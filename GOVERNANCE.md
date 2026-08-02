@@ -70,18 +70,22 @@ issues, forks, and external links do not become dead ends.
 ## Repository-setting gate / 仓库设置门槛
 
 The desired rules live in `ai/repository-settings.target.yml`.  They are not
-automatically applied.  Before requiring a non-author approval, maintainers
-must record at least two active human reviewers with review permission and
-confirmed availability.  CI check names must first succeed on the default
-branch.  Otherwise the target remains documentation only.
+automatically applied.  One Responsible human is sufficient; the currently
+confirmed maintainer is `LYHGLYTX`.  A sole maintainer's own pull request must
+not require a second or non-author approval, so the target approval count
+remains zero and last-pusher approval remains disabled.  CI check names must
+first succeed on the default branch.  Bots cannot replace the Responsible
+human, approve their own work, or enable auto-merge.
 
-启用非作者审批前，必须确认并记录至少两名拥有审查权限且愿意持续审阅的人类
-维护者；必需检查也必须先在默认分支成功运行。条件不足时只保留目标配置，不得
-启用会导致仓库无法合并的规则。
+一名 Responsible human 即可；当前确认的维护者是 `LYHGLYTX`。唯一维护者自己
+创建的 PR 不得要求第二人或非作者批准，因此目标批准数保持为 0，也不启用最后
+推送者之外的批准要求。必需检查仍须先在默认分支稳定成功；机器人不能取代
+Responsible human、批准自己的修改或启用自动合并。
 
 ## Administrator checklist / 管理员清单
 
-- Confirm two active human reviewer accounts and their repository permissions.
+- Confirm the Responsible human account and its repository permissions.
+- Keep the approval count at zero while one maintainer owns and authors pull requests.
 - Confirm each intended required check has a stable, successful default-branch run.
 - Configure CCB-Docs Pages to use GitHub Actions only after its CI is green.
 - Grant scheduled issue/PR automation the minimum token permissions.

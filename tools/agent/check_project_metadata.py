@@ -14,6 +14,7 @@ from pathlib import Path
 import jsonschema
 import yaml
 
+from audit_repository_governance import validate_repository, validate_target
 from generate_markdown_inventory import contributor_rejection_reason
 
 
@@ -23,7 +24,6 @@ CONTEXT_FILES = (
     ROOT / "ai/test-matrix.yml",
     ROOT / "ai/generated-files.yml",
     ROOT / "ai/docs-impact.yml",
-    ROOT / "ai/repository-settings.target.yml",
 )
 
 
@@ -392,12 +392,25 @@ def validate_documentation_registry() -> None:
             )
 
 
+def validate_repository_settings(settings: dict | None = None) -> None:
+    if settings is None:
+        _target, errors = validate_repository()
+    else:
+        errors = validate_target(settings)
+    if errors:
+        details = "\n- ".join(errors)
+        raise ValueError(
+            f"repository governance metadata is invalid:\n- {details}"
+        )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.parse_args()
     validate_context()
     validate_inventory()
     validate_documentation_registry()
+    validate_repository_settings()
     print("agent metadata and Markdown inventory are valid")
     return 0
 

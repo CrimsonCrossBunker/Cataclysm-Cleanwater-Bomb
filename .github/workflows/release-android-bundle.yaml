@@ -7,7 +7,7 @@ env:
   REPOSITORY_NAME: ${{ github.event.repository.name }}
 
 permissions:
-  write-all
+  contents: read
 
 jobs:
   compile-shaders:
@@ -25,6 +25,9 @@ jobs:
     name: Build and release Android bundle
     needs: compile-shaders
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
     steps:
       - name: Generate build variables
         id: vars

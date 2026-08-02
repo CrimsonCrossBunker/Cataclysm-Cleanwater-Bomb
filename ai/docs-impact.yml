@@ -5,7 +5,20 @@ enforcement: staged
 entries:
   - id: governance-policy
     enforcement: advisory
-    patterns: [AGENTS.md, '*/AGENTS.md', CONTRIBUTING.md, GOVERNANCE.md, .github/pull_request_template.md]
+    patterns:
+      - AGENTS.md
+      - '*/AGENTS.md'
+      - CONTRIBUTING.md
+      - GOVERNANCE.md
+      - OWNERSHIP.md
+      - REPOSITORY_SETTINGS.md
+      - ai/repository-settings.target.yml
+      - ai/repository-settings.target.schema.json
+      - .github/dependabot.yml
+      - .github/pull_request_template.md
+      - .github/workflows/validate-github-config.yml
+      - tools/agent/audit_repository_governance.py
+      - tools/agent/test_repository_governance.py
     documentation_ids: [contributing.responsible-human, getting-started.first-contribution]
     generated_reference_impact: false
     required_check_ids: []

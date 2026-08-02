@@ -1,0 +1,233 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crimsoncrossbunker.github.io/schemas/repository-settings-target-v1.json",
+  "title": "CCB repository settings target and audit",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [ "schema_version", "kind", "description", "enforcement", "audit", "entries" ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "kind": { "const": "repository_settings_target" },
+    "description": { "type": "string", "minLength": 1 },
+    "enforcement": { "const": "deferred" },
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [ "observed_at", "observed_timestamp", "observed_by", "timezone", "evidence_scope", "observation_commands", "repository", "actions", "security", "organization", "reviewer_confirmation", "required_check_evidence", "two_factor_rollout" ],
+      "properties": {
+        "observed_at": { "type": "string", "format": "date" },
+        "observed_timestamp": { "type": "string", "format": "date-time" },
+        "observed_by": { "type": "string", "minLength": 1 },
+        "timezone": { "const": "Asia/Shanghai" },
+        "evidence_scope": { "type": "string", "minLength": 1 },
+        "observation_commands": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "repository": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [ "full_name", "default_branch", "rulesets", "branch_protection_observed", "allow_auto_merge" ],
+          "properties": {
+            "full_name": { "const": "CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb" },
+            "default_branch": { "const": "master" },
+            "rulesets": { "type": "array" },
+            "branch_protection_observed": { "type": "boolean" },
+            "allow_auto_merge": { "type": "boolean" }
+          }
+        },
+        "actions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [ "default_workflow_permissions", "can_approve_pull_request_reviews" ],
+          "properties": {
+            "default_workflow_permissions": { "enum": [ "read", "write" ] },
+            "can_approve_pull_request_reviews": { "type": "boolean" }
+          }
+        },
+        "security": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [ "secret_scanning", "secret_scanning_push_protection", "dependabot_security_updates", "vulnerability_alerts_http_status", "automated_security_fixes" ],
+          "properties": {
+            "secret_scanning": { "enum": [ "enabled", "disabled" ] },
+            "secret_scanning_push_protection": { "enum": [ "enabled", "disabled" ] },
+            "dependabot_security_updates": { "enum": [ "enabled", "disabled" ] },
+            "vulnerability_alerts_http_status": { "type": "integer", "minimum": 100, "maximum": 599 },
+            "automated_security_fixes": { "enum": [ "enabled", "disabled" ] }
+          }
+        },
+        "organization": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [ "two_factor_requirement_enabled" ],
+          "properties": {
+            "two_factor_requirement_enabled": { "type": "boolean" }
+          }
+        },
+        "reviewer_confirmation": {
+          "$ref": "#/$defs/tracking_count"
+        },
+        "required_check_evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [ "pull_requests", "status", "default_branch_success_confirmed" ],
+          "properties": {
+            "pull_requests": { "type": "array", "items": { "type": "integer", "minimum": 1 }, "minItems": 1, "uniqueItems": true },
+            "status": { "enum": [ "pr_branch_only", "default_branch_stable" ] },
+            "default_branch_success_confirmed": { "type": "boolean" }
+          }
+        },
+        "two_factor_rollout": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [ "tracking_issue", "status" ],
+          "properties": {
+            "tracking_issue": { "type": "integer", "minimum": 1 },
+            "status": { "enum": [ "blocked_pending_member_audit_and_notice", "ready", "enabled" ] }
+          }
+        }
+      }
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "tracking_count": {
+      "type": "object",
+      "additionalProperties": false,
+          "required": [ "tracking_issue", "issue_comments_at_audit", "confirmed_willing_humans", "required_willing_humans", "review_model", "policy_decision_at" ],
+      "properties": {
+        "tracking_issue": { "type": "integer", "minimum": 1 },
+        "issue_comments_at_audit": { "type": "integer", "minimum": 0 },
+        "confirmed_willing_humans": { "type": "integer", "minimum": 0 },
+            "required_willing_humans": { "type": "integer", "minimum": 1 },
+            "review_model": { "const": "single_responsible_human" },
+            "policy_decision_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [ "id", "branch", "enabled", "prerequisites", "target", "blockers", "manual_record" ],
+      "properties": {
+        "id": { "const": "master-protection" },
+        "branch": { "const": "master" },
+        "enabled": { "type": "boolean" },
+        "prerequisites": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [ "minimum_confirmed_human_reviewers", "required_checks_must_succeed_on_default_branch", "emergency_bypass_actor_must_be_confirmed" ],
+          "properties": {
+            "minimum_confirmed_human_reviewers": { "type": "integer", "minimum": 1 },
+            "required_checks_must_succeed_on_default_branch": { "const": true },
+            "emergency_bypass_actor_must_be_confirmed": { "const": true }
+          }
+        },
+        "target": { "$ref": "#/$defs/target" },
+        "blockers": { "type": "array", "items": { "$ref": "#/$defs/blocker" }, "uniqueItems": true },
+        "manual_record": { "$ref": "#/$defs/manual_record" }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [ "github_ruleset", "bypass_policy" ],
+      "properties": {
+        "github_ruleset": { "$ref": "#/$defs/github_ruleset" },
+        "bypass_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [ "mode", "reason_required", "configured_actors" ],
+          "properties": {
+            "mode": { "const": "emergency_only" },
+            "reason_required": { "const": true },
+            "configured_actors": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/bypass_actor" },
+              "uniqueItems": true
+            }
+          }
+        }
+      }
+    },
+    "github_ruleset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [ "name", "target", "enforcement", "bypass_actors", "conditions", "rules" ],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "target": { "const": "branch" },
+        "enforcement": { "enum": [ "disabled", "active" ] },
+        "bypass_actors": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/bypass_actor" },
+          "uniqueItems": true
+        },
+        "conditions": { "type": "object" },
+        "rules": { "type": "array", "minItems": 4 }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [ "id", "state", "reason" ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "state": { "enum": [ "open", "resolved" ] },
+        "tracking_issue": { "type": [ "integer", "null" ], "minimum": 1 },
+        "evidence_pull_requests": { "type": "array", "items": { "type": "integer", "minimum": 1 }, "uniqueItems": true },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "manual_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [ "confirmed_reviewers", "required_checks", "emergency_bypass_actors", "enabled_at", "enabled_by", "ruleset_id", "bypass_tested_at" ],
+      "properties": {
+        "confirmed_reviewers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/reviewer" },
+          "uniqueItems": true
+        },
+        "required_checks": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "emergency_bypass_actors": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/bypass_actor" },
+          "uniqueItems": true
+        },
+        "enabled_at": { "type": [ "string", "null" ], "format": "date-time" },
+        "enabled_by": { "type": [ "string", "null" ], "minLength": 1 },
+        "ruleset_id": { "type": [ "integer", "null" ], "minimum": 1 },
+        "bypass_tested_at": { "type": [ "string", "null" ], "format": "date-time" }
+      }
+    },
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [ "login", "permission_verified_at", "willingness_confirmed_at", "scope" ],
+      "properties": {
+        "login": { "type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$" },
+        "permission_verified_at": { "type": "string", "format": "date" },
+        "willingness_confirmed_at": { "type": "string", "format": "date" },
+        "scope": { "type": "string", "minLength": 1 }
+      }
+    },
+    "bypass_actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [ "actor_id", "actor_type", "bypass_mode" ],
+      "properties": {
+        "actor_id": { "type": "integer", "minimum": 1 },
+        "actor_type": { "enum": [ "Integration", "OrganizationAdmin", "RepositoryRole", "Team" ] },
+        "bypass_mode": { "enum": [ "always", "pull_request" ] }
+      }
+    }
+  }
+}
