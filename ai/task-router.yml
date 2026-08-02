@@ -92,11 +92,11 @@ entries:
       - Generated boundaries are repository-specific and must be re-discovered in CCB.
   - id: documentation-impact
     keywords: [documentation, docs impact, stale, translation, 文档, 影响, 翻译]
-    paths: [ai/docs-impact.yml, ai/documentation-registry.yml, doc/migration/, .github/pull_request_template.md]
+    paths: [ai/docs-impact.yml, ai/documentation-registry.yml, doc/migration/, .github/pull_request_template.md, tools/agent/check_docs_impact.py]
     project_ids: [governance, developer-tools]
     documentation_ids: [contributing.documentation-policy]
     source_symbols: []
-    validation_ids: [agent-context]
+    validation_ids: [documentation-impact]
     compatibility:
       - Scope drift to declared source paths and preserve permanent moved stubs.
     upstream_differences:

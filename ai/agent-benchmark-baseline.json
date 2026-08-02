@@ -75,7 +75,7 @@
     },
     {
       "errors": [],
-      "estimated_tokens": 1953,
+      "estimated_tokens": 2103,
       "id": "documentation-impact",
       "passed": true,
       "selected_routes": [

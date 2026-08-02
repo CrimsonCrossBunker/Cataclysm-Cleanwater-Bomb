@@ -44,6 +44,18 @@ Responsible human，负责理解修改、审查最终差异、确认测试、许
 4. Enforcement is staged in `ai/docs-impact.yml`; a mapping becomes required
    only after its referenced documentation and default-branch checks are ready.
 
+The Lua, JSON, and EOC documentation stacks may declare `bilingual_draft` while
+their dependent pull requests are under review.  That state is auditable
+provenance for a stacked Draft PR, not permission to merge enforcement early.
+Before this enforcement reaches `master`, every mapped page must be refreshed
+to the merged source commit and promoted according to the CCB-Docs catalog
+policy.  Ordinary content and unrelated documentation fixes remain advisory.
+
+Translation debt is enforced in CCB-Docs against the changed bilingual pair or
+the same high-risk subsystem only.  Nightly automation may report global debt,
+but neither source drift nor an overdue unrelated translation may make all
+pull requests fail.
+
 ## Legacy documentation paths / 旧文档路径
 
 When a legacy `doc/...` page is migrated in a later phase, its old repository
