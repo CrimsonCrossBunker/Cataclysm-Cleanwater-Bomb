@@ -5,19 +5,19 @@ document_count: 175
 scope: Tracked Markdown at source_commit, excluding dot-prefixed tool/config paths; filesystem caches
   are never traversed.
 classification_summary:
-  review: 98
+  review: 96
   actions:
     archive_public: 1
     generated_reference: 2
     keep_in_repo: 54
     merge_into: 4
-    migrate_preserve: 3
+    migrate_preserve: 5
     migrate_rewrite: 7
     retain_third_party: 6
-    review: 98
+    review: 96
   migration_statuses:
-    classified: 65
-    inventoried: 98
+    classified: 67
+    inventoried: 96
     verified: 12
 documents:
 - original_path: CODE_OF_CONDUCT.md
@@ -2430,59 +2430,70 @@ documents:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-dimensions
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/dimensions/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.dimensions
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_extended
+  upstream_relation: forked_synced_and_ccb_policy_adjusted
   merge_target: null
   source_paths:
-  - doc/JSON/DIMENSIONS.md
-  source_symbols: []
+  - src/overmap_worldgen.cpp
+  - src/overmap_worldgen.h
+  - data/json/region_settings/region_settings/dimensions/dimensions.json
+  - data/json/effects_on_condition/nether_eocs/dimensions.json
+  source_symbols:
+  - dimension_world::load
+  - dimension_region_layout::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 链接 REGION_LAYOUT.MD 在大小写敏感环境中无效；开头给出的 json\region_settings 路径也不是当前仓库路径。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 72 行说明维度切换、NPC/物品携带和清理 EOC，2026-06/07 多次更新且当前 dimension loaders/data 存在；迁移时应修正路径和大小写坏链。
+  migration_batch: phase-1-json
 - original_path: doc/JSON/EFFECTS_JSON.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/effects.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-effects-json
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/effects/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.effects
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_contract_with_tests
   merge_target: null
   source_paths:
-  - doc/JSON/EFFECTS_JSON.md
-  source_symbols: []
+  - src/effect.cpp
+  - src/effect.h
+  - data/json/effects.json
+  - tests/effect_test.cpp
+  - tests/creature_effect_test.cpp
+  source_symbols:
+  - load_effect_type
+  - effect_type::load_mod_data
+  - effect_migration::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 744 行覆盖 effect_type 必选/可选字段、强度、免疫、修饰器、死亡和示例；当前 loader 与 effect 测试提供可验证契约。
+  migration_batch: phase-1-json
 - original_path: doc/JSON/EFFECT_ON_CONDITION.md
-  target_path: null
+  target_path: docs/zh_CN/reference/eoc/index.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - zihanZheng
