@@ -89,6 +89,7 @@ def validate_context() -> None:
                 raise ValueError(f"unmatched test path pattern: {pattern}")
 
     project = documents["project-map.yml"]
+    project_ids = unique_ids(project, "project-map.yml")
     for entry in project["entries"]:
         for validation_id in entry.get("validation_ids", []):
             if validation_id not in test_ids:
@@ -125,6 +126,57 @@ def validate_context() -> None:
             if not path_pattern_exists(pattern, known):
                 raise ValueError(
                     f"unmatched documentation impact pattern: {pattern}"
+                )
+
+    router = load_yaml(ROOT / "ai/task-router.yml")
+    router_schema = json.loads(
+        (ROOT / "ai/task-router.schema.json").read_text(encoding="utf-8")
+    )
+    jsonschema.Draft202012Validator(router_schema).validate(router)
+    route_ids = [entry["id"] for entry in router["entries"]]
+    if len(route_ids) != len(set(route_ids)):
+        raise ValueError("duplicate id in task-router.yml")
+    for entry in router["entries"]:
+        unknown_projects = sorted(set(entry["project_ids"]) - project_ids)
+        if unknown_projects:
+            raise ValueError(
+                f"unknown project ids in {entry['id']}: {unknown_projects}"
+            )
+        unknown_tests = sorted(set(entry["validation_ids"]) - test_ids)
+        if unknown_tests:
+            raise ValueError(
+                f"unknown validation ids in {entry['id']}: {unknown_tests}"
+            )
+        for pattern in entry["paths"]:
+            if not path_pattern_exists(pattern, known):
+                raise ValueError(f"unmatched task-router path: {pattern}")
+
+    benchmark = load_yaml(ROOT / "ai/agent-benchmark.yml")
+    benchmark_schema = json.loads(
+        (ROOT / "ai/agent-benchmark.schema.json").read_text(encoding="utf-8")
+    )
+    jsonschema.Draft202012Validator(benchmark_schema).validate(benchmark)
+    case_ids = [case["id"] for case in benchmark["cases"]]
+    if len(case_ids) != len(set(case_ids)):
+        raise ValueError("duplicate id in agent-benchmark.yml")
+    for case in benchmark["cases"]:
+        unknown_routes = sorted(set(case["expected_routes"]) - set(route_ids))
+        if unknown_routes:
+            raise ValueError(
+                f"unknown benchmark routes in {case['id']}: {unknown_routes}"
+            )
+        unknown_tests = sorted(
+            set(case["expected_validation_ids"]) - test_ids
+        )
+        if unknown_tests:
+            raise ValueError(
+                f"unknown benchmark validation ids in {case['id']}: "
+                f"{unknown_tests}"
+            )
+        for path in case["files"]:
+            if path not in known:
+                raise ValueError(
+                    f"untracked benchmark file in {case['id']}: {path}"
                 )
 
 

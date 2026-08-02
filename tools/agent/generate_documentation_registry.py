@@ -30,7 +30,11 @@ ROOT_GOVERNANCE = {
     "SYNC_EXCLUDED_PRS.md",
 }
 AGENT_METADATA = {
+    "ai/agent-benchmark-baseline.json",
+    "ai/agent-benchmark.schema.json",
+    "ai/agent-benchmark.yml",
     "ai/context.schema.json",
+    "ai/context-pack.schema.json",
     "ai/documentation-registry.schema.json",
     "ai/documentation-registry.yml",
     "ai/docs-impact.yml",
@@ -38,12 +42,15 @@ AGENT_METADATA = {
     "ai/project-map.yml",
     "ai/repository-settings.target.yml",
     "ai/test-matrix.yml",
+    "ai/task-router.schema.json",
+    "ai/task-router.yml",
 }
 API_CONTRACTS = {
     "data/lua/manifest.schema.json",
     "data/lua/reference/ccb_public_api_v5.schema.json",
     "data/lua/reference/ccb_public_api_v5_coverage.schema.json",
     "data/lua/types/ccb_api_v5.d.lua",
+    "tools/json_api/contract-inventory.schema.json",
 }
 
 
@@ -79,6 +86,8 @@ def is_documentation_path(path: str) -> bool:
         return True
     if path.startswith("data/lua/reference/") and path.endswith(".json"):
         return True
+    if path.startswith("data/reference/json/") and path.endswith(".json"):
+        return True
     if path.startswith("doc/migration/") and path.endswith((".json", ".yml")):
         return True
     return False
@@ -99,6 +108,8 @@ def generated_by(path: str) -> str | None:
         return None
     if path == "ai/documentation-registry.yml":
         return "python3 tools/agent/generate_documentation_registry.py"
+    if path == "ai/agent-benchmark-baseline.json":
+        return "python3 tools/agent/benchmark_context_pack.py"
     if path in {
         "doc/migration/contributor-anomalies.yml",
         "doc/migration/markdown-inventory.yml",
@@ -129,6 +140,8 @@ def generated_by(path: str) -> str | None:
             Path(path).stem,
             "Lua contract generator; see ai/generated-files.yml",
         )
+    if path.startswith("data/reference/json/"):
+        return "python3 tools/json_api/generate_contracts.py"
     return None
 
 
