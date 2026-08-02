@@ -3966,10 +3966,6 @@ void vehicle::deserialize( const JsonObject &data )
     data.read( "autopilot_on", autopilot_on );
     data.read( "precollision_on", precollision_on );
     data.read( "last_update_turn", last_update );
-    if( !data.read( "last_auto_process_update_turn", last_auto_process_update ) ) {
-        // Saves predating this field: don't settle time before the load.
-        last_auto_process_update = last_update;
-    }
 
     units::angle fdir_angle = units::from_degrees( fdir );
     face.init( fdir_angle );
@@ -4114,7 +4110,6 @@ void vehicle::serialize( JsonOut &json ) const
     json.member( "autopilot_on", autopilot_on );
     json.member( "precollision_on", precollision_on );
     json.member( "last_update_turn", last_update );
-    json.member( "last_auto_process_update_turn", last_auto_process_update );
     json.member( "pivot", pivot_anchor[0] );
     json.member( "is_on_ramp", is_on_ramp );
     json.member( "is_autodriving", is_autodriving );
