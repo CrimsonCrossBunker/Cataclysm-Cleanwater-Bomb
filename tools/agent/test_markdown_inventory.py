@@ -59,6 +59,21 @@ class MarkdownInventoryTest(unittest.TestCase):
             self.assertTrue(item["contributors"])
             self.assertEqual(data["source_commit"], item["source_commit"])
 
+    def test_all_legacy_reviews_are_classified(self):
+        path = ROOT / "doc/migration/markdown-inventory.yml"
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+
+        self.assertEqual(data["classification_summary"]["review"], 0)
+        self.assertFalse(
+            any(item["action"] == "review" for item in data["documents"])
+        )
+        self.assertFalse(
+            any(
+                item["migration_status"] == "inventoried"
+                for item in data["documents"]
+            )
+        )
+
     def test_command_fragment_identity_is_rejected(self):
         clean, anomalies = inventory.sanitize_contributors(
             [
