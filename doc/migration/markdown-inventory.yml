@@ -5,19 +5,19 @@ document_count: 175
 scope: Tracked Markdown at source_commit, excluding dot-prefixed tool/config paths; filesystem caches
   are never traversed.
 classification_summary:
-  review: 78
+  review: 77
   actions:
     archive_public: 1
     generated_reference: 3
     keep_in_repo: 54
     merge_into: 6
-    migrate_preserve: 14
+    migrate_preserve: 15
     migrate_rewrite: 13
     retain_third_party: 6
-    review: 78
+    review: 77
   migration_statuses:
-    classified: 85
-    inventoried: 78
+    classified: 86
+    inventoried: 77
     verified: 12
 documents:
 - original_path: CODE_OF_CONDUCT.md
@@ -3165,30 +3165,38 @@ documents:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-magic
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/magic-spells-enchantments/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.magic-spells-enchantments
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_extended
+  upstream_relation: forked_and_locally_extended
   merge_target: null
   source_paths:
-  - doc/JSON/MAGIC.md
-  source_symbols: []
+  - src/magic.cpp
+  - src/magic_enchantment.cpp
+  - src/magic_type.cpp
+  - data/json/enchantments.json
+  - tests/magic_spell_test.cpp
+  source_symbols:
+  - spell_type::load
+  - enchantment::load
+  - magic_type::load
+  - spell_migration::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 1,149 行手工枚举 spell effects/flags/enchantment values；应与注册/loader 生成清单做 parity，保留人工解释。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 完整覆盖 spell、magic_type、enchantment 和实例，导入后加入 CCB FOCUS_REGEN 等更新；现有 magic tests 可验证关键示例。
+  migration_batch: phase-1-json
 - original_path: doc/JSON/MAPGEN.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/mapgen.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - dumb-kevin
