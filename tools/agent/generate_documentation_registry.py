@@ -85,3 +85,32 @@ def is_documentation_path(path: str) -> bool:
 def registry_id(path: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", path.lower()).strip("-")
     return "repo." + slug
+
+def load_inventory() -> dict[str, dict]:
+    data = yaml.safe_load(INVENTORY.read_text(encoding="utf-8"))
+    return {entry["original_path"]: entry for entry in data["documents"]}
+
+def generated_by(path: str) -> str | None:
+    if path == "ai/documentation-registry.yml":
+        return "python3 tools/agent/generate_documentation_registry.py"
+    if path in {
+        "doc/migration/contributor-anomalies.yml",
+        "doc/migration/markdown-inventory.yml",
+    }:
+        return "python3 tools/agent/generate_markdown_inventory.py"
+    if path in {
+        "doc/migration/classification-report.md",
+        "doc/migration/migration-batches.yml",
+    }:
+        return "python3 tools/agent/generate_migration_reports.py"
+    if path.startswith("data/lua/reference/"):
+        generators = {
+            "cbn_api_inventory": "python3 tools/lua_api/generate_cbn_inventory.py",
+            "cbn_coverage": "python3 tools/lua_api/generate_cbn_coverage.py",
+            "ccb_native_inventory": "python3 tools/lua_api/generate_ccb_inventory.py",
+        }
+        return generators.get(
+            Path(path).stem,
+            "Lua contract generator; see ai/generated-files.yml",
+        )
+    return None
