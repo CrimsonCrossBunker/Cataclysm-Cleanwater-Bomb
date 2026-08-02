@@ -32,27 +32,20 @@ except ImportError:
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
-
 DECLARATIONS = REPOSITORY_ROOT / "data/lua/types/ccb_api_v5.d.lua"
-
 MANIFEST_SCHEMA = REPOSITORY_ROOT / "data/lua/manifest.schema.json"
-
 NATIVE_INVENTORY = (
     REPOSITORY_ROOT / "data/lua/reference/ccb_native_inventory.json"
 )
-
 DEFAULT_OUTPUT = (
     REPOSITORY_ROOT / "data/lua/reference/ccb_public_api_v5.json"
 )
-
 DEFAULT_COVERAGE = (
     REPOSITORY_ROOT / "data/lua/reference/ccb_public_api_v5_coverage.json"
 )
-
 CONTRACT_SCHEMA = (
     REPOSITORY_ROOT / "data/lua/reference/ccb_public_api_v5.schema.json"
 )
-
 COVERAGE_SCHEMA = (
     REPOSITORY_ROOT /
     "data/lua/reference/ccb_public_api_v5_coverage.schema.json"
@@ -120,6 +113,7 @@ OPERATOR_SIGNATURES = {
     "__unm": (["self"], ["same type"]),
 }
 
+
 def relative(path: Path) -> str:
     try:
         return path.relative_to(REPOSITORY_ROOT).as_posix()
@@ -127,8 +121,10 @@ def relative(path: Path) -> str:
         # Parser regression tests intentionally use temporary files.
         return path.as_posix()
 
+
 def line_number(contents: str, offset: int) -> int:
     return contents.count("\n", 0, offset) + 1
+
 
 def source(
     path: Path, contents: str, offset: int, authority: str
@@ -139,18 +135,22 @@ def source(
         "authority": authority,
     }
 
+
 def sha256_bytes(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
+
 
 def documentation_id(section: str, identity: str) -> str:
     normalized = re.sub(r"[^A-Za-z0-9_.-]+", "-", identity).strip("-")
     return f"api.lua.v5.generated.{section}.{normalized}"
+
 
 def documentation(section: str, identity: str) -> dict[str, str]:
     return {
         "id": documentation_id(section, identity),
         "status": "generated-contract-source",
     }
+
 
 def extract_balanced(
     contents: str, opening: int, opener: str = "(", closer: str = ")"
@@ -208,6 +208,7 @@ def extract_balanced(
                 return contents[opening + 1:index], index + 1
         index += 1
     raise RuntimeError(f"unterminated {opener}{closer} region")
+
 
 def split_top_level(contents: str) -> list[str]:
     """Split a C++ argument list without splitting nested expressions."""
@@ -281,8 +282,10 @@ def split_top_level(contents: str) -> list[str]:
         parts.append(tail)
     return parts
 
+
 def cpp_sources() -> list[Path]:
     return sorted((REPOSITORY_ROOT / "src").glob("catalua*.cpp"))
+
 
 def parse_luals(path: Path = DECLARATIONS) -> dict[str, object]:
     contents = path.read_text(encoding="utf-8")
@@ -420,6 +423,7 @@ def parse_luals(path: Path = DECLARATIONS) -> dict[str, object]:
     validate_confirmed_declaration_contracts(result)
     return result
 
+
 def validate_confirmed_declaration_contracts(luals: dict[str, object]) -> None:
     """Lock in declaration fixes that previously disagreed with runtime."""
     classes = luals["classes"]
@@ -449,6 +453,7 @@ def validate_confirmed_declaration_contracts(luals: dict[str, object]) -> None:
     }
     if callback_fields.get("consuming") != "boolean":
         raise RuntimeError("CcbCallbackMethodSpec.consuming must be boolean")
+
 
 def parse_table_paths() -> tuple[dict[str, set[str]], list[dict[str, object]]]:
     paths: dict[str, set[str]] = defaultdict(set)
@@ -531,6 +536,7 @@ def parse_table_paths() -> tuple[dict[str, set[str]], list[dict[str, object]]]:
                     },
                 )
     return paths, [namespaces[key] for key in sorted(namespaces)]
+
 
 def parse_set_functions(
     luals: dict[str, object], table_paths: dict[str, set[str]]
@@ -711,6 +717,7 @@ def parse_set_functions(
         functions.append(entry)
     return sorted(functions, key=lambda entry: str(entry["id"]))
 
+
 def capabilities_for_call(identity: str, call_body: str) -> list[str]:
     capabilities = set(
         re.findall(
@@ -725,8 +732,10 @@ def capabilities_for_call(identity: str, call_body: str) -> list[str]:
             capabilities.update(values)
     return sorted(capabilities)
 
+
 def example_files() -> list[Path]:
     return sorted((REPOSITORY_ROOT / "data/lua/examples").glob("**/*.lua"))
+
 
 def examples_for_symbol(identity: str) -> list[dict[str, object]]:
     needles = {identity}
@@ -748,6 +757,7 @@ def examples_for_symbol(identity: str) -> list[dict[str, object]]:
             }
         )
     return result
+
 
 def parse_usertypes(
     luals: dict[str, object],
@@ -941,6 +951,7 @@ def parse_usertypes(
         sorted(operators, key=lambda entry: str(entry["id"])),
     )
 
+
 def parse_event_specs() -> list[dict[str, object]]:
     path = REPOSITORY_ROOT / "src/event.h"
     contents = path.read_text(encoding="utf-8")
@@ -1019,8 +1030,10 @@ def parse_event_specs() -> list[dict[str, object]]:
         raise RuntimeError(f"expected 242 event fields, found {field_count}")
     return events
 
+
 def quoted_values(contents: str) -> list[str]:
     return re.findall(r'"([^\"]+)"', contents)
+
 
 def parse_hooks() -> list[dict[str, object]]:
     path = REPOSITORY_ROOT / "src/catalua_ui_callbacks.cpp"
@@ -1065,6 +1078,7 @@ def parse_hooks() -> list[dict[str, object]]:
     if len(hooks) != 52:
         raise RuntimeError(f"expected 52 hooks, found {len(hooks)}")
     return hooks
+
 
 def parse_callbacks() -> list[dict[str, object]]:
     path = REPOSITORY_ROOT / "src/catalua_ui_callbacks.cpp"
@@ -1127,6 +1141,7 @@ def parse_callbacks() -> list[dict[str, object]]:
         )
     return callbacks
 
+
 def parse_enums() -> list[dict[str, object]]:
     path = REPOSITORY_ROOT / "src/catalua_bindings_enums.cpp"
     contents = path.read_text(encoding="utf-8")
@@ -1181,6 +1196,7 @@ def parse_enums() -> list[dict[str, object]]:
     if len(enums) != 26:
         raise RuntimeError(f"expected 26 enum families, found {len(enums)}")
     return enums
+
 
 def parse_manifest_and_capabilities(
     luals: dict[str, object],
@@ -1322,6 +1338,7 @@ def parse_manifest_and_capabilities(
     }
     return fields, capabilities, permissions
 
+
 def build_modules(
     functions: list[dict[str, object]],
 ) -> list[dict[str, object]]:
@@ -1346,12 +1363,14 @@ def build_modules(
         )
     return modules
 
+
 def add_class_documentation(classes: Iterable[dict[str, object]]) -> None:
     for class_entry in classes:
         for field in class_entry["fields"]:
             if "documentation" not in field:
                 identity = f"{class_entry['id']}.{field['name']}"
                 field["documentation"] = documentation("property", identity)
+
 
 def build_contract() -> dict[str, object]:
     luals = parse_luals()
@@ -1437,6 +1456,7 @@ def build_contract() -> dict[str, object]:
     }
     return contract
 
+
 def section_counts(contract: dict[str, object]) -> dict[str, int]:
     sections = (
         "modules",
@@ -1455,6 +1475,7 @@ def section_counts(contract: dict[str, object]) -> dict[str, int]:
     )
     return {section: len(contract[section]) for section in sections}
 
+
 def iter_documented_symbols(
     contract: dict[str, object],
 ) -> Iterable[dict[str, object]]:
@@ -1471,6 +1492,7 @@ def iter_documented_symbols(
     for event in events:
         for field in event["fields"]:
             yield field
+
 
 def build_coverage(contract: dict[str, object]) -> dict[str, object]:
     counts = section_counts(contract)
@@ -1539,11 +1561,13 @@ def build_coverage(contract: dict[str, object]) -> dict[str, object]:
         ),
     }
 
+
 def serialize(value: dict[str, object]) -> str:
     serialized = json.dumps(
         value, ensure_ascii=False, indent=2, sort_keys=False
     )
     return serialized + "\n"
+
 
 def write_or_check(path: Path, contents: str, check: bool) -> None:
     if check:
@@ -1561,6 +1585,7 @@ def write_or_check(path: Path, contents: str, check: bool) -> None:
         return
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(contents, encoding="utf-8")
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -1586,3 +1611,7 @@ def main() -> int:
         f"{coverage['undocumented_symbols']['count']} undocumented"
     )
     return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
