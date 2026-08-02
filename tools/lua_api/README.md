@@ -34,6 +34,9 @@ Make compiles the bundled `.c` sources as C++, so CMake must also apply
 `LANGUAGE CXX`; otherwise sol2 and the native bridge request C++-mangled
 `lua_*` symbols from a C ABI archive. The checker also preserves `libsol`
 propagation through `configure_lua_ui` while Lua-disabled builds remain inert.
+It also prevents headless `--check-mods` from initializing options twice.  A
+second initialization retains option-group registrations while clearing their
+options, emits `D_ERROR`, and makes an otherwise successful validation exit 1.
 
 Generated JSON must not be edited by hand. The coverage file distinguishes
 100% inventory coverage from CCB-Docs publication coverage; the latter stays

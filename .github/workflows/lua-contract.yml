@@ -54,6 +54,7 @@ jobs:
             ':(glob)data/lua/**' \
             'src/CMakeLists.txt' \
             'src/lua/CMakeLists.txt' \
+            'src/main.cpp' \
             ':(glob)src/catalua*.cpp' \
             ':(glob)src/catalua*.h' \
             'src/event.h' \
