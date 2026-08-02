@@ -124,5 +124,102 @@ def validate_source(source: object, identity: str) -> None:
         )
 
 
+def validate_contract(contract: dict[str, object]) -> dict[str, int]:
+    if contract.get("schema_version") != 1 or contract.get("api_version") != 5:
+        raise RuntimeError("public contract must be schema 1 for API v5")
+    schema = load_object(CONTRACT_SCHEMA)
+    if schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema":
+        raise RuntimeError(
+            "public contract schema is not JSON Schema draft 2020-12")
+
+    seen: dict[str, set[str]] = {section: set() for section in LIST_SECTIONS}
+    documented_id_counts: dict[str, int] = {}
+    property_documentation_ids = {
+        str(entry.get("documentation", {}).get("id"))
+        for entry in contract.get("properties", [])
+        if isinstance(entry, dict) and
+        isinstance(entry.get("documentation"), dict)
+    }
+    for section, entry in entries(contract):
+        identity_value = entry.get("id", entry.get("name"))
+        identity = f"{section}:{identity_value}"
+        if section in seen:
+            if not isinstance(identity_value, str) or not identity_value:
+                raise RuntimeError(f"{section} entry lacks a stable id")
+            if identity_value in seen[section]:
+                raise RuntimeError(f"duplicate {section} id {identity_value}")
+            seen[section].add(identity_value)
+        sources = entry.get("sources")
+        if not isinstance(sources, list) or not sources:
+            raise RuntimeError(f"{identity} lacks source evidence")
+        for source_value in sources:
+            validate_source(source_value, identity)
+        documentation = entry.get("documentation")
+        if not isinstance(documentation, dict) or not documentation.get("id"):
+            raise RuntimeError(
+                f"{identity} lacks generated documentation metadata")
+        if documentation.get("status") != "generated-contract-source":
+            raise RuntimeError(
+                f"{identity} has an invalid documentation status")
+        documentation_id = str(documentation["id"])
+        documented_id_counts[documentation_id] = (
+            documented_id_counts.get(documentation_id, 0) + 1
+        )
+        if documented_id_counts[documentation_id] > 1 and (
+            documentation_id not in property_documentation_ids or
+            documented_id_counts[documentation_id] > 2
+        ):
+            raise RuntimeError(
+                f"duplicate generated documentation id {documentation_id}"
+            )
+
+        if section in CALLABLE_SECTIONS:
+            required = (
+                "parameters",
+                "returns",
+                "errors",
+                "api_version",
+                "since",
+                "deprecated",
+                "deprecation_replacement",
+                "capabilities",
+                "examples",
+            )
+            missing = [field for field in required if field not in entry]
+            if missing:
+                raise RuntimeError(
+                    f"{identity} lacks callable metadata {missing}")
+            if entry["api_version"] != 5 or not entry["since"]:
+                raise RuntimeError(
+                    f"{identity} has invalid API version metadata")
+            if not isinstance(entry["deprecated"], bool):
+                raise RuntimeError(
+                    f"{identity} has invalid deprecation metadata")
+
+    counts = {section: len(values) for section, values in seen.items()}
+    expected_counts = {
+        "modules": 3,
+        "namespaces": 68,
+        "classes": 260,
+        "functions": 482,
+        "methods": 142,
+        "properties": 51,
+        "operators": 47,
+        "enums": 26,
+        "events": 113,
+        "hooks": 52,
+        "callbacks": 38,
+        "capabilities": 16,
+        "manifest_fields": 6,
+    }
+    if counts != expected_counts:
+        raise RuntimeError(
+            "public contract denominator drifted: "
+            f"{counts}, expected {expected_counts}"
+        )
+    validate_schema_instance(contract, CONTRACT_SCHEMA, "public contract")
+    return {**counts, "documented_ids": len(documented_id_counts)}
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
