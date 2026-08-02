@@ -5,19 +5,19 @@ document_count: 175
 scope: Tracked Markdown at source_commit, excluding dot-prefixed tool/config paths; filesystem caches
   are never traversed.
 classification_summary:
-  review: 95
+  review: 90
   actions:
     archive_public: 1
     generated_reference: 2
     keep_in_repo: 54
     merge_into: 4
-    migrate_preserve: 6
-    migrate_rewrite: 7
+    migrate_preserve: 10
+    migrate_rewrite: 8
     retain_third_party: 6
-    review: 95
+    review: 90
   migration_statuses:
-    classified: 68
-    inventoried: 95
+    classified: 73
+    inventoried: 90
     verified: 12
 documents:
 - original_path: CODE_OF_CONDUCT.md
@@ -2542,146 +2542,168 @@ documents:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-examine
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/examine-actions/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.examine-actions
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_extended
+  upstream_relation: forked_and_locally_extended
   merge_target: null
   source_paths:
-  - doc/JSON/EXAMINE.md
-  source_symbols: []
+  - src/iexamine.cpp
+  - src/iexamine_actors.cpp
+  - src/mapdata.cpp
+  - tests/iexamine_test.cpp
+  source_symbols:
+  - iexamine_functions_from_string
+  - appliance_convert_examine_actor::load
+  - cardreader_examine_actor::load
+  - eoc_examine_actor::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 301 行同时记录硬编码 examine_action 和四类 examine actor；2026-07 增加数组动作与 CCB fertilize_terrain 文档，且当前 mapdata/actor
+    loader 可核验。
+  migration_batch: phase-1-json
 - original_path: doc/JSON/FACTIONS.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/npc-factions.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-factions
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/npc-factions/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.npc-factions
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_contract_with_tests
   merge_target: null
   source_paths:
-  - doc/JSON/FACTIONS.md
-  source_symbols: []
+  - src/faction.cpp
+  - src/faction.h
+  - data/json/npcs/factions.json
+  - tests/faction_price_rules_test.cpp
+  source_symbols:
+  - faction_template::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 115 行覆盖 faction 字段、数值尺度、价格规则与非对称关系；当前 faction_template loader、核心数据和价格规则测试均存在。
+  migration_batch: phase-1-json
 - original_path: doc/JSON/FACTION_MISSIONS.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/faction-missions.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-faction-missions
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/faction-missions/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.faction-missions
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_partial_json_contract
   merge_target: null
   source_paths:
-  - doc/JSON/FACTION_MISSIONS.md
-  source_symbols: []
+  - src/faction_mission.cpp
+  - src/faction_camp.cpp
+  - data/json/faction_missions.json
+  - tests/faction_camp_test.cpp
+  source_symbols:
+  - faction_mission::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 正文明确说明任务仍大多硬编码；页面必须区分 JSON 描述字段与 C++ 行为，不能暗示完全数据驱动。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 49 行是紧凑 faction_mission 字段表和示例；当前 loader/data 存在，但实际任务执行仍集中在 faction_camp.cpp。
+  migration_batch: phase-2-json
 - original_path: doc/JSON/GUIDE_COMESTIBLES.md
-  target_path: null
+  target_path: docs/zh_CN/how-to/json/comestibles.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-guide-comestibles
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/how-to/json/comestibles/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.comestibles-placement
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: b1ee97987589450da70f30ee2feed12c9d18f479
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_directory_convention
   merge_target: null
   source_paths:
-  - doc/JSON/GUIDE_COMESTIBLES.md
-  source_symbols: []
+  - src/item_factory.cpp
+  - data/json/items/comestibles/other.json
+  - data/json/items/comestibles/meat_dishes.json
+  - tests/comestible_test.cpp
+  source_symbols:
+  - islot_comestible::deserialize
+  - itype::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 正文列出的 meat_dishes_human.json 当前不存在；目录路由是约定而非 JSON 契约，需从 Git index 生成或测试。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 67 行仅说明食物应放入哪个文件，技术字段很少；大部分目录仍在，但至少一个文件名已漂移，适合改写为经 Git 跟踪列表验证的操作指南。
+  migration_batch: phase-2-json
 - original_path: doc/JSON/HELP_MENU.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/help-menu.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-help-menu
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/help-menu/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.help-menu
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_contract_with_core_data
   merge_target: null
   source_paths:
-  - doc/JSON/HELP_MENU.md
-  source_symbols: []
+  - src/help.cpp
+  - src/help.h
+  - data/core/help.json
+  source_symbols:
+  - help::load
+  - help::load_object
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 41 行完整说明 help 类型、排序、颜色/键位/特殊标签和示例；当前 help loader 与 data/core/help.json 直接对应。
+  migration_batch: phase-2-json
 - original_path: doc/JSON/ITEM.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/items/index.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - LunaGlaze
