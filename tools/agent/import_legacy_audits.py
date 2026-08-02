@@ -182,3 +182,84 @@ def retained_record(
         "evidence": [evidence],
         "migration_batch": None,
     }
+
+def reviewed_record(
+    base: dict,
+    audit: dict,
+    anomalies: list[dict],
+    authoritative_contributors: list[object] | None = None,
+) -> dict:
+    path = base["original_path"]
+    if authoritative_contributors:
+        contributor_source = authoritative_contributors
+    elif audit.get("contributors"):
+        contributor_source = list(audit["contributors"])
+    else:
+        contributor_source = list(base.get("contributors", []))
+    contributors, rejected_count = clean_identities(
+        path,
+        list(base.get("contributors", [])),
+        contributor_source,
+        anomalies,
+    )
+    action = audit.get("action", audit.get("recommended_action"))
+    evidence = evidence_list(audit.get("evidence"))
+    if not evidence:
+        raise ValueError(f"audit has no evidence: {path}")
+    archive_reason = audit.get("archive_reason")
+    if action == "archive_public" and not archive_reason:
+        archive_reason = evidence[0]
+    priority = audit["priority"]
+    domain = audit["domain"]
+    target_path = site_target(audit.get("target_path"))
+    if action in {"keep_in_repo", "retain_third_party"}:
+        target_path = path
+    source_paths = unique_strings(list(audit.get("source_paths", [])))
+    if not source_paths:
+        source_paths = [path]
+    if any("obj-lua" in Path(item).parts for item in source_paths):
+        raise ValueError(f"obj-lua is forbidden in source_paths for {path}")
+    correction = AUDIT_CORRECTIONS.get(path, {})
+    source_paths = unique_strings(
+        [*source_paths, *correction.get("add_source_paths", [])]
+    )
+    source_symbols = unique_strings(
+        list(
+            correction.get(
+                "source_symbols",
+                audit.get("source_symbols", []),
+            )
+        )
+    )
+    if correction:
+        evidence.append(
+            "Import-time source-symbol correction was verified against the "
+            "tracked implementation."
+        )
+    return {
+        "original_path": path,
+        "target_path": target_path,
+        "source_commit": base["source_commit"],
+        "contributors": contributors,
+        "contributor_anomaly_count": rejected_count,
+        "license": audit.get("license", base["license"]),
+        "action": action,
+        "archive_reason": archive_reason,
+        "replacement": audit.get("replacement"),
+        "migration_status": "classified",
+        "history_strategy": audit["history_strategy"],
+        "stable_document_id": audit["stable_document_id"],
+        "domain": domain,
+        "priority": priority,
+        "last_applicable_commit": audit.get("last_applicable_commit"),
+        "ccb_specificity": audit["ccb_specificity"],
+        "upstream_relation": audit["upstream_relation"],
+        "merge_target": audit.get("merge_target"),
+        "source_paths": source_paths,
+        "source_symbols": source_symbols,
+        "translation_required": bool(audit["translation_required"]),
+        "include_in_ai_index": bool(audit["include_in_ai_index"]),
+        "blockers": unique_strings(list(audit.get("blockers", []))),
+        "evidence": evidence,
+        "migration_batch": f"phase-{priority[1:]}-{domain}",
+    }
