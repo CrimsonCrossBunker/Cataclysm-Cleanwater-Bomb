@@ -447,6 +447,14 @@
     "flags": [ "SEES", "HEARS", "NO_BREATHE", "PUSH_MON", "GROUP_BASH" ]
   },
   {
+    "id": "mon_debug_group_bash_no_damage",
+    "type": "MONSTER",
+    "copy-from": "mon_debug_memory",
+    "name": { "str": "harmless memory", "str_pl": "harmless memories" },
+    "melee_dice": 0,
+    "melee_dice_sides": 0
+  },
+  {
     "id": "mon_test_weakpoint_mon",
     "type": "MONSTER",
     "copy-from": "mon_test_zombie_cop",
