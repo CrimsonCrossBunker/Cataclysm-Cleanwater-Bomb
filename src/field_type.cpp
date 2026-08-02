@@ -302,6 +302,12 @@ void field_type::load( const JsonObject &jo, std::string_view )
     optional( jo, was_loaded, "is_splattering", is_splattering, false );
     optional( jo, was_loaded, "dirty_transparency_cache", dirty_transparency_cache, false );
     optional( jo, was_loaded, "has_fire", has_fire, false );
+    if( jo.has_object( "fire_reaction" ) ) {
+        JsonObject jfr = jo.get_object( "fire_reaction" );
+        optional( jfr, was_loaded, "degrade_at", fire_reaction.degrade_at, 0 );
+        optional( jfr, was_loaded, "clear_at", fire_reaction.clear_at, 0 );
+        optional( jfr, was_loaded, "interval", fire_reaction.interval, 1_minutes );
+    }
     optional( jo, was_loaded, "has_acid", has_acid, false );
     optional( jo, was_loaded, "has_elec", has_elec, false );
     optional( jo, was_loaded, "has_fume", has_fume, false );
@@ -371,6 +377,23 @@ void field_type::finalize()
 
 void field_type::check() const
 {
+    if( fire_reaction.degrade_at < 0 || fire_reaction.degrade_at > 3 ||
+        fire_reaction.clear_at < 0 || fire_reaction.clear_at > 3 ) {
+        debugmsg( "Field type %s has fire reaction thresholds outside the range 0 to 3.",
+                  id.c_str() );
+    }
+    if( fire_reaction.degrade_at > 0 && fire_reaction.interval <= 0_turns ) {
+        debugmsg( "Field type %s has a non-positive fire reaction interval.", id.c_str() );
+    }
+    if( fire_reaction.degrade_at > 0 && fire_reaction.clear_at > 0 &&
+        fire_reaction.clear_at <= fire_reaction.degrade_at ) {
+        debugmsg( "Field type %s clears at or below its fire reaction degrade threshold.", id.c_str() );
+    }
+    if( has_fire && ( fire_reaction.degrade_at > 0 || fire_reaction.clear_at > 0 ) ) {
+        debugmsg( "Field type %s has both has_fire and fire_reaction; the reaction is ignored.",
+                  id.c_str() );
+    }
+
     int i = 0;
     for( const field_intensity_level &intensity_level : intensity_levels ) {
         i++;
