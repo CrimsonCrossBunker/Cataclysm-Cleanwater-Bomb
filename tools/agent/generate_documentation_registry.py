@@ -70,3 +70,18 @@ def tracked_paths() -> list[str]:
     if any("obj-lua" in Path(path).parts for path in paths):
         raise RuntimeError("obj-lua must never enter documentation metadata")
     return paths
+
+def is_documentation_path(path: str) -> bool:
+    if path.lower().endswith(".md"):
+        return True
+    if path in AGENT_METADATA or path in API_CONTRACTS:
+        return True
+    if path.startswith("data/lua/reference/") and path.endswith(".json"):
+        return True
+    if path.startswith("doc/migration/") and path.endswith((".json", ".yml")):
+        return True
+    return False
+
+def registry_id(path: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", path.lower()).strip("-")
+    return "repo." + slug
