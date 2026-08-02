@@ -378,7 +378,7 @@ void suffer::while_grabbed( Character &you )
             crowd++;
             const int bash_damage = static_cast<int>( mon->type->melee_damage.type_damage( damage_bash ) ) +
                                     mon->type->melee_dice * mon->type->melee_sides;
-            crowd_pressure += std::max( 1, bash_damage );
+            crowd_pressure += std::max( 0, bash_damage );
             add_msg_debug( debugmode::DF_CHARACTER, "Crowd pressure check: monster %s found, crowd size %d",
                            mon->name(), crowd );
         }
