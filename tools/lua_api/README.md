@@ -1,4 +1,40 @@
-# Lua API coverage tools
+# Lua API contract and coverage tools
+
+## CCB Lua API v5 public denominator
+
+`generate_public_contract.py` joins the authoritative native registrations,
+LuaLS declarations, Manifest Schema, event specifications, hook/callback
+registries, enum registry, and the existing native inventory. It produces:
+
+- `data/lua/reference/ccb_public_api_v5.json`, the immutable generated input
+  for CCB-Docs API pages; and
+- `data/lua/reference/ccb_public_api_v5_coverage.json`, the unique-symbol
+  denominator and missing-documentation report.
+
+Every callable contains parameter, return, error mode, API version,
+introduction-status, deprecation, capability, source, example, and generated
+documentation-id metadata. Dynamic enum values remain explicitly runtime
+generated rather than being guessed. The generator also enforces native and
+LuaLS member parity, all 113 native events and 242 fields, all 52 hooks, all
+38 callback kind-method pairs, and Schema/runtime/LuaLS capability parity.
+
+```sh
+python3 tools/lua_api/generate_public_contract.py
+tools/format/json_formatter.cgi data/lua/reference/ccb_public_api_v5.json
+tools/format/json_formatter.cgi data/lua/reference/ccb_public_api_v5_coverage.json
+python3 tools/lua_api/generate_public_contract.py --check
+python3 tools/lua_api/check_public_contract.py
+python3 tools/lua_api/check_examples.py --require-luac
+python3 -m unittest discover -s tools/lua_api -p 'test_*.py'
+```
+
+Generated JSON must not be edited by hand. The coverage file distinguishes
+100% inventory coverage from CCB-Docs publication coverage; the latter stays
+`null` until the stacked documentation PR publishes the generated reference.
+`check_public_contract.py` validates both generated outputs against their
+Draft 2020-12 Schemas as well as rebuilding them from every authority.
+
+## CBN comparison inventory
 
 `generate_cbn_inventory.py` records the public Lua surface exposed by a
 specific Cataclysm: Bright Nights checkout.  The checked-in snapshot is a

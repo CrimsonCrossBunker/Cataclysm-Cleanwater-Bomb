@@ -62,6 +62,11 @@ entries:
     tracked: true
     generated_by: python3 tools/lua_api/generate_ccb_inventory.py
     validation_id: lua-contract
+  - id: ccb-lua-v5-public-contract
+    paths: [data/lua/reference/ccb_public_api_v5.json, data/lua/reference/ccb_public_api_v5_coverage.json]
+    tracked: true
+    generated_by: python3 tools/lua_api/generate_public_contract.py
+    validation_id: lua-contract
   - id: shader-artifacts
     paths: [data/shaders/*.spv, data/shaders/*.dxil, data/shaders/*.msl, data/shaders/build-*.stamp]
     tracked: false

@@ -6,7 +6,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from .check_luals_declarations import check, validate_table_mappings
+try:
+    from .check_luals_declarations import check, validate_table_mappings
+except ImportError:
+    from check_luals_declarations import check, validate_table_mappings
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]

@@ -1,5 +1,5 @@
 {
-  "$schema": "../../../manifest.schema.json",
+  "$schema": "https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/raw/master/data/lua/manifest.schema.json",
   "id": "ccb_lua_v5_example",
   "version": "1.0.0",
   "api_version": 5,

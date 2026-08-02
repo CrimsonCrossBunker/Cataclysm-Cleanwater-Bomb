@@ -22,8 +22,8 @@ entries:
     risk_group: build
     risk_level: high
   - id: lua-public-contract
-    patterns: [src/catalua_ui_*, data/lua/manifest.schema.json, data/lua/types/ccb_api_v5.d.lua, data/lua/reference/*, tools/lua_api/*]
-    documentation_ids: []
+    patterns: [src/catalua*, src/event.h, data/lua/manifest.schema.json, data/lua/types/ccb_api_v5.d.lua, data/lua/reference/*, tools/lua_api/*]
+    documentation_ids: [api.lua.v5.overview, api.lua.v5.reference]
     generated_reference_impact: true
     risk_group: lua-api
     risk_level: high
