@@ -1,0 +1,67 @@
+schema_version: 1
+kind: agent_benchmark
+description: Offline routing benchmark; it measures context selection, not model quality.
+cases:
+  - id: repository-navigation
+    task: Locate the correct repository area and validation command.
+    files: [AGENTS.md]
+    expected_routes: [repository-navigation]
+    expected_paths: [AGENTS.md, ai/]
+    expected_documentation_ids: [architecture.project-map]
+    expected_validation_ids: [agent-context]
+  - id: cpp-bug
+    task: Diagnose a C++ assertion bug.
+    files: [src/game.cpp, tests/force_load_game_test.cpp]
+    expected_routes: [cpp-bug]
+    expected_paths: [src/, tests/]
+    expected_documentation_ids: [validation.debugging]
+    expected_validation_ids: [cpp-format, cpp-tests]
+  - id: json-content
+    task: Add JSON item content without breaking stable IDs.
+    files: [data/json/items/melee/misc.json]
+    expected_routes: [json-content]
+    expected_paths: [data/json/]
+    expected_documentation_ids: [api.json.overview]
+    expected_validation_ids: [json-load]
+  - id: eoc
+    task: Add an EOC condition and effect with the correct talker context.
+    files: [src/condition.cpp]
+    expected_routes: [eoc]
+    expected_paths: [src/condition.cpp]
+    expected_documentation_ids: [api.eoc.conditions, api.eoc.effects]
+    expected_validation_ids: [json-load]
+  - id: lua-api
+    task: Extend the Lua API manifest capability contract.
+    files: [data/lua/manifest.schema.json]
+    expected_routes: [lua-api]
+    expected_paths: [data/lua/]
+    expected_documentation_ids: [api.lua.v5.reference]
+    expected_validation_ids: [lua-contract]
+  - id: upstream-port
+    task: Port an upstream CBN fix while preserving CCB differences.
+    files: [CONTRIBUTING.md]
+    expected_routes: [upstream-port]
+    expected_paths: [SYNC_EXCLUDED_PRS.md]
+    expected_documentation_ids: [maintenance.upstream-sync]
+    expected_validation_ids: [cpp-tests, json-load]
+  - id: save-compatibility
+    task: Change save serialization and migrate old worlds.
+    files: [src/savegame_json.cpp]
+    expected_routes: [save-compatibility]
+    expected_paths: [src/savegame_json.cpp]
+    expected_documentation_ids: [compatibility.save]
+    expected_validation_ids: [cpp-tests]
+  - id: generated-file-detection
+    task: Detect whether an inventory is generated before editing it.
+    files: [ai/generated-files.yml]
+    expected_routes: [generated-file-detection]
+    expected_paths: [ai/generated-files.yml]
+    expected_documentation_ids: [contributing.documentation-policy]
+    expected_validation_ids: [agent-context]
+  - id: documentation-impact
+    task: Determine documentation impact and translation drift scope.
+    files: [ai/docs-impact.yml]
+    expected_routes: [documentation-impact]
+    expected_paths: [ai/docs-impact.yml]
+    expected_documentation_ids: [contributing.documentation-policy]
+    expected_validation_ids: [agent-context]
