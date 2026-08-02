@@ -1,3 +1,16 @@
+<!-- CCB-DOC-MOVED-START -->
+> [!IMPORTANT] **Moved / 已迁移**
+>
+> Stable document IDs and last commits / 稳定文档 ID 与最后 commit:
+> - `legacy.data-json-loading-order`: `0378ca2b84303cf614c617c9d9eaa50138cd21ff`
+> - `legacy.doc-json-json-loading-order`: `0378ca2b84303cf614c617c9d9eaa50138cd21ff`
+> 中文: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/loading-order/
+> English: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/loading-order/
+> Moved date / 迁移日期: `2026-08-02`
+> The maintained documentation now lives in CCB-Docs.
+> This in-repository body is no longer maintained. The historical body is retained through `2027-02-02` and may then be removed; this bilingual entry banner remains permanently.
+> 本仓库正文不再维护；历史正文至少保留到上述日期，之后可删除，但本双语迁移入口永久保留。
+<!-- CCB-DOC-MOVED-END -->
 # JSON Loading Order #
 
 All files here in data/json are read eventually, but the order in which they're
