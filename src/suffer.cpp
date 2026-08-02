@@ -364,7 +364,7 @@ void suffer::while_grabbed( Character &you )
     map &here = get_map();
     creature_tracker &creatures = get_creature_tracker();
     int crowd = 0;
-    int crowd_pressure = 0;
+    float crowd_pressure = 0.0f;
     int impassable_ter = 0;
     // This looks scary, but it's really just casting the enum to an integer. So medium size characters == 3.
     int your_size = static_cast<std::underlying_type_t<creature_size>>( you.get_size() );
@@ -376,9 +376,9 @@ void suffer::while_grabbed( Character &you )
         const monster *const mon = creatures.creature_at<monster>( dest );
         if( mon && mon->has_flag( mon_flag_GROUP_BASH ) ) {
             crowd++;
-            const int bash_damage = static_cast<int>( mon->type->melee_damage.type_damage( damage_bash ) ) +
-                                    mon->type->melee_dice * mon->type->melee_sides;
-            crowd_pressure += std::max( 0, bash_damage );
+            const float bash_damage = mon->type->melee_damage.type_damage( damage_bash ) +
+                                      mon->type->melee_dice * mon->type->melee_sides;
+            crowd_pressure += std::max( 0.0f, bash_damage );
             add_msg_debug( debugmode::DF_CHARACTER, "Crowd pressure check: monster %s found, crowd size %d",
                            mon->name(), crowd );
         }
@@ -406,10 +406,11 @@ void suffer::while_grabbed( Character &you )
     if( impassable_ter ) {
         you.add_msg_if_player( m_bad, _( "You're crushed against the walls!" ) );
         crowd += impassable_ter;
-        crowd_pressure += impassable_ter * std::max( 1, crowd_pressure / ( crowd - impassable_ter ) );
+        crowd_pressure += impassable_ter * std::max( 1.0f,
+                          crowd_pressure / ( crowd - impassable_ter ) );
     }
 
-    const float pressure_per_part = static_cast<float>( crowd_pressure ) / 4;
+    const float pressure_per_part = crowd_pressure / 4;
     bool pressure_absorbed = true;
     const auto absorb_bodypart_pressure = [&]( const bodypart_id & bp, float pressure_amount ) {
         damage_instance pressure( damage_bash, pressure_amount );
