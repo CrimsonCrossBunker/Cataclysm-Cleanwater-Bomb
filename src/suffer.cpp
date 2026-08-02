@@ -27,6 +27,7 @@
 #include "creature.h"
 #include "creature_tracker.h"
 #include "debug.h"
+#include "damage.h"
 #include "dialogue.h"
 #include "effect.h"
 #include "effect_on_condition.h"
@@ -84,6 +85,7 @@ static const efftype_id effect_adrenaline( "adrenaline" );
 static const efftype_id effect_asthma( "asthma" );
 static const efftype_id effect_blind( "blind" );
 static const efftype_id effect_cig( "cig" );
+static const efftype_id effect_crowd_crushed( "crowd_crushed" );
 static const efftype_id effect_datura( "datura" );
 static const efftype_id effect_deaf( "deaf" );
 static const efftype_id effect_disabled( "disabled" );
@@ -137,6 +139,9 @@ static const json_character_flag json_flag_SUNBURN( "SUNBURN" );
 static const json_character_flag json_flag_SUNBURN_SUPERNATURAL( "SUNBURN_SUPERNATURAL" );
 static const json_character_flag
 json_flag_SUNBURN_SUPERNATURAL_REDUCTION( "SUNBURN_SUPERNATURAL_REDUCTION" );
+
+static const damage_type_id damage_bash( "bash" );
+static const bodypart_str_id body_part_neck( "neck" );
 
 static const morale_type morale_feeling_bad( "morale_feeling_bad" );
 static const morale_type morale_feeling_good( "morale_feeling_good" );
@@ -358,6 +363,7 @@ void suffer::while_grabbed( Character &you )
     map &here = get_map();
     creature_tracker &creatures = get_creature_tracker();
     int crowd = 0;
+    int crowd_pressure = 0;
     int impassable_ter = 0;
     // This looks scary, but it's really just casting the enum to an integer. So medium size characters == 3.
     int your_size = static_cast<std::underlying_type_t<creature_size>>( you.get_size() );
@@ -369,6 +375,9 @@ void suffer::while_grabbed( Character &you )
         const monster *const mon = creatures.creature_at<monster>( dest );
         if( mon && mon->has_flag( mon_flag_GROUP_BASH ) ) {
             crowd++;
+            const int bash_damage = static_cast<int>( mon->type->melee_damage.type_damage( damage_bash ) ) +
+                                    mon->type->melee_dice * mon->type->melee_sides;
+            crowd_pressure += std::max( 1, bash_damage );
             add_msg_debug( debugmode::DF_CHARACTER, "Crowd pressure check: monster %s found, crowd size %d",
                            mon->name(), crowd );
         }
@@ -379,6 +388,8 @@ void suffer::while_grabbed( Character &you )
 
     add_msg_debug( debugmode::DF_CHARACTER,
                    "Crowd pressure sum: character size requires %d grabbers, found %d ", crush_grabs_req, crowd );
+
+    you.remove_effect( effect_crowd_crushed );
 
     // if we aren't near enough monsters with GROUP_BASH we won't suffocate
     if( crowd < crush_grabs_req ) {
@@ -394,7 +405,26 @@ void suffer::while_grabbed( Character &you )
     if( impassable_ter ) {
         you.add_msg_if_player( m_bad, _( "You're crushed against the walls!" ) );
         crowd += impassable_ter;
+        crowd_pressure += impassable_ter * std::max( 1, crowd_pressure / ( crowd - impassable_ter ) );
     }
+
+    const std::array<bodypart_id, 4> breathing_parts = { body_part_torso.id(), body_part_neck.id(),
+        body_part_mouth.id(), body_part_eyes.id() };
+    const float pressure_per_part = static_cast<float>( crowd_pressure ) / breathing_parts.size();
+    bool pressure_absorbed = true;
+    for( const bodypart_id &bp : breathing_parts ) {
+        damage_instance pressure( damage_bash, pressure_per_part );
+        you.absorb_hit( weakpoint_attack(), bp, pressure );
+        if( pressure.total_damage() > 0.0f ) {
+            pressure_absorbed = false;
+        }
+    }
+
+    if( pressure_absorbed ) {
+        return;
+    }
+
+    you.add_effect( effect_crowd_crushed, 2_turns );
 
     if( crowd == crush_grabs_req ) {
         // only a chance to lose breath at minimum grabs
