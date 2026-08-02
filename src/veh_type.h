@@ -18,6 +18,7 @@
 #include "color.h"
 #include "hsv_color.h"
 #include "lightmap.h"
+#include "auto_process.h"
 #include "coordinates.h"
 #include "memory_fast.h"
 #include "point.h"
@@ -109,7 +110,6 @@ enum vpart_bitflags : int {
     VPFLAG_AUTOCLAVE,
     VPFLAG_WASHING_MACHINE,
     VPFLAG_DISHWASHER,
-    VPFLAG_AUTO_COOKER,
     VPFLAG_FLUIDTANK,
     VPFLAG_REACTOR,
     VPFLAG_RAIL,
@@ -368,6 +368,9 @@ class vpart_info
         std::optional<vpslot_balloon> balloon_info;
         std::optional<vpslot_ladder> ladder_info;
         std::optional<vpslot_terrain_transform> transform_terrain_info;
+
+        /** Automatic processing station capabilities (auto-craft). */
+        std::optional<auto_process_station> auto_process;
 
         //Enchantments
         std::vector<enchantment_id> enchantments;

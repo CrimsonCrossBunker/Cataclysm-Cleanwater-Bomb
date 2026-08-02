@@ -586,6 +586,16 @@ const std::optional<time_point> &monster::get_baby_timer() const
     return baby_timer;
 }
 
+time_point monster::get_udder_timer() const
+{
+    return udder_timer;
+}
+
+void monster::set_udder_timer( const time_point &t )
+{
+    udder_timer = t;
+}
+
 void monster::try_reproduce()
 {
     if( !reproduces ) {

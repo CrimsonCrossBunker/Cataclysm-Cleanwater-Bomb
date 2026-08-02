@@ -718,7 +718,17 @@ CBMs can be defined like this:
 }
 "smoking_result": "dry_meat",     // Food that results from drying this food in a smoker
 "petfood": [ "FUNGALFRUIT", "MIGOFOOD" ] // (Optional) Pet food categories this item is in.
+"auto_process": [                 // (Optional) Automatic processing rules for auto-craft stations (vehicle parts or furniture with a matching "auto_process" station definition).  Array of objects:
+  {
+    "action": "COOK",             // Action type this rule responds to (open string; the station must list it in its "actions").  Must be unique within one item type: rules sharing an action share the progress variable
+    "energy": "300 kJ",           // (Optional, default 0 J) Energy the station must accumulate on the item before it transforms.  Must be positive — a zero-cost rule can never trigger.  For count_by_charges items this is the cost per charge, so a stack of N charges needs N times the energy
+    "results": [ "meat_cooked" ], // Item types produced on completion (must not be empty).  Charges/rot/flags are inherited from the input (charges scale to count_by_charges results); progress for other actions is preserved
+    "completion_eoc": "eoc_id"    // (Optional) Effect-on-condition activated on the result item when the transformation completes.  Must not add/remove/relocate items being processed or vehicle parts; for items nested inside a container on furniture stations the EOC gets no item talker
+  }
+]
 ```
+Defining `"auto_process": []` explicitly clears rules inherited via `copy-from`.
+If the processed item has container pockets, anything stored inside it is spilled into the station's cargo or onto the furniture's tile when the transformation completes (the result item does not keep the contents).
 
 
 ### Containers

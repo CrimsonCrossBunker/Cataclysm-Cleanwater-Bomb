@@ -18,6 +18,7 @@
 
 #include "body_part_set.h"
 #include "bodypart.h"
+#include "auto_process.h"
 #include "calendar.h"
 #include "color.h" // nc_color
 #include "coords_fwd.h"
@@ -241,11 +242,6 @@ struct islot_comestible {
 
         /** Reference to item that will be received after smoking current item */
         itype_id smoking_result;
-
-        /** Reference to item that will be received after cooking current item in an electric cooker */
-        itype_id cook_result;
-        /** Energy required to cook the item in an electric cooker */
-        units::energy cook_cost_energy = 0_J;
 
         /*
         * For the few rare cases where default nutrition needs to be accessible. Prefer using
@@ -1442,6 +1438,9 @@ struct itype {
         cata::value_ptr<relic> relic_data;
         cata::value_ptr<islot_milling> milling_data;
         /*@}*/
+
+        /** Automatic processing rules for this item type (auto-craft stations). */
+        std::vector<auto_process_rule> auto_process;
 
         /** Action to take BEFORE the item is placed on map. If it returns non-zero, item won't be placed. */
         use_function drop_action;

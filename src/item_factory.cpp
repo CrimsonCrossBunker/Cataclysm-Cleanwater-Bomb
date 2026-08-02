@@ -2356,6 +2356,24 @@ void Item_factory::check_definitions() const
             msg +=  "item has unknown ascii_picture.";
         }
 
+        std::unordered_set<std::string> auto_process_actions;
+        for( const auto_process_rule &rule : type->auto_process ) {
+            if( rule.results.empty() ) {
+                msg += "auto_process rule has empty results\n";
+            }
+            if( rule.energy_cost <= 0_J ) {
+                msg += "auto_process rule has non-positive energy cost\n";
+            }
+            if( !auto_process_actions.insert( rule.action ).second ) {
+                msg += string_format( "duplicate auto_process action %s\n", rule.action );
+            }
+            for( const itype_id &result : rule.results ) {
+                if( !has_template( result ) ) {
+                    msg += string_format( "invalid auto_process result %s\n", result.c_str() );
+                }
+            }
+        }
+
         for( const pocket_data &data : type->pockets ) {
             std::string pocket_error = data.check_definition();
             if( !pocket_error.empty() ) {
@@ -2731,12 +2749,6 @@ void Item_factory::check_definitions() const
                 !has_template( type->comestible->smoking_result ) ) {
                 msg += string_format( "invalid smoking_result %s\n",
                                       type->comestible->smoking_result.c_str() );
-            }
-            if( !type->comestible->cook_result.is_null() &&
-                !type->comestible->cook_result.is_empty() &&
-                !has_template( type->comestible->cook_result ) ) {
-                msg += string_format( "invalid cook_result %s\n",
-                                      type->comestible->cook_result.c_str() );
             }
             if( type->comestible->rot_spawn.rot_spawn_monster != mtype_id::NULL_ID() &&
                 !type->comestible->rot_spawn.rot_spawn_monster.is_valid() ) {
@@ -3806,9 +3818,6 @@ void islot_comestible::deserialize( const JsonObject &jo )
     optional( jo, was_loaded, "cooks_like", cooks_like );
     optional( jo, was_loaded, "eats_like", eats_like );
     optional( jo, was_loaded, "smoking_result", smoking_result, itype_id::NULL_ID() );
-    optional( jo, was_loaded, "cook_result", cook_result, itype_id::NULL_ID() );
-    optional( jo, was_loaded, "cook_cost_energy", cook_cost_energy,
-              units_bound_reader<units::energy> {0_kJ} );
     optional( jo, was_loaded, "petfood", petfood, string_reader{} );
     optional( jo, was_loaded, "monotony_penalty", monotony_penalty, -1 );
     optional( jo, was_loaded, "calories", default_nutrition.calories );
@@ -3829,9 +3838,6 @@ void islot_comestible::deserialize( const JsonObject &jo )
 
     if( smoking_result != itype_id::NULL_ID() && comesttype == "INVALID" ) {
         jo.throw_error( "comestible_type INVALID cannot have smoking_result" );
-    }
-    if( cook_result != itype_id::NULL_ID() && comesttype == "INVALID" ) {
-        jo.throw_error( "comestible_type INVALID cannot have cook_result" );
     }
 }
 
@@ -4631,6 +4637,26 @@ void itype::load( const JsonObject &jo, std::string_view src )
     optional( jo, was_loaded, "tick_action", tick_action, use_function_reader_map{ ammo_scale, src } );
     optional( jo, was_loaded, "countdown_action", countdown_action, use_function_reader_single{ ammo_scale, src } );
     optional( jo, was_loaded, "drop_action", drop_action, use_function_reader_single{ ammo_scale, src } );
+
+    // Automatic processing rules (auto-craft stations)
+    if( jo.has_array( "auto_process" ) ) {
+        // Replace inherited rules rather than appending to copy-from parents
+        auto_process.clear();
+        for( const JsonObject &jobj : jo.get_array( "auto_process" ) ) {
+            auto_process_rule rule;
+            mandatory( jobj, was_loaded, "action", rule.action );
+            optional( jobj, was_loaded, "energy", rule.energy_cost,
+                      units_bound_reader<units::energy> {0_kJ}, 0_J );
+            mandatory( jobj, was_loaded, "results", rule.results );
+            if( rule.results.empty() ) {
+                // Empty results would replace the item with a "null" ghost at
+                // runtime; there is no legitimate use for it.
+                jobj.throw_error( "auto_process rule results must not be empty" );
+            }
+            optional( jobj, was_loaded, "completion_eoc", rule.completion_eoc );
+            auto_process.push_back( rule );
+        }
+    }
 
     optional( jo, was_loaded, "symbol", sym );
 

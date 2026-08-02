@@ -17,6 +17,7 @@
 #include "calendar.h"
 #include "clone_ptr.h"
 #include "color.h"
+#include "auto_process.h"
 #include "coords_fwd.h"
 #include "enum_bitset.h"
 #include "game_constants.h"
@@ -793,6 +794,8 @@ struct furn_t : map_data_common_t {
     furn_str_id lockpick_result; // Lockpick action: transform when successfully lockpicked
     std::optional<map_furn_bash_info> bash;
     std::optional<map_furn_deconstruct_info> deconstruct;
+    /** Automatic processing station capabilities (auto-craft). */
+    std::optional<auto_process_station> auto_process;
     itype_id crafting_pseudo_item;
     units::volume keg_capacity = 0_ml;
 

@@ -2802,6 +2802,24 @@ Vehicle components when installed on a vehicle.
                               // ENABLED_DRAINS_EPOWER flag and for the item to be turned on.
                               // Solar panel power gneration is modified by sun angle.
                               // When sun is at 90 degrees the panel produces the full epower.
+"auto_process": {             // (Optional) Makes this part an auto-process station: while enabled,
+                              // it injects its epower as processing energy into matching items in
+                              // its cargo (see "auto_process" in ITEM.md).
+                              // Each turn processes at most ONE item (put items in different parts
+                              // to process multiple simultaneously).
+                              // While the vehicle is off-map, processing and power draw are
+                              // settled in one catch-up pass when it is processed again; on-map
+                              // vehicles are advanced every turn.  Catch-up discharges each
+                              // station only for the energy actually injected into its cargo
+                              // (a station whose cargo finished early switches off), while
+                              // other enabled drains (e.g. fridges) draw for the full span.
+                              // Grid-connected off-map vehicles (linked by jumper cables) are
+                              // drained every turn but gain NO processing progress.
+  "actions": [ "COOK" ],      // Action types this station can perform (matched against item rules)
+  "energy_mult": 1.0,         // (Optional, default 1.0) Multiplier applied to item energy costs; must be > 0
+  "completion_eoc": "eoc_id", // (Optional) EOC activated on the vehicle when a transformation completes
+  "advance_eoc": "eoc_id"     // (Optional) EOC activated on the vehicle each turn while processing (on-map turns only, never during off-map catch-up)
+},
 "item": "wheel",              // The item used to install this part, and the item obtained when
                               // removing this part.
 "remove_as": "solar_panel",   // Overrides "item", item returned when removing this part.
@@ -3457,6 +3475,27 @@ Strength required to move the furniture around. Negative values indicate an unmo
 #### `crafting_pseudo_item`
 
 (Optional) Id of an item (tool) that will be available for crafting when this furniture is range (the furniture acts as an item of that type).
+
+#### `auto_process`
+
+(Optional) Makes this furniture an auto-process station.  Every turn it injects its
+`power` as processing energy into matching items lying on its tile (see
+`"auto_process"` in ITEM.md).  Items are processed **serially**: only the first
+pending item on the tile is advanced each turn (putting N items on one tile does
+NOT multiply the throughput), matching both vehicle stations and off-map
+catch-up.  Items inside containers (e.g. backpacks) on the tile are also
+processed recursively.  Furniture stations are always on and do not draw from
+any power grid; `power` abstracts fuel or manual processes.
+
+```json
+"auto_process": {
+  "actions": [ "SMOKE" ],     // Action types this station can perform (matched against item rules)
+  "energy_mult": 1.0,         // (Optional, default 1.0) Multiplier applied to item energy costs
+  "power": "10 W",            // (Optional, default 0 W) Energy injected into items each turn
+  "completion_eoc": "eoc_id", // (Optional) EOC activated when this station completes a transformation
+  "advance_eoc": "eoc_id"     // (Optional) EOC activated each turn while the station is processing
+}
+```
 
 #### `workbench`
 
