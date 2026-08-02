@@ -136,5 +136,78 @@ def validate_example_mod() -> dict[str, int]:
     }
 
 
+def tracked_lua_files() -> list[Path]:
+    result = subprocess.run(
+        ["git", "ls-files", "-z", "--", "data/lua"],
+        cwd=REPOSITORY_ROOT,
+        check=True,
+        capture_output=True,
+    )
+    names = result.stdout.decode("utf-8").split("\0")
+    return [
+        REPOSITORY_ROOT / name
+        for name in names
+        if name.endswith(".lua")
+    ]
+
+
+def check_lua_syntax(require_luac: bool) -> tuple[int, str]:
+    executable = shutil.which("luac")
+    if executable is None:
+        if require_luac:
+            raise RuntimeError("luac is required but was not found")
+        return 0, "not-installed"
+    files = tracked_lua_files()
+    if not files:
+        raise RuntimeError("no tracked Lua files were found")
+    for path in files:
+        result = subprocess.run(
+            [executable, "-p", str(path)],
+            cwd=REPOSITORY_ROOT,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            details = (result.stderr or result.stdout).strip()
+            raise RuntimeError(f"Lua syntax failed for {path}: {details}")
+    version = subprocess.run(
+        [executable, "-v"], capture_output=True, text=True, check=True
+    )
+    return len(files), (version.stdout or version.stderr).strip()
+
+
+def check(require_luac: bool = False) -> dict[str, object]:
+    validate_manifest(BUILTIN_MANIFEST)
+    example = validate_example_mod()
+    lua_files, luac_version = check_lua_syntax(require_luac)
+    return {
+        "manifests": 2,
+        "example_lua_files": example["lua_files"],
+        "example_contract_symbols": example["contract_symbols"],
+        "tracked_lua_files": lua_files,
+        "luac": luac_version,
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--require-luac",
+        action="store_true",
+        help="fail instead of reporting when the Lua compiler is unavailable",
+    )
+    arguments = parser.parse_args()
+    summary = check(arguments.require_luac)
+    print(
+        "Lua examples verified: "
+        f"{summary['manifests']} manifests, "
+        f"{summary['example_lua_files']} example source files, "
+        f"{summary['example_contract_symbols']} public symbol references, "
+        f"{summary['tracked_lua_files']} tracked Lua syntax checks "
+        f"({summary['luac']})"
+    )
+    return 0
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
