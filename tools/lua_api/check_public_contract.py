@@ -80,5 +80,49 @@ def validate_schema_instance(
         ) from error
 
 
+def entries(
+    contract: dict[str, object],
+) -> Iterable[tuple[str, dict[str, object]]]:
+    for section in LIST_SECTIONS:
+        values = contract.get(section)
+        if not isinstance(values, list):
+            raise RuntimeError(f"contract section {section} must be an array")
+        for value in values:
+            if not isinstance(value, dict):
+                raise RuntimeError(
+                    f"contract section {section} contains a non-object")
+            yield section, value
+            if section == "classes":
+                for field in value.get("fields", []):
+                    yield "class_fields", field
+            if section == "events":
+                for field in value.get("fields", []):
+                    yield "event_fields", field
+
+
+def validate_source(source: object, identity: str) -> None:
+    if not isinstance(source, dict):
+        raise RuntimeError(f"{identity} has a non-object source reference")
+    path_value = source.get("path")
+    line = source.get("line")
+    authority = source.get("authority")
+    if not isinstance(path_value, str) or not path_value:
+        raise RuntimeError(f"{identity} has an invalid source path")
+    if not isinstance(line, int) or line < 1:
+        raise RuntimeError(f"{identity} has an invalid source line")
+    if not isinstance(authority, str) or not authority:
+        raise RuntimeError(f"{identity} has an invalid source authority")
+    path = REPOSITORY_ROOT / path_value
+    if not path.is_file():
+        raise RuntimeError(
+            f"{identity} source path does not exist: {path_value}")
+    line_count = len(path.read_text(
+        encoding="utf-8", errors="replace").splitlines())
+    if line > line_count:
+        raise RuntimeError(
+            f"{identity} source line {line} exceeds {path_value}:{line_count}"
+        )
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
