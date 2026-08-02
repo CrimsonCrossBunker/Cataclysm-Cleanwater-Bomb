@@ -1817,7 +1817,9 @@ class Character : public Creature, public visitable
         /** Removes a bionic from my_bionics[] */
         void remove_bionic( const bionic &bio );
         /** Adds a bionic to my_bionics[] */
-        bionic_uid add_bionic( const bionic_id &b, bionic_uid parent_uid = 0, bool suppress_debug = false );
+        bionic_uid add_bionic( const bionic_id &b, bionic_uid parent_uid = 0,
+                               bool suppress_debug = false,
+                               const std::optional<item> &source_item = std::nullopt );
         /**Calculate skill bonus from tiles in radius*/
         float env_surgery_bonus( int radius ) const;
         /** Calculate skill for (un)installing bionics */
@@ -1832,11 +1834,13 @@ class Character : public Creature, public visitable
         std::map<bodypart_id, int> bionic_installation_issues( const bionic_id &bioid ) const;
         /** Initialize all the values needed to start the operation player_activity */
         bool install_bionics( const itype &type, Character &installer, bool autodoc = false,
-                              int skill_level = -1 );
+                              int skill_level = -1,
+                              const std::optional<item> &source_item = std::nullopt );
         /**Success or failure of installation happens here*/
         void perform_install( const bionic_id &bid, bionic_uid upbio_uid, int difficulty, int success,
                               int pl_skill, const std::string &installer_name,
-                              const std::vector<trait_id> &trait_to_rem, const tripoint_bub_ms &patient_pos );
+                              const std::vector<trait_id> &trait_to_rem, const tripoint_bub_ms &patient_pos,
+                              const std::optional<item> &source_item = std::nullopt );
         void bionics_install_failure( const bionic_id &bid, const std::string &installer, int difficulty,
                                       int success, float adjusted_skill, const tripoint_bub_ms &patient_pos );
         /**

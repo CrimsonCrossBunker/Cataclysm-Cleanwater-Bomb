@@ -6628,6 +6628,7 @@ void iexamine::autodoc( Character &you, const tripoint_bub_ms &examp )
             if( patient.can_install_bionics( ( *itemtype ), installer, true, has_install_program ? 10 : -1 ) ) {
                 const time_duration duration = itemtype->bionic->difficulty * 20_minutes;
                 patient.introduce_into_anesthesia( duration, installer, needs_anesthesia );
+                std::optional<item> source_item = *bionic.get_item();
                 bionic.remove_item();
                 if( needs_anesthesia ) {
                     for( const auto &e : req_anesth.get_components() ) {
@@ -6640,7 +6641,8 @@ void iexamine::autodoc( Character &you, const tripoint_bub_ms &examp )
                 }
                 installer.mod_moves( -to_moves<int>( 1_minutes ) );
 
-                patient.install_bionics( ( *itemtype ), installer, true, has_install_program ? 10 : -1 );
+                patient.install_bionics( ( *itemtype ), installer, true, has_install_program ? 10 : -1,
+                                         source_item );
 
                 if( has_install_program ) {
                     you.consume_items( progs );

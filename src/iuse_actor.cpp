@@ -4764,7 +4764,7 @@ std::optional<int> install_bionic_actor::use( Character *p, item &it,
             p->consume_installation_requirement( it.type->bionic->id );
             p->consume_anesth_requirement( *it.type, *p );
         }
-        if( p->install_bionics( *it.type, *p, false ) ) {
+        if( p->install_bionics( *it.type, *p, false, -1, it ) ) {
             return 1;
         }
     }

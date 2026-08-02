@@ -969,11 +969,13 @@ class bionic_operation_activity_actor : public activity_actor
         //install
         bionic_operation_activity_actor( bool installing, int operation_success, bool operation_autodoc,
                                          int operation_skill, int operation_difficulty, bionic_id installed_bionic,
-                                         bionic_uid uninstalled_bionic, const std::string &installer_name = std::string() ) :
+                                         bionic_uid uninstalled_bionic, const std::string &installer_name = std::string(),
+                                         const std::optional<item> &source_item = std::nullopt ) :
             installing( installing ), operation_success( operation_success ),
             operation_autodoc( operation_autodoc ), operation_skill( operation_skill ),
             operation_difficulty( operation_difficulty ), installed_bionic( installed_bionic ),
-            uninstalled_bionic( uninstalled_bionic ), installer_name( installer_name ) {};
+            uninstalled_bionic( uninstalled_bionic ), installer_name( installer_name ),
+            source_item( source_item ) {};
 
         void start( player_activity &act, Character & ) override;
         void do_turn( player_activity &act, Character &who ) override;
@@ -997,6 +999,7 @@ class bionic_operation_activity_actor : public activity_actor
         bionic_id installed_bionic;
         bionic_uid uninstalled_bionic;
         std::string installer_name;
+        std::optional<item> source_item;
 };
 
 class read_activity_actor : public activity_actor

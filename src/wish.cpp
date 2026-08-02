@@ -426,7 +426,7 @@ void debug_menu::wishbionics( Character *you )
 
                     you->perform_install( bio, upbio_uid, difficulty, success, level, "NOT_MED",
                                           bio->canceled_mutations,
-                                          you->pos_bub() );
+                                          you->pos_bub(), std::nullopt );
                 }
                 break;
             }
