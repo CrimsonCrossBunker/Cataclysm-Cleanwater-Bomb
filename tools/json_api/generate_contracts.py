@@ -250,3 +250,153 @@ def parse_json_registrations(contents: str) -> list[dict[str, object]]:
     if not registrations:
         raise RuntimeError("no DynamicDataLoader registrations were found")
     return registrations
+
+def initializer_entries(
+    contents: str, marker: str, source_path: str
+) -> list[tuple[str, int]]:
+    marker_offset = contents.find(marker)
+    if marker_offset < 0:
+        raise RuntimeError(
+            f"initializer marker not found in {source_path}: {
+                marker!r}")
+    opening = contents.find("{", marker_offset + len(marker))
+    closing = find_matching(contents, opening, "{", "}")
+    body = contents[opening + 1: closing]
+    masked = mask_comments(body)
+    entries: list[tuple[str, int]] = []
+    depth = 0
+    entry_start: int | None = None
+    quote: str | None = None
+    escaped = False
+    for index, char in enumerate(masked):
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in {'"', "'"}:
+            quote = char
+        elif char == "{":
+            if depth == 0:
+                entry_start = index
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth < 0:
+                raise RuntimeError(f"malformed initializer in {source_path}")
+            if depth == 0 and entry_start is not None:
+                absolute = opening + 1 + entry_start
+                entries.append((body[entry_start: index + 1], absolute))
+                entry_start = None
+    if depth or not entries:
+        raise RuntimeError(f"empty or malformed initializer in {source_path}")
+    residue = mask_comments(body)
+    for raw, absolute in reversed(entries):
+        relative = absolute - opening - 1
+        residue = residue[:relative] + " " * \
+            len(raw) + residue[relative + len(raw):]
+    if residue.replace(",", "").strip():
+        raise RuntimeError(f"unparsed initializer content in {source_path}")
+    return entries
+
+def parse_parser_vector(
+    contents: str,
+    marker: str,
+    source_path: str,
+    syntax: str,
+    order_offset: int = 0,
+    source_symbol: str | None = None,
+) -> list[dict[str, object]]:
+    parsed: list[dict[str, object]] = []
+    for local_order, (raw, offset) in enumerate(
+        initializer_entries(contents, marker, source_path)
+    ):
+        strings = re.findall(r'"(?:\\.|[^"\\])*"', raw)
+        keys = [json.loads(item) for item in strings]
+        handler = re.search(r"&\s*([A-Za-z_][A-Za-z0-9_:]*)", raw)
+        shapes = re.findall(r"jarg::([a-z_]+)", raw)
+        if not 1 <= len(keys) <= 2 or handler is None:
+            raise RuntimeError(
+                f"unrecognized parser registration at {source_path}:"
+                f"{line_number(contents, offset)}"
+            )
+        if syntax == "object_member" and not shapes:
+            raise RuntimeError(
+                f"parser registration lacks jarg shape at {source_path}:"
+                f"{line_number(contents, offset)}"
+            )
+        if syntax == "condition_string" and shapes:
+            raise RuntimeError(
+                f"simple parser unexpectedly has jarg shape at {source_path}:"
+                f"{line_number(contents, offset)}"
+            )
+        parsed.append(
+            {
+                "registration_order": order_offset +
+                local_order,
+                "keys": keys,
+                "syntax": syntax,
+                "accepted_json_shapes": shapes or ["condition_string"],
+                "handler": handler.group(1),
+                "source": source_reference(
+                    source_path,
+                    contents,
+                    offset,
+                    source_symbol or (
+                        "parsers_simple"
+                        if syntax == "condition_string"
+                        else "parsers"
+                    ),
+                ),
+            })
+    return parsed
+
+def function_body(contents: str, signature: str) -> tuple[str, int]:
+    start = contents.find(signature)
+    if start < 0:
+        raise RuntimeError(f"function not found: {signature}")
+    opening = contents.find("{", start + len(signature))
+    closing = find_matching(contents, opening, "{", "}")
+    return contents[opening + 1: closing], opening + 1
+
+def parse_string_effects(contents: str) -> list[dict[str, object]]:
+    body, base = function_body(
+        contents, "void talk_effect_t::parse_string_effect")
+    matches: list[tuple[int, str, str | None, str]] = []
+    for match in re.finditer(
+        r"\bWRAP\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)",
+            body):
+        key = match.group(1)
+        if key != "function":
+            matches.append(
+                (match.start(), key, f"talk_function::{key}", "static_map"))
+    for match in re.finditer(r'effect_id\s*==\s*"([^"]+)"', body):
+        matches.append(
+            (match.start(),
+             match.group(1),
+             None,
+             "explicit_branch"))
+    if not matches:
+        raise RuntimeError("no string effects were found")
+    registrations: list[dict[str, object]] = []
+    for order, (offset, key, handler, kind) in enumerate(sorted(matches)):
+        registrations.append(
+            {
+                "registration_order": order,
+                "keys": [key],
+                "syntax": "effect_string",
+                "accepted_json_shapes": ["effect_string"],
+                "handler": handler,
+                "registration_kind": kind,
+                "source": source_reference(
+                    "src/npctalk.cpp",
+                    contents,
+                    base + offset,
+                    "talk_effect_t::parse_string_effect",
+                ),
+            }
+        )
+    return registrations
