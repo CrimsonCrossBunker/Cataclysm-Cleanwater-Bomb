@@ -479,11 +479,13 @@ stomach_digest_rates stomach_contents::get_digest_rates( const needs_rates &meta
 void stomach_contents::mod_calories( int kcal )
 {
     const int64_t calories = static_cast<int64_t>( kcal ) * 1000;
+    const int64_t maximum_calories = static_cast<int64_t>( std::numeric_limits<int>::max() ) * 1000;
+    nutr.calories = std::min( nutr.calories, maximum_calories );
     if( calories <= -nutr.calories ) {
         nutr.calories = 0;
         return;
     }
-    nutr.calories += calories;
+    nutr.calories = std::min( nutr.calories, maximum_calories - calories ) + calories;
 }
 
 void stomach_contents::set_vitamin( const vitamin_id &vit, int units )
