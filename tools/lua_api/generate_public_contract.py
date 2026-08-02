@@ -1436,3 +1436,105 @@ def build_contract() -> dict[str, object]:
         "manifest_fields": manifest_fields,
     }
     return contract
+
+def section_counts(contract: dict[str, object]) -> dict[str, int]:
+    sections = (
+        "modules",
+        "namespaces",
+        "classes",
+        "functions",
+        "methods",
+        "properties",
+        "operators",
+        "enums",
+        "events",
+        "hooks",
+        "callbacks",
+        "capabilities",
+        "manifest_fields",
+    )
+    return {section: len(contract[section]) for section in sections}
+
+def iter_documented_symbols(
+    contract: dict[str, object],
+) -> Iterable[dict[str, object]]:
+    for section in section_counts(contract):
+        values = contract[section]
+        assert isinstance(values, list)
+        yield from values
+    classes = contract["classes"]
+    assert isinstance(classes, list)
+    for class_entry in classes:
+        yield from class_entry["fields"]
+    events = contract["events"]
+    assert isinstance(events, list)
+    for event in events:
+        for field in event["fields"]:
+            yield field
+
+def build_coverage(contract: dict[str, object]) -> dict[str, object]:
+    counts = section_counts(contract)
+    counts["class_fields"] = sum(
+        len(entry["fields"]) for entry in contract["classes"]
+    )
+    counts["event_fields"] = sum(
+        len(entry["fields"]) for entry in contract["events"]
+    )
+    symbols = list(iter_documented_symbols(contract))
+    undocumented = [
+        entry.get("id", entry.get("name", "<unknown>"))
+        for entry in symbols
+        if not isinstance(entry.get("documentation"), dict) or
+        not entry["documentation"].get("id")
+    ]
+    documented_ids = [
+        entry["documentation"]["id"]
+        for entry in symbols
+        if isinstance(entry.get("documentation"), dict) and
+        entry["documentation"].get("id")
+    ]
+    property_documentation_ids = {
+        entry["documentation"]["id"]
+        for entry in contract["properties"]
+    }
+    documentation_id_counts = Counter(documented_ids)
+    unexpected_duplicates = sorted(
+        identity
+        for identity, count in documentation_id_counts.items()
+        if count > 1 and (
+            identity not in property_documentation_ids or count != 2
+        )
+    )
+    if unexpected_duplicates:
+        raise RuntimeError(
+            "duplicate generated documentation ids: "
+            f"{unexpected_duplicates}"
+        )
+    # Native usertype properties are projected both under their declaring
+    # class and in the top-level property index. They intentionally share one
+    # stable documentation id and count as one public symbol.
+    total = len(set(documented_ids)) + len(undocumented)
+    documented = len(set(documented_ids))
+    return {
+        "$schema": (
+            "https://github.com/CrimsonCrossBunker/"
+            "Cataclysm-Cleanwater-Bomb/raw/master/data/lua/reference/"
+            "ccb_public_api_v5_coverage.schema.json"
+        ),
+        "schema_version": 1,
+        "api_version": 5,
+        "denominator": contract["denominator"],
+        "inventory_sha256": sha256_bytes(serialize(contract).encode("utf-8")),
+        "sections": counts,
+        "public_symbols": total,
+        "documented_symbols": documented,
+        "undocumented_symbols": {
+            "count": len(undocumented),
+            "ids": undocumented,
+        },
+        "inventory_coverage_percent": round(100.0 * documented / total, 2),
+        "published_ccb_docs_coverage_percent": None,
+        "published_ccb_docs_status": (
+            "generated pages are delivered by a stacked CCB-Docs PR"
+        ),
+    }
