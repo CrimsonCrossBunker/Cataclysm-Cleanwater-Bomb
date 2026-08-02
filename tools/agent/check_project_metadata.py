@@ -271,7 +271,9 @@ def validate_inventory() -> None:
     expected_batched = {
         entry["stable_document_id"]
         for entry in inventory["documents"]
-        if entry["migration_batch"]
+        if entry["migration_batch"] and (
+            entry["migration_status"] not in {"verified", "stubbed", "archived"}
+        )
     }
     actual_batched = {
         entry["stable_document_id"] for entry in batch_documents

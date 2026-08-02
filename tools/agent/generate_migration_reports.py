@@ -74,6 +74,8 @@ def render_report(data: dict) -> str:
 def build_batches(data: dict) -> dict:
     grouped: dict[str, list[dict]] = defaultdict(list)
     for item in data["documents"]:
+        if item["migration_status"] in {"verified", "stubbed", "archived"}:
+            continue
         if not item["migration_batch"]:
             continue
         grouped[item["migration_batch"]].append(

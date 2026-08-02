@@ -17,11 +17,16 @@ class MigrationReportsTest(unittest.TestCase):
         data = reports.load_inventory()
         batches = reports.build_batches(data)
         expected = sum(
-            1 for item in data["documents"] if item["migration_batch"]
+            1
+            for item in data["documents"]
+            if item["migration_batch"] and item["migration_status"] not in {
+                "verified", "stubbed", "archived"
+            }
         )
 
         self.assertEqual(batches["document_count"], expected)
         self.assertEqual(batches["batch_count"], len(batches["batches"]))
+        self.assertEqual(expected, 0)
 
 
 if __name__ == "__main__":
