@@ -143,6 +143,18 @@ void destroyed_armor_msg( Character &who, const std::string &pre_damage_name )
 const weakpoint *Character::absorb_hit( const weakpoint_attack &, const bodypart_id &bp,
                                         damage_instance &dam, const weakpoint & )
 {
+    absorb_damage( bp, std::nullopt, dam );
+    return nullptr;
+}
+
+void Character::absorb_hit( const sub_bodypart_id &sbp, damage_instance &dam )
+{
+    absorb_damage( sbp->parent.id(), sbp, dam );
+}
+
+void Character::absorb_damage( const bodypart_id &bp, const std::optional<sub_bodypart_id> &sbp,
+                               damage_instance &dam )
+{
     std::list<item> worn_remains;
     bool armor_destroyed = false;
 
@@ -194,7 +206,7 @@ const weakpoint *Character::absorb_hit( const weakpoint_attack &, const bodypart
 
         adjust_taken_damage_by_enchantments( elem );
 
-        worn.absorb_damage( *this, elem, bp, worn_remains, armor_destroyed );
+        worn.absorb_damage( *this, elem, bp, worn_remains, armor_destroyed, sbp );
 
         passive_absorb_hit( bp, elem );
 
@@ -208,7 +220,6 @@ const weakpoint *Character::absorb_hit( const weakpoint_attack &, const bodypart
     if( armor_destroyed ) {
         drop_invalid_inventory();
     }
-    return nullptr;
 }
 
 void Character::armor_use_power_when_hit( damage_unit &du, item &armor ) const
