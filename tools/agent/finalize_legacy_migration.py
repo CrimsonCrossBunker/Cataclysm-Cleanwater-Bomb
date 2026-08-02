@@ -251,3 +251,7 @@ def main() -> int:
         f"{len(expected_inventory['documents'])} terminal records"
     )
     return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
