@@ -1037,3 +1037,78 @@ def validate_source_reference(
         raise RuntimeError(
             f"source evidence token is stale: {path}:{line}: {token}"
         )
+
+def validate_data_reference(
+    evidence: object,
+    key: str,
+    contract_kind: str,
+    tracked_data: set[str],
+    data_cache: dict[str, object],
+    root: Path,
+) -> None:
+    if not isinstance(evidence, dict):
+        raise RuntimeError(f"invalid data evidence: {evidence!r}")
+    path = evidence.get("path")
+    pointer = evidence.get("pointer")
+    valid = (isinstance(path, str) and
+             isinstance(pointer, str) and
+             path in tracked_data)
+    if not valid:
+        raise RuntimeError(f"invalid data evidence: {evidence!r}")
+    if path not in data_cache:
+        data_cache[path] = json.loads(read_text(root, path))
+    value = resolve_json_pointer(data_cache[path], pointer)
+    if contract_kind == "json_object_types":
+        if not isinstance(value, dict) or value.get("type") != key:
+            raise RuntimeError(
+                f"JSON type example does not resolve to {key}: "
+                f"{path}#{pointer}"
+            )
+        return
+    pointer_token = (
+        pointer.rsplit("/", 1)[-1].replace("~1", "/").replace("~0", "~")
+        if pointer
+        else ""
+    )
+    if pointer_token != key and value != key:
+        raise RuntimeError(
+            f"EOC example does not resolve to {key}: {path}#{pointer}"
+        )
+
+def validate_documentation_reference(
+    documentation: object,
+    key: str,
+    tracked_docs: set[str],
+    documentation_cache: dict[str, str],
+    root: Path,
+) -> None:
+    if not isinstance(documentation, dict):
+        raise RuntimeError(f"invalid documentation evidence for {key}")
+    status = documentation.get("status")
+    evidence = documentation.get("evidence")
+    if not isinstance(evidence, list):
+        raise RuntimeError(f"invalid documentation evidence for {key}")
+    if status == "not_found":
+        if evidence:
+            raise RuntimeError(f"unexpected documentation evidence for {key}")
+        return
+    if status != "lexically_mentioned" or len(evidence) != 1:
+        raise RuntimeError(f"invalid documentation status for {key}")
+    reference = evidence[0]
+    if not isinstance(reference, dict):
+        raise RuntimeError(f"invalid documentation evidence for {key}")
+    path = reference.get("path")
+    line = reference.get("line")
+    valid = (isinstance(path, str) and
+             isinstance(line, int) and
+             path in tracked_docs)
+    if not valid:
+        raise RuntimeError(f"invalid documentation evidence for {key}")
+    if path not in documentation_cache:
+        documentation_cache[path] = read_text(root, path)
+    contents = documentation_cache[path]
+    lines = contents.splitlines()
+    if line < 1 or line > len(lines) or key not in lines[line - 1]:
+        raise RuntimeError(
+            f"documentation evidence is stale: {path}:{line}: {key}"
+        )
