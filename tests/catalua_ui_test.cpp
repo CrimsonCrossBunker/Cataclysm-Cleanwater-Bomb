@@ -3021,6 +3021,10 @@ local calories = game.needs.get_gut_calories(avatar)
 assert(calories.ok == true)
 assert(math.type(calories.value) == "integer")
 
+local large_calories = game.needs.set_gut_calories(avatar, 2000001)
+assert(large_calories.ok == true)
+assert(large_calories.value.after == 2000001)
+
 local assigned_calories = game.needs.set_gut_calories(avatar, 100)
 assert(assigned_calories.ok == true)
 assert(assigned_calories.value.before == calories.value)
@@ -3049,7 +3053,7 @@ assert(pcall(function()
     game.needs.get_gut_vitamin(avatar, game.types.id("item", "rock"))
 end) == false)
 assert(pcall(function()
-    game.needs.set_gut_calories(avatar, 2000001)
+    game.needs.set_gut_calories(avatar, -1)
 end) == false)
 )lua" );
 
