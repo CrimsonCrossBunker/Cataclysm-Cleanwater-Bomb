@@ -20,19 +20,14 @@ from typing import Iterable
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
-
 DEFAULT_OUTPUT_DIRECTORY = REPOSITORY_ROOT / "data/reference/json"
-
 OUTPUT_NAMES = {
     "json_object_types": "ccb_json_object_types.json",
     "eoc_conditions": "ccb_eoc_conditions.json",
     "eoc_effects": "ccb_eoc_effects.json",
 }
-
 CONTRACT_ROOTS = ("data/core", "data/json", "data/mods", "data/sound")
-
 VARIABLE_SCOPES = ("u_val", "npc_val", "global_val", "var_val", "context_val")
-
 VALUE_HELPERS = (
     "value_or_var",
     "value_or_var_pair",
@@ -42,6 +37,7 @@ VALUE_HELPERS = (
     "translation_or_var",
     "eoc_math",
 )
+
 
 def git_tracked_files(root: Path, *pathspecs: str) -> list[str]:
     """Return tracked paths without walking the checkout."""
@@ -57,11 +53,14 @@ def git_tracked_files(root: Path, *pathspecs: str) -> list[str]:
         if item
     )
 
+
 def read_text(root: Path, relative_path: str) -> str:
     return (root / relative_path).read_text(encoding="utf-8")
 
+
 def line_number(text: str, offset: int) -> int:
     return text.count("\n", 0, offset) + 1
+
 
 def source_reference(
     path: str, text: str, offset: int, symbol: str
@@ -71,6 +70,7 @@ def source_reference(
         "line": line_number(text, offset),
         "symbol": symbol,
     }
+
 
 def mask_comments(text: str) -> str:
     """Replace C++ comments with spaces while retaining offsets and strings."""
@@ -114,6 +114,7 @@ def mask_comments(text: str) -> str:
         index += 1
     return "".join(result)
 
+
 def find_matching(text: str, opening: int, left: str, right: str) -> int:
     """Find a balanced delimiter while ignoring strings and comments."""
     masked = mask_comments(text)
@@ -140,6 +141,7 @@ def find_matching(text: str, opening: int, left: str, right: str) -> int:
                 return index
     raise RuntimeError(f"unbalanced {left}{right} delimiters")
 
+
 def split_first_argument(call: str) -> tuple[str, str]:
     depth = 0
     quote: str | None = None
@@ -162,6 +164,7 @@ def split_first_argument(call: str) -> tuple[str, str]:
         elif char == "," and depth == 0:
             return call[:index].strip(), call[index + 1:].strip()
     raise RuntimeError("registration call has no handler argument")
+
 
 def preprocessor_contexts(text: str) -> dict[int, list[str]]:
     contexts: dict[int, list[str]] = {}
@@ -192,6 +195,7 @@ def preprocessor_contexts(text: str) -> dict[int, list[str]]:
         raise RuntimeError("unterminated preprocessor conditional")
     return contexts
 
+
 def handler_metadata(expression: str) -> tuple[str, str | None]:
     normalized = re.sub(r"\s+", " ", expression).strip()
     direct = re.match(r"&\s*([A-Za-z_][A-Za-z0-9_:]*)", normalized)
@@ -204,6 +208,7 @@ def handler_metadata(expression: str) -> tuple[str, str | None]:
             (item for item in called if item not in ignored), None)
     callable_match = re.match(r"([A-Za-z_][A-Za-z0-9_:]*)", normalized)
     return "callable", callable_match.group(1) if callable_match else None
+
 
 def parse_json_registrations(contents: str) -> list[dict[str, object]]:
     signature = "void DynamicDataLoader::initialize()"
@@ -250,6 +255,7 @@ def parse_json_registrations(contents: str) -> list[dict[str, object]]:
     if not registrations:
         raise RuntimeError("no DynamicDataLoader registrations were found")
     return registrations
+
 
 def initializer_entries(
     contents: str, marker: str, source_path: str
@@ -301,6 +307,7 @@ def initializer_entries(
     if residue.replace(",", "").strip():
         raise RuntimeError(f"unparsed initializer content in {source_path}")
     return entries
+
 
 def parse_parser_vector(
     contents: str,
@@ -354,6 +361,7 @@ def parse_parser_vector(
             })
     return parsed
 
+
 def function_body(contents: str, signature: str) -> tuple[str, int]:
     start = contents.find(signature)
     if start < 0:
@@ -361,6 +369,7 @@ def function_body(contents: str, signature: str) -> tuple[str, int]:
     opening = contents.find("{", start + len(signature))
     closing = find_matching(contents, opening, "{", "}")
     return contents[opening + 1: closing], opening + 1
+
 
 def parse_string_effects(contents: str) -> list[dict[str, object]]:
     body, base = function_body(
@@ -401,6 +410,7 @@ def parse_string_effects(contents: str) -> list[dict[str, object]]:
         )
     return registrations
 
+
 def legacy_alias_note(aliases: list[str]) -> dict[str, object]:
     if not any(item.startswith(("u_", "npc_")) for item in aliases):
         return {
@@ -419,6 +429,7 @@ def legacy_alias_note(aliases: list[str]) -> dict[str, object]:
             "that either talker is a concrete avatar or NPC."
         ),
     }
+
 
 def aggregate_parser_entries(
     registrations: list[dict[str, object]], contract_kind: str
@@ -504,6 +515,7 @@ def aggregate_parser_entries(
         )
     return result
 
+
 def add_logical_conditions(
     entries: list[dict[str, object]], condition_contents: str
 ) -> None:
@@ -555,6 +567,7 @@ def add_logical_conditions(
         }
     entries[:] = [by_key[key] for key in sorted(by_key)]
 
+
 def walk_json(
         value: object, pointer: str = "") -> Iterable[tuple[object, str]]:
     yield value, pointer
@@ -565,6 +578,7 @@ def walk_json(
     elif isinstance(value, list):
         for index, child in enumerate(value):
             yield from walk_json(child, f"{pointer}/{index}")
+
 
 def tracked_json_scan(
     root: Path, condition_keys: set[str], effect_keys: set[str]
@@ -637,6 +651,7 @@ def tracked_json_scan(
         "paths": paths,
     }
 
+
 def lexical_documentation(
     root: Path, keys: Iterable[str]
 ) -> dict[str, dict[str, object]]:
@@ -664,6 +679,7 @@ def lexical_documentation(
         }
     return result
 
+
 def attach_examples_and_docs(
     entries: list[dict[str, object]],
     counts: collections.Counter[str],
@@ -684,6 +700,7 @@ def attach_examples_and_docs(
             ),
         }
         entry["documentation"] = documentation[key]
+
 
 def extract_eoc_base_fields(contents: str) -> list[dict[str, object]]:
     body, base = function_body(contents, "void effect_on_condition::load")
@@ -731,6 +748,7 @@ def extract_eoc_base_fields(contents: str) -> list[dict[str, object]]:
             }
     return [results[key] for key in sorted(results)]
 
+
 def source_fingerprint(root: Path, paths: Iterable[str]) -> str:
     digest = hashlib.sha256()
     for path in sorted(set(paths)):
@@ -739,6 +757,7 @@ def source_fingerprint(root: Path, paths: Iterable[str]) -> str:
         digest.update((root / path).read_bytes())
         digest.update(b"\0")
     return f"sha256:{digest.hexdigest()}"
+
 
 def build_contracts(
         root: Path = REPOSITORY_ROOT) -> dict[str, dict[str, object]]:
@@ -983,6 +1002,7 @@ def build_contracts(
     validate_contracts(payloads, root)
     return payloads
 
+
 def resolve_json_pointer(value: object, pointer: str) -> object:
     """Resolve an RFC 6901 pointer and fail closed on malformed evidence."""
     if pointer == "":
@@ -1004,6 +1024,7 @@ def resolve_json_pointer(value: object, pointer: str) -> object:
         else:
             raise RuntimeError(f"unresolved JSON Pointer: {pointer!r}")
     return current
+
 
 def validate_source_reference(
     evidence: object,
@@ -1037,6 +1058,7 @@ def validate_source_reference(
         raise RuntimeError(
             f"source evidence token is stale: {path}:{line}: {token}"
         )
+
 
 def validate_data_reference(
     evidence: object,
@@ -1075,6 +1097,7 @@ def validate_data_reference(
             f"EOC example does not resolve to {key}: {path}#{pointer}"
         )
 
+
 def validate_documentation_reference(
     documentation: object,
     key: str,
@@ -1112,6 +1135,7 @@ def validate_documentation_reference(
         raise RuntimeError(
             f"documentation evidence is stale: {path}:{line}: {key}"
         )
+
 
 def validate_summary(payload: dict[str, object], kind: str) -> None:
     entries = payload["entries"]
@@ -1192,6 +1216,7 @@ def validate_summary(payload: dict[str, object], kind: str) -> None:
     for key, value in expected.items():
         if summary.get(key) != value:
             raise RuntimeError(f"stale {kind} summary field: {key}")
+
 
 def validate_contracts(
     payloads: dict[str, dict[str, object]], root: Path = REPOSITORY_ROOT
@@ -1291,8 +1316,10 @@ def validate_contracts(
                 root,
             )
 
+
 def serialize(payload: dict[str, object]) -> str:
     return json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+
 
 def write_or_check(
     payloads: dict[str, dict[str, object]], output_directory: Path, check: bool
@@ -1311,6 +1338,7 @@ def write_or_check(
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(serialize(payloads[kind]), encoding="utf-8")
     return stale
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -1345,3 +1373,7 @@ def main() -> int:
     for kind, payload in payloads.items():
         print(f"{kind}: {len(payload['entries'])} entries")
     return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
