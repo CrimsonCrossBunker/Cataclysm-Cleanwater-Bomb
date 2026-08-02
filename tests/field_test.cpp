@@ -26,6 +26,7 @@ static const efftype_id effect_test_rash( "test_rash" );
 static const field_type_str_id field_fd_acid( "fd_acid" );
 static const field_type_str_id field_fd_test( "fd_test" );
 static const field_type_str_id field_fd_test_fire_reaction( "fd_test_fire_reaction" );
+static const field_type_str_id field_fd_test_fire_reaction_source( "fd_test_fire_reaction_source" );
 
 static const itype_id itype_test_2x4( "test_2x4" );
 static const itype_id itype_test_hazmat_hat( "test_hazmat_hat" );
@@ -196,6 +197,14 @@ TEST_CASE( "field fire reaction", "[field]" )
     m.process_fields();
 
     reaction_field = m.get_field( p, field_fd_test_fire_reaction );
+    CHECK( ( !reaction_field || !reaction_field->is_field_alive() ) );
+
+    const tripoint_bub_ms other_p{ 34, 33, 0 };
+    m.add_field( other_p, field_fd_test_fire_reaction_source, 3, 1_turns );
+    m.add_field( other_p, field_fd_test_fire_reaction, 1, 1_turns );
+    m.process_fields();
+
+    reaction_field = m.get_field( other_p, field_fd_test_fire_reaction );
     CHECK( ( !reaction_field || !reaction_field->is_field_alive() ) );
 
     fields_test_cleanup();
