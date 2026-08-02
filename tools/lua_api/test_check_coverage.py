@@ -9,8 +9,12 @@ import unittest
 from pathlib import Path
 from typing import Callable
 
-from .check_coverage import check, load
-from .generate_cbn_coverage import write_or_check
+try:
+    from .check_coverage import check, load
+    from .generate_cbn_coverage import write_or_check
+except ImportError:
+    from check_coverage import check, load
+    from generate_cbn_coverage import write_or_check
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
