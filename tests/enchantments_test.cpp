@@ -46,6 +46,7 @@ static const itype_id itype_test_MELEE_TO_HIT_ench_item_1( "test_MELEE_TO_HIT_en
 static const itype_id itype_test_MELEE_TO_HIT_ench_item_2( "test_MELEE_TO_HIT_ench_item_2" );
 static const itype_id itype_test_MAX_HP_BP_ench_item( "test_MAX_HP_BP_ench_item" );
 static const itype_id itype_test_LIMB_SCORE_ench_item( "test_LIMB_SCORE_ench_item" );
+static const itype_id itype_test_LIMB_SCORE_ZERO_BP_ench_item( "test_LIMB_SCORE_ZERO_BP_ench_item" );
 static const itype_id
 itype_test_PAIN_PENALTY_MOD_ench_item_1( "test_PAIN_PENALTY_MOD_ench_item_1" );
 static const itype_id itype_test_SPEED_ench_item( "test_SPEED_ench_item" );
@@ -506,4 +507,11 @@ TEST_CASE( "Enchantment_bodypart_modifiers", "[magic][enchantments][bodypart]" )
     INFO( "Left arm's lift contribution is doubled, balance gets a global +0.5" );
     CHECK( guy.get_limb_score( score_lift ) == Approx( lift_before + 0.5f ) );
     CHECK( guy.get_limb_score( score_balance ) == Approx( balance_before + 0.5f ) );
+
+    INFO( "Obtain item that tries to add lift to torso, which does not provide the lift score" );
+    const float lift_with_torso_bonus = guy.get_limb_score( score_lift );
+    guy.i_add( item( itype_test_LIMB_SCORE_ZERO_BP_ench_item ) );
+    guy.recalculate_enchantment_cache();
+    INFO( "Torso does not provide lift, so the per-part add must be a no-op" );
+    CHECK( guy.get_limb_score( score_lift ) == Approx( lift_with_torso_bonus ) );
 }

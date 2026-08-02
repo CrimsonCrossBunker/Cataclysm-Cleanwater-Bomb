@@ -377,7 +377,7 @@ class enchant_cache : public enchantment
         double get_armor_multiply( const damage_type_id &value ) const;
         double get_encumbrance_multiply( const bodypart_str_id &value ) const;
         double get_extra_damage_multiply( const damage_type_id &value ) const;
-        int get_max_hp_add( const bodypart_str_id &value ) const;
+        double get_max_hp_add( const bodypart_str_id &value ) const;
         double get_max_hp_multiply( const bodypart_str_id &value ) const;
         // global limb score modifiers (apply to the final aggregated score)
         double get_limb_score_add( const limb_score_id &score ) const;

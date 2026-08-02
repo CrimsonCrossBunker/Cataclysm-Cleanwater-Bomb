@@ -473,8 +473,10 @@ stomach_digest_rates stomach_contents::get_digest_rates( const needs_rates &meta
         rates.percent_vitamin = 0.05f * metabolic_rates.hunger;
     }
     // Enchantments can speed up or slow down all digestion rates
-    const double digest_mult = owner.enchantment_cache->modify_value(
-                                   enchant_vals::mod::DIGESTION_RATE_MULTIPLIER, 1.0 );
+    double digest_mult = owner.enchantment_cache->modify_value(
+                             enchant_vals::mod::DIGESTION_RATE_MULTIPLIER, 1.0 );
+    // Clamp to non-negative: a negative rate would reverse digestion (filling the stomach).
+    digest_mult = std::max( 0.0, digest_mult );
     rates.solids *= digest_mult;
     rates.water *= digest_mult;
     rates.percent_kcal *= digest_mult;

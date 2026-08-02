@@ -5290,6 +5290,20 @@
   },
   {
     "type": "ITEM",
+    "subtypes": [ "ARTIFACT" ],
+    "id": "test_LIMB_SCORE_ZERO_BP_ench_item",
+    "copy-from": "test_item_ench",
+    "name": "test_LIMB_SCORE_ZERO_BP_ench_item",
+    "passive_effects": [
+      {
+        "limb_score_modifier": [
+          { "score": "lift", "part": "torso", "add": 5.0 }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "ITEM",
     "id": "test_rock_cheese",
     "category": "spare_parts",
     "symbol": ",",

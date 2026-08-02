@@ -211,14 +211,21 @@ float Character::manipulator_score( const std::map<bodypart_str_id, bodypart> &b
                     }
                 }
             }
-            // per-bodypart limb score modifiers from enchantments
-            float part_score = id.first.get_limb_score( *this, limb_score_manip, -1, override_encumb,
-                               override_wounds );
-            part_score = part_score * ( 1.0f + enchantment_cache->get_limb_score_bp_multiply(
-                                            id.first.get_id().id(), limb_score_manip ) ) +
-                         enchantment_cache->get_limb_score_bp_add( id.first.get_id().id(), limb_score_manip );
+            const float part_score = id.first.get_limb_score( *this, limb_score_manip, -1,
+                                    override_encumb, override_wounds );
             total = std::min( total + part_score * id.second * local_mul,
                               id.first.get_limb_score_max( limb_score_manip ) * local_mul * id.second );
+            if( part_score != 0.0f ) {
+                // per-bodypart enchantment modifiers apply after the natural max clamp, so they
+                // can push a body part's contribution past its natural limit; skipped for parts
+                // that do not provide the manip score at all
+                const float modified = part_score * ( 1.0f +
+                                       enchantment_cache->get_limb_score_bp_multiply(
+                                           id.first.get_id().id(), limb_score_manip ) ) +
+                                       enchantment_cache->get_limb_score_bp_add(
+                                           id.first.get_id().id(), limb_score_manip );
+                total += ( modified - part_score ) * id.second * local_mul;
+            }
         }
         add_msg_debug( debugmode::DF_CHARACTER,
                        "Manipulation score of bodypart group %s %.1f",
@@ -264,9 +271,13 @@ float Character::get_limb_score( const limb_score_id &score, const bp_type &bp,
             mod = id.second.get_limb_score( *this, score, skill, override_encumb,
                                             override_wounds ) * id.first->limbtypes.at( bp );
         }
-        // per-bodypart limb score modifiers from enchantments
-        mod = mod * ( 1.0f + enchantment_cache->get_limb_score_bp_multiply( id.first, score ) ) +
-              enchantment_cache->get_limb_score_bp_add( id.first, score );
+        // per-bodypart limb score modifiers from enchantments; skipped for body parts that
+        // do not provide this score at all (mod == 0) so an add cannot conjure score
+        // out of nothing
+        if( mod != 0.0f ) {
+            mod = mod * ( 1.0f + enchantment_cache->get_limb_score_bp_multiply( id.first, score ) ) +
+                  enchantment_cache->get_limb_score_bp_add( id.first, score );
+        }
         if( cache_flag_EFFECT_LIMB_SCORE_MOD_LOCAL ) {
             for( const effect &local : get_effects_from_bp( id.first ) ) {
                 float local_mul = 1.0f;

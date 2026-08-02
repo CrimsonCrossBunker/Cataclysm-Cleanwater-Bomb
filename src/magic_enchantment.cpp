@@ -695,7 +695,7 @@ void enchant_cache::load( const JsonObject &jo, std::string_view,
             const bodypart_str_id part( value_obj.get_string( "part", bodypart_str_id::NULL_ID().str() ) );
             const double add = value_obj.get_float( "add", 0.0 );
             const double mult = value_obj.get_float( "multiply", 0.0 );
-            if( part.is_null() ) {
+            if( part.is_null() || part.is_empty() ) {
                 if( add != 0.0 ) {
                     limb_score_add.emplace( score, add );
                 }
@@ -1380,7 +1380,7 @@ int enchant_cache::get_extra_damage_add( const damage_type_id &value ) const
     return get_value<damage_type_id>( value, extra_damage_add );
 }
 
-int enchant_cache::get_max_hp_add( const bodypart_str_id &value ) const
+double enchant_cache::get_max_hp_add( const bodypart_str_id &value ) const
 {
     return get_value<bodypart_str_id>( value,
                                        max_hp_values_add ) + get_value<bodypart_str_id>( body_part_all, max_hp_values_add );
