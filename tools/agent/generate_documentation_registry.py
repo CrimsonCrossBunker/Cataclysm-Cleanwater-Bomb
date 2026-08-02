@@ -40,6 +40,7 @@ AGENT_METADATA = {
     "ai/docs-impact.yml",
     "ai/generated-files.yml",
     "ai/project-map.yml",
+    "ai/repository-settings.target.schema.json",
     "ai/repository-settings.target.yml",
     "ai/test-matrix.yml",
     "ai/task-router.schema.json",
