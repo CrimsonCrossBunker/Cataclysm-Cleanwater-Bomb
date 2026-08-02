@@ -1065,3 +1065,259 @@ def parse_hooks() -> list[dict[str, object]]:
     if len(hooks) != 52:
         raise RuntimeError(f"expected 52 hooks, found {len(hooks)}")
     return hooks
+
+def parse_callbacks() -> list[dict[str, object]]:
+    path = REPOSITORY_ROOT / "src/catalua_ui_callbacks.cpp"
+    contents = path.read_text(encoding="utf-8")
+    start = contents.index("script_callback_kind_specs()")
+    end = contents.index("find_script_callback_kind_spec", start)
+    region = contents[start:end]
+    headers = list(
+        re.finditer(r"\{\s*\"([^\"]+)\"\s*,\s*\"([^\"]+)\"\s*,\s*\{", region)
+    )
+    callbacks: list[dict[str, object]] = []
+    method_pattern = re.compile(
+        r"\{\s*\"([^\"]+)\"\s*,\s*(true|false)"
+        r"(?:\s*,\s*(true|false))?\s*\}"
+    )
+    for index, header in enumerate(headers):
+        kind, target_kind = header.groups()
+        stop = headers[index + 1].start() if index + \
+            1 < len(headers) else len(region)
+        segment = region[header.end():stop]
+        for method in method_pattern.finditer(segment):
+            name, decision_value, consuming_value = method.groups()
+            decision = decision_value == "true"
+            consuming = consuming_value == "true"
+            identity = f"{kind}.{name}"
+            callbacks.append(
+                {
+                    "id": identity,
+                    "kind": kind,
+                    "target_id_kind": target_kind,
+                    "method": name,
+                    "decision": decision,
+                    "consuming": consuming,
+                    "requires_write": decision,
+                    "payload_type": "table<string, CcbLuaValue>",
+                    "result_type": (
+                        "boolean|table|nil" if decision or consuming else "nil"
+                    ),
+                    "capabilities": [
+                        "game.callbacks",
+                        "game.read",
+                        *(["game.write"] if decision else []),
+                    ],
+                    "sources": [
+                        source(
+                            path,
+                            contents,
+                            start + header.end() + method.start(),
+                            "native callback registry",
+                        )
+                    ],
+                    "documentation": documentation("callback", identity),
+                }
+            )
+    callbacks.sort(key=lambda entry: str(entry["id"]))
+    if len(headers) != 11 or len(callbacks) != 38:
+        raise RuntimeError(
+            f"expected 11 callback kinds and 38 pairs, found "
+            f"{len(headers)} kinds and {len(callbacks)} pairs"
+        )
+    return callbacks
+
+def parse_enums() -> list[dict[str, object]]:
+    path = REPOSITORY_ROOT / "src/catalua_bindings_enums.cpp"
+    contents = path.read_text(encoding="utf-8")
+    start = contents.index("enum_families()")
+    end = contents.index("find_enum_family", start)
+    region = contents[start:end]
+    pattern = re.compile(
+        r"\{\s*\"([^\"]+)\"\s*,\s*enum_family_status::(\w+)\s*,\s*"
+        r"\"([^\"]*)\"\s*,\s*\"([^\"]*)\"\s*,\s*&(\w+)\s*\}",
+        re.DOTALL,
+    )
+    enums: list[dict[str, object]] = []
+    for match in pattern.finditer(region):
+        name, status, replacement, reason, factory = match.groups()
+        factory_match = re.search(
+            rf"std::vector<std::string>\s+{re.escape(factory)}\(\)\s*"
+            rf"\{{(.*?)\n\}}",
+            contents,
+            re.DOTALL,
+        )
+        values: list[str] = []
+        value_source = "runtime"
+        if factory_match:
+            fixed = re.search(
+                r"return\s+fixed_values\s*\(\s*\{(.*?)\}\s*\)",
+                factory_match.group(1),
+                re.DOTALL,
+            )
+            if fixed:
+                values = quoted_values(fixed.group(1))
+                value_source = "fixed-native-list"
+            elif factory == "no_values":
+                value_source = "not-applicable"
+        absolute_offset = start + match.start()
+        enums.append(
+            {
+                "id": name,
+                "status": status,
+                "replacement": replacement or None,
+                "reason": reason or None,
+                "members": values,
+                "member_source": value_source,
+                "factory": factory,
+                "sources": [
+                    source(path, contents, absolute_offset,
+                           "native enum registry")
+                ],
+                "documentation": documentation("enum", name),
+            }
+        )
+    enums.sort(key=lambda entry: str(entry["id"]))
+    if len(enums) != 26:
+        raise RuntimeError(f"expected 26 enum families, found {len(enums)}")
+    return enums
+
+def parse_manifest_and_capabilities(
+    luals: dict[str, object],
+) -> tuple[
+    list[dict[str, object]],
+    list[dict[str, object]],
+    dict[str, object],
+]:
+    schema = json.loads(MANIFEST_SCHEMA.read_text(encoding="utf-8"))
+    schema_properties = schema["properties"]
+    required = set(schema["required"])
+    manifest_cpp = REPOSITORY_ROOT / "src/catalua_ui_manifest.cpp"
+    cpp_contents = manifest_cpp.read_text(encoding="utf-8")
+    runtime_fields = set(
+        re.findall(
+            r'root\.get_(?:string|int|string_array)\s*\(\s*"([^\"]+)"',
+            cpp_contents,
+        )
+    )
+    expected_runtime_fields = set(schema_properties) - {"$schema"}
+    if runtime_fields != expected_runtime_fields:
+        raise RuntimeError(
+            f"manifest Schema/runtime field parity failed: "
+            f"schema={sorted(expected_runtime_fields)}, "
+            f"runtime={sorted(runtime_fields)}"
+        )
+    fields = []
+    for name, definition in schema_properties.items():
+        offset = MANIFEST_SCHEMA.read_text(encoding="utf-8").find(f'"{name}"')
+        fields.append(
+            {
+                "id": name,
+                "required": name in required,
+                "schema": definition,
+                "runtime_read": name in runtime_fields,
+                "sources": [
+                    source(
+                        MANIFEST_SCHEMA,
+                        MANIFEST_SCHEMA.read_text(encoding="utf-8"),
+                        offset,
+                        "manifest Schema",
+                    )
+                ],
+                "documentation": documentation("manifest-field", name),
+            }
+        )
+
+    capability_schema = schema_properties["capabilities"]["items"]["enum"]
+    capability_function = re.search(
+        r"supported_script_capabilities\(\)\s*\{(.*?)\n\}",
+        cpp_contents,
+        re.DOTALL,
+    )
+    if capability_function is None:
+        raise RuntimeError("supported_script_capabilities body is missing")
+    runtime_capabilities = quoted_values(capability_function.group(1))
+    declarations = luals["contents"]
+    assert isinstance(declarations, str)
+    alias_match = re.search(
+        r"---@alias CcbCapability\n((?:---\|.*\n)+)", declarations
+    )
+    if alias_match is None:
+        raise RuntimeError("CcbCapability LuaLS alias is missing")
+    luals_capabilities = re.findall(r"'\"([^\"]+)\"'", alias_match.group(1))
+    if not (
+        set(capability_schema) ==
+        set(runtime_capabilities) ==
+        set(luals_capabilities)
+    ):
+        raise RuntimeError(
+            "manifest Schema/runtime/LuaLS capability parity failed")
+
+    version_four_match = re.search(
+        r"version_four\s*=\s*\{(.*?)\};", cpp_contents, re.DOTALL
+    )
+    version_five_match = re.search(
+        r"version_five\s*=\s*\{(.*?)\};", cpp_contents, re.DOTALL
+    )
+    version_four = set(quoted_values(version_four_match.group(1))
+                       ) if version_four_match else set()
+    version_five = set(quoted_values(version_five_match.group(1))
+                       ) if version_five_match else set()
+    capabilities = []
+    for capability in sorted(runtime_capabilities):
+        if capability in version_five:
+            minimum = 5
+        elif capability in version_four:
+            minimum = 4
+        else:
+            minimum = 2
+        offset = cpp_contents.find(f'"{capability}"')
+        capabilities.append(
+            {
+                "id": capability,
+                "minimum_api_version": minimum,
+                "sources": [
+                    source(manifest_cpp, cpp_contents, offset,
+                           "native capability registry"),
+                    {
+                        "path": relative(MANIFEST_SCHEMA),
+                        "line": line_number(
+                            MANIFEST_SCHEMA.read_text(encoding="utf-8"),
+                            MANIFEST_SCHEMA.read_text(encoding="utf-8").find(
+                                f'"{capability}"'
+                            ),
+                        ),
+                        "authority": "manifest Schema",
+                    },
+                ],
+                "documentation": documentation("capability", capability),
+            }
+        )
+
+    permissions = {
+        "model": "capability-gating",
+        "separate_manifest_field": False,
+        "manifest_field": "capabilities",
+        "dependency_rules": [
+            {
+                "capability": "game.actions.dangerous",
+                "requires": "game.actions",
+            },
+            {"capability": "game.write", "requires": "game.read"},
+            {"capability": "game.hooks", "requires": "events"},
+            {"capability": "game.callbacks", "requires": "game.read"},
+        ],
+        "sources": [
+            {
+                "path": relative(manifest_cpp),
+                "line": 1,
+                "authority": "native manifest validator",
+            },
+            {
+                "path": relative(MANIFEST_SCHEMA),
+                "line": 1,
+                "authority": "manifest Schema",
+            },
+        ],
+    }
+    return fields, capabilities, permissions
