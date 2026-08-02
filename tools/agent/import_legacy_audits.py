@@ -74,3 +74,21 @@ def unique_strings(values: list[object]) -> list[str]:
             if clean and clean not in result:
                 result.append(clean)
     return result
+
+def site_target(value: object) -> str | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    clean = value.strip().lstrip("/")
+    if clean.startswith("docs/"):
+        return clean
+    return "docs/zh_CN/" + clean
+
+def evidence_list(value: object) -> list[str]:
+    if isinstance(value, str):
+        return [" ".join(value.split())]
+    if isinstance(value, list):
+        return unique_strings(value)
+    return []
+
+def anomaly_key(entry: dict) -> tuple[str, str]:
+    return entry["original_path"], entry["fingerprint"]
