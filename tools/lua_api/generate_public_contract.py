@@ -1018,3 +1018,50 @@ def parse_event_specs() -> list[dict[str, object]]:
     if field_count != 242:
         raise RuntimeError(f"expected 242 event fields, found {field_count}")
     return events
+
+def quoted_values(contents: str) -> list[str]:
+    return re.findall(r'"([^\"]+)"', contents)
+
+def parse_hooks() -> list[dict[str, object]]:
+    path = REPOSITORY_ROOT / "src/catalua_ui_callbacks.cpp"
+    contents = path.read_text(encoding="utf-8")
+    start = contents.index("script_hook_specs()")
+    end = contents.index("find_script_hook_spec", start)
+    region = contents[start:end]
+    pattern = re.compile(
+        r"\{\s*\"([^\"]+)\"\s*,\s*script_hook_mode::(observe|intercept)\s*,"
+        r"\s*\{([^}]*)\}(?:\s*,\s*\{([^}]*)\})?\s*\}",
+        re.DOTALL,
+    )
+    hooks: list[dict[str, object]] = []
+    for match in pattern.finditer(region):
+        name, mode, payload, result = match.groups()
+        absolute_offset = start + match.start()
+        hooks.append(
+            {
+                "id": name,
+                "mode": mode,
+                "payload": [
+                    {"name": field, "type": "CcbLuaValue"}
+                    for field in quoted_values(payload)
+                ],
+                "returns": [
+                    {"name": field, "type": "CcbLuaValue"}
+                    for field in quoted_values(result or "")
+                ],
+                "capabilities": (
+                    ["events", "game.hooks", "game.write"]
+                    if mode == "intercept"
+                    else ["events", "game.hooks"]
+                ),
+                "sources": [
+                    source(path, contents, absolute_offset,
+                           "native hook registry")
+                ],
+                "documentation": documentation("hook", name),
+            }
+        )
+    hooks.sort(key=lambda entry: str(entry["id"]))
+    if len(hooks) != 52:
+        raise RuntimeError(f"expected 52 hooks, found {len(hooks)}")
+    return hooks
