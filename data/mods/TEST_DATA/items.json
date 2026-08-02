@@ -5304,6 +5304,20 @@
   },
   {
     "type": "ITEM",
+    "subtypes": [ "ARTIFACT" ],
+    "id": "test_LIMB_SCORE_MANIP_BP_ench_item",
+    "copy-from": "test_item_ench",
+    "name": "test_LIMB_SCORE_MANIP_BP_ench_item",
+    "passive_effects": [
+      {
+        "limb_score_modifier": [
+          { "score": "manip", "part": "hand_l", "add": 0.5 }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "ITEM",
     "id": "test_rock_cheese",
     "category": "spare_parts",
     "symbol": ",",

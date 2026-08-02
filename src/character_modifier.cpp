@@ -190,6 +190,9 @@ float Character::manipulator_score( const std::map<bodypart_str_id, bodypart> &b
     }
     for( auto &part : bodypart_groups ) {
         float total = 0.0f;
+        // per-bodypart enchantment deltas accumulate separately, so the natural max clamp
+        // applied by a later body part cannot swallow the bonus of an earlier one
+        float enchant_delta = 0.0f;
         std::sort( part.second.begin(), part.second.end(),
         []( const std::pair<bodypart, float> &a, const std::pair<bodypart, float> &b ) {
             return a.first.get_limb_score_max( limb_score_manip ) * a.second <
@@ -224,9 +227,10 @@ float Character::manipulator_score( const std::map<bodypart_str_id, bodypart> &b
                                            id.first.get_id().id(), limb_score_manip ) ) +
                                        enchantment_cache->get_limb_score_bp_add(
                                            id.first.get_id().id(), limb_score_manip );
-                total += ( modified - part_score ) * id.second * local_mul;
+                enchant_delta += ( modified - part_score ) * id.second * local_mul;
             }
         }
+        total += enchant_delta;
         add_msg_debug( debugmode::DF_CHARACTER,
                        "Manipulation score of bodypart group %s %.1f",
                        io::enum_to_string<bp_type>( part.first ), total );
