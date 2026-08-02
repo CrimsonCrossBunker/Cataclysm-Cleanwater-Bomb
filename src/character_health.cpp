@@ -127,6 +127,7 @@ static const efftype_id effect_bite( "bite" );
 static const efftype_id effect_chafing( "chafing" );
 static const efftype_id effect_common_cold( "common_cold" );
 static const efftype_id effect_cough_suppress( "cough_suppress" );
+static const efftype_id effect_crowd_crushed( "crowd_crushed" );
 static const efftype_id effect_deaf( "deaf" );
 static const efftype_id effect_disinfected( "disinfected" );
 static const efftype_id effect_disrupted_sleep( "disrupted_sleep" );
@@ -262,7 +263,8 @@ std::string enum_to_string<blood_type>( blood_type data )
 bool Character::can_recover_oxygen() const
 {
     return get_limb_score( limb_score_breathing ) > 0.5f && !is_underwater() &&
-           !has_effect_with_flag( json_flag_GRAB ) && !( has_bionic( bio_synlungs ) &&
+           !( has_effect_with_flag( json_flag_GRAB ) && has_effect( effect_crowd_crushed ) ) &&
+           !( has_bionic( bio_synlungs ) &&
                    !has_active_bionic( bio_synlungs ) );
 }
 
