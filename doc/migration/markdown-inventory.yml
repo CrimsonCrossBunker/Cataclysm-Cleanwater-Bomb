@@ -5,19 +5,17 @@ document_count: 175
 scope: Tracked Markdown at source_commit, excluding dot-prefixed tool/config paths; filesystem caches
   are never traversed.
 classification_summary:
-  review: 33
+  review: 0
   actions:
-    archive_public: 3
+    archive_public: 7
     generated_reference: 4
-    keep_in_repo: 54
-    merge_into: 12
+    keep_in_repo: 57
+    merge_into: 15
     migrate_preserve: 35
-    migrate_rewrite: 28
-    retain_third_party: 6
-    review: 33
+    migrate_rewrite: 50
+    retain_third_party: 7
   migration_statuses:
-    classified: 130
-    inventoried: 33
+    classified: 163
     verified: 12
 documents:
 - original_path: CODE_OF_CONDUCT.md
@@ -4732,872 +4730,984 @@ documents:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: build-overview
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-c-compiling
-  domain: cpp
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: build-overview
+  domain: build
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: mixed
+  upstream_relation: upstream_derived_with_ccb_extensions
   merge_target: null
   source_paths:
   - doc/c++/COMPILING.md
+  - CMakeLists.txt
+  - Makefile
+  - CMakePresets.json
+  - android/app/jni/CMakeLists.txt
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - The page contains recent CCB SDL3/Android additions mixed with stale upstream clone URLs and platform
+    instructions; split and rewrite around current build contracts.
+  migration_batch: phase-0-build
 - original_path: doc/c++/DEVELOPER_TOOLING.md
-  target_path: null
+  target_path: docs/zh_CN/cpp/developer-tooling.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - dumb-kevin
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: developer-tooling
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-c-developer-tooling
+  stable_document_id: developer-tooling
   domain: cpp
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: mixed
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/c++/DEVELOPER_TOOLING.md
+  - build-scripts/clang-tidy-run.sh
+  - build-scripts/ci-iwyu-run.py
+  - .github/workflows/clang-tidy.yml
+  - .github/workflows/iwyu.yml
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Clang-tidy and IWYU automation is current, but setup and invocation must be derived from the checked-in
+    scripts/workflows.
+  migration_batch: phase-1-cpp
 - original_path: doc/c++/JSON_INTERFACE.md
-  target_path: null
+  target_path: docs/zh_CN/cpp/json-interface.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - ehughsbaird
   contributor_anomaly_count: 0
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: cpp-json-interface
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-c-json-interface
+  stable_document_id: cpp-json-interface
   domain: cpp
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_specific
+  upstream_relation: ccb_specific_implementation
   merge_target: null
   source_paths:
   - doc/c++/JSON_INTERFACE.md
-  source_symbols: []
+  - src/flexbuffer_json.h
+  - src/flexbuffer_json.cpp
+  - src/generic_factory.h
+  - tests/generic_factory_test.cpp
+  source_symbols:
+  - JsonObject
+  - JsonArray
+  - generic_factory
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - This recent CCB page maps to the FlexBuffers-backed Json classes and generic_factory tests; preserve
+    its intent but add source-linked invariants and examples.
+  migration_batch: phase-1-cpp
 - original_path: doc/c++/PERFORMANCE.md
-  target_path: null
+  target_path: docs/zh_CN/cpp/performance.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - g1ytx
   contributor_anomaly_count: 0
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: cpp-performance
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-c-performance
+  stable_document_id: cpp-performance
   domain: cpp
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_specific
+  upstream_relation: ccb_specific_implementation
   merge_target: null
   source_paths:
   - doc/c++/PERFORMANCE.md
-  source_symbols: []
+  - src/profiling.h
+  - tests/cata_catch.h
+  - tests/generic_factory_test.cpp
+  source_symbols:
+  - CATA_PROFILE_SCOPE
+  - BENCHMARK_TEST_CASE
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Profiling macros and benchmark-only Catch tags are present and tested in current CCB; expand this
+    recent page with verified commands and artifact guidance.
+  migration_batch: phase-1-cpp
 - original_path: doc/c++/POINTS_COORDINATES.md
-  target_path: null
+  target_path: docs/zh_CN/cpp/coordinates.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: cpp-coordinates
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-c-points-coordinates
+  stable_document_id: cpp-coordinates
   domain: cpp
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: mixed
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/c++/POINTS_COORDINATES.md
-  source_symbols: []
+  - src/point.h
+  - src/coordinates.h
+  - src/coordinate_conversions.cpp
+  - tests/coordinate_test.cpp
+  - tests/point_test.cpp
+  source_symbols:
+  - point
+  - tripoint
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Coordinate types, conversions, and tests remain core contracts; rewrite diagrams and examples against
+    the current typed-coordinate implementation.
+  migration_batch: phase-1-cpp
 - original_path: doc/c++/TESTING.md
-  target_path: null
+  target_path: docs/zh_CN/testing/cpp.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - g1ytx
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: cpp-testing
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-c-testing
-  domain: cpp
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: cpp-testing
+  domain: testing
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: mixed
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/c++/TESTING.md
-  source_symbols: []
+  - tests/CMakeLists.txt
+  - tests/Makefile
+  - tests/cata_catch.h
+  - .github/workflows/matrix.yml
+  source_symbols:
+  - BENCHMARK_TEST_CASE
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - The C++ test suite and benchmark conventions are active; rewrite commands and filtering guidance from
+    current CMake/Make/CI contracts.
+  migration_batch: phase-0-testing
 - original_path: doc/design-balance-lore/ARMOR_BALANCE_AND_DESIGN.md
-  target_path: null
+  target_path: docs/zh_CN/json/armor-design.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: json-armor-design
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-design-balance-lore-armor-balance-and-design
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: json-armor-design
+  domain: design
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_derived
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/design-balance-lore/ARMOR_BALANCE_AND_DESIGN.md
+  - src/item_armor.cpp
+  - src/item_factory.cpp
+  - data/json/items/armor/torso_armor.json
+  - tests/item_test.cpp
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - The design rationale is useful, but armor fields and behavior must be checked against item loading,
+    current data, and tests before publication.
+  migration_batch: phase-2-design
 - original_path: doc/design-balance-lore/CONSTRUCTION_BALANCE.md
-  target_path: null
+  target_path: docs/zh_CN/archive/design/construction-balance.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
-  archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  action: archive_public
+  archive_reason: Unvalidated historical balance proposal; it is not a current CCB contract or policy.
+  replacement: design-balance
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-design-balance-lore-construction-balance
-  domain: legacy
+  stable_document_id: archive-construction-balance
+  domain: design
   priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  last_applicable_commit: null
+  ccb_specificity: upstream_derived
+  upstream_relation: upstream_historical_proposal
   merge_target: null
   source_paths:
   - doc/design-balance-lore/CONSTRUCTION_BALANCE.md
+  - src/construction.cpp
+  - data/json/construction/terrain.json
   source_symbols: []
-  translation_required: true
-  include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  translation_required: false
+  include_in_ai_index: false
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - This is an old normative balance proposal with no current validation trail; current construction behavior
+    is data/source driven.
+  - 'The exact last-applicable SHA is intentionally unknown: imported snapshot history repeatedly re-adds
+    this path at unrelated commits, so those SHAs are provenance rather than validity evidence.'
+  migration_batch: phase-3-design
 - original_path: doc/design-balance-lore/GAME_BALANCE.md
-  target_path: null
+  target_path: docs/zh_CN/design/balance.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: merge_into
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: design-balance
+  migration_status: classified
   history_strategy: evaluate_filtered_history
   stable_document_id: legacy.doc-design-balance-lore-game-balance
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
-  merge_target: null
+  domain: design
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_derived
+  upstream_relation: upstream_derived_revalidate
+  merge_target: design-balance
   source_paths:
   - doc/design-balance-lore/GAME_BALANCE.md
+  - doc/design-balance-lore/design-balance.md
+  - GOVERNANCE.md
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - The high-level balance principles overlap design-balance.md and should become one explicitly CCB-reviewed
+    policy/explanation page.
+  migration_batch: phase-1-design
 - original_path: doc/design-balance-lore/LORE_FAQ.md
-  target_path: null
+  target_path: docs/zh_CN/archive/lore/faq.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
-  archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  action: archive_public
+  archive_reason: Dated upstream FAQ without a current CCB authority trail; preserve only for historical
+    context.
+  replacement: lore-overview
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-design-balance-lore-lore-faq
-  domain: legacy
+  stable_document_id: archive-lore-faq
+  domain: lore
   priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  last_applicable_commit: null
+  ccb_specificity: upstream_derived
+  upstream_relation: upstream_only_obsolete
   merge_target: null
   source_paths:
   - doc/design-balance-lore/LORE_FAQ.md
+  - doc/design-balance-lore/lore.md
+  - doc/design-balance-lore/lore-background.md
   source_symbols: []
-  translation_required: true
-  include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  translation_required: false
+  include_in_ai_index: false
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - The inherited FAQ encodes dated upstream assumptions and external answers; it cannot serve as current
+    CCB lore authority.
+  - 'The exact last-applicable SHA is intentionally unknown: imported snapshot history repeatedly re-adds
+    this path at unrelated commits, so those SHAs are provenance rather than validity evidence.'
+  migration_batch: phase-3-lore
 - original_path: doc/design-balance-lore/PORTAL_STORM_BALANCE_AND_DESIGN.md
-  target_path: null
+  target_path: docs/zh_CN/design/portal-storms.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: design-portal-storms
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-design-balance-lore-portal-storm-balance-and-design
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: design-portal-storms
+  domain: design
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_derived
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/design-balance-lore/PORTAL_STORM_BALANCE_AND_DESIGN.md
-  source_symbols: []
+  - src/game.cpp
+  - data/json/effects_on_condition/nether_eocs/portal_storm_effect_on_condition.json
+  - data/json/mapgen/portal_storm.json
+  - tests/widget_test.cpp
+  source_symbols:
+  - game::portal_storm_query
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Portal-storm runtime hooks, EOCs, mapgen, and tests remain present; rewrite the rationale with an
+    explicit CCB-divergence and current-data review.
+  migration_batch: phase-2-design
 - original_path: doc/design-balance-lore/POSTAPOC_PRICE_GUIDE.md
-  target_path: null
+  target_path: docs/zh_CN/json/item-pricing.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: json-item-pricing
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-design-balance-lore-postapoc-price-guide
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: json-item-pricing
+  domain: design
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_derived
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/design-balance-lore/POSTAPOC_PRICE_GUIDE.md
+  - src/faction.cpp
+  - tests/faction_price_rules_test.cpp
+  - data/json/npcs/factions.json
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Pricing guidance is useful to content authors, but examples and formulas must be reconciled with current
+    faction pricing code/tests.
+  migration_batch: phase-2-design
 - original_path: doc/design-balance-lore/STEEL_CRAFTING.md
-  target_path: null
+  target_path: docs/zh_CN/design/steel-crafting.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - FarFarLakeSea
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: design-steel-crafting
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-design-balance-lore-steel-crafting
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: design-steel-crafting
+  domain: design
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_derived
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/design-balance-lore/STEEL_CRAFTING.md
+  - data/json/materials.json
+  - data/json/recipes/other/materials.json
+  - data/json/requirements/materials.json
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - The process rationale can inform content work, but recipe stages, requirements, and terminology must
+    be checked against current JSON.
+  migration_batch: phase-2-design
 - original_path: doc/design-balance-lore/VARIANTS.md
-  target_path: null
+  target_path: docs/zh_CN/json/item-variants.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: json-item-variants
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-design-balance-lore-variants
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: json-item-variants
+  domain: json
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_derived
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/design-balance-lore/VARIANTS.md
-  source_symbols: []
+  - src/item_factory.cpp
+  - src/cata_variant.h
+  - tests/cata_variant_test.cpp
+  - data/json/artifact/artifact_item_types.json
+  source_symbols:
+  - cata_variant
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Item/trait variant concepts remain implemented and tested; rewrite the JSON-facing rules from loaders
+    and representative current data.
+  migration_batch: phase-1-json
 - original_path: doc/design-balance-lore/batteries_and_electricity.md
-  target_path: null
+  target_path: docs/zh_CN/design/batteries-electricity.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: design-batteries-electricity
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-design-balance-lore-batteries-and-electricity
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: design-batteries-electricity
+  domain: design
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_derived
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/design-balance-lore/batteries_and_electricity.md
+  - data/json/items/battery.json
+  - data/json/vehicleparts/battery.json
+  - src/vehicle_part.cpp
+  - tests/battery_mod_test.cpp
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Battery/electricity design remains relevant, but values and invariants need reconciliation with current
+    item/vehicle data and battery tests.
+  migration_batch: phase-2-design
 - original_path: doc/design-balance-lore/design-balance.md
-  target_path: null
+  target_path: docs/zh_CN/design/balance.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: design-balance
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-design-balance-lore-design-balance
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: design-balance
+  domain: design
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_derived
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/design-balance-lore/design-balance.md
+  - doc/design-balance-lore/GAME_BALANCE.md
+  - GOVERNANCE.md
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - The principles are useful but originated upstream; publish only after reconciling them into one CCB-owned
+    design/balance explanation.
+  migration_batch: phase-1-design
 - original_path: doc/design-balance-lore/design-doc.md
-  target_path: null
+  target_path: docs/zh_CN/design/overview.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: merge_into
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: design-overview
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-design-balance-lore-design-doc
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
-  merge_target: null
+  stable_document_id: design-overview
+  domain: design
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_derived
+  upstream_relation: upstream_derived_revalidate
+  merge_target: design-overview
   source_paths:
   - doc/design-balance-lore/design-doc.md
+  - doc/design-balance-lore/design-gameplay.md
+  - doc/design-balance-lore/design-user-experience.md
+  - GOVERNANCE.md
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - This is an index/outline for neighboring design essays; merge its useful framing into a maintained
+    CCB design overview.
+  migration_batch: phase-1-design
 - original_path: doc/design-balance-lore/design-gameplay.md
-  target_path: null
+  target_path: docs/zh_CN/design/gameplay.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: design-gameplay
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-design-balance-lore-design-gameplay
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: design-gameplay
+  domain: design
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_derived
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/design-balance-lore/design-gameplay.md
+  - doc/design-balance-lore/design-balance.md
+  - GOVERNANCE.md
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Retain the gameplay design discussion as explanation, clearly labeled non-runtime authority and reviewed
+    for CCB divergence.
+  migration_batch: phase-1-design
 - original_path: doc/design-balance-lore/design-user-experience.md
-  target_path: null
+  target_path: docs/zh_CN/design/user-experience.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: design-user-experience
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-design-balance-lore-design-user-experience
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: design-user-experience
+  domain: design
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_derived
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/design-balance-lore/design-user-experience.md
+  - doc/USER_INTERFACE_AND_ACCESSIBILITY.md
+  - src/options.cpp
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - The UX principles remain useful explanation, but must be tied to CCB accessibility/UI behavior and
+    separated from binding runtime contracts.
+  migration_batch: phase-1-design
 - original_path: doc/design-balance-lore/lore-background.md
-  target_path: null
+  target_path: docs/zh_CN/lore/background.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: lore-background
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-design-balance-lore-lore-background
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: lore-background
+  domain: lore
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_derived
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/design-balance-lore/lore-background.md
+  - doc/design-balance-lore/lore.md
+  - data/json/snippets/epilogue_factions.json
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - The inherited background is useful lore context but must be reviewed for CCB canon/divergence and
+    labeled as explanation rather than code authority.
+  migration_batch: phase-2-lore
 - original_path: doc/design-balance-lore/lore-factions.md
-  target_path: null
+  target_path: docs/zh_CN/lore/factions.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: lore-factions
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-design-balance-lore-lore-factions
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: lore-factions
+  domain: lore
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_derived
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
+  - doc/design-balance-lore/lore-factions.md
+  - data/json/npcs/factions.json
+  - src/faction.cpp
+  - tests/monfactions_test.cpp
+  source_symbols: []
+  translation_required: true
+  include_in_ai_index: true
+  blockers: []
+  evidence:
+  - Faction lore should be reconciled with current faction JSON/source and CCB canon before becoming a
+    searchable page.
+  migration_batch: phase-2-lore
+- original_path: doc/design-balance-lore/lore.md
+  target_path: docs/zh_CN/lore/overview.md
+  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+  contributors:
+  - thaelina
+  contributor_anomaly_count: 1
+  license: CC-BY-SA-3.0
+  action: migrate_rewrite
+  archive_reason: null
+  replacement: lore-overview
+  migration_status: classified
+  history_strategy: evaluate_filtered_history
+  stable_document_id: lore-overview
+  domain: lore
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_derived
+  upstream_relation: upstream_derived_revalidate
+  merge_target: null
+  source_paths:
+  - doc/design-balance-lore/lore.md
+  - doc/design-balance-lore/lore-background.md
   - doc/design-balance-lore/lore-factions.md
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
-- original_path: doc/design-balance-lore/lore.md
-  target_path: null
-  source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  contributors:
-  - thaelina
-  contributor_anomaly_count: 1
-  license: CC-BY-SA-3.0
-  action: review
-  archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-design-balance-lore-lore
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
-  merge_target: null
-  source_paths:
-  - doc/design-balance-lore/lore.md
-  source_symbols: []
-  translation_required: true
-  include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
-  evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Use this inherited overview as input, not authority; rewrite a CCB-reviewed lore navigation/explanation
+    page with explicit provenance.
+  migration_batch: phase-2-lore
 - original_path: doc/design-balance-lore/melee_weapons/MELEE_BALANCE_SPREADSHEET.md
-  target_path: null
+  target_path: docs/zh_CN/archive/design/melee-balance-spreadsheet.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
-  archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  action: archive_public
+  archive_reason: The source page self-identifies as substantially out of date and has no current CCB
+    validation trail.
+  replacement: design-balance
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-design-balance-lore-melee-weapons-melee-balance-spreadsheet
-  domain: legacy
+  stable_document_id: archive-melee-balance-spreadsheet
+  domain: design
   priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  last_applicable_commit: null
+  ccb_specificity: upstream_derived
+  upstream_relation: upstream_only_obsolete
   merge_target: null
   source_paths:
   - doc/design-balance-lore/melee_weapons/MELEE_BALANCE_SPREADSHEET.md
+  - src/melee.cpp
+  - tests/melee_test.cpp
   source_symbols: []
-  translation_required: true
-  include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  translation_required: false
+  include_in_ai_index: false
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - The page explicitly calls the spreadsheet 'quite out of date'; current melee behavior/tests cannot
+    validate it as guidance.
+  - 'The exact last-applicable SHA is intentionally unknown: imported snapshot history repeatedly re-adds
+    this path at unrelated commits, so those SHAs are provenance rather than validity evidence.'
+  migration_batch: phase-3-design
 - original_path: doc/design-balance-lore/technology.md
-  target_path: null
+  target_path: docs/zh_CN/lore/technology.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: lore-technology
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-design-balance-lore-technology
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: lore-technology
+  domain: lore
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_derived
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/design-balance-lore/technology.md
+  - doc/design-balance-lore/lore.md
+  - data/json/materials.json
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Technology assumptions affect lore and content design; rewrite after checking CCB divergence and label
+    it as reviewed design explanation.
+  migration_batch: phase-2-lore
 - original_path: doc/development_process.md
-  target_path: null
+  target_path: docs/zh_CN/archive/governance/development-process.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
-  archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  action: archive_public
+  archive_reason: Obsolete upstream governance names, roles, and process conflict with current CCB policy.
+  replacement: getting-started-first-contribution
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-development-process
-  domain: legacy
+  stable_document_id: archive-upstream-development-process
+  domain: governance
   priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  last_applicable_commit: null
+  ccb_specificity: upstream_derived
+  upstream_relation: upstream_only_obsolete
   merge_target: null
   source_paths:
   - doc/development_process.md
+  - CONTRIBUTING.md
+  - GOVERNANCE.md
   source_symbols: []
-  translation_required: true
-  include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  translation_required: false
+  include_in_ai_index: false
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - The page is entirely CleverRaven/Kevin/CDDA governance and conflicts with CCB CONTRIBUTING/GOVERNANCE;
+    it must not remain active guidance.
+  - 'The exact last-applicable SHA is intentionally unknown: imported snapshot history repeatedly re-adds
+    this path at unrelated commits, so those SHAs are provenance rather than validity evidence.'
+  migration_batch: phase-3-governance
 - original_path: doc/reviewing_PR_guide.md
-  target_path: null
+  target_path: docs/zh_CN/contributing/pr-review.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: pr-review-guide
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-reviewing-pr-guide
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: pr-review-guide
+  domain: governance
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_specific
+  upstream_relation: ccb_governance_replaces_upstream_process
   merge_target: null
   source_paths:
   - doc/reviewing_PR_guide.md
+  - CONTRIBUTING.md
+  - GOVERNANCE.md
+  - .github/pull_request_template.md
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Review guidance is valuable but must match CCB Responsible-human, validation, and documentation-impact
+    policy rather than upstream roles.
+  migration_batch: phase-0-governance
 - original_path: doc/user-guides/COLOR.md
-  target_path: null
+  target_path: docs/zh_CN/ui/colors.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: ui-colors
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-user-guides-color
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: ui-colors
+  domain: ui
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: mixed
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/user-guides/COLOR.md
-  source_symbols: []
+  - data/raw/colors.json
+  - data/raw/color_templates/default.json
+  - src/color.cpp
+  - tests/light_color_test.cpp
+  source_symbols:
+  - color_manager::load_default
+  - color_manager::load_custom
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Color configuration and themes are active; verify names, fallbacks, and examples against loaders and
+    current data.
+  migration_batch: phase-2-ui
 - original_path: doc/user-guides/FONT_OPTIONS.md
-  target_path: null
+  target_path: docs/zh_CN/ui/fonts.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: ui-fonts
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-user-guides-font-options
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: ui-fonts
+  domain: ui
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: mixed
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/user-guides/FONT_OPTIONS.md
-  source_symbols: []
+  - data/fontdata.json
+  - src/font_loader.cpp
+  - src/sdl_font.cpp
+  source_symbols:
+  - font_loader::load
+  - font_loader::save
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Font configuration remains active across SDL paths; rewrite platform-specific instructions from fontdata
+    and the current loader.
+  migration_batch: phase-2-ui
 - original_path: lang/notes/README_all_translators.md
-  target_path: null
+  target_path: docs/zh_CN/localization/translation-guide.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: merge_into
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: translation-guide
+  migration_status: classified
   history_strategy: evaluate_filtered_history
   stable_document_id: legacy.lang-notes-readme-all-translators
-  domain: translation
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
-  merge_target: null
+  domain: localization
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: mixed
+  upstream_relation: upstream_derived_revalidate
+  merge_target: translation-guide
   source_paths:
   - lang/notes/README_all_translators.md
+  - lang/Makefile
+  - lang/update_pot.sh
+  - .github/workflows/build-translations.yml
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - General translator notes duplicate the main translation guide and contain inherited workflow assumptions;
+    merge only verified content.
+  migration_batch: phase-1-localization
 - original_path: lang/notes/ru-notes.md
-  target_path: null
+  target_path: lang/notes/ru-notes.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.lang-notes-ru-notes
-  domain: translation
+  migration_status: classified
+  history_strategy: keep_in_repo
+  stable_document_id: translation-notes-ru
+  domain: localization
   priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_derived
+  upstream_relation: language_team_operational_note
   merge_target: null
   source_paths:
   - lang/notes/ru-notes.md
+  - lang/Makefile
   source_symbols: []
-  translation_required: true
-  include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  translation_required: false
+  include_in_ai_index: false
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - This is language-team-specific operational context best kept beside translation sources, not promoted
+    into bilingual site navigation or AI search.
+  migration_batch: phase-3-localization
 - original_path: src/lua/LICENSE.md
   target_path: src/lua/LICENSE.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5627,34 +5737,35 @@ documents:
   - Retained in place under its file-specific third-party license.
   migration_batch: null
 - original_path: src/lua/README.md
-  target_path: null
+  target_path: src/lua/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - LYHGLYTX
   contributor_anomaly_count: 0
   license: CC-BY-SA-3.0
-  action: review
+  action: retain_third_party
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.src-lua-readme
-  domain: lua
+  migration_status: classified
+  history_strategy: retain_in_place
+  stable_document_id: vendor-lua-runtime-provenance
+  domain: third-party
   priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: third_party
+  upstream_relation: vendored_provenance
   merge_target: null
   source_paths:
   - src/lua/README.md
+  - src/lua/CMakeLists.txt
   source_symbols: []
-  translation_required: true
-  include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  translation_required: false
+  include_in_ai_index: false
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - This is Lua 5.4.8 vendored-source provenance and belongs beside the third-party runtime; it is not
+    CCB API documentation.
+  migration_batch: phase-3-third-party
 - original_path: src/third-party/snmalloc/README.md
   target_path: src/third-party/snmalloc/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5796,60 +5907,67 @@ documents:
   - Retained in place under its file-specific third-party license.
   migration_batch: null
 - original_path: tools/llama/README.md
-  target_path: null
+  target_path: tools/llama/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.tools-llama-readme
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  migration_status: classified
+  history_strategy: keep_in_repo
+  stable_document_id: tool-llama-build-acceleration
+  domain: tooling
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: mixed
+  upstream_relation: upstream_tool_retained_locally
   merge_target: null
   source_paths:
   - tools/llama/README.md
+  - tools/llama/clang_tidy.sh
+  - tools/llama/gcc-focal/Dockerfile
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - The helper scripts still exist, so keep their operational README near the tool; refresh stale CDDA/SDL2
+    wording before marking it verified.
+  migration_batch: phase-2-tooling
 - original_path: tools/lua_api/README.md
-  target_path: null
+  target_path: tools/lua_api/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - LYHGLYTX
   contributor_anomaly_count: 0
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.tools-lua-api-readme
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  migration_status: classified
+  history_strategy: keep_in_repo
+  stable_document_id: tool-lua-api-coverage
+  domain: lua
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_specific
+  upstream_relation: ccb_specific_tooling
   merge_target: null
   source_paths:
   - tools/lua_api/README.md
+  - tools/lua_api/check_ccb_inventory.py
+  - tools/lua_api/check_coverage.py
+  - tools/lua_api/check_luals_declarations.py
+  - data/lua/reference/ccb_native_inventory.json
+  - data/lua/types/ccb_api_v5.d.lua
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - This is current CCB operational contract/coverage tooling documentation and should stay beside the
+    scripts, with generated public reference published separately.
+  migration_batch: phase-0-lua
