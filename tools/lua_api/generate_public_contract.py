@@ -748,3 +748,273 @@ def examples_for_symbol(identity: str) -> list[dict[str, object]]:
             }
         )
     return result
+
+def parse_usertypes(
+    luals: dict[str, object],
+) -> tuple[
+    list[dict[str, object]],
+    list[dict[str, object]],
+    list[dict[str, object]],
+]:
+    declarations = luals["functions"]
+    classes = luals["classes"]
+    assert isinstance(declarations, dict)
+    assert isinstance(classes, dict)
+    methods: list[dict[str, object]] = []
+    properties: list[dict[str, object]] = []
+    operators: list[dict[str, object]] = []
+    usertype_names: set[str] = set()
+    pattern = re.compile(r"new_usertype\s*<[^;]+?>\s*\(", re.DOTALL)
+    for path in cpp_sources():
+        contents = path.read_text(encoding="utf-8", errors="replace")
+        for match in pattern.finditer(contents):
+            opening = contents.find("(", match.start())
+            body, _ = extract_balanced(contents, opening)
+            arguments = split_top_level(body)
+            if len(arguments) < 4 or len(arguments[2:]) % 2 != 0:
+                raise RuntimeError(
+                    f"cannot parse new_usertype registration at "
+                    f"{relative(path)}:{line_number(contents, match.start())}"
+                )
+            name_match = re.fullmatch(r'"([^\"]+)"', arguments[0].strip())
+            if name_match is None:
+                raise RuntimeError(
+                    "new_usertype public name is not a string literal")
+            class_name = name_match.group(1)
+            usertype_names.add(class_name)
+            class_entry = classes.get(class_name)
+            if class_entry is None:
+                raise RuntimeError(
+                    f"native usertype {class_name} lacks a LuaLS class")
+            class_entry["kind"] = "native-usertype"
+            class_entry["sources"].insert(
+                0, source(path, contents, match.start(), "native registration")
+            )
+            fields = {entry["name"]: entry for entry in class_entry["fields"]}
+            for key_expression, value_expression in zip(
+                arguments[2::2], arguments[3::2]
+            ):
+                string_key = re.fullmatch(
+                    r'"([^\"]+)"', key_expression.strip())
+                if string_key:
+                    member_name = string_key.group(1)
+                    identity = f"{class_name}.{member_name}"
+                    declaration = declarations.get((class_name, member_name))
+                    field = fields.get(member_name)
+                    if declaration is not None and field is not None:
+                        raise RuntimeError(
+                            f"{identity} is both a LuaLS method and field")
+                    native_offset = contents.find(
+                        key_expression.strip(), match.start())
+                    native_source = source(
+                        path, contents, native_offset, "native registration"
+                    )
+                    if declaration is not None:
+                        entry = dict(declaration)
+                        entry.update(
+                            {
+                                "id": identity,
+                                "class": class_name,
+                                "capabilities": capabilities_for_call(
+                                    identity, value_expression
+                                ),
+                                "sources": [
+                                    native_source,
+                                    *declaration["sources"],
+                                ],
+                                "examples": examples_for_symbol(identity),
+                                "documentation": documentation(
+                                    "method", identity
+                                ),
+                            }
+                        )
+                        methods.append(entry)
+                    elif field is not None:
+                        properties.append(
+                            {
+                                **field,
+                                "id": identity,
+                                "class": class_name,
+                                "name": member_name,
+                                "read_only": (
+                                    "sol::property" in value_expression
+                                ),
+                                "sources": [native_source, *field["sources"]],
+                                "documentation": documentation(
+                                    "property", identity
+                                ),
+                            }
+                        )
+                    else:
+                        raise RuntimeError(
+                            f"native usertype member {identity} lacks "
+                            "LuaLS metadata"
+                        )
+                    continue
+                meta_match = re.fullmatch(
+                    r"sol::meta_function::(\w+)", key_expression.strip()
+                )
+                if meta_match is None:
+                    raise RuntimeError(
+                        f"unknown usertype registration key {key_expression!r}"
+                    )
+                native_name = meta_match.group(1)
+                operator = META_FUNCTION_NAMES.get(native_name)
+                if operator is None:
+                    raise RuntimeError(
+                        f"unmapped sol meta function {native_name}")
+                parameters, returns = OPERATOR_SIGNATURES[operator]
+                identity = f"{class_name}.{operator}"
+                native_offset = contents.find(
+                    key_expression.strip(), match.start())
+                operators.append(
+                    {
+                        "id": identity,
+                        "class": class_name,
+                        "name": operator,
+                        "parameters": [
+                            {
+                                "name": parameter,
+                                "optional": False,
+                                "declaration": (
+                                    class_name
+                                    if parameter in {"self", "other"}
+                                    else "number"
+                                ),
+                            }
+                            for parameter in parameters
+                        ],
+                        "returns": [
+                            {
+                                "declaration": (
+                                    class_name
+                                    if value == "same type"
+                                    else value
+                                )
+                            }
+                            for value in returns
+                        ],
+                        "errors": {
+                            "mode": "lua-error",
+                            "message_stability": "not-guaranteed",
+                            "conditions": [
+                                "invalid operand type or native value failure"
+                            ],
+                        },
+                        "api_version": 5,
+                        "since": "untracked-before-or-at-v5",
+                        "deprecated": False,
+                        "deprecation_replacement": None,
+                        "capabilities": [],
+                        "sources": [
+                            source(
+                                path,
+                                contents,
+                                native_offset,
+                                "native registration",
+                            )
+                        ],
+                        "examples": examples_for_symbol(identity),
+                        "documentation": documentation("operator", identity),
+                    }
+                )
+
+    declared_methods = {
+        key
+        for key, entry in declarations.items()
+        if entry["style"] == "method"
+    }
+    native_methods = {(entry["class"], entry["name"]) for entry in methods}
+    if declared_methods != native_methods:
+        extra = sorted(declared_methods - native_methods)
+        missing = sorted(native_methods - declared_methods)
+        raise RuntimeError(
+            f"native/LuaLS usertype method parity failed; "
+            f"declaration-only={extra}, native-only={missing}"
+        )
+    if len(usertype_names) != 15:
+        raise RuntimeError(
+            f"expected 15 native usertypes, found {len(usertype_names)}")
+    return (
+        sorted(methods, key=lambda entry: str(entry["id"])),
+        sorted(properties, key=lambda entry: str(entry["id"])),
+        sorted(operators, key=lambda entry: str(entry["id"])),
+    )
+
+def parse_event_specs() -> list[dict[str, object]]:
+    path = REPOSITORY_ROOT / "src/event.h"
+    contents = path.read_text(encoding="utf-8")
+    field_pattern = re.compile(
+        r'\{\s*"([^\"]+)"\s*,\s*cata_variant_type::(\w+)\s*\}'
+    )
+
+    def fields_from_body(
+        body: str, body_offset: int
+    ) -> list[dict[str, object]]:
+        result = []
+        for match in field_pattern.finditer(body):
+            result.append(
+                {
+                    "name": match.group(1),
+                    "type": match.group(2),
+                    "sources": [
+                        source(
+                            path,
+                            contents,
+                            body_offset + match.start(),
+                            "native event specification",
+                        )
+                    ],
+                }
+            )
+        return result
+
+    helper_fields: dict[str, list[dict[str, object]]] = {}
+    helper_pattern = re.compile(r"struct\s+(event_spec_\w+)\s*\{")
+    for match in helper_pattern.finditer(contents):
+        opening = contents.find("{", match.start())
+        body, _ = extract_balanced(contents, opening, "{", "}")
+        helper_fields[match.group(1)] = fields_from_body(body, opening + 1)
+
+    events: list[dict[str, object]] = []
+    specialization = re.compile(
+        r"struct\s+event_spec<event_type::(\w+)>\s*(?::\s*(\w+))?\s*\{"
+    )
+    for match in specialization.finditer(contents):
+        event_name, base = match.groups()
+        opening = contents.find("{", match.start())
+        body, _ = extract_balanced(contents, opening, "{", "}")
+        fields = fields_from_body(body, opening + 1)
+        if base:
+            fields = [dict(entry) for entry in helper_fields.get(base, [])]
+        for field in fields:
+            field["documentation"] = documentation(
+                "event-field", f"{event_name}.{field['name']}"
+            )
+        events.append(
+            {
+                "id": event_name,
+                "fields": fields,
+                "capabilities": ["events", "game.read"],
+                "sources": [
+                    source(path, contents, match.start(),
+                           "native event specification")
+                ],
+                "documentation": documentation("event", event_name),
+            }
+        )
+    events.sort(key=lambda entry: str(entry["id"]))
+    native_names = {
+        entry["type"] for entry in build_native_inventory()["event_types"]
+    }
+    parsed_names = {entry["id"] for entry in events}
+    if parsed_names != native_names:
+        raise RuntimeError(
+            "event specification parity failed; "
+            f"missing={sorted(native_names - parsed_names)}, "
+            f"extra={sorted(parsed_names - native_names)}"
+        )
+    field_count = sum(len(entry["fields"]) for entry in events)
+    if field_count != 242:
+        raise RuntimeError(f"expected 242 event fields, found {field_count}")
+    return events
