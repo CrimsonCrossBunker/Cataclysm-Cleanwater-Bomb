@@ -48,3 +48,29 @@ AUDIT_CORRECTIONS = {
         "add_source_paths": ["src/translation_manager.cpp"],
     },
 }
+
+def load_jsonl(paths: list[Path]) -> dict[str, dict]:
+    records: dict[str, dict] = {}
+    for path in paths:
+        for line_number, line in enumerate(
+            path.read_text(encoding="utf-8").splitlines(), 1
+        ):
+            if not line.strip():
+                continue
+            record = json.loads(line)
+            original_path = record.get("original_path")
+            if not isinstance(original_path, str):
+                raise ValueError(f"{path}:{line_number} has no original_path")
+            if original_path in records:
+                raise ValueError(f"duplicate audit path: {original_path}")
+            records[original_path] = record
+    return records
+
+def unique_strings(values: list[object]) -> list[str]:
+    result = []
+    for value in values:
+        if isinstance(value, str):
+            clean = " ".join(value.split())
+            if clean and clean not in result:
+                result.append(clean)
+    return result
