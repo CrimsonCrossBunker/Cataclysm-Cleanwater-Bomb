@@ -66,6 +66,7 @@ python3 -m unittest discover -s tools/agent -p 'test_*.py'
 python3 tools/agent/check_project_metadata.py
 python3 tools/agent/generate_markdown_inventory.py --check
 python3 tools/agent/generate_documentation_registry.py --check
+python3 tools/agent/generate_migration_reports.py --check
 
 # C++ formatting and unit tests
 make astyle-check

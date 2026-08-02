@@ -17,6 +17,16 @@ entries:
     tracked: true
     generated_by: python3 tools/agent/generate_markdown_inventory.py
     validation_id: agent-context
+  - id: markdown-classification-report
+    paths: [doc/migration/classification-report.md]
+    tracked: true
+    generated_by: python3 tools/agent/generate_migration_reports.py
+    validation_id: agent-context
+  - id: markdown-migration-batches
+    paths: [doc/migration/migration-batches.yml]
+    tracked: true
+    generated_by: python3 tools/agent/generate_migration_reports.py
+    validation_id: agent-context
   - id: version-header
     paths: [src/version.h]
     tracked: false
