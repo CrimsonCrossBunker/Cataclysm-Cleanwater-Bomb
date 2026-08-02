@@ -39,6 +39,9 @@ ongoing review.
 
 Until this table contains two qualified humans, approval protection remains a
 documented target rather than an active rule that could lock the repository.
+The ongoing-review confirmation is tracked in
+https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/issues/563.
+Repository permission or recent activity alone is not treated as consent.
 
 ## Changing ownership records
 

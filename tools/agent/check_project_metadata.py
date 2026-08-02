@@ -65,6 +65,41 @@ def unique_ids(data: dict, label: str) -> set[str]:
     return set(ids)
 
 
+def validate_repository_settings(settings: dict) -> None:
+    if settings.get("enforcement") != "deferred":
+        raise ValueError("repository rules must remain deferred")
+    for entry in settings.get("entries", []):
+        prerequisites = entry.get("prerequisites", {})
+        target = entry.get("target", {})
+        ruleset = target.get("ruleset", {})
+        record = entry.get("manual_record", {})
+        reviewers = record.get("confirmed_reviewers", [])
+        minimum = prerequisites.get("minimum_confirmed_human_reviewers", 2)
+        if not isinstance(reviewers, list):
+            raise ValueError("confirmed repository reviewers must be an array")
+        if len(reviewers) < minimum:
+            if entry.get("enabled"):
+                raise ValueError("repository rules cannot be enabled without two reviewers")
+            if ruleset.get("enforcement") != "deferred":
+                raise ValueError("ruleset must remain deferred without two reviewers")
+            if record.get("ruleset_enabled_at") is not None:
+                raise ValueError("ruleset cannot have an activation time without reviewers")
+        actions = target.get("actions", {})
+        if actions.get("default_workflow_permissions") != "read":
+            raise ValueError("default Actions token permissions must remain read-only")
+        if actions.get("bot_may_approve_pull_requests") is not False:
+            raise ValueError("Actions bots must not approve pull requests")
+        if actions.get("auto_merge") is not False:
+            raise ValueError("repository target must prohibit auto-merge")
+        if not ruleset.get("require_conversation_resolution"):
+            raise ValueError("ruleset target must resolve review conversations")
+        bypass = ruleset.get("bypass", {})
+        if bypass.get("policy") != "emergency_only":
+            raise ValueError("ruleset bypass must be emergency-only")
+        if bypass.get("reason_required") is not True:
+            raise ValueError("ruleset bypass must record a reason")
+
+
 def validate_context() -> None:
     schema_path = ROOT / "ai/context.schema.json"
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
@@ -73,6 +108,7 @@ def validate_context() -> None:
     for path in CONTEXT_FILES:
         jsonschema.Draft202012Validator(schema).validate(documents[path.name])
         unique_ids(documents[path.name], path.name)
+    validate_repository_settings(documents["repository-settings.target.yml"])
 
     tests = documents["test-matrix.yml"]
     test_ids = unique_ids(tests, "test-matrix.yml")

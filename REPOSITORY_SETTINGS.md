@@ -33,6 +33,12 @@ currently runs inside `Agent context and documentation impact`.  The Lua
 workflow starts for every pull request so its named check exists; its expensive
 validation job is path-scoped and is skipped successfully for unrelated work.
 
+As observed on 2026-08-02, `master` has no branch protection and the repository
+has no Ruleset.  This is deliberate while issue #563 has no two maintainers who
+both have review permission and explicitly accept ongoing review.  Do not turn
+the candidate checks into required checks, or enable the approval rule, merely
+because this target file merges.
+
 ## Actions and automation
 
 - Default `GITHUB_TOKEN` permissions remain read-only.
@@ -45,11 +51,16 @@ validation job is path-scoped and is skipped successfully for unrelated work.
 
 ## Security settings
 
-Private vulnerability reporting is the public reporting path. Secret scanning,
-push protection, dependency updates, Pages environment protection, and
-organization 2FA require administrator review of availability, cost, member
-impact, and rollout communication. Never claim they are active because a file
-mentions them.
+Private vulnerability reporting is the reporting path.  On 2026-08-02 the
+repository API reported secret scanning, push protection, and Dependabot
+security updates enabled.  The Actions token default was read-only, Actions Bot
+approval was disabled, and auto-merge was disabled.  These observations are
+recorded in `ai/repository-settings.target.yml`; GitHub remains authoritative.
+
+Organization 2FA is not enabled.  Issue #564 requires an organization member
+and outside-collaborator audit, advance notice, recovery coverage, and a named
+owner before enforcement.  A repository commit cannot safely perform that
+organization-wide action.
 
 ## Manual verification commands
 
