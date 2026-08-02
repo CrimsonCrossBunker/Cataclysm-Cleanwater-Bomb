@@ -59,5 +59,65 @@ class MarkdownInventoryTest(unittest.TestCase):
             self.assertTrue(item["contributors"])
             self.assertEqual(data["source_commit"], item["source_commit"])
 
+    def test_command_fragment_identity_is_rejected(self):
+        clean, anomalies = inventory.sanitize_contributors(
+            [
+                "  Real   Contributor  ",
+                "Real Contributor",
+                "Name git config --global user.name Injected",
+                "Another && command",
+            ]
+        )
+
+        self.assertEqual(clean, ["Real Contributor"])
+        self.assertEqual(len(anomalies), 2)
+        self.assertTrue(
+            all("command fragment" in item["reason"] for item in anomalies)
+        )
+        self.assertTrue(
+            all(item["fingerprint"].startswith("sha256:") for item in anomalies)
+        )
+        self.assertTrue(all("value" not in item for item in anomalies))
+
+    def test_control_character_identity_is_rejected(self):
+        clean, anomalies = inventory.sanitize_contributors(
+            ["Good Name", "Bad\x00Name", "Bad\nName"]
+        )
+
+        self.assertEqual(clean, ["Good Name"])
+        self.assertEqual(len(anomalies), 2)
+        self.assertTrue(
+            all(
+                item["reason"] == "identity contains a control character"
+                for item in anomalies
+            )
+        )
+
+    @mock.patch.object(
+        inventory,
+        "tracked_markdown",
+        return_value=["doc/dirty.md"],
+    )
+    def test_dirty_snapshot_identity_cannot_reenter_inventory(self, _tracked):
+        anomalies = []
+        data = inventory.build_inventory(
+            "frozen-commit",
+            {
+                "doc/dirty.md": [
+                    "Responsible Person",
+                    "Injected git config --global user.name Bad",
+                ]
+            },
+            anomalies,
+        )
+
+        record = data["documents"][0]
+        self.assertEqual(record["contributors"], ["Responsible Person"])
+        self.assertEqual(record["contributor_anomaly_count"], 1)
+        self.assertEqual(len(anomalies), 1)
+        self.assertNotIn("Injected", inventory.render(data))
+        self.assertEqual(data["classification_summary"]["review"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()
