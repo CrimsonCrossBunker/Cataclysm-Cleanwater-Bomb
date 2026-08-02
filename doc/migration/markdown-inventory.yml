@@ -5,19 +5,19 @@ document_count: 175
 scope: Tracked Markdown at source_commit, excluding dot-prefixed tool/config paths; filesystem caches
   are never traversed.
 classification_summary:
-  review: 89
+  review: 87
   actions:
     archive_public: 1
     generated_reference: 2
     keep_in_repo: 54
     merge_into: 4
-    migrate_preserve: 11
+    migrate_preserve: 13
     migrate_rewrite: 8
     retain_third_party: 6
-    review: 89
+    review: 87
   migration_statuses:
-    classified: 74
-    inventoried: 89
+    classified: 76
+    inventoried: 87
     verified: 12
 documents:
 - original_path: CODE_OF_CONDUCT.md
@@ -2756,60 +2756,76 @@ documents:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-item-craft-and-disassembly
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/recipes-and-disassembly/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.recipes-and-disassembly
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_synced
+  upstream_relation: inherited_then_synced
   merge_target: null
   source_paths:
-  - doc/JSON/ITEM_CRAFT_AND_DISASSEMBLY.md
-  source_symbols: []
+  - src/recipe.cpp
+  - src/recipe_dictionary.cpp
+  - data/json/recipes/armor/other.json
+  - data/json/uncraft/ammo/10mm.json
+  - tests/recipe_steps_test.cpp
+  source_symbols:
+  - recipe::load
+  - recipe_dictionary::load
+  - recipe_dictionary::load_uncraft
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 残留两个 CleverRaven PR/Issue 解释历史语义，应改为来源注释而非现行契约链接。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 681 行覆盖配方、步骤、继承、requirements、拆解三种方式；2026-06 对 charged/unattended step 继续同步，且 recipe_steps/uncraft
+    测试可验证。
+  migration_batch: phase-0-json
 - original_path: doc/JSON/ITEM_SPAWN.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/item-groups.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - dumb-kevin
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-item-spawn
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/item-groups/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.item-groups
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_synced
+  upstream_relation: inherited_then_synced
   merge_target: null
   source_paths:
-  - doc/JSON/ITEM_SPAWN.md
-  source_symbols: []
+  - src/item_factory.cpp
+  - src/item_group.cpp
+  - data/json/itemgroups/Food/food.json
+  - tests/item_group_test.cpp
+  - tests/item_spawn_test.cpp
+  source_symbols:
+  - Item_factory::load_item_group
+  - item_group::load_item_group
+  - Item_spawn_data::relic_generator::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - SUS 示例链接指向 CleverRaven；迁移时改为 CCB 固定 commit 或本地样例。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 360 行解释 collection/distribution、entries、弹药/弹匣、嵌套组和测试；2026-04 已更新 multi-well 规则，现有 item_group 与 spawn
+    tests 覆盖核心行为。
+  migration_batch: phase-0-json
 - original_path: doc/JSON/JSON_FLAGS.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/generated/flags.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - LunaGlaze
