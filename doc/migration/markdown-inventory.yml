@@ -5,19 +5,19 @@ document_count: 175
 scope: Tracked Markdown at source_commit, excluding dot-prefixed tool/config paths; filesystem caches
   are never traversed.
 classification_summary:
-  review: 69
+  review: 33
   actions:
-    archive_public: 1
-    generated_reference: 3
+    archive_public: 3
+    generated_reference: 4
     keep_in_repo: 54
-    merge_into: 7
-    migrate_preserve: 22
-    migrate_rewrite: 13
+    merge_into: 12
+    migrate_preserve: 35
+    migrate_rewrite: 28
     retain_third_party: 6
-    review: 69
+    review: 33
   migration_statuses:
-    classified: 94
-    inventoried: 69
+    classified: 130
+    inventoried: 33
     verified: 12
 documents:
 - original_path: CODE_OF_CONDUCT.md
@@ -3495,383 +3495,465 @@ documents:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-npcs
-  domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/eoc/npcs-and-dialogue/
+  migration_status: classified
+  history_strategy: filtered_path_history_candidate
+  stable_document_id: json.npcs-dialogue
+  domain: eoc
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_extended
+  upstream_relation: forked_and_locally_extended
   merge_target: null
   source_paths:
-  - doc/JSON/NPCs.md
-  source_symbols: []
+  - src/npc.cpp
+  - src/npc_class.cpp
+  - src/npctalk.cpp
+  - data/json/npcs/missiondef.json
+  - tests/npc_talk_test.cpp
+  source_symbols:
+  - npc_template::load
+  - npc_class::load
+  - json_talk_topic::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 1,637 行含 NPC 定义、对话、条件、效果和 math 巨量内容；必须与 EOC registry 去重并保留 deprecated 标记。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 导入后 12 次更新，含 CCB NPC vehicle service 与 jmath 条件；当前 npctalk loader 和 npc tests 支持拆分成 NPC 配置与对话/EOC
+    页面。
+  migration_batch: phase-0-eoc
 - original_path: doc/JSON/OBSOLETION_AND_MIGRATION.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/obsoletion-and-migration.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-obsoletion-and-migration
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/obsoletion-and-migration/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.obsoletion-and-migration
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_high_risk_compatibility_contract
   merge_target: null
   source_paths:
-  - doc/JSON/OBSOLETION_AND_MIGRATION.md
-  source_symbols: []
+  - src/item_factory.cpp
+  - src/effect.cpp
+  - src/savegame_json.cpp
+  - data/json/obsoletion_and_migration_0.J/migration_items.json
+  - data/json/obsoletion_and_migration_0.J/eocs.json
+  - src/init.cpp
+  - src/magic.cpp
+  - src/proficiency.cpp
+  source_symbols:
+  - effect_migration::load
+  - ter_furn_migrations::load
+  - spell_migration::load
+  - proficiency_migration::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 这是存档兼容高风险文档；每种 migration 类型必须由当前注册、save loader 和加载测试验证后才能 active。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 464 行覆盖 item/vehicle/effect/trait/proficiency/spell/terrain/OMT/EOC/activity/mod 等迁移，直接关系存档兼容，不能压缩成泛化说明。
+  - Import-time source-symbol correction was verified against the tracked implementation.
+  migration_batch: phase-0-json
 - original_path: doc/JSON/OPTIONS.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/options.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-options
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/options/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.options
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_contract_with_tests
   merge_target: null
   source_paths:
-  - doc/JSON/OPTIONS.md
-  source_symbols: []
+  - src/options.cpp
+  - src/options.h
+  - data/core/external_options.json
+  - tests/options_test.cpp
+  source_symbols:
+  - options_manager::add_external
+  - options_manager::load
+  - options_manager::migrateOptionName
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 28 行准确区分 menu/external/world options 及 COPT_HIDE/stub 迁移技巧；当前 options 实现、external_options 数据和 tests
+    均存在。
+  migration_batch: phase-2-json
 - original_path: doc/JSON/OVERMAP.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/overmap.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - dumb-kevin
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-overmap
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/overmap/
+  migration_status: classified
+  history_strategy: filtered_path_history_candidate
+  stable_document_id: json.overmap
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_synced
+  upstream_relation: inherited_then_synced
   merge_target: null
   source_paths:
-  - doc/JSON/OVERMAP.md
-  source_symbols: []
+  - src/overmap_terrain.cpp
+  - src/overmap_special.cpp
+  - src/overmap_connection.cpp
+  - src/mapgen_post_process.cpp
+  - tests/overmap_test.cpp
+  source_symbols:
+  - overmap_terrains::load
+  - overmap_special::load
+  - overmap_connection::load
+  - pp_generator::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 迁移时应把 post-process generator 与 overmap special 的来源和测试保持同页关联。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 1,329 行覆盖 terrain/special/connection/location/city 与 mutable placement，导入后补充 post-process scope/persistence；tests/overmap_test.cpp
+    明确提供大量放置验证。
+  migration_batch: phase-0-json
 - original_path: doc/JSON/PRACTICE_RECIPES.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/practice-recipes.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-practice-recipes
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/practice-recipes/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.practice-recipes
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_contract_with_tests
   merge_target: null
   source_paths:
-  - doc/JSON/PRACTICE_RECIPES.md
-  source_symbols: []
+  - src/recipe.cpp
+  - src/recipe_dictionary.cpp
+  - data/json/recipes/practice/computers.json
+  - tests/crafting_gui_test.cpp
+  source_symbols:
+  - recipe_dictionary::load_practice
+  - recipe::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 71 行说明 practice 与普通 recipe 的差异、practice_data 和标准 1h 示例；当前 loader、核心实践配方和 crafting GUI tests 对应。
+  migration_batch: phase-2-json
 - original_path: doc/JSON/PROFICIENCY.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/proficiencies.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-proficiency
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/proficiencies/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.proficiencies
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_contract_with_current_sources
   merge_target: null
   source_paths:
-  - doc/JSON/PROFICIENCY.md
-  source_symbols: []
+  - src/proficiency.cpp
+  - src/proficiency.h
+  - data/json/proficiencies/misc.json
+  - tests/crafting_test.cpp
+  source_symbols:
+  - proficiency::load
+  - proficiency_category::load
+  - proficiency_migration::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 公式解释引用 CleverRaven PR；应把当前源码公式和测试作为来源。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 192 行解释 proficiency graph、类别、学习效果、penalty/bonus 字段；当前 loader 与大量 crafting 使用点存在。
+  migration_batch: phase-1-json
 - original_path: doc/JSON/PROFICIENCY_LIST.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/generated/proficiencies.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: generated_reference
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-proficiency-list
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/generated/proficiencies/
+  migration_status: classified
+  history_strategy: replace_manual_snapshot_with_generated_reference
+  stable_document_id: json.proficiencies-index
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: b1ee97987589450da70f30ee2feed12c9d18f479
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_manual_snapshot
   merge_target: null
   source_paths:
-  - doc/JSON/PROFICIENCY_LIST.md
-  source_symbols: []
+  - src/proficiency.cpp
+  - data/json/proficiencies/misc.json
+  - data/json/proficiencies/proficiency_categories.json
+  - data/mods/Magiclysm/proficiencies.json
+  source_symbols:
+  - proficiency::load
+  - proficiency_category::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 122 行却有 41 KB 的手工表，导入后从未更新；必须从 core 与明确纳入的 Mod 数据生成，并标出来源范围。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 页面本质是 ID/name/parent/description 清单且含 Magiclysm 专节，没有解释性结构；这类内容应由 JSON registry 生成，手工快照不可靠。
+  migration_batch: phase-1-json
 - original_path: doc/JSON/REGION_LAYOUT.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/region-layout.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - LYHGLYTX
   - Anton Simakov
   contributor_anomaly_count: 0
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-region-layout
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/region-layout/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.region-layout
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_sync_policy_adjusted
+  upstream_relation: forked_synced_with_exclusion_note
   merge_target: null
   source_paths:
-  - doc/JSON/REGION_LAYOUT.md
-  source_symbols: []
+  - src/overmap_worldgen.cpp
+  - src/overmap_worldgen.h
+  - data/json/region_settings/region_settings/dimensions/dimension_regions.json
+  source_symbols:
+  - dimension_region_layout::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 文档只列 UNIFORM 动态模式；生成 reference 必须从 loader 明确标记支持范围，不能暗示 STATIC 已完整实现。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 29 行定义 dimension_region_layout、STATIC/DYNAMIC 概念和 UNIFORM 字段；2026-07 随 dimension-id 及 CCB sync exclusion
+    更新。
+  migration_batch: phase-1-json
 - original_path: doc/JSON/REGION_SETTINGS.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/region-settings.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-region-settings
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/region-settings/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.region-settings
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_contract_with_test_data
   merge_target: null
   source_paths:
-  - doc/JSON/REGION_SETTINGS.md
-  source_symbols: []
+  - src/regional_settings.cpp
+  - src/regional_settings.h
+  - data/json/region_settings/region_settings/regional_map_settings.json
+  - data/json/region_settings/region_settings/test_regional_map_settings.json
+  source_symbols:
+  - region_settings::load
+  - region_settings_forest::load
+  - region_settings_city::load
+  - region_settings_map_extras::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 624 行字段表无专项 C++ test；应至少通过 test_regional_map_settings 的全量 JSON load 验证。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 完整覆盖地形、湖泊、森林、道路、城市、map extras、天气和 feature flags，当前 regional_settings loaders/data 对应。
+  migration_batch: phase-1-json
 - original_path: doc/JSON/TER_FURN_TRANSFORM.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/terrain-furniture-transforms.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-ter-furn-transform
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/terrain-furniture-transforms/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.terrain-furniture-transforms
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_contract_with_multiple_consumers
   merge_target: null
   source_paths:
-  - doc/JSON/TER_FURN_TRANSFORM.md
-  source_symbols: []
+  - src/magic_ter_fur_transform.cpp
+  - src/magic_ter_furn_transform.h
+  - src/mapgen.cpp
+  - data/json/mapgen/haunting.json
+  source_symbols:
+  - ter_furn_transform::load
+  - ter_furn_data<T>::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 已选择核心 mapgen 实例作为示例；迁移时仍需用 JSON load 验证该实例。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 83 行解释 terrain/furniture/field/trap 的 ID、权重与 flag 转换，并链接 EOC/mapgen/spell 三种调用方；C++ loader 当前存在。
+  migration_batch: phase-1-json
 - original_path: doc/JSON/VEHICLES_JSON.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/vehicle-prototypes.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - LunaGlaze
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-vehicles-json
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/vehicle-prototypes/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.vehicle-prototypes
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_extended
+  upstream_relation: forked_and_locally_extended
   merge_target: null
   source_paths:
-  - doc/JSON/VEHICLES_JSON.md
-  source_symbols: []
+  - src/veh_type.cpp
+  - src/veh_type.h
+  - data/json/road_vehicles.json
+  - data/json/vehicleparts/vehicle_parts.json
+  - tests/vehicle_export_test.cpp
+  source_symbols:
+  - vehicle_prototype::load
+  - vehicles::parts::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 182 行覆盖 prototype part order、parts/items/zones、variants 与 debug export；2026-07 加入 CCB default_tint_color，vehicle
+    export test 可验证导出流程。
+  migration_batch: phase-1-json
 - original_path: doc/JSON/VITAMIN.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/vitamins.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - zihanZheng
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-vitamin
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/vitamins/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.vitamins
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_extended
+  upstream_relation: forked_and_locally_extended
   merge_target: null
   source_paths:
-  - doc/JSON/VITAMIN.md
-  source_symbols: []
+  - src/vitamin.cpp
+  - src/vitamin.h
+  - data/json/vitamin.json
+  - tests/vitamin_test.cpp
+  source_symbols:
+  - vitamin::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 204 行逐字段解释 vitamin/toxin/counter/drug、继承和 flags；2026-07 CCB 增加 copy-from、extend/delete、decays_into
+    语义，且有专项测试。
+  migration_batch: phase-1-json
 - original_path: doc/JSON/WEATHER_TYPE.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/weather-types.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - Anton Simakov
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-weather-type
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/weather-types/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.weather-types
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_synced
+  upstream_relation: inherited_then_synced
   merge_target: null
   source_paths:
-  - doc/JSON/WEATHER_TYPE.md
-  source_symbols: []
+  - src/weather_type.cpp
+  - src/weather_type.h
+  - src/weather_gen.cpp
+  - data/json/weather_type.json
+  - tests/weather_test.cpp
+  source_symbols:
+  - weather_type::load
+  - weather_types::load
+  - weather_generator::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 81 行字段表和完整天气示例，2026-07 随 temperature_modifier 实现更新；loader/data/weather tests 对应。
+  migration_batch: phase-1-json
 - original_path: doc/JSON/WOUNDS.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/wounds.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - Anton Simakov
@@ -3879,642 +3961,731 @@ documents:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-wounds
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/wounds/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.wounds
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_synced
+  upstream_relation: inherited_then_synced
   merge_target: null
   source_paths:
-  - doc/JSON/WOUNDS.md
-  source_symbols: []
+  - src/wound.cpp
+  - src/wound.h
+  - src/init.cpp
+  source_symbols:
+  - wound_type::load
+  - wound_fix::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - Git index 中未发现第一方 wound/wound_fix JSON 实例或专项测试；示例只能标记 schema-style，不能宣称已加载验证。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 54 行给出 wound 与 wound_fix 两个完整示例，2026-06 连续加入 limit、progression、limb score；类型已在 DynamicDataLoader 注册，但缺少第一方数据覆盖。
+  migration_batch: phase-1-json
 - original_path: doc/MANUAL_OF_STYLE.md
-  target_path: null
+  target_path: docs/zh_CN/contributing/in-game-text-style.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-manual-of-style
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/contributing/in-game-text-style/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: content.manual-of-style
+  domain: translation
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_style_policy_requiring_ccb_confirmation
   merge_target: null
   source_paths:
-  - doc/MANUAL_OF_STYLE.md
+  - CONTRIBUTING.md
+  - lang/notes/README_all_translators.md
+  - tools/check_translation_tags.py
+  - src/translations.cpp
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 链接 ../lang/notes 指向目录而非页面；双句空格、专名和方言规则应由 CCB 维护者在 CONTRIBUTING/治理来源中确认后发布。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 30 行是英文游戏文本与 NPC 对话风格规范，仍有贡献价值但属于规范性内容；需与翻译说明、提取器和 CCB 贡献政策对齐后双语发布。
+  migration_batch: phase-1-translation
 - original_path: doc/MODDING.md
-  target_path: null
+  target_path: docs/zh_CN/modding/overview.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - SpinosaurusBoat
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: modding-overview
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-modding
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: modding-overview
+  domain: mods
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: mixed
+  upstream_relation: upstream_derived_with_ccb_extensions
   merge_target: null
   source_paths:
   - doc/MODDING.md
-  source_symbols: []
+  - src/mod_manager.cpp
+  - src/init.cpp
+  - src/game_io.cpp
+  - build-scripts/get_all_mods.py
+  source_symbols:
+  - DynamicDataLoader::load_mod_interaction_files_from_path
+  - game::load_mod_interaction_data_from_dir
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - The mod loader and mod_interactions path are live in init/game I/O, while the inherited guide still
+    points at upstream CDDA processes.
+  - Rewrite against current CCB MOD_INFO fields and validate examples with the all-mod loader.
+  migration_batch: phase-0-mods
 - original_path: doc/MOD_COMPATIBILITY.md
-  target_path: null
+  target_path: docs/zh_CN/modding/compatibility.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: mod-compatibility
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-mod-compatibility
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: mod-compatibility
+  domain: mods
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: mixed
+  upstream_relation: upstream_derived_with_ccb_extensions
   merge_target: null
   source_paths:
   - doc/MOD_COMPATIBILITY.md
-  source_symbols: []
+  - src/mod_manager.cpp
+  - src/init.cpp
+  - build-scripts/get_all_mods.py
+  - data/mods/MindOverMatter/mod_interactions/innawood/recipes.json
+  source_symbols:
+  - DynamicDataLoader::load_mod_interaction_files_from_path
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Compatibility overlays remain implemented and have first-party examples, but the old document must
+    distinguish CCB behavior from inherited upstream assumptions.
+  migration_batch: phase-0-mods
 - original_path: doc/PLAYER_ACTIVITY.md
-  target_path: null
+  target_path: docs/zh_CN/cpp/activities.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - Antonín Drdácký
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: cpp-activities
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-player-activity
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: cpp-activities
+  domain: cpp
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: mixed
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/PLAYER_ACTIVITY.md
-  source_symbols: []
+  - src/activity_actor.h
+  - src/activity_type.cpp
+  - data/json/player_activities.json
+  - tests/player_activities_test.cpp
+  source_symbols:
+  - activity_type::load
+  - activity_type::load_all
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Activity actors, JSON activity types, completion_eoc/do_turn_eoc fields, and tests are current; the
+    page should be rebuilt as a source-linked subsystem guide.
+  migration_batch: phase-1-cpp
 - original_path: doc/RELEASE_DIFF.md
-  target_path: null
+  target_path: docs/zh_CN/maintenance/releases.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: merge_into
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: release-maintenance
+  migration_status: classified
   history_strategy: evaluate_filtered_history
   stable_document_id: legacy.doc-release-diff
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
-  merge_target: null
+  domain: release
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_specific
+  upstream_relation: ccb_workflow_replaces_upstream_process
+  merge_target: release-maintenance
   source_paths:
   - doc/RELEASE_DIFF.md
+  - .github/workflows/release.yml
+  - build-scripts/generate-release-notes.js
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - The useful release-diff procedure belongs with the current CCB release workflow and generated release
+    notes rather than as a standalone inherited page.
+  migration_batch: phase-1-release
 - original_path: doc/RELEASE_PROCESS.md
-  target_path: null
+  target_path: docs/zh_CN/maintenance/releases.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: merge_into
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: release-maintenance
+  migration_status: classified
   history_strategy: evaluate_filtered_history
   stable_document_id: legacy.doc-release-process
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
-  merge_target: null
+  domain: release
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_specific
+  upstream_relation: ccb_workflow_replaces_upstream_process
+  merge_target: release-maintenance
   source_paths:
   - doc/RELEASE_PROCESS.md
+  - .github/workflows/release.yml
+  - .github/workflows/release-android-bundle.yaml
+  - build-scripts/generate-release-notes.js
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Release automation is CCB-specific and active, but this upstream-oriented process page duplicates
+    the release-diff material and must be reconciled with Actions.
+  migration_batch: phase-1-release
 - original_path: doc/SOUNDPACKS.md
-  target_path: null
+  target_path: docs/zh_CN/resources/soundpacks.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: soundpacks
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-soundpacks
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: soundpacks
+  domain: resources
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: mixed
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/SOUNDPACKS.md
-  source_symbols: []
+  - src/sdlsound.cpp
+  - src/sdlsound.h
+  source_symbols:
+  - load_soundset
+  - sfx::load_sound_effects
+  - sfx::load_playlist
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - SDL soundpack loading remains active; static ID lists in the old guide should be generated or checked
+    against sdlsound.cpp instead of copied forward.
+  migration_batch: phase-2-resources
 - original_path: doc/TESTING_YOUR_CHANGES.md
-  target_path: null
+  target_path: docs/zh_CN/testing/manual-playtesting.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: merge_into
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: testing-manual
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-testing-your-changes
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
-  merge_target: null
+  stable_document_id: testing-manual
+  domain: testing
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: mixed
+  upstream_relation: upstream_derived_revalidate
+  merge_target: testing-manual
   source_paths:
   - doc/TESTING_YOUR_CHANGES.md
+  - tests/AGENTS.md
+  - Makefile
+  - CMakeLists.txt
+  - .github/workflows/matrix.yml
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Manual playtesting guidance is still useful but overlaps the test guide; merge it into a CCB test
+    matrix backed by current build and CI commands.
+  migration_batch: phase-0-testing
 - original_path: doc/TILESET.md
-  target_path: null
+  target_path: docs/zh_CN/resources/tilesets.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: tilesets
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-tileset
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: tilesets
+  domain: resources
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: mixed
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/TILESET.md
+  - tools/gfx_tools/compose.py
+  - tools/gfx_tools/decompose.py
+  - .github/workflows/compose-tilesets.yml
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Compose/decompose tooling and CI are current, but the guide has upstream-only links and unfinished
+    platform sections; rewrite with commands exercised in CCB.
+  migration_batch: phase-2-resources
 - original_path: doc/TRANSLATING.md
-  target_path: null
+  target_path: docs/zh_CN/localization/translation-guide.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - LunaGlaze
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: translation-guide
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-translating
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: translation-guide
+  domain: localization
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_specific
+  upstream_relation: ccb_workflow_replaces_upstream_process
   merge_target: null
   source_paths:
   - doc/TRANSLATING.md
-  source_symbols: []
+  - lang/Makefile
+  - src/translations.cpp
+  - .github/workflows/build-translations.yml
+  - .github/workflows/push-translation-template.yml
+  - src/translation_manager.cpp
+  source_symbols:
+  - TranslationManager::LoadDocuments
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - CCB translation extraction/build workflows are active; the old page retains CDDA wording and inconsistent
+    POT filenames, so commands and service references need replacement.
+  - Import-time source-symbol correction was verified against the tracked implementation.
+  migration_batch: phase-0-localization
 - original_path: doc/TRANSLATING_MOD.md
-  target_path: null
+  target_path: docs/zh_CN/modding/localization.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: merge_into
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: mod-localization
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-translating-mod
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
-  merge_target: null
+  stable_document_id: mod-localization
+  domain: localization
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: mixed
+  upstream_relation: upstream_derived_revalidate
+  merge_target: mod-localization
   source_paths:
   - doc/TRANSLATING_MOD.md
+  - lang/extract_json_strings.py
+  - lang/string_extractor/parsers/mod_info.py
+  - src/translations.cpp
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Mod-specific extraction rules remain relevant but should be part of the mod documentation and verified
+    against the current extractor.
+  migration_batch: phase-1-localization
 - original_path: doc/USER_INTERFACE_AND_ACCESSIBILITY.md
-  target_path: null
+  target_path: docs/zh_CN/ui/accessibility.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: ui-accessibility
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-user-interface-and-accessibility
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: ui-accessibility
+  domain: ui
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: mixed
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/USER_INTERFACE_AND_ACCESSIBILITY.md
-  source_symbols: []
+  - src/options.cpp
+  - src/newcharacter.cpp
+  - src/player_difficulty.cpp
+  source_symbols:
+  - SCREEN_READER_MODE
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Screen reader mode is registered and consumed in current CCB code; rewrite this conceptual guide with
+    tested UI entry points and known limits.
+  migration_batch: phase-1-ui
 - original_path: doc/WIDGETS.md
-  target_path: null
+  target_path: docs/zh_CN/json/widgets.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: json-widgets
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-widgets
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: json-widgets
+  domain: json
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: mixed
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/WIDGETS.md
-  source_symbols: []
+  - src/widget.cpp
+  - src/widget.h
+  - tests/widget_test.cpp
+  - data/json/ui/layout.json
+  source_symbols:
+  - widget::load_widget
+  - widget::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Widgets are implemented, loaded from data/json/ui, and extensively tested; regenerate or validate
+    variable/reference lists from source during the rewrite.
+  migration_batch: phase-1-json
 - original_path: doc/c++/CODE_STYLE.md
-  target_path: null
+  target_path: docs/zh_CN/cpp/code-style.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: cpp-code-style
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-c-code-style
+  stable_document_id: cpp-code-style
   domain: cpp
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: mixed
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/c++/CODE_STYLE.md
+  - .astylerc
+  - .clang-tidy
+  - .github/workflows/astyle.yml
+  - tools/format/format.cpp
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Style policy must reflect the checked-in formatter/linter configuration and current CI, not inherited
+    prose alone.
+  migration_batch: phase-0-cpp
 - original_path: doc/c++/COMPILER_SUPPORT.md
-  target_path: null
+  target_path: docs/zh_CN/platforms/compiler-support.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: platform-matrix
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-c-compiler-support
-  domain: cpp
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: platform-matrix
+  domain: build
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_specific
+  upstream_relation: ccb_ci_is_authoritative
   merge_target: null
   source_paths:
   - doc/c++/COMPILER_SUPPORT.md
+  - CMakeLists.txt
+  - .github/workflows/matrix.yml
+  - .github/workflows/msvc-full-features.yml
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - CMake requires 3.20 and C++17, while active CI defines the real compiler matrix; rewrite the support
+    claims from those contracts.
+  migration_batch: phase-0-build
 - original_path: doc/c++/COMPILING-CMAKE-VCPKG.md
-  target_path: null
+  target_path: docs/zh_CN/build/windows-msvc.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: merge_into
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: build-windows-msvc
+  migration_status: classified
   history_strategy: evaluate_filtered_history
   stable_document_id: legacy.doc-c-compiling-cmake-vcpkg
-  domain: cpp
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
-  merge_target: null
+  domain: build
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: mixed
+  upstream_relation: upstream_derived_revalidate
+  merge_target: build-windows-msvc
   source_paths:
   - doc/c++/COMPILING-CMAKE-VCPKG.md
+  - CMakeLists.txt
+  - CMakePresets.json
+  - build-scripts/x64-windows-static.cmake
+  - .github/workflows/msvc-full-features.yml
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - This is one Windows/vcpkg route and should be reconciled with the maintained MSVC preset/workflow
+    instead of published as a parallel guide.
+  migration_batch: phase-0-build
 - original_path: doc/c++/COMPILING-CMAKE.md
-  target_path: null
+  target_path: docs/zh_CN/build/cmake.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: build-cmake
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-c-compiling-cmake
-  domain: cpp
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: build-cmake
+  domain: build
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_specific
+  upstream_relation: ccb_build_contract_is_authoritative
   merge_target: null
   source_paths:
   - doc/c++/COMPILING-CMAKE.md
+  - CMakeLists.txt
+  - CMakePresets.json
+  - build-scripts/CMakeUserPresets.json.in
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - The old statement that CMake is unsupported is false; current CMake configuration and presets are
+    authoritative and require a clean rewrite.
+  migration_batch: phase-0-build
 - original_path: doc/c++/COMPILING-CYGWIN.md
-  target_path: null
+  target_path: docs/zh_CN/archive/build/cygwin.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
-  archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  action: archive_public
+  archive_reason: No current CCB CI/support evidence; Cygwin instructions are obsolete and superseded
+    by maintained Windows paths.
+  replacement: build-windows-msys2
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-c-compiling-cygwin
-  domain: cpp
+  stable_document_id: archive-build-cygwin
+  domain: build
   priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  last_applicable_commit: null
+  ccb_specificity: upstream_derived
+  upstream_relation: upstream_only_obsolete
   merge_target: null
   source_paths:
   - doc/c++/COMPILING-CYGWIN.md
+  - Makefile
   source_symbols: []
-  translation_required: true
-  include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  translation_required: false
+  include_in_ai_index: false
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - The Makefile retains Cygwin conditionals, but no current CI or maintained support evidence exists;
+    preserve the page only as historical material.
+  - 'The exact last-applicable SHA is intentionally unknown: imported snapshot history repeatedly re-adds
+    this path at unrelated commits, so those SHAs are provenance rather than validity evidence.'
+  migration_batch: phase-3-build
 - original_path: doc/c++/COMPILING-DEVCONTAINER.md
-  target_path: null
+  target_path: docs/zh_CN/build/devcontainer.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: build-devcontainer
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-c-compiling-devcontainer
-  domain: cpp
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: build-devcontainer
+  domain: build
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_specific
+  upstream_relation: ccb_configuration_is_authoritative
   merge_target: null
   source_paths:
   - doc/c++/COMPILING-DEVCONTAINER.md
+  - .devcontainer/devcontainer.json
+  - .devcontainer/Dockerfile
+  - .devcontainer/graphical/devcontainer.json
+  - .devcontainer/cross-compile/devcontainer.json
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Multiple tracked devcontainer variants are live; rewrite the page around the actual CCB configurations
+    and validation commands.
+  migration_batch: phase-1-build
 - original_path: doc/c++/COMPILING-FLATPAK.md
-  target_path: null
+  target_path: docs/zh_CN/archive/build/flatpak.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
-  archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  action: archive_public
+  archive_reason: No maintained Flatpak manifest, workflow, or validation path exists in CCB.
+  replacement: build-overview
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-c-compiling-flatpak
-  domain: cpp
+  stable_document_id: archive-build-flatpak
+  domain: build
   priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  last_applicable_commit: null
+  ccb_specificity: upstream_derived
+  upstream_relation: upstream_only_obsolete
   merge_target: null
   source_paths:
   - doc/c++/COMPILING-FLATPAK.md
   source_symbols: []
-  translation_required: true
-  include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  translation_required: false
+  include_in_ai_index: false
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - No tracked Flatpak manifest or CI path exists on the reviewed default branch; only historical remnants
+    support this page.
+  - 'The exact last-applicable SHA is intentionally unknown: imported snapshot history repeatedly re-adds
+    this path at unrelated commits, so those SHAs are provenance rather than validity evidence.'
+  migration_batch: phase-3-build
 - original_path: doc/c++/COMPILING-MSYS.md
-  target_path: null
+  target_path: docs/zh_CN/build/windows-msys2.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: build-windows-msys2
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-c-compiling-msys
-  domain: cpp
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: build-windows-msys2
+  domain: build
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: mixed
+  upstream_relation: upstream_derived_revalidate
   merge_target: null
   source_paths:
   - doc/c++/COMPILING-MSYS.md
+  - Makefile
+  - CMakeLists.txt
+  - .github/workflows/sdl3-matrix.yml
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - MSYS2 remains a relevant Windows route, but package names, SDL generation, clone URLs, and commands
+    must be verified against current CCB build files.
+  migration_batch: phase-0-build
 - original_path: doc/c++/COMPILING-VS-VCPKG.md
-  target_path: null
+  target_path: docs/zh_CN/build/windows-msvc.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - Maleclypse
@@ -4522,30 +4693,34 @@ documents:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
+  replacement: build-windows-msvc
+  migration_status: classified
   history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-c-compiling-vs-vcpkg
-  domain: cpp
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  stable_document_id: build-windows-msvc
+  domain: build
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_specific
+  upstream_relation: ccb_build_contract_is_authoritative
   merge_target: null
   source_paths:
   - doc/c++/COMPILING-VS-VCPKG.md
+  - CMakePresets.json
+  - build-scripts/x64-windows-static.cmake
+  - build-scripts/windows-tiles-sounds-x64-msvc.cmake
+  - .github/workflows/msvc-full-features.yml
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - MSVC/vcpkg is maintained in presets and CI; consolidate current flags and dependencies while removing
+    CleverRaven URLs.
+  migration_batch: phase-0-build
 - original_path: doc/c++/COMPILING.md
-  target_path: null
+  target_path: docs/zh_CN/build/overview.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - LYHGLYTX
