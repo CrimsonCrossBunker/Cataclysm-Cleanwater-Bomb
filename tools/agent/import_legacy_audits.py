@@ -92,3 +92,93 @@ def evidence_list(value: object) -> list[str]:
 
 def anomaly_key(entry: dict) -> tuple[str, str]:
     return entry["original_path"], entry["fingerprint"]
+
+def direct_path_contributors(commit: str, path: str) -> list[str]:
+    """Return authors of commits that directly touched this exact path.
+
+    Deliberately avoid ``--follow`` here: Git rename detection jumped between
+    unrelated, byte-identical legacy documents and polluted the frozen v1
+    inventory with cross-path identities.
+    """
+    result = subprocess.run(
+        ["git", "log", commit, "--format=%aN", "--", path],
+        cwd=ROOT,
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    return result.stdout.splitlines()
+
+def clean_identities(
+    original_path: str,
+    anomaly_values: list[object],
+    authoritative_values: list[object],
+    anomaly_sink: list[dict],
+) -> tuple[list[str], int]:
+    _, inherited_rejected = sanitize_contributors(anomaly_values)
+    clean, direct_rejected = sanitize_contributors(authoritative_values)
+    rejected = [*inherited_rejected, *direct_rejected]
+    records_by_fingerprint = {
+        entry["fingerprint"]: {"original_path": original_path, **entry}
+        for entry in rejected
+    }
+    records = list(records_by_fingerprint.values())
+    anomaly_sink.extend(records)
+    return clean or ["Unknown (see source history)"], len(records)
+
+def retained_record(
+    base: dict,
+    anomalies: list[dict],
+    authoritative_contributors: list[object] | None = None,
+) -> dict:
+    path = base["original_path"]
+    contributors, rejected_count = clean_identities(
+        path,
+        list(base.get("contributors", [])),
+        authoritative_contributors or list(base.get("contributors", [])),
+        anomalies,
+    )
+    if path in RETAINED_IDS:
+        stable_id, domain, priority = RETAINED_IDS[path]
+        action = "keep_in_repo"
+        specificity = "ccb_project"
+        relation = "fork_governance_or_project_entry"
+        include_in_ai = True
+        evidence = "Retained as a repository authority or project entry point."
+    else:
+        stable_id = "third-party." + stable_id_for(path).removeprefix("legacy.")
+        domain = "third-party"
+        priority = "P3"
+        action = "retain_third_party"
+        specificity = "third_party"
+        relation = "vendored"
+        include_in_ai = False
+        evidence = "Retained in place under its file-specific third-party license."
+    return {
+        "original_path": path,
+        "target_path": path,
+        "source_commit": base["source_commit"],
+        "contributors": contributors,
+        "contributor_anomaly_count": rejected_count,
+        "license": base["license"],
+        "action": action,
+        "archive_reason": None,
+        "replacement": None,
+        "migration_status": "verified",
+        "history_strategy": base["history_strategy"],
+        "stable_document_id": stable_id,
+        "domain": domain,
+        "priority": priority,
+        "last_applicable_commit": base["source_commit"],
+        "ccb_specificity": specificity,
+        "upstream_relation": relation,
+        "merge_target": None,
+        "source_paths": [path],
+        "source_symbols": [],
+        "translation_required": False,
+        "include_in_ai_index": include_in_ai,
+        "blockers": [],
+        "evidence": [evidence],
+        "migration_batch": None,
+    }
