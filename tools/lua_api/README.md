@@ -25,8 +25,14 @@ tools/format/json_formatter.cgi data/lua/reference/ccb_public_api_v5_coverage.js
 python3 tools/lua_api/generate_public_contract.py --check
 python3 tools/lua_api/check_public_contract.py
 python3 tools/lua_api/check_examples.py --require-luac
+python3 tools/lua_api/check_cmake_contract.py
 python3 -m unittest discover -s tools/lua_api -p 'test_*.py'
 ```
+
+`check_cmake_contract.py` protects the final executable link boundary for all
+three CMake backends. Lua-disabled builds remain dependency-free; Lua-enabled
+tiles, curses, and headless executables must explicitly link the bundled Lua
+archive after their object libraries so static-link order cannot drop it.
 
 Generated JSON must not be edited by hand. The coverage file distinguishes
 100% inventory coverage from CCB-Docs publication coverage; the latter stays

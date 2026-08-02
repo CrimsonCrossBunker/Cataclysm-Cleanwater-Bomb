@@ -13,6 +13,16 @@ function(configure_lua_ui TARGET)
     endif()
 endfunction()
 
+# Object-library usage requirements do not reliably place Lua's static archive
+# after the final executable objects on every CMake generator.  Link the Lua
+# runtime explicitly at each executable boundary while keeping Lua-disabled
+# builds free of the dependency.
+function(link_lua_ui_runtime TARGET)
+    if (CATA_ENABLE_LUA_UI)
+        target_link_libraries(${TARGET} PRIVATE liblua)
+    endif()
+endfunction()
+
 # Tracy profiler interface.  When TRACY=ON (root CMakeLists.txt), this carries
 # the tracy include path and libTracyClient link to every -common object lib.
 # When TRACY=OFF the target is not created and these lines are inert.
@@ -152,6 +162,7 @@ if (TILES)
     add_dependencies(cataclysm-tiles-common get_version)
 
     target_link_libraries(cataclysm-tiles PRIVATE cataclysm-tiles-common)
+    link_lua_ui_runtime(cataclysm-tiles)
     target_compile_definitions(cataclysm-tiles-common PUBLIC TILES )
     if(NOT "${CMAKE_EXPORT_COMPILE_COMMANDS}")
         target_precompile_headers(cataclysm-tiles-common PUBLIC
@@ -354,6 +365,7 @@ if (CURSES)
 
     add_dependencies(cataclysm-common get_version)
     target_link_libraries(cataclysm PRIVATE cataclysm-common)
+    link_lua_ui_runtime(cataclysm)
 
     if (LOCALIZE)
         target_include_directories(cataclysm-common PUBLIC
@@ -432,6 +444,7 @@ if (HEADLESS)
 
     add_dependencies(cataclysm-common get_version)
     target_link_libraries(cataclysm PRIVATE cataclysm-common)
+    link_lua_ui_runtime(cataclysm)
 
     if (LOCALIZE)
         target_include_directories(cataclysm-common PUBLIC

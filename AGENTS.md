@@ -83,6 +83,7 @@ make -j2 json-check
 # Lua public-contract checks
 python3 tools/lua_api/check_luals_declarations.py
 python3 tools/lua_api/check_coverage.py
+python3 tools/lua_api/check_cmake_contract.py
 
 # CMake configuration (out-of-tree)
 cmake --preset linux-x64
