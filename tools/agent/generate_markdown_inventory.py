@@ -172,6 +172,26 @@ def main() -> int:
     print(f"wrote {output.relative_to(ROOT)} at {commit}")
     return 0
 DEFAULT_ANOMALY_REPORT = ROOT / "doc/migration/contributor-anomalies.yml"
+def sanitize_contributors(values: list[object]) -> tuple[list[str], list[dict]]:
+    """Normalize identities and keep rejected values out of publishable data."""
+    clean_names: list[str] = []
+    anomalies: list[dict] = []
+    for value in values:
+        reason = contributor_rejection_reason(value)
+        if reason:
+            encoded = repr(value).encode("utf-8", errors="backslashreplace")
+            anomalies.append(
+                {
+                    "fingerprint": "sha256:" + hashlib.sha256(encoded).hexdigest(),
+                    "reason": reason,
+                    "value_type": type(value).__name__,
+                }
+            )
+            continue
+        clean = " ".join(value.split())
+        if clean not in clean_names:
+            clean_names.append(clean)
+    return clean_names, anomalies
 UNSAFE_CONTRIBUTOR_PATTERNS = (
     re.compile(r"\bgit\s+config\b", re.IGNORECASE),
     re.compile(r"(?:\$\(|`|&&|\|\||[;<>])"),
@@ -186,3 +206,16 @@ KEEP_IN_REPO = {
     "SYNC_EXCLUDED_PRS.md",
     "TRANSLATION_CREDITS.md",
 }
+def contributor_rejection_reason(value: object) -> str | None:
+    if not isinstance(value, str):
+        return "identity is not a string"
+    if any(unicodedata.category(character) == "Cc" for character in value):
+        return "identity contains a control character"
+    clean = " ".join(value.split())
+    if not clean:
+        return "identity is empty after whitespace normalization"
+    if len(clean) > MAX_CONTRIBUTOR_LENGTH:
+        return "identity exceeds the safe display length"
+    if any(pattern.search(clean) for pattern in UNSAFE_CONTRIBUTOR_PATTERNS):
+        return "identity contains a command fragment or control syntax"
+    return None
