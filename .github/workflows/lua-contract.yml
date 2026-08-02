@@ -10,6 +10,8 @@ on:
       - 'ai/generated-files.yml'
       - 'ai/test-matrix.yml'
       - 'data/lua/**'
+      - 'src/CMakeLists.txt'
+      - 'src/lua/CMakeLists.txt'
       - 'src/catalua*.cpp'
       - 'src/catalua*.h'
       - 'src/event.h'
@@ -50,6 +52,9 @@ jobs:
             'ai/generated-files.yml' \
             'ai/test-matrix.yml' \
             ':(glob)data/lua/**' \
+            'src/CMakeLists.txt' \
+            'src/lua/CMakeLists.txt' \
+            'src/main.cpp' \
             ':(glob)src/catalua*.cpp' \
             ':(glob)src/catalua*.h' \
             'src/event.h' \
@@ -78,4 +83,5 @@ jobs:
           python3 tools/lua_api/generate_public_contract.py --check
           python3 tools/lua_api/check_public_contract.py
           python3 tools/lua_api/check_examples.py --require-luac
+          python3 tools/lua_api/check_cmake_contract.py
           python3 -m unittest discover -s tools/lua_api -p 'test_*.py'

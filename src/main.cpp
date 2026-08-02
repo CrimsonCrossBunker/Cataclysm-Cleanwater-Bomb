@@ -344,7 +344,7 @@ cli_opts parse_commandline( int argc, const char **argv )
             },
             {
                 "--check-mods", "[mod…]",
-                "Checks the json files belonging to given CDDA mod and exits",
+                "Checks Mod data and, in Lua-enabled builds, top-level Lua scripts, then exits",
                 section_default,
                 1,
                 [&result]( int n, const char **params ) -> int {
@@ -1080,8 +1080,10 @@ int main( int argc, const char *argv[] )
 #endif
 
 #if !defined(TILES)
-    get_options().init();
-    get_options().load();
+    if( !cli.check_mods ) {
+        get_options().init();
+        get_options().load();
+    }
 #endif
 
     // in test mode don't initialize curses to avoid escape sequences being inserted into output stream

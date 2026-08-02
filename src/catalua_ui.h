@@ -196,6 +196,13 @@ bool is_safe_module_name( std::string_view name );
 // failed reload leaves the previous runtime active.
 bool reload_scripts( std::string &error );
 
+// In Lua-enabled builds, parse manifests and execute the top-level scripts for
+// explicit Mods in a separate, non-active Lua runtime state.  Top-level APIs
+// execute normally, but --check-mods never subscribes callbacks, dispatches
+// lifecycle events, or commits script state.  Builds without Lua skip this.
+bool validate_mod_scripts( const std::vector<std::string> &mod_ids,
+                           std::string &error );
+
 // Run deterministic due callbacks once after the game turn advances.
 void on_turn();
 

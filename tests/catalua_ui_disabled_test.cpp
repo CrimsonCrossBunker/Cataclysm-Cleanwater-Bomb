@@ -17,6 +17,10 @@ TEST_CASE( "disabled_lua_ui_build_has_an_inert_facade", "[lua][ui][build]" )
     CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
     CHECK_FALSE( error.empty() );
 
+    error = "stale";
+    CHECK( cata::lua_ui::validate_mod_scripts( { "ignored_without_lua" }, error ) );
+    CHECK( error.empty() );
+
     const cata::lua_ui::runtime_status status = cata::lua_ui::status();
     CHECK_FALSE( status.loaded );
     CHECK_FALSE( status.last_error.empty() );

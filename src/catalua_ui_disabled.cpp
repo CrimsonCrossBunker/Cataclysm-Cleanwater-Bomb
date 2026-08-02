@@ -36,6 +36,13 @@ bool reload_scripts( std::string &error )
     return false;
 }
 
+bool validate_mod_scripts( const std::vector<std::string> &, std::string &error )
+{
+    // A build without Lua has no script runtime to validate.
+    error.clear();
+    return true;
+}
+
 void on_turn()
 {
 }

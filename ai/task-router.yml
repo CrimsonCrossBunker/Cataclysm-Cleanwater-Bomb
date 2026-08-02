@@ -48,13 +48,13 @@ entries:
       - EOC syntax may differ when CCB registrations lag or diverge from upstream.
   - id: lua-api
     keywords: [Lua, LuaLS, manifest, capability, callback, hook, 脚本, 能力]
-    paths: [data/lua/, tools/lua_api/, 'src/catalua*.cpp', 'src/catalua*.h']
+    paths: [data/lua/, tools/lua_api/, src/main.cpp, src/game_io.cpp, 'src/catalua*.cpp', 'src/catalua*.h']
     project_ids: [lua-api]
     documentation_ids: [api.lua.v5.overview, api.lua.v5.reference.modules]
     source_symbols: [ccb_api_v5]
     validation_ids: [lua-contract]
     compatibility:
-      - Keep manifest, LuaLS, native registration, inventory, and examples in parity.
+      - Keep manifest, LuaLS, native registration, inventory, examples, and runtime validation in parity.
     upstream_differences:
       - CCB Lua v5 is a CCB contract and is not inferred from CBN or CDDA APIs.
   - id: upstream-port
