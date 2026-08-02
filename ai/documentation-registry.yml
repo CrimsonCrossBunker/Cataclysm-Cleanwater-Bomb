@@ -1,9 +1,9 @@
 schema_version: 1
 kind: documentation_registry
-source_commit: 2c899a3db790e11a6ff44d91f319064b1ee65d2a
+source_commit: 0535df12e953dafe15e92bc497c845b103390d94
 scope: Tracked documentation and machine contracts from the Git index; untracked build caches are never
   traversed.
-entry_count: 214
+entry_count: 217
 entries:
 - id: repo.deepcode-plans-sim-render-decoupling-plan-md
   path: .deepcode/plans/sim-render-decoupling-plan.md
@@ -349,25 +349,23 @@ entries:
   include_in_ai_index: true
 - id: repo.data-json-npcs-godco-necc-info-md
   path: data/json/npcs/godco/NECC_INFO.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-json-npcs-godco-necc-info
-  ccb_docs_ids:
-  - legacy.data-json-npcs-godco-necc-info
+  stable_document_id: content.npc.godco-roster
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-json-npcs-refugee-center-free-merchants-info-md
   path: data/json/npcs/refugee_center/FREE_MERCHANTS_INFO.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-json-npcs-refugee-center-free-merchants-info
-  ccb_docs_ids:
-  - legacy.data-json-npcs-refugee-center-free-merchants-info
+  stable_document_id: content.npc.free-merchants-economy
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -388,9 +386,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.data-lua-readme
+  stable_document_id: lua.v5.overview
   ccb_docs_ids:
-  - legacy.data-lua-readme
+  - lua.v5.overview
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -400,9 +398,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.data-lua-examples-api-v5-mod-readme
+  stable_document_id: lua.v5.example-mod
   ccb_docs_ids:
-  - legacy.data-lua-examples-api-v5-mod-readme
+  - lua.v5.example-mod
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -474,145 +472,133 @@ entries:
   include_in_ai_index: true
 - id: repo.data-mods-backrooms-readme-md
   path: data/mods/Backrooms/README.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-backrooms-readme
-  ccb_docs_ids:
-  - legacy.data-mods-backrooms-readme
+  stable_document_id: mods.backrooms.overview
+  ccb_docs_ids: []
   generated: false
   generated_by: null
-  include_in_ai_index: true
+  include_in_ai_index: false
 - id: repo.data-mods-bombasticperks-docs-contributing-md
   path: data/mods/BombasticPerks/docs/contributing.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-bombasticperks-docs-contributing
-  ccb_docs_ids:
-  - legacy.data-mods-bombasticperks-docs-contributing
+  stable_document_id: mods.bombastic-perks.contributing
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-bombasticperks-docs-expanding-with-mods-md
   path: data/mods/BombasticPerks/docs/expanding_with_mods.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-bombasticperks-docs-expanding-with-mods
-  ccb_docs_ids:
-  - legacy.data-mods-bombasticperks-docs-expanding-with-mods
+  stable_document_id: mods.bombastic-perks.extension-contract
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-dinomod-design-md
   path: data/mods/DinoMod/DESIGN.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-dinomod-design
-  ccb_docs_ids:
-  - legacy.data-mods-dinomod-design
+  stable_document_id: mods.dinomod.design
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-dinomod-readme-md
   path: data/mods/DinoMod/README.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-dinomod-readme
-  ccb_docs_ids:
-  - legacy.data-mods-dinomod-readme
+  stable_document_id: mods.dinomod.overview
+  ccb_docs_ids: []
   generated: false
   generated_by: null
-  include_in_ai_index: true
+  include_in_ai_index: false
 - id: repo.data-mods-ma-readme-md
   path: data/mods/MA/README.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-ma-readme
-  ccb_docs_ids:
-  - legacy.data-mods-ma-readme
+  stable_document_id: mods.massachusetts.overview
+  ccb_docs_ids: []
   generated: false
   generated_by: null
-  include_in_ai_index: true
+  include_in_ai_index: false
 - id: repo.data-mods-magiclysm-lore-md
   path: data/mods/Magiclysm/lore.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-magiclysm-lore
-  ccb_docs_ids:
-  - legacy.data-mods-magiclysm-lore
+  stable_document_id: mods.magiclysm.lore
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-magiclysm-magic-balance-md
   path: data/mods/Magiclysm/magic_balance.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-magiclysm-magic-balance
-  ccb_docs_ids:
-  - legacy.data-mods-magiclysm-magic-balance
+  stable_document_id: mods.magiclysm.balance
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-megafauna-readme-md
   path: data/mods/Megafauna/readme.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-megafauna-readme
-  ccb_docs_ids:
-  - legacy.data-mods-megafauna-readme
+  stable_document_id: mods.megafauna.overview
+  ccb_docs_ids: []
   generated: false
   generated_by: null
-  include_in_ai_index: true
+  include_in_ai_index: false
 - id: repo.data-mods-mindovermatter-gainingpowerspoilers-md
   path: data/mods/MindOverMatter/GainingPowerSpoilers.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-mindovermatter-gainingpowerspoilers
-  ccb_docs_ids:
-  - legacy.data-mods-mindovermatter-gainingpowerspoilers
+  stable_document_id: mods.mind-over-matter.gaining-powers
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-mindovermatter-netherattunementspoilers-md
   path: data/mods/MindOverMatter/NetherAttunementSpoilers.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-mindovermatter-netherattunementspoilers
-  ccb_docs_ids:
-  - legacy.data-mods-mindovermatter-netherattunementspoilers
+  stable_document_id: mods.mind-over-matter.nether-attunement
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-mindovermatter-newpowerguide-md
   path: data/mods/MindOverMatter/NewPowerGuide.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-mindovermatter-newpowerguide
-  ccb_docs_ids:
-  - legacy.data-mods-mindovermatter-newpowerguide
+  stable_document_id: mods.mind-over-matter.new-power-guide
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -622,177 +608,163 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.data-mods-mindovermatter-powerdescriptionspoilers
+  stable_document_id: mods.mind-over-matter.power-reference
   ccb_docs_ids:
-  - legacy.data-mods-mindovermatter-powerdescriptionspoilers
+  - mods.mind-over-matter.power-reference
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-mindovermatter-readme-md
   path: data/mods/MindOverMatter/README.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-mindovermatter-readme
-  ccb_docs_ids:
-  - legacy.data-mods-mindovermatter-readme
+  stable_document_id: mods.mind-over-matter.overview
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-mindovermatter-lore-spoilers-md
   path: data/mods/MindOverMatter/lore_spoilers.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-mindovermatter-lore-spoilers
-  ccb_docs_ids:
-  - legacy.data-mods-mindovermatter-lore-spoilers
+  stable_document_id: mods.mind-over-matter.lore
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-mindovermatternoknacks-readme-md
   path: data/mods/MindOverMatterNoKnacks/README.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-mindovermatternoknacks-readme
-  ccb_docs_ids:
-  - legacy.data-mods-mindovermatternoknacks-readme
+  stable_document_id: mods.mind-over-matter.no-knacks
+  ccb_docs_ids: []
   generated: false
   generated_by: null
-  include_in_ai_index: true
+  include_in_ai_index: false
 - id: repo.data-mods-no-hope-contributing-md
   path: data/mods/No_Hope/CONTRIBUTING.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-no-hope-contributing
-  ccb_docs_ids:
-  - legacy.data-mods-no-hope-contributing
+  stable_document_id: mods.no-hope.contributing
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-no-hope-difficulty-options-md
   path: data/mods/No_Hope/DIFFICULTY_OPTIONS.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-no-hope-difficulty-options
-  ccb_docs_ids:
-  - legacy.data-mods-no-hope-difficulty-options
+  stable_document_id: mods.no-hope.difficulty-options
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-sky-island-readme-md
   path: data/mods/Sky_Island/README.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-sky-island-readme
-  ccb_docs_ids:
-  - legacy.data-mods-sky-island-readme
+  stable_document_id: mods.sky-island.overview
+  ccb_docs_ids: []
   generated: false
   generated_by: null
-  include_in_ai_index: true
+  include_in_ai_index: false
 - id: repo.data-mods-sorcerer-readme-md
   path: data/mods/Sorcerer/README.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-sorcerer-readme
-  ccb_docs_ids:
-  - legacy.data-mods-sorcerer-readme
+  stable_document_id: mods.sorcerer.overview
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-test-data-readme-md
   path: data/mods/TEST_DATA/README.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-test-data-readme
-  ccb_docs_ids:
-  - legacy.data-mods-test-data-readme
+  stable_document_id: testing.test-data-mod
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-xedrawood-readme-md
   path: data/mods/XedraWood/README.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-xedrawood-readme
-  ccb_docs_ids:
-  - legacy.data-mods-xedrawood-readme
+  stable_document_id: mods.xedra-wood.overview
+  ccb_docs_ids: []
   generated: false
   generated_by: null
-  include_in_ai_index: true
+  include_in_ai_index: false
 - id: repo.data-mods-xedra-evolved-readme-md
   path: data/mods/Xedra_Evolved/README.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-xedra-evolved-readme
-  ccb_docs_ids:
-  - legacy.data-mods-xedra-evolved-readme
+  stable_document_id: mods.xedra-evolved.overview
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-xedra-evolved-design-doc-spoilers-md
   path: data/mods/Xedra_Evolved/design_doc_spoilers.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-xedra-evolved-design-doc-spoilers
-  ccb_docs_ids:
-  - legacy.data-mods-xedra-evolved-design-doc-spoilers
+  stable_document_id: mods.xedra-evolved.design
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-xedra-evolved-vampire-guide-md
   path: data/mods/Xedra_Evolved/vampire_guide.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-xedra-evolved-vampire-guide
-  ccb_docs_ids:
-  - legacy.data-mods-xedra-evolved-vampire-guide
+  stable_document_id: mods.xedra-evolved.vampire-guide
+  ccb_docs_ids: []
   generated: false
   generated_by: null
-  include_in_ai_index: true
+  include_in_ai_index: false
 - id: repo.data-mods-aftershock-exoplanet-doc-hacking-md
   path: data/mods/aftershock_exoplanet/doc/Hacking.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-hacking
-  ccb_docs_ids:
-  - legacy.data-mods-aftershock-exoplanet-doc-hacking
+  stable_document_id: mods.aftershock-exoplanet.hacking
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-aftershock-exoplanet-doc-crafting-system-md
   path: data/mods/aftershock_exoplanet/doc/crafting_system.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-crafting-system
-  ccb_docs_ids:
-  - legacy.data-mods-aftershock-exoplanet-doc-crafting-system
+  stable_document_id: mods.aftershock-exoplanet.crafting-system
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -802,45 +774,42 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-lore-cyberpunk-future
+  stable_document_id: mods.aftershock-exoplanet.lore.cyberpunk-future
   ccb_docs_ids:
-  - legacy.data-mods-aftershock-exoplanet-doc-lore-cyberpunk-future
+  - mods.aftershock-exoplanet.lore.cyberpunk-future
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-aftershock-exoplanet-doc-lore-factions-md
   path: data/mods/aftershock_exoplanet/doc/lore/factions.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-lore-factions
-  ccb_docs_ids:
-  - legacy.data-mods-aftershock-exoplanet-doc-lore-factions
+  stable_document_id: mods.aftershock-exoplanet.lore.factions
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-aftershock-exoplanet-doc-lore-organizations-md
   path: data/mods/aftershock_exoplanet/doc/lore/organizations.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-lore-organizations
-  ccb_docs_ids:
-  - legacy.data-mods-aftershock-exoplanet-doc-lore-organizations
+  stable_document_id: mods.aftershock-exoplanet.lore.organizations
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-aftershock-exoplanet-doc-lore-points-of-interest-md
   path: data/mods/aftershock_exoplanet/doc/lore/points_of_interest.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-lore-points-of-interest
-  ccb_docs_ids:
-  - legacy.data-mods-aftershock-exoplanet-doc-lore-points-of-interest
+  stable_document_id: mods.aftershock-exoplanet.lore.points-of-interest
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -850,201 +819,185 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-lore-ranged-weapon-balance
+  stable_document_id: mods.aftershock-exoplanet.balance.ranged-weapons
   ccb_docs_ids:
-  - legacy.data-mods-aftershock-exoplanet-doc-lore-ranged-weapon-balance
+  - mods.aftershock-exoplanet.balance.ranged-weapons
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-aftershock-exoplanet-doc-lore-salus-4-md
   path: data/mods/aftershock_exoplanet/doc/lore/salus_4.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-lore-salus-4
-  ccb_docs_ids:
-  - legacy.data-mods-aftershock-exoplanet-doc-lore-salus-4
+  stable_document_id: mods.aftershock-exoplanet.lore.salus-iv
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-aftershock-exoplanet-doc-lore-timeline-md
   path: data/mods/aftershock_exoplanet/doc/lore/timeline.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-lore-timeline
-  ccb_docs_ids:
-  - legacy.data-mods-aftershock-exoplanet-doc-lore-timeline
+  stable_document_id: mods.aftershock-exoplanet.lore.timeline
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-aftershock-exoplanet-doc-suit-operating-time-md
   path: data/mods/aftershock_exoplanet/doc/suit_operating_time.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-suit-operating-time
-  ccb_docs_ids:
-  - legacy.data-mods-aftershock-exoplanet-doc-suit-operating-time
+  stable_document_id: mods.aftershock-exoplanet.balance.powered-armor
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-aftershock-exoplanet-items-armor-exosuit-exosuit-guide-md
   path: data/mods/aftershock_exoplanet/items/armor/exosuit/exosuit_guide.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-aftershock-exoplanet-items-armor-exosuit-exosuit-guide
-  ccb_docs_ids:
-  - legacy.data-mods-aftershock-exoplanet-items-armor-exosuit-exosuit-guide
+  stable_document_id: mods.aftershock-exoplanet.exosuit-guide
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-alt-map-key-readme-md
   path: data/mods/alt_map_key/README.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-alt-map-key-readme
-  ccb_docs_ids:
-  - legacy.data-mods-alt-map-key-readme
+  stable_document_id: mods.alternative-map-key.overview
+  ccb_docs_ids: []
   generated: false
   generated_by: null
-  include_in_ai_index: true
+  include_in_ai_index: false
 - id: repo.data-mods-classic-zombies-design-doc-md
   path: data/mods/classic_zombies/design-doc.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-classic-zombies-design-doc
-  ccb_docs_ids:
-  - legacy.data-mods-classic-zombies-design-doc
+  stable_document_id: mods.classic-zombies.design
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-classic-zombies-place-names-md
   path: data/mods/classic_zombies/place_names.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-classic-zombies-place-names
-  ccb_docs_ids:
-  - legacy.data-mods-classic-zombies-place-names
+  stable_document_id: mods.classic-zombies.place-names
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-hunvre-documentation-lore-md
   path: data/mods/hunvre/documentation/lore.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-hunvre-documentation-lore
-  ccb_docs_ids:
-  - legacy.data-mods-hunvre-documentation-lore
+  stable_document_id: mods.hunvre.lore
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-hunvre-progress-tracker-md
   path: data/mods/hunvre/progress_tracker.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-hunvre-progress-tracker
-  ccb_docs_ids:
-  - legacy.data-mods-hunvre-progress-tracker
+  stable_document_id: mods.hunvre.progress
+  ccb_docs_ids: []
   generated: false
   generated_by: null
-  include_in_ai_index: true
+  include_in_ai_index: false
 - id: repo.data-mods-immortal-path-glossary-md
   path: data/mods/immortal_path/GLOSSARY.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-immortal-path-glossary
-  ccb_docs_ids:
-  - legacy.data-mods-immortal-path-glossary
+  stable_document_id: mods.immortal-path.glossary
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-immortal-path-language-convention-md
   path: data/mods/immortal_path/LANGUAGE_CONVENTION.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-immortal-path-language-convention
-  ccb_docs_ids:
-  - legacy.data-mods-immortal-path-language-convention
+  stable_document_id: mods.immortal-path.language-convention
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-immortal-path-doc-game-design-md
   path: data/mods/immortal_path/doc/game-design.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-immortal-path-doc-game-design
-  ccb_docs_ids:
-  - legacy.data-mods-immortal-path-doc-game-design
+  stable_document_id: mods.immortal-path.game-design
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-immortal-path-doc-lore-md
   path: data/mods/immortal_path/doc/lore.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-immortal-path-doc-lore
-  ccb_docs_ids:
-  - legacy.data-mods-immortal-path-doc-lore
+  stable_document_id: mods.immortal-path.lore
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-immortal-path-doc-spell-design-md
   path: data/mods/immortal_path/doc/spell-design.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-immortal-path-doc-spell-design
-  ccb_docs_ids:
-  - legacy.data-mods-immortal-path-doc-spell-design
+  stable_document_id: mods.immortal-path.spell-design
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.data-mods-innawood-readme-md
   path: data/mods/innawood/readme.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-innawood-readme
-  ccb_docs_ids:
-  - legacy.data-mods-innawood-readme
+  stable_document_id: mods.innawood.overview
+  ccb_docs_ids: []
   generated: false
   generated_by: null
-  include_in_ai_index: true
+  include_in_ai_index: false
 - id: repo.data-mods-translate-dialogue-readme-md
   path: data/mods/translate-dialogue/README.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.data-mods-translate-dialogue-readme
-  ccb_docs_ids:
-  - legacy.data-mods-translate-dialogue-readme
+  stable_document_id: mods.translate-dialogue.maintenance
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1054,21 +1007,20 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-ascii-art
+  stable_document_id: content.ascii-art
   ccb_docs_ids:
-  - legacy.doc-ascii-art
+  - content.ascii-art
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.doc-changelog-guidelines-md
   path: doc/CHANGELOG_GUIDELINES.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.doc-changelog-guidelines
-  ccb_docs_ids:
-  - legacy.doc-changelog-guidelines
+  stable_document_id: contributing.changelog-guidelines
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1078,9 +1030,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-developer-faq
+  stable_document_id: contributing.developer-faq
   ccb_docs_ids:
-  - legacy.doc-developer-faq
+  - contributing.developer-faq
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1090,9 +1042,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-frequently-made-suggestions
+  stable_document_id: design.frequently-made-suggestions
   ccb_docs_ids:
-  - legacy.doc-frequently-made-suggestions
+  - design.frequently-made-suggestions
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1102,9 +1054,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-gun-naming-and-inclusion
+  stable_document_id: content.firearms-naming-and-inclusion
   ccb_docs_ids:
-  - legacy.doc-gun-naming-and-inclusion
+  - content.firearms-naming-and-inclusion
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1114,21 +1066,21 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-howto-massage-ma-gun-data
+  stable_document_id: archive.firearms-massachusetts-data-workflow
   ccb_docs_ids:
-  - legacy.doc-howto-massage-ma-gun-data
+  - archive.firearms-massachusetts-data-workflow
   generated: false
   generated_by: null
-  include_in_ai_index: true
+  include_in_ai_index: false
 - id: repo.doc-how-you-can-help-md
   path: doc/HOW_YOU_CAN_HELP.md
   category: legacy_source
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-how-you-can-help
+  stable_document_id: getting-started.how-you-can-help
   ccb_docs_ids:
-  - legacy.doc-how-you-can-help
+  - getting-started.how-you-can-help
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1138,9 +1090,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-in-repo-mods
+  stable_document_id: mods.in-repository-policy
   ccb_docs_ids:
-  - legacy.doc-in-repo-mods
+  - mods.in-repository-policy
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1150,9 +1102,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-issue-triage
+  stable_document_id: maintainers.issue-triage
   ccb_docs_ids:
-  - legacy.doc-issue-triage
+  - maintainers.issue-triage
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1162,9 +1114,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-artifacts
+  stable_document_id: json.artifacts
   ccb_docs_ids:
-  - legacy.doc-json-artifacts
+  - json.artifacts
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1174,9 +1126,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-basecamp
+  stable_document_id: json.basecamp
   ccb_docs_ids:
-  - legacy.doc-json-basecamp
+  - json.basecamp
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1186,9 +1138,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-climbing
+  stable_document_id: json.climbing-aids
   ccb_docs_ids:
-  - legacy.doc-json-climbing
+  - json.climbing-aids
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1198,9 +1150,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-dimensions
+  stable_document_id: json.dimensions
   ccb_docs_ids:
-  - legacy.doc-json-dimensions
+  - json.dimensions
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1210,9 +1162,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-effects-json
+  stable_document_id: json.effects
   ccb_docs_ids:
-  - legacy.doc-json-effects-json
+  - json.effects
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1222,9 +1174,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-effect-on-condition
+  stable_document_id: eoc.reference
   ccb_docs_ids:
-  - legacy.doc-json-effect-on-condition
+  - eoc.reference
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1234,9 +1186,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-examine
+  stable_document_id: json.examine-actions
   ccb_docs_ids:
-  - legacy.doc-json-examine
+  - json.examine-actions
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1246,9 +1198,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-factions
+  stable_document_id: json.npc-factions
   ccb_docs_ids:
-  - legacy.doc-json-factions
+  - json.npc-factions
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1258,9 +1210,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-faction-missions
+  stable_document_id: json.faction-missions
   ccb_docs_ids:
-  - legacy.doc-json-faction-missions
+  - json.faction-missions
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1270,9 +1222,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-guide-comestibles
+  stable_document_id: json.comestibles-placement
   ccb_docs_ids:
-  - legacy.doc-json-guide-comestibles
+  - json.comestibles-placement
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1282,9 +1234,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-help-menu
+  stable_document_id: json.help-menu
   ccb_docs_ids:
-  - legacy.doc-json-help-menu
+  - json.help-menu
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1294,9 +1246,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-item
+  stable_document_id: json.items
   ccb_docs_ids:
-  - legacy.doc-json-item
+  - json.items
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1306,9 +1258,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-item-craft-and-disassembly
+  stable_document_id: json.recipes-and-disassembly
   ccb_docs_ids:
-  - legacy.doc-json-item-craft-and-disassembly
+  - json.recipes-and-disassembly
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1318,9 +1270,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-item-spawn
+  stable_document_id: json.item-groups
   ccb_docs_ids:
-  - legacy.doc-json-item-spawn
+  - json.item-groups
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1330,9 +1282,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-json-flags
+  stable_document_id: json.flags
   ccb_docs_ids:
-  - legacy.doc-json-json-flags
+  - json.flags
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1342,9 +1294,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-json-info
+  stable_document_id: json.object-types
   ccb_docs_ids:
-  - legacy.doc-json-json-info
+  - json.object-types
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1354,9 +1306,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-json-inheritance
+  stable_document_id: json.inheritance
   ccb_docs_ids:
-  - legacy.doc-json-json-inheritance
+  - json.inheritance
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1378,9 +1330,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-json-mapping-guides-guide-for-beginning-mapgen
+  stable_document_id: tutorial.mapgen-beginner
   ccb_docs_ids:
-  - legacy.doc-json-json-mapping-guides-guide-for-beginning-mapgen
+  - tutorial.mapgen-beginner
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1390,9 +1342,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-json-mapping-guides-guide-for-intermediate-mapgen
+  stable_document_id: tutorial.mapgen-intermediate
   ccb_docs_ids:
-  - legacy.doc-json-json-mapping-guides-guide-for-intermediate-mapgen
+  - tutorial.mapgen-intermediate
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1402,9 +1354,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-json-mapping-guides-json-roof-mapgen
+  stable_document_id: tutorial.mapgen-roofs
   ccb_docs_ids:
-  - legacy.doc-json-json-mapping-guides-json-roof-mapgen
+  - tutorial.mapgen-roofs
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1414,9 +1366,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-json-style
+  stable_document_id: contributing.json-style
   ccb_docs_ids:
-  - legacy.doc-json-json-style
+  - contributing.json-style
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1426,9 +1378,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-json-tools
+  stable_document_id: how-to.json-tools
   ccb_docs_ids:
-  - legacy.doc-json-json-tools
+  - how-to.json-tools
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1438,9 +1390,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-magic
+  stable_document_id: json.magic-spells-enchantments
   ccb_docs_ids:
-  - legacy.doc-json-magic
+  - json.magic-spells-enchantments
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1450,9 +1402,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-mapgen
+  stable_document_id: json.mapgen
   ccb_docs_ids:
-  - legacy.doc-json-mapgen
+  - json.mapgen
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1462,9 +1414,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-map-smashing
+  stable_document_id: json.map-smashing
   ccb_docs_ids:
-  - legacy.doc-json-map-smashing
+  - json.map-smashing
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1474,9 +1426,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-martialart-json
+  stable_document_id: json.martial-arts
   ccb_docs_ids:
-  - legacy.doc-json-martialart-json
+  - json.martial-arts
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1486,9 +1438,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-missions-json
+  stable_document_id: json.missions
   ccb_docs_ids:
-  - legacy.doc-json-missions-json
+  - json.missions
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1498,9 +1450,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-monsters
+  stable_document_id: json.monsters
   ccb_docs_ids:
-  - legacy.doc-json-monsters
+  - json.monsters
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1510,9 +1462,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-monster-special-attacks
+  stable_document_id: json.monster-special-attacks
   ccb_docs_ids:
-  - legacy.doc-json-monster-special-attacks
+  - json.monster-special-attacks
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1522,9 +1474,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-move-mode
+  stable_document_id: json.movement-modes
   ccb_docs_ids:
-  - legacy.doc-json-move-mode
+  - json.movement-modes
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1534,9 +1486,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-mutations
+  stable_document_id: json.mutations
   ccb_docs_ids:
-  - legacy.doc-json-mutations
+  - json.mutations
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1546,9 +1498,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-npcs
+  stable_document_id: json.npcs-dialogue
   ccb_docs_ids:
-  - legacy.doc-json-npcs
+  - json.npcs-dialogue
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1558,9 +1510,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-obsoletion-and-migration
+  stable_document_id: json.obsoletion-and-migration
   ccb_docs_ids:
-  - legacy.doc-json-obsoletion-and-migration
+  - json.obsoletion-and-migration
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1570,9 +1522,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-options
+  stable_document_id: json.options
   ccb_docs_ids:
-  - legacy.doc-json-options
+  - json.options
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1582,9 +1534,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-overmap
+  stable_document_id: json.overmap
   ccb_docs_ids:
-  - legacy.doc-json-overmap
+  - json.overmap
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1594,9 +1546,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-practice-recipes
+  stable_document_id: json.practice-recipes
   ccb_docs_ids:
-  - legacy.doc-json-practice-recipes
+  - json.practice-recipes
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1606,9 +1558,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-proficiency
+  stable_document_id: json.proficiencies
   ccb_docs_ids:
-  - legacy.doc-json-proficiency
+  - json.proficiencies
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1618,9 +1570,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-proficiency-list
+  stable_document_id: json.proficiencies-index
   ccb_docs_ids:
-  - legacy.doc-json-proficiency-list
+  - json.proficiencies-index
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1630,9 +1582,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-region-layout
+  stable_document_id: json.region-layout
   ccb_docs_ids:
-  - legacy.doc-json-region-layout
+  - json.region-layout
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1642,9 +1594,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-region-settings
+  stable_document_id: json.region-settings
   ccb_docs_ids:
-  - legacy.doc-json-region-settings
+  - json.region-settings
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1654,9 +1606,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-ter-furn-transform
+  stable_document_id: json.terrain-furniture-transforms
   ccb_docs_ids:
-  - legacy.doc-json-ter-furn-transform
+  - json.terrain-furniture-transforms
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1666,9 +1618,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-vehicles-json
+  stable_document_id: json.vehicle-prototypes
   ccb_docs_ids:
-  - legacy.doc-json-vehicles-json
+  - json.vehicle-prototypes
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1678,9 +1630,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-vitamin
+  stable_document_id: json.vitamins
   ccb_docs_ids:
-  - legacy.doc-json-vitamin
+  - json.vitamins
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1690,9 +1642,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-weather-type
+  stable_document_id: json.weather-types
   ccb_docs_ids:
-  - legacy.doc-json-weather-type
+  - json.weather-types
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1702,9 +1654,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-json-wounds
+  stable_document_id: json.wounds
   ccb_docs_ids:
-  - legacy.doc-json-wounds
+  - json.wounds
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1714,9 +1666,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-manual-of-style
+  stable_document_id: content.manual-of-style
   ccb_docs_ids:
-  - legacy.doc-manual-of-style
+  - content.manual-of-style
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1726,9 +1678,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-modding
+  stable_document_id: modding-overview
   ccb_docs_ids:
-  - legacy.doc-modding
+  - modding-overview
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1738,9 +1690,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-mod-compatibility
+  stable_document_id: mod-compatibility
   ccb_docs_ids:
-  - legacy.doc-mod-compatibility
+  - mod-compatibility
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1750,9 +1702,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-player-activity
+  stable_document_id: cpp-activities
   ccb_docs_ids:
-  - legacy.doc-player-activity
+  - cpp-activities
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1786,9 +1738,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-soundpacks
+  stable_document_id: soundpacks
   ccb_docs_ids:
-  - legacy.doc-soundpacks
+  - soundpacks
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1798,9 +1750,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-testing-your-changes
+  stable_document_id: testing-manual
   ccb_docs_ids:
-  - legacy.doc-testing-your-changes
+  - testing-manual
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1810,9 +1762,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-tileset
+  stable_document_id: tilesets
   ccb_docs_ids:
-  - legacy.doc-tileset
+  - tilesets
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1822,9 +1774,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-translating
+  stable_document_id: translation-guide
   ccb_docs_ids:
-  - legacy.doc-translating
+  - translation-guide
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1834,9 +1786,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-translating-mod
+  stable_document_id: mod-localization
   ccb_docs_ids:
-  - legacy.doc-translating-mod
+  - mod-localization
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1846,9 +1798,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-user-interface-and-accessibility
+  stable_document_id: ui-accessibility
   ccb_docs_ids:
-  - legacy.doc-user-interface-and-accessibility
+  - ui-accessibility
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1858,9 +1810,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-widgets
+  stable_document_id: json-widgets
   ccb_docs_ids:
-  - legacy.doc-widgets
+  - json-widgets
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1870,9 +1822,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-c-code-style
+  stable_document_id: cpp-code-style
   ccb_docs_ids:
-  - legacy.doc-c-code-style
+  - cpp-code-style
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1882,9 +1834,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-c-compiler-support
+  stable_document_id: platform-matrix
   ccb_docs_ids:
-  - legacy.doc-c-compiler-support
+  - platform-matrix
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1906,9 +1858,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-c-compiling-cmake
+  stable_document_id: build-cmake
   ccb_docs_ids:
-  - legacy.doc-c-compiling-cmake
+  - build-cmake
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1918,21 +1870,21 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-c-compiling-cygwin
+  stable_document_id: archive-build-cygwin
   ccb_docs_ids:
-  - legacy.doc-c-compiling-cygwin
+  - archive-build-cygwin
   generated: false
   generated_by: null
-  include_in_ai_index: true
+  include_in_ai_index: false
 - id: repo.doc-c-compiling-devcontainer-md
   path: doc/c++/COMPILING-DEVCONTAINER.md
   category: legacy_source
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-c-compiling-devcontainer
+  stable_document_id: build-devcontainer
   ccb_docs_ids:
-  - legacy.doc-c-compiling-devcontainer
+  - build-devcontainer
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1942,21 +1894,21 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-c-compiling-flatpak
+  stable_document_id: archive-build-flatpak
   ccb_docs_ids:
-  - legacy.doc-c-compiling-flatpak
+  - archive-build-flatpak
   generated: false
   generated_by: null
-  include_in_ai_index: true
+  include_in_ai_index: false
 - id: repo.doc-c-compiling-msys-md
   path: doc/c++/COMPILING-MSYS.md
   category: legacy_source
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-c-compiling-msys
+  stable_document_id: build-windows-msys2
   ccb_docs_ids:
-  - legacy.doc-c-compiling-msys
+  - build-windows-msys2
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1966,9 +1918,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-c-compiling-vs-vcpkg
+  stable_document_id: build-windows-msvc
   ccb_docs_ids:
-  - legacy.doc-c-compiling-vs-vcpkg
+  - build-windows-msvc
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1978,9 +1930,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-c-compiling
+  stable_document_id: build-overview
   ccb_docs_ids:
-  - legacy.doc-c-compiling
+  - build-overview
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1990,9 +1942,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-c-developer-tooling
+  stable_document_id: developer-tooling
   ccb_docs_ids:
-  - legacy.doc-c-developer-tooling
+  - developer-tooling
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2002,9 +1954,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-c-json-interface
+  stable_document_id: cpp-json-interface
   ccb_docs_ids:
-  - legacy.doc-c-json-interface
+  - cpp-json-interface
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2014,9 +1966,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-c-performance
+  stable_document_id: cpp-performance
   ccb_docs_ids:
-  - legacy.doc-c-performance
+  - cpp-performance
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2026,9 +1978,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-c-points-coordinates
+  stable_document_id: cpp-coordinates
   ccb_docs_ids:
-  - legacy.doc-c-points-coordinates
+  - cpp-coordinates
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2038,9 +1990,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-c-testing
+  stable_document_id: cpp-testing
   ccb_docs_ids:
-  - legacy.doc-c-testing
+  - cpp-testing
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2050,9 +2002,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-design-balance-lore-armor-balance-and-design
+  stable_document_id: json-armor-design
   ccb_docs_ids:
-  - legacy.doc-design-balance-lore-armor-balance-and-design
+  - json-armor-design
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2062,12 +2014,12 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-design-balance-lore-construction-balance
+  stable_document_id: archive-construction-balance
   ccb_docs_ids:
-  - legacy.doc-design-balance-lore-construction-balance
+  - archive-construction-balance
   generated: false
   generated_by: null
-  include_in_ai_index: true
+  include_in_ai_index: false
 - id: repo.doc-design-balance-lore-game-balance-md
   path: doc/design-balance-lore/GAME_BALANCE.md
   category: legacy_source
@@ -2086,21 +2038,21 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-design-balance-lore-lore-faq
+  stable_document_id: archive-lore-faq
   ccb_docs_ids:
-  - legacy.doc-design-balance-lore-lore-faq
+  - archive-lore-faq
   generated: false
   generated_by: null
-  include_in_ai_index: true
+  include_in_ai_index: false
 - id: repo.doc-design-balance-lore-portal-storm-balance-and-design-md
   path: doc/design-balance-lore/PORTAL_STORM_BALANCE_AND_DESIGN.md
   category: legacy_source
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-design-balance-lore-portal-storm-balance-and-design
+  stable_document_id: design-portal-storms
   ccb_docs_ids:
-  - legacy.doc-design-balance-lore-portal-storm-balance-and-design
+  - design-portal-storms
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2110,9 +2062,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-design-balance-lore-postapoc-price-guide
+  stable_document_id: json-item-pricing
   ccb_docs_ids:
-  - legacy.doc-design-balance-lore-postapoc-price-guide
+  - json-item-pricing
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2122,9 +2074,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-design-balance-lore-steel-crafting
+  stable_document_id: design-steel-crafting
   ccb_docs_ids:
-  - legacy.doc-design-balance-lore-steel-crafting
+  - design-steel-crafting
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2134,9 +2086,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-design-balance-lore-variants
+  stable_document_id: json-item-variants
   ccb_docs_ids:
-  - legacy.doc-design-balance-lore-variants
+  - json-item-variants
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2146,9 +2098,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-design-balance-lore-batteries-and-electricity
+  stable_document_id: design-batteries-electricity
   ccb_docs_ids:
-  - legacy.doc-design-balance-lore-batteries-and-electricity
+  - design-batteries-electricity
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2158,9 +2110,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-design-balance-lore-design-balance
+  stable_document_id: design-balance
   ccb_docs_ids:
-  - legacy.doc-design-balance-lore-design-balance
+  - design-balance
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2170,9 +2122,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-design-balance-lore-design-doc
+  stable_document_id: design-overview
   ccb_docs_ids:
-  - legacy.doc-design-balance-lore-design-doc
+  - design-overview
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2182,9 +2134,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-design-balance-lore-design-gameplay
+  stable_document_id: design-gameplay
   ccb_docs_ids:
-  - legacy.doc-design-balance-lore-design-gameplay
+  - design-gameplay
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2194,9 +2146,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-design-balance-lore-design-user-experience
+  stable_document_id: design-user-experience
   ccb_docs_ids:
-  - legacy.doc-design-balance-lore-design-user-experience
+  - design-user-experience
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2206,9 +2158,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-design-balance-lore-lore-background
+  stable_document_id: lore-background
   ccb_docs_ids:
-  - legacy.doc-design-balance-lore-lore-background
+  - lore-background
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2218,9 +2170,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-design-balance-lore-lore-factions
+  stable_document_id: lore-factions
   ccb_docs_ids:
-  - legacy.doc-design-balance-lore-lore-factions
+  - lore-factions
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2230,9 +2182,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-design-balance-lore-lore
+  stable_document_id: lore-overview
   ccb_docs_ids:
-  - legacy.doc-design-balance-lore-lore
+  - lore-overview
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2242,21 +2194,21 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-design-balance-lore-melee-weapons-melee-balance-spreadsheet
+  stable_document_id: archive-melee-balance-spreadsheet
   ccb_docs_ids:
-  - legacy.doc-design-balance-lore-melee-weapons-melee-balance-spreadsheet
+  - archive-melee-balance-spreadsheet
   generated: false
   generated_by: null
-  include_in_ai_index: true
+  include_in_ai_index: false
 - id: repo.doc-design-balance-lore-technology-md
   path: doc/design-balance-lore/technology.md
   category: legacy_source
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-design-balance-lore-technology
+  stable_document_id: lore-technology
   ccb_docs_ids:
-  - legacy.doc-design-balance-lore-technology
+  - lore-technology
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2266,12 +2218,23 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-development-process
+  stable_document_id: archive-upstream-development-process
   ccb_docs_ids:
-  - legacy.doc-development-process
+  - archive-upstream-development-process
   generated: false
   generated_by: null
-  include_in_ai_index: true
+  include_in_ai_index: false
+- id: repo.doc-migration-classification-report-md
+  path: doc/migration/classification-report.md
+  category: generated_document
+  status: generated
+  authority: generated_contract
+  source_of_truth: true
+  stable_document_id: null
+  ccb_docs_ids: []
+  generated: true
+  generated_by: python3 tools/agent/generate_migration_reports.py
+  include_in_ai_index: false
 - id: repo.doc-migration-contributor-anomalies-schema-json
   path: doc/migration/contributor-anomalies.schema.json
   category: historical_document
@@ -2327,15 +2290,37 @@ entries:
   generated: true
   generated_by: python3 tools/agent/generate_markdown_inventory.py
   include_in_ai_index: false
+- id: repo.doc-migration-migration-batches-schema-json
+  path: doc/migration/migration-batches.schema.json
+  category: historical_document
+  status: historical
+  authority: historical
+  source_of_truth: false
+  stable_document_id: null
+  ccb_docs_ids: []
+  generated: false
+  generated_by: null
+  include_in_ai_index: false
+- id: repo.doc-migration-migration-batches-yml
+  path: doc/migration/migration-batches.yml
+  category: generated_document
+  status: generated
+  authority: generated_contract
+  source_of_truth: true
+  stable_document_id: null
+  ccb_docs_ids: []
+  generated: true
+  generated_by: python3 tools/agent/generate_migration_reports.py
+  include_in_ai_index: false
 - id: repo.doc-reviewing-pr-guide-md
   path: doc/reviewing_PR_guide.md
   category: legacy_source
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-reviewing-pr-guide
+  stable_document_id: pr-review-guide
   ccb_docs_ids:
-  - legacy.doc-reviewing-pr-guide
+  - pr-review-guide
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2345,9 +2330,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-user-guides-color
+  stable_document_id: ui-colors
   ccb_docs_ids:
-  - legacy.doc-user-guides-color
+  - ui-colors
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2357,9 +2342,9 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.doc-user-guides-font-options
+  stable_document_id: ui-fonts
   ccb_docs_ids:
-  - legacy.doc-user-guides-font-options
+  - ui-fonts
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2377,16 +2362,15 @@ entries:
   include_in_ai_index: true
 - id: repo.lang-notes-ru-notes-md
   path: lang/notes/ru-notes.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.lang-notes-ru-notes
-  ccb_docs_ids:
-  - legacy.lang-notes-ru-notes
+  stable_document_id: translation-notes-ru
+  ccb_docs_ids: []
   generated: false
   generated_by: null
-  include_in_ai_index: true
+  include_in_ai_index: false
 - id: repo.src-agents-md
   path: src/AGENTS.md
   category: agent_instruction
@@ -2415,12 +2399,11 @@ entries:
   status: legacy
   authority: historical
   source_of_truth: false
-  stable_document_id: legacy.src-lua-readme
-  ccb_docs_ids:
-  - legacy.src-lua-readme
+  stable_document_id: vendor-lua-runtime-provenance
+  ccb_docs_ids: []
   generated: false
   generated_by: null
-  include_in_ai_index: true
+  include_in_ai_index: false
 - id: repo.src-third-party-snmalloc-readme-md
   path: src/third-party/snmalloc/README.md
   category: third_party_document
@@ -2500,25 +2483,23 @@ entries:
   include_in_ai_index: true
 - id: repo.tools-llama-readme-md
   path: tools/llama/README.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.tools-llama-readme
-  ccb_docs_ids:
-  - legacy.tools-llama-readme
+  stable_document_id: tool-llama-build-acceleration
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
 - id: repo.tools-lua-api-readme-md
   path: tools/lua_api/README.md
-  category: legacy_source
-  status: legacy
-  authority: historical
+  category: maintained_document
+  status: active
+  authority: explanatory
   source_of_truth: false
-  stable_document_id: legacy.tools-lua-api-readme
-  ccb_docs_ids:
-  - legacy.tools-lua-api-readme
+  stable_document_id: tool-lua-api-coverage
+  ccb_docs_ids: []
   generated: false
   generated_by: null
   include_in_ai_index: true
