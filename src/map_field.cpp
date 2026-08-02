@@ -961,6 +961,26 @@ static void field_processor_fd_fungicidal_gas( const tripoint_bub_ms &p, field_e
     }
 }
 
+static void process_field_fire_reactions( const tripoint_bub_ms &p, field_entry &cur,
+        field_proc_data &pd )
+{
+    const int fire_intensity = cur.get_field_intensity();
+    for( const std::pair<const field_type_id, field_entry> &entry : pd.map_tile.get_field() ) {
+        const field_type &other_type = entry.first.obj();
+        const field_type::fire_reaction_data &reaction = other_type.fire_reaction;
+        if( other_type.has_fire ) {
+            continue;
+        }
+        if( reaction.clear_at > 0 && fire_intensity >= reaction.clear_at ) {
+            pd.here.remove_field( p, entry.first );
+        } else if( reaction.degrade_at > 0 && reaction.interval > 0_turns &&
+                   fire_intensity >= reaction.degrade_at &&
+                   calendar::once_every( reaction.interval ) ) {
+            pd.here.mod_field_intensity( p, entry.first, -1 );
+        }
+    }
+}
+
 void field_processor_fd_fire( const tripoint_bub_ms &p, field_entry &cur, field_proc_data &pd )
 {
     const field_type_id fd_fire = ::fd_fire;
@@ -978,22 +998,6 @@ void field_processor_fd_fire( const tripoint_bub_ms &p, field_entry &cur, field_
                                          sheltered );
     const ter_t &ter = map_tile.get_ter_t();
     const furn_t &frn = map_tile.get_furn_t();
-
-    const int fire_intensity = cur.get_field_intensity();
-    for( const std::pair<const field_type_id, field_entry> &entry : map_tile.get_field() ) {
-        const field_type &other_type = entry.first.obj();
-        const field_type::fire_reaction_data &reaction = other_type.fire_reaction;
-        if( other_type.has_fire ) {
-            continue;
-        }
-        if( reaction.clear_at > 0 && fire_intensity >= reaction.clear_at ) {
-            here.remove_field( p, entry.first );
-        } else if( reaction.degrade_at > 0 && reaction.interval > 0_turns &&
-                   fire_intensity >= reaction.degrade_at &&
-                   calendar::once_every( reaction.interval ) ) {
-            here.mod_field_intensity( p, entry.first, -1 );
-        }
-    }
 
     // We've got ter/furn cached, so let's use that
     const bool is_sealed = ter_furn_has_flag( ter, frn, ter_furn_flag::TFLAG_SEALED ) &&
@@ -1152,6 +1156,7 @@ void field_processor_fd_fire( const tripoint_bub_ms &p, field_entry &cur, field_
                     }
                     fire_there->set_field_intensity( new_intensity );
                 }
+                process_field_fire_reactions( p, cur, pd );
                 return;
             }
         }
@@ -1459,6 +1464,8 @@ void field_processor_fd_fire( const tripoint_bub_ms &p, field_entry &cur, field_
     if( adjacent_fires < 5 && rng( 0, 4 - adjacent_fires ) ) {
         here.create_hot_air( p, cur.get_field_intensity() );
     }
+
+    process_field_fire_reactions( p, cur, pd );
 }
 
 static void field_processor_fd_last_known( const tripoint_bub_ms &p, field_entry &cur,
