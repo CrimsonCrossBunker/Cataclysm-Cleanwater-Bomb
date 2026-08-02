@@ -28,8 +28,8 @@ entries:
     workdir: .
     cost: medium
   - id: lua-contract
-    paths: ['src/catalua_ui_*.cpp', 'src/catalua_ui_*.h', data/lua/, tools/lua_api/]
-    command: python3 tools/lua_api/check_luals_declarations.py && python3 tools/lua_api/check_coverage.py
+    paths: ['src/catalua*.cpp', 'src/catalua*.h', src/event.h, data/lua/, tools/lua_api/]
+    command: python3 tools/lua_api/check_luals_declarations.py && python3 tools/lua_api/check_ccb_inventory.py && python3 tools/lua_api/generate_public_contract.py --check && python3 tools/lua_api/check_public_contract.py && python3 tools/lua_api/check_examples.py && python3 -m unittest discover -s tools/lua_api -p 'test_*.py'
     workdir: .
     cost: fast
   - id: cmake-configure

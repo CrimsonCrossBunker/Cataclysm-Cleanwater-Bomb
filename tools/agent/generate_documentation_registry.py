@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the tracked documentation registry without walking the work tree."""
+"""Generate the tracked documentation registry from the Git index."""
 
 from __future__ import annotations
 
@@ -41,6 +41,8 @@ AGENT_METADATA = {
 }
 API_CONTRACTS = {
     "data/lua/manifest.schema.json",
+    "data/lua/reference/ccb_public_api_v5.schema.json",
+    "data/lua/reference/ccb_public_api_v5_coverage.schema.json",
     "data/lua/types/ccb_api_v5.d.lua",
 }
 
@@ -93,6 +95,8 @@ def load_inventory() -> dict[str, dict]:
 
 
 def generated_by(path: str) -> str | None:
+    if path in API_CONTRACTS:
+        return None
     if path == "ai/documentation-registry.yml":
         return "python3 tools/agent/generate_documentation_registry.py"
     if path in {
@@ -107,9 +111,19 @@ def generated_by(path: str) -> str | None:
         return "python3 tools/agent/generate_migration_reports.py"
     if path.startswith("data/lua/reference/"):
         generators = {
-            "cbn_api_inventory": "python3 tools/lua_api/generate_cbn_inventory.py",
+            "cbn_api_inventory": (
+                "python3 tools/lua_api/generate_cbn_inventory.py"
+            ),
             "cbn_coverage": "python3 tools/lua_api/generate_cbn_coverage.py",
-            "ccb_native_inventory": "python3 tools/lua_api/generate_ccb_inventory.py",
+            "ccb_native_inventory": (
+                "python3 tools/lua_api/generate_ccb_inventory.py"
+            ),
+            "ccb_public_api_v5": (
+                "python3 tools/lua_api/generate_public_contract.py"
+            ),
+            "ccb_public_api_v5_coverage": (
+                "python3 tools/lua_api/generate_public_contract.py"
+            ),
         }
         return generators.get(
             Path(path).stem,
@@ -171,7 +185,9 @@ def classify(path: str, legacy: dict[str, dict]) -> dict:
         authority = "historical"
         source_of_truth = False
 
-    stable_document_id = historical.get("stable_document_id") if historical else None
+    stable_document_id = (
+        historical.get("stable_document_id") if historical else None
+    )
     ccb_docs_ids = []
     if historical and historical["action"] not in {
         "keep_in_repo",
