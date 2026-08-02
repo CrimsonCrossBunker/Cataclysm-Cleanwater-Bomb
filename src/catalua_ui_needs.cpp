@@ -24,7 +24,6 @@ namespace
 
 constexpr int maximum_need_magnitude = 1000000;
 constexpr int maximum_stored_kcal = 2000000;
-constexpr int maximum_gut_vitamin = 1000000000;
 constexpr std::int64_t maximum_sleep_adjustment_turns = 31622400;
 
 Character *resolve_character(
@@ -349,9 +348,9 @@ sol::table set_gut_calories(
     const std::size_t runtime_generation,
     const std::size_t world_generation )
 {
-    if( requested_kcal < 0 || requested_kcal > maximum_stored_kcal ) {
+    if( requested_kcal < 0 ) {
         throw std::invalid_argument(
-            "game.needs.set_gut_calories kcal must be within 0..2000000" );
+            "game.needs.set_gut_calories kcal cannot be negative" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -377,11 +376,6 @@ sol::table modify_gut_calories(
     const std::size_t runtime_generation,
     const std::size_t world_generation )
 {
-    if( requested_delta < -maximum_need_magnitude ||
-        requested_delta > maximum_need_magnitude ) {
-        throw std::invalid_argument(
-            "game.needs.modify_gut_calories delta must be within -1000000..1000000" );
-    }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -430,9 +424,9 @@ sol::table set_gut_vitamin(
     const std::size_t world_generation )
 {
     require_vitamin_id( id, "game.needs.set_gut_vitamin" );
-    if( requested_amount < 0 || requested_amount > maximum_gut_vitamin ) {
+    if( requested_amount < 0 ) {
         throw std::invalid_argument(
-            "game.needs.set_gut_vitamin amount must be within 0..1000000000" );
+            "game.needs.set_gut_vitamin amount cannot be negative" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -460,11 +454,6 @@ sol::table modify_gut_vitamin(
     const std::size_t world_generation )
 {
     require_vitamin_id( id, "game.needs.modify_gut_vitamin" );
-    if( requested_delta < -maximum_gut_vitamin ||
-        requested_delta > maximum_gut_vitamin ) {
-        throw std::invalid_argument(
-            "game.needs.modify_gut_vitamin delta must be within -1000000000..1000000000" );
-    }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
