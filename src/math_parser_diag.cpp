@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <functional>
 #include <list>
+#include <limits>
 #include <memory>
 #include <numeric>
 #include <optional>
@@ -1890,7 +1891,9 @@ void gut_calories_ass( double val, dialogue &d, char scope,
                        diag_kwargs const & /* kwargs */ )
 {
     if( Character *const chr = d.actor( is_beta( scope ) )->get_character() ) {
-        const int difference = val - chr->guts.get_calories();
+        const int desired = static_cast<int>( std::clamp( val, 0.0,
+                            static_cast<double>( std::numeric_limits<int>::max() ) ) );
+        const int difference = desired - chr->guts.get_calories();
         chr->guts.mod_calories( difference );
         return;
     }
