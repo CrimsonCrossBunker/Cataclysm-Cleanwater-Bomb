@@ -1,6 +1,6 @@
 schema_version: 1
 kind: documentation_registry
-source_commit: 91e2f09f05ca033b05934c1e7a6f9314425b3316
+source_commit: f3ce6ba509dc4c26ed9a9eaea462d7e45638bc52
 scope: Tracked documentation and machine contracts from the Git index; untracked build caches are never
   traversed.
 entry_count: 232
@@ -403,8 +403,8 @@ entries:
   include_in_ai_index: true
 - id: repo.data-json-loading-order-md
   path: data/json/LOADING_ORDER.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: legacy.data-json-loading-order
@@ -448,8 +448,8 @@ entries:
   include_in_ai_index: true
 - id: repo.data-lua-readme-md
   path: data/lua/README.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: lua.v5.overview
@@ -460,8 +460,8 @@ entries:
   include_in_ai_index: true
 - id: repo.data-lua-examples-api-v5-mod-readme-md
   path: data/lua/examples/api_v5_mod/README.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: lua.v5.example-mod
@@ -714,8 +714,8 @@ entries:
   include_in_ai_index: true
 - id: repo.data-mods-mindovermatter-powerdescriptionspoilers-md
   path: data/mods/MindOverMatter/PowerDescriptionSpoilers.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: mods.mind-over-matter.power-reference
@@ -880,8 +880,8 @@ entries:
   include_in_ai_index: true
 - id: repo.data-mods-aftershock-exoplanet-doc-lore-cyberpunk-future-md
   path: data/mods/aftershock_exoplanet/doc/lore/cyberpunk_future.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: mods.aftershock-exoplanet.lore.cyberpunk-future
@@ -925,8 +925,8 @@ entries:
   include_in_ai_index: true
 - id: repo.data-mods-aftershock-exoplanet-doc-lore-ranged-weapon-balance-md
   path: data/mods/aftershock_exoplanet/doc/lore/ranged_weapon_balance.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: mods.aftershock-exoplanet.balance.ranged-weapons
@@ -1146,8 +1146,8 @@ entries:
   include_in_ai_index: false
 - id: repo.doc-ascii-art-md
   path: doc/ASCII_ART.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: content.ascii-art
@@ -1169,8 +1169,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-developer-faq-md
   path: doc/DEVELOPER_FAQ.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: contributing.developer-faq
@@ -1181,8 +1181,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-frequently-made-suggestions-md
   path: doc/FREQUENTLY_MADE_SUGGESTIONS.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: design.frequently-made-suggestions
@@ -1193,8 +1193,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-gun-naming-and-inclusion-md
   path: doc/GUN_NAMING_AND_INCLUSION.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: content.firearms-naming-and-inclusion
@@ -1205,8 +1205,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-howto-massage-ma-gun-data-md
   path: doc/HOWTO_MASSAGE_MA_GUN_DATA.md
-  category: legacy_source
-  status: legacy
+  category: historical_document
+  status: archived
   authority: historical
   source_of_truth: false
   stable_document_id: archive.firearms-massachusetts-data-workflow
@@ -1217,8 +1217,8 @@ entries:
   include_in_ai_index: false
 - id: repo.doc-how-you-can-help-md
   path: doc/HOW_YOU_CAN_HELP.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: getting-started.how-you-can-help
@@ -1229,8 +1229,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-in-repo-mods-md
   path: doc/IN_REPO_MODS.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: mods.in-repository-policy
@@ -1241,8 +1241,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-issue-triage-md
   path: doc/ISSUE_TRIAGE.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: maintainers.issue-triage
@@ -1253,8 +1253,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-artifacts-md
   path: doc/JSON/ARTIFACTS.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.artifacts
@@ -1265,8 +1265,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-basecamp-md
   path: doc/JSON/BASECAMP.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.basecamp
@@ -1277,8 +1277,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-climbing-md
   path: doc/JSON/CLIMBING.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.climbing-aids
@@ -1289,8 +1289,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-dimensions-md
   path: doc/JSON/DIMENSIONS.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.dimensions
@@ -1301,8 +1301,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-effects-json-md
   path: doc/JSON/EFFECTS_JSON.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.effects
@@ -1313,8 +1313,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-effect-on-condition-md
   path: doc/JSON/EFFECT_ON_CONDITION.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: eoc.reference
@@ -1325,8 +1325,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-examine-md
   path: doc/JSON/EXAMINE.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.examine-actions
@@ -1337,8 +1337,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-factions-md
   path: doc/JSON/FACTIONS.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.npc-factions
@@ -1349,8 +1349,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-faction-missions-md
   path: doc/JSON/FACTION_MISSIONS.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.faction-missions
@@ -1361,8 +1361,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-guide-comestibles-md
   path: doc/JSON/GUIDE_COMESTIBLES.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.comestibles-placement
@@ -1373,8 +1373,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-help-menu-md
   path: doc/JSON/HELP_MENU.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.help-menu
@@ -1385,8 +1385,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-item-md
   path: doc/JSON/ITEM.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.items
@@ -1397,8 +1397,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-item-craft-and-disassembly-md
   path: doc/JSON/ITEM_CRAFT_AND_DISASSEMBLY.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.recipes-and-disassembly
@@ -1409,8 +1409,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-item-spawn-md
   path: doc/JSON/ITEM_SPAWN.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.item-groups
@@ -1421,8 +1421,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-json-flags-md
   path: doc/JSON/JSON_FLAGS.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.flags
@@ -1433,8 +1433,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-json-info-md
   path: doc/JSON/JSON_INFO.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.object-types
@@ -1445,8 +1445,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-json-inheritance-md
   path: doc/JSON/JSON_INHERITANCE.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.inheritance
@@ -1457,8 +1457,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-json-loading-order-md
   path: doc/JSON/JSON_LOADING_ORDER.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: legacy.doc-json-json-loading-order
@@ -1469,8 +1469,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-json-mapping-guides-guide-for-beginning-mapgen-md
   path: doc/JSON/JSON_Mapping_Guides/Guide_for_beginning_mapgen.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: tutorial.mapgen-beginner
@@ -1481,8 +1481,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-json-mapping-guides-guide-for-intermediate-mapgen-md
   path: doc/JSON/JSON_Mapping_Guides/Guide_for_intermediate_mapgen.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: tutorial.mapgen-intermediate
@@ -1493,8 +1493,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-json-mapping-guides-json-roof-mapgen-md
   path: doc/JSON/JSON_Mapping_Guides/JSON_ROOF_MAPGEN.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: tutorial.mapgen-roofs
@@ -1505,8 +1505,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-json-style-md
   path: doc/JSON/JSON_STYLE.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: contributing.json-style
@@ -1517,8 +1517,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-json-tools-md
   path: doc/JSON/JSON_TOOLS.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: how-to.json-tools
@@ -1529,8 +1529,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-magic-md
   path: doc/JSON/MAGIC.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.magic-spells-enchantments
@@ -1541,8 +1541,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-mapgen-md
   path: doc/JSON/MAPGEN.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.mapgen
@@ -1553,8 +1553,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-map-smashing-md
   path: doc/JSON/MAP_SMASHING.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.map-smashing
@@ -1565,8 +1565,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-martialart-json-md
   path: doc/JSON/MARTIALART_JSON.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.martial-arts
@@ -1577,8 +1577,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-missions-json-md
   path: doc/JSON/MISSIONS_JSON.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.missions
@@ -1589,8 +1589,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-monsters-md
   path: doc/JSON/MONSTERS.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.monsters
@@ -1601,8 +1601,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-monster-special-attacks-md
   path: doc/JSON/MONSTER_SPECIAL_ATTACKS.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.monster-special-attacks
@@ -1613,8 +1613,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-move-mode-md
   path: doc/JSON/MOVE_MODE.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.movement-modes
@@ -1625,8 +1625,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-mutations-md
   path: doc/JSON/MUTATIONS.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.mutations
@@ -1637,8 +1637,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-npcs-md
   path: doc/JSON/NPCs.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.npcs-dialogue
@@ -1649,8 +1649,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-obsoletion-and-migration-md
   path: doc/JSON/OBSOLETION_AND_MIGRATION.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.obsoletion-and-migration
@@ -1661,8 +1661,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-options-md
   path: doc/JSON/OPTIONS.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.options
@@ -1673,8 +1673,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-overmap-md
   path: doc/JSON/OVERMAP.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.overmap
@@ -1685,8 +1685,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-practice-recipes-md
   path: doc/JSON/PRACTICE_RECIPES.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.practice-recipes
@@ -1697,8 +1697,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-proficiency-md
   path: doc/JSON/PROFICIENCY.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.proficiencies
@@ -1709,8 +1709,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-proficiency-list-md
   path: doc/JSON/PROFICIENCY_LIST.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.proficiencies-index
@@ -1721,8 +1721,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-region-layout-md
   path: doc/JSON/REGION_LAYOUT.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.region-layout
@@ -1733,8 +1733,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-region-settings-md
   path: doc/JSON/REGION_SETTINGS.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.region-settings
@@ -1745,8 +1745,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-ter-furn-transform-md
   path: doc/JSON/TER_FURN_TRANSFORM.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.terrain-furniture-transforms
@@ -1757,8 +1757,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-vehicles-json-md
   path: doc/JSON/VEHICLES_JSON.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.vehicle-prototypes
@@ -1769,8 +1769,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-vitamin-md
   path: doc/JSON/VITAMIN.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.vitamins
@@ -1781,8 +1781,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-weather-type-md
   path: doc/JSON/WEATHER_TYPE.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.weather-types
@@ -1793,8 +1793,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-json-wounds-md
   path: doc/JSON/WOUNDS.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json.wounds
@@ -1805,8 +1805,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-manual-of-style-md
   path: doc/MANUAL_OF_STYLE.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: content.manual-of-style
@@ -1817,8 +1817,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-modding-md
   path: doc/MODDING.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: modding-overview
@@ -1829,8 +1829,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-mod-compatibility-md
   path: doc/MOD_COMPATIBILITY.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: mod-compatibility
@@ -1841,8 +1841,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-player-activity-md
   path: doc/PLAYER_ACTIVITY.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: cpp-activities
@@ -1853,8 +1853,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-release-diff-md
   path: doc/RELEASE_DIFF.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: legacy.doc-release-diff
@@ -1865,8 +1865,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-release-process-md
   path: doc/RELEASE_PROCESS.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: legacy.doc-release-process
@@ -1877,8 +1877,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-soundpacks-md
   path: doc/SOUNDPACKS.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: soundpacks
@@ -1889,8 +1889,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-testing-your-changes-md
   path: doc/TESTING_YOUR_CHANGES.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: testing-manual
@@ -1901,8 +1901,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-tileset-md
   path: doc/TILESET.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: tilesets
@@ -1913,8 +1913,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-translating-md
   path: doc/TRANSLATING.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: translation-guide
@@ -1925,8 +1925,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-translating-mod-md
   path: doc/TRANSLATING_MOD.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: mod-localization
@@ -1937,8 +1937,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-user-interface-and-accessibility-md
   path: doc/USER_INTERFACE_AND_ACCESSIBILITY.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: ui-accessibility
@@ -1949,8 +1949,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-widgets-md
   path: doc/WIDGETS.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json-widgets
@@ -1961,8 +1961,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-c-code-style-md
   path: doc/c++/CODE_STYLE.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: cpp-code-style
@@ -1973,8 +1973,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-c-compiler-support-md
   path: doc/c++/COMPILER_SUPPORT.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: platform-matrix
@@ -1985,8 +1985,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-c-compiling-cmake-vcpkg-md
   path: doc/c++/COMPILING-CMAKE-VCPKG.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: legacy.doc-c-compiling-cmake-vcpkg
@@ -1997,8 +1997,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-c-compiling-cmake-md
   path: doc/c++/COMPILING-CMAKE.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: build-cmake
@@ -2009,8 +2009,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-c-compiling-cygwin-md
   path: doc/c++/COMPILING-CYGWIN.md
-  category: legacy_source
-  status: legacy
+  category: historical_document
+  status: archived
   authority: historical
   source_of_truth: false
   stable_document_id: archive-build-cygwin
@@ -2021,8 +2021,8 @@ entries:
   include_in_ai_index: false
 - id: repo.doc-c-compiling-devcontainer-md
   path: doc/c++/COMPILING-DEVCONTAINER.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: build-devcontainer
@@ -2033,8 +2033,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-c-compiling-flatpak-md
   path: doc/c++/COMPILING-FLATPAK.md
-  category: legacy_source
-  status: legacy
+  category: historical_document
+  status: archived
   authority: historical
   source_of_truth: false
   stable_document_id: archive-build-flatpak
@@ -2045,8 +2045,8 @@ entries:
   include_in_ai_index: false
 - id: repo.doc-c-compiling-msys-md
   path: doc/c++/COMPILING-MSYS.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: build-windows-msys2
@@ -2057,8 +2057,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-c-compiling-vs-vcpkg-md
   path: doc/c++/COMPILING-VS-VCPKG.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: build-windows-msvc
@@ -2069,8 +2069,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-c-compiling-md
   path: doc/c++/COMPILING.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: build-overview
@@ -2081,8 +2081,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-c-developer-tooling-md
   path: doc/c++/DEVELOPER_TOOLING.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: developer-tooling
@@ -2093,8 +2093,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-c-json-interface-md
   path: doc/c++/JSON_INTERFACE.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: cpp-json-interface
@@ -2105,8 +2105,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-c-performance-md
   path: doc/c++/PERFORMANCE.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: cpp-performance
@@ -2117,8 +2117,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-c-points-coordinates-md
   path: doc/c++/POINTS_COORDINATES.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: cpp-coordinates
@@ -2129,8 +2129,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-c-testing-md
   path: doc/c++/TESTING.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: cpp-testing
@@ -2141,8 +2141,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-design-balance-lore-armor-balance-and-design-md
   path: doc/design-balance-lore/ARMOR_BALANCE_AND_DESIGN.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json-armor-design
@@ -2153,8 +2153,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-design-balance-lore-construction-balance-md
   path: doc/design-balance-lore/CONSTRUCTION_BALANCE.md
-  category: legacy_source
-  status: legacy
+  category: historical_document
+  status: archived
   authority: historical
   source_of_truth: false
   stable_document_id: archive-construction-balance
@@ -2165,8 +2165,8 @@ entries:
   include_in_ai_index: false
 - id: repo.doc-design-balance-lore-game-balance-md
   path: doc/design-balance-lore/GAME_BALANCE.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: legacy.doc-design-balance-lore-game-balance
@@ -2177,8 +2177,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-design-balance-lore-lore-faq-md
   path: doc/design-balance-lore/LORE_FAQ.md
-  category: legacy_source
-  status: legacy
+  category: historical_document
+  status: archived
   authority: historical
   source_of_truth: false
   stable_document_id: archive-lore-faq
@@ -2189,8 +2189,8 @@ entries:
   include_in_ai_index: false
 - id: repo.doc-design-balance-lore-portal-storm-balance-and-design-md
   path: doc/design-balance-lore/PORTAL_STORM_BALANCE_AND_DESIGN.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: design-portal-storms
@@ -2201,8 +2201,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-design-balance-lore-postapoc-price-guide-md
   path: doc/design-balance-lore/POSTAPOC_PRICE_GUIDE.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json-item-pricing
@@ -2213,8 +2213,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-design-balance-lore-steel-crafting-md
   path: doc/design-balance-lore/STEEL_CRAFTING.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: design-steel-crafting
@@ -2225,8 +2225,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-design-balance-lore-variants-md
   path: doc/design-balance-lore/VARIANTS.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: json-item-variants
@@ -2237,8 +2237,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-design-balance-lore-batteries-and-electricity-md
   path: doc/design-balance-lore/batteries_and_electricity.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: design-batteries-electricity
@@ -2249,8 +2249,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-design-balance-lore-design-balance-md
   path: doc/design-balance-lore/design-balance.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: design-balance
@@ -2261,8 +2261,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-design-balance-lore-design-doc-md
   path: doc/design-balance-lore/design-doc.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: design-overview
@@ -2273,8 +2273,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-design-balance-lore-design-gameplay-md
   path: doc/design-balance-lore/design-gameplay.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: design-gameplay
@@ -2285,8 +2285,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-design-balance-lore-design-user-experience-md
   path: doc/design-balance-lore/design-user-experience.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: design-user-experience
@@ -2297,8 +2297,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-design-balance-lore-lore-background-md
   path: doc/design-balance-lore/lore-background.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: lore-background
@@ -2309,8 +2309,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-design-balance-lore-lore-factions-md
   path: doc/design-balance-lore/lore-factions.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: lore-factions
@@ -2321,8 +2321,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-design-balance-lore-lore-md
   path: doc/design-balance-lore/lore.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: lore-overview
@@ -2333,8 +2333,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-design-balance-lore-melee-weapons-melee-balance-spreadsheet-md
   path: doc/design-balance-lore/melee_weapons/MELEE_BALANCE_SPREADSHEET.md
-  category: legacy_source
-  status: legacy
+  category: historical_document
+  status: archived
   authority: historical
   source_of_truth: false
   stable_document_id: archive-melee-balance-spreadsheet
@@ -2345,8 +2345,8 @@ entries:
   include_in_ai_index: false
 - id: repo.doc-design-balance-lore-technology-md
   path: doc/design-balance-lore/technology.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: lore-technology
@@ -2357,8 +2357,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-development-process-md
   path: doc/development_process.md
-  category: legacy_source
-  status: legacy
+  category: historical_document
+  status: archived
   authority: historical
   source_of_truth: false
   stable_document_id: archive-upstream-development-process
@@ -2457,8 +2457,8 @@ entries:
   include_in_ai_index: false
 - id: repo.doc-reviewing-pr-guide-md
   path: doc/reviewing_PR_guide.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: pr-review-guide
@@ -2469,8 +2469,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-user-guides-color-md
   path: doc/user-guides/COLOR.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: ui-colors
@@ -2481,8 +2481,8 @@ entries:
   include_in_ai_index: true
 - id: repo.doc-user-guides-font-options-md
   path: doc/user-guides/FONT_OPTIONS.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: ui-fonts
@@ -2493,8 +2493,8 @@ entries:
   include_in_ai_index: true
 - id: repo.lang-notes-readme-all-translators-md
   path: lang/notes/README_all_translators.md
-  category: legacy_source
-  status: legacy
+  category: migration_entry
+  status: moved_stub
   authority: historical
   source_of_truth: false
   stable_document_id: legacy.lang-notes-readme-all-translators
