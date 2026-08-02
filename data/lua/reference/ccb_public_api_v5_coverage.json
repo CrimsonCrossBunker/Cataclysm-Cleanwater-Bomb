@@ -1,0 +1,40 @@
+{
+  "$schema": "https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/raw/master/data/lua/reference/ccb_public_api_v5_coverage.schema.json",
+  "schema_version": 1,
+  "api_version": 5,
+  "denominator": {
+    "definition": "Every callable access path and native usertype member registered by tracked catalua sources, plus every API v5 LuaLS class/field, native event spec, hook spec, callback kind-method pair, enum family, capability, and manifest field.",
+    "exclusions": [
+      "restricted Lua standard-library implementation helpers",
+      "dynamic enum member values whose authoritative set exists only at runtime",
+      "private C++ helpers without a registered Lua access path"
+    ]
+  },
+  "inventory_sha256": "df1f3218a05459be66bd89f88772c805384acb1f4b913a631fe046598d8cb230",
+  "sections": {
+    "modules": 3,
+    "namespaces": 68,
+    "classes": 260,
+    "functions": 482,
+    "methods": 142,
+    "properties": 51,
+    "operators": 47,
+    "enums": 26,
+    "events": 113,
+    "hooks": 52,
+    "callbacks": 38,
+    "capabilities": 16,
+    "manifest_fields": 6,
+    "class_fields": 1311,
+    "event_fields": 242
+  },
+  "public_symbols": 2806,
+  "documented_symbols": 2806,
+  "undocumented_symbols": {
+    "count": 0,
+    "ids": [  ]
+  },
+  "inventory_coverage_percent": 100.0,
+  "published_ccb_docs_coverage_percent": null,
+  "published_ccb_docs_status": "generated pages are delivered by a stacked CCB-Docs PR"
+}
