@@ -5,13 +5,17 @@ document_count: 175
 scope: Tracked Markdown at source_commit, excluding dot-prefixed tool/config paths; filesystem caches
   are never traversed.
 classification_summary:
-  review: 163
+  review: 129
   actions:
-    keep_in_repo: 6
+    generated_reference: 1
+    keep_in_repo: 35
+    merge_into: 2
+    migrate_rewrite: 2
     retain_third_party: 6
-    review: 163
+    review: 129
   migration_statuses:
-    inventoried: 163
+    classified: 34
+    inventoried: 129
     verified: 12
 documents:
 - original_path: CODE_OF_CONDUCT.md
@@ -191,968 +195,1144 @@ documents:
   - Retained as a repository authority or project entry point.
   migration_batch: null
 - original_path: data/json/LOADING_ORDER.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/loading-order.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: merge_into
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/loading-order/
+  migration_status: classified
+  history_strategy: merge_attribution_and_source_history
   stable_document_id: legacy.data-json-loading-order
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
-  merge_target: null
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
+  merge_target: json.loading-order
   source_paths:
   - data/json/LOADING_ORDER.md
-  source_symbols: []
+  - doc/JSON/JSON_LOADING_ORDER.md
+  - src/filesystem.cpp
+  - src/init.cpp
+  source_symbols:
+  - DynamicDataLoader::load_data_from_path
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - Both old repository paths must become permanent bilingual moved stubs after the shared page is published.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The two Markdown files are byte-identical; filesystem.cpp still documents breadth-first traversal
+    with lexical ordering, and init.cpp owns the loader entry point.
+  migration_batch: phase-1-json
 - original_path: data/json/npcs/godco/NECC_INFO.md
-  target_path: null
+  target_path: data/json/npcs/godco/NECC_INFO.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-json-npcs-godco-necc-info
-  domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: content.npc.godco-roster
+  domain: content
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/json/npcs/godco/NECC_INFO.md
+  - data/json/npcs/godco/npcs.json
+  - data/json/npcs/godco/members/NPC_Arturo_Maldonado.json
+  - data/json/npcs/godco/members/NPC_Helena_Misinter.json
+  - data/json/npcs/godco/godco_missions.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The roster remains source-adjacent design context and named members such as Arturo and Helena have
+    live JSON definitions and missions.
+  migration_batch: phase-2-content
 - original_path: data/json/npcs/refugee_center/FREE_MERCHANTS_INFO.md
-  target_path: null
+  target_path: data/json/npcs/refugee_center/FREE_MERCHANTS_INFO.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-json-npcs-refugee-center-free-merchants-info
-  domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: content.npc.free-merchants-economy
+  domain: content
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/json/npcs/refugee_center/FREE_MERCHANTS_INFO.md
+  - data/json/npcs/refugee_center/missiondef_free_merchants.json
+  - data/json/npcs/refugee_center/surface_staff/Smokes/free_merchant_shopkeep_goods.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The economy principles remain close to active Free Merchant mission and shop inventories; the shop
+    data still explicitly describes merch and deliberate stock exclusions.
+  migration_batch: phase-2-content
 - original_path: data/lua/README.md
-  target_path: null
+  target_path: docs/zh_CN/api/lua/v5/overview.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - LYHGLYTX
   contributor_anomaly_count: 0
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-lua-readme
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/api/lua/v5/overview/
+  migration_status: classified
+  history_strategy: evaluate_filtered_history_then_preserve_source_url
+  stable_document_id: lua.v5.overview
   domain: lua
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P0
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: ccb_specific
+  upstream_relation: ccb_native_lua_v5_contract
   merge_target: null
   source_paths:
   - data/lua/README.md
-  source_symbols: []
+  - data/lua/manifest.schema.json
+  - data/lua/types/ccb_api_v5.d.lua
+  - data/lua/reference/ccb_native_inventory.json
+  - src/catalua_ui_manifest.cpp
+  - tests/catalua_ui_test.cpp
+  source_symbols:
+  - supported_script_capabilities
+  - read_script_manifest
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - Do not preserve manual symbol counts as prose; regenerate them and prove LuaLS/native/inventory/test
+    parity before publishing.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The 1,150-line CCB-specific v5 overview is current high-value material, but it combines many contracts
+    that must be split and generated from Schema, LuaLS, native inventory, registration, and tests.
+  migration_batch: phase-0-lua
 - original_path: data/lua/examples/api_v5_mod/README.md
-  target_path: null
+  target_path: docs/zh_CN/api/lua/v5/example-mod.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - LYHGLYTX
   contributor_anomaly_count: 0
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-lua-examples-api-v5-mod-readme
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/api/lua/v5/example-mod/
+  migration_status: classified
+  history_strategy: evaluate_filtered_history_then_preserve_source_url
+  stable_document_id: lua.v5.example-mod
   domain: lua
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P0
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: ccb_specific
+  upstream_relation: ccb_native_lua_v5_example
   merge_target: null
   source_paths:
   - data/lua/examples/api_v5_mod/README.md
-  source_symbols: []
+  - data/lua/examples/api_v5_mod/lua/main.lua
+  - data/lua/examples/api_v5_mod/lua/lib/model.lua
+  - data/lua/examples/api_v5_mod/lua/manifest.json
+  - tests/catalua_ui_test.cpp
+  source_symbols:
+  - read_script_manifest
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - The published example must pass manifest Schema, Lua syntax, native loading, and generated-reference
+    checks.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The README accurately enumerates the checked-in complete v5 example surfaces; the formal page should
+    be bilingual and validated against the example manifest and Lua files.
+  migration_batch: phase-0-lua
 - original_path: data/mods/Backrooms/README.md
-  target_path: null
+  target_path: data/mods/Backrooms/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-backrooms-readme
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.backrooms.overview
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/Backrooms/README.md
+  - data/mods/Backrooms/modinfo.json
+  - data/mods/Backrooms/overmap_terrain.json
+  - data/mods/Backrooms/overmap_specials.json
   source_symbols: []
-  translation_required: true
-  include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  translation_required: false
+  include_in_ai_index: false
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - This is an active source-adjacent player/mod overview; MOD_INFO still requires the Backrooms world
+    conversion and its worldgen files remain present.
+  migration_batch: phase-2-mods
 - original_path: data/mods/BombasticPerks/docs/contributing.md
-  target_path: null
+  target_path: data/mods/BombasticPerks/docs/contributing.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-bombasticperks-docs-contributing
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.bombastic-perks.contributing
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/BombasticPerks/docs/contributing.md
+  - data/mods/BombasticPerks/modinfo.json
+  - data/mods/BombasticPerks/perkmenu.json
+  - data/mods/BombasticPerks/perks.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The documented perk_ naming and TALK_PERK_MENU entry points are present in the active mod JSON, so
+    this remains a local contribution contract.
+  migration_batch: phase-1-mods
 - original_path: data/mods/BombasticPerks/docs/expanding_with_mods.md
-  target_path: null
+  target_path: data/mods/BombasticPerks/docs/expanding_with_mods.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-bombasticperks-docs-expanding-with-mods
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.bombastic-perks.extension-contract
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/BombasticPerks/docs/expanding_with_mods.md
+  - data/mods/BombasticPerks/modinfo.json
+  - data/mods/BombasticPerks/perkmenu.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - The abbreviated JSON fragment is illustrative rather than parseable and must be explicitly marked
+    or replaced with a validated example.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The extension mechanism still targets TALK_PERK_MENU_MAIN and is best retained beside the mod that
+    owns that EOC/dialogue contract.
+  migration_batch: phase-1-mods
 - original_path: data/mods/DinoMod/DESIGN.md
-  target_path: null
+  target_path: data/mods/DinoMod/DESIGN.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-dinomod-design
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.dinomod.design
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/DinoMod/DESIGN.md
+  - data/mods/DinoMod/modinfo.json
+  - data/mods/DinoMod/monsters/dinosaur.json
+  - data/mods/DinoMod/monstergroups/dinosaur.json
+  - data/mods/DinoMod/monstergroups/wilderness.json
+  - data/mods/DinoMod/regional_overlay.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - Before substantive edits, re-check the enumerated file workflow because the current mod has grown
+    beyond the document's minimum list.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The contribution/design guide still maps to live dinosaur, hatchling, monster-group, map-extra, and
+    regional-overlay data, though its file-count wording is only a snapshot.
+  migration_batch: phase-1-mods
 - original_path: data/mods/DinoMod/README.md
-  target_path: null
+  target_path: data/mods/DinoMod/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-dinomod-readme
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.dinomod.overview
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/DinoMod/README.md
+  - data/mods/DinoMod/modinfo.json
+  - data/mods/DinoMod/monsters/dinosaur.json
   source_symbols: []
-  translation_required: true
-  include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  translation_required: false
+  include_in_ai_index: false
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The short overview agrees with active DinoMod MOD_INFO and loaded dinosaur content and should stay
+    next to the mod.
+  migration_batch: phase-2-mods
 - original_path: data/mods/MA/README.md
-  target_path: null
+  target_path: data/mods/MA/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-ma-readme
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.massachusetts.overview
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/MA/README.md
+  - data/mods/MA/modinfo.json
+  - data/mods/MA/MA_overmap_index.png
+  - data/mods/MA/MA_overmap_cities.xlsx
   source_symbols: []
-  translation_required: true
-  include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  translation_required: false
+  include_in_ai_index: false
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The total-conversion MOD_INFO and both named supporting assets still exist, so this remains useful
+    local orientation for an active bundled mod.
+  migration_batch: phase-2-mods
 - original_path: data/mods/Magiclysm/lore.md
-  target_path: null
+  target_path: data/mods/Magiclysm/lore.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-magiclysm-lore
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.magiclysm.lore
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/Magiclysm/lore.md
+  - data/mods/Magiclysm/modinfo.json
+  - data/mods/Magiclysm/Spells/druid.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The class/lore design remains relevant to the active Magiclysm spell classes and is source-adjacent
+    authoring context rather than a general CCB contract.
+  migration_batch: phase-2-mods
 - original_path: data/mods/Magiclysm/magic_balance.md
-  target_path: null
+  target_path: data/mods/Magiclysm/magic_balance.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-magiclysm-magic-balance
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.magiclysm.balance
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/Magiclysm/magic_balance.md
+  - data/mods/Magiclysm/modinfo.json
+  - data/mods/Magiclysm/flags.json
+  - data/mods/Magiclysm/Spells/druid.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - Specific damage, cost, and casting-time examples are snapshots and must be checked against JSON whenever
+    reused.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - Tier and proficiency guidance corresponds to live spell_class values and EVOCATION/CHANNELING/RESTORATION
+    flags, so it remains an active balancing contract.
+  migration_batch: phase-1-mods
 - original_path: data/mods/Megafauna/readme.md
-  target_path: null
+  target_path: data/mods/Megafauna/readme.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-megafauna-readme
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.megafauna.overview
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/Megafauna/readme.md
+  - data/mods/Megafauna/modinfo.json
+  - data/mods/Megafauna/monsters/mf_wild.json
+  - data/mods/Megafauna/monsters/mf_domestic.json
+  - data/mods/Megafauna/monstergroups/wilderness.json
   source_symbols: []
-  translation_required: true
-  include_in_ai_index: true
+  translation_required: false
+  include_in_ai_index: false
   blockers:
-  - Full-text source review is pending.
+  - Do not present the hard-coded species counts or TODO completion states as generated facts.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The active MOD_INFO and wild/domestic monster data implement the described Pleistocene fauna scope;
+    TODO and species counts remain editorial snapshots.
+  migration_batch: phase-2-mods
 - original_path: data/mods/MindOverMatter/GainingPowerSpoilers.md
-  target_path: null
+  target_path: data/mods/MindOverMatter/GainingPowerSpoilers.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-mindovermatter-gainingpowerspoilers
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.mind-over-matter.gaining-powers
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/MindOverMatter/GainingPowerSpoilers.md
+  - data/mods/MindOverMatter/modinfo.json
+  - data/mods/MindOverMatter/effectoncondition/eoc_awakening.json
+  - data/mods/MindOverMatter/powers/learning_eocs/overall.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - Revalidate every numeric formula against current awakening and learning EOCs before treating the guide
+    as exact.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The awakening and insight systems still have live EOC implementations, but the prose embeds formulas
+    and cooldown numbers that can drift.
+  migration_batch: phase-1-mods
 - original_path: data/mods/MindOverMatter/NetherAttunementSpoilers.md
-  target_path: null
+  target_path: data/mods/MindOverMatter/NetherAttunementSpoilers.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-mindovermatter-netherattunementspoilers
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.mind-over-matter.nether-attunement
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/MindOverMatter/NetherAttunementSpoilers.md
+  - data/mods/MindOverMatter/modinfo.json
+  - data/mods/MindOverMatter/effectoncondition/eoc_nether_attunement_events.json
+  - data/mods/MindOverMatter/effects/effects_nether_attunement.json
+  - data/mods/MindOverMatter/enchantments/enchantments_nether_attunement.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - Probability, threshold, and weight tables need contract extraction or explicit source-linked validation.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The attunement vitamin, effects, and consequence EOCs remain live; the large hand-maintained probability
+    table is not itself authoritative.
+  migration_batch: phase-1-mods
 - original_path: data/mods/MindOverMatter/NewPowerGuide.md
-  target_path: null
+  target_path: data/mods/MindOverMatter/NewPowerGuide.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-mindovermatter-newpowerguide
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.mind-over-matter.new-power-guide
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/MindOverMatter/NewPowerGuide.md
+  - data/mods/MindOverMatter/modinfo.json
+  - data/mods/MindOverMatter/powers/learning_eocs/overall.json
+  - data/mods/MindOverMatter/powers/biokinesis.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - The sample math formula and per-path limitations are design policy, not a substitute for validating
+    current spell/EOC fields.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - This is source-adjacent design guidance for adding powers and path boundaries; the power and learning-EOC
+    directories it names remain active.
+  migration_batch: phase-1-mods
 - original_path: data/mods/MindOverMatter/PowerDescriptionSpoilers.md
-  target_path: null
+  target_path: docs/zh_CN/data/mods/MindOverMatter/PowerDescriptionSpoilers.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - Standing-Storm
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: generated_reference
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-mindovermatter-powerdescriptionspoilers
+  migration_status: classified
+  history_strategy: retain_path_and_generate_from_power_json
+  stable_document_id: mods.mind-over-matter.power-reference
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: null
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_bundled_mod_manual_reference
   merge_target: null
   source_paths:
   - data/mods/MindOverMatter/PowerDescriptionSpoilers.md
+  - data/mods/MindOverMatter/modinfo.json
+  - data/mods/MindOverMatter/powers/biokinesis.json
+  - data/mods/MindOverMatter/powers/clairsentience.json
+  - data/mods/MindOverMatter/powers/electrokinesis.json
+  - data/mods/MindOverMatter/powers/photokinesis.json
+  - data/mods/MindOverMatter/powers/pyrokinesis.json
+  - data/mods/MindOverMatter/powers/telekinesis.json
+  - data/mods/MindOverMatter/powers/telepathy.json
+  - data/mods/MindOverMatter/powers/teleportation.json
+  - data/mods/MindOverMatter/powers/vitakinesis.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - No current evidence proves all hand-copied values match the nine power JSON files; generation and
+    parity tests are required.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The 1,838-line reference manually mirrors loaded spell JSON and contains visible placeholders and
+    copy errors; it should be generator-owned while retaining its source path and attribution.
+  migration_batch: phase-1-mods
 - original_path: data/mods/MindOverMatter/README.md
-  target_path: null
+  target_path: data/mods/MindOverMatter/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - Standing-Storm
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-mindovermatter-readme
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.mind-over-matter.overview
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/MindOverMatter/README.md
+  - data/mods/MindOverMatter/modinfo.json
+  - data/mods/MindOverMatter/effectoncondition/eoc_awakening.json
+  - data/mods/MindOverMatter/powers/learning_eocs/overall.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - Replace the two upstream GitHub links with permanent local/CCB links and revalidate embedded numeric
+    claims.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The overview matches the active nine-path mod and its awakening/learning implementation, but its further-information
+    links still point at CleverRaven instead of local CCB paths.
+  migration_batch: phase-1-mods
 - original_path: data/mods/MindOverMatter/lore_spoilers.md
-  target_path: null
+  target_path: data/mods/MindOverMatter/lore_spoilers.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-mindovermatter-lore-spoilers
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.mind-over-matter.lore
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/MindOverMatter/lore_spoilers.md
+  - data/mods/MindOverMatter/modinfo.json
+  - data/mods/MindOverMatter/items/matrix_crystals.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The PHAVIAN and matrix-crystal lore remains source-adjacent narrative context for the active mod.
+  migration_batch: phase-2-mods
 - original_path: data/mods/MindOverMatterNoKnacks/README.md
-  target_path: null
+  target_path: data/mods/MindOverMatterNoKnacks/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-mindovermatternoknacks-readme
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.mind-over-matter.no-knacks
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/MindOverMatterNoKnacks/README.md
+  - data/mods/MindOverMatterNoKnacks/modinfo.json
+  - data/mods/MindOverMatterNoKnacks/eocs/eocs_game_start.json
+  - data/mods/MindOverMatterNoKnacks/items/item_blacklist.json
   source_symbols: []
-  translation_required: true
-  include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  translation_required: false
+  include_in_ai_index: false
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The four-line overview remains accurate orientation for the active compatibility/variant mod and its
+    EOC and blacklist overrides.
+  migration_batch: phase-2-mods
 - original_path: data/mods/No_Hope/CONTRIBUTING.md
-  target_path: null
+  target_path: data/mods/No_Hope/CONTRIBUTING.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-no-hope-contributing
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.no-hope.contributing
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/No_Hope/CONTRIBUTING.md
+  - data/mods/No_Hope/modinfo.json
+  - data/mods/No_Hope/difficulty_options.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 'Resolve or replace the bare upstream #70325 reference and re-check the list of missing C++-dependent
+    features.'
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The source-adjacent design ethos still governs an active mod, while the temporary-feature and upstream
+    issue references are historical planning notes.
+  migration_batch: phase-1-mods
 - original_path: data/mods/No_Hope/DIFFICULTY_OPTIONS.md
-  target_path: null
+  target_path: data/mods/No_Hope/DIFFICULTY_OPTIONS.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-no-hope-difficulty-options
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.no-hope.difficulty-options
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/No_Hope/DIFFICULTY_OPTIONS.md
+  - data/mods/No_Hope/modinfo.json
+  - data/mods/No_Hope/difficulty_options.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - Regenerate or validate the item-category list and count against the current registry and difficulty_options.json.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The active EOCs still call set_item_category_spawn_rates, but the prose's count and inclusion table
+    are manually copied snapshots.
+  migration_batch: phase-1-mods
 - original_path: data/mods/Sky_Island/README.md
-  target_path: null
+  target_path: data/mods/Sky_Island/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-sky-island-readme
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.sky-island.overview
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/Sky_Island/README.md
+  - data/mods/Sky_Island/modinfo.json
+  - data/mods/Sky_Island/effectoncondition/raid_missions.json
+  - data/mods/Sky_Island/missions/raid_missions.json
   source_symbols: []
-  translation_required: true
-  include_in_ai_index: true
+  translation_required: false
+  include_in_ai_index: false
   blockers:
-  - Full-text source review is pending.
+  - Separate or refresh the stale embedded changelog before presenting version-specific behavior as current.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The expedition, warp-shard, and mission concepts remain implemented, but the embedded changelog stops
+    at v0.3.0 while MOD_INFO declares v0.4.0.
+  migration_batch: phase-2-mods
 - original_path: data/mods/Sorcerer/README.md
-  target_path: null
+  target_path: data/mods/Sorcerer/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-sorcerer-readme
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.sorcerer.overview
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/Sorcerer/README.md
+  - data/mods/Sorcerer/modinfo.json
+  - data/mods/Sorcerer/tools/generate_code.py
+  - data/mods/Sorcerer/tools/spell_data.txt
+  - data/mods/Sorcerer/generated_code/learn_spell/learn_spells.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - Generated-code ownership should be registered machine-readably and the generator must run without
+    path edits before its instructions are treated as complete.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - 'The README''s generator boundary is real: editable source/tool files and checked-in generated spell
+    JSON coexist in the active mod.'
+  migration_batch: phase-1-mods
 - original_path: data/mods/TEST_DATA/README.md
-  target_path: null
+  target_path: data/mods/TEST_DATA/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-test-data-readme
-  domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: testing.test-data-mod
+  domain: testing
+  priority: P0
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_active_test_contract
   merge_target: null
   source_paths:
   - data/mods/TEST_DATA/README.md
+  - data/mods/TEST_DATA/modinfo.json
+  - tests/test_main.cpp
+  - data/mods/TEST_DATA/items.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - tests/test_main.cpp still adds the test_data mod and the directory contains controlled fixtures, so
+    this is an active offline testing contract that belongs beside the fixtures.
+  migration_batch: phase-0-testing
 - original_path: data/mods/XedraWood/README.md
-  target_path: null
+  target_path: data/mods/XedraWood/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - Standing-Storm
   contributor_anomaly_count: 0
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-xedrawood-readme
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.xedra-wood.overview
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/XedraWood/README.md
+  - data/mods/XedraWood/modinfo.json
+  - data/mods/XedraWood/monsters/factions.json
   source_symbols: []
-  translation_required: true
-  include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  translation_required: false
+  include_in_ai_index: false
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The overview remains valid source-adjacent context for the active Xedra Evolved/Innawood compatibility
+    expansion.
+  migration_batch: phase-2-mods
 - original_path: data/mods/Xedra_Evolved/README.md
-  target_path: null
+  target_path: data/mods/Xedra_Evolved/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-xedra-evolved-readme
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.xedra-evolved.overview
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/Xedra_Evolved/README.md
+  - data/mods/Xedra_Evolved/modinfo.json
+  - data/mods/Xedra_Evolved/effects/vampvirus.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - Do not publish feature counts as exact until derived from current JSON registries.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The chapter-based overview and active MOD_INFO still describe a broad bundled content mod, though
+    shipping counts are manually maintained.
+  migration_batch: phase-2-mods
 - original_path: data/mods/Xedra_Evolved/design_doc_spoilers.md
-  target_path: null
+  target_path: data/mods/Xedra_Evolved/design_doc_spoilers.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - SariusSkelrets
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-xedra-evolved-design-doc-spoilers
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.xedra-evolved.design
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/Xedra_Evolved/design_doc_spoilers.md
+  - data/mods/Xedra_Evolved/modinfo.json
+  - data/mods/Xedra_Evolved/effects/vampvirus.json
+  - data/mods/Xedra_Evolved/monsters/cryptids.json
+  - data/mods/Xedra_Evolved/mutations/dhampir_eocs.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The supernatural-exclusivity, vampire, dhampir, and cryptid principles map to active JSON and remain
+    important local design policy; explicit TBD sections are drafts, not stale contracts.
+  migration_batch: phase-1-mods
 - original_path: data/mods/Xedra_Evolved/vampire_guide.md
-  target_path: null
+  target_path: data/mods/Xedra_Evolved/vampire_guide.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-xedra-evolved-vampire-guide
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.xedra-evolved.vampire-guide
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/Xedra_Evolved/vampire_guide.md
+  - data/mods/Xedra_Evolved/effects/vampvirus.json
+  - data/mods/Xedra_Evolved/mutations/dhampir_eocs.json
   source_symbols: []
-  translation_required: true
-  include_in_ai_index: true
+  translation_required: false
+  include_in_ai_index: false
   blockers:
-  - Full-text source review is pending.
+  - Timing and progression statements must be checked against the virus EOCs when changed.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - This is a compact player-facing walkthrough tied to the live vampirism EOCs; it should remain next
+    to the mod and out of the general developer AI index.
+  migration_batch: phase-2-mods
 - original_path: data/mods/aftershock_exoplanet/doc/Hacking.md
-  target_path: null
+  target_path: data/mods/aftershock_exoplanet/doc/Hacking.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-hacking
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.aftershock-exoplanet.hacking
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/aftershock_exoplanet/doc/Hacking.md
+  - data/mods/aftershock_exoplanet/modinfo.json
+  - data/mods/aftershock_exoplanet/EOC/hacking_eoc.json
+  - data/mods/aftershock_exoplanet/EOC/hacking_results_eoc.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - The second code block contains invalid JSON syntax and must be replaced with a formatter-validated
+    example.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - EOC_start_lock_hack, power-cost scaling, HACK quality, and HACK_NO_CHARGE remain implemented, making
+    this a live mod-specific authoring contract.
+  migration_batch: phase-1-mods
 - original_path: data/mods/aftershock_exoplanet/doc/crafting_system.md
-  target_path: null
+  target_path: data/mods/aftershock_exoplanet/doc/crafting_system.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - Mihály Verhás
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-crafting-system
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.aftershock-exoplanet.crafting-system
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/aftershock_exoplanet/doc/crafting_system.md
+  - data/mods/aftershock_exoplanet/modinfo.json
+  - data/mods/aftershock_exoplanet/items/crafting_scrap/abstract_scrap.json
+  - data/mods/aftershock_exoplanet/items/crafting_scrap/circuity_scrap.json
+  - data/mods/aftershock_exoplanet/itemgroups/scrap_groups.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - Category names and tier completeness should be compared to all crafting_scrap JSON when edited.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The tiered scrap categories remain represented by active item and item-group JSON; the prose is local
+    balance policy rather than generic crafting documentation.
+  migration_batch: phase-1-mods
 - original_path: data/mods/aftershock_exoplanet/doc/lore/cyberpunk_future.md
-  target_path: null
+  target_path: docs/zh_CN/data/mods/aftershock_exoplanet/doc/lore/organizations.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: merge_into
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-lore-cyberpunk-future
+  replacement: mods.aftershock-exoplanet.lore.organizations
+  migration_status: classified
+  history_strategy: merge_attribution_and_source_history
+  stable_document_id: mods.aftershock-exoplanet.lore.cyberpunk-future
   domain: mods
   priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
-  merge_target: null
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
+  merge_target: mods.aftershock-exoplanet.lore.organizations
   source_paths:
   - data/mods/aftershock_exoplanet/doc/lore/cyberpunk_future.md
+  - data/mods/aftershock_exoplanet/doc/lore/organizations.md
+  - data/mods/aftershock_exoplanet/doc/lore/timeline.md
+  - data/mods/aftershock_exoplanet/modinfo.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - Retain a permanent lightweight moved stub at the old path after merging the unique technology paragraph.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - This 13-line fragment duplicates corporation and lost-technology context developed more fully in organizations.md
+    and timeline.md.
+  migration_batch: phase-3-mods
 - original_path: data/mods/aftershock_exoplanet/doc/lore/factions.md
-  target_path: null
+  target_path: data/mods/aftershock_exoplanet/doc/lore/factions.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - Mihály Verhás
@@ -1160,30 +1340,33 @@ documents:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-lore-factions
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.aftershock-exoplanet.lore.factions
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/aftershock_exoplanet/doc/lore/factions.md
+  - data/mods/aftershock_exoplanet/modinfo.json
+  - data/mods/aftershock_exoplanet/npcs/factions.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - This file records gameplay-facing faction goals, offers, and bases, distinct from the historical organization
+    catalogue; active faction JSON provides implementation context.
+  migration_batch: phase-2-mods
 - original_path: data/mods/aftershock_exoplanet/doc/lore/organizations.md
-  target_path: null
+  target_path: data/mods/aftershock_exoplanet/doc/lore/organizations.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - Mihály Verhás
