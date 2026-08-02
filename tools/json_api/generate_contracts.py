@@ -1290,3 +1290,58 @@ def validate_contracts(
                 documentation_cache,
                 root,
             )
+
+def serialize(payload: dict[str, object]) -> str:
+    return json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+
+def write_or_check(
+    payloads: dict[str, dict[str, object]], output_directory: Path, check: bool
+) -> list[str]:
+    stale: list[str] = []
+    for kind, filename in OUTPUT_NAMES.items():
+        path = output_directory / filename
+        if check:
+            try:
+                current = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, UnicodeError, json.JSONDecodeError):
+                current = None
+            if current != payloads[kind]:
+                stale.append(path.as_posix())
+        else:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(serialize(payloads[kind]), encoding="utf-8")
+    return stale
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="fail if outputs are stale")
+    parser.add_argument(
+        "--output-directory",
+        type=Path,
+        default=DEFAULT_OUTPUT_DIRECTORY,
+        help="directory for the three checked inventories",
+    )
+    arguments = parser.parse_args()
+    try:
+        payloads = build_contracts()
+        stale = write_or_check(
+            payloads,
+            arguments.output_directory,
+            arguments.check)
+    except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
+        print(f"JSON/EOC contract generation failed: {error}", file=sys.stderr)
+        return 1
+    if stale:
+        print(
+            "stale generated JSON/EOC contract inventories:",
+            file=sys.stderr,
+        )
+        for path in stale:
+            print(f"  {path}", file=sys.stderr)
+        return 1
+    for kind, payload in payloads.items():
+        print(f"{kind}: {len(payload['entries'])} entries")
+    return 0
