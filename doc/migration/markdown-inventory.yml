@@ -5,17 +5,19 @@ document_count: 175
 scope: Tracked Markdown at source_commit, excluding dot-prefixed tool/config paths; filesystem caches
   are never traversed.
 classification_summary:
-  review: 129
+  review: 98
   actions:
-    generated_reference: 1
-    keep_in_repo: 35
-    merge_into: 2
-    migrate_rewrite: 2
+    archive_public: 1
+    generated_reference: 2
+    keep_in_repo: 54
+    merge_into: 4
+    migrate_preserve: 3
+    migrate_rewrite: 7
     retain_third_party: 6
-    review: 129
+    review: 98
   migration_statuses:
-    classified: 34
-    inventoried: 129
+    classified: 65
+    inventoried: 98
     verified: 12
 documents:
 - original_path: CODE_OF_CONDUCT.md
@@ -1374,906 +1376,1052 @@ documents:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-lore-organizations
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.aftershock-exoplanet.lore.organizations
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/aftershock_exoplanet/doc/lore/organizations.md
+  - data/mods/aftershock_exoplanet/modinfo.json
+  - data/mods/aftershock_exoplanet/npcs/factions.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The organization catalogue is the fuller lore source for UICA, TsKBEM, PrepNet, and corporations and
+    should absorb the smaller cyberpunk_future fragment.
+  migration_batch: phase-2-mods
 - original_path: data/mods/aftershock_exoplanet/doc/lore/points_of_interest.md
-  target_path: null
+  target_path: data/mods/aftershock_exoplanet/doc/lore/points_of_interest.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-lore-points-of-interest
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.aftershock-exoplanet.lore.points-of-interest
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/aftershock_exoplanet/doc/lore/points_of_interest.md
+  - data/mods/aftershock_exoplanet/modinfo.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The implemented/planned POI distinctions are source-adjacent world-design context; unimplemented suggestions
+    are clearly phrased as candidates.
+  migration_batch: phase-2-mods
 - original_path: data/mods/aftershock_exoplanet/doc/lore/ranged_weapon_balance.md
-  target_path: null
+  target_path: docs/zh_CN/data/mods/aftershock_exoplanet/doc/lore/ranged_weapon_balance.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - Mihály Verhás
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: generated_reference
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-lore-ranged-weapon-balance
+  migration_status: classified
+  history_strategy: retain_path_and_generate_weapon_tables_from_json
+  stable_document_id: mods.aftershock-exoplanet.balance.ranged-weapons
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: null
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/aftershock_exoplanet/doc/lore/ranged_weapon_balance.md
+  - data/mods/aftershock_exoplanet/modinfo.json
+  - data/mods/aftershock_exoplanet/items/weapons.json
+  - data/mods/aftershock_exoplanet/itemgroups/weapons/energy_gun_groups.json
+  - data/mods/aftershock_exoplanet/itemgroups/weapons/balistic_gun_groups.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - Split hand-authored balance policy from generated weapon/armor tables and add parity tests before
+    declaring completeness.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The prose contains useful balance policy, but its claim to list every ranged weapon and all numeric
+    stats is a manual mirror of loaded JSON and must become generator-owned.
+  migration_batch: phase-1-mods
 - original_path: data/mods/aftershock_exoplanet/doc/lore/salus_4.md
-  target_path: null
+  target_path: data/mods/aftershock_exoplanet/doc/lore/salus_4.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-lore-salus-4
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.aftershock-exoplanet.lore.salus-iv
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/aftershock_exoplanet/doc/lore/salus_4.md
+  - data/mods/aftershock_exoplanet/modinfo.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The concise Salus IV setting remains canonical source-adjacent worldbuilding for the active exoplanet
+    total conversion.
+  migration_batch: phase-2-mods
 - original_path: data/mods/aftershock_exoplanet/doc/lore/timeline.md
-  target_path: null
+  target_path: data/mods/aftershock_exoplanet/doc/lore/timeline.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - Mihály Verhás
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-lore-timeline
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.aftershock-exoplanet.lore.timeline
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/aftershock_exoplanet/doc/lore/timeline.md
+  - data/mods/aftershock_exoplanet/modinfo.json
+  - data/mods/aftershock_exoplanet/doc/lore/organizations.md
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The timeline supplies chronology referenced by the active setting and organization documents and remains
+    local narrative design context.
+  migration_batch: phase-2-mods
 - original_path: data/mods/aftershock_exoplanet/doc/suit_operating_time.md
-  target_path: null
+  target_path: data/mods/aftershock_exoplanet/doc/suit_operating_time.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-aftershock-exoplanet-doc-suit-operating-time
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.aftershock-exoplanet.balance.powered-armor
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/aftershock_exoplanet/doc/suit_operating_time.md
+  - data/mods/aftershock_exoplanet/modinfo.json
+  - data/mods/aftershock_exoplanet/items/armor/exosuit/exosuit_frame.json
+  - data/mods/aftershock_exoplanet/items/armor/exosuit/exosuit_modules.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - Add a validator for the 277777.78/hour calculation and verify the example against current item JSON.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The operating-time formula is active mod balance policy and its exosuit sources still use battery/power-draw
+    data, but the worked Magellan snapshot needs automated validation.
+  migration_batch: phase-1-mods
 - original_path: data/mods/aftershock_exoplanet/items/armor/exosuit/exosuit_guide.md
-  target_path: null
+  target_path: data/mods/aftershock_exoplanet/items/armor/exosuit/exosuit_guide.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-aftershock-exoplanet-items-armor-exosuit-exosuit-guide
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.aftershock-exoplanet.exosuit-guide
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/aftershock_exoplanet/items/armor/exosuit/exosuit_guide.md
+  - data/mods/aftershock_exoplanet/modinfo.json
+  - data/mods/aftershock_exoplanet/items/armor/exosuit/exosuit_frame.json
+  - data/mods/aftershock_exoplanet/items/armor/exosuit/exosuit_modules.json
+  - data/mods/aftershock_exoplanet/items/armor/exosuit/exosuit_storage.json
+  - data/mods/aftershock_exoplanet/items/armor/exosuit/exosuit_ranged.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - Module capacities and item stats are hand-maintained tables and should be validated or generated.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The frame, module, storage, and weapon families described by the guide remain active JSON and the
+    guide belongs beside those definitions.
+  migration_batch: phase-1-mods
 - original_path: data/mods/alt_map_key/README.md
-  target_path: null
+  target_path: data/mods/alt_map_key/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-alt-map-key-readme
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.alternative-map-key.overview
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/alt_map_key/README.md
+  - data/mods/alt_map_key/modinfo.json
+  - data/mods/alt_map_key/overmap_terrain_blue.json
+  - data/mods/alt_map_key/overmap_terrain_terrain.json
+  - data/mods/alt_map_key/mod_interactions/xedra_evolved/overmap_terrain.json
   source_symbols: []
-  translation_required: true
-  include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  translation_required: false
+  include_in_ai_index: false
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The active mod still implements the documented color/category replacement through core and interaction
+    overmap-terrain JSON.
+  migration_batch: phase-2-mods
 - original_path: data/mods/classic_zombies/design-doc.md
-  target_path: null
+  target_path: data/mods/classic_zombies/design-doc.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-classic-zombies-design-doc
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.classic-zombies.design
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/classic_zombies/design-doc.md
+  - data/mods/classic_zombies/modinfo.json
+  - data/mods/classic_zombies/monsters/zombies.json
+  - data/mods/classic_zombies/monsters/weakpoints.json
+  - data/mods/classic_zombies/monstergroups/classic_upgrades.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The Alberta/Romero conversion's active MOD_INFO and zombie adjustment data implement its central design,
+    while future tense sections remain proposals.
+  migration_batch: phase-1-mods
 - original_path: data/mods/classic_zombies/place_names.md
-  target_path: null
+  target_path: data/mods/classic_zombies/place_names.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-classic-zombies-place-names
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.classic-zombies.place-names
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/classic_zombies/place_names.md
+  - data/mods/classic_zombies/modinfo.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - Clarify whether the name list is an authoring source or historical draft; it currently has no loaded
+    JSON consumer.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - This is a source list of Alberta city/world names stored as JSON-shaped design data but not loaded
+    due to its Markdown extension; retain it beside the total conversion until a loader/generator explicitly
+    owns it.
+  migration_batch: phase-2-mods
 - original_path: data/mods/hunvre/documentation/lore.md
-  target_path: null
+  target_path: data/mods/hunvre/documentation/lore.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - BalthazarArgall
   contributor_anomaly_count: 0
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-hunvre-documentation-lore
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.hunvre.lore
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/hunvre/documentation/lore.md
+  - data/mods/hunvre/modinfo.json
+  - data/mods/hunvre/json/monsters/euzhvil_monsters.json
+  - data/mods/hunvre/json/monster_special_attacks/euzhvil_attacks.json
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The Midas/Dreamer/euzhvil design is reflected in the active total-conversion MOD_INFO and loaded euzhvil
+    monster/attack data.
+  migration_batch: phase-1-mods
 - original_path: data/mods/hunvre/progress_tracker.md
-  target_path: null
+  target_path: data/mods/hunvre/progress_tracker.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - BalthazarArgall
   contributor_anomaly_count: 0
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-hunvre-progress-tracker
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.hunvre.progress
   domain: mods
   priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/hunvre/progress_tracker.md
+  - data/mods/hunvre/modinfo.json
+  - data/mods/hunvre/json/mod_settings/region_settings/regional_map_settings.json
   source_symbols: []
-  translation_required: true
-  include_in_ai_index: true
+  translation_required: false
+  include_in_ai_index: false
   blockers:
-  - Full-text source review is pending.
+  - Any surfaced status must be checked against tracked Hunvre data because the file explicitly may be
+    stale.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The tracker explicitly disclaims synchronization and coercive authority; retain it as local planning
+    context, never as a runtime or roadmap contract.
+  migration_batch: phase-3-mods
 - original_path: data/mods/immortal_path/GLOSSARY.md
-  target_path: null
+  target_path: data/mods/immortal_path/GLOSSARY.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - Asthmatic123
   - EliadOArias
   contributor_anomaly_count: 0
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-immortal-path-glossary
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.immortal-path.glossary
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P0
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: ccb_specific
+  upstream_relation: ccb_only_bundled_mod_contract
   merge_target: null
   source_paths:
   - data/mods/immortal_path/GLOSSARY.md
+  - data/mods/immortal_path/LANGUAGE_CONVENTION.md
+  - data/mods/immortal_path/modinfo.json
+  - data/mods/immortal_path/magic/meditation.json
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - This CCB-specific bilingual glossary explicitly owns mod terminology and its terms are used by live
+    Chinese values and en_US comment pairs.
+  migration_batch: phase-0-mods
 - original_path: data/mods/immortal_path/LANGUAGE_CONVENTION.md
-  target_path: null
+  target_path: data/mods/immortal_path/LANGUAGE_CONVENTION.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - EliadOArias
   - LYHGLYTX
   contributor_anomaly_count: 0
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-immortal-path-language-convention
-  domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.immortal-path.language-convention
+  domain: translation
+  priority: P0
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: ccb_specific
+  upstream_relation: ccb_only_temporary_translation_contract
   merge_target: null
   source_paths:
   - data/mods/immortal_path/LANGUAGE_CONVENTION.md
+  - data/mods/immortal_path/GLOSSARY.md
+  - data/mods/immortal_path/modinfo.json
+  - data/mods/immortal_path/magic/meditation.json
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - When formal i18n is wired for the mod, this page must drive a scripted migration and then be superseded
+    rather than silently left active.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The temporary Chinese-live/en_US-comment convention is implemented throughout current mod JSON and
+    remains an explicit CCB-specific source contract until formal i18n migration occurs.
+  migration_batch: phase-0-translation
 - original_path: data/mods/immortal_path/doc/game-design.md
-  target_path: null
+  target_path: data/mods/immortal_path/doc/game-design.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - EliadOArias
   contributor_anomaly_count: 0
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-immortal-path-doc-game-design
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.immortal-path.game-design
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: ccb_specific
+  upstream_relation: ccb_only_bundled_mod_design
   merge_target: null
   source_paths:
   - data/mods/immortal_path/doc/game-design.md
+  - data/mods/immortal_path/modinfo.json
+  - data/mods/immortal_path/jmath/qi_formulas.json
+  - data/mods/immortal_path/magic/meditation.json
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The qi_max/qi_power/polarization and conflicting-phase formulas in the design page are present in
+    current jmath and meditation EOCs.
+  migration_batch: phase-1-mods
 - original_path: data/mods/immortal_path/doc/lore.md
-  target_path: null
+  target_path: data/mods/immortal_path/doc/lore.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - EliadOArias
   contributor_anomaly_count: 0
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-immortal-path-doc-lore
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.immortal-path.lore
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: ccb_specific
+  upstream_relation: ccb_only_bundled_mod_lore
   merge_target: null
   source_paths:
   - data/mods/immortal_path/doc/lore.md
+  - data/mods/immortal_path/modinfo.json
+  - data/mods/immortal_path/GLOSSARY.md
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - An English counterpart is required if this becomes an active CCB-Docs page; keeping it in-repo does
+    not make it a translated site page.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The Chinese cultivation setting is core source-adjacent narrative design for the CCB-specific total
+    conversion.
+  migration_batch: phase-2-mods
 - original_path: data/mods/immortal_path/doc/spell-design.md
-  target_path: null
+  target_path: data/mods/immortal_path/doc/spell-design.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - EliadOArias
   contributor_anomaly_count: 0
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-immortal-path-doc-spell-design
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.immortal-path.spell-design
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: ccb_specific
+  upstream_relation: ccb_only_bundled_mod_design
   merge_target: null
   source_paths:
   - data/mods/immortal_path/doc/spell-design.md
+  - data/mods/immortal_path/modinfo.json
+  - data/mods/immortal_path/jmath/qi_formulas.json
+  - data/mods/immortal_path/magic/arts_attack.json
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The documented power formula is directly realized by current fire/water art JSON and the shared qi_power/polarization
+    jmath functions.
+  migration_batch: phase-1-mods
 - original_path: data/mods/innawood/readme.md
-  target_path: null
+  target_path: data/mods/innawood/readme.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-innawood-readme
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.innawood.overview
   domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/innawood/readme.md
+  - data/mods/innawood/modinfo.json
+  - data/mods/innawood/overmap/overmap_terrain.json
+  - data/mods/innawood/overmap/specials_kept.json
+  - data/mods/innawood/monsters/mon_blacklist.json
   source_symbols: []
-  translation_required: true
-  include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  translation_required: false
+  include_in_ai_index: false
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The active total conversion still removes conventional world content and supplies wilderness progression
+    through overmap, blacklist, and recipe data.
+  migration_batch: phase-2-mods
 - original_path: data/mods/translate-dialogue/README.md
-  target_path: null
+  target_path: data/mods/translate-dialogue/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.data-mods-translate-dialogue-readme
-  domain: mods
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: mods.translate-dialogue.maintenance
+  domain: translation
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - data/mods/translate-dialogue/README.md
+  - data/mods/translate-dialogue/modinfo.json
+  - tools/json_tools/update-translate-dialogue-mod.py
+  - doc/JSON/JSON_STYLE.md
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - Rewrite the generic Cataclysm-DDA path wording for CCB and validate the formatter command against
+    the current repository toolchain.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The named updater and compact marker remain implemented, so this is an active maintenance instruction
+    beside the generated/derived mod.
+  migration_batch: phase-1-translation
 - original_path: doc/ASCII_ART.md
-  target_path: null
+  target_path: docs/zh_CN/content/ascii-art.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-ascii-art
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/content/ascii-art/
+  migration_status: classified
+  history_strategy: evaluate_filtered_history_then_preserve_source_url
+  stable_document_id: content.ascii-art
+  domain: ui
+  priority: P2
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_bundled_content
   merge_target: null
   source_paths:
   - doc/ASCII_ART.md
-  source_symbols: []
+  - src/ascii_art.cpp
+  - src/ascii_art.h
+  - src/init.cpp
+  - data/json/ascii_art/generic_ascii.json
+  - data/json/bodypart_graphs/arms.json
+  source_symbols:
+  - ascii_art::load_ascii_art
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - Validate REXPaint version, palette/font links, width limits, and export examples; remove doctoc and
+    retain a permanent bilingual moved stub.
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - The JSON type, loader, and target directories remain live, but the inherited guide carries obsolete
+    doctoc boilerplate and external-tool snapshots and should be rewritten as a validated bilingual how-to.
+  migration_batch: phase-2-ui
 - original_path: doc/CHANGELOG_GUIDELINES.md
-  target_path: null
+  target_path: doc/CHANGELOG_GUIDELINES.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-changelog-guidelines
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  migration_status: classified
+  history_strategy: keep_in_repo_path_history
+  stable_document_id: contributing.changelog-guidelines
+  domain: release
+  priority: P1
+  last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
+  ccb_specificity: upstream_inherited
+  upstream_relation: upstream_inherited_but_ccb_active_release_contract
   merge_target: null
   source_paths:
   - doc/CHANGELOG_GUIDELINES.md
+  - .github/pull_request_template.md
+  - tools/generate_changelog.py
+  - .github/workflows/weekly-changelog.yml
   source_symbols: []
-  translation_required: true
+  translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
+  - This is still linked directly by the CCB PR template and its categories are parsed by tools/generate_changelog.py
+    and used by the weekly changelog workflow, so it must remain in-repository authority-adjacent guidance.
+  migration_batch: phase-1-release
 - original_path: doc/DEVELOPER_FAQ.md
-  target_path: null
+  target_path: docs/zh_CN/how-to/common-tasks.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: merge_into
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-developer-faq
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
-  merge_target: null
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/how-to/common-tasks/
+  migration_status: classified
+  history_strategy: merge_attribution_and_source_history
+  stable_document_id: contributing.developer-faq
+  domain: architecture
+  priority: P1
+  last_applicable_commit: b1ee97987589450da70f30ee2feed12c9d18f479
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_unmodified
+  merge_target: how-to.common-tasks
   source_paths:
-  - doc/DEVELOPER_FAQ.md
-  source_symbols: []
+  - src/monstergenerator.cpp
+  - src/overmap_terrain.cpp
+  - src/item_factory.cpp
+  - src/item_armor.cpp
+  - tests/monster_test.cpp
+  source_symbols:
+  - MonsterGenerator::load_monster
+  - overmap_terrains::load
+  - itype::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 文中的 NUM_OMSPECS、player::activate_bionic 和 monattack::function 在当前已跟踪源码中均不存在，不能原样发布。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 全文混合怪物、旧式硬编码 mapgen、仿生、护甲和 iuse FAQ；当前注册点已迁到 monstergenerator、overmap JSON 和 item loader，适合拆入按任务组织的页面而非保留杂项
+    FAQ。
+  migration_batch: phase-1-architecture
 - original_path: doc/FREQUENTLY_MADE_SUGGESTIONS.md
-  target_path: null
+  target_path: docs/zh_CN/design/frequently-made-suggestions.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - LunaGlaze
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-frequently-made-suggestions
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/design/frequently-made-suggestions/
+  migration_status: classified
+  history_strategy: filtered_path_history_candidate
+  stable_document_id: design.frequently-made-suggestions
+  domain: design
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_customized
+  upstream_relation: forked_and_locally_revised
   merge_target: null
   source_paths:
   - doc/FREQUENTLY_MADE_SUGGESTIONS.md
+  - GOVERNANCE.md
+  - README.md
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 仍含多个 CleverRaven/CDDA Issue 与 discourse 链接；正式发布前必须逐条确认 CCB 是否继续采用相同结论。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 499 行设计答复在 2026-07-28 经 LunaGlaze 三次提交专门删改“不符合本分叉”的内容，已具有 CCB 政策价值；但残留上游链接和时态判断要求按 CCB 当前设计重新表述。
+  migration_batch: phase-1-design
 - original_path: doc/GUN_NAMING_AND_INCLUSION.md
-  target_path: null
+  target_path: docs/zh_CN/content/firearms/naming-and-inclusion.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-gun-naming-and-inclusion
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/content/firearms/naming-and-inclusion/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: content.firearms-naming-and-inclusion
+  domain: design
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_with_live_validator
   merge_target: null
   source_paths:
-  - doc/GUN_NAMING_AND_INCLUSION.md
-  source_symbols: []
+  - tools/json_tools/gun_variant_validator.py
+  - tools/json_tools/generic_guns_validator.py
+  - data/json/items/gun/9mm.json
+  source_symbols:
+  - guns_are_similar
+  - check_identifiers
+  - check_names
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 文中的阈值是快照；页面必须从验证脚本派生或明确以脚本为准，避免双重契约。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 全文的稀有度、差异阈值和命名规则仍对应已跟踪 gun_variant_validator.py；项目身份仍写 CDDA，且硬编码阈值可能随脚本变化，适合 CCB 双语重写。
+  migration_batch: phase-2-design
 - original_path: doc/HOWTO_MASSAGE_MA_GUN_DATA.md
-  target_path: null
+  target_path: docs/zh_CN/archive/firearms/massachusetts-data-workflow.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
-  archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-howto-massage-ma-gun-data
-  domain: legacy
+  action: archive_public
+  archive_reason: 全文是针对 2004–2023 马萨诸塞州 CSV 的一次性 sqlite/sed 清洗笔记，引用的 fix_serial_numbers.sql 与 remove_empty_entroes.sql
+    未被 Git 跟踪，也不是游戏构建或数据契约。
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/archive/firearms/massachusetts-data-workflow/
+  migration_status: classified
+  history_strategy: archive_snapshot_with_history_url
+  stable_document_id: archive.firearms-massachusetts-data-workflow
+  domain: historical
   priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  last_applicable_commit: b1ee97987589450da70f30ee2feed12c9d18f479
+  ccb_specificity: upstream_historical
+  upstream_relation: upstream_one_off_research_workflow
   merge_target: null
   source_paths:
   - doc/HOWTO_MASSAGE_MA_GUN_DATA.md
   source_symbols: []
-  translation_required: true
-  include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  translation_required: false
+  include_in_ai_index: false
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 全文是针对 2004–2023 马萨诸塞州 CSV 的一次性 sqlite/sed 清洗笔记，引用的 fix_serial_numbers.sql 与 remove_empty_entroes.sql
+    未被 Git 跟踪，也不是游戏构建或数据契约。
+  migration_batch: phase-3-historical
 - original_path: doc/HOW_YOU_CAN_HELP.md
-  target_path: null
+  target_path: docs/zh_CN/getting-started/first-contribution.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: merge_into
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-how-you-can-help
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
-  merge_target: null
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/getting-started/first-contribution/
+  migration_status: classified
+  history_strategy: merge_attribution_and_source_history
+  stable_document_id: getting-started.how-you-can-help
+  domain: governance
+  priority: P0
+  last_applicable_commit: b1ee97987589450da70f30ee2feed12c9d18f479
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_but_links_upstream_project
+  merge_target: getting-started.first-contribution
   source_paths:
-  - doc/HOW_YOU_CAN_HELP.md
+  - CONTRIBUTING.md
+  - GOVERNANCE.md
+  - .github/ISSUE_TEMPLATE/bug_report.yml
+  - .github/ISSUE_TEMPLATE/feature_proposal.yml
+  - .github/pull_request_template.md
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 全文 84 个外部链接绝大多数指向 CleverRaven/CDDA labels、Wiki 和 Issue；不得直接搬迁。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 198 行贡献入口与标签表仍指向上游仓库和旧标签体系；其有用内容已由 CCB 的 CONTRIBUTING、Issue Forms、PR 模板及现有双语首次贡献页取代。
+  migration_batch: phase-0-governance
 - original_path: doc/IN_REPO_MODS.md
-  target_path: null
+  target_path: docs/zh_CN/mods/in-repository-policy.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-in-repo-mods
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/mods/in-repository-policy/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: mods.in-repository-policy
+  domain: mods
+  priority: P1
+  last_applicable_commit: b1ee97987589450da70f30ee2feed12c9d18f479
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_policy_not_yet_ccb_ratified
   merge_target: null
   source_paths:
-  - doc/IN_REPO_MODS.md
-  source_symbols: []
+  - CONTRIBUTING.md
+  - GOVERNANCE.md
+  - data/mods/AGENTS.md
+  - src/mod_manager.cpp
+  - tools/load_all_mods.sh
+  source_symbols:
+  - mod_manager::load_modfile
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 全文反复指定 CleverRaven 仓库和 curator 合并权；CCB 必须先在 CONTRIBUTING/OWNERSHIP 中确认自己的 mod 责任模型。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 内容解释内置 Mod 的类别、维护责任、淘汰与 modmod 规则，技术上仍有价值；但它是上游治理文本，不能未经 CCB 治理确认就作为现行政策发布。
+  - Import-time source-symbol correction was verified against the tracked implementation.
+  migration_batch: phase-1-mods
 - original_path: doc/ISSUE_TRIAGE.md
-  target_path: null
+  target_path: docs/zh_CN/maintainers/issue-triage.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-issue-triage
-  domain: legacy
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/maintainers/issue-triage/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: maintainers.issue-triage
+  domain: governance
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: generic_upstream_process_requiring_ccb_mapping
   merge_target: null
   source_paths:
-  - doc/ISSUE_TRIAGE.md
+  - ISSUES.md
+  - GOVERNANCE.md
+  - .github/ISSUE_TEMPLATE/bug_report.yml
+  - .github/ISSUE_TEMPLATE/feature_proposal.yml
+  - .github/labeler.yml
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 优先级和标签名必须映射到最终 CCB Issue Forms/LABELS.md 后才能标为 active。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 全文的 bug/feature 判定、数据丢失优先级和可复现性要求仍合理，但没有绑定 CCB 实际 Issue Forms 与标签，因此应按新工作流重写。
+  migration_batch: phase-1-governance
 - original_path: doc/JSON/ARTIFACTS.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/artifacts.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-artifacts
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/artifacts/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.artifacts
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_contract_with_current_sources
   merge_target: null
   source_paths:
-  - doc/JSON/ARTIFACTS.md
-  source_symbols: []
+  - src/relic.cpp
+  - src/relic.h
+  - data/json/artifact/relic_procgen_data.json
+  - data/json/artifact/premade_artifacts.json
+  source_symbols:
+  - relic_procgen_data::load
+  - relic_procgen_data::generation_rules::load
+  - relic_charge_template::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 没有专门 artifact 单元测试；字段参考必须以 loader 与已加载 JSON 校验补强。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 154 行完整覆盖生成权重、充能、被动/主动 procgen、强度与 resonance，当前 relic loader 和 artifact JSON 均存在；适合保留结构并补充生成校验。
+  migration_batch: phase-1-json
 - original_path: doc/JSON/BASECAMP.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/basecamp.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-basecamp
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/basecamp/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.basecamp
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_contract_with_live_examples
   merge_target: null
   source_paths:
-  - doc/JSON/BASECAMP.md
-  source_symbols: []
+  - src/basecamp.cpp
+  - src/faction_camp.cpp
+  - src/recipe.cpp
+  - data/json/recipes/basecamps/components.json
+  - tests/faction_camp_test.cpp
+  source_symbols:
+  - basecamp::available_upgrades
+  - recipe::load
+  - basecamp::define_camp
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 364 行说明 blueprint requires/provides/excludes、mapgen_update、recipe groups 和模块化营地约定；当前 basecamp/faction_camp
+    实现、配方与测试仍对应这些概念。
+  migration_batch: phase-1-json
 - original_path: doc/JSON/CLIMBING.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/climbing-aids.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - Killa-bite
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-climbing
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/climbing-aids/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.climbing-aids
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_extended
+  upstream_relation: forked_and_locally_extended
   merge_target: null
   source_paths:
-  - doc/JSON/CLIMBING.md
-  source_symbols: []
+  - src/climbing.cpp
+  - src/climbing.h
+  - data/json/climbing.json
+  source_symbols:
+  - climbing_aid::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 缺少 climbing_aid 专项单元测试；示例需通过 JSON load。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 159 行逐字段解释 climbing_aid，2026-07-02 随 CCB airship gangway 功能更新；loader 和 data/json/climbing.json 当前存在。
+  migration_batch: phase-2-json
 - original_path: doc/JSON/DIMENSIONS.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/dimensions.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - LYHGLYTX
