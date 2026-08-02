@@ -5,19 +5,19 @@ document_count: 175
 scope: Tracked Markdown at source_commit, excluding dot-prefixed tool/config paths; filesystem caches
   are never traversed.
 classification_summary:
-  review: 86
+  review: 85
   actions:
     archive_public: 1
     generated_reference: 3
     keep_in_repo: 54
     merge_into: 4
     migrate_preserve: 13
-    migrate_rewrite: 8
+    migrate_rewrite: 9
     retain_third_party: 6
-    review: 86
+    review: 85
   migration_statuses:
-    classified: 77
-    inventoried: 86
+    classified: 78
+    inventoried: 85
     verified: 12
 documents:
 - original_path: CODE_OF_CONDUCT.md
@@ -2885,30 +2885,38 @@ documents:
   - RenechCDDA
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-json-info
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/
+  migration_status: classified
+  history_strategy: filtered_path_history_candidate
+  stable_document_id: json.object-types
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_extended
+  upstream_relation: forked_and_locally_extended
   merge_target: null
   source_paths:
-  - doc/JSON/JSON_INFO.md
-  source_symbols: []
+  - src/init.cpp
+  - src/json.cpp
+  - src/generic_factory.cpp
+  - tests/json_load_test.cpp
+  - tests/json_test.cpp
+  source_symbols:
+  - DynamicDataLoader::initialize
+  - DynamicDataLoader::load_object
+  - DynamicDataLoader::load_data_from_path
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 4,696 行把介绍、通用语法、目录导航和约 200 个对象章节混在一起；需拆为手写入口和生成 object type registry，且不得假装 Schema 完整。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 这是广域 JSON 总参考，导入后 14 次更新并含 CCB fertilize_terrain/植物生命周期字段；当前 DynamicDataLoader 注册和 JSON load tests
+    应成为生成清单权威。
+  migration_batch: phase-0-json
 - original_path: doc/JSON/JSON_INHERITANCE.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/inheritance.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - zihanZheng
