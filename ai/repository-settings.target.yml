@@ -1,68 +1,106 @@
 schema_version: 1
 kind: repository_settings_target
-description: Desired settings and manual evidence; merging this file does not apply GitHub rules.
+description: Audited GitHub state, disabled ruleset target, and human activation gates; this file never applies settings by itself.
 enforcement: deferred
+
+audit:
+  observed_at: '2026-08-02'
+  observed_timestamp: '2026-08-02T02:52:24+08:00'
+  observed_by: LYHGLYTX
+  timezone: Asia/Shanghai
+  evidence_scope: Maintainer-supplied read-only GitHub API audit.
+  observation_commands:
+    - gh api repos/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/actions/permissions/workflow
+    - gh api repos/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb
+    - gh api repos/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/rulesets
+    - gh api repos/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/branches/master/protection
+  repository:
+    full_name: CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb
+    default_branch: master
+    rulesets: []
+    branch_protection_observed: false
+    allow_auto_merge: false
+  actions:
+    default_workflow_permissions: read
+    can_approve_pull_request_reviews: false
+  security:
+    secret_scanning: enabled
+    secret_scanning_push_protection: enabled
+    dependabot_security_updates: enabled
+    vulnerability_alerts_http_status: 204
+    automated_security_fixes: enabled
+  organization:
+    two_factor_requirement_enabled: false
+  reviewer_confirmation:
+    tracking_issue: 563
+    issue_comments_at_audit: 0
+    confirmed_willing_humans: 0
+    required_willing_humans: 2
+  required_check_evidence:
+    pull_requests: [568, 569]
+    status: pr_branch_only
+    default_branch_success_confirmed: false
+  two_factor_rollout:
+    tracking_issue: 564
+    status: blocked_pending_member_audit_and_notice
+
 entries:
   - id: master-protection
-    repository: CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb
     branch: master
     enabled: false
     prerequisites:
       minimum_confirmed_human_reviewers: 2
       required_checks_must_succeed_on_default_branch: true
-      member_audit_and_notice_before_organization_2fa: true
-    blockers:
-      human_reviewers:
-        state: blocked_pending_explicit_willingness
-        issue: https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/issues/563
-      organization_2fa:
-        state: blocked_pending_member_audit_and_notice
-        issue: https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/issues/564
+      emergency_bypass_actor_must_be_confirmed: true
     target:
-      ruleset:
-        name: protected-default-branch
-        enforcement: deferred
-        require_pull_request: true
-        required_non_author_human_approvals: 1
-        dismiss_stale_reviews: true
-        require_conversation_resolution: true
-        required_status_checks:
-          - Agent context and documentation impact
-          - Lua public contract
-        prohibit_force_push: true
-        prohibit_branch_deletion: true
-        bypass:
-          policy: emergency_only
-          actors: []
-          reason_required: true
-      actions:
-        default_workflow_permissions: read
-        bot_may_approve_pull_requests: false
-        auto_merge: false
-      security:
-        secret_scanning: enabled
-        push_protection: enabled
-        dependabot_security_updates: enabled
-        organization_2fa: deferred_pending_member_audit_and_notice
+      github_ruleset:
+        name: CCB master protection
+        target: branch
+        enforcement: disabled
+        bypass_actors: []
+        conditions:
+          ref_name:
+            include: [refs/heads/master]
+            exclude: []
+        rules:
+          - type: deletion
+          - type: non_fast_forward
+          - type: pull_request
+            parameters:
+              dismiss_stale_reviews_on_push: true
+              require_code_owner_review: false
+              require_last_push_approval: true
+              required_approving_review_count: 1
+              required_review_thread_resolution: true
+          - type: required_status_checks
+            parameters:
+              strict_required_status_checks_policy: true
+              do_not_enforce_on_create: true
+              required_status_checks:
+                - context: Agent context and documentation impact
+                - context: Lua public contract
+      bypass_policy:
+        mode: emergency_only
+        reason_required: true
+        configured_actors: []
+    blockers:
+      - id: reviewer-quorum
+        state: open
+        tracking_issue: 563
+        reason: No comments or two explicitly willing human reviewers were confirmed at audit time.
+      - id: default-branch-check-stability
+        state: open
+        evidence_pull_requests: [568, 569]
+        reason: Candidate checks passed only on pull-request branches and have no stable master run yet.
+      - id: emergency-bypass-owner
+        state: open
+        tracking_issue: null
+        reason: No real emergency bypass actor and escalation owner has been confirmed.
     manual_record:
-      observed_at: '2026-08-02T02:52:24+08:00'
-      observed_by: LYHGLYTX
-      observation_commands:
-        - gh api repos/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/actions/permissions/workflow
-        - gh api repos/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb
-        - gh api repos/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/rulesets
-        - gh api repos/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/branches/master/protection
       confirmed_reviewers: []
       required_checks: []
-      required_checks_verified_at: null
-      rulesets_observed: 0
-      branch_protection_observed: false
-      ruleset_enabled_at: null
-      ruleset_enabled_by: null
-      default_workflow_permissions: read
-      actions_bot_may_approve_pull_requests: false
-      auto_merge: false
-      secret_scanning: enabled
-      push_protection: enabled
-      dependabot_security_updates: enabled
-      organization_2fa: blocked_pending_member_audit_and_notice
+      emergency_bypass_actors: []
+      enabled_at: null
+      enabled_by: null
+      ruleset_id: null
+      bypass_tested_at: null

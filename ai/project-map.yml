@@ -60,9 +60,21 @@ entries:
     boundaries:
       - Actual build definitions override explanatory documentation.
   - id: governance
-    paths: [AGENTS.md, CONTRIBUTING.md, GOVERNANCE.md, .github/pull_request_template.md]
+    paths:
+      - AGENTS.md
+      - CONTRIBUTING.md
+      - GOVERNANCE.md
+      - OWNERSHIP.md
+      - REPOSITORY_SETTINGS.md
+      - ai/repository-settings.target.yml
+      - ai/repository-settings.target.schema.json
+      - .github/dependabot.yml
+      - .github/pull_request_template.md
+      - .github/workflows/validate-github-config.yml
     purpose: Contribution, responsibility, and repository governance policy.
     instructions: AGENTS.md
-    validation_ids: [agent-context]
+    validation_ids: [agent-context, governance-audit]
     boundaries:
       - Every PR names a Responsible human.
+      - Tracked targets never prove that an administrator setting is active.
+      - Do not enable non-author approval without two confirmed human reviewers.

@@ -39,9 +39,26 @@ ongoing review.
 
 Until this table contains two qualified humans, approval protection remains a
 documented target rather than an active rule that could lock the repository.
-The ongoing-review confirmation is tracked in
-https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/issues/563.
-Repository permission or recent activity alone is not treated as consent.
+
+The latest read-only audit was performed on 2026-08-02 (Asia/Shanghai).  Issue
+[#563](https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/issues/563)
+had no comments at that time, so the confirmed reviewer count remains 0/2.
+Repository access, commit activity, or an assumed maintainer role is not
+evidence of willingness to provide continuing review.
+
+## Quarterly permission review
+
+At least once per quarter, a human maintainer must:
+
+1. verify that every listed reviewer is a human, active, and still has review
+   permission;
+2. reconfirm willingness and the review scope, recording the evidence and
+   audit date without publishing private organization data;
+3. remove or replace stale entries and check the rotation/escalation path;
+4. verify that bots and PR authors cannot satisfy the non-author human approval
+   requirement; and
+5. update `ai/repository-settings.target.yml` only after the GitHub setting is
+   observed, never in anticipation of an administrator action.
 
 ## Changing ownership records
 

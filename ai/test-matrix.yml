@@ -7,6 +7,19 @@ entries:
     command: python3 -m unittest discover -s tools/agent -p 'test_*.py'
     workdir: .
     cost: fast
+  - id: governance-audit
+    paths:
+      - OWNERSHIP.md
+      - REPOSITORY_SETTINGS.md
+      - ai/repository-settings.target.yml
+      - ai/repository-settings.target.schema.json
+      - .github/dependabot.yml
+      - .github/workflows/
+      - tools/agent/audit_repository_governance.py
+      - tools/agent/test_repository_governance.py
+    command: python3 tools/agent/audit_repository_governance.py --check
+    workdir: .
+    cost: fast
   - id: documentation-impact
     paths: [ai/docs-impact.yml, tools/agent/check_docs_impact.py, tools/agent/test_docs_impact.py, .github/pull_request_template.md, .github/workflows/agent-context.yml]
     command: python3 tools/agent/check_docs_impact.py --changed-file ai/docs-impact.yml && python3 -m unittest discover -s tools/agent -p 'test_docs_impact.py'

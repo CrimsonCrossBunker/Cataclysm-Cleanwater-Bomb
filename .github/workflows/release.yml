@@ -25,11 +25,15 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   REPOSITORY_NAME: ${{ github.event.repository.name }}
 
+permissions:
+  contents: read
+
 jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    permissions: write-all
+    permissions:
+      contents: write
     outputs:
       timestamp: ${{ steps.meta.outputs.time }}
       tag_name: ${{ steps.meta.outputs.tag_name }}
@@ -287,7 +291,9 @@ jobs:
           #  wasm: true
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
-    permissions: write-all
+    permissions:
+      actions: read
+      contents: write
     env:
         ZSTD_CLEVEL: 17
         CATA_ENABLE_LUA_UI: 1
