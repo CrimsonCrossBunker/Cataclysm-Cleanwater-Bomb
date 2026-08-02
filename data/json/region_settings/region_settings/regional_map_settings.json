@@ -1035,7 +1035,7 @@
   {
     "type": "map_extra_collection",
     "id": "park",
-    "chance": 60,
+    "chance": 600,
     "extras": [ [ "mx_fungal_zone", 100 ] ]
   },
   {

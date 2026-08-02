@@ -14,6 +14,7 @@
 #include "cata_utility.h"
 #include "cellular_automata.h"
 #include "character_id.h"
+#include "city.h"
 #include "coordinates.h"
 #include "debug.h"
 #include "enum_conversions.h"
@@ -1058,8 +1059,29 @@ static bool mx_corpses( map &m, const tripoint_abs_sm &abs_sub )
     return true;
 }
 
+static bool city_has_fungal_zone( const tripoint_abs_sm &abs_sub )
+{
+    const city_reference city_ref = overmap_buffer.closest_city( abs_sub );
+    if( !city_ref ) {
+        return false;
+    }
+
+    const tripoint_abs_omt city_center = project_to<coords::omt>( city_ref.abs_sm_pos );
+    for( const tripoint_abs_omt &omt : points_in_radius( city_center, city_ref.city->size ) ) {
+        if( overmap_buffer.extra( omt ) == map_extra_mx_fungal_zone ) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 static bool mx_fungal_zone( map &m, const tripoint_abs_sm &abs_sub )
 {
+    if( city_has_fungal_zone( abs_sub ) ) {
+        return false;
+    }
+
     // Find suitable location for fungal spire to spawn (grass, dirt etc)
     const tripoint_bub_ms omt_center = { SEEX, SEEY, abs_sub.z()};
     std::vector<tripoint_bub_ms> suitable_locations;
