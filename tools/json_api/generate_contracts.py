@@ -139,3 +139,114 @@ def find_matching(text: str, opening: int, left: str, right: str) -> int:
             if depth == 0:
                 return index
     raise RuntimeError(f"unbalanced {left}{right} delimiters")
+
+def split_first_argument(call: str) -> tuple[str, str]:
+    depth = 0
+    quote: str | None = None
+    escaped = False
+    for index, char in enumerate(call):
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in {'"', "'"}:
+            quote = char
+        elif char in "([{<":
+            depth += 1
+        elif char in ")]}>" and depth:
+            depth -= 1
+        elif char == "," and depth == 0:
+            return call[:index].strip(), call[index + 1:].strip()
+    raise RuntimeError("registration call has no handler argument")
+
+def preprocessor_contexts(text: str) -> dict[int, list[str]]:
+    contexts: dict[int, list[str]] = {}
+    stack: list[str] = []
+    for number, line in enumerate(text.splitlines(), 1):
+        directive = re.match(
+            r"#\s*(if|ifdef|ifndef|elif|else|endif)\b(.*)", line.strip()
+        )
+        if directive:
+            kind = directive.group(1)
+            expression = directive.group(2).strip()
+            if kind in {"if", "ifdef", "ifndef"}:
+                stack.append(f"{kind} {expression}".strip())
+            elif kind == "elif":
+                if not stack:
+                    raise RuntimeError(f"orphan #elif at line {number}")
+                stack[-1] = f"elif {expression}"
+            elif kind == "else":
+                if not stack:
+                    raise RuntimeError(f"orphan #else at line {number}")
+                stack[-1] = f"else ({stack[-1]})"
+            elif kind == "endif":
+                if not stack:
+                    raise RuntimeError(f"orphan #endif at line {number}")
+                stack.pop()
+        contexts[number] = list(stack)
+    if stack:
+        raise RuntimeError("unterminated preprocessor conditional")
+    return contexts
+
+def handler_metadata(expression: str) -> tuple[str, str | None]:
+    normalized = re.sub(r"\s+", " ", expression).strip()
+    direct = re.match(r"&\s*([A-Za-z_][A-Za-z0-9_:]*)", normalized)
+    if direct:
+        return "direct_function", direct.group(1)
+    if normalized.startswith("["):
+        called = re.findall(r"\b([A-Za-z_][A-Za-z0-9_:]*)\s*\(", normalized)
+        ignored = {"if", "for", "while", "switch"}
+        return "lambda", next(
+            (item for item in called if item not in ignored), None)
+    callable_match = re.match(r"([A-Za-z_][A-Za-z0-9_:]*)", normalized)
+    return "callable", callable_match.group(1) if callable_match else None
+
+def parse_json_registrations(contents: str) -> list[dict[str, object]]:
+    signature = "void DynamicDataLoader::initialize()"
+    start = contents.find(signature)
+    if start < 0:
+        raise RuntimeError("DynamicDataLoader::initialize was not found")
+    body_open = contents.find("{", start)
+    body_close = find_matching(contents, body_open, "{", "}")
+    section = contents[body_open + 1: body_close]
+    masked = mask_comments(section)
+    contexts = preprocessor_contexts(contents)
+    registrations: list[dict[str, object]] = []
+    for order, match in enumerate(re.finditer(r"\badd\s*\(", masked)):
+        absolute = body_open + 1 + match.start()
+        open_paren = contents.find("(", absolute)
+        close_paren = find_matching(contents, open_paren, "(", ")")
+        first, handler_expression = split_first_argument(
+            contents[open_paren + 1: close_paren]
+        )
+        literal = re.fullmatch(r'"([^"\\]*(?:\\.[^"\\]*)*)"', first)
+        if literal is None:
+            raise RuntimeError(
+                "non-literal DynamicDataLoader registration at "
+                f"line {line_number(contents, absolute)}"
+            )
+        kind, symbol = handler_metadata(handler_expression)
+        source_line = line_number(contents, absolute)
+        normalized_handler = re.sub(r"\s+", " ", handler_expression).strip()
+        registrations.append(
+            {
+                "registration_order": order,
+                "type": json.loads(first),
+                "handler_kind": kind,
+                "handler_symbol": symbol,
+                "handler_expression": normalized_handler,
+                "compile_context": contexts[source_line],
+                "source": {
+                    "path": "src/init.cpp",
+                    "line": source_line,
+                    "symbol": "DynamicDataLoader::initialize",
+                },
+            }
+        )
+    if not registrations:
+        raise RuntimeError("no DynamicDataLoader registrations were found")
+    return registrations
