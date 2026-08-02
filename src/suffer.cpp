@@ -141,7 +141,6 @@ static const json_character_flag
 json_flag_SUNBURN_SUPERNATURAL_REDUCTION( "SUNBURN_SUPERNATURAL_REDUCTION" );
 
 static const damage_type_id damage_bash( "bash" );
-static const bodypart_str_id body_part_neck( "neck" );
 
 static const morale_type morale_feeling_bad( "morale_feeling_bad" );
 static const morale_type morale_feeling_good( "morale_feeling_good" );
@@ -408,8 +407,8 @@ void suffer::while_grabbed( Character &you )
         crowd_pressure += impassable_ter * std::max( 1, crowd_pressure / ( crowd - impassable_ter ) );
     }
 
-    const std::array<bodypart_id, 4> breathing_parts = { body_part_torso.id(), body_part_neck.id(),
-        body_part_mouth.id(), body_part_eyes.id() };
+    const std::array<bodypart_id, 3> breathing_parts = { body_part_torso.id(), body_part_mouth.id(),
+        body_part_eyes.id() };
     const float pressure_per_part = static_cast<float>( crowd_pressure ) / breathing_parts.size();
     bool pressure_absorbed = true;
     for( const bodypart_id &bp : breathing_parts ) {
