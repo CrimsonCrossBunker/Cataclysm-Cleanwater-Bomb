@@ -19,12 +19,10 @@ from generate_markdown_inventory import (
     stable_id_for,
 )
 
+
 ROOT = Path(__file__).resolve().parents[2]
-
 DEFAULT_INVENTORY = ROOT / "doc/migration/markdown-inventory.yml"
-
 DEFAULT_ANOMALIES = ROOT / "doc/migration/contributor-anomalies.yml"
-
 RETAINED_IDS = {
     "CODE_OF_CONDUCT.md": ("governance.code-of-conduct", "governance", "P0"),
     "CONTRIBUTING.md": ("governance.contributing", "governance", "P0"),
@@ -33,7 +31,6 @@ RETAINED_IDS = {
     "SYNC_EXCLUDED_PRS.md": ("upstream.excluded-prs", "upstream", "P1"),
     "TRANSLATION_CREDITS.md": ("translation.credits", "translation", "P2"),
 }
-
 AUDIT_CORRECTIONS = {
     "doc/IN_REPO_MODS.md": {
         "source_symbols": ["mod_manager::load_modfile"],
@@ -48,6 +45,7 @@ AUDIT_CORRECTIONS = {
         "add_source_paths": ["src/translation_manager.cpp"],
     },
 }
+
 
 def load_jsonl(paths: list[Path]) -> dict[str, dict]:
     records: dict[str, dict] = {}
@@ -66,6 +64,7 @@ def load_jsonl(paths: list[Path]) -> dict[str, dict]:
             records[original_path] = record
     return records
 
+
 def unique_strings(values: list[object]) -> list[str]:
     result = []
     for value in values:
@@ -75,6 +74,7 @@ def unique_strings(values: list[object]) -> list[str]:
                 result.append(clean)
     return result
 
+
 def site_target(value: object) -> str | None:
     if not isinstance(value, str) or not value.strip():
         return None
@@ -83,6 +83,7 @@ def site_target(value: object) -> str | None:
         return clean
     return "docs/zh_CN/" + clean
 
+
 def evidence_list(value: object) -> list[str]:
     if isinstance(value, str):
         return [" ".join(value.split())]
@@ -90,8 +91,10 @@ def evidence_list(value: object) -> list[str]:
         return unique_strings(value)
     return []
 
+
 def anomaly_key(entry: dict) -> tuple[str, str]:
     return entry["original_path"], entry["fingerprint"]
+
 
 def direct_path_contributors(commit: str, path: str) -> list[str]:
     """Return authors of commits that directly touched this exact path.
@@ -110,6 +113,7 @@ def direct_path_contributors(commit: str, path: str) -> list[str]:
     )
     return result.stdout.splitlines()
 
+
 def clean_identities(
     original_path: str,
     anomaly_values: list[object],
@@ -126,6 +130,7 @@ def clean_identities(
     records = list(records_by_fingerprint.values())
     anomaly_sink.extend(records)
     return clean or ["Unknown (see source history)"], len(records)
+
 
 def retained_record(
     base: dict,
@@ -182,6 +187,7 @@ def retained_record(
         "evidence": [evidence],
         "migration_batch": None,
     }
+
 
 def reviewed_record(
     base: dict,
@@ -263,3 +269,190 @@ def reviewed_record(
         "evidence": evidence,
         "migration_batch": f"phase-{priority[1:]}-{domain}",
     }
+
+
+def import_audits(inventory: dict, audits: dict[str, dict]) -> tuple[dict, list[dict]]:
+    expected = {
+        item["original_path"]
+        for item in inventory["documents"]
+        if item["action"] == "review"
+    }
+    if set(audits) != expected:
+        missing = sorted(expected - set(audits))
+        extra = sorted(set(audits) - expected)
+        raise ValueError(f"audit coverage mismatch; missing={missing}, extra={extra}")
+    anomalies: list[dict] = []
+    documents = []
+    for base in inventory["documents"]:
+        path = base["original_path"]
+        direct_contributors = direct_path_contributors(
+            base["source_commit"], path
+        )
+        if path in audits:
+            documents.append(
+                reviewed_record(
+                    base,
+                    audits[path],
+                    anomalies,
+                    direct_contributors,
+                )
+            )
+        else:
+            documents.append(
+                retained_record(base, anomalies, direct_contributors)
+            )
+    grouped_ids: dict[str, list[dict]] = {}
+    for item in documents:
+        grouped_ids.setdefault(item["stable_document_id"], []).append(item)
+    for shared_id, items in grouped_ids.items():
+        if len(items) < 2:
+            continue
+        keepers = [item for item in items if item["action"] != "merge_into"]
+        keeper = keepers[0] if len(keepers) == 1 else None
+        for item in items:
+            if item is keeper:
+                continue
+            if item["action"] == "merge_into" and not item["merge_target"]:
+                item["merge_target"] = shared_id
+            item["stable_document_id"] = stable_id_for(item["original_path"])
+    stable_ids = [item["stable_document_id"] for item in documents]
+    if len(stable_ids) != len(set(stable_ids)):
+        duplicates = sorted(
+            stable_id
+            for stable_id, count in Counter(stable_ids).items()
+            if count > 1
+        )
+        raise ValueError(f"duplicate stable document IDs: {duplicates}")
+    deduplicated_anomalies = {
+        anomaly_key(entry): entry for entry in anomalies
+    }
+    anomalies = list(deduplicated_anomalies.values())
+    action_counts = Counter(item["action"] for item in documents)
+    status_counts = Counter(item["migration_status"] for item in documents)
+    result = {
+        "schema_version": 2,
+        "kind": "markdown_inventory",
+        "source_commit": inventory["source_commit"],
+        "document_count": len(documents),
+        "scope": inventory["scope"],
+        "classification_summary": {
+            "review": 0,
+            "actions": dict(sorted(action_counts.items())),
+            "migration_statuses": dict(sorted(status_counts.items())),
+        },
+        "documents": documents,
+    }
+    return result, anomalies
+
+
+def upgrade_baseline(inventory: dict) -> tuple[dict, list[dict]]:
+    """Upgrade the frozen v1 inventory without making review decisions."""
+    anomalies: list[dict] = []
+    documents = []
+    for base in inventory["documents"]:
+        path = base["original_path"]
+        direct_contributors = direct_path_contributors(
+            base["source_commit"], path
+        )
+        if base["action"] != "review":
+            documents.append(
+                retained_record(base, anomalies, direct_contributors)
+            )
+            continue
+        record, direct_anomalies = default_record(
+            base["source_commit"], path, direct_contributors
+        )
+        _, inherited_anomalies = sanitize_contributors(
+            list(base.get("contributors", []))
+        )
+        rejected = {
+            entry["fingerprint"]: {"original_path": path, **entry}
+            for entry in [*inherited_anomalies, *direct_anomalies]
+        }
+        anomaly_records = list(rejected.values())
+        anomalies.extend(anomaly_records)
+        record["contributor_anomaly_count"] = len(anomaly_records)
+        documents.append(record)
+    anomalies = list(
+        {anomaly_key(entry): entry for entry in anomalies}.values()
+    )
+    action_counts = Counter(item["action"] for item in documents)
+    status_counts = Counter(item["migration_status"] for item in documents)
+    return (
+        {
+            "schema_version": 2,
+            "kind": "markdown_inventory",
+            "source_commit": inventory["source_commit"],
+            "document_count": len(documents),
+            "scope": inventory["scope"],
+            "classification_summary": {
+                "review": action_counts.get("review", 0),
+                "actions": dict(sorted(action_counts.items())),
+                "migration_statuses": dict(sorted(status_counts.items())),
+            },
+            "documents": documents,
+        },
+        anomalies,
+    )
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("audit", nargs="*", type=Path)
+    parser.add_argument("--inventory", type=Path, default=DEFAULT_INVENTORY)
+    parser.add_argument("--anomaly-report", type=Path, default=DEFAULT_ANOMALIES)
+    parser.add_argument(
+        "--baseline-ref",
+        help="Read the pre-classification inventory from this Git ref.",
+    )
+    parser.add_argument(
+        "--upgrade-only",
+        action="store_true",
+        help="Upgrade the frozen baseline without importing review decisions.",
+    )
+    args = parser.parse_args()
+
+    inventory_path = args.inventory if args.inventory.is_absolute() else ROOT / args.inventory
+    anomaly_path = (
+        args.anomaly_report
+        if args.anomaly_report.is_absolute()
+        else ROOT / args.anomaly_report
+    )
+    if args.baseline_ref:
+        relative_inventory = inventory_path.relative_to(ROOT)
+        baseline_text = subprocess.run(
+            ["git", "show", f"{args.baseline_ref}:{relative_inventory}"],
+            cwd=ROOT,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        ).stdout
+        inventory = yaml.safe_load(baseline_text)
+    else:
+        inventory = yaml.safe_load(inventory_path.read_text(encoding="utf-8"))
+    if args.upgrade_only:
+        if args.audit:
+            parser.error("--upgrade-only does not accept audit shards")
+        result, anomalies = upgrade_baseline(inventory)
+        imported_count = 0
+    else:
+        if not args.audit:
+            parser.error("at least one audit shard is required")
+        audits = load_jsonl(args.audit)
+        result, anomalies = import_audits(inventory, audits)
+        imported_count = len(audits)
+    inventory_path.write_text(render(result), encoding="utf-8")
+    anomaly_path.write_text(
+        render_anomaly_report(result["source_commit"], anomalies),
+        encoding="utf-8",
+    )
+    print(
+        f"imported {imported_count} reviews; rejected "
+        f"{len(anomalies)} unsafe contributor identities"
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
