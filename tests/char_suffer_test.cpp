@@ -566,4 +566,17 @@ TEST_CASE( "suffering_from_asphyxiation", "[char][suffer][oxygen][grab]" )
             }
         }
     }
+
+    GIVEN( "character is grabbed by a harmless crowd" ) {
+        spawn_test_monster( "mon_debug_group_bash_no_damage", dummy.pos_bub() + tripoint::east );
+        spawn_test_monster( "mon_debug_group_bash_no_damage", dummy.pos_bub() + tripoint::west );
+        dummy.add_effect( effect_grabbed, 20_turns, body_part_torso, false, 2, true );
+        dummy.oxygen = 0;
+
+        THEN( "they recover oxygen" ) {
+            test_suffer( dummy, 3_turns, true );
+            CHECK( dummy.oxygen == 15 );
+            CHECK_FALSE( dummy.has_effect( effect_crowd_crushed ) );
+        }
+    }
 }
