@@ -90,6 +90,8 @@ it was not executed.
 - Every PR names a Responsible human.  AI-tool disclosure is not required.
 - Complete the Documentation impact, Related CCB-Docs PR, Affected
   documentation IDs, and Generated reference impact fields.
-- During Phase 0/1, documentation-impact automation is advisory only.
+- Documentation-impact enforcement is staged in `ai/docs-impact.yml`; do not
+  claim a mapping is required until its referenced docs and default-branch
+  checks are complete.
 - A CCB-Docs PR may be prepared before its source PR merges, but it stays draft.
   After source merge, refresh it to the final commit before merging the docs.

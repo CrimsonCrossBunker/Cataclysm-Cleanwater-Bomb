@@ -13,7 +13,8 @@
 ## 贡献方式
 
 任何有意愿参与分支建设的开发者皆可通过向本仓库发起 PR 为本分支的建设贡献力量。
-暂时可以参考 [CONTRIBUTING.md](./CONTRIBUTING.md)。请注意，我们还没有对其做出完整修改，并不完全符合我们的项目。
+请阅读当前 CCB 的 [CONTRIBUTING.md](./CONTRIBUTING.md) 和
+[开发文档](https://crimsoncrossbunker.github.io/CCB-Docs/)。
 
 对于任何玩家，同时也欢迎基于以下方向提交反馈或改动建议：
 
@@ -61,7 +62,8 @@ Based on the `cdda/master` branch of [CleverRaven/Cataclysm-DDA](https://github.
 
 ## How to Contribute
 Any developer interested in contributing to this branch is welcome to submit pull requests to this repository to support its development.
-For now, you can refer to [CONTRIBUTING.md](./CONTRIBUTING.md). Please note that we have not yet fully updated this document, so it may not fully align with this project's guidelines.
+Read the current CCB [CONTRIBUTING.md](./CONTRIBUTING.md) and
+[developer documentation](https://crimsoncrossbunker.github.io/CCB-Docs/).
 
 We also welcome feedback and improvement suggestions from all players, particularly on the following areas:
 - Any illogical or counterintuitive mechanics, preferably with verifiable real-world references
