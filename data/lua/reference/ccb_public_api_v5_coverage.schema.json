@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/raw/master/data/lua/reference/ccb_public_api_v5_coverage.schema.json",
+  "title": "CCB Lua API v5 public contract coverage",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "$schema",
+    "api_version",
+    "denominator",
+    "inventory_sha256",
+    "sections",
+    "public_symbols",
+    "documented_symbols",
+    "undocumented_symbols",
+    "inventory_coverage_percent",
+    "published_ccb_docs_coverage_percent",
+    "published_ccb_docs_status"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "minLength": 1 },
+    "schema_version": { "const": 1 },
+    "api_version": { "const": 5 },
+    "denominator": {
+      "type": "object",
+      "required": [ "definition", "exclusions" ],
+      "properties": {
+        "definition": { "type": "string", "minLength": 1 },
+        "exclusions": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+      },
+      "additionalProperties": false
+    },
+    "inventory_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "sections": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+    "public_symbols": { "type": "integer", "minimum": 1 },
+    "documented_symbols": { "type": "integer", "minimum": 0 },
+    "undocumented_symbols": {
+      "type": "object",
+      "required": [ "count", "ids" ],
+      "properties": {
+        "count": { "type": "integer", "minimum": 0 },
+        "ids": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+      },
+      "additionalProperties": false
+    },
+    "inventory_coverage_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+    "published_ccb_docs_coverage_percent": { "type": [ "number", "null" ], "minimum": 0, "maximum": 100 },
+    "published_ccb_docs_status": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": false
+}
