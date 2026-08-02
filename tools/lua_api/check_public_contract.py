@@ -221,5 +221,58 @@ def validate_contract(contract: dict[str, object]) -> dict[str, int]:
     return {**counts, "documented_ids": len(documented_id_counts)}
 
 
+def check(inventory_path: Path, coverage_path: Path) -> dict[str, int]:
+    expected_inventory = build_contract()
+    expected_coverage = build_coverage(expected_inventory)
+    actual_inventory = load_object(inventory_path)
+    actual_coverage = load_object(coverage_path)
+    if actual_inventory != expected_inventory:
+        raise RuntimeError(
+            "Lua v5 public contract is stale; run "
+            "python3 tools/lua_api/generate_public_contract.py"
+        )
+    if actual_coverage != expected_coverage:
+        raise RuntimeError(
+            "Lua v5 public contract coverage is stale; run "
+            "python3 tools/lua_api/generate_public_contract.py"
+        )
+    summary = validate_contract(actual_inventory)
+    validate_schema_instance(
+        actual_coverage, COVERAGE_SCHEMA, "public contract coverage"
+    )
+    if actual_coverage.get("undocumented_symbols") != {
+        "count": 0,
+        "ids": [],
+    }:
+        raise RuntimeError(
+            "Lua v5 public contract contains undocumented symbols")
+    if actual_coverage.get("inventory_coverage_percent") != 100.0:
+        raise RuntimeError(
+            "Lua v5 public contract inventory coverage is not 100%")
+    if actual_coverage.get("public_symbols") != summary["documented_ids"]:
+        raise RuntimeError(
+            "Lua v5 public contract coverage denominator does not match "
+            "its unique documented symbols"
+        )
+    return summary
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--inventory", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--coverage", type=Path, default=DEFAULT_COVERAGE)
+    arguments = parser.parse_args()
+    summary = check(arguments.inventory, arguments.coverage)
+    print(
+        "Lua v5 public contract verified: "
+        f"{summary['functions']} callable paths, "
+        f"{summary['methods']} methods, {summary['properties']} properties, "
+        f"{summary['operators']} operators, {summary['events']} events, "
+        f"{summary['hooks']} hooks, {summary['callbacks']} callbacks, "
+        "0 undocumented symbols"
+    )
+    return 0
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
