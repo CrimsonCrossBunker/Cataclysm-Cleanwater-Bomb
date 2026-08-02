@@ -531,3 +531,196 @@ def parse_table_paths() -> tuple[dict[str, set[str]], list[dict[str, object]]]:
                     },
                 )
     return paths, [namespaces[key] for key in sorted(namespaces)]
+
+def parse_set_functions(
+    luals: dict[str, object], table_paths: dict[str, set[str]]
+) -> list[dict[str, object]]:
+    declarations = luals["functions"]
+    assert isinstance(declarations, dict)
+    functions: list[dict[str, object]] = []
+    seen_registrations: set[tuple[str, str]] = set()
+    pattern = re.compile(
+        r"\b([A-Za-z_][A-Za-z0-9_]*)\.set_function\s*\(\s*\"([^\"]+)\""
+    )
+    for path in cpp_sources():
+        contents = path.read_text(encoding="utf-8", errors="replace")
+        for match in pattern.finditer(contents):
+            table, name = match.groups()
+            if table in INTENTIONALLY_UNDECLARED_TABLES:
+                continue
+            registration = (table, name)
+            if registration in seen_registrations:
+                raise RuntimeError(
+                    f"duplicate native registration {table}.{name}")
+            seen_registrations.add(registration)
+            class_name = TABLE_CLASSES.get(table)
+            if class_name is None:
+                raise RuntimeError(f"unmapped public native table {table}")
+            declaration = declarations.get((class_name, name))
+            if declaration is None:
+                raise RuntimeError(
+                    f"native registration {table}.{name} lacks LuaLS "
+                    "declaration "
+                    f"{class_name}.{name}"
+                )
+            opening = contents.find("(", match.start())
+            call_body, _ = extract_balanced(contents, opening)
+            public_paths = sorted(table_paths.get(table, set()))
+            if not public_paths:
+                raise RuntimeError(
+                    f"public native table {table} has no access path")
+            for public_namespace in public_paths:
+                identity = f"{public_namespace}.{name}"
+                entry = dict(declaration)
+                entry.update(
+                    {
+                        "id": identity,
+                        "namespace": public_namespace,
+                        "class": class_name,
+                        "name": name,
+                        "capabilities": capabilities_for_call(
+                            identity, call_body
+                        ),
+                        "sources": [
+                            source(path, contents, match.start(),
+                                   "native registration"),
+                            *declaration["sources"],
+                        ],
+                        "examples": examples_for_symbol(identity),
+                        "documentation": documentation("function", identity),
+                    }
+                )
+                functions.append(entry)
+
+    require_match = re.search(
+        r"state\.lua\.set_function\s*\(\s*\"require\"",
+        (REPOSITORY_ROOT / "src/catalua_ui.cpp").read_text(encoding="utf-8"),
+    )
+    if require_match is None:
+        raise RuntimeError(
+            "native require(module_name) registration is missing")
+    require_path = REPOSITORY_ROOT / "src/catalua_ui.cpp"
+    require_contents = require_path.read_text(encoding="utf-8")
+    functions.append(
+        {
+            "id": "require",
+            "namespace": "_G",
+            "class": None,
+            "name": "require",
+            "style": "function",
+            "parameters": [
+                {
+                    "name": "module_name",
+                    "optional": False,
+                    "declaration": "string",
+                }
+            ],
+            "returns": [{"declaration": "any exported_value"}],
+            "overloads": [],
+            "errors": {
+                "mode": "lua-error",
+                "message_stability": "not-guaranteed",
+                "conditions": [
+                    "invalid module name, source context, cycle, "
+                    "or load failure"
+                ],
+            },
+            "api_version": 5,
+            "since": "untracked-before-or-at-v5",
+            "deprecated": False,
+            "deprecation_replacement": None,
+            "capabilities": [],
+            "sources": [
+                source(
+                    require_path,
+                    require_contents,
+                    require_match.start(),
+                    "native registration",
+                )
+            ],
+            "examples": examples_for_symbol("require"),
+            "documentation": documentation("function", "require"),
+        }
+    )
+
+    classes = luals["classes"]
+    assert isinstance(classes, dict)
+    coordinate_class = classes.get("CcbCoordsApi")
+    if coordinate_class is None:
+        raise RuntimeError("CcbCoordsApi declaration is missing")
+    coordinate_fields = {
+        entry["name"]: entry for entry in coordinate_class["fields"]
+    }
+    coord_path = REPOSITORY_ROOT / "src/catalua_bindings_coords.cpp"
+    coord_contents = coord_path.read_text(encoding="utf-8")
+    for factory in sorted(coordinate_factories()):
+        coordinate_declaration = coordinate_fields.get(factory)
+        if coordinate_declaration is None:
+            raise RuntimeError(
+                f"dynamic coordinate factory {factory} lacks LuaLS metadata"
+            )
+        needle = f'prefix + "_{factory.split("_", 1)[1]}"'
+        offset = coord_contents.find(needle)
+        if offset < 0:
+            offset = coord_contents.find("coord_api[prefix +")
+        identity = f"game.coords.{factory}"
+        is_point = factory.startswith("point_")
+        parameters = [
+            {"name": "x", "optional": False, "declaration": "integer"},
+            {"name": "y", "optional": False, "declaration": "integer"},
+        ]
+        if not is_point:
+            parameters.append(
+                {"name": "z", "optional": False, "declaration": "integer"}
+            )
+        entry = {
+            "id": identity,
+            "namespace": "game.coords",
+            "class": "CcbCoordsApi",
+            "name": factory,
+            "style": "function",
+            "parameters": parameters,
+            "returns": [
+                {
+                    "declaration": (
+                        "PointCoord" if is_point else "TripointCoord"
+                    )
+                }
+            ],
+            "overloads": [],
+            "errors": {
+                "mode": "lua-error",
+                "message_stability": "not-guaranteed",
+                "conditions": [
+                    "invalid coordinate component or unavailable game state"
+                ],
+            },
+            "api_version": 5,
+            "since": "untracked-before-or-at-v5",
+            "deprecated": False,
+            "deprecation_replacement": None,
+            "capabilities": ["game.read"],
+            "sources": [
+                source(coord_path, coord_contents,
+                       offset, "native registration"),
+                *coordinate_declaration["sources"],
+            ],
+            "examples": examples_for_symbol(identity),
+            "documentation": documentation("function", identity),
+        }
+        functions.append(entry)
+    return sorted(functions, key=lambda entry: str(entry["id"]))
+
+def capabilities_for_call(identity: str, call_body: str) -> list[str]:
+    capabilities = set(
+        re.findall(
+            r"require_capability\s*\([^;]*?\"([^\"]+)\"", call_body, re.DOTALL
+        )
+    )
+    for token, capability in CAPABILITY_TOKEN_MAP.items():
+        if token in call_body:
+            capabilities.add(capability)
+    for prefix, values in NAMESPACE_CAPABILITIES.items():
+        if identity == prefix or identity.startswith(prefix + "."):
+            capabilities.update(values)
+    return sorted(capabilities)
