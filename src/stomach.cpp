@@ -478,11 +478,12 @@ stomach_digest_rates stomach_contents::get_digest_rates( const needs_rates &meta
 
 void stomach_contents::mod_calories( int kcal )
 {
-    if( -kcal >= nutr.kcal() ) {
+    const int64_t calories = static_cast<int64_t>( kcal ) * 1000;
+    if( calories <= -nutr.calories ) {
         nutr.calories = 0;
         return;
     }
-    nutr.calories += kcal * 1000;
+    nutr.calories += calories;
 }
 
 void stomach_contents::set_vitamin( const vitamin_id &vit, int units )
