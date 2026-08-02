@@ -501,7 +501,7 @@ TEST_CASE( "suffering_from_asphyxiation", "[char][suffer][oxygen][grab]" )
             const int torso_hp = dummy.get_part_hp_cur( body_part_torso );
 
             THEN( "it does not cause immediate torso damage" ) {
-                test_suffer( dummy, 1_turn );
+                test_suffer( dummy, 1_turns );
                 CHECK( dummy.get_part_hp_cur( body_part_torso ) == torso_hp );
             }
         }
