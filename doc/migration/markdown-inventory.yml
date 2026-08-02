@@ -15,8 +15,9 @@ classification_summary:
     migrate_rewrite: 50
     retain_third_party: 7
   migration_statuses:
-    classified: 163
-    verified: 12
+    archived: 7
+    stubbed: 104
+    verified: 64
 documents:
 - original_path: CODE_OF_CONDUCT.md
   target_path: CODE_OF_CONDUCT.md
@@ -47,6 +48,10 @@ documents:
   evidence:
   - Retained as a repository authority or project entry point.
   migration_batch: null
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: CONTRIBUTING.md
   target_path: CONTRIBUTING.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -76,6 +81,10 @@ documents:
   evidence:
   - Retained as a repository authority or project entry point.
   migration_batch: null
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: ISSUES.md
   target_path: ISSUES.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -104,6 +113,10 @@ documents:
   evidence:
   - Retained as a repository authority or project entry point.
   migration_batch: null
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: README.md
   target_path: README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -137,6 +150,10 @@ documents:
   evidence:
   - Retained as a repository authority or project entry point.
   migration_batch: null
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: SYNC_EXCLUDED_PRS.md
   target_path: SYNC_EXCLUDED_PRS.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -166,6 +183,10 @@ documents:
   evidence:
   - Retained as a repository authority or project entry point.
   migration_batch: null
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: TRANSLATION_CREDITS.md
   target_path: TRANSLATION_CREDITS.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -194,6 +215,10 @@ documents:
   evidence:
   - Retained as a repository authority or project entry point.
   migration_batch: null
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/json/LOADING_ORDER.md
   target_path: docs/zh_CN/reference/json/loading-order.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -204,7 +229,7 @@ documents:
   action: merge_into
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/loading-order/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: merge_attribution_and_source_history
   stable_document_id: legacy.data-json-loading-order
   domain: json
@@ -222,13 +247,17 @@ documents:
   - DynamicDataLoader::load_data_from_path
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Both old repository paths must become permanent bilingual moved stubs after the shared page is published.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The two Markdown files are byte-identical; filesystem.cpp still documents breadth-first traversal
     with lexical ordering, and init.cpp owns the loader entry point.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/loading-order/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/loading-order/
+  retained_body_until: '2027-02-02'
 - original_path: data/json/npcs/godco/NECC_INFO.md
   target_path: data/json/npcs/godco/NECC_INFO.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -239,7 +268,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: content.npc.godco-roster
   domain: content
@@ -263,6 +292,10 @@ documents:
   - The roster remains source-adjacent design context and named members such as Arturo and Helena have
     live JSON definitions and missions.
   migration_batch: phase-2-content
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/json/npcs/refugee_center/FREE_MERCHANTS_INFO.md
   target_path: data/json/npcs/refugee_center/FREE_MERCHANTS_INFO.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -273,7 +306,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: content.npc.free-merchants-economy
   domain: content
@@ -295,6 +328,10 @@ documents:
   - The economy principles remain close to active Free Merchant mission and shop inventories; the shop
     data still explicitly describes merch and deliberate stock exclusions.
   migration_batch: phase-2-content
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/lua/README.md
   target_path: docs/zh_CN/api/lua/v5/overview.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -305,7 +342,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/api/lua/v5/overview/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history_then_preserve_source_url
   stable_document_id: lua.v5.overview
   domain: lua
@@ -326,14 +363,17 @@ documents:
   - read_script_manifest
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Do not preserve manual symbol counts as prose; regenerate them and prove LuaLS/native/inventory/test
-    parity before publishing.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The 1,150-line CCB-specific v5 overview is current high-value material, but it combines many contracts
     that must be split and generated from Schema, LuaLS, native inventory, registration, and tests.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-lua
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/api/lua/v5/overview/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/api/lua/v5/overview/
+  retained_body_until: '2027-02-02'
 - original_path: data/lua/examples/api_v5_mod/README.md
   target_path: docs/zh_CN/api/lua/v5/example-mod.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -344,7 +384,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/api/lua/v5/example-mod/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history_then_preserve_source_url
   stable_document_id: lua.v5.example-mod
   domain: lua
@@ -363,14 +403,17 @@ documents:
   - read_script_manifest
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - The published example must pass manifest Schema, Lua syntax, native loading, and generated-reference
-    checks.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The README accurately enumerates the checked-in complete v5 example surfaces; the formal page should
     be bilingual and validated against the example manifest and Lua files.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-lua
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/api/lua/v5/example-mod/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/api/lua/v5/example-mod/
+  retained_body_until: '2027-02-02'
 - original_path: data/mods/Backrooms/README.md
   target_path: data/mods/Backrooms/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -381,7 +424,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.backrooms.overview
   domain: mods
@@ -404,6 +447,10 @@ documents:
   - This is an active source-adjacent player/mod overview; MOD_INFO still requires the Backrooms world
     conversion and its worldgen files remain present.
   migration_batch: phase-2-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/BombasticPerks/docs/contributing.md
   target_path: data/mods/BombasticPerks/docs/contributing.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -414,7 +461,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.bombastic-perks.contributing
   domain: mods
@@ -437,6 +484,10 @@ documents:
   - The documented perk_ naming and TALK_PERK_MENU entry points are present in the active mod JSON, so
     this remains a local contribution contract.
   migration_batch: phase-1-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/BombasticPerks/docs/expanding_with_mods.md
   target_path: data/mods/BombasticPerks/docs/expanding_with_mods.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -447,7 +498,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.bombastic-perks.extension-contract
   domain: mods
@@ -463,14 +514,16 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: true
-  blockers:
-  - The abbreviated JSON fragment is illustrative rather than parseable and must be explicitly marked
-    or replaced with a validated example.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The extension mechanism still targets TALK_PERK_MENU_MAIN and is best retained beside the mod that
     owns that EOC/dialogue contract.
   migration_batch: phase-1-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/DinoMod/DESIGN.md
   target_path: data/mods/DinoMod/DESIGN.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -481,7 +534,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.dinomod.design
   domain: mods
@@ -500,14 +553,16 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Before substantive edits, re-check the enumerated file workflow because the current mod has grown
-    beyond the document's minimum list.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The contribution/design guide still maps to live dinosaur, hatchling, monster-group, map-extra, and
     regional-overlay data, though its file-count wording is only a snapshot.
   migration_batch: phase-1-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/DinoMod/README.md
   target_path: data/mods/DinoMod/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -518,7 +573,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.dinomod.overview
   domain: mods
@@ -540,6 +595,10 @@ documents:
   - The short overview agrees with active DinoMod MOD_INFO and loaded dinosaur content and should stay
     next to the mod.
   migration_batch: phase-2-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/MA/README.md
   target_path: data/mods/MA/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -550,7 +609,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.massachusetts.overview
   domain: mods
@@ -573,6 +632,10 @@ documents:
   - The total-conversion MOD_INFO and both named supporting assets still exist, so this remains useful
     local orientation for an active bundled mod.
   migration_batch: phase-2-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/Magiclysm/lore.md
   target_path: data/mods/Magiclysm/lore.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -583,7 +646,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.magiclysm.lore
   domain: mods
@@ -605,6 +668,10 @@ documents:
   - The class/lore design remains relevant to the active Magiclysm spell classes and is source-adjacent
     authoring context rather than a general CCB contract.
   migration_batch: phase-2-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/Magiclysm/magic_balance.md
   target_path: data/mods/Magiclysm/magic_balance.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -615,7 +682,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.magiclysm.balance
   domain: mods
@@ -632,14 +699,16 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Specific damage, cost, and casting-time examples are snapshots and must be checked against JSON whenever
-    reused.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - Tier and proficiency guidance corresponds to live spell_class values and EVOCATION/CHANNELING/RESTORATION
     flags, so it remains an active balancing contract.
   migration_batch: phase-1-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/Megafauna/readme.md
   target_path: data/mods/Megafauna/readme.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -650,7 +719,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.megafauna.overview
   domain: mods
@@ -668,13 +737,16 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: false
-  blockers:
-  - Do not present the hard-coded species counts or TODO completion states as generated facts.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The active MOD_INFO and wild/domestic monster data implement the described Pleistocene fauna scope;
     TODO and species counts remain editorial snapshots.
   migration_batch: phase-2-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/MindOverMatter/GainingPowerSpoilers.md
   target_path: data/mods/MindOverMatter/GainingPowerSpoilers.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -685,7 +757,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.mind-over-matter.gaining-powers
   domain: mods
@@ -702,14 +774,16 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Revalidate every numeric formula against current awakening and learning EOCs before treating the guide
-    as exact.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The awakening and insight systems still have live EOC implementations, but the prose embeds formulas
     and cooldown numbers that can drift.
   migration_batch: phase-1-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/MindOverMatter/NetherAttunementSpoilers.md
   target_path: data/mods/MindOverMatter/NetherAttunementSpoilers.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -720,7 +794,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.mind-over-matter.nether-attunement
   domain: mods
@@ -738,13 +812,16 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Probability, threshold, and weight tables need contract extraction or explicit source-linked validation.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The attunement vitamin, effects, and consequence EOCs remain live; the large hand-maintained probability
     table is not itself authoritative.
   migration_batch: phase-1-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/MindOverMatter/NewPowerGuide.md
   target_path: data/mods/MindOverMatter/NewPowerGuide.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -755,7 +832,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.mind-over-matter.new-power-guide
   domain: mods
@@ -772,14 +849,16 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: true
-  blockers:
-  - The sample math formula and per-path limitations are design policy, not a substitute for validating
-    current spell/EOC fields.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - This is source-adjacent design guidance for adding powers and path boundaries; the power and learning-EOC
     directories it names remain active.
   migration_batch: phase-1-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/MindOverMatter/PowerDescriptionSpoilers.md
   target_path: docs/zh_CN/data/mods/MindOverMatter/PowerDescriptionSpoilers.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -791,7 +870,7 @@ documents:
   action: generated_reference
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: retain_path_and_generate_from_power_json
   stable_document_id: mods.mind-over-matter.power-reference
   domain: mods
@@ -815,14 +894,17 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: true
-  blockers:
-  - No current evidence proves all hand-copied values match the nine power JSON files; generation and
-    parity tests are required.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The 1,838-line reference manually mirrors loaded spell JSON and contains visible placeholders and
     copy errors; it should be generator-owned while retaining its source path and attribution.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-mods
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/data/mods/MindOverMatter/PowerDescriptionSpoilers/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/data/mods/MindOverMatter/PowerDescriptionSpoilers/
+  retained_body_until: '2027-02-02'
 - original_path: data/mods/MindOverMatter/README.md
   target_path: data/mods/MindOverMatter/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -834,7 +916,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.mind-over-matter.overview
   domain: mods
@@ -851,14 +933,16 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Replace the two upstream GitHub links with permanent local/CCB links and revalidate embedded numeric
-    claims.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The overview matches the active nine-path mod and its awakening/learning implementation, but its further-information
     links still point at CleverRaven instead of local CCB paths.
   migration_batch: phase-1-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/MindOverMatter/lore_spoilers.md
   target_path: data/mods/MindOverMatter/lore_spoilers.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -869,7 +953,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.mind-over-matter.lore
   domain: mods
@@ -890,6 +974,10 @@ documents:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The PHAVIAN and matrix-crystal lore remains source-adjacent narrative context for the active mod.
   migration_batch: phase-2-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/MindOverMatterNoKnacks/README.md
   target_path: data/mods/MindOverMatterNoKnacks/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -900,7 +988,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.mind-over-matter.no-knacks
   domain: mods
@@ -923,6 +1011,10 @@ documents:
   - The four-line overview remains accurate orientation for the active compatibility/variant mod and its
     EOC and blacklist overrides.
   migration_batch: phase-2-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/No_Hope/CONTRIBUTING.md
   target_path: data/mods/No_Hope/CONTRIBUTING.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -933,7 +1025,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.no-hope.contributing
   domain: mods
@@ -949,14 +1041,16 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: true
-  blockers:
-  - 'Resolve or replace the bare upstream #70325 reference and re-check the list of missing C++-dependent
-    features.'
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The source-adjacent design ethos still governs an active mod, while the temporary-feature and upstream
     issue references are historical planning notes.
   migration_batch: phase-1-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/No_Hope/DIFFICULTY_OPTIONS.md
   target_path: data/mods/No_Hope/DIFFICULTY_OPTIONS.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -967,7 +1061,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.no-hope.difficulty-options
   domain: mods
@@ -983,13 +1077,16 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Regenerate or validate the item-category list and count against the current registry and difficulty_options.json.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The active EOCs still call set_item_category_spawn_rates, but the prose's count and inclusion table
     are manually copied snapshots.
   migration_batch: phase-1-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/Sky_Island/README.md
   target_path: data/mods/Sky_Island/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1000,7 +1097,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.sky-island.overview
   domain: mods
@@ -1017,13 +1114,16 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: false
-  blockers:
-  - Separate or refresh the stale embedded changelog before presenting version-specific behavior as current.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The expedition, warp-shard, and mission concepts remain implemented, but the embedded changelog stops
     at v0.3.0 while MOD_INFO declares v0.4.0.
   migration_batch: phase-2-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/Sorcerer/README.md
   target_path: data/mods/Sorcerer/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1034,7 +1134,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.sorcerer.overview
   domain: mods
@@ -1052,14 +1152,16 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Generated-code ownership should be registered machine-readably and the generator must run without
-    path edits before its instructions are treated as complete.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - 'The README''s generator boundary is real: editable source/tool files and checked-in generated spell
     JSON coexist in the active mod.'
   migration_batch: phase-1-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/TEST_DATA/README.md
   target_path: data/mods/TEST_DATA/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1070,7 +1172,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: testing.test-data-mod
   domain: testing
@@ -1093,6 +1195,10 @@ documents:
   - tests/test_main.cpp still adds the test_data mod and the directory contains controlled fixtures, so
     this is an active offline testing contract that belongs beside the fixtures.
   migration_batch: phase-0-testing
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/XedraWood/README.md
   target_path: data/mods/XedraWood/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1103,7 +1209,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.xedra-wood.overview
   domain: mods
@@ -1125,6 +1231,10 @@ documents:
   - The overview remains valid source-adjacent context for the active Xedra Evolved/Innawood compatibility
     expansion.
   migration_batch: phase-2-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/Xedra_Evolved/README.md
   target_path: data/mods/Xedra_Evolved/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1135,7 +1245,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.xedra-evolved.overview
   domain: mods
@@ -1151,13 +1261,16 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Do not publish feature counts as exact until derived from current JSON registries.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The chapter-based overview and active MOD_INFO still describe a broad bundled content mod, though
     shipping counts are manually maintained.
   migration_batch: phase-2-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/Xedra_Evolved/design_doc_spoilers.md
   target_path: data/mods/Xedra_Evolved/design_doc_spoilers.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1169,7 +1282,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.xedra-evolved.design
   domain: mods
@@ -1193,6 +1306,10 @@ documents:
   - The supernatural-exclusivity, vampire, dhampir, and cryptid principles map to active JSON and remain
     important local design policy; explicit TBD sections are drafts, not stale contracts.
   migration_batch: phase-1-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/Xedra_Evolved/vampire_guide.md
   target_path: data/mods/Xedra_Evolved/vampire_guide.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1203,7 +1320,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.xedra-evolved.vampire-guide
   domain: mods
@@ -1219,13 +1336,16 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: false
-  blockers:
-  - Timing and progression statements must be checked against the virus EOCs when changed.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - This is a compact player-facing walkthrough tied to the live vampirism EOCs; it should remain next
     to the mod and out of the general developer AI index.
   migration_batch: phase-2-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/aftershock_exoplanet/doc/Hacking.md
   target_path: data/mods/aftershock_exoplanet/doc/Hacking.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1236,7 +1356,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.aftershock-exoplanet.hacking
   domain: mods
@@ -1253,14 +1373,16 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: true
-  blockers:
-  - The second code block contains invalid JSON syntax and must be replaced with a formatter-validated
-    example.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - EOC_start_lock_hack, power-cost scaling, HACK quality, and HACK_NO_CHARGE remain implemented, making
     this a live mod-specific authoring contract.
   migration_batch: phase-1-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/aftershock_exoplanet/doc/crafting_system.md
   target_path: data/mods/aftershock_exoplanet/doc/crafting_system.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1272,7 +1394,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.aftershock-exoplanet.crafting-system
   domain: mods
@@ -1290,13 +1412,16 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Category names and tier completeness should be compared to all crafting_scrap JSON when edited.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The tiered scrap categories remain represented by active item and item-group JSON; the prose is local
     balance policy rather than generic crafting documentation.
   migration_batch: phase-1-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/aftershock_exoplanet/doc/lore/cyberpunk_future.md
   target_path: docs/zh_CN/data/mods/aftershock_exoplanet/doc/lore/organizations.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1307,7 +1432,7 @@ documents:
   action: merge_into
   archive_reason: null
   replacement: mods.aftershock-exoplanet.lore.organizations
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: merge_attribution_and_source_history
   stable_document_id: mods.aftershock-exoplanet.lore.cyberpunk-future
   domain: mods
@@ -1324,13 +1449,17 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Retain a permanent lightweight moved stub at the old path after merging the unique technology paragraph.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - This 13-line fragment duplicates corporation and lost-technology context developed more fully in organizations.md
     and timeline.md.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-3-mods
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/data/mods/aftershock_exoplanet/doc/lore/organizations/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/data/mods/aftershock_exoplanet/doc/lore/organizations/
+  retained_body_until: '2027-02-02'
 - original_path: data/mods/aftershock_exoplanet/doc/lore/factions.md
   target_path: data/mods/aftershock_exoplanet/doc/lore/factions.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1343,7 +1472,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.aftershock-exoplanet.lore.factions
   domain: mods
@@ -1365,6 +1494,10 @@ documents:
   - This file records gameplay-facing faction goals, offers, and bases, distinct from the historical organization
     catalogue; active faction JSON provides implementation context.
   migration_batch: phase-2-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/aftershock_exoplanet/doc/lore/organizations.md
   target_path: data/mods/aftershock_exoplanet/doc/lore/organizations.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1377,7 +1510,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.aftershock-exoplanet.lore.organizations
   domain: mods
@@ -1399,6 +1532,10 @@ documents:
   - The organization catalogue is the fuller lore source for UICA, TsKBEM, PrepNet, and corporations and
     should absorb the smaller cyberpunk_future fragment.
   migration_batch: phase-2-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/aftershock_exoplanet/doc/lore/points_of_interest.md
   target_path: data/mods/aftershock_exoplanet/doc/lore/points_of_interest.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1409,7 +1546,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.aftershock-exoplanet.lore.points-of-interest
   domain: mods
@@ -1430,6 +1567,10 @@ documents:
   - The implemented/planned POI distinctions are source-adjacent world-design context; unimplemented suggestions
     are clearly phrased as candidates.
   migration_batch: phase-2-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/aftershock_exoplanet/doc/lore/ranged_weapon_balance.md
   target_path: docs/zh_CN/data/mods/aftershock_exoplanet/doc/lore/ranged_weapon_balance.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1441,7 +1582,7 @@ documents:
   action: generated_reference
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: retain_path_and_generate_weapon_tables_from_json
   stable_document_id: mods.aftershock-exoplanet.balance.ranged-weapons
   domain: mods
@@ -1459,14 +1600,17 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Split hand-authored balance policy from generated weapon/armor tables and add parity tests before
-    declaring completeness.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The prose contains useful balance policy, but its claim to list every ranged weapon and all numeric
     stats is a manual mirror of loaded JSON and must become generator-owned.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-mods
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/data/mods/aftershock_exoplanet/doc/lore/ranged_weapon_balance/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/data/mods/aftershock_exoplanet/doc/lore/ranged_weapon_balance/
+  retained_body_until: '2027-02-02'
 - original_path: data/mods/aftershock_exoplanet/doc/lore/salus_4.md
   target_path: data/mods/aftershock_exoplanet/doc/lore/salus_4.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1477,7 +1621,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.aftershock-exoplanet.lore.salus-iv
   domain: mods
@@ -1498,6 +1642,10 @@ documents:
   - The concise Salus IV setting remains canonical source-adjacent worldbuilding for the active exoplanet
     total conversion.
   migration_batch: phase-2-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/aftershock_exoplanet/doc/lore/timeline.md
   target_path: data/mods/aftershock_exoplanet/doc/lore/timeline.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1509,7 +1657,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.aftershock-exoplanet.lore.timeline
   domain: mods
@@ -1531,6 +1679,10 @@ documents:
   - The timeline supplies chronology referenced by the active setting and organization documents and remains
     local narrative design context.
   migration_batch: phase-2-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/aftershock_exoplanet/doc/suit_operating_time.md
   target_path: data/mods/aftershock_exoplanet/doc/suit_operating_time.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1541,7 +1693,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.aftershock-exoplanet.balance.powered-armor
   domain: mods
@@ -1558,13 +1710,16 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Add a validator for the 277777.78/hour calculation and verify the example against current item JSON.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The operating-time formula is active mod balance policy and its exosuit sources still use battery/power-draw
     data, but the worked Magellan snapshot needs automated validation.
   migration_batch: phase-1-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/aftershock_exoplanet/items/armor/exosuit/exosuit_guide.md
   target_path: data/mods/aftershock_exoplanet/items/armor/exosuit/exosuit_guide.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1575,7 +1730,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.aftershock-exoplanet.exosuit-guide
   domain: mods
@@ -1594,13 +1749,16 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Module capacities and item stats are hand-maintained tables and should be validated or generated.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The frame, module, storage, and weapon families described by the guide remain active JSON and the
     guide belongs beside those definitions.
   migration_batch: phase-1-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/alt_map_key/README.md
   target_path: data/mods/alt_map_key/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1611,7 +1769,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.alternative-map-key.overview
   domain: mods
@@ -1635,6 +1793,10 @@ documents:
   - The active mod still implements the documented color/category replacement through core and interaction
     overmap-terrain JSON.
   migration_batch: phase-2-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/classic_zombies/design-doc.md
   target_path: data/mods/classic_zombies/design-doc.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1645,7 +1807,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.classic-zombies.design
   domain: mods
@@ -1669,6 +1831,10 @@ documents:
   - The Alberta/Romero conversion's active MOD_INFO and zombie adjustment data implement its central design,
     while future tense sections remain proposals.
   migration_batch: phase-1-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/classic_zombies/place_names.md
   target_path: data/mods/classic_zombies/place_names.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1679,7 +1845,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.classic-zombies.place-names
   domain: mods
@@ -1694,15 +1860,17 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Clarify whether the name list is an authoring source or historical draft; it currently has no loaded
-    JSON consumer.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - This is a source list of Alberta city/world names stored as JSON-shaped design data but not loaded
     due to its Markdown extension; retain it beside the total conversion until a loader/generator explicitly
     owns it.
   migration_batch: phase-2-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/hunvre/documentation/lore.md
   target_path: data/mods/hunvre/documentation/lore.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1713,7 +1881,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.hunvre.lore
   domain: mods
@@ -1736,6 +1904,10 @@ documents:
   - The Midas/Dreamer/euzhvil design is reflected in the active total-conversion MOD_INFO and loaded euzhvil
     monster/attack data.
   migration_batch: phase-1-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/hunvre/progress_tracker.md
   target_path: data/mods/hunvre/progress_tracker.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1746,7 +1918,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.hunvre.progress
   domain: mods
@@ -1762,14 +1934,16 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: false
-  blockers:
-  - Any surfaced status must be checked against tracked Hunvre data because the file explicitly may be
-    stale.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The tracker explicitly disclaims synchronization and coercive authority; retain it as local planning
     context, never as a runtime or roadmap contract.
   migration_batch: phase-3-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/immortal_path/GLOSSARY.md
   target_path: data/mods/immortal_path/GLOSSARY.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1781,7 +1955,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.immortal-path.glossary
   domain: mods
@@ -1804,6 +1978,10 @@ documents:
   - This CCB-specific bilingual glossary explicitly owns mod terminology and its terms are used by live
     Chinese values and en_US comment pairs.
   migration_batch: phase-0-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/immortal_path/LANGUAGE_CONVENTION.md
   target_path: data/mods/immortal_path/LANGUAGE_CONVENTION.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1815,7 +1993,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.immortal-path.language-convention
   domain: translation
@@ -1832,14 +2010,16 @@ documents:
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - When formal i18n is wired for the mod, this page must drive a scripted migration and then be superseded
-    rather than silently left active.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The temporary Chinese-live/en_US-comment convention is implemented throughout current mod JSON and
     remains an explicit CCB-specific source contract until formal i18n migration occurs.
   migration_batch: phase-0-translation
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/immortal_path/doc/game-design.md
   target_path: data/mods/immortal_path/doc/game-design.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1850,7 +2030,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.immortal-path.game-design
   domain: mods
@@ -1873,6 +2053,10 @@ documents:
   - The qi_max/qi_power/polarization and conflicting-phase formulas in the design page are present in
     current jmath and meditation EOCs.
   migration_batch: phase-1-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/immortal_path/doc/lore.md
   target_path: data/mods/immortal_path/doc/lore.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1883,7 +2067,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.immortal-path.lore
   domain: mods
@@ -1899,14 +2083,16 @@ documents:
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - An English counterpart is required if this becomes an active CCB-Docs page; keeping it in-repo does
-    not make it a translated site page.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The Chinese cultivation setting is core source-adjacent narrative design for the CCB-specific total
     conversion.
   migration_batch: phase-2-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/immortal_path/doc/spell-design.md
   target_path: data/mods/immortal_path/doc/spell-design.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1917,7 +2103,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.immortal-path.spell-design
   domain: mods
@@ -1940,6 +2126,10 @@ documents:
   - The documented power formula is directly realized by current fire/water art JSON and the shared qi_power/polarization
     jmath functions.
   migration_batch: phase-1-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/innawood/readme.md
   target_path: data/mods/innawood/readme.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1950,7 +2140,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.innawood.overview
   domain: mods
@@ -1974,6 +2164,10 @@ documents:
   - The active total conversion still removes conventional world content and supplies wilderness progression
     through overmap, blacklist, and recipe data.
   migration_batch: phase-2-mods
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: data/mods/translate-dialogue/README.md
   target_path: data/mods/translate-dialogue/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -1984,7 +2178,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: mods.translate-dialogue.maintenance
   domain: translation
@@ -2001,14 +2195,16 @@ documents:
   source_symbols: []
   translation_required: false
   include_in_ai_index: true
-  blockers:
-  - Rewrite the generic Cataclysm-DDA path wording for CCB and validate the formatter command against
-    the current repository toolchain.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The named updater and compact marker remain implemented, so this is an active maintenance instruction
     beside the generated/derived mod.
   migration_batch: phase-1-translation
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: doc/ASCII_ART.md
   target_path: docs/zh_CN/content/ascii-art.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2019,7 +2215,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/content/ascii-art/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history_then_preserve_source_url
   stable_document_id: content.ascii-art
   domain: ui
@@ -2039,14 +2235,17 @@ documents:
   - ascii_art::load_ascii_art
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Validate REXPaint version, palette/font links, width limits, and export examples; remove doctoc and
-    retain a permanent bilingual moved stub.
+  blockers: []
   evidence:
   - Read the complete tracked document and reviewed its declared sources at origin/master@5f23722ff28c5cc552baa0422b32b1f10fd890fa.
   - The JSON type, loader, and target directories remain live, but the inherited guide carries obsolete
     doctoc boilerplate and external-tool snapshots and should be rewritten as a validated bilingual how-to.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-ui
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/content/ascii-art/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/content/ascii-art/
+  retained_body_until: '2027-02-02'
 - original_path: doc/CHANGELOG_GUIDELINES.md
   target_path: doc/CHANGELOG_GUIDELINES.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2057,7 +2256,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo_path_history
   stable_document_id: contributing.changelog-guidelines
   domain: release
@@ -2080,6 +2279,10 @@ documents:
   - This is still linked directly by the CCB PR template and its categories are parsed by tools/generate_changelog.py
     and used by the weekly changelog workflow, so it must remain in-repository authority-adjacent guidance.
   migration_batch: phase-1-release
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: doc/DEVELOPER_FAQ.md
   target_path: docs/zh_CN/how-to/common-tasks.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2090,7 +2293,7 @@ documents:
   action: merge_into
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/how-to/common-tasks/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: merge_attribution_and_source_history
   stable_document_id: contributing.developer-faq
   domain: architecture
@@ -2111,12 +2314,16 @@ documents:
   - itype::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 文中的 NUM_OMSPECS、player::activate_bionic 和 monattack::function 在当前已跟踪源码中均不存在，不能原样发布。
+  blockers: []
   evidence:
   - 全文混合怪物、旧式硬编码 mapgen、仿生、护甲和 iuse FAQ；当前注册点已迁到 monstergenerator、overmap JSON 和 item loader，适合拆入按任务组织的页面而非保留杂项
     FAQ。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-architecture
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/how-to/common-tasks/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/how-to/common-tasks/
+  retained_body_until: '2027-02-02'
 - original_path: doc/FREQUENTLY_MADE_SUGGESTIONS.md
   target_path: docs/zh_CN/design/frequently-made-suggestions.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2128,7 +2335,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/design/frequently-made-suggestions/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: filtered_path_history_candidate
   stable_document_id: design.frequently-made-suggestions
   domain: design
@@ -2144,11 +2351,15 @@ documents:
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 仍含多个 CleverRaven/CDDA Issue 与 discourse 链接；正式发布前必须逐条确认 CCB 是否继续采用相同结论。
+  blockers: []
   evidence:
   - 499 行设计答复在 2026-07-28 经 LunaGlaze 三次提交专门删改“不符合本分叉”的内容，已具有 CCB 政策价值；但残留上游链接和时态判断要求按 CCB 当前设计重新表述。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-design
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/design/frequently-made-suggestions/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/design/frequently-made-suggestions/
+  retained_body_until: '2027-02-02'
 - original_path: doc/GUN_NAMING_AND_INCLUSION.md
   target_path: docs/zh_CN/content/firearms/naming-and-inclusion.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2159,7 +2370,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/content/firearms/naming-and-inclusion/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: content.firearms-naming-and-inclusion
   domain: design
@@ -2178,11 +2389,15 @@ documents:
   - check_names
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 文中的阈值是快照；页面必须从验证脚本派生或明确以脚本为准，避免双重契约。
+  blockers: []
   evidence:
   - 全文的稀有度、差异阈值和命名规则仍对应已跟踪 gun_variant_validator.py；项目身份仍写 CDDA，且硬编码阈值可能随脚本变化，适合 CCB 双语重写。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-design
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/content/firearms/naming-and-inclusion/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/content/firearms/naming-and-inclusion/
+  retained_body_until: '2027-02-02'
 - original_path: doc/HOWTO_MASSAGE_MA_GUN_DATA.md
   target_path: docs/zh_CN/archive/firearms/massachusetts-data-workflow.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2194,7 +2409,7 @@ documents:
   archive_reason: 全文是针对 2004–2023 马萨诸塞州 CSV 的一次性 sqlite/sed 清洗笔记，引用的 fix_serial_numbers.sql 与 remove_empty_entroes.sql
     未被 Git 跟踪，也不是游戏构建或数据契约。
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/archive/firearms/massachusetts-data-workflow/
-  migration_status: classified
+  migration_status: archived
   history_strategy: archive_snapshot_with_history_url
   stable_document_id: archive.firearms-massachusetts-data-workflow
   domain: historical
@@ -2212,7 +2427,12 @@ documents:
   evidence:
   - 全文是针对 2004–2023 马萨诸塞州 CSV 的一次性 sqlite/sed 清洗笔记，引用的 fix_serial_numbers.sql 与 remove_empty_entroes.sql
     未被 Git 跟踪，也不是游戏构建或数据契约。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-3-historical
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/archive/firearms/massachusetts-data-workflow/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/archive/firearms/massachusetts-data-workflow/
+  retained_body_until: '2027-02-02'
 - original_path: doc/HOW_YOU_CAN_HELP.md
   target_path: docs/zh_CN/getting-started/first-contribution.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2223,7 +2443,7 @@ documents:
   action: merge_into
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/getting-started/first-contribution/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: merge_attribution_and_source_history
   stable_document_id: getting-started.how-you-can-help
   domain: governance
@@ -2241,11 +2461,15 @@ documents:
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 全文 84 个外部链接绝大多数指向 CleverRaven/CDDA labels、Wiki 和 Issue；不得直接搬迁。
+  blockers: []
   evidence:
   - 198 行贡献入口与标签表仍指向上游仓库和旧标签体系；其有用内容已由 CCB 的 CONTRIBUTING、Issue Forms、PR 模板及现有双语首次贡献页取代。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-governance
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/getting-started/first-contribution/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/getting-started/first-contribution/
+  retained_body_until: '2027-02-02'
 - original_path: doc/IN_REPO_MODS.md
   target_path: docs/zh_CN/mods/in-repository-policy.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2256,7 +2480,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/mods/in-repository-policy/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: mods.in-repository-policy
   domain: mods
@@ -2275,12 +2499,16 @@ documents:
   - mod_manager::load_modfile
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 全文反复指定 CleverRaven 仓库和 curator 合并权；CCB 必须先在 CONTRIBUTING/OWNERSHIP 中确认自己的 mod 责任模型。
+  blockers: []
   evidence:
   - 内容解释内置 Mod 的类别、维护责任、淘汰与 modmod 规则，技术上仍有价值；但它是上游治理文本，不能未经 CCB 治理确认就作为现行政策发布。
   - Import-time source-symbol correction was verified against the tracked implementation.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-mods
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/mods/in-repository-policy/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/mods/in-repository-policy/
+  retained_body_until: '2027-02-02'
 - original_path: doc/ISSUE_TRIAGE.md
   target_path: docs/zh_CN/maintainers/issue-triage.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2291,7 +2519,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/maintainers/issue-triage/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: maintainers.issue-triage
   domain: governance
@@ -2309,11 +2537,15 @@ documents:
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 优先级和标签名必须映射到最终 CCB Issue Forms/LABELS.md 后才能标为 active。
+  blockers: []
   evidence:
   - 全文的 bug/feature 判定、数据丢失优先级和可复现性要求仍合理，但没有绑定 CCB 实际 Issue Forms 与标签，因此应按新工作流重写。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-governance
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/maintainers/issue-triage/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/maintainers/issue-triage/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/ARTIFACTS.md
   target_path: docs/zh_CN/reference/json/artifacts.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2324,7 +2556,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/artifacts/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.artifacts
   domain: json
@@ -2344,11 +2576,15 @@ documents:
   - relic_charge_template::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 没有专门 artifact 单元测试；字段参考必须以 loader 与已加载 JSON 校验补强。
+  blockers: []
   evidence:
   - 154 行完整覆盖生成权重、充能、被动/主动 procgen、强度与 resonance，当前 relic loader 和 artifact JSON 均存在；适合保留结构并补充生成校验。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/artifacts/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/artifacts/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/BASECAMP.md
   target_path: docs/zh_CN/reference/json/basecamp.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2359,7 +2595,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/basecamp/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.basecamp
   domain: json
@@ -2384,7 +2620,12 @@ documents:
   evidence:
   - 364 行说明 blueprint requires/provides/excludes、mapgen_update、recipe groups 和模块化营地约定；当前 basecamp/faction_camp
     实现、配方与测试仍对应这些概念。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/basecamp/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/basecamp/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/CLIMBING.md
   target_path: docs/zh_CN/reference/json/climbing-aids.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2396,7 +2637,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/climbing-aids/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.climbing-aids
   domain: json
@@ -2413,11 +2654,15 @@ documents:
   - climbing_aid::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 缺少 climbing_aid 专项单元测试；示例需通过 JSON load。
+  blockers: []
   evidence:
   - 159 行逐字段解释 climbing_aid，2026-07-02 随 CCB airship gangway 功能更新；loader 和 data/json/climbing.json 当前存在。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/climbing-aids/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/climbing-aids/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/DIMENSIONS.md
   target_path: docs/zh_CN/reference/json/dimensions.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2431,7 +2676,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/dimensions/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.dimensions
   domain: json
@@ -2450,11 +2695,15 @@ documents:
   - dimension_region_layout::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 链接 REGION_LAYOUT.MD 在大小写敏感环境中无效；开头给出的 json\region_settings 路径也不是当前仓库路径。
+  blockers: []
   evidence:
   - 72 行说明维度切换、NPC/物品携带和清理 EOC，2026-06/07 多次更新且当前 dimension loaders/data 存在；迁移时应修正路径和大小写坏链。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/dimensions/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/dimensions/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/EFFECTS_JSON.md
   target_path: docs/zh_CN/reference/json/effects.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2465,7 +2714,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/effects/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.effects
   domain: json
@@ -2489,7 +2738,12 @@ documents:
   blockers: []
   evidence:
   - 744 行覆盖 effect_type 必选/可选字段、强度、免疫、修饰器、死亡和示例；当前 loader 与 effect 测试提供可验证契约。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/effects/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/effects/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/EFFECT_ON_CONDITION.md
   target_path: docs/zh_CN/reference/eoc/index.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2505,7 +2759,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/eoc/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: filtered_path_history_candidate
   stable_document_id: eoc.reference
   domain: eoc
@@ -2526,11 +2780,15 @@ documents:
   - conditional_t::conditional_t
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 5,913 行手工条件/效果清单含 TODO 与 deprecated 项；必须拆分概念页和由注册表生成的 reference，并做 condition/effect parity。
+  blockers: []
   evidence:
   - 这是当前 EOC 主参考，覆盖 talkers、变量、条件、效果、math 和大量示例；2026-06/07 有 8 次导入后更新，包括 CCB 种植事件，必须保留 CCB 差异和作者历史。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-eoc
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/eoc/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/eoc/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/EXAMINE.md
   target_path: docs/zh_CN/reference/json/examine-actions.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2543,7 +2801,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/examine-actions/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.examine-actions
   domain: json
@@ -2568,7 +2826,12 @@ documents:
   evidence:
   - 301 行同时记录硬编码 examine_action 和四类 examine actor；2026-07 增加数组动作与 CCB fertilize_terrain 文档，且当前 mapdata/actor
     loader 可核验。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/examine-actions/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/examine-actions/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/FACTIONS.md
   target_path: docs/zh_CN/reference/json/npc-factions.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2579,7 +2842,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/npc-factions/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.npc-factions
   domain: json
@@ -2600,7 +2863,12 @@ documents:
   blockers: []
   evidence:
   - 115 行覆盖 faction 字段、数值尺度、价格规则与非对称关系；当前 faction_template loader、核心数据和价格规则测试均存在。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/npc-factions/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/npc-factions/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/FACTION_MISSIONS.md
   target_path: docs/zh_CN/reference/json/faction-missions.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2611,7 +2879,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/faction-missions/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.faction-missions
   domain: json
@@ -2629,11 +2897,15 @@ documents:
   - faction_mission::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 正文明确说明任务仍大多硬编码；页面必须区分 JSON 描述字段与 C++ 行为，不能暗示完全数据驱动。
+  blockers: []
   evidence:
   - 49 行是紧凑 faction_mission 字段表和示例；当前 loader/data 存在，但实际任务执行仍集中在 faction_camp.cpp。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/faction-missions/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/faction-missions/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/GUIDE_COMESTIBLES.md
   target_path: docs/zh_CN/how-to/json/comestibles.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2644,7 +2916,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/how-to/json/comestibles/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.comestibles-placement
   domain: json
@@ -2663,11 +2935,15 @@ documents:
   - itype::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 正文列出的 meat_dishes_human.json 当前不存在；目录路由是约定而非 JSON 契约，需从 Git index 生成或测试。
+  blockers: []
   evidence:
   - 67 行仅说明食物应放入哪个文件，技术字段很少；大部分目录仍在，但至少一个文件名已漂移，适合改写为经 Git 跟踪列表验证的操作指南。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/how-to/json/comestibles/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/how-to/json/comestibles/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/HELP_MENU.md
   target_path: docs/zh_CN/reference/json/help-menu.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2678,7 +2954,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/help-menu/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.help-menu
   domain: json
@@ -2699,7 +2975,12 @@ documents:
   blockers: []
   evidence:
   - 41 行完整说明 help 类型、排序、颜色/键位/特殊标签和示例；当前 help loader 与 data/core/help.json 直接对应。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/help-menu/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/help-menu/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/ITEM.md
   target_path: docs/zh_CN/reference/json/items/index.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2717,7 +2998,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/items/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: filtered_path_history_candidate
   stable_document_id: json.items
   domain: json
@@ -2738,11 +3019,15 @@ documents:
   - islot_comestible::deserialize
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 1,666 行手工覆盖众多 subtype，必须拆分为概念/专题页并与 JSON object registry 做字段覆盖校验。
+  blockers: []
   evidence:
   - 核心 item 参考在导入后有 11 次更新，包含 CCB FIRING_EXT_POWER、植物生命周期与 Mod 内容字段；应保留细节和历史，但不能继续作为单一巨页维护。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/items/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/items/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/ITEM_CRAFT_AND_DISASSEMBLY.md
   target_path: docs/zh_CN/reference/json/recipes-and-disassembly.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2757,7 +3042,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/recipes-and-disassembly/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.recipes-and-disassembly
   domain: json
@@ -2778,12 +3063,16 @@ documents:
   - recipe_dictionary::load_uncraft
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 残留两个 CleverRaven PR/Issue 解释历史语义，应改为来源注释而非现行契约链接。
+  blockers: []
   evidence:
   - 681 行覆盖配方、步骤、继承、requirements、拆解三种方式；2026-06 对 charged/unattended step 继续同步，且 recipe_steps/uncraft
     测试可验证。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/recipes-and-disassembly/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/recipes-and-disassembly/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/ITEM_SPAWN.md
   target_path: docs/zh_CN/reference/json/item-groups.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2795,7 +3084,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/item-groups/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.item-groups
   domain: json
@@ -2816,12 +3105,16 @@ documents:
   - Item_spawn_data::relic_generator::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - SUS 示例链接指向 CleverRaven；迁移时改为 CCB 固定 commit 或本地样例。
+  blockers: []
   evidence:
   - 360 行解释 collection/distribution、entries、弹药/弹匣、嵌套组和测试；2026-04 已更新 multi-well 规则，现有 item_group 与 spawn
     tests 覆盖核心行为。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/item-groups/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/item-groups/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/JSON_FLAGS.md
   target_path: docs/zh_CN/reference/json/generated/flags.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2842,7 +3135,7 @@ documents:
   action: generated_reference
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/generated/flags/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: filtered_path_history_candidate
   stable_document_id: json.flags
   domain: json
@@ -2861,11 +3154,15 @@ documents:
   - json_flag::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 1,841 行跨子系统手工 flag 表无法证明完整；新生成器需合并注册、flagdoc 配置和 JSON，并保留无法自动提取的解释。
+  blockers: []
   evidence:
   - 导入后 26 次更新，包含 CCB SHOCK_*、GUILT_HUMAN、NO_CROP_OVERGROWTH 等差异；仓库已有 flagdoc 工具，最适合作为生成参考而非继续手改。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/generated/flags/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/generated/flags/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/JSON_INFO.md
   target_path: docs/zh_CN/reference/json/index.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2886,7 +3183,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: filtered_path_history_candidate
   stable_document_id: json.object-types
   domain: json
@@ -2907,12 +3204,16 @@ documents:
   - DynamicDataLoader::load_data_from_path
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 4,696 行把介绍、通用语法、目录导航和约 200 个对象章节混在一起；需拆为手写入口和生成 object type registry，且不得假装 Schema 完整。
+  blockers: []
   evidence:
   - 这是广域 JSON 总参考，导入后 14 次更新并含 CCB fertilize_terrain/植物生命周期字段；当前 DynamicDataLoader 注册和 JSON load tests
     应成为生成清单权威。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/JSON_INHERITANCE.md
   target_path: docs/zh_CN/reference/json/inheritance.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2925,7 +3226,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/inheritance/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.inheritance
   domain: json
@@ -2943,13 +3244,17 @@ documents:
   - generic_factory::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 示例源码链接指向 CleverRaven master；应改为本地 source badge 和固定 verified commit。
+  blockers: []
   evidence:
   - 217 行系统解释 copy-from、extend/delete、relative/proportional 与支持范围；2026-07 加入 CCB vitamin 和 overmap special
     支持，generic_factory tests 可验证基础语义。
   - Import-time source-symbol correction was verified against the tracked implementation.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/inheritance/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/inheritance/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/JSON_LOADING_ORDER.md
   target_path: docs/zh_CN/reference/json/loading-order.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2960,7 +3265,7 @@ documents:
   action: merge_into
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/loading-order/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: merge_attribution_and_source_history
   stable_document_id: legacy.doc-json-json-loading-order
   domain: json
@@ -2979,11 +3284,15 @@ documents:
   - DynamicDataLoader::finalize_loaded_data
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 与 data/json/LOADING_ORDER.md 字节级相同；两个旧路径都应指向同一稳定文档 ID，避免重复维护。
+  blockers: []
   evidence:
   - diff 显示两个文件完全相同；内容描述目录深度和同深度字母顺序，应从实际 loader 行为生成/测试并只发布一份页面。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/loading-order/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/loading-order/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/JSON_Mapping_Guides/Guide_for_beginning_mapgen.md
   target_path: docs/zh_CN/tutorials/json-mapgen/beginner.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -2994,7 +3303,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/tutorials/json-mapgen/beginner/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: tutorial.mapgen-beginner
   domain: json
@@ -3014,11 +3323,15 @@ documents:
   - overmap_terrains::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 教程含 11 个 CleverRaven 文件/文档链接和若干作者经验性结论；所有示例需改成本地固定来源并实际加载。
+  blockers: []
   evidence:
   - 616 行从 OMT、ASCII map、屋顶、palette 到 special 的完整入门教程仍有价值，但仓库身份和链接全部需要 CCB 化。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/tutorials/json-mapgen/beginner/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/tutorials/json-mapgen/beginner/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/JSON_Mapping_Guides/Guide_for_intermediate_mapgen.md
   target_path: docs/zh_CN/tutorials/json-mapgen/intermediate.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3029,7 +3342,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/tutorials/json-mapgen/intermediate/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: tutorial.mapgen-intermediate
   domain: json
@@ -3049,11 +3362,15 @@ documents:
   - jmapgen_objects::load_objects
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Magiclysm/micro_lab 示例与上游锚点需在 CCB 当前数据中逐项重跑；代码块应加入可提取验证标记。
+  blockers: []
   evidence:
   - 614 行聚焦 layered/nested mapgen、条件放置与复杂生成，概念仍由 mapgen loader 支持；应保留教程层次但重做可执行示例。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/tutorials/json-mapgen/intermediate/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/tutorials/json-mapgen/intermediate/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/JSON_Mapping_Guides/JSON_ROOF_MAPGEN.md
   target_path: docs/zh_CN/tutorials/json-mapgen/beginner.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3064,7 +3381,7 @@ documents:
   action: merge_into
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/tutorials/json-mapgen/beginner/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: merge_attribution_and_source_history
   stable_document_id: tutorial.mapgen-roofs
   domain: json
@@ -3081,11 +3398,15 @@ documents:
   - mapgen_function_json::setup_internal
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 引用 CleverRaven MAPGEN 和已过时的 dev.narc.ro formatter；示例需并入可验证的初级 mapgen 路线。
+  blockers: []
   evidence:
   - 180 行只讲 roof map、overmap special/terrain 与 region settings 的衔接，内容与初级教程高度重叠，合并可减少重复且保留旧路径 stub。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/tutorials/json-mapgen/beginner/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/tutorials/json-mapgen/beginner/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/JSON_STYLE.md
   target_path: docs/zh_CN/contributing/json-style.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3096,7 +3417,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/contributing/json-style/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: contributing.json-style
   domain: json
@@ -3114,11 +3435,15 @@ documents:
   - main
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 正文仍称 Cataclysm-DDA root 并推荐 dev.narc.ro；命令应以当前 Makefile/CI 为准且实际运行。
+  blockers: []
   evidence:
   - 107 行样式规则本身仍适用，Makefile 仍有 style-json 且 CI 使用 formatter；站点页需用当前 CCB 命令替换旧网站和上游身份。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/contributing/json-style/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/contributing/json-style/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/JSON_TOOLS.md
   target_path: docs/zh_CN/how-to/json/tools.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3129,7 +3454,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/how-to/json/tools/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: how-to.json-tools
   domain: json
@@ -3148,11 +3473,15 @@ documents:
   - main
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 正文泛称 Cataclysm-DDA 且不覆盖每个脚本的当前参数；命令必须通过 --help/样例运行验证。
+  blockers: []
   evidence:
   - 153 行介绍 keys/values/pluck/table/lister 与 jq，用例仍对应已跟踪脚本；适合作为操作指南按当前 CLI 重写。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/how-to/json/tools/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/how-to/json/tools/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/MAGIC.md
   target_path: docs/zh_CN/reference/json/magic-spells-enchantments.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3166,7 +3495,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/magic-spells-enchantments/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.magic-spells-enchantments
   domain: json
@@ -3188,11 +3517,15 @@ documents:
   - spell_migration::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 1,149 行手工枚举 spell effects/flags/enchantment values；应与注册/loader 生成清单做 parity，保留人工解释。
+  blockers: []
   evidence:
   - 完整覆盖 spell、magic_type、enchantment 和实例，导入后加入 CCB FOCUS_REGEN 等更新；现有 magic tests 可验证关键示例。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/magic-spells-enchantments/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/magic-spells-enchantments/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/MAPGEN.md
   target_path: docs/zh_CN/reference/json/mapgen.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3206,7 +3539,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/mapgen/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: filtered_path_history_candidate
   stable_document_id: json.mapgen
   domain: json
@@ -3228,12 +3561,16 @@ documents:
   - pp_generator::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 1,792 行仍含 Limitations/TODO；拆分后必须保持字段来源与测试映射，不能把 TODO 当契约。
+  blockers: []
   evidence:
   - 核心 mapgen 参考覆盖 placement、palettes、update_mapgen、parameters、post-process 等，导入后继续更新 SKIP_ON_OPEN_AIR
     和 vision/post-process 行为，当前测试丰富。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/mapgen/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/mapgen/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/MAP_SMASHING.md
   target_path: docs/zh_CN/reference/json/terrain-and-furniture.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3244,7 +3581,7 @@ documents:
   action: merge_into
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/terrain-and-furniture/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: merge_attribution_and_source_history
   stable_document_id: json.map-smashing
   domain: json
@@ -3267,7 +3604,12 @@ documents:
   evidence:
   - 24 行只解释 bash min/max、阻挡与 damage profile，是 terrain/furniture JSON 的小节而非独立完整主题；loader 和 bash profile
     数据仍存在。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/terrain-and-furniture/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/terrain-and-furniture/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/MARTIALART_JSON.md
   target_path: docs/zh_CN/reference/json/martial-arts.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3278,7 +3620,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/martial-arts/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.martial-arts
   domain: json
@@ -3302,7 +3644,12 @@ documents:
   blockers: []
   evidence:
   - 285 行覆盖武术、buff、technique、bonus、attack vector 与用法，当前 loader/data/test 对应，适合保留结构并双语化。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/martial-arts/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/martial-arts/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/MISSIONS_JSON.md
   target_path: docs/zh_CN/reference/json/missions.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3314,7 +3661,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/missions/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.missions
   domain: json
@@ -3334,11 +3681,15 @@ documents:
   - json_talk_topic::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 部分 start/end/fail 行为仍需硬编码函数；页面必须区分 mission JSON 与 dialogue/EOC 行为边界。
+  blockers: []
   evidence:
   - 355 行逐字段解释 mission、目标、对话和 effects；2026-06 随 mission enum 继续更新，mission loader/test 可验证。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/missions/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/missions/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/MONSTERS.md
   target_path: docs/zh_CN/reference/json/monsters.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3350,7 +3701,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/monsters/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.monsters
   domain: json
@@ -3371,11 +3722,15 @@ documents:
   - mon_flag::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 771 行字段表应与 mtype loader/object registry 自动比对；当前目录链接应改为可解析文件链接。
+  blockers: []
   evidence:
   - 核心 monster JSON 参考覆盖属性、弱点、升级、繁殖、攻击等，2026-06 随 vitals weakpoints 更新；loader 和多组 monster tests 仍是权威。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/monsters/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/monsters/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/MONSTER_SPECIAL_ATTACKS.md
   target_path: docs/zh_CN/reference/json/monster-special-attacks.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3387,7 +3742,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/monster-special-attacks/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.monster-special-attacks
   domain: json
@@ -3406,11 +3761,15 @@ documents:
   - mattack_actor::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 正文明确含未完成的 hardcoded attack 描述 TODO；生成覆盖率必须区分硬编码、actor JSON 与 EOC attacks。
+  blockers: []
   evidence:
   - 338 行解释选择逻辑、旧/新语法、硬编码与 JSON actor、EOC attack；2026-06 随 body-part targeting 更新，现有 loader/test 可核验。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/monster-special-attacks/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/monster-special-attacks/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/MOVE_MODE.md
   target_path: docs/zh_CN/reference/json/movement-modes.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3421,7 +3780,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/movement-modes/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.movement-modes
   domain: json
@@ -3441,7 +3800,12 @@ documents:
   blockers: []
   evidence:
   - 158 行逐字段说明 movement_mode，当前单一 loader 与 data/json/move_modes.json 直接对应，迁移风险低。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/movement-modes/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/movement-modes/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/MUTATIONS.md
   target_path: docs/zh_CN/reference/json/mutations.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3452,7 +3816,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/mutations/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.mutations
   domain: json
@@ -3473,11 +3837,15 @@ documents:
   - mutation_variant::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 系统说明同时依赖硬编码检查与 EOC；迁移后需清楚标注两种权威来源并修复目录型链接。
+  blockers: []
   evidence:
   - 455 行同时解释 mutagen 系统和 mutation/category/migration JSON，当前 loader、核心 mutation EOCs 与 tests 均存在。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/mutations/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/mutations/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/NPCs.md
   target_path: docs/zh_CN/reference/eoc/npcs-and-dialogue.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3496,7 +3864,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/eoc/npcs-and-dialogue/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: filtered_path_history_candidate
   stable_document_id: json.npcs-dialogue
   domain: eoc
@@ -3517,12 +3885,16 @@ documents:
   - json_talk_topic::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 1,637 行含 NPC 定义、对话、条件、效果和 math 巨量内容；必须与 EOC registry 去重并保留 deprecated 标记。
+  blockers: []
   evidence:
   - 导入后 12 次更新，含 CCB NPC vehicle service 与 jmath 条件；当前 npctalk loader 和 npc tests 支持拆分成 NPC 配置与对话/EOC
     页面。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-eoc
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/eoc/npcs-and-dialogue/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/eoc/npcs-and-dialogue/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/OBSOLETION_AND_MIGRATION.md
   target_path: docs/zh_CN/reference/json/obsoletion-and-migration.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3533,7 +3905,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/obsoletion-and-migration/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.obsoletion-and-migration
   domain: json
@@ -3558,12 +3930,16 @@ documents:
   - proficiency_migration::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 这是存档兼容高风险文档；每种 migration 类型必须由当前注册、save loader 和加载测试验证后才能 active。
+  blockers: []
   evidence:
   - 464 行覆盖 item/vehicle/effect/trait/proficiency/spell/terrain/OMT/EOC/activity/mod 等迁移，直接关系存档兼容，不能压缩成泛化说明。
   - Import-time source-symbol correction was verified against the tracked implementation.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/obsoletion-and-migration/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/obsoletion-and-migration/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/OPTIONS.md
   target_path: docs/zh_CN/reference/json/options.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3574,7 +3950,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/options/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.options
   domain: json
@@ -3598,7 +3974,12 @@ documents:
   evidence:
   - 28 行准确区分 menu/external/world options 及 COPT_HIDE/stub 迁移技巧；当前 options 实现、external_options 数据和 tests
     均存在。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/options/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/options/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/OVERMAP.md
   target_path: docs/zh_CN/reference/json/overmap.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3610,7 +3991,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/overmap/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: filtered_path_history_candidate
   stable_document_id: json.overmap
   domain: json
@@ -3632,12 +4013,16 @@ documents:
   - pp_generator::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 迁移时应把 post-process generator 与 overmap special 的来源和测试保持同页关联。
+  blockers: []
   evidence:
   - 1,329 行覆盖 terrain/special/connection/location/city 与 mutable placement，导入后补充 post-process scope/persistence；tests/overmap_test.cpp
     明确提供大量放置验证。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/overmap/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/overmap/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/PRACTICE_RECIPES.md
   target_path: docs/zh_CN/reference/json/practice-recipes.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3648,7 +4033,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/practice-recipes/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.practice-recipes
   domain: json
@@ -3670,7 +4055,12 @@ documents:
   blockers: []
   evidence:
   - 71 行说明 practice 与普通 recipe 的差异、practice_data 和标准 1h 示例；当前 loader、核心实践配方和 crafting GUI tests 对应。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/practice-recipes/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/practice-recipes/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/PROFICIENCY.md
   target_path: docs/zh_CN/reference/json/proficiencies.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3681,7 +4071,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/proficiencies/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.proficiencies
   domain: json
@@ -3701,11 +4091,15 @@ documents:
   - proficiency_migration::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 公式解释引用 CleverRaven PR；应把当前源码公式和测试作为来源。
+  blockers: []
   evidence:
   - 192 行解释 proficiency graph、类别、学习效果、penalty/bonus 字段；当前 loader 与大量 crafting 使用点存在。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/proficiencies/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/proficiencies/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/PROFICIENCY_LIST.md
   target_path: docs/zh_CN/reference/json/generated/proficiencies.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3716,7 +4110,7 @@ documents:
   action: generated_reference
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/generated/proficiencies/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: replace_manual_snapshot_with_generated_reference
   stable_document_id: json.proficiencies-index
   domain: json
@@ -3735,11 +4129,15 @@ documents:
   - proficiency_category::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 122 行却有 41 KB 的手工表，导入后从未更新；必须从 core 与明确纳入的 Mod 数据生成，并标出来源范围。
+  blockers: []
   evidence:
   - 页面本质是 ID/name/parent/description 清单且含 Magiclysm 专节，没有解释性结构；这类内容应由 JSON registry 生成，手工快照不可靠。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/generated/proficiencies/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/generated/proficiencies/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/REGION_LAYOUT.md
   target_path: docs/zh_CN/reference/json/region-layout.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3751,7 +4149,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/region-layout/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.region-layout
   domain: json
@@ -3768,12 +4166,16 @@ documents:
   - dimension_region_layout::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 文档只列 UNIFORM 动态模式；生成 reference 必须从 loader 明确标记支持范围，不能暗示 STATIC 已完整实现。
+  blockers: []
   evidence:
   - 29 行定义 dimension_region_layout、STATIC/DYNAMIC 概念和 UNIFORM 字段；2026-07 随 dimension-id 及 CCB sync exclusion
     更新。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/region-layout/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/region-layout/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/REGION_SETTINGS.md
   target_path: docs/zh_CN/reference/json/region-settings.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3784,7 +4186,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/region-settings/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.region-settings
   domain: json
@@ -3805,11 +4207,15 @@ documents:
   - region_settings_map_extras::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 624 行字段表无专项 C++ test；应至少通过 test_regional_map_settings 的全量 JSON load 验证。
+  blockers: []
   evidence:
   - 完整覆盖地形、湖泊、森林、道路、城市、map extras、天气和 feature flags，当前 regional_settings loaders/data 对应。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/region-settings/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/region-settings/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/TER_FURN_TRANSFORM.md
   target_path: docs/zh_CN/reference/json/terrain-furniture-transforms.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3820,7 +4226,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/terrain-furniture-transforms/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.terrain-furniture-transforms
   domain: json
@@ -3839,11 +4245,15 @@ documents:
   - ter_furn_data<T>::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 已选择核心 mapgen 实例作为示例；迁移时仍需用 JSON load 验证该实例。
+  blockers: []
   evidence:
   - 83 行解释 terrain/furniture/field/trap 的 ID、权重与 flag 转换，并链接 EOC/mapgen/spell 三种调用方；C++ loader 当前存在。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/terrain-furniture-transforms/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/terrain-furniture-transforms/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/VEHICLES_JSON.md
   target_path: docs/zh_CN/reference/json/vehicle-prototypes.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3855,7 +4265,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/vehicle-prototypes/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.vehicle-prototypes
   domain: json
@@ -3879,7 +4289,12 @@ documents:
   evidence:
   - 182 行覆盖 prototype part order、parts/items/zones、variants 与 debug export；2026-07 加入 CCB default_tint_color，vehicle
     export test 可验证导出流程。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/vehicle-prototypes/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/vehicle-prototypes/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/VITAMIN.md
   target_path: docs/zh_CN/reference/json/vitamins.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3891,7 +4306,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/vitamins/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.vitamins
   domain: json
@@ -3913,7 +4328,12 @@ documents:
   evidence:
   - 204 行逐字段解释 vitamin/toxin/counter/drug、继承和 flags；2026-07 CCB 增加 copy-from、extend/delete、decays_into
     语义，且有专项测试。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/vitamins/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/vitamins/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/WEATHER_TYPE.md
   target_path: docs/zh_CN/reference/json/weather-types.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3925,7 +4345,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/weather-types/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.weather-types
   domain: json
@@ -3949,7 +4369,12 @@ documents:
   blockers: []
   evidence:
   - 81 行字段表和完整天气示例，2026-07 随 temperature_modifier 实现更新；loader/data/weather tests 对应。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/weather-types/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/weather-types/
+  retained_body_until: '2027-02-02'
 - original_path: doc/JSON/WOUNDS.md
   target_path: docs/zh_CN/reference/json/wounds.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3962,7 +4387,7 @@ documents:
   action: migrate_preserve
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/wounds/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: json.wounds
   domain: json
@@ -3980,11 +4405,15 @@ documents:
   - wound_fix::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Git index 中未发现第一方 wound/wound_fix JSON 实例或专项测试；示例只能标记 schema-style，不能宣称已加载验证。
+  blockers: []
   evidence:
   - 54 行给出 wound 与 wound_fix 两个完整示例，2026-06 连续加入 limit、progression、limb score；类型已在 DynamicDataLoader 注册，但缺少第一方数据覆盖。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/wounds/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/wounds/
+  retained_body_until: '2027-02-02'
 - original_path: doc/MANUAL_OF_STYLE.md
   target_path: docs/zh_CN/contributing/in-game-text-style.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -3995,7 +4424,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: https://crimsoncrossbunker.github.io/CCB-Docs/contributing/in-game-text-style/
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: preserve_source_commit_and_history_url
   stable_document_id: content.manual-of-style
   domain: translation
@@ -4012,11 +4441,15 @@ documents:
   source_symbols: []
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - 链接 ../lang/notes 指向目录而非页面；双句空格、专名和方言规则应由 CCB 维护者在 CONTRIBUTING/治理来源中确认后发布。
+  blockers: []
   evidence:
   - 30 行是英文游戏文本与 NPC 对话风格规范，仍有贡献价值但属于规范性内容；需与翻译说明、提取器和 CCB 贡献政策对齐后双语发布。
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-translation
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/contributing/in-game-text-style/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/contributing/in-game-text-style/
+  retained_body_until: '2027-02-02'
 - original_path: doc/MODDING.md
   target_path: docs/zh_CN/modding/overview.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4028,7 +4461,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: modding-overview
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: modding-overview
   domain: mods
@@ -4053,7 +4486,12 @@ documents:
   - The mod loader and mod_interactions path are live in init/game I/O, while the inherited guide still
     points at upstream CDDA processes.
   - Rewrite against current CCB MOD_INFO fields and validate examples with the all-mod loader.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-mods
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/modding/overview/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/modding/overview/
+  retained_body_until: '2027-02-02'
 - original_path: doc/MOD_COMPATIBILITY.md
   target_path: docs/zh_CN/modding/compatibility.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4064,7 +4502,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: mod-compatibility
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: mod-compatibility
   domain: mods
@@ -4087,7 +4525,12 @@ documents:
   evidence:
   - Compatibility overlays remain implemented and have first-party examples, but the old document must
     distinguish CCB behavior from inherited upstream assumptions.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-mods
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/modding/compatibility/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/modding/compatibility/
+  retained_body_until: '2027-02-02'
 - original_path: doc/PLAYER_ACTIVITY.md
   target_path: docs/zh_CN/cpp/activities.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4099,7 +4542,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: cpp-activities
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: cpp-activities
   domain: cpp
@@ -4123,7 +4566,12 @@ documents:
   evidence:
   - Activity actors, JSON activity types, completion_eoc/do_turn_eoc fields, and tests are current; the
     page should be rebuilt as a source-linked subsystem guide.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-cpp
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/cpp/activities/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/cpp/activities/
+  retained_body_until: '2027-02-02'
 - original_path: doc/RELEASE_DIFF.md
   target_path: docs/zh_CN/maintenance/releases.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4134,7 +4582,7 @@ documents:
   action: merge_into
   archive_reason: null
   replacement: release-maintenance
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: legacy.doc-release-diff
   domain: release
@@ -4154,7 +4602,12 @@ documents:
   evidence:
   - The useful release-diff procedure belongs with the current CCB release workflow and generated release
     notes rather than as a standalone inherited page.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-release
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/maintenance/releases/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/maintenance/releases/
+  retained_body_until: '2027-02-02'
 - original_path: doc/RELEASE_PROCESS.md
   target_path: docs/zh_CN/maintenance/releases.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4165,7 +4618,7 @@ documents:
   action: merge_into
   archive_reason: null
   replacement: release-maintenance
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: legacy.doc-release-process
   domain: release
@@ -4186,7 +4639,12 @@ documents:
   evidence:
   - Release automation is CCB-specific and active, but this upstream-oriented process page duplicates
     the release-diff material and must be reconciled with Actions.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-release
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/maintenance/releases/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/maintenance/releases/
+  retained_body_until: '2027-02-02'
 - original_path: doc/SOUNDPACKS.md
   target_path: docs/zh_CN/resources/soundpacks.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4197,7 +4655,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: soundpacks
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: soundpacks
   domain: resources
@@ -4220,7 +4678,12 @@ documents:
   evidence:
   - SDL soundpack loading remains active; static ID lists in the old guide should be generated or checked
     against sdlsound.cpp instead of copied forward.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-resources
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/resources/soundpacks/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/resources/soundpacks/
+  retained_body_until: '2027-02-02'
 - original_path: doc/TESTING_YOUR_CHANGES.md
   target_path: docs/zh_CN/testing/manual-playtesting.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4231,7 +4694,7 @@ documents:
   action: merge_into
   archive_reason: null
   replacement: testing-manual
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: testing-manual
   domain: testing
@@ -4253,7 +4716,12 @@ documents:
   evidence:
   - Manual playtesting guidance is still useful but overlaps the test guide; merge it into a CCB test
     matrix backed by current build and CI commands.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-testing
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/testing/manual-playtesting/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/testing/manual-playtesting/
+  retained_body_until: '2027-02-02'
 - original_path: doc/TILESET.md
   target_path: docs/zh_CN/resources/tilesets.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4264,7 +4732,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: tilesets
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: tilesets
   domain: resources
@@ -4285,7 +4753,12 @@ documents:
   evidence:
   - Compose/decompose tooling and CI are current, but the guide has upstream-only links and unfinished
     platform sections; rewrite with commands exercised in CCB.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-resources
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/resources/tilesets/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/resources/tilesets/
+  retained_body_until: '2027-02-02'
 - original_path: doc/TRANSLATING.md
   target_path: docs/zh_CN/localization/translation-guide.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4297,7 +4770,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: translation-guide
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: translation-guide
   domain: localization
@@ -4322,7 +4795,12 @@ documents:
   - CCB translation extraction/build workflows are active; the old page retains CDDA wording and inconsistent
     POT filenames, so commands and service references need replacement.
   - Import-time source-symbol correction was verified against the tracked implementation.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-localization
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/localization/translation-guide/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/localization/translation-guide/
+  retained_body_until: '2027-02-02'
 - original_path: doc/TRANSLATING_MOD.md
   target_path: docs/zh_CN/modding/localization.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4333,7 +4811,7 @@ documents:
   action: merge_into
   archive_reason: null
   replacement: mod-localization
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: mod-localization
   domain: localization
@@ -4354,7 +4832,12 @@ documents:
   evidence:
   - Mod-specific extraction rules remain relevant but should be part of the mod documentation and verified
     against the current extractor.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-localization
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/modding/localization/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/modding/localization/
+  retained_body_until: '2027-02-02'
 - original_path: doc/USER_INTERFACE_AND_ACCESSIBILITY.md
   target_path: docs/zh_CN/ui/accessibility.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4365,7 +4848,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: ui-accessibility
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: ui-accessibility
   domain: ui
@@ -4387,7 +4870,12 @@ documents:
   evidence:
   - Screen reader mode is registered and consumed in current CCB code; rewrite this conceptual guide with
     tested UI entry points and known limits.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-ui
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/ui/accessibility/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/ui/accessibility/
+  retained_body_until: '2027-02-02'
 - original_path: doc/WIDGETS.md
   target_path: docs/zh_CN/json/widgets.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4398,7 +4886,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: json-widgets
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: json-widgets
   domain: json
@@ -4422,7 +4910,12 @@ documents:
   evidence:
   - Widgets are implemented, loaded from data/json/ui, and extensively tested; regenerate or validate
     variable/reference lists from source during the rewrite.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/json/widgets/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/json/widgets/
+  retained_body_until: '2027-02-02'
 - original_path: doc/c++/CODE_STYLE.md
   target_path: docs/zh_CN/cpp/code-style.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4433,7 +4926,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: cpp-code-style
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: cpp-code-style
   domain: cpp
@@ -4455,7 +4948,12 @@ documents:
   evidence:
   - Style policy must reflect the checked-in formatter/linter configuration and current CI, not inherited
     prose alone.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-cpp
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/cpp/code-style/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/cpp/code-style/
+  retained_body_until: '2027-02-02'
 - original_path: doc/c++/COMPILER_SUPPORT.md
   target_path: docs/zh_CN/platforms/compiler-support.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4466,7 +4964,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: platform-matrix
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: platform-matrix
   domain: build
@@ -4487,7 +4985,12 @@ documents:
   evidence:
   - CMake requires 3.20 and C++17, while active CI defines the real compiler matrix; rewrite the support
     claims from those contracts.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-build
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/platforms/compiler-support/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/platforms/compiler-support/
+  retained_body_until: '2027-02-02'
 - original_path: doc/c++/COMPILING-CMAKE-VCPKG.md
   target_path: docs/zh_CN/build/windows-msvc.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4498,7 +5001,7 @@ documents:
   action: merge_into
   archive_reason: null
   replacement: build-windows-msvc
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: legacy.doc-c-compiling-cmake-vcpkg
   domain: build
@@ -4520,7 +5023,12 @@ documents:
   evidence:
   - This is one Windows/vcpkg route and should be reconciled with the maintained MSVC preset/workflow
     instead of published as a parallel guide.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-build
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/build/windows-msvc/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/build/windows-msvc/
+  retained_body_until: '2027-02-02'
 - original_path: doc/c++/COMPILING-CMAKE.md
   target_path: docs/zh_CN/build/cmake.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4531,7 +5039,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: build-cmake
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: build-cmake
   domain: build
@@ -4552,7 +5060,12 @@ documents:
   evidence:
   - The old statement that CMake is unsupported is false; current CMake configuration and presets are
     authoritative and require a clean rewrite.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-build
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/build/cmake/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/build/cmake/
+  retained_body_until: '2027-02-02'
 - original_path: doc/c++/COMPILING-CYGWIN.md
   target_path: docs/zh_CN/archive/build/cygwin.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4564,7 +5077,7 @@ documents:
   archive_reason: No current CCB CI/support evidence; Cygwin instructions are obsolete and superseded
     by maintained Windows paths.
   replacement: build-windows-msys2
-  migration_status: classified
+  migration_status: archived
   history_strategy: evaluate_filtered_history
   stable_document_id: archive-build-cygwin
   domain: build
@@ -4585,7 +5098,12 @@ documents:
     preserve the page only as historical material.
   - 'The exact last-applicable SHA is intentionally unknown: imported snapshot history repeatedly re-adds
     this path at unrelated commits, so those SHAs are provenance rather than validity evidence.'
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-3-build
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/archive/build/cygwin/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/archive/build/cygwin/
+  retained_body_until: '2027-02-02'
 - original_path: doc/c++/COMPILING-DEVCONTAINER.md
   target_path: docs/zh_CN/build/devcontainer.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4596,7 +5114,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: build-devcontainer
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: build-devcontainer
   domain: build
@@ -4618,7 +5136,12 @@ documents:
   evidence:
   - Multiple tracked devcontainer variants are live; rewrite the page around the actual CCB configurations
     and validation commands.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-build
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/build/devcontainer/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/build/devcontainer/
+  retained_body_until: '2027-02-02'
 - original_path: doc/c++/COMPILING-FLATPAK.md
   target_path: docs/zh_CN/archive/build/flatpak.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4629,7 +5152,7 @@ documents:
   action: archive_public
   archive_reason: No maintained Flatpak manifest, workflow, or validation path exists in CCB.
   replacement: build-overview
-  migration_status: classified
+  migration_status: archived
   history_strategy: evaluate_filtered_history
   stable_document_id: archive-build-flatpak
   domain: build
@@ -4649,7 +5172,12 @@ documents:
     support this page.
   - 'The exact last-applicable SHA is intentionally unknown: imported snapshot history repeatedly re-adds
     this path at unrelated commits, so those SHAs are provenance rather than validity evidence.'
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-3-build
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/archive/build/flatpak/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/archive/build/flatpak/
+  retained_body_until: '2027-02-02'
 - original_path: doc/c++/COMPILING-MSYS.md
   target_path: docs/zh_CN/build/windows-msys2.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4660,7 +5188,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: build-windows-msys2
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: build-windows-msys2
   domain: build
@@ -4681,7 +5209,12 @@ documents:
   evidence:
   - MSYS2 remains a relevant Windows route, but package names, SDL generation, clone URLs, and commands
     must be verified against current CCB build files.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-build
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/build/windows-msys2/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/build/windows-msys2/
+  retained_body_until: '2027-02-02'
 - original_path: doc/c++/COMPILING-VS-VCPKG.md
   target_path: docs/zh_CN/build/windows-msvc.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4694,7 +5227,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: build-windows-msvc
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: build-windows-msvc
   domain: build
@@ -4716,7 +5249,12 @@ documents:
   evidence:
   - MSVC/vcpkg is maintained in presets and CI; consolidate current flags and dependencies while removing
     CleverRaven URLs.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-build
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/build/windows-msvc/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/build/windows-msvc/
+  retained_body_until: '2027-02-02'
 - original_path: doc/c++/COMPILING.md
   target_path: docs/zh_CN/build/overview.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4733,7 +5271,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: build-overview
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: build-overview
   domain: build
@@ -4755,7 +5293,12 @@ documents:
   evidence:
   - The page contains recent CCB SDL3/Android additions mixed with stale upstream clone URLs and platform
     instructions; split and rewrite around current build contracts.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-build
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/build/overview/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/build/overview/
+  retained_body_until: '2027-02-02'
 - original_path: doc/c++/DEVELOPER_TOOLING.md
   target_path: docs/zh_CN/cpp/developer-tooling.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4767,7 +5310,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: developer-tooling
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: developer-tooling
   domain: cpp
@@ -4789,7 +5332,12 @@ documents:
   evidence:
   - Clang-tidy and IWYU automation is current, but setup and invocation must be derived from the checked-in
     scripts/workflows.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-cpp
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/cpp/developer-tooling/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/cpp/developer-tooling/
+  retained_body_until: '2027-02-02'
 - original_path: doc/c++/JSON_INTERFACE.md
   target_path: docs/zh_CN/cpp/json-interface.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4800,7 +5348,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: cpp-json-interface
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: cpp-json-interface
   domain: cpp
@@ -4825,7 +5373,12 @@ documents:
   evidence:
   - This recent CCB page maps to the FlexBuffers-backed Json classes and generic_factory tests; preserve
     its intent but add source-linked invariants and examples.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-cpp
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/cpp/json-interface/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/cpp/json-interface/
+  retained_body_until: '2027-02-02'
 - original_path: doc/c++/PERFORMANCE.md
   target_path: docs/zh_CN/cpp/performance.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4836,7 +5389,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: cpp-performance
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: cpp-performance
   domain: cpp
@@ -4859,7 +5412,12 @@ documents:
   evidence:
   - Profiling macros and benchmark-only Catch tags are present and tested in current CCB; expand this
     recent page with verified commands and artifact guidance.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-cpp
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/cpp/performance/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/cpp/performance/
+  retained_body_until: '2027-02-02'
 - original_path: doc/c++/POINTS_COORDINATES.md
   target_path: docs/zh_CN/cpp/coordinates.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4870,7 +5428,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: cpp-coordinates
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: cpp-coordinates
   domain: cpp
@@ -4895,7 +5453,12 @@ documents:
   evidence:
   - Coordinate types, conversions, and tests remain core contracts; rewrite diagrams and examples against
     the current typed-coordinate implementation.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-cpp
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/cpp/coordinates/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/cpp/coordinates/
+  retained_body_until: '2027-02-02'
 - original_path: doc/c++/TESTING.md
   target_path: docs/zh_CN/testing/cpp.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4907,7 +5470,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: cpp-testing
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: cpp-testing
   domain: testing
@@ -4930,7 +5493,12 @@ documents:
   evidence:
   - The C++ test suite and benchmark conventions are active; rewrite commands and filtering guidance from
     current CMake/Make/CI contracts.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-testing
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/testing/cpp/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/testing/cpp/
+  retained_body_until: '2027-02-02'
 - original_path: doc/design-balance-lore/ARMOR_BALANCE_AND_DESIGN.md
   target_path: docs/zh_CN/json/armor-design.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4941,7 +5509,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: json-armor-design
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: json-armor-design
   domain: design
@@ -4963,7 +5531,12 @@ documents:
   evidence:
   - The design rationale is useful, but armor fields and behavior must be checked against item loading,
     current data, and tests before publication.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-design
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/json/armor-design/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/json/armor-design/
+  retained_body_until: '2027-02-02'
 - original_path: doc/design-balance-lore/CONSTRUCTION_BALANCE.md
   target_path: docs/zh_CN/archive/design/construction-balance.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -4974,7 +5547,7 @@ documents:
   action: archive_public
   archive_reason: Unvalidated historical balance proposal; it is not a current CCB contract or policy.
   replacement: design-balance
-  migration_status: classified
+  migration_status: archived
   history_strategy: evaluate_filtered_history
   stable_document_id: archive-construction-balance
   domain: design
@@ -4996,7 +5569,12 @@ documents:
     is data/source driven.
   - 'The exact last-applicable SHA is intentionally unknown: imported snapshot history repeatedly re-adds
     this path at unrelated commits, so those SHAs are provenance rather than validity evidence.'
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-3-design
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/archive/design/construction-balance/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/archive/design/construction-balance/
+  retained_body_until: '2027-02-02'
 - original_path: doc/design-balance-lore/GAME_BALANCE.md
   target_path: docs/zh_CN/design/balance.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5007,7 +5585,7 @@ documents:
   action: merge_into
   archive_reason: null
   replacement: design-balance
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: legacy.doc-design-balance-lore-game-balance
   domain: design
@@ -5027,7 +5605,12 @@ documents:
   evidence:
   - The high-level balance principles overlap design-balance.md and should become one explicitly CCB-reviewed
     policy/explanation page.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-design
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/design/balance/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/design/balance/
+  retained_body_until: '2027-02-02'
 - original_path: doc/design-balance-lore/LORE_FAQ.md
   target_path: docs/zh_CN/archive/lore/faq.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5039,7 +5622,7 @@ documents:
   archive_reason: Dated upstream FAQ without a current CCB authority trail; preserve only for historical
     context.
   replacement: lore-overview
-  migration_status: classified
+  migration_status: archived
   history_strategy: evaluate_filtered_history
   stable_document_id: archive-lore-faq
   domain: lore
@@ -5061,7 +5644,12 @@ documents:
     CCB lore authority.
   - 'The exact last-applicable SHA is intentionally unknown: imported snapshot history repeatedly re-adds
     this path at unrelated commits, so those SHAs are provenance rather than validity evidence.'
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-3-lore
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/archive/lore/faq/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/archive/lore/faq/
+  retained_body_until: '2027-02-02'
 - original_path: doc/design-balance-lore/PORTAL_STORM_BALANCE_AND_DESIGN.md
   target_path: docs/zh_CN/design/portal-storms.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5072,7 +5660,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: design-portal-storms
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: design-portal-storms
   domain: design
@@ -5095,7 +5683,12 @@ documents:
   evidence:
   - Portal-storm runtime hooks, EOCs, mapgen, and tests remain present; rewrite the rationale with an
     explicit CCB-divergence and current-data review.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-design
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/design/portal-storms/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/design/portal-storms/
+  retained_body_until: '2027-02-02'
 - original_path: doc/design-balance-lore/POSTAPOC_PRICE_GUIDE.md
   target_path: docs/zh_CN/json/item-pricing.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5106,7 +5699,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: json-item-pricing
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: json-item-pricing
   domain: design
@@ -5127,7 +5720,12 @@ documents:
   evidence:
   - Pricing guidance is useful to content authors, but examples and formulas must be reconciled with current
     faction pricing code/tests.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-design
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/json/item-pricing/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/json/item-pricing/
+  retained_body_until: '2027-02-02'
 - original_path: doc/design-balance-lore/STEEL_CRAFTING.md
   target_path: docs/zh_CN/design/steel-crafting.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5139,7 +5737,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: design-steel-crafting
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: design-steel-crafting
   domain: design
@@ -5160,7 +5758,12 @@ documents:
   evidence:
   - The process rationale can inform content work, but recipe stages, requirements, and terminology must
     be checked against current JSON.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-design
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/design/steel-crafting/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/design/steel-crafting/
+  retained_body_until: '2027-02-02'
 - original_path: doc/design-balance-lore/VARIANTS.md
   target_path: docs/zh_CN/json/item-variants.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5171,7 +5774,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: json-item-variants
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: json-item-variants
   domain: json
@@ -5194,7 +5797,12 @@ documents:
   evidence:
   - Item/trait variant concepts remain implemented and tested; rewrite the JSON-facing rules from loaders
     and representative current data.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-json
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/json/item-variants/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/json/item-variants/
+  retained_body_until: '2027-02-02'
 - original_path: doc/design-balance-lore/batteries_and_electricity.md
   target_path: docs/zh_CN/design/batteries-electricity.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5205,7 +5813,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: design-batteries-electricity
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: design-batteries-electricity
   domain: design
@@ -5227,7 +5835,12 @@ documents:
   evidence:
   - Battery/electricity design remains relevant, but values and invariants need reconciliation with current
     item/vehicle data and battery tests.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-design
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/design/batteries-electricity/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/design/batteries-electricity/
+  retained_body_until: '2027-02-02'
 - original_path: doc/design-balance-lore/design-balance.md
   target_path: docs/zh_CN/design/balance.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5238,7 +5851,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: design-balance
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: design-balance
   domain: design
@@ -5258,7 +5871,12 @@ documents:
   evidence:
   - The principles are useful but originated upstream; publish only after reconciling them into one CCB-owned
     design/balance explanation.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-design
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/design/balance/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/design/balance/
+  retained_body_until: '2027-02-02'
 - original_path: doc/design-balance-lore/design-doc.md
   target_path: docs/zh_CN/design/overview.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5269,7 +5887,7 @@ documents:
   action: merge_into
   archive_reason: null
   replacement: design-overview
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: design-overview
   domain: design
@@ -5290,7 +5908,12 @@ documents:
   evidence:
   - This is an index/outline for neighboring design essays; merge its useful framing into a maintained
     CCB design overview.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-design
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/design/overview/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/design/overview/
+  retained_body_until: '2027-02-02'
 - original_path: doc/design-balance-lore/design-gameplay.md
   target_path: docs/zh_CN/design/gameplay.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5301,7 +5924,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: design-gameplay
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: design-gameplay
   domain: design
@@ -5321,7 +5944,12 @@ documents:
   evidence:
   - Retain the gameplay design discussion as explanation, clearly labeled non-runtime authority and reviewed
     for CCB divergence.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-design
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/design/gameplay/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/design/gameplay/
+  retained_body_until: '2027-02-02'
 - original_path: doc/design-balance-lore/design-user-experience.md
   target_path: docs/zh_CN/design/user-experience.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5332,7 +5960,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: design-user-experience
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: design-user-experience
   domain: design
@@ -5352,7 +5980,12 @@ documents:
   evidence:
   - The UX principles remain useful explanation, but must be tied to CCB accessibility/UI behavior and
     separated from binding runtime contracts.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-design
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/design/user-experience/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/design/user-experience/
+  retained_body_until: '2027-02-02'
 - original_path: doc/design-balance-lore/lore-background.md
   target_path: docs/zh_CN/lore/background.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5363,7 +5996,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: lore-background
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: lore-background
   domain: lore
@@ -5383,7 +6016,12 @@ documents:
   evidence:
   - The inherited background is useful lore context but must be reviewed for CCB canon/divergence and
     labeled as explanation rather than code authority.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-lore
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/lore/background/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/lore/background/
+  retained_body_until: '2027-02-02'
 - original_path: doc/design-balance-lore/lore-factions.md
   target_path: docs/zh_CN/lore/factions.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5394,7 +6032,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: lore-factions
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: lore-factions
   domain: lore
@@ -5415,7 +6053,12 @@ documents:
   evidence:
   - Faction lore should be reconciled with current faction JSON/source and CCB canon before becoming a
     searchable page.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-lore
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/lore/factions/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/lore/factions/
+  retained_body_until: '2027-02-02'
 - original_path: doc/design-balance-lore/lore.md
   target_path: docs/zh_CN/lore/overview.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5426,7 +6069,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: lore-overview
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: lore-overview
   domain: lore
@@ -5446,7 +6089,12 @@ documents:
   evidence:
   - Use this inherited overview as input, not authority; rewrite a CCB-reviewed lore navigation/explanation
     page with explicit provenance.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-lore
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/lore/overview/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/lore/overview/
+  retained_body_until: '2027-02-02'
 - original_path: doc/design-balance-lore/melee_weapons/MELEE_BALANCE_SPREADSHEET.md
   target_path: docs/zh_CN/archive/design/melee-balance-spreadsheet.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5458,7 +6106,7 @@ documents:
   archive_reason: The source page self-identifies as substantially out of date and has no current CCB
     validation trail.
   replacement: design-balance
-  migration_status: classified
+  migration_status: archived
   history_strategy: evaluate_filtered_history
   stable_document_id: archive-melee-balance-spreadsheet
   domain: design
@@ -5480,7 +6128,12 @@ documents:
     validate it as guidance.
   - 'The exact last-applicable SHA is intentionally unknown: imported snapshot history repeatedly re-adds
     this path at unrelated commits, so those SHAs are provenance rather than validity evidence.'
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-3-design
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/archive/design/melee-balance-spreadsheet/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/archive/design/melee-balance-spreadsheet/
+  retained_body_until: '2027-02-02'
 - original_path: doc/design-balance-lore/technology.md
   target_path: docs/zh_CN/lore/technology.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5491,7 +6144,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: lore-technology
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: lore-technology
   domain: lore
@@ -5511,7 +6164,12 @@ documents:
   evidence:
   - Technology assumptions affect lore and content design; rewrite after checking CCB divergence and label
     it as reviewed design explanation.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-lore
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/lore/technology/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/lore/technology/
+  retained_body_until: '2027-02-02'
 - original_path: doc/development_process.md
   target_path: docs/zh_CN/archive/governance/development-process.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5522,7 +6180,7 @@ documents:
   action: archive_public
   archive_reason: Obsolete upstream governance names, roles, and process conflict with current CCB policy.
   replacement: getting-started-first-contribution
-  migration_status: classified
+  migration_status: archived
   history_strategy: evaluate_filtered_history
   stable_document_id: archive-upstream-development-process
   domain: governance
@@ -5544,7 +6202,12 @@ documents:
     it must not remain active guidance.
   - 'The exact last-applicable SHA is intentionally unknown: imported snapshot history repeatedly re-adds
     this path at unrelated commits, so those SHAs are provenance rather than validity evidence.'
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-3-governance
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/archive/governance/development-process/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/archive/governance/development-process/
+  retained_body_until: '2027-02-02'
 - original_path: doc/reviewing_PR_guide.md
   target_path: docs/zh_CN/contributing/pr-review.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5555,7 +6218,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: pr-review-guide
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: pr-review-guide
   domain: governance
@@ -5576,7 +6239,12 @@ documents:
   evidence:
   - Review guidance is valuable but must match CCB Responsible-human, validation, and documentation-impact
     policy rather than upstream roles.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-0-governance
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/contributing/pr-review/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/contributing/pr-review/
+  retained_body_until: '2027-02-02'
 - original_path: doc/user-guides/COLOR.md
   target_path: docs/zh_CN/ui/colors.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5587,7 +6255,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: ui-colors
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: ui-colors
   domain: ui
@@ -5611,7 +6279,12 @@ documents:
   evidence:
   - Color configuration and themes are active; verify names, fallbacks, and examples against loaders and
     current data.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-ui
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/ui/colors/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/ui/colors/
+  retained_body_until: '2027-02-02'
 - original_path: doc/user-guides/FONT_OPTIONS.md
   target_path: docs/zh_CN/ui/fonts.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5622,7 +6295,7 @@ documents:
   action: migrate_rewrite
   archive_reason: null
   replacement: ui-fonts
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: ui-fonts
   domain: ui
@@ -5645,7 +6318,12 @@ documents:
   evidence:
   - Font configuration remains active across SDL paths; rewrite platform-specific instructions from fontdata
     and the current loader.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-2-ui
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/ui/fonts/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/ui/fonts/
+  retained_body_until: '2027-02-02'
 - original_path: lang/notes/README_all_translators.md
   target_path: docs/zh_CN/localization/translation-guide.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5656,7 +6334,7 @@ documents:
   action: merge_into
   archive_reason: null
   replacement: translation-guide
-  migration_status: classified
+  migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: legacy.lang-notes-readme-all-translators
   domain: localization
@@ -5677,7 +6355,12 @@ documents:
   evidence:
   - General translator notes duplicate the main translation guide and contain inherited workflow assumptions;
     merge only verified content.
+  - Permanent bilingual repository entry prepared at 2026-08-02; the historical body remains during retention.
   migration_batch: phase-1-localization
+  moved_at: '2026-08-02'
+  zh_url: https://crimsoncrossbunker.github.io/CCB-Docs/localization/translation-guide/
+  en_url: https://crimsoncrossbunker.github.io/CCB-Docs/en/localization/translation-guide/
+  retained_body_until: '2027-02-02'
 - original_path: lang/notes/ru-notes.md
   target_path: lang/notes/ru-notes.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5688,7 +6371,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo
   stable_document_id: translation-notes-ru
   domain: localization
@@ -5708,6 +6391,10 @@ documents:
   - This is language-team-specific operational context best kept beside translation sources, not promoted
     into bilingual site navigation or AI search.
   migration_batch: phase-3-localization
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: src/lua/LICENSE.md
   target_path: src/lua/LICENSE.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5736,6 +6423,10 @@ documents:
   evidence:
   - Retained in place under its file-specific third-party license.
   migration_batch: null
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: src/lua/README.md
   target_path: src/lua/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5746,7 +6437,7 @@ documents:
   action: retain_third_party
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: retain_in_place
   stable_document_id: vendor-lua-runtime-provenance
   domain: third-party
@@ -5766,6 +6457,10 @@ documents:
   - This is Lua 5.4.8 vendored-source provenance and belongs beside the third-party runtime; it is not
     CCB API documentation.
   migration_batch: phase-3-third-party
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: src/third-party/snmalloc/README.md
   target_path: src/third-party/snmalloc/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5794,6 +6489,10 @@ documents:
   evidence:
   - Retained in place under its file-specific third-party license.
   migration_batch: null
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: src/third-party/snmalloc/stl/README.md
   target_path: src/third-party/snmalloc/stl/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5822,6 +6521,10 @@ documents:
   evidence:
   - Retained in place under its file-specific third-party license.
   migration_batch: null
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: src/third-party/snmalloc/stl/cxx/README.md
   target_path: src/third-party/snmalloc/stl/cxx/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5850,6 +6553,10 @@ documents:
   evidence:
   - Retained in place under its file-specific third-party license.
   migration_batch: null
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: src/third-party/snmalloc/stl/gnu/README.md
   target_path: src/third-party/snmalloc/stl/gnu/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5878,6 +6585,10 @@ documents:
   evidence:
   - Retained in place under its file-specific third-party license.
   migration_batch: null
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: src/third-party/zstd/README.md
   target_path: src/third-party/zstd/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5906,6 +6617,10 @@ documents:
   evidence:
   - Retained in place under its file-specific third-party license.
   migration_batch: null
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: tools/llama/README.md
   target_path: tools/llama/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5916,7 +6631,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo
   stable_document_id: tool-llama-build-acceleration
   domain: tooling
@@ -5937,6 +6652,10 @@ documents:
   - The helper scripts still exist, so keep their operational README near the tool; refresh stale CDDA/SDL2
     wording before marking it verified.
   migration_batch: phase-2-tooling
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
 - original_path: tools/lua_api/README.md
   target_path: tools/lua_api/README.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
@@ -5947,7 +6666,7 @@ documents:
   action: keep_in_repo
   archive_reason: null
   replacement: null
-  migration_status: classified
+  migration_status: verified
   history_strategy: keep_in_repo
   stable_document_id: tool-lua-api-coverage
   domain: lua
@@ -5971,3 +6690,7 @@ documents:
   - This is current CCB operational contract/coverage tooling documentation and should stay beside the
     scripts, with generated public reference published separately.
   migration_batch: phase-0-lua
+  moved_at: null
+  zh_url: null
+  en_url: null
+  retained_body_until: null
