@@ -100,6 +100,18 @@
     "looks_like": "fd_fog"
   },
   {
+    "id": "fd_test_fire_reaction",
+    "type": "field_type",
+    "intensity_levels": [
+      { "name": "test fire reaction", "sym": "1" },
+      { "name": "test fire reaction", "sym": "2" },
+      { "name": "test fire reaction", "sym": "3" }
+    ],
+    "fire_reaction": { "degrade_at": 2, "clear_at": 3, "interval": "1 turns" },
+    "half_life": "1 hours",
+    "phase": "solid"
+  },
+  {
     "id": "test_fd_migration_new_id",
     "type": "field_type",
     "intensity_levels": [ { "name": "migrated" } ]
