@@ -1,0 +1,1005 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://docs.crimsoncrossbunker.org/schemas/contract-inventory-v1.json",
+  "title": "CCB JSON and EOC contract inventory",
+  "type": "object",
+  "required": [
+    "$schema",
+    "schema_version",
+    "inventory_kind",
+    "source",
+    "summary",
+    "entries"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "inventory_kind": {
+      "enum": [
+        "json_object_types",
+        "eoc_conditions",
+        "eoc_effects"
+      ]
+    },
+    "source": {
+      "$ref": "#/$defs/source"
+    },
+    "summary": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          }
+        ]
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "global_contract": {
+      "$ref": "#/$defs/eoc_global_contract"
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "inventory_kind": {
+            "const": "json_object_types"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "policy"
+        ],
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/$defs/json_entry"
+            }
+          }
+        }
+      },
+      "else": {
+        "required": [
+          "global_contract"
+        ],
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/$defs/eoc_entry"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "source": {
+      "type": "object",
+      "required": [
+        "project",
+        "source_fingerprint",
+        "contract_roots",
+        "discovery"
+      ],
+      "properties": {
+        "project": {
+          "const": "Cataclysm-Cleanwater-Bomb"
+        },
+        "source_fingerprint": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "contract_roots": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^data/"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "discovery": {
+          "const": "git ls-files"
+        },
+        "registrations": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parser": {
+          "type": "string",
+          "minLength": 1
+        },
+        "variable_parser": {
+          "type": "string",
+          "minLength": 1
+        },
+        "object_parser": {
+          "type": "string",
+          "minLength": 1
+        },
+        "string_parser": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "source_reference": {
+      "type": "object",
+      "required": [
+        "path",
+        "line",
+        "symbol"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^src/"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "symbol": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "eoc_global_contract": {
+      "type": "object",
+      "required": [
+        "parser_order",
+        "variable_scopes",
+        "value_helpers"
+      ],
+      "properties": {
+        "parser_order": {
+          "const": "first matching parser wins"
+        },
+        "unknown_object_condition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unknown_string_condition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "accepted_effect_container_shapes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "unknown_effect": {
+          "type": "string",
+          "minLength": 1
+        },
+        "variable_scopes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "value_helpers": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "unknown_object_condition",
+            "unknown_string_condition"
+          ]
+        },
+        {
+          "required": [
+            "accepted_effect_container_shapes",
+            "unknown_effect"
+          ]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "data_reference": {
+      "type": "object",
+      "required": [
+        "path",
+        "pointer"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^data/"
+        },
+        "pointer": {
+          "type": "string",
+          "pattern": "^(?:$|/)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "documentation": {
+      "type": "object",
+      "required": [
+        "status",
+        "evidence",
+        "confidence"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "lexically_mentioned",
+            "not_found"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "maxItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "path",
+              "line"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "pattern": "^doc/JSON/"
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "confidence": {
+          "const": "lexical_only"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "not_found"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "maxItems": 0
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "evidence": {
+                "minItems": 1,
+                "maxItems": 1
+              }
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "json_entry": {
+      "type": "object",
+      "required": [
+        "type",
+        "registrations",
+        "compile_conditional_variants",
+        "instance_evidence",
+        "schema",
+        "documentation",
+        "field_contract",
+        "contract_status"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "registrations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "registration_order",
+              "type",
+              "handler_kind",
+              "handler_symbol",
+              "handler_expression",
+              "compile_context",
+              "source"
+            ],
+            "properties": {
+              "registration_order": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "handler_kind": {
+                "enum": [
+                  "direct_function",
+                  "lambda",
+                  "callable"
+                ]
+              },
+              "handler_symbol": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "handler_expression": {
+                "type": "string",
+                "minLength": 1
+              },
+              "compile_context": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "uniqueItems": true
+              },
+              "source": {
+                "$ref": "#/$defs/source_reference"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "compile_conditional_variants": {
+          "type": "boolean"
+        },
+        "instance_evidence": {
+          "type": "object",
+          "required": [
+            "occurrences",
+            "examples",
+            "contract_roots"
+          ],
+          "properties": {
+            "occurrences": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "examples": {
+              "type": "array",
+              "maxItems": 1,
+              "items": {
+                "$ref": "#/$defs/data_reference"
+              }
+            },
+            "contract_roots": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^data/"
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "occurrences": {
+                    "const": 0
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "examples": {
+                    "maxItems": 0
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "examples": {
+                    "minItems": 1,
+                    "maxItems": 1
+                  }
+                }
+              }
+            }
+          ],
+          "additionalProperties": false
+        },
+        "schema": {
+          "type": "object",
+          "required": [
+            "status",
+            "paths",
+            "note"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "none",
+                "partial",
+                "complete"
+              ]
+            },
+            "paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            },
+            "note": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "const": "none"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "paths": {
+                    "maxItems": 0
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "paths": {
+                    "minItems": 1
+                  }
+                }
+              }
+            }
+          ],
+          "additionalProperties": false
+        },
+        "documentation": {
+          "$ref": "#/$defs/documentation"
+        },
+        "field_contract": {
+          "$ref": "#/$defs/field_contract"
+        },
+        "contract_status": {
+          "enum": [
+            "partial",
+            "complete"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "field_evidence": {
+      "type": "object",
+      "required": [
+        "name",
+        "required",
+        "requiredness_evidence",
+        "default_expression",
+        "source"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "requiredness_evidence": {
+          "enum": [
+            "mandatory",
+            "optional",
+            "guarded_or_loader_optional_path"
+          ]
+        },
+        "default_expression": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/source_reference"
+        }
+      },
+      "additionalProperties": false
+    },
+    "field_contract": {
+      "type": "object",
+      "required": [
+        "status",
+        "inheritance",
+        "copy_from",
+        "validation",
+        "note"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "unclassified",
+            "partial",
+            "complete"
+          ]
+        },
+        "required_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "optional_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/field_evidence"
+          }
+        },
+        "inheritance": {
+          "type": "string",
+          "minLength": 1
+        },
+        "copy_from": {
+          "type": "string",
+          "minLength": 1
+        },
+        "validation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unclassified"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "required_fields",
+              "optional_fields"
+            ]
+          },
+          "else": {
+            "required": [
+              "fields"
+            ]
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "classification_block": {
+      "type": "object",
+      "required": [
+        "status",
+        "items"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "unclassified",
+            "partial",
+            "complete",
+            "not_applicable"
+          ]
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object"
+              }
+            ]
+          }
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "variable_contract": {
+      "type": "object",
+      "required": [
+        "status",
+        "scopes",
+        "known_global_scopes"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "unclassified",
+            "partial",
+            "complete",
+            "not_applicable"
+          ]
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "known_global_scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "context_contract": {
+      "type": "object",
+      "required": [
+        "status",
+        "requirements"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "unclassified",
+            "partial",
+            "complete",
+            "not_applicable"
+          ]
+        },
+        "requirements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "eoc_entry": {
+      "type": "object",
+      "required": [
+        "key",
+        "syntaxes",
+        "accepted_json_shapes",
+        "handlers",
+        "aliases",
+        "parser_registrations",
+        "parameters",
+        "value_types",
+        "defaults",
+        "nesting",
+        "talker_semantics",
+        "variables",
+        "context",
+        "contract_status",
+        "contract_kind",
+        "example_evidence",
+        "documentation"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "syntaxes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "accepted_json_shapes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "handlers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "aliases": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "parser_registrations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "registration_order",
+              "alias_role",
+              "alias_group",
+              "source"
+            ],
+            "properties": {
+              "registration_order": {
+                "type": "integer",
+                "minimum": -1
+              },
+              "alias_role": {
+                "enum": [
+                  "alpha",
+                  "beta",
+                  "special"
+                ]
+              },
+              "alias_group": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "registration_kind": {
+                "enum": [
+                  "static_map",
+                  "explicit_branch"
+                ]
+              },
+              "source": {
+                "$ref": "#/$defs/source_reference"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "parameters": {
+          "$ref": "#/$defs/classification_block"
+        },
+        "value_types": {
+          "$ref": "#/$defs/classification_block"
+        },
+        "defaults": {
+          "$ref": "#/$defs/classification_block"
+        },
+        "nesting": {
+          "type": "object",
+          "required": [
+            "status",
+            "allows"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "unclassified",
+                "partial",
+                "complete",
+                "not_applicable"
+              ]
+            },
+            "allows": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            }
+          },
+          "additionalProperties": false
+        },
+        "talker_semantics": {
+          "type": "object",
+          "required": [
+            "status",
+            "talkers",
+            "note"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "unknown",
+                "legacy_alpha_beta_alias",
+                "partial",
+                "complete"
+              ]
+            },
+            "talkers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            },
+            "note": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "variables": {
+          "$ref": "#/$defs/variable_contract"
+        },
+        "context": {
+          "$ref": "#/$defs/context_contract"
+        },
+        "contract_status": {
+          "enum": [
+            "partial",
+            "complete"
+          ]
+        },
+        "contract_kind": {
+          "enum": [
+            "condition",
+            "effect"
+          ]
+        },
+        "example_evidence": {
+          "type": "object",
+          "required": [
+            "status",
+            "occurrences",
+            "examples",
+            "confidence",
+            "note"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "lexical_candidate",
+                "not_found"
+              ]
+            },
+            "occurrences": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "examples": {
+              "type": "array",
+              "maxItems": 1,
+              "items": {
+                "$ref": "#/$defs/data_reference"
+              }
+            },
+            "confidence": {
+              "const": "lexical_only"
+            },
+            "note": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "const": "not_found"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "occurrences": {
+                    "const": 0
+                  },
+                  "examples": {
+                    "maxItems": 0
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "occurrences": {
+                    "minimum": 1
+                  },
+                  "examples": {
+                    "minItems": 1,
+                    "maxItems": 1
+                  }
+                }
+              }
+            }
+          ],
+          "additionalProperties": false
+        },
+        "documentation": {
+          "$ref": "#/$defs/documentation"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

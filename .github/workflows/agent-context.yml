@@ -25,6 +25,11 @@ jobs:
           python3 tools/agent/check_project_metadata.py
           python3 -m unittest discover -s tools/agent -p 'test_*.py'
 
+      - name: Validate generated JSON and EOC contracts
+        run: |
+          python3 tools/json_api/generate_contracts.py --check
+          python3 -m unittest discover -s tools/json_api -p 'test_*.py'
+
       - name: Report documentation impact and validate PR responsibility
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
