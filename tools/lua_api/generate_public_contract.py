@@ -1538,3 +1538,51 @@ def build_coverage(contract: dict[str, object]) -> dict[str, object]:
             "generated pages are delivered by a stacked CCB-Docs PR"
         ),
     }
+
+def serialize(value: dict[str, object]) -> str:
+    serialized = json.dumps(
+        value, ensure_ascii=False, indent=2, sort_keys=False
+    )
+    return serialized + "\n"
+
+def write_or_check(path: Path, contents: str, check: bool) -> None:
+    if check:
+        expected = json.loads(contents)
+        actual = (
+            json.loads(path.read_text(encoding="utf-8"))
+            if path.exists()
+            else None
+        )
+        if actual != expected:
+            raise RuntimeError(
+                f"{relative(path)} is stale; run "
+                "python3 tools/lua_api/generate_public_contract.py"
+            )
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(contents, encoding="utf-8")
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--coverage", type=Path, default=DEFAULT_COVERAGE)
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="fail instead of modifying stale outputs",
+    )
+    arguments = parser.parse_args()
+    contract = build_contract()
+    coverage = build_coverage(contract)
+    write_or_check(arguments.output, serialize(contract), arguments.check)
+    write_or_check(arguments.coverage, serialize(coverage), arguments.check)
+    counts = section_counts(contract)
+    print(
+        "Lua v5 public contract: "
+        f"{coverage['public_symbols']} symbols, "
+        f"{counts['functions']} callable paths, "
+        f"{counts['methods']} methods, {counts['events']} events, "
+        f"{counts['hooks']} hooks, {counts['callbacks']} callbacks, "
+        f"{coverage['undocumented_symbols']['count']} undocumented"
+    )
+    return 0
