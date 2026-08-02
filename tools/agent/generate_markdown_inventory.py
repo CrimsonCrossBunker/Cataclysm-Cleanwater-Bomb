@@ -70,34 +70,39 @@ def classification(path: str) -> tuple[str, str, str]:
     return "review", "CC-BY-SA-3.0", "evaluate_filtered_history"
 def build_inventory(
     commit: str,
-    contributor_snapshot: dict[str, list[str]] | None = None,
+    record_snapshot: dict[str, object] | None = None,
+    anomaly_sink: list[dict] | None = None,
 ) -> dict:
-    recorded_contributors = contributor_snapshot or {}
+    recorded = record_snapshot or {}
     documents = []
     for path in tracked_markdown(commit):
-        action, license_name, history_strategy = classification(path)
-        documents.append(
-            {
-                "original_path": path,
-                "target_path": (
-                    path
-                    if action in {"keep_in_repo", "retain_third_party"}
-                    else None
-                ),
-                "source_commit": commit,
-                "contributors": list(recorded_contributors[path])
-                if path in recorded_contributors
-                else contributors(commit, path),
-                "license": license_name,
-                "action": action,
-                "archive_reason": None,
-                "replacement": None,
-                "migration_status": "inventoried",
-                "history_strategy": history_strategy,
-            }
-        )
+        saved = recorded.get(path)
+        if isinstance(saved, dict):
+            record = deepcopy(saved)
+            names = list(record.get("contributors", []))
+            clean_contributors, anomalies = sanitize_contributors(names)
+            record["original_path"] = path
+            record["source_commit"] = commit
+            record["contributors"] = clean_contributors or [
+                "Unknown (see source history)"
+            ]
+            record["contributor_anomaly_count"] = int(
+                record.get("contributor_anomaly_count", 0)
+            ) + len(anomalies)
+        else:
+            names = list(saved) if isinstance(saved, list) else git(
+                "log", commit, "--format=%aN", "--", path
+            ).splitlines()
+            record, anomalies = default_record(commit, path, names)
+        if anomaly_sink is not None:
+            anomaly_sink.extend(
+                {"original_path": path, **anomaly} for anomaly in anomalies
+            )
+        documents.append(record)
+    action_counts = Counter(item["action"] for item in documents)
+    status_counts = Counter(item["migration_status"] for item in documents)
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "kind": "markdown_inventory",
         "source_commit": commit,
         "document_count": len(documents),
@@ -106,11 +111,16 @@ def build_inventory(
             "tool/config paths; "
             "filesystem caches are never traversed."
         ),
+        "classification_summary": {
+            "review": action_counts.get("review", 0),
+            "actions": dict(sorted(action_counts.items())),
+            "migration_statuses": dict(sorted(status_counts.items())),
+        },
         "documents": documents,
     }
 def render(data: dict) -> str:
     return yaml.safe_dump(data, allow_unicode=True, sort_keys=False, width=100)
-def inventory_for_check(output: Path) -> tuple[str, dict[str, list[str]]]:
+def inventory_for_check(output: Path) -> tuple[str, dict[str, dict]]:
     """Load the frozen commit and history snapshot used by check mode.
 
     Contributor history depends on clone depth and mailmap availability.  A
@@ -120,16 +130,14 @@ def inventory_for_check(output: Path) -> tuple[str, dict[str, list[str]]]:
     if not output.exists():
         raise FileNotFoundError(f"inventory does not exist: {output}")
     data = yaml.safe_load(output.read_text(encoding="utf-8"))
-    contributor_snapshot = {
-        item["original_path"]: item["contributors"]
+    record_snapshot = {
+        item["original_path"]: item
         for item in data.get("documents", [])
-        if isinstance(item.get("original_path"), str) and isinstance(
-            item.get("contributors"), list
-        )
+        if isinstance(item.get("original_path"), str)
     }
     return (
         resolve_commit(str(data["source_commit"])),
-        contributor_snapshot,
+        record_snapshot,
     )
 def main() -> int:
     parser = argparse.ArgumentParser()
