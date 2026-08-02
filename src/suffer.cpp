@@ -141,6 +141,7 @@ static const json_character_flag
 json_flag_SUNBURN_SUPERNATURAL_REDUCTION( "SUNBURN_SUPERNATURAL_REDUCTION" );
 
 static const damage_type_id damage_bash( "bash" );
+static const sub_bodypart_str_id sub_body_part_torso_upper( "torso_upper" );
 static const sub_bodypart_str_id sub_body_part_torso_neck( "torso_neck" );
 
 static const morale_type morale_feeling_bad( "morale_feeling_bad" );
@@ -424,7 +425,7 @@ void suffer::while_grabbed( Character &you )
             pressure_absorbed = false;
         }
     };
-    absorb_bodypart_pressure( body_part_torso.id() );
+    absorb_sub_bodypart_pressure( sub_body_part_torso_upper.id() );
     absorb_sub_bodypart_pressure( sub_body_part_torso_neck.id() );
     absorb_bodypart_pressure( body_part_mouth.id() );
     absorb_bodypart_pressure( body_part_eyes.id() );
