@@ -503,3 +503,163 @@ def aggregate_parser_entries(
             }
         )
     return result
+
+def add_logical_conditions(
+    entries: list[dict[str, object]], condition_contents: str
+) -> None:
+    by_key = {str(entry["key"]): entry for entry in entries}
+    specifications = {
+        "and": ("array", ["condition_object", "condition_string"]),
+        "or": ("array", ["condition_object", "condition_string"]),
+        "not": ("object_or_string", ["condition_object", "condition_string"]),
+    }
+    for key, (shape, nesting) in specifications.items():
+        member_kind = "array" if key != "not" else "object"
+        needle = f'jo.has_{member_kind}( "{key}" )'
+        offset = condition_contents.find(needle)
+        if offset < 0:
+            raise RuntimeError(
+                f"logical condition parser was not found: {key}")
+        by_key[key] = {
+            "key": key,
+            "syntaxes": ["logical_operator"],
+            "accepted_json_shapes": [shape],
+            "handlers": ["conditional_t::conditional_t"],
+            "aliases": [key],
+            "parser_registrations": [
+                {
+                    "registration_order": -1,
+                    "alias_role": "special",
+                    "alias_group": [key],
+                    "source": source_reference(
+                        "src/condition.cpp",
+                        condition_contents,
+                        offset,
+                        "conditional_t::conditional_t",
+                    ),
+                }
+            ],
+            "parameters": {"status": "complete", "items": []},
+            "value_types": {"status": "complete", "items": [shape]},
+            "defaults": {"status": "complete", "items": []},
+            "nesting": {"status": "complete", "allows": nesting},
+            "talker_semantics": legacy_alias_note([key]),
+            "variables": {
+                "status": "not_applicable",
+                "scopes": [],
+                "known_global_scopes": list(VARIABLE_SCOPES),
+            },
+            "context": {"status": "complete", "requirements": []},
+            "contract_status": "complete",
+            "contract_kind": "condition",
+        }
+    entries[:] = [by_key[key] for key in sorted(by_key)]
+
+def walk_json(
+        value: object, pointer: str = "") -> Iterable[tuple[object, str]]:
+    yield value, pointer
+    if isinstance(value, dict):
+        for key, child in value.items():
+            escaped = str(key).replace("~", "~0").replace("/", "~1")
+            yield from walk_json(child, f"{pointer}/{escaped}")
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            yield from walk_json(child, f"{pointer}/{index}")
+
+def tracked_json_scan(
+    root: Path, condition_keys: set[str], effect_keys: set[str]
+) -> dict[str, object]:
+    paths = [
+        path
+        for path in git_tracked_files(root, *CONTRACT_ROOTS)
+        if path.endswith(".json")
+    ]
+    type_counts: collections.Counter[str] = collections.Counter()
+    type_examples: dict[str, dict[str, str]] = {}
+    condition_counts: collections.Counter[str] = collections.Counter()
+    condition_examples: dict[str, dict[str, str]] = {}
+    effect_counts: collections.Counter[str] = collections.Counter()
+    effect_examples: dict[str, dict[str, str]] = {}
+    missing_type = 0
+    top_level_objects = 0
+    for path in paths:
+        try:
+            payload = json.loads(read_text(root, path))
+        except (OSError, UnicodeError, json.JSONDecodeError) as error:
+            raise RuntimeError(
+                f"tracked JSON cannot be parsed: {path}: {error}") from error
+        top_level = payload if isinstance(payload, list) else [payload]
+        for index, item in enumerate(top_level):
+            if not isinstance(item, dict):
+                continue
+            top_level_objects += 1
+            pointer = f"/{index}" if isinstance(payload, list) else ""
+            object_type = item.get("type")
+            if isinstance(object_type, str):
+                type_counts[object_type] += 1
+                type_examples.setdefault(
+                    object_type, {
+                        "path": path, "pointer": pointer})
+            else:
+                missing_type += 1
+        for item, pointer in walk_json(payload):
+            if isinstance(item, dict):
+                for key in item:
+                    if key in condition_keys:
+                        condition_counts[key] += 1
+                        condition_examples.setdefault(
+                            key, {"path": path, "pointer": f"{pointer}/{key}"}
+                        )
+                    if key in effect_keys:
+                        effect_counts[key] += 1
+                        effect_examples.setdefault(
+                            key, {"path": path, "pointer": f"{pointer}/{key}"}
+                        )
+            elif isinstance(item, str):
+                if item in condition_keys:
+                    condition_counts[item] += 1
+                    condition_examples.setdefault(
+                        item, {"path": path, "pointer": pointer})
+                if item in effect_keys:
+                    effect_counts[item] += 1
+                    effect_examples.setdefault(
+                        item, {"path": path, "pointer": pointer})
+    return {
+        "tracked_json_files": len(paths),
+        "top_level_objects": top_level_objects,
+        "top_level_objects_without_string_type": missing_type,
+        "type_counts": type_counts,
+        "type_examples": type_examples,
+        "condition_counts": condition_counts,
+        "condition_examples": condition_examples,
+        "effect_counts": effect_counts,
+        "effect_examples": effect_examples,
+        "paths": paths,
+    }
+
+def lexical_documentation(
+    root: Path, keys: Iterable[str]
+) -> dict[str, dict[str, object]]:
+    paths = [path for path in git_tracked_files(
+        root, "doc/JSON") if path.endswith(".md")]
+    contents = {path: read_text(root, path) for path in paths}
+    result: dict[str, dict[str, object]] = {}
+    for key in keys:
+        evidence: dict[str, object] | None = None
+        pattern = re.compile(
+            rf"(?<![A-Za-z0-9_]){re.escape(key)}(?![A-Za-z0-9_])")
+        for path in paths:
+            match = pattern.search(contents[path])
+            if match:
+                evidence = {
+                    "path": path,
+                    "line": line_number(
+                        contents[path],
+                        match.start())}
+                break
+        result[key] = {
+            "status": "lexically_mentioned" if evidence else "not_found",
+            "evidence": [evidence] if evidence else [],
+            "confidence": "lexical_only",
+        }
+    return result
