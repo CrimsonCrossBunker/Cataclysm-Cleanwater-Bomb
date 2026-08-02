@@ -40,6 +40,10 @@ file(GLOB LUA_HEADERS CONFIGURE_DEPENDS
 
 # Add both sources and headers to the library (headers for IDE visibility)
 add_library(liblua ${LUA_SOURCES} ${LUA_HEADERS})
+# sol is configured (via src/sol/config.hpp, SOL_USE_CXX_LUA) to reference
+# Lua symbols with C++ linkage, so the Lua sources must be compiled as C++
+# too, or linking fails with undefined Lua references on CMake builds.
+set_source_files_properties(${LUA_SOURCES} PROPERTIES LANGUAGE CXX)
 target_include_directories(liblua SYSTEM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Lua is third-party C code.  Keep its diagnostics isolated from the game's
