@@ -207,6 +207,18 @@ UNSAFE_CONTRIBUTOR_PATTERNS = (
     re.compile(r"(?:^|\s)-(?:c|e|x)(?:\s|$)"),
 )
 MAX_CONTRIBUTOR_LENGTH = 160
+def validate_anomaly_report(path: Path, commit: str) -> None:
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if data.get("source_commit") != commit:
+        raise ValueError("contributor anomaly report uses another source commit")
+    entries = data.get("entries", [])
+    if data.get("rejected_count") != len(entries):
+        raise ValueError("contributor anomaly rejected_count is stale")
+    for entry in entries:
+        if "value" in entry:
+            raise ValueError("raw rejected contributor identity must not be published")
+        if not str(entry.get("fingerprint", "")).startswith("sha256:"):
+            raise ValueError("contributor anomaly needs a SHA-256 fingerprint")
 KEEP_IN_REPO = {
     "README.md",
     "CONTRIBUTING.md",
