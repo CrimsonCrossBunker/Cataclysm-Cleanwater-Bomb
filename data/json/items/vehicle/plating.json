@@ -64,8 +64,8 @@
     "material": [ "superalloy" ],
     "volume": "6 L",
     "category": "veh_parts",
-    "price": "185 USD",
-    "price_postapoc": "5 USD",
+    "price": "5 kUSD",
+    "price_postapoc": "75 USD",
     "qualities": [ [ "COOK", 1 ] ],
     "use_action": [ "HEAT_SOLID_ITEMS" ],
     "melee_damage": { "bash": 6 }
@@ -81,7 +81,7 @@
     "material": [ "superalloy" ],
     "volume": "500 ml",
     "category": "veh_parts",
-    "price": "85 USD",
+    "price": "350 USD",
     "price_postapoc": "5 USD",
     "qualities": [ [ "COOK", 1 ] ],
     "use_action": [ "HEAT_SOLID_ITEMS" ]
