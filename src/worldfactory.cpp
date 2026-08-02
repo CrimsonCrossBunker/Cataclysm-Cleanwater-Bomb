@@ -10,6 +10,7 @@
 #include <iterator>
 #include <memory>
 #include <set>
+#include <system_error>
 #include <unordered_map>
 #include <utility>
 
@@ -3757,15 +3758,89 @@ static bool isForbidden( const cata_path &candidate )
            || candidate_path.extension().generic_u8string() == ".dict";
 }
 
-void worldfactory::delete_world( const std::string &worldname, const bool delete_folder )
+static void make_world_tree_writable( const std::filesystem::path &worldpath )
 {
+    std::error_code ec;
+    std::filesystem::permissions( worldpath, std::filesystem::perms::owner_all,
+                                  std::filesystem::perm_options::add, ec );
+
+    std::filesystem::recursive_directory_iterator iter(
+        worldpath, std::filesystem::directory_options::skip_permission_denied, ec );
+    const std::filesystem::recursive_directory_iterator end;
+    while( iter != end ) {
+        const std::filesystem::path entry_path = iter->path();
+        std::error_code status_ec;
+        const std::filesystem::file_status status = iter->symlink_status( status_ec );
+        if( !status_ec && !std::filesystem::is_symlink( status ) ) {
+            const std::filesystem::perms permissions = std::filesystem::is_directory( status ) ?
+                    std::filesystem::perms::owner_all : std::filesystem::perms::owner_write;
+            std::error_code permissions_ec;
+            std::filesystem::permissions( entry_path, permissions,
+                                          std::filesystem::perm_options::add, permissions_ec );
+        }
+        iter.increment( ec );
+        if( ec ) {
+            ec.clear();
+        }
+    }
+}
+
+static bool remove_world_directory( const std::filesystem::path &worldpath,
+                                    std::error_code &result_error )
+{
+    std::error_code remove_error;
+    std::filesystem::remove_all( worldpath, remove_error );
+
+    std::error_code exists_error;
+    bool directory_remains = std::filesystem::exists( worldpath, exists_error );
+    if( !directory_remains && !exists_error ) {
+        return true;
+    }
+
+    // Windows refuses to delete read-only files.  A failed remove_all may also
+    // leave only the now-empty world directory behind, so make any remaining
+    // entries writable and retry the complete operation.
+    make_world_tree_writable( worldpath );
+    remove_error.clear();
+    std::filesystem::remove_all( worldpath, remove_error );
+
+    exists_error.clear();
+    directory_remains = std::filesystem::exists( worldpath, exists_error );
+    if( !directory_remains && !exists_error ) {
+        return true;
+    }
+
+    if( exists_error ) {
+        result_error = exists_error;
+    } else if( remove_error ) {
+        result_error = remove_error;
+    } else {
+        result_error = std::make_error_code( std::errc::directory_not_empty );
+    }
+    return false;
+}
+
+bool worldfactory::delete_world( const std::string &worldname, const bool delete_folder )
+{
+    if( !has_world( worldname ) ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Unable to delete unknown world '" << worldname << "'";
+        return false;
+    }
+
     cata_path worldpath = get_world( worldname )->folder_path();
     std::set<std::filesystem::path> directory_paths;
 
     if( delete_folder ) {
-        std::filesystem::remove_all( worldpath.get_unrelative_path() );
+        const std::filesystem::path unrelative_worldpath = worldpath.get_unrelative_path();
+        std::error_code ec;
+        if( !remove_world_directory( unrelative_worldpath, ec ) ) {
+            DebugLog( D_ERROR, D_MAIN ) << "Unable to delete world directory ['"
+                                        << unrelative_worldpath.generic_u8string() << "']: "
+                                        << ec.message();
+            return false;
+        }
         remove_world( worldname );
-        return;
+        return true;
     }
 
     // Clear out everything except options and mods and compression dictionaries.
@@ -3795,4 +3870,5 @@ void worldfactory::delete_world( const std::string &worldname, const bool delete
         remove_directory( *it );
     }
     get_world( worldname )->world_saves.clear();
+    return true;
 }

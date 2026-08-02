@@ -147,8 +147,10 @@ class worldfactory
          * @param delete_folder If true: delete all the files and directories of the given
          * world folder. Else just avoid deleting the config files and the directory
          * itself.
+         * @return True when the requested operation completed.  When deleting the
+         * world, success means its directory no longer exists.
          */
-        void delete_world( const std::string &worldname, bool delete_folder );
+        bool delete_world( const std::string &worldname, bool delete_folder );
 
         static std::map<size_t, inclusive_rectangle<point>> draw_worldgen_tabs( const catacurses::window &w,
                 size_t current );
