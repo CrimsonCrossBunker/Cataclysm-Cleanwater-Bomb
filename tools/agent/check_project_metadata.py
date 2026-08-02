@@ -200,6 +200,33 @@ def validate_inventory() -> None:
     if any("value" in entry for entry in anomalies["entries"]):
         raise ValueError("raw rejected contributor identities must not be published")
 
+    batches_path = ROOT / "doc/migration/migration-batches.yml"
+    batches_schema_path = ROOT / "doc/migration/migration-batches.schema.json"
+    batches = load_yaml(batches_path)
+    batches_schema = json.loads(
+        batches_schema_path.read_text(encoding="utf-8")
+    )
+    jsonschema.Draft202012Validator(batches_schema).validate(batches)
+    batch_documents = [
+        document
+        for batch in batches["batches"]
+        for document in batch["documents"]
+    ]
+    if batches["batch_count"] != len(batches["batches"]):
+        raise ValueError("migration batch_count is stale")
+    if batches["document_count"] != len(batch_documents):
+        raise ValueError("migration batch document_count is stale")
+    expected_batched = {
+        entry["stable_document_id"]
+        for entry in inventory["documents"]
+        if entry["migration_batch"]
+    }
+    actual_batched = {
+        entry["stable_document_id"] for entry in batch_documents
+    }
+    if actual_batched != expected_batched:
+        raise ValueError("migration batches do not match the inventory")
+
 
 def validate_documentation_registry() -> None:
     registry_path = ROOT / "ai/documentation-registry.yml"
