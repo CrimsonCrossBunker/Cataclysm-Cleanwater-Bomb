@@ -2997,6 +2997,71 @@ end) == false)
         original_sleep_deprivation );
 }
 
+TEST_CASE( "lua_v5_gut_nutrients_are_generation_safe_and_bounded",
+           "[lua][bindings][needs][gut][integration]" )
+{
+    avatar &player = get_avatar();
+    const vitamin_id vitamin_c( "vitC" );
+    const int original_calories = player.guts.get_calories();
+    const int original_vitamin = player.guts.get_vitamin( vitamin_c );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local vit_c = game.types.id("vitamin", "vitC")
+
+local calories = game.needs.get_gut_calories(avatar)
+assert(calories.ok == true)
+assert(math.type(calories.value) == "integer")
+
+local assigned_calories = game.needs.set_gut_calories(avatar, 100)
+assert(assigned_calories.ok == true)
+assert(assigned_calories.value.before == calories.value)
+assert(assigned_calories.value.after == 100)
+
+local modified_calories = game.needs.modify_gut_calories(avatar, -25)
+assert(modified_calories.ok == true)
+assert(modified_calories.value.applied_delta == -25)
+assert(modified_calories.value.after == 75)
+
+local vitamin = game.needs.get_gut_vitamin(avatar, vit_c)
+assert(vitamin.ok == true)
+assert(vitamin.value.id == vit_c)
+assert(math.type(vitamin.value.amount) == "integer")
+
+local assigned_vitamin = game.needs.set_gut_vitamin(avatar, vit_c, 20)
+assert(assigned_vitamin.ok == true)
+assert(assigned_vitamin.value.after.amount == 20)
+
+local modified_vitamin = game.needs.modify_gut_vitamin(avatar, vit_c, -5)
+assert(modified_vitamin.ok == true)
+assert(modified_vitamin.value.applied_delta == -5)
+assert(modified_vitamin.value.after.amount == 15)
+
+assert(pcall(function()
+    game.needs.get_gut_vitamin(avatar, game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.needs.set_gut_calories(avatar, 2000001)
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( player.guts.get_calories() == 75 );
+    CHECK( player.guts.get_vitamin( vitamin_c ) == 15 );
+    player.guts.mod_calories( original_calories - 75 );
+    player.guts.set_vitamin( vitamin_c, original_vitamin );
+}
+
 TEST_CASE( "lua_v5_calorie_sleep_and_health_services_use_native_rules",
            "[lua][bindings][needs][health][integration]" )
 {
