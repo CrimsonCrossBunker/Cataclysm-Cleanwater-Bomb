@@ -4585,8 +4585,8 @@ Fields can exist on top of terrain/furniture, and support different intensity le
     "gas_absorption_factor": "80m", // Length a full 100 charge gas mask filter will last in this gas. Will be divided by the concentration of the gas, and should be 80m for concentration 1 toxic gas or similar. The worst gas should still be kept out for 20 minutes in a concentration 4 thick gas.
     "is_splattering": true, // If splatters of this field should bloody vehicle parts
     "dirty_transparency_cache": true, // Should the transparency cache be recalculated when the field is modified (used for nontransparent, spreading fields)
-    "has_fire": false, // Is this field a kind of fire (for immunity, monster avoidance and similar checks)
-    "fire_reaction": { // Optional; omitted keeps the legacy behavior
+    "has_fire": false, // Is this field a kind of fire (for immunity, monster avoidance and similar checks); true ignores fire_reaction
+    "fire_reaction": { // Optional; omitted keeps the legacy behavior; ignored when has_fire is true
       "degrade_at": 2, // Periodic intensity-loss threshold; 0 disables degradation
       "clear_at": 3, // Immediate-removal threshold; 0 disables immediate removal
       "interval": "30 seconds" // Interval between degradation attempts; defaults to 1 minute
@@ -4627,7 +4627,7 @@ Fields can exist on top of terrain/furniture, and support different intensity le
 
 `fire_reaction` is optional.  `degrade_at` and `clear_at` are integer thresholds from 0 to 3;
 0 disables the corresponding behavior.  Immediate clearing takes precedence over degradation.  A
-field with `has_fire` ignores `fire_reaction`, preventing fire fields from reacting to themselves.
+field with `has_fire: true` ignores `fire_reaction`, preventing fire fields from reacting to themselves.
 `clear_at` must be greater than `degrade_at` when both are nonzero.  For example, use
 `"degrade_at": 1, "clear_at": 3` to degrade in small or medium fires and clear immediately in a
 large fire.
