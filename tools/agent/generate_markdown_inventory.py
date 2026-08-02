@@ -4,8 +4,13 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import re
 import subprocess
 import sys
+import unicodedata
+from collections import Counter
+from copy import deepcopy
 from pathlib import Path
 
 import yaml
@@ -13,6 +18,21 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT = ROOT / "doc/migration/markdown-inventory.yml"
+DEFAULT_ANOMALY_REPORT = ROOT / "doc/migration/contributor-anomalies.yml"
+UNSAFE_CONTRIBUTOR_PATTERNS = (
+    re.compile(r"\bgit\s+config\b", re.IGNORECASE),
+    re.compile(r"(?:\$\(|`|&&|\|\||[;<>])"),
+    re.compile(r"(?:^|\s)-(?:c|e|x)(?:\s|$)"),
+)
+MAX_CONTRIBUTOR_LENGTH = 160
+KEEP_IN_REPO = {
+    "README.md",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
+    "ISSUES.md",
+    "SYNC_EXCLUDED_PRS.md",
+    "TRANSLATION_CREDITS.md",
+}
 
 
 def git(*args: str) -> str:
@@ -53,16 +73,71 @@ def tracked_markdown(commit: str) -> list[str]:
     return sorted(paths)
 
 
+def contributor_rejection_reason(value: object) -> str | None:
+    if not isinstance(value, str):
+        return "identity is not a string"
+    if any(unicodedata.category(character) == "Cc" for character in value):
+        return "identity contains a control character"
+    clean = " ".join(value.split())
+    if not clean:
+        return "identity is empty after whitespace normalization"
+    if len(clean) > MAX_CONTRIBUTOR_LENGTH:
+        return "identity exceeds the safe display length"
+    if any(pattern.search(clean) for pattern in UNSAFE_CONTRIBUTOR_PATTERNS):
+        return "identity contains a command fragment or control syntax"
+    return None
+
+
+def sanitize_contributors(values: list[object]) -> tuple[list[str], list[dict]]:
+    """Normalize identities and keep rejected values out of publishable data."""
+    clean_names: list[str] = []
+    anomalies: list[dict] = []
+    for value in values:
+        reason = contributor_rejection_reason(value)
+        if reason:
+            encoded = repr(value).encode("utf-8", errors="backslashreplace")
+            anomalies.append(
+                {
+                    "fingerprint": "sha256:" + hashlib.sha256(encoded).hexdigest(),
+                    "reason": reason,
+                    "value_type": type(value).__name__,
+                }
+            )
+            continue
+        clean = " ".join(value.split())
+        if clean not in clean_names:
+            clean_names.append(clean)
+    return clean_names, anomalies
+
+
 def contributors(commit: str, path: str) -> list[str]:
-    names = git(
-        "log", commit, "--follow", "--format=%aN", "--", path
+    names: list[object] = git(
+        "log", commit, "--format=%aN", "--", path
     ).splitlines()
-    unique: list[str] = []
-    for name in names:
-        clean = name.strip()
-        if clean and clean not in unique:
-            unique.append(clean)
-    return unique or ["Unknown (see source history)"]
+    clean, _ = sanitize_contributors(names)
+    return clean or ["Unknown (see source history)"]
+
+
+def stable_id_for(path: str) -> str:
+    stem = path.rsplit(".", 1)[0].lower()
+    slug = re.sub(r"[^a-z0-9]+", "-", stem).strip("-")
+    return "legacy." + slug
+
+
+def domain_for(path: str) -> str:
+    if path.startswith("data/mods/"):
+        return "mods"
+    if path.startswith("data/lua/") or path.startswith("src/lua"):
+        return "lua"
+    if path.startswith("doc/JSON/") or path.startswith("data/json/"):
+        return "json"
+    if path.startswith("doc/c++/"):
+        return "cpp"
+    if path.startswith("lang/"):
+        return "translation"
+    if path.startswith("src/third-party/"):
+        return "third-party"
+    return "governance" if "/" not in path else "legacy"
 
 
 def classification(path: str) -> tuple[str, str, str]:
@@ -74,48 +149,80 @@ def classification(path: str) -> tuple[str, str, str]:
         )
     if path == "src/lua/LICENSE.md":
         return "retain_third_party", "MIT", "retain_in_place"
-    if path in {
-        "README.md",
-        "CONTRIBUTING.md",
-        "CODE_OF_CONDUCT.md",
-        "ISSUES.md",
-        "SYNC_EXCLUDED_PRS.md",
-        "TRANSLATION_CREDITS.md",
-    }:
+    if path in KEEP_IN_REPO:
         return "keep_in_repo", "CC-BY-SA-3.0", "keep_in_repo"
     return "review", "CC-BY-SA-3.0", "evaluate_filtered_history"
 
 
+def default_record(commit: str, path: str, names: list[object]) -> tuple[dict, list[dict]]:
+    action, license_name, history_strategy = classification(path)
+    clean_contributors, anomalies = sanitize_contributors(names)
+    terminal = action in {"keep_in_repo", "retain_third_party"}
+    record = {
+        "original_path": path,
+        "target_path": path if terminal else None,
+        "source_commit": commit,
+        "contributors": clean_contributors or ["Unknown (see source history)"],
+        "contributor_anomaly_count": len(anomalies),
+        "license": license_name,
+        "action": action,
+        "archive_reason": None,
+        "replacement": None,
+        "migration_status": "verified" if terminal else "inventoried",
+        "history_strategy": history_strategy,
+        "stable_document_id": stable_id_for(path),
+        "domain": domain_for(path),
+        "priority": "P3",
+        "last_applicable_commit": commit,
+        "ccb_specificity": "third_party" if action == "retain_third_party" else "pending_review",
+        "upstream_relation": "vendored" if action == "retain_third_party" else "pending_review",
+        "merge_target": None,
+        "source_paths": [path],
+        "source_symbols": [],
+        "translation_required": not terminal,
+        "include_in_ai_index": action != "retain_third_party",
+        "blockers": [] if terminal else ["Full-text source review is pending."],
+        "evidence": ["Frozen tracked Markdown path at source_commit."],
+        "migration_batch": None,
+    }
+    return record, anomalies
+
+
 def build_inventory(
     commit: str,
-    contributor_snapshot: dict[str, list[str]] | None = None,
+    record_snapshot: dict[str, object] | None = None,
+    anomaly_sink: list[dict] | None = None,
 ) -> dict:
-    recorded_contributors = contributor_snapshot or {}
+    recorded = record_snapshot or {}
     documents = []
     for path in tracked_markdown(commit):
-        action, license_name, history_strategy = classification(path)
-        documents.append(
-            {
-                "original_path": path,
-                "target_path": (
-                    path
-                    if action in {"keep_in_repo", "retain_third_party"}
-                    else None
-                ),
-                "source_commit": commit,
-                "contributors": list(recorded_contributors[path])
-                if path in recorded_contributors
-                else contributors(commit, path),
-                "license": license_name,
-                "action": action,
-                "archive_reason": None,
-                "replacement": None,
-                "migration_status": "inventoried",
-                "history_strategy": history_strategy,
-            }
-        )
+        saved = recorded.get(path)
+        if isinstance(saved, dict):
+            record = deepcopy(saved)
+            names = list(record.get("contributors", []))
+            clean_contributors, anomalies = sanitize_contributors(names)
+            record["original_path"] = path
+            record["source_commit"] = commit
+            record["contributors"] = clean_contributors or [
+                "Unknown (see source history)"
+            ]
+            record["contributor_anomaly_count"] = int(
+                record.get("contributor_anomaly_count", 0)
+            ) + len(anomalies)
+        else:
+            names = list(saved) if isinstance(saved, list) else git(
+                "log", commit, "--format=%aN", "--", path
+            ).splitlines()
+            record, anomalies = default_record(commit, path, names)
+        if anomaly_sink is not None:
+            anomaly_sink.extend(
+                {"original_path": path, **anomaly} for anomaly in anomalies
+            )
+        documents.append(record)
+    action_counts = Counter(item["action"] for item in documents)
+    status_counts = Counter(item["migration_status"] for item in documents)
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "kind": "markdown_inventory",
         "source_commit": commit,
         "document_count": len(documents),
@@ -124,6 +231,11 @@ def build_inventory(
             "tool/config paths; "
             "filesystem caches are never traversed."
         ),
+        "classification_summary": {
+            "review": action_counts.get("review", 0),
+            "actions": dict(sorted(action_counts.items())),
+            "migration_statuses": dict(sorted(status_counts.items())),
+        },
         "documents": documents,
     }
 
@@ -132,7 +244,7 @@ def render(data: dict) -> str:
     return yaml.safe_dump(data, allow_unicode=True, sort_keys=False, width=100)
 
 
-def inventory_for_check(output: Path) -> tuple[str, dict[str, list[str]]]:
+def inventory_for_check(output: Path) -> tuple[str, dict[str, dict]]:
     """Load the frozen commit and history snapshot used by check mode.
 
     Contributor history depends on clone depth and mailmap availability.  A
@@ -142,33 +254,68 @@ def inventory_for_check(output: Path) -> tuple[str, dict[str, list[str]]]:
     if not output.exists():
         raise FileNotFoundError(f"inventory does not exist: {output}")
     data = yaml.safe_load(output.read_text(encoding="utf-8"))
-    contributor_snapshot = {
-        item["original_path"]: item["contributors"]
+    record_snapshot = {
+        item["original_path"]: item
         for item in data.get("documents", [])
-        if isinstance(item.get("original_path"), str) and isinstance(
-            item.get("contributors"), list
-        )
+        if isinstance(item.get("original_path"), str)
     }
     return (
         resolve_commit(str(data["source_commit"])),
-        contributor_snapshot,
+        record_snapshot,
     )
+
+
+def render_anomaly_report(commit: str, anomalies: list[dict]) -> str:
+    data = {
+        "schema_version": 1,
+        "kind": "contributor_anomaly_report",
+        "source_commit": commit,
+        "rejected_count": len(anomalies),
+        "entries": sorted(
+            anomalies,
+            key=lambda item: (item["original_path"], item["fingerprint"]),
+        ),
+    }
+    return render(data)
+
+
+def validate_anomaly_report(path: Path, commit: str) -> None:
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if data.get("source_commit") != commit:
+        raise ValueError("contributor anomaly report uses another source commit")
+    entries = data.get("entries", [])
+    if data.get("rejected_count") != len(entries):
+        raise ValueError("contributor anomaly rejected_count is stale")
+    for entry in entries:
+        if "value" in entry:
+            raise ValueError("raw rejected contributor identity must not be published")
+        if not str(entry.get("fingerprint", "")).startswith("sha256:"):
+            raise ValueError("contributor anomaly needs a SHA-256 fingerprint")
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument(
+        "--anomaly-report", type=Path, default=DEFAULT_ANOMALY_REPORT
+    )
     parser.add_argument("--source-commit", default="HEAD")
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
 
     output = args.output if args.output.is_absolute() else ROOT / args.output
+    anomaly_report = (
+        args.anomaly_report
+        if args.anomaly_report.is_absolute()
+        else ROOT / args.anomaly_report
+    )
     if args.check:
-        commit, contributor_snapshot = inventory_for_check(output)
+        commit, record_snapshot = inventory_for_check(output)
     else:
         commit = resolve_commit(args.source_commit)
-        contributor_snapshot = None
-    rendered = render(build_inventory(commit, contributor_snapshot))
+        record_snapshot = None
+    anomalies: list[dict] = []
+    rendered = render(build_inventory(commit, record_snapshot, anomalies))
 
     if args.check:
         if output.read_text(encoding="utf-8") != rendered:
@@ -177,11 +324,16 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
+        validate_anomaly_report(anomaly_report, commit)
         print(f"Markdown inventory is current at {commit}")
         return 0
 
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(rendered, encoding="utf-8")
+    anomaly_report.parent.mkdir(parents=True, exist_ok=True)
+    anomaly_report.write_text(
+        render_anomaly_report(commit, anomalies), encoding="utf-8"
+    )
     print(f"wrote {output.relative_to(ROOT)} at {commit}")
     return 0
 

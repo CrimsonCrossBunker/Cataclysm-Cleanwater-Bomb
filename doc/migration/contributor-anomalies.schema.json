@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crimsoncrossbunker.github.io/schemas/contributor-anomalies-v1.json",
+  "title": "Rejected contributor identity audit",
+  "type": "object",
+  "required": [ "schema_version", "kind", "source_commit", "rejected_count", "entries" ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "kind": { "const": "contributor_anomaly_report" },
+    "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "rejected_count": { "type": "integer", "minimum": 0 },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [ "original_path", "fingerprint", "reason", "value_type" ],
+        "properties": {
+          "original_path": { "type": "string", "minLength": 1 },
+          "fingerprint": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+          "reason": { "type": "string", "minLength": 1 },
+          "value_type": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

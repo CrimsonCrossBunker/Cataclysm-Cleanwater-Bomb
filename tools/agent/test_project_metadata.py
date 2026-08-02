@@ -4,6 +4,7 @@ from unittest import mock
 from check_project_metadata import (
     tracked_paths,
     validate_context,
+    validate_documentation_registry,
     validate_inventory,
 )
 
@@ -23,6 +24,9 @@ class ProjectMetadataTest(unittest.TestCase):
 
     def test_inventory_is_valid(self):
         validate_inventory()
+
+    def test_documentation_registry_is_valid(self):
+        validate_documentation_registry()
 
 
 if __name__ == "__main__":

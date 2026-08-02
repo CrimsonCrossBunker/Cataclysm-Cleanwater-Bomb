@@ -2,6 +2,21 @@ schema_version: 1
 kind: generated_files
 description: Files and artifacts that must be regenerated rather than hand-edited.
 entries:
+  - id: documentation-registry
+    paths: [ai/documentation-registry.yml]
+    tracked: true
+    generated_by: python3 tools/agent/generate_documentation_registry.py
+    validation_id: agent-context
+  - id: markdown-migration-inventory
+    paths: [doc/migration/markdown-inventory.yml]
+    tracked: true
+    generated_by: python3 tools/agent/generate_markdown_inventory.py
+    validation_id: agent-context
+  - id: contributor-anomaly-report
+    paths: [doc/migration/contributor-anomalies.yml]
+    tracked: true
+    generated_by: python3 tools/agent/generate_markdown_inventory.py
+    validation_id: agent-context
   - id: version-header
     paths: [src/version.h]
     tracked: false

@@ -1,17 +1,43 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://crimsoncrossbunker.github.io/schemas/markdown-inventory-v1.json",
-  "title": "CCB Markdown migration inventory",
+  "$id": "https://crimsoncrossbunker.github.io/schemas/markdown-inventory-v2.json",
+  "title": "CCB frozen Markdown migration inventory",
   "type": "object",
-  "required": [ "schema_version", "kind", "source_commit", "document_count", "documents" ],
+  "required": [
+    "schema_version",
+    "kind",
+    "source_commit",
+    "document_count",
+    "scope",
+    "classification_summary",
+    "documents"
+  ],
   "properties": {
-    "schema_version": { "const": 1 },
+    "schema_version": { "const": 2 },
     "kind": { "const": "markdown_inventory" },
     "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
-    "document_count": { "type": "integer", "minimum": 1 },
+    "document_count": { "const": 175 },
     "scope": { "type": "string", "minLength": 1 },
+    "classification_summary": {
+      "type": "object",
+      "required": [ "review", "actions", "migration_statuses" ],
+      "properties": {
+        "review": { "type": "integer", "minimum": 0 },
+        "actions": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "migration_statuses": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "additionalProperties": false
+    },
     "documents": {
       "type": "array",
+      "minItems": 175,
+      "maxItems": 175,
       "items": {
         "type": "object",
         "required": [
@@ -19,12 +45,27 @@
           "target_path",
           "source_commit",
           "contributors",
+          "contributor_anomaly_count",
           "license",
           "action",
           "archive_reason",
           "replacement",
           "migration_status",
-          "history_strategy"
+          "history_strategy",
+          "stable_document_id",
+          "domain",
+          "priority",
+          "last_applicable_commit",
+          "ccb_specificity",
+          "upstream_relation",
+          "merge_target",
+          "source_paths",
+          "source_symbols",
+          "translation_required",
+          "include_in_ai_index",
+          "blockers",
+          "evidence",
+          "migration_batch"
         ],
         "properties": {
           "original_path": { "type": "string", "minLength": 1 },
@@ -32,20 +73,77 @@
           "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
           "contributors": {
             "type": "array",
+            "items": { "type": "string", "minLength": 1, "maxLength": 160 },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "contributor_anomaly_count": { "type": "integer", "minimum": 0 },
+          "license": { "type": "string", "minLength": 1 },
+          "action": {
+            "enum": [
+              "keep_in_repo",
+              "migrate_preserve",
+              "migrate_rewrite",
+              "merge_into",
+              "archive_public",
+              "moved_stub_only",
+              "retain_third_party",
+              "generated_reference",
+              "review"
+            ]
+          },
+          "archive_reason": { "type": [ "string", "null" ] },
+          "replacement": { "type": [ "string", "null" ] },
+          "migration_status": {
+            "enum": [
+              "inventoried",
+              "classified",
+              "in_progress",
+              "migrated",
+              "verified",
+              "stubbed",
+              "archived",
+              "blocked"
+            ]
+          },
+          "history_strategy": { "type": "string", "minLength": 1 },
+          "stable_document_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          },
+          "domain": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "priority": { "enum": [ "P0", "P1", "P2", "P3" ] },
+          "last_applicable_commit": {
+            "type": [ "string", "null" ],
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "ccb_specificity": { "type": "string", "minLength": 1 },
+          "upstream_relation": { "type": "string", "minLength": 1 },
+          "merge_target": { "type": [ "string", "null" ] },
+          "source_paths": {
+            "type": "array",
             "items": { "type": "string", "minLength": 1 },
             "minItems": 1,
             "uniqueItems": true
           },
-          "license": { "type": "string", "minLength": 1 },
-          "action": {
-            "enum": [ "keep_in_repo", "review", "retain_third_party" ]
+          "source_symbols": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
           },
-          "archive_reason": { "type": [ "string", "null" ] },
-          "replacement": { "type": [ "string", "null" ] },
-          "migration_status": { "const": "inventoried" },
-          "history_strategy": {
-            "enum": [ "keep_in_repo", "evaluate_filtered_history", "retain_in_place" ]
-          }
+          "translation_required": { "type": "boolean" },
+          "include_in_ai_index": { "type": "boolean" },
+          "blockers": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
+          },
+          "evidence": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "minItems": 1
+          },
+          "migration_batch": { "type": [ "string", "null" ] }
         },
         "additionalProperties": false
       }

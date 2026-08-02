@@ -1,0 +1,633 @@
+schema_version: 1
+kind: contributor_anomaly_report
+source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
+rejected_count: 157
+entries:
+- original_path: CODE_OF_CONDUCT.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: CONTRIBUTING.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: ISSUES.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: README.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/json/LOADING_ORDER.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/json/npcs/godco/NECC_INFO.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/json/npcs/refugee_center/FREE_MERCHANTS_INFO.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/Backrooms/README.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/BombasticPerks/docs/contributing.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/BombasticPerks/docs/expanding_with_mods.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/DinoMod/DESIGN.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/DinoMod/README.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/MA/README.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/Magiclysm/lore.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/Magiclysm/magic_balance.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/Megafauna/readme.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/MindOverMatter/GainingPowerSpoilers.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/MindOverMatter/NetherAttunementSpoilers.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/MindOverMatter/NewPowerGuide.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/MindOverMatter/PowerDescriptionSpoilers.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/MindOverMatter/README.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/MindOverMatter/lore_spoilers.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/MindOverMatterNoKnacks/README.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/No_Hope/CONTRIBUTING.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/No_Hope/DIFFICULTY_OPTIONS.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/Sky_Island/README.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/Sorcerer/README.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/TEST_DATA/README.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/Xedra_Evolved/README.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/Xedra_Evolved/design_doc_spoilers.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/Xedra_Evolved/vampire_guide.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/aftershock_exoplanet/doc/Hacking.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/aftershock_exoplanet/doc/crafting_system.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/aftershock_exoplanet/doc/lore/cyberpunk_future.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/aftershock_exoplanet/doc/lore/factions.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/aftershock_exoplanet/doc/lore/organizations.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/aftershock_exoplanet/doc/lore/points_of_interest.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/aftershock_exoplanet/doc/lore/ranged_weapon_balance.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/aftershock_exoplanet/doc/lore/salus_4.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/aftershock_exoplanet/doc/lore/timeline.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/aftershock_exoplanet/doc/suit_operating_time.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/aftershock_exoplanet/items/armor/exosuit/exosuit_guide.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/alt_map_key/README.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/classic_zombies/design-doc.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/classic_zombies/place_names.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/innawood/readme.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: data/mods/translate-dialogue/README.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/ASCII_ART.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/CHANGELOG_GUIDELINES.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/DEVELOPER_FAQ.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/FREQUENTLY_MADE_SUGGESTIONS.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/GUN_NAMING_AND_INCLUSION.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/HOWTO_MASSAGE_MA_GUN_DATA.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/HOW_YOU_CAN_HELP.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/IN_REPO_MODS.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/ISSUE_TRIAGE.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/ARTIFACTS.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/BASECAMP.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/CLIMBING.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/DIMENSIONS.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/EFFECTS_JSON.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/EFFECT_ON_CONDITION.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/EXAMINE.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/FACTIONS.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/FACTION_MISSIONS.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/GUIDE_COMESTIBLES.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/HELP_MENU.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/ITEM.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/ITEM_CRAFT_AND_DISASSEMBLY.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/ITEM_SPAWN.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/JSON_FLAGS.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/JSON_INFO.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/JSON_INHERITANCE.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/JSON_LOADING_ORDER.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/JSON_Mapping_Guides/Guide_for_beginning_mapgen.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/JSON_Mapping_Guides/Guide_for_intermediate_mapgen.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/JSON_Mapping_Guides/JSON_ROOF_MAPGEN.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/JSON_STYLE.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/JSON_TOOLS.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/MAGIC.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/MAPGEN.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/MAP_SMASHING.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/MARTIALART_JSON.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/MISSIONS_JSON.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/MONSTERS.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/MONSTER_SPECIAL_ATTACKS.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/MOVE_MODE.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/MUTATIONS.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/NPCs.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/OBSOLETION_AND_MIGRATION.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/OPTIONS.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/OVERMAP.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/PRACTICE_RECIPES.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/PROFICIENCY.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/PROFICIENCY_LIST.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/REGION_SETTINGS.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/TER_FURN_TRANSFORM.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/VEHICLES_JSON.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/VITAMIN.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/WEATHER_TYPE.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/JSON/WOUNDS.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/MANUAL_OF_STYLE.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/MODDING.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/MOD_COMPATIBILITY.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/PLAYER_ACTIVITY.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/RELEASE_DIFF.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/RELEASE_PROCESS.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/SOUNDPACKS.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/TESTING_YOUR_CHANGES.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/TILESET.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/TRANSLATING.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/TRANSLATING_MOD.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/USER_INTERFACE_AND_ACCESSIBILITY.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/WIDGETS.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/c++/CODE_STYLE.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/c++/COMPILER_SUPPORT.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/c++/COMPILING-CMAKE-VCPKG.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/c++/COMPILING-CMAKE.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/c++/COMPILING-CYGWIN.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/c++/COMPILING-DEVCONTAINER.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/c++/COMPILING-FLATPAK.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/c++/COMPILING-MSYS.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/c++/COMPILING-VS-VCPKG.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/c++/COMPILING.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/c++/DEVELOPER_TOOLING.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/c++/POINTS_COORDINATES.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/c++/TESTING.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/design-balance-lore/ARMOR_BALANCE_AND_DESIGN.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/design-balance-lore/CONSTRUCTION_BALANCE.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/design-balance-lore/GAME_BALANCE.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/design-balance-lore/LORE_FAQ.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/design-balance-lore/PORTAL_STORM_BALANCE_AND_DESIGN.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/design-balance-lore/POSTAPOC_PRICE_GUIDE.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/design-balance-lore/STEEL_CRAFTING.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/design-balance-lore/VARIANTS.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/design-balance-lore/batteries_and_electricity.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/design-balance-lore/design-balance.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/design-balance-lore/design-doc.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/design-balance-lore/design-gameplay.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/design-balance-lore/design-user-experience.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/design-balance-lore/lore-background.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/design-balance-lore/lore-factions.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/design-balance-lore/lore.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/design-balance-lore/melee_weapons/MELEE_BALANCE_SPREADSHEET.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/design-balance-lore/technology.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/development_process.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/reviewing_PR_guide.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/user-guides/COLOR.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: doc/user-guides/FONT_OPTIONS.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: lang/notes/README_all_translators.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: lang/notes/ru-notes.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: src/third-party/snmalloc/README.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: src/third-party/snmalloc/stl/README.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: src/third-party/snmalloc/stl/cxx/README.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: src/third-party/snmalloc/stl/gnu/README.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: src/third-party/zstd/README.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str
+- original_path: tools/llama/README.md
+  fingerprint: sha256:f4049c181df01b7e30035fe7c87962856e8d6ac1bffc5dac134903dcc5843a4a
+  reason: identity contains a command fragment or control syntax
+  value_type: str

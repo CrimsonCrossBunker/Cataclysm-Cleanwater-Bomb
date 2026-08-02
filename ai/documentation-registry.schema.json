@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crimsoncrossbunker.github.io/schemas/documentation-registry-v1.json",
+  "title": "CCB tracked documentation registry",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "source_commit",
+    "scope",
+    "entry_count",
+    "entries"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "kind": { "const": "documentation_registry" },
+    "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "scope": { "type": "string", "minLength": 1 },
+    "entry_count": { "type": "integer", "minimum": 1 },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "path",
+          "category",
+          "status",
+          "authority",
+          "source_of_truth",
+          "stable_document_id",
+          "ccb_docs_ids",
+          "generated",
+          "generated_by",
+          "include_in_ai_index"
+        ],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+          "path": { "type": "string", "minLength": 1 },
+          "category": {
+            "enum": [
+              "authoritative_document",
+              "maintained_document",
+              "agent_instruction",
+              "migration_entry",
+              "third_party_document",
+              "generated_document",
+              "historical_document",
+              "legacy_source",
+              "api_contract"
+            ]
+          },
+          "status": {
+            "enum": [
+              "active",
+              "legacy",
+              "moved_stub",
+              "archived",
+              "historical",
+              "third_party",
+              "generated"
+            ]
+          },
+          "authority": {
+            "enum": [
+              "governance_contract",
+              "api_contract",
+              "build_contract",
+              "generated_contract",
+              "explanatory",
+              "third_party",
+              "historical"
+            ]
+          },
+          "source_of_truth": { "type": "boolean" },
+          "stable_document_id": { "type": [ "string", "null" ] },
+          "ccb_docs_ids": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+            "uniqueItems": true
+          },
+          "generated": { "type": "boolean" },
+          "generated_by": { "type": [ "string", "null" ] },
+          "include_in_ai_index": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

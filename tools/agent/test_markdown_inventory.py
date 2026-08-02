@@ -11,16 +11,16 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class MarkdownInventoryTest(unittest.TestCase):
-    @mock.patch.object(inventory, "contributors")
+    @mock.patch.object(inventory, "git")
     @mock.patch.object(
         inventory,
         "tracked_markdown",
         return_value=["doc/existing.md", "doc/new.md"],
     )
     def test_recorded_contributors_are_stable_in_check_mode(
-        self, tracked_markdown, contributors
+        self, tracked_markdown, git
     ):
-        contributors.return_value = ["Visible in this clone"]
+        git.return_value = "Visible in this clone\n"
 
         data = inventory.build_inventory(
             "frozen-commit",
@@ -36,7 +36,13 @@ class MarkdownInventoryTest(unittest.TestCase):
             data["documents"][1]["contributors"],
         )
         tracked_markdown.assert_called_once_with("frozen-commit")
-        contributors.assert_called_once_with("frozen-commit", "doc/new.md")
+        git.assert_called_once_with(
+            "log",
+            "frozen-commit",
+            "--format=%aN",
+            "--",
+            "doc/new.md",
+        )
 
     def test_frozen_phase_zero_scope(self):
         path = ROOT / "doc/migration/markdown-inventory.yml"
@@ -52,6 +58,65 @@ class MarkdownInventoryTest(unittest.TestCase):
         for item in data["documents"]:
             self.assertTrue(item["contributors"])
             self.assertEqual(data["source_commit"], item["source_commit"])
+
+    def test_command_fragment_identity_is_rejected(self):
+        clean, anomalies = inventory.sanitize_contributors(
+            [
+                "  Real   Contributor  ",
+                "Real Contributor",
+                "Name git config --global user.name Injected",
+                "Another && command",
+            ]
+        )
+
+        self.assertEqual(clean, ["Real Contributor"])
+        self.assertEqual(len(anomalies), 2)
+        self.assertTrue(
+            all("command fragment" in item["reason"] for item in anomalies)
+        )
+        self.assertTrue(
+            all(item["fingerprint"].startswith("sha256:") for item in anomalies)
+        )
+        self.assertTrue(all("value" not in item for item in anomalies))
+
+    def test_control_character_identity_is_rejected(self):
+        clean, anomalies = inventory.sanitize_contributors(
+            ["Good Name", "Bad\x00Name", "Bad\nName"]
+        )
+
+        self.assertEqual(clean, ["Good Name"])
+        self.assertEqual(len(anomalies), 2)
+        self.assertTrue(
+            all(
+                item["reason"] == "identity contains a control character"
+                for item in anomalies
+            )
+        )
+
+    @mock.patch.object(
+        inventory,
+        "tracked_markdown",
+        return_value=["doc/dirty.md"],
+    )
+    def test_dirty_snapshot_identity_cannot_reenter_inventory(self, _tracked):
+        anomalies = []
+        data = inventory.build_inventory(
+            "frozen-commit",
+            {
+                "doc/dirty.md": [
+                    "Responsible Person",
+                    "Injected git config --global user.name Bad",
+                ]
+            },
+            anomalies,
+        )
+
+        record = data["documents"][0]
+        self.assertEqual(record["contributors"], ["Responsible Person"])
+        self.assertEqual(record["contributor_anomaly_count"], 1)
+        self.assertEqual(len(anomalies), 1)
+        self.assertNotIn("Injected", inventory.render(data))
+        self.assertEqual(data["classification_summary"]["review"], 1)
 
 
 if __name__ == "__main__":
