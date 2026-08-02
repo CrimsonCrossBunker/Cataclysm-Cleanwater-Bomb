@@ -69,14 +69,7 @@ def classification(path: str) -> tuple[str, str, str]:
         )
     if path == "src/lua/LICENSE.md":
         return "retain_third_party", "MIT", "retain_in_place"
-    if path in {
-        "README.md",
-        "CONTRIBUTING.md",
-        "CODE_OF_CONDUCT.md",
-        "ISSUES.md",
-        "SYNC_EXCLUDED_PRS.md",
-        "TRANSLATION_CREDITS.md",
-    }:
+    if path in KEEP_IN_REPO:
         return "keep_in_repo", "CC-BY-SA-3.0", "keep_in_repo"
     return "review", "CC-BY-SA-3.0", "evaluate_filtered_history"
 def build_inventory(
@@ -237,3 +230,35 @@ def domain_for(path: str) -> str:
     if path.startswith("src/third-party/"):
         return "third-party"
     return "governance" if "/" not in path else "legacy"
+def default_record(commit: str, path: str, names: list[object]) -> tuple[dict, list[dict]]:
+    action, license_name, history_strategy = classification(path)
+    clean_contributors, anomalies = sanitize_contributors(names)
+    terminal = action in {"keep_in_repo", "retain_third_party"}
+    record = {
+        "original_path": path,
+        "target_path": path if terminal else None,
+        "source_commit": commit,
+        "contributors": clean_contributors or ["Unknown (see source history)"],
+        "contributor_anomaly_count": len(anomalies),
+        "license": license_name,
+        "action": action,
+        "archive_reason": None,
+        "replacement": None,
+        "migration_status": "verified" if terminal else "inventoried",
+        "history_strategy": history_strategy,
+        "stable_document_id": stable_id_for(path),
+        "domain": domain_for(path),
+        "priority": "P3",
+        "last_applicable_commit": commit,
+        "ccb_specificity": "third_party" if action == "retain_third_party" else "pending_review",
+        "upstream_relation": "vendored" if action == "retain_third_party" else "pending_review",
+        "merge_target": None,
+        "source_paths": [path],
+        "source_symbols": [],
+        "translation_required": not terminal,
+        "include_in_ai_index": action != "retain_third_party",
+        "blockers": [] if terminal else ["Full-text source review is pending."],
+        "evidence": ["Frozen tracked Markdown path at source_commit."],
+        "migration_batch": None,
+    }
+    return record, anomalies
