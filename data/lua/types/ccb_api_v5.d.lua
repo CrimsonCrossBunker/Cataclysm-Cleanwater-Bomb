@@ -237,21 +237,15 @@ local TripointCoord = {}
 ---@return PointCoord
 function TripointCoord:xy() end
 
+---@overload fun(self: TripointCoord, other: PointCoord): TripointCoord
 ---@param other TripointCoord
 ---@return TripointCoord
 function TripointCoord:add(other) end
 
----@param other PointCoord
----@return TripointCoord
-function TripointCoord:add_xy(other) end
-
+---@overload fun(self: TripointCoord, other: PointCoord): TripointCoord
 ---@param other TripointCoord
 ---@return TripointCoord
 function TripointCoord:subtract(other) end
-
----@param other PointCoord
----@return TripointCoord
-function TripointCoord:subtract_xy(other) end
 
 ---@param factor integer
 ---@return TripointCoord
@@ -316,8 +310,10 @@ local GameEnum = {}
 ---Generation-bound opaque reference to a live native game object.
 ---@class GameHandle
 ---@field kind '"creature"'|'"item"'|'"vehicle"'
----@field locator CcbHandleLocator
 local GameHandle = {}
+
+---@return CcbHandleLocator
+function GameHandle:locator() end
 
 ---@return boolean
 function GameHandle:is_valid() end
@@ -1589,6 +1585,7 @@ function CcbHooksApi.limits() end
 ---@class CcbCallbackMethodSpec
 ---@field name string
 ---@field decision boolean
+---@field consuming boolean
 ---@field requires_write boolean
 
 ---@class CcbCallbackKindSpec
