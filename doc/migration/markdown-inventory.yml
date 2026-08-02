@@ -5,19 +5,19 @@ document_count: 175
 scope: Tracked Markdown at source_commit, excluding dot-prefixed tool/config paths; filesystem caches
   are never traversed.
 classification_summary:
-  review: 90
+  review: 89
   actions:
     archive_public: 1
     generated_reference: 2
     keep_in_repo: 54
     merge_into: 4
-    migrate_preserve: 10
+    migrate_preserve: 11
     migrate_rewrite: 8
     retain_third_party: 6
-    review: 90
+    review: 89
   migration_statuses:
-    classified: 73
-    inventoried: 90
+    classified: 74
+    inventoried: 89
     verified: 12
 documents:
 - original_path: CODE_OF_CONDUCT.md
@@ -2716,30 +2716,37 @@ documents:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-item
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/items/
+  migration_status: classified
+  history_strategy: filtered_path_history_candidate
+  stable_document_id: json.items
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_extended
+  upstream_relation: forked_and_locally_extended
   merge_target: null
   source_paths:
-  - doc/JSON/ITEM.md
-  source_symbols: []
+  - src/item_factory.cpp
+  - src/item_factory.h
+  - data/json/items/generic.json
+  - data/json/items/classes/gun.json
+  - tests/item_test.cpp
+  source_symbols:
+  - itype::load
+  - items::load
+  - islot_comestible::deserialize
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 1,666 行手工覆盖众多 subtype，必须拆分为概念/专题页并与 JSON object registry 做字段覆盖校验。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 核心 item 参考在导入后有 11 次更新，包含 CCB FIRING_EXT_POWER、植物生命周期与 Mod 内容字段；应保留细节和历史，但不能继续作为单一巨页维护。
+  migration_batch: phase-0-json
 - original_path: doc/JSON/ITEM_CRAFT_AND_DISASSEMBLY.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/recipes-and-disassembly.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - Anton Simakov
