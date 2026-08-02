@@ -961,7 +961,7 @@ static void field_processor_fd_fungicidal_gas( const tripoint_bub_ms &p, field_e
     }
 }
 
-static void process_field_fire_reactions( const tripoint_bub_ms &p, field_entry &cur,
+static void field_processor_fire_reactions( const tripoint_bub_ms &p, field_entry &cur,
         field_proc_data &pd )
 {
     const int fire_intensity = cur.get_field_intensity();
@@ -1156,7 +1156,6 @@ void field_processor_fd_fire( const tripoint_bub_ms &p, field_entry &cur, field_
                     }
                     fire_there->set_field_intensity( new_intensity );
                 }
-                process_field_fire_reactions( p, cur, pd );
                 return;
             }
         }
@@ -1465,7 +1464,6 @@ void field_processor_fd_fire( const tripoint_bub_ms &p, field_entry &cur, field_
         here.create_hot_air( p, cur.get_field_intensity() );
     }
 
-    process_field_fire_reactions( p, cur, pd );
 }
 
 static void field_processor_fd_last_known( const tripoint_bub_ms &p, field_entry &cur,
@@ -2349,6 +2347,9 @@ std::vector<FieldProcessorPtr> map_field_processing::processors_for_type( const 
     }
     if( ft.id == fd_last_known ) {
         processors.push_back( &field_processor_fd_last_known );
+    }
+    if( ft.has_fire ) {
+        processors.push_back( &field_processor_fire_reactions );
     }
 
     return processors;
