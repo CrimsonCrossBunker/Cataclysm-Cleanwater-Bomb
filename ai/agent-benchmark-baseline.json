@@ -39,7 +39,7 @@
     },
     {
       "errors": [],
-      "estimated_tokens": 2218,
+      "estimated_tokens": 2477,
       "id": "lua-api",
       "passed": true,
       "selected_routes": [

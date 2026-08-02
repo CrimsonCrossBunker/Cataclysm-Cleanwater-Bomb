@@ -18,12 +18,12 @@ entries:
     boundaries:
       - Preserve stable IDs or provide explicit migration data.
   - id: lua-api
-    paths: [data/lua/, tools/lua_api/, 'src/catalua_ui_*.cpp', 'src/catalua_ui_*.h']
+    paths: [data/lua/, tools/lua_api/, src/main.cpp, src/game_io.cpp, 'src/catalua_ui*.cpp', 'src/catalua_ui*.h']
     purpose: Versioned Lua runtime, declarations, registrations, and coverage inventories.
     instructions: data/lua/AGENTS.md
     validation_ids: [lua-contract]
     boundaries:
-      - Schema, LuaLS declarations, native registrations, and generated inventories are authoritative.
+      - Schema, LuaLS declarations, native registrations, generated inventories, and runtime validation tests are authoritative.
   - id: bundled-mods
     paths: [data/mods/]
     purpose: Mods shipped and validated with CCB.
@@ -77,4 +77,4 @@ entries:
     boundaries:
       - Every PR names a Responsible human.
       - Tracked targets never prove that an administrator setting is active.
-      - One Responsible human is sufficient; do not enable an approval gate that locks the sole maintainer's own pull requests.
+      - Do not enable non-author approval without two confirmed human reviewers.

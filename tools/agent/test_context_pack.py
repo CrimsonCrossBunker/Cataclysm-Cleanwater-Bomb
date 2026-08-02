@@ -23,6 +23,8 @@ class ContextPackTests(unittest.TestCase):
         self.assertIn("lua-api", pack["selected_routes"])
         self.assertIn("api.lua.v5.reference.modules", pack["documentation_ids"])
         self.assertIn("lua-contract", {entry["id"] for entry in pack["tests"]})
+        self.assertIn("src/main.cpp", pack["source_paths"])
+        self.assertIn("src/game_io.cpp", pack["source_paths"])
         self.assertLessEqual(pack["estimated_tokens"], 4000)
 
     def test_untracked_and_obj_lua_paths_are_rejected(self) -> None:
