@@ -5,19 +5,19 @@ document_count: 175
 scope: Tracked Markdown at source_commit, excluding dot-prefixed tool/config paths; filesystem caches
   are never traversed.
 classification_summary:
-  review: 87
+  review: 86
   actions:
     archive_public: 1
-    generated_reference: 2
+    generated_reference: 3
     keep_in_repo: 54
     merge_into: 4
     migrate_preserve: 13
     migrate_rewrite: 8
     retain_third_party: 6
-    review: 87
+    review: 86
   migration_statuses:
-    classified: 76
-    inventoried: 87
+    classified: 77
+    inventoried: 86
     verified: 12
 documents:
 - original_path: CODE_OF_CONDUCT.md
@@ -2841,30 +2841,35 @@ documents:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: generated_reference
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-json-flags
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/generated/flags/
+  migration_status: classified
+  history_strategy: filtered_path_history_candidate
+  stable_document_id: json.flags
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_extended
+  upstream_relation: forked_and_locally_extended
   merge_target: null
   source_paths:
-  - doc/JSON/JSON_FLAGS.md
-  source_symbols: []
+  - src/flag.cpp
+  - src/flag.h
+  - data/json/flags.json
+  - tools/flagdoc/flagdoc.pl
+  - tools/flagdoc/sections.conf
+  source_symbols:
+  - json_flag::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 1,841 行跨子系统手工 flag 表无法证明完整；新生成器需合并注册、flagdoc 配置和 JSON，并保留无法自动提取的解释。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 导入后 26 次更新，包含 CCB SHOCK_*、GUILT_HUMAN、NO_CROP_OVERGROWTH 等差异；仓库已有 flagdoc 工具，最适合作为生成参考而非继续手改。
+  migration_batch: phase-0-json
 - original_path: doc/JSON/JSON_INFO.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/index.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - LunaGlaze
