@@ -5,19 +5,19 @@ document_count: 175
 scope: Tracked Markdown at source_commit, excluding dot-prefixed tool/config paths; filesystem caches
   are never traversed.
 classification_summary:
-  review: 77
+  review: 69
   actions:
     archive_public: 1
     generated_reference: 3
     keep_in_repo: 54
-    merge_into: 6
-    migrate_preserve: 15
+    merge_into: 7
+    migrate_preserve: 22
     migrate_rewrite: 13
     retain_third_party: 6
-    review: 77
+    review: 69
   migration_statuses:
-    classified: 86
-    inventoried: 77
+    classified: 94
+    inventoried: 69
     verified: 12
 documents:
 - original_path: CODE_OF_CONDUCT.md
@@ -3205,236 +3205,283 @@ documents:
   - Tektolnes
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-mapgen
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/mapgen/
+  migration_status: classified
+  history_strategy: filtered_path_history_candidate
+  stable_document_id: json.mapgen
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_synced
+  upstream_relation: inherited_then_synced
   merge_target: null
   source_paths:
-  - doc/JSON/MAPGEN.md
-  source_symbols: []
+  - src/mapgen.cpp
+  - src/mapgen.h
+  - src/mapgen_post_process.cpp
+  - tests/mapgen_function_test.cpp
+  - tests/mapgen_post_process_test.cpp
+  source_symbols:
+  - mapgen_function_json::setup_internal
+  - update_mapgen_function_json::setup_update
+  - mapgen_palette::load
+  - pp_generator::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 1,792 行仍含 Limitations/TODO；拆分后必须保持字段来源与测试映射，不能把 TODO 当契约。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 核心 mapgen 参考覆盖 placement、palettes、update_mapgen、parameters、post-process 等，导入后继续更新 SKIP_ON_OPEN_AIR
+    和 vision/post-process 行为，当前测试丰富。
+  migration_batch: phase-0-json
 - original_path: doc/JSON/MAP_SMASHING.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/terrain-and-furniture.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: merge_into
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-map-smashing
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/terrain-and-furniture/
+  migration_status: classified
+  history_strategy: merge_attribution_and_source_history
+  stable_document_id: json.map-smashing
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
-  merge_target: null
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_small_fragment
+  merge_target: json.terrain-and-furniture
   source_paths:
-  - doc/JSON/MAP_SMASHING.md
-  source_symbols: []
+  - src/mapdata.cpp
+  - src/mapdata.h
+  - data/json/bash_damage_profiles.json
+  source_symbols:
+  - map_common_bash_info::load
+  - map_ter_bash_info::load
+  - map_furn_bash_info::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 24 行只解释 bash min/max、阻挡与 damage profile，是 terrain/furniture JSON 的小节而非独立完整主题；loader 和 bash profile
+    数据仍存在。
+  migration_batch: phase-2-json
 - original_path: doc/JSON/MARTIALART_JSON.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/martial-arts.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-martialart-json
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/martial-arts/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.martial-arts
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_contract_with_tests
   merge_target: null
   source_paths:
-  - doc/JSON/MARTIALART_JSON.md
-  source_symbols: []
+  - src/martialarts.cpp
+  - src/martialarts.h
+  - data/json/martialarts.json
+  - tests/martial_art_test.cpp
+  source_symbols:
+  - martialart::load
+  - ma_technique::load
+  - ma_buff::load
+  - attack_vector::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 285 行覆盖武术、buff、technique、bonus、attack vector 与用法，当前 loader/data/test 对应，适合保留结构并双语化。
+  migration_batch: phase-1-json
 - original_path: doc/JSON/MISSIONS_JSON.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/missions.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - Maleclypse
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-missions-json
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/missions/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.missions
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_synced
+  upstream_relation: inherited_then_synced
   merge_target: null
   source_paths:
-  - doc/JSON/MISSIONS_JSON.md
-  source_symbols: []
+  - src/missiondef.cpp
+  - src/mission.cpp
+  - src/npctalk.cpp
+  - data/json/npcs/missiondef.json
+  - tests/mission_test.cpp
+  source_symbols:
+  - mission_type::load
+  - json_talk_topic::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 部分 start/end/fail 行为仍需硬编码函数；页面必须区分 mission JSON 与 dialogue/EOC 行为边界。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 355 行逐字段解释 mission、目标、对话和 effects；2026-06 随 mission enum 继续更新，mission loader/test 可验证。
+  migration_batch: phase-1-json
 - original_path: doc/JSON/MONSTERS.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/monsters.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - Maleclypse
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-monsters
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/monsters/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.monsters
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_synced
+  upstream_relation: inherited_then_synced
   merge_target: null
   source_paths:
-  - doc/JSON/MONSTERS.md
-  source_symbols: []
+  - src/monstergenerator.cpp
+  - src/monstergenerator.h
+  - data/json/monsters/zed-classic.json
+  - tests/monster_test.cpp
+  source_symbols:
+  - MonsterGenerator::load_monster
+  - mtype::load
+  - species_type::load
+  - mon_flag::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 771 行字段表应与 mtype loader/object registry 自动比对；当前目录链接应改为可解析文件链接。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 核心 monster JSON 参考覆盖属性、弱点、升级、繁殖、攻击等，2026-06 随 vitals weakpoints 更新；loader 和多组 monster tests 仍是权威。
+  migration_batch: phase-0-json
 - original_path: doc/JSON/MONSTER_SPECIAL_ATTACKS.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/monster-special-attacks.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - Maleclypse
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-monster-special-attacks
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/monster-special-attacks/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.monster-special-attacks
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_synced
+  upstream_relation: inherited_then_synced
   merge_target: null
   source_paths:
-  - doc/JSON/MONSTER_SPECIAL_ATTACKS.md
-  source_symbols: []
+  - src/monstergenerator.cpp
+  - src/monstergenerator.h
+  - data/json/monster_special_attacks/monster_attacks.json
+  - tests/monster_attack_test.cpp
+  source_symbols:
+  - MonsterGenerator::load_monster_attack
+  - mattack_actor::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 正文明确含未完成的 hardcoded attack 描述 TODO；生成覆盖率必须区分硬编码、actor JSON 与 EOC attacks。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 338 行解释选择逻辑、旧/新语法、硬编码与 JSON actor、EOC attack；2026-06 随 body-part targeting 更新，现有 loader/test 可核验。
+  migration_batch: phase-0-json
 - original_path: doc/JSON/MOVE_MODE.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/movement-modes.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-move-mode
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/movement-modes/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.movement-modes
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_contract_with_core_data
   merge_target: null
   source_paths:
-  - doc/JSON/MOVE_MODE.md
-  source_symbols: []
+  - src/move_mode.cpp
+  - src/move_mode.h
+  - data/json/move_modes.json
+  source_symbols:
+  - move_mode::load
   translation_required: true
   include_in_ai_index: true
-  blockers:
-  - Full-text source review is pending.
+  blockers: []
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 158 行逐字段说明 movement_mode，当前单一 loader 与 data/json/move_modes.json 直接对应，迁移风险低。
+  migration_batch: phase-2-json
 - original_path: doc/JSON/MUTATIONS.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/mutations.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-mutations
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/mutations/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.mutations
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_contract_with_live_eocs
   merge_target: null
   source_paths:
-  - doc/JSON/MUTATIONS.md
-  source_symbols: []
+  - src/mutation_data.cpp
+  - src/mutation.cpp
+  - data/json/mutations/mutations.json
+  - data/json/effects_on_condition/mutation_eocs/changing_eocs.json
+  - tests/mutation_test.cpp
+  source_symbols:
+  - mutation_branch::load
+  - mutation_category_trait::load
+  - mutation_variant::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 系统说明同时依赖硬编码检查与 EOC；迁移后需清楚标注两种权威来源并修复目录型链接。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 455 行同时解释 mutagen 系统和 mutation/category/migration JSON，当前 loader、核心 mutation EOCs 与 tests 均存在。
+  migration_batch: phase-1-json
 - original_path: doc/JSON/NPCs.md
-  target_path: null
+  target_path: docs/zh_CN/reference/eoc/npcs-and-dialogue.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - Killa-bite
