@@ -400,3 +400,106 @@ def parse_string_effects(contents: str) -> list[dict[str, object]]:
             }
         )
     return registrations
+
+def legacy_alias_note(aliases: list[str]) -> dict[str, object]:
+    if not any(item.startswith(("u_", "npc_")) for item in aliases):
+        return {
+            "status": "unknown",
+            "talkers": [],
+            "note": (
+                "Concrete talker compatibility is not inferred from the "
+                "parser key."
+            ),
+        }
+    return {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": (
+            "u_/npc_ identifies alpha/beta legacy routing; it does not prove "
+            "that either talker is a concrete avatar or NPC."
+        ),
+    }
+
+def aggregate_parser_entries(
+    registrations: list[dict[str, object]], contract_kind: str
+) -> list[dict[str, object]]:
+    aggregate: dict[str, dict[str, object]] = {}
+    for registration in registrations:
+        keys = registration["keys"]
+        if not isinstance(keys, list):
+            raise RuntimeError("parser registration keys are invalid")
+        for alias_index, key_value in enumerate(keys):
+            key = str(key_value)
+            entry = aggregate.setdefault(
+                key,
+                {
+                    "syntaxes": set(),
+                    "accepted_json_shapes": set(),
+                    "handlers": set(),
+                    "parser_registrations": [],
+                    "alias_groups": set(),
+                },
+            )
+            entry["syntaxes"].add(registration["syntax"])
+            entry["accepted_json_shapes"].update(
+                registration["accepted_json_shapes"])
+            if registration.get("handler"):
+                entry["handlers"].add(registration["handler"])
+            alias_tuple = tuple(str(item) for item in keys)
+            entry["alias_groups"].add(alias_tuple)
+            detail = {
+                "registration_order": registration["registration_order"],
+                "alias_role": "alpha" if alias_index == 0 else "beta",
+                "alias_group": list(alias_tuple),
+                "source": registration["source"],
+            }
+            if "registration_kind" in registration:
+                detail["registration_kind"] = registration["registration_kind"]
+            entry["parser_registrations"].append(detail)
+
+    result: list[dict[str, object]] = []
+    for key in sorted(aggregate):
+        raw = aggregate[key]
+        alias_groups = sorted(raw["alias_groups"])
+        aliases = sorted({item for group in alias_groups for item in group})
+        result.append(
+            {
+                "key": key,
+                "syntaxes": sorted(raw["syntaxes"]),
+                "accepted_json_shapes": sorted(raw["accepted_json_shapes"]),
+                "handlers": sorted(raw["handlers"]),
+                "aliases": aliases,
+                "parser_registrations": sorted(
+                    raw["parser_registrations"],
+                    key=lambda item: (
+                        int(item["registration_order"]),
+                        str(item["alias_role"]),
+                    ),
+                ),
+                "parameters": {
+                    "status": "unclassified",
+                    "items": [],
+                    "note": (
+                        "Handler-specific members require source-backed "
+                        "review."
+                    ),
+                },
+                "value_types": {
+                    "status": "partial",
+                    "items": sorted(raw["accepted_json_shapes"]),
+                    "note": "Only parser dispatch shapes are proven here.",
+                },
+                "defaults": {"status": "unclassified", "items": []},
+                "nesting": {"status": "unclassified", "allows": []},
+                "talker_semantics": legacy_alias_note(aliases),
+                "variables": {
+                    "status": "unclassified",
+                    "scopes": [],
+                    "known_global_scopes": list(VARIABLE_SCOPES),
+                },
+                "context": {"status": "unclassified", "requirements": []},
+                "contract_status": "partial",
+                "contract_kind": contract_kind,
+            }
+        )
+    return result
