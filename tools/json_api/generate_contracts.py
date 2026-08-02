@@ -663,3 +663,322 @@ def lexical_documentation(
             "confidence": "lexical_only",
         }
     return result
+
+def attach_examples_and_docs(
+    entries: list[dict[str, object]],
+    counts: collections.Counter[str],
+    examples: dict[str, dict[str, str]],
+    documentation: dict[str, dict[str, object]],
+) -> None:
+    for entry in entries:
+        key = str(entry["key"])
+        evidence = examples.get(key)
+        entry["example_evidence"] = {
+            "status": "lexical_candidate" if evidence else "not_found",
+            "occurrences": counts[key],
+            "examples": [evidence] if evidence else [],
+            "confidence": "lexical_only",
+            "note": (
+                "A lexical match is evidence of use, not proof that the full "
+                "surrounding object is a minimal valid example."
+            ),
+        }
+        entry["documentation"] = documentation[key]
+
+def extract_eoc_base_fields(contents: str) -> list[dict[str, object]]:
+    body, base = function_body(contents, "void effect_on_condition::load")
+    results: dict[str, dict[str, object]] = {}
+    pattern = re.compile(
+        r"\b(mandatory|optional)\s*\(\s*jo\s*,\s*was_loaded\s*,\s*"
+        r'"([^"]+)"(?P<tail>[^;]*)\);'
+    )
+    for match in pattern.finditer(body):
+        kind, field = match.group(1), match.group(2)
+        arguments = [part.strip() for part in match.group(
+            "tail").split(",") if part.strip()]
+        default_expression = arguments[-1] if kind == "optional" and len(
+            arguments) > 1 else None
+        results[field] = {
+            "name": field,
+            "required": kind == "mandatory",
+            "requiredness_evidence": kind,
+            "default_expression": default_expression,
+            "source": source_reference(
+                "src/effect_on_condition.cpp",
+                contents,
+                base + match.start(),
+                "effect_on_condition::load",
+            ),
+        }
+    for field in (
+        "deactivate_condition",
+        "condition",
+        "effect",
+            "false_effect"):
+        match = re.search(re.escape(f'"{field}"'), body)
+        if match and field not in results:
+            results[field] = {
+                "name": field,
+                "required": False,
+                "requiredness_evidence": "guarded_or_loader_optional_path",
+                "default_expression": None,
+                "source": source_reference(
+                    "src/effect_on_condition.cpp",
+                    contents,
+                    base + match.start(),
+                    "effect_on_condition::load",
+                ),
+            }
+    return [results[key] for key in sorted(results)]
+
+def source_fingerprint(root: Path, paths: Iterable[str]) -> str:
+    digest = hashlib.sha256()
+    for path in sorted(set(paths)):
+        digest.update(path.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update((root / path).read_bytes())
+        digest.update(b"\0")
+    return f"sha256:{digest.hexdigest()}"
+
+def build_contracts(
+        root: Path = REPOSITORY_ROOT) -> dict[str, dict[str, object]]:
+    init_cpp = read_text(root, "src/init.cpp")
+    condition_cpp = read_text(root, "src/condition.cpp")
+    npctalk_cpp = read_text(root, "src/npctalk.cpp")
+    eoc_cpp = read_text(root, "src/effect_on_condition.cpp")
+    registrations = parse_json_registrations(init_cpp)
+    grouped: dict[str, list[dict[str, object]]] = collections.defaultdict(list)
+    for registration in registrations:
+        grouped[str(registration["type"])].append(registration)
+
+    complex_conditions = parse_parser_vector(
+        condition_cpp,
+        "std::vector<condition_parser>\nparsers =",
+        "src/condition.cpp",
+        "object_member",
+        source_symbol="parsers",
+    )
+    simple_conditions = parse_parser_vector(
+        condition_cpp,
+        "std::vector<condition_parser>\nparsers_simple =",
+        "src/condition.cpp",
+        "condition_string",
+        order_offset=len(complex_conditions),
+        source_symbol="parsers_simple",
+    )
+    condition_entries = aggregate_parser_entries(
+        complex_conditions + simple_conditions, "condition"
+    )
+    add_logical_conditions(condition_entries, condition_cpp)
+    object_effects = parse_parser_vector(
+        npctalk_cpp,
+        "std::vector<sub_effect_parser>\nparsers =",
+        "src/npctalk.cpp",
+        "object_member",
+        source_symbol="parsers",
+    )
+    string_effects = parse_string_effects(npctalk_cpp)
+    for registration in string_effects:
+        registration["registration_order"] = len(object_effects) + int(
+            registration["registration_order"]
+        )
+    effect_entries = aggregate_parser_entries(
+        object_effects + string_effects, "effect")
+
+    condition_keys = {str(entry["key"]) for entry in condition_entries}
+    effect_keys = {str(entry["key"]) for entry in effect_entries}
+    scan = tracked_json_scan(root, condition_keys, effect_keys)
+    observed_types = set(scan["type_counts"])
+    registered_types = set(grouped)
+    unknown_observed = sorted(observed_types - registered_types)
+    if unknown_observed:
+        raise RuntimeError(
+            "top-level DynamicDataLoader types are not registered: " +
+            ", ".join(unknown_observed)
+        )
+
+    json_docs = lexical_documentation(root, registered_types)
+    condition_docs = lexical_documentation(root, condition_keys)
+    effect_docs = lexical_documentation(root, effect_keys)
+    eoc_fields = extract_eoc_base_fields(eoc_cpp)
+    json_entries: list[dict[str, object]] = []
+    for object_type in sorted(registered_types):
+        type_registrations = grouped[object_type]
+        evidence = scan["type_examples"].get(object_type)
+        field_contract: dict[str, object] = {
+            "status": "unclassified",
+            "required_fields": [],
+            "optional_fields": [],
+            "inheritance": "unknown",
+            "copy_from": "unknown",
+            "validation": "unknown",
+            "note": (
+                "No field contract is inferred from instance frequency. Only "
+                "mandatory()/optional() or validator-backed evidence may "
+                "classify it."
+            ),
+        }
+        if object_type == "effect_on_condition":
+            field_contract = {
+                "status": "partial",
+                "fields": eoc_fields,
+                "inheritance": "generic_factory_handle_inheritance",
+                "copy_from": "supported_by_generic_factory",
+                "validation": "partial",
+                "note": (
+                    "Only fields directly proven in "
+                    "effect_on_condition::load are listed."
+                ),
+            }
+        json_entries.append(
+            {
+                "type": object_type,
+                "registrations": type_registrations,
+                "compile_conditional_variants": len(type_registrations) > 1,
+                "instance_evidence": {
+                    "occurrences": scan["type_counts"][object_type],
+                    "examples": [evidence] if evidence else [],
+                    "contract_roots": list(CONTRACT_ROOTS),
+                },
+                "schema": {
+                    "status": "none",
+                    "paths": [],
+                    "note": (
+                        "No general validator-backed Schema exists for this "
+                        "object type."
+                    ),
+                },
+                "documentation": json_docs[object_type],
+                "field_contract": field_contract,
+                "contract_status": "partial",
+            })
+
+    attach_examples_and_docs(
+        condition_entries,
+        scan["condition_counts"],
+        scan["condition_examples"],
+        condition_docs,
+    )
+    attach_examples_and_docs(
+        effect_entries,
+        scan["effect_counts"],
+        scan["effect_examples"],
+        effect_docs,
+    )
+    input_paths = [
+        "src/init.cpp",
+        "src/condition.cpp",
+        "src/npctalk.cpp",
+        "src/effect_on_condition.cpp",
+        *scan["paths"],
+        *git_tracked_files(root, "doc/JSON"),
+    ]
+    fingerprint = source_fingerprint(root, input_paths)
+    common_source = {
+        "project": "Cataclysm-Cleanwater-Bomb",
+        "source_fingerprint": fingerprint,
+        "contract_roots": list(CONTRACT_ROOTS),
+        "discovery": "git ls-files",
+    }
+    json_payload = {
+        "$schema": "../../../tools/json_api/contract-inventory.schema.json",
+        "schema_version": 1,
+        "inventory_kind": "json_object_types",
+        "source": {
+            **common_source,
+            "registrations": "src/init.cpp#DynamicDataLoader::initialize",
+        },
+        "summary": {
+            "registration_calls": len(registrations),
+            "registered_types": len(registered_types),
+            "observed_types": len(observed_types),
+            "registered_and_observed": len(registered_types & observed_types),
+            "registered_not_observed": sorted(
+                registered_types - observed_types
+            ),
+            "observed_not_registered": unknown_observed,
+            "tracked_json_files": scan["tracked_json_files"],
+            "top_level_objects": scan["top_level_objects"],
+            "top_level_objects_without_string_type": scan[
+                "top_level_objects_without_string_type"
+            ],
+            "schema_complete_types": 0,
+        },
+        "policy": {
+            "requiredness": "explicit mandatory() or Schema evidence only",
+            "data_frequency": "evidence of use only; never requiredness",
+            "unknown_fields": "retained as unclassified",
+        },
+        "entries": json_entries,
+    }
+    condition_payload = {
+        "$schema": "../../../tools/json_api/contract-inventory.schema.json",
+        "schema_version": 1,
+        "inventory_kind": "eoc_conditions",
+        "source": {
+            **common_source,
+            "parser": "src/condition.cpp#conditional_t::conditional_t",
+            "variable_parser": "src/condition.cpp#var_info::_deserialize",
+        },
+        "summary": {
+            "complex_parser_registrations": len(complex_conditions),
+            "simple_parser_registrations": len(simple_conditions),
+            "public_keys": len(condition_entries),
+            "keys_with_example_candidates": sum(
+                bool(scan["condition_counts"][key]) for key in condition_keys
+            ),
+            "fully_classified_keys": sum(
+                entry["contract_status"] == "complete"
+                for entry in condition_entries
+            ),
+        },
+        "global_contract": {
+            "parser_order": "first matching parser wins",
+            "unknown_object_condition": "JsonError",
+            "unknown_string_condition": "predicate returning false",
+            "variable_scopes": list(VARIABLE_SCOPES),
+            "value_helpers": list(VALUE_HELPERS),
+        },
+        "entries": condition_entries,
+    }
+    effect_payload = {
+        "$schema": "../../../tools/json_api/contract-inventory.schema.json",
+        "schema_version": 1,
+        "inventory_kind": "eoc_effects",
+        "source": {
+            **common_source,
+            "object_parser": (
+                "src/npctalk.cpp#talk_effect_t::parse_sub_effect"
+            ),
+            "string_parser": (
+                "src/npctalk.cpp#talk_effect_t::parse_string_effect"
+            ),
+        },
+        "summary": {
+            "object_parser_registrations": len(object_effects),
+            "string_parser_registrations": len(string_effects),
+            "public_keys": len(effect_entries),
+            "keys_with_example_candidates": sum(
+                bool(scan["effect_counts"][key]) for key in effect_keys
+            ),
+            "fully_classified_keys": sum(
+                entry["contract_status"] == "complete"
+                for entry in effect_entries
+            ),
+        },
+        "global_contract": {
+            "parser_order": "first matching parser wins",
+            "accepted_effect_container_shapes": ["string", "object", "array"],
+            "unknown_effect": "JsonError",
+            "variable_scopes": list(VARIABLE_SCOPES),
+            "value_helpers": list(VALUE_HELPERS),
+        },
+        "entries": effect_entries,
+    }
+    payloads = {
+        "json_object_types": json_payload,
+        "eoc_conditions": condition_payload,
+        "eoc_effects": effect_payload,
+    }
+    validate_contracts(payloads, root)
+    return payloads
