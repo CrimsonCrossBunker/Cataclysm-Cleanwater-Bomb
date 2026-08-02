@@ -151,3 +151,132 @@ def documentation(section: str, identity: str) -> dict[str, str]:
         "id": documentation_id(section, identity),
         "status": "generated-contract-source",
     }
+
+def extract_balanced(
+    contents: str, opening: int, opener: str = "(", closer: str = ")"
+) -> tuple[str, int]:
+    """Return a balanced C++ region, ignoring comments and quoted strings."""
+    if contents[opening] != opener:
+        raise RuntimeError(f"expected {opener!r} at offset {opening}")
+    depth = 0
+    quote: str | None = None
+    escaped = False
+    line_comment = False
+    block_comment = False
+    index = opening
+    while index < len(contents):
+        char = contents[index]
+        following = contents[index + 1] if index + 1 < len(contents) else ""
+        if line_comment:
+            if char == "\n":
+                line_comment = False
+            index += 1
+            continue
+        if block_comment:
+            if char == "*" and following == "/":
+                block_comment = False
+                index += 2
+            else:
+                index += 1
+            continue
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            index += 1
+            continue
+        if char == "/" and following == "/":
+            line_comment = True
+            index += 2
+            continue
+        if char == "/" and following == "*":
+            block_comment = True
+            index += 2
+            continue
+        if char in {'"', "'"}:
+            quote = char
+            index += 1
+            continue
+        if char == opener:
+            depth += 1
+        elif char == closer:
+            depth -= 1
+            if depth == 0:
+                return contents[opening + 1:index], index + 1
+        index += 1
+    raise RuntimeError(f"unterminated {opener}{closer} region")
+
+def split_top_level(contents: str) -> list[str]:
+    """Split a C++ argument list without splitting nested expressions."""
+    parts: list[str] = []
+    start = 0
+    round_depth = 0
+    square_depth = 0
+    brace_depth = 0
+    quote: str | None = None
+    escaped = False
+    line_comment = False
+    block_comment = False
+    index = 0
+    while index < len(contents):
+        char = contents[index]
+        following = contents[index + 1] if index + 1 < len(contents) else ""
+        if line_comment:
+            if char == "\n":
+                line_comment = False
+            index += 1
+            continue
+        if block_comment:
+            if char == "*" and following == "/":
+                block_comment = False
+                index += 2
+            else:
+                index += 1
+            continue
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            index += 1
+            continue
+        if char == "/" and following == "/":
+            line_comment = True
+            index += 2
+            continue
+        if char == "/" and following == "*":
+            block_comment = True
+            index += 2
+            continue
+        if char in {'"', "'"}:
+            quote = char
+        elif char == "(":
+            round_depth += 1
+        elif char == ")":
+            round_depth -= 1
+        elif char == "[":
+            square_depth += 1
+        elif char == "]":
+            square_depth -= 1
+        elif char == "{":
+            brace_depth += 1
+        elif char == "}":
+            brace_depth -= 1
+        elif (
+            char == "," and
+            round_depth == 0 and
+            square_depth == 0 and
+            brace_depth == 0
+        ):
+            parts.append(contents[start:index].strip())
+            start = index + 1
+        index += 1
+    tail = contents[start:].strip()
+    if tail:
+        parts.append(tail)
+    return parts
