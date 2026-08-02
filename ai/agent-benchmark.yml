@@ -64,4 +64,4 @@ cases:
     expected_routes: [documentation-impact]
     expected_paths: [ai/docs-impact.yml]
     expected_documentation_ids: [contributing.documentation-policy]
-    expected_validation_ids: [agent-context]
+    expected_validation_ids: [documentation-impact]

@@ -1,6 +1,6 @@
 schema_version: 1
 kind: repository_settings_target
-description: Desired settings only; Phase 0/1 does not apply them automatically.
+description: Desired settings only; code changes do not apply GitHub rules automatically.
 enforcement: deferred
 entries:
   - id: master-protection
@@ -13,6 +13,9 @@ entries:
       require_pull_request: true
       required_non_author_approvals: 1
       dismiss_stale_reviews: true
+      candidate_required_checks:
+        - Agent context and documentation impact
+        - Lua public contract
       prohibit_force_push: true
       prohibit_branch_deletion: true
       administrator_emergency_bypass: true

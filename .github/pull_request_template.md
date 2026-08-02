@@ -68,17 +68,18 @@ https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/blob/master/data
 
 #### Documentation impact
 <!-- None，或说明需要新增、更新、迁移、归档或标记 stale 的开发文档。
-实际执行级别以 ai/docs-impact.yml 为准。 -->
+实际执行级别以 ai/docs-impact.yml 为准。required 映射不能填写 None/N/A/TBD。 -->
 
 None
 
 #### Related CCB-Docs PR
-<!-- None，或填写 CrimsonCrossBunker/CCB-Docs 的 PR 链接。 -->
+<!-- None，或填写 CrimsonCrossBunker/CCB-Docs 的 PR 链接。required 映射必须链接实际 PR。 -->
 
 None
 
 #### Affected documentation IDs
-<!-- None，或填写 docs-catalog.yml 中稳定的文档 ID，多个 ID 用逗号分隔。 -->
+<!-- None，或填写 docs-catalog.yml 中稳定的文档 ID，多个 ID 用逗号分隔。
+required 映射至少填写一个 ai/docs-impact.yml 列出的对应 ID。 -->
 
 None
 

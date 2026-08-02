@@ -1,48 +1,148 @@
 schema_version: 1
 kind: docs_impact
-description: Advisory Phase 0/1 mapping from source changes to stable CCB-Docs IDs.
-enforcement: advisory
+description: Staged source-to-document mapping; ordinary changes remain advisory while public API and format contracts require complete cross-repository PR metadata.
+enforcement: staged
 entries:
   - id: governance-policy
+    enforcement: advisory
     patterns: [AGENTS.md, '*/AGENTS.md', CONTRIBUTING.md, GOVERNANCE.md, .github/pull_request_template.md]
     documentation_ids: [contributing.responsible-human, getting-started.first-contribution]
     generated_reference_impact: false
+    required_check_ids: []
     risk_group: governance
     risk_level: high
+
   - id: project-routing
-    patterns: [ai/project-map.yml, ai/test-matrix.yml, ai/generated-files.yml]
+    enforcement: advisory
+    patterns: [ai/project-map.yml, ai/test-matrix.yml, ai/generated-files.yml, ai/docs-impact.yml]
     documentation_ids: [architecture.project-map, validation.quickstart]
     generated_reference_impact: false
+    required_check_ids: []
     risk_group: project-context
     risk_level: normal
+
   - id: build-contracts
+    enforcement: advisory
     patterns: [CMakeLists.txt, CMakeModules/*, CMakePresets.json, Makefile, build-scripts/*, .github/workflows/*]
     documentation_ids: [validation.quickstart]
     generated_reference_impact: false
+    required_check_ids: []
     risk_group: build
     risk_level: high
+
   - id: lua-public-contract
-    patterns: [src/catalua*, src/event.h, data/lua/manifest.schema.json, data/lua/types/ccb_api_v5.d.lua, data/lua/reference/*, tools/lua_api/*]
-    documentation_ids: [api.lua.v5.overview, api.lua.v5.reference]
+    enforcement: required
+    patterns:
+      - src/catalua*
+      - src/event.h
+      - data/lua/manifest.schema.json
+      - data/lua/types/ccb_api_v5.d.lua
+      - data/lua/reference/*
+      - tools/lua_api/*
+    documentation_ids:
+      - api.lua.v5.overview
+      - api.lua.v5.lifecycle
+      - api.lua.v5.events
+      - api.lua.v5.capabilities
+      - api.lua.v5.permissions
+      - api.lua.v5.ui
+      - api.lua.v5.debugging
+      - api.lua.v5.performance
+      - api.lua.v5.migration
+      - api.lua.v5.changelog
+      - api.lua.v5.example-mod
+      - api.lua.v5.reference.modules
+      - api.lua.v5.reference.namespaces
+      - api.lua.v5.reference.classes
+      - api.lua.v5.reference.functions
+      - api.lua.v5.reference.methods
+      - api.lua.v5.reference.properties
+      - api.lua.v5.reference.operators
+      - api.lua.v5.reference.enums
+      - api.lua.v5.reference.events
+      - api.lua.v5.reference.hooks
+      - api.lua.v5.reference.callbacks
+      - api.lua.v5.reference.capabilities
+      - api.lua.v5.reference.permissions
+      - api.lua.v5.reference.manifest-fields
     generated_reference_impact: true
+    required_check_ids: [documentation-impact, lua-contract]
+    documentation_readiness:
+      state: bilingual_draft
+      languages: [zh_CN, en]
+      repository: CrimsonCrossBunker/CCB-Docs
+      ref: agent/ccb-docs-program-lua-reference
+      commit: 7fc27b606fed83b5dbcef57506b28a84cce046c1
+      source_commit: 3ac0bd7f356b30b880dc655f3006ebf1cbda9cfd
+      activation_gate: Refresh to the merged CCB source commit and promote every mapped page from draft before this enforcement PR merges.
     risk_group: lua-api
     risk_level: high
-  - id: json-eoc-contracts
+
+  - id: json-public-contract
+    enforcement: required
     patterns:
-      - data/json/*
-      - data/core/*
-      - data/mods/*
-      - data/sound/*
-      - data/reference/json/*
-      - doc/JSON/*
-      - src/*factory*
-      - src/*json*
+      - data/reference/json/ccb_json_object_types.json
       - src/init.cpp
+      - src/generic_factory.h
+      - src/*factory*
+      - tools/json_api/*
+    documentation_ids:
+      - json.overview
+      - json.inheritance-copy-from
+      - json.validation
+      - reference.json-object-types
+      - mods.complete-json-eoc-mod
+    generated_reference_impact: true
+    required_check_ids: [documentation-impact, json-eoc-contract]
+    documentation_readiness: &json_eoc_docs_readiness
+      state: bilingual_draft
+      languages: [zh_CN, en]
+      repository: CrimsonCrossBunker/CCB-Docs
+      ref: agent/ccb-docs-json-eoc-on-lua
+      commit: c86731aad984f67ed679a9f244f476fee7f973a1
+      source_commit: a038c765568fc47a58ef8c523b2722d416f5f61c
+      activation_gate: Refresh to the merged CCB source commit and promote every mapped page from draft before this enforcement PR merges.
+    risk_group: json-api
+    risk_level: high
+
+  - id: eoc-public-contract
+    enforcement: required
+    patterns:
+      - data/reference/json/ccb_eoc_conditions.json
+      - data/reference/json/ccb_eoc_effects.json
       - src/condition.cpp
       - src/npctalk.cpp
       - src/effect_on_condition.cpp
+      - src/effect_on_condition.h
       - tools/json_api/*
-    documentation_ids: []
+    documentation_ids:
+      - eoc.overview
+      - eoc.talkers
+      - eoc.variables-context
+      - eoc.nesting
+      - reference.eoc-conditions
+      - reference.eoc-effects
+      - mods.complete-json-eoc-mod
     generated_reference_impact: true
-    risk_group: json-eoc-api
+    required_check_ids: [documentation-impact, json-eoc-contract]
+    documentation_readiness: *json_eoc_docs_readiness
+    risk_group: eoc-api
+    risk_level: high
+
+  - id: json-eoc-content
+    enforcement: advisory
+    patterns: [data/core/*, data/json/*, data/mods/*, data/sound/*, doc/JSON/*]
+    documentation_ids: [json.overview, eoc.overview, mods.complete-json-eoc-mod]
+    generated_reference_impact: false
+    required_check_ids: []
+    risk_group: json-eoc-content
+    risk_level: normal
+
+  - id: json-serialization
+    enforcement: advisory
+    patterns: [src/*json*]
+    documentation_ids: [compatibility.save, json.overview]
+    generated_reference_impact: false
+    required_check_ids: []
+    risk_group: serialization
     risk_level: high

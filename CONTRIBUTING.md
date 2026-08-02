@@ -303,6 +303,15 @@ Every PR must describe:
 - affected stable documentation IDs;
 - generated-reference impact.
 
+Enforcement is path-scoped by `ai/docs-impact.yml`. Governance, build, and
+ordinary JSON content mappings remain advisory. Changes to the public Lua
+contract or the JSON/EOC registration and parsing contracts are required: the
+four fields must contain a concrete impact statement, a CCB-Docs pull-request
+link, at least one mapped stable document ID, and the generated-reference
+result. Template placeholders such as `None`, `N/A`, and `TBD` do not satisfy a
+required mapping. Unrelated paths are never made to fail merely because an API
+subsystem has documentation work elsewhere.
+
 A CCB-Docs PR may be prepared before the source PR merges, but must remain
 Draft. After source merge, refresh its metadata to the final source commit,
 regenerate derived files, rerun checks, and then request human review.

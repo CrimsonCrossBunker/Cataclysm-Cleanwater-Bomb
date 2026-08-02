@@ -25,6 +25,14 @@ must record the date and operator after each administrator change.
 - emergency bypass is limited, intentional, and records a reason;
 - bots cannot approve their own pull requests and no PR is automatically merged.
 
+The candidate check names introduced by the staged documentation work are
+`Agent context and documentation impact` and `Lua public contract`.  They are
+only candidates until each has a stable successful run on `master`; merging a
+workflow does not add either name to a ruleset.  JSON/EOC contract validation
+currently runs inside `Agent context and documentation impact`.  The Lua
+workflow starts for every pull request so its named check exists; its expensive
+validation job is path-scoped and is skipped successfully for unrelated work.
+
 ## Actions and automation
 
 - Default `GITHUB_TOKEN` permissions remain read-only.
