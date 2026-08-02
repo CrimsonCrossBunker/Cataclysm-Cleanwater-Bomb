@@ -1112,3 +1112,181 @@ def validate_documentation_reference(
         raise RuntimeError(
             f"documentation evidence is stale: {path}:{line}: {key}"
         )
+
+def validate_summary(payload: dict[str, object], kind: str) -> None:
+    entries = payload["entries"]
+    summary = payload["summary"]
+    if not isinstance(entries, list) or not isinstance(summary, dict):
+        raise RuntimeError(f"invalid inventory structure: {kind}")
+    if kind == "json_object_types":
+        registration_count = sum(
+            len(entry["registrations"]) for entry in entries
+        )
+        observed = [
+            entry for entry in entries
+            if entry["instance_evidence"]["occurrences"] > 0
+        ]
+        expected = {
+            "registration_calls": registration_count,
+            "registered_types": len(entries),
+            "observed_types": len(observed),
+            "registered_and_observed": len(observed),
+            "registered_not_observed": sorted(
+                entry["type"] for entry in entries
+                if entry["instance_evidence"]["occurrences"] == 0
+            ),
+            "observed_not_registered": [],
+            "schema_complete_types": sum(
+                entry["schema"]["status"] == "complete"
+                for entry in entries
+            ),
+        }
+    else:
+        parser_registrations = {
+            (
+                registration["registration_order"],
+                tuple(registration["alias_group"]),
+                registration["source"]["path"],
+                registration["source"]["line"],
+                registration["source"]["symbol"],
+                registration.get("registration_kind"),
+            )
+            for entry in entries
+            for registration in entry["parser_registrations"]
+            if registration["registration_order"] >= 0
+        }
+        expected = {
+            "public_keys": len(entries),
+            "keys_with_example_candidates": sum(
+                entry["example_evidence"]["occurrences"] > 0
+                for entry in entries
+            ),
+            "fully_classified_keys": sum(
+                entry["contract_status"] == "complete"
+                for entry in entries
+            ),
+        }
+        if kind == "eoc_conditions":
+            expected.update({
+                "complex_parser_registrations": sum(
+                    registration[4] == "parsers"
+                    for registration in parser_registrations
+                ),
+                "simple_parser_registrations": sum(
+                    registration[4] == "parsers_simple"
+                    for registration in parser_registrations
+                ),
+            })
+        else:
+            expected.update({
+                "object_parser_registrations": sum(
+                    registration[4] == "parsers"
+                    for registration in parser_registrations
+                ),
+                "string_parser_registrations": sum(
+                    registration[4] ==
+                    "talk_effect_t::parse_string_effect"
+                    for registration in parser_registrations
+                ),
+            })
+    for key, value in expected.items():
+        if summary.get(key) != value:
+            raise RuntimeError(f"stale {kind} summary field: {key}")
+
+def validate_contracts(
+    payloads: dict[str, dict[str, object]], root: Path = REPOSITORY_ROOT
+) -> None:
+    if set(payloads) != set(OUTPUT_NAMES):
+        raise RuntimeError("contract payload set is incomplete")
+    tracked_sources = set(git_tracked_files(root, "src"))
+    tracked_data = {
+        path for path in git_tracked_files(root, *CONTRACT_ROOTS)
+        if path.endswith(".json")
+    }
+    tracked_docs = {
+        path for path in git_tracked_files(root, "doc/JSON")
+        if path.endswith(".md")
+    }
+    source_cache: dict[str, str] = {}
+    data_cache: dict[str, object] = {}
+    documentation_cache: dict[str, str] = {}
+    for kind, payload in payloads.items():
+        if payload.get("schema_version") != 1 or payload.get(
+                "inventory_kind") != kind:
+            raise RuntimeError(f"invalid inventory header: {kind}")
+        entries = payload.get("entries")
+        if not isinstance(entries, list) or not entries:
+            raise RuntimeError(f"inventory has no entries: {kind}")
+        key_name = "type" if kind == "json_object_types" else "key"
+        keys = [entry.get(key_name)
+                for entry in entries if isinstance(entry, dict)]
+        if len(keys) != len(entries) or keys != sorted(
+                keys) or len(keys) != len(set(keys)):
+            raise RuntimeError(
+                f"inventory keys are invalid or non-deterministic: {kind}")
+        validate_summary(payload, kind)
+        for entry in entries:
+            key = str(entry[key_name])
+            fields: list[dict[str, object]] = []
+            if kind == "json_object_types":
+                sources = [item["source"] for item in entry["registrations"]]
+                fields = entry["field_contract"].get("fields", [])
+                if entry["field_contract"]["status"] not in {
+                    "unclassified",
+                    "partial",
+                    "complete",
+                }:
+                    raise RuntimeError(f"invalid field status for {key}")
+                field_names = [field.get("name") for field in fields]
+                if field_names != sorted(field_names) or len(
+                        field_names) != len(set(field_names)):
+                    raise RuntimeError(
+                        f"field evidence is invalid or unsorted for {key}"
+                    )
+                for field in fields:
+                    required = field.get("required")
+                    requiredness = field.get("requiredness_evidence")
+                    if required != (requiredness == "mandatory"):
+                        raise RuntimeError(
+                            f"field requiredness evidence conflicts for "
+                            f"{key}.{field.get('name')}"
+                        )
+                examples = entry["instance_evidence"]["examples"]
+            else:
+                sources = [item["source"]
+                           for item in entry["parser_registrations"]]
+                if entry["contract_status"] not in {"partial", "complete"}:
+                    raise RuntimeError(f"invalid contract status for {key}")
+                examples = entry["example_evidence"]["examples"]
+            for evidence in sources:
+                validate_source_reference(
+                    evidence,
+                    key,
+                    tracked_sources,
+                    source_cache,
+                    root,
+                )
+            for field in (fields if kind == "json_object_types" else []):
+                validate_source_reference(
+                    field["source"],
+                    str(field["name"]),
+                    tracked_sources,
+                    source_cache,
+                    root,
+                )
+            for evidence in examples:
+                validate_data_reference(
+                    evidence,
+                    key,
+                    kind,
+                    tracked_data,
+                    data_cache,
+                    root,
+                )
+            validate_documentation_reference(
+                entry["documentation"],
+                key,
+                tracked_docs,
+                documentation_cache,
+                root,
+            )
