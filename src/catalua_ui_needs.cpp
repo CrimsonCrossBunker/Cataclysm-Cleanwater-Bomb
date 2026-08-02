@@ -7,12 +7,14 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
 #include "character.h"
 #include "creature.h"
+#include "vitamin.h"
 
 namespace cata::lua_ui
 {
@@ -22,6 +24,7 @@ namespace
 
 constexpr int maximum_need_magnitude = 1000000;
 constexpr int maximum_stored_kcal = 2000000;
+constexpr int maximum_gut_vitamin = 1000000000;
 constexpr std::int64_t maximum_sleep_adjustment_turns = 31622400;
 
 Character *resolve_character(
@@ -298,6 +301,188 @@ sol::table modify_calories(
     value["before"] = std::move( before );
     value["after"] =
         snapshot_needs( state, *character );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+void require_vitamin_id(
+    const script_game_id &id, const std::string_view api_name )
+{
+    if( id.kind() != "vitamin" || !id.is_valid() ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " requires a valid GameId<vitamin>" );
+    }
+}
+
+sol::table snapshot_gut_vitamin(
+    sol::state_view lua, const Character &character,
+    const vitamin_id &id )
+{
+    sol::table result = lua.create_table();
+    result["id"] = script_game_id( "vitamin", id.str() );
+    result["amount"] = character.guts.get_vitamin( id );
+    return result;
+}
+
+sol::table get_gut_calories(
+    sol::this_state lua, const game_handle &handle,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, character->guts.get_calories() ) );
+}
+
+sol::table set_gut_calories(
+    sol::this_state lua, const game_handle &handle,
+    const int requested_kcal,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    if( requested_kcal < 0 || requested_kcal > maximum_stored_kcal ) {
+        throw std::invalid_argument(
+            "game.needs.set_gut_calories kcal must be within 0..2000000" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const int before = character->guts.get_calories();
+    character->guts.mod_calories( requested_kcal - before );
+    sol::table value = state.create_table();
+    value["requested"] = requested_kcal;
+    value["before"] = before;
+    value["after"] = character->guts.get_calories();
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table modify_gut_calories(
+    sol::this_state lua, const game_handle &handle,
+    const int requested_delta,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    if( requested_delta < -maximum_need_magnitude ||
+        requested_delta > maximum_need_magnitude ) {
+        throw std::invalid_argument(
+            "game.needs.modify_gut_calories delta must be within -1000000..1000000" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const int before = character->guts.get_calories();
+    character->guts.mod_calories( requested_delta );
+    const int after = character->guts.get_calories();
+    sol::table value = state.create_table();
+    value["requested_delta"] = requested_delta;
+    value["applied_delta"] = after - before;
+    value["before"] = before;
+    value["after"] = after;
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table get_gut_vitamin(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &id,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_vitamin_id( id, "game.needs.get_gut_vitamin" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, snapshot_gut_vitamin(
+                       state, *character, vitamin_id( id.value() ) ) ) );
+}
+
+sol::table set_gut_vitamin(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &id, const int requested_amount,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_vitamin_id( id, "game.needs.set_gut_vitamin" );
+    if( requested_amount < 0 || requested_amount > maximum_gut_vitamin ) {
+        throw std::invalid_argument(
+            "game.needs.set_gut_vitamin amount must be within 0..1000000000" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const vitamin_id vitamin( id.value() );
+    sol::table before = snapshot_gut_vitamin( state, *character, vitamin );
+    character->guts.set_vitamin( vitamin, requested_amount );
+    sol::table value = state.create_table();
+    value["requested"] = requested_amount;
+    value["before"] = std::move( before );
+    value["after"] = snapshot_gut_vitamin( state, *character, vitamin );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table modify_gut_vitamin(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &id, const int requested_delta,
+    const std::size_t runtime_generation,
+    const std::size_t world_generation )
+{
+    require_vitamin_id( id, "game.needs.modify_gut_vitamin" );
+    if( requested_delta < -maximum_gut_vitamin ||
+        requested_delta > maximum_gut_vitamin ) {
+        throw std::invalid_argument(
+            "game.needs.modify_gut_vitamin delta must be within -1000000000..1000000000" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const vitamin_id vitamin( id.value() );
+    const int before_amount = character->guts.get_vitamin( vitamin );
+    sol::table before = snapshot_gut_vitamin( state, *character, vitamin );
+    character->guts.mod_vitamin( vitamin, requested_delta );
+    const int after_amount = character->guts.get_vitamin( vitamin );
+    sol::table value = state.create_table();
+    value["requested_delta"] = requested_delta;
+    value["applied_delta"] = after_amount - before_amount;
+    value["before"] = std::move( before );
+    value["after"] = snapshot_gut_vitamin( state, *character, vitamin );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -669,6 +854,68 @@ void install_need_api(
         return modify_calories(
                    lua_state, handle, delta,
                    ignore_weariness.value_or( false ),
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    needs.set_function(
+        "get_gut_calories",
+        [current_runtime_generation, current_world_generation, require_read](
+    sol::this_state lua_state, const game_handle & handle ) {
+        require_read();
+        return get_gut_calories(
+                   lua_state, handle,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    needs.set_function(
+        "set_gut_calories",
+        [current_runtime_generation, current_world_generation, require_write](
+    sol::this_state lua_state, const game_handle & handle, const int kcal ) {
+        require_write();
+        return set_gut_calories(
+                   lua_state, handle, kcal,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    needs.set_function(
+        "modify_gut_calories",
+        [current_runtime_generation, current_world_generation, require_write](
+    sol::this_state lua_state, const game_handle & handle, const int delta ) {
+        require_write();
+        return modify_gut_calories(
+                   lua_state, handle, delta,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    needs.set_function(
+        "get_gut_vitamin",
+        [current_runtime_generation, current_world_generation, require_read](
+    sol::this_state lua_state, const game_handle & handle, const script_game_id & id ) {
+        require_read();
+        return get_gut_vitamin(
+                   lua_state, handle, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    needs.set_function(
+        "set_gut_vitamin",
+        [current_runtime_generation, current_world_generation, require_write](
+    sol::this_state lua_state, const game_handle & handle, const script_game_id & id,
+    const int amount ) {
+        require_write();
+        return set_gut_vitamin(
+                   lua_state, handle, id, amount,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    needs.set_function(
+        "modify_gut_vitamin",
+        [current_runtime_generation, current_world_generation, require_write](
+    sol::this_state lua_state, const game_handle & handle, const script_game_id & id,
+    const int delta ) {
+        require_write();
+        return modify_gut_vitamin(
+                   lua_state, handle, id, delta,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
