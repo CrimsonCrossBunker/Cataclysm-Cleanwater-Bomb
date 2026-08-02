@@ -28,7 +28,7 @@
     ],
     "luminance": 40,
     "harvest": "exempt",
-    "special_attacks": [ [ "FUNGUS_HAZE", 25 ] ],
+    "special_attacks": [ [ "FUNGUS_HAZE", 40 ] ],
     "death_function": { "corpse_type": "NO_CORPSE", "effect": { "id": "death_fungus", "hit_self": true } },
     "flags": [ "HEARS", "GOODHEARING", "NOHEAD", "POISON", "IMMOBILE", "NO_BREATHE" ],
     "armor": { "bash": 4, "cut": 4, "bullet": 3, "electric": 4 }
