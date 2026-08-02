@@ -51,15 +51,11 @@ def tracked_markdown(commit: str) -> list[str]:
         paths.append(path)
     return sorted(paths)
 def contributors(commit: str, path: str) -> list[str]:
-    names = git(
-        "log", commit, "--follow", "--format=%aN", "--", path
+    names: list[object] = git(
+        "log", commit, "--format=%aN", "--", path
     ).splitlines()
-    unique: list[str] = []
-    for name in names:
-        clean = name.strip()
-        if clean and clean not in unique:
-            unique.append(clean)
-    return unique or ["Unknown (see source history)"]
+    clean, _ = sanitize_contributors(names)
+    return clean or ["Unknown (see source history)"]
 def classification(path: str) -> tuple[str, str, str]:
     if path.startswith("src/third-party/"):
         return (
