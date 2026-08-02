@@ -5,19 +5,19 @@ document_count: 175
 scope: Tracked Markdown at source_commit, excluding dot-prefixed tool/config paths; filesystem caches
   are never traversed.
 classification_summary:
-  review: 96
+  review: 95
   actions:
     archive_public: 1
     generated_reference: 2
     keep_in_repo: 54
     merge_into: 4
-    migrate_preserve: 5
+    migrate_preserve: 6
     migrate_rewrite: 7
     retain_third_party: 6
-    review: 96
+    review: 95
   migration_statuses:
-    classified: 67
-    inventoried: 96
+    classified: 68
+    inventoried: 95
     verified: 12
 documents:
 - original_path: CODE_OF_CONDUCT.md
@@ -2504,30 +2504,37 @@ documents:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-effect-on-condition
-  domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/eoc/
+  migration_status: classified
+  history_strategy: filtered_path_history_candidate
+  stable_document_id: eoc.reference
+  domain: eoc
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_extended
+  upstream_relation: forked_and_locally_extended
   merge_target: null
   source_paths:
-  - doc/JSON/EFFECT_ON_CONDITION.md
-  source_symbols: []
+  - src/effect_on_condition.cpp
+  - src/condition.cpp
+  - src/npctalk.cpp
+  - data/json/effects_on_condition/example_eocs.json
+  - tests/npc_talk_test.cpp
+  source_symbols:
+  - effect_on_condition::load
+  - effect_on_conditions::load
+  - conditional_t::conditional_t
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 5,913 行手工条件/效果清单含 TODO 与 deprecated 项；必须拆分概念页和由注册表生成的 reference，并做 condition/effect parity。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 这是当前 EOC 主参考，覆盖 talkers、变量、条件、效果、math 和大量示例；2026-06/07 有 8 次导入后更新，包括 CCB 种植事件，必须保留 CCB 差异和作者历史。
+  migration_batch: phase-0-eoc
 - original_path: doc/JSON/EXAMINE.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/examine-actions.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - LunaGlaze
