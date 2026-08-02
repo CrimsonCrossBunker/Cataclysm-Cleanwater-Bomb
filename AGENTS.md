@@ -68,6 +68,10 @@ python3 tools/agent/generate_markdown_inventory.py --check
 python3 tools/agent/generate_documentation_registry.py --check
 python3 tools/agent/generate_migration_reports.py --check
 
+# Bounded task context and deterministic benchmark
+python3 tools/agent/build_context_pack.py --task-id repository-navigation --file AGENTS.md
+python3 tools/agent/benchmark_context_pack.py --check
+
 # C++ formatting and unit tests
 make astyle-check
 make -j2 tests
