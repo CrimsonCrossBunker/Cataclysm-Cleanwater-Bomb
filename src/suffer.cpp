@@ -142,7 +142,6 @@ json_flag_SUNBURN_SUPERNATURAL_REDUCTION( "SUNBURN_SUPERNATURAL_REDUCTION" );
 
 static const damage_type_id damage_bash( "bash" );
 static const sub_bodypart_str_id sub_body_part_torso_upper( "torso_upper" );
-static const sub_bodypart_str_id sub_body_part_torso_neck( "torso_neck" );
 
 static const morale_type morale_feeling_bad( "morale_feeling_bad" );
 static const morale_type morale_feeling_good( "morale_feeling_good" );
@@ -411,24 +410,23 @@ void suffer::while_grabbed( Character &you )
 
     const float pressure_per_part = static_cast<float>( crowd_pressure ) / 4;
     bool pressure_absorbed = true;
-    const auto absorb_bodypart_pressure = [&]( const bodypart_id & bp ) {
-        damage_instance pressure( damage_bash, pressure_per_part );
+    const auto absorb_bodypart_pressure = [&]( const bodypart_id & bp, float pressure_amount ) {
+        damage_instance pressure( damage_bash, pressure_amount );
         you.absorb_hit( weakpoint_attack(), bp, pressure );
         if( pressure.total_damage() > 0.0f ) {
             pressure_absorbed = false;
         }
     };
-    const auto absorb_sub_bodypart_pressure = [&]( const sub_bodypart_id & sbp ) {
-        damage_instance pressure( damage_bash, pressure_per_part );
+    const auto absorb_sub_bodypart_pressure = [&]( const sub_bodypart_id & sbp, float pressure_amount ) {
+        damage_instance pressure( damage_bash, pressure_amount );
         you.absorb_hit( sbp, pressure );
         if( pressure.total_damage() > 0.0f ) {
             pressure_absorbed = false;
         }
     };
-    absorb_sub_bodypart_pressure( sub_body_part_torso_upper.id() );
-    absorb_sub_bodypart_pressure( sub_body_part_torso_neck.id() );
-    absorb_bodypart_pressure( body_part_mouth.id() );
-    absorb_bodypart_pressure( body_part_eyes.id() );
+    absorb_sub_bodypart_pressure( sub_body_part_torso_upper.id(), pressure_per_part * 2 );
+    absorb_bodypart_pressure( body_part_mouth.id(), pressure_per_part );
+    absorb_bodypart_pressure( body_part_eyes.id(), pressure_per_part );
 
     if( pressure_absorbed ) {
         return;
