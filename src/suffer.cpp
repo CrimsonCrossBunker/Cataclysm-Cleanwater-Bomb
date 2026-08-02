@@ -141,6 +141,7 @@ static const json_character_flag
 json_flag_SUNBURN_SUPERNATURAL_REDUCTION( "SUNBURN_SUPERNATURAL_REDUCTION" );
 
 static const damage_type_id damage_bash( "bash" );
+static const sub_bodypart_str_id sub_body_part_torso_neck( "torso_neck" );
 
 static const morale_type morale_feeling_bad( "morale_feeling_bad" );
 static const morale_type morale_feeling_good( "morale_feeling_good" );
@@ -407,17 +408,26 @@ void suffer::while_grabbed( Character &you )
         crowd_pressure += impassable_ter * std::max( 1, crowd_pressure / ( crowd - impassable_ter ) );
     }
 
-    const std::array<bodypart_id, 3> breathing_parts = { body_part_torso.id(), body_part_mouth.id(),
-        body_part_eyes.id() };
-    const float pressure_per_part = static_cast<float>( crowd_pressure ) / breathing_parts.size();
+    const float pressure_per_part = static_cast<float>( crowd_pressure ) / 4;
     bool pressure_absorbed = true;
-    for( const bodypart_id &bp : breathing_parts ) {
+    const auto absorb_bodypart_pressure = [&]( const bodypart_id & bp ) {
         damage_instance pressure( damage_bash, pressure_per_part );
         you.absorb_hit( weakpoint_attack(), bp, pressure );
         if( pressure.total_damage() > 0.0f ) {
             pressure_absorbed = false;
         }
-    }
+    };
+    const auto absorb_sub_bodypart_pressure = [&]( const sub_bodypart_id & sbp ) {
+        damage_instance pressure( damage_bash, pressure_per_part );
+        you.absorb_hit( sbp, pressure );
+        if( pressure.total_damage() > 0.0f ) {
+            pressure_absorbed = false;
+        }
+    };
+    absorb_bodypart_pressure( body_part_torso.id() );
+    absorb_sub_bodypart_pressure( sub_body_part_torso_neck.id() );
+    absorb_bodypart_pressure( body_part_mouth.id() );
+    absorb_bodypart_pressure( body_part_eyes.id() );
 
     if( pressure_absorbed ) {
         return;
