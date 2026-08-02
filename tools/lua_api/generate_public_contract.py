@@ -280,3 +280,142 @@ def split_top_level(contents: str) -> list[str]:
     if tail:
         parts.append(tail)
     return parts
+
+def cpp_sources() -> list[Path]:
+    return sorted((REPOSITORY_ROOT / "src").glob("catalua*.cpp"))
+
+def parse_luals(path: Path = DECLARATIONS) -> dict[str, object]:
+    contents = path.read_text(encoding="utf-8")
+    lines = contents.splitlines()
+    classes: dict[str, dict[str, object]] = {}
+    functions: dict[tuple[str, str], dict[str, object]] = {}
+
+    for index, line in enumerate(lines):
+        class_match = re.match(r"^---@class\s+(\w+)(.*)$", line)
+        if class_match:
+            name, declaration_tail = class_match.groups()
+            fields: list[dict[str, object]] = []
+            cursor = index + 1
+            while cursor < len(lines):
+                field_match = re.match(
+                    r"^---@field\s+(\w+)(\?)?\s+(.+)$", lines[cursor]
+                )
+                if field_match is None:
+                    break
+                field_name, optional, declaration = field_match.groups()
+                fields.append(
+                    {
+                        "name": field_name,
+                        "optional": bool(optional),
+                        "declaration": declaration,
+                        "sources": [
+                            {
+                                "path": relative(path),
+                                "line": cursor + 1,
+                                "authority": "LuaLS declaration",
+                            }
+                        ],
+                        "documentation": documentation(
+                            "property", f"{name}.{field_name}"
+                        ),
+                    }
+                )
+                cursor += 1
+            classes[name] = {
+                "id": name,
+                "kind": "record",
+                "declaration": declaration_tail.strip(),
+                "fields": fields,
+                "sources": [
+                    {
+                        "path": relative(path),
+                        "line": index + 1,
+                        "authority": "LuaLS declaration",
+                    }
+                ],
+                "documentation": documentation("class", name),
+            }
+
+        function_match = re.match(
+            r"^function\s+(\w+)([:.])(\w+)\(([^)]*)\)\s+end$", line
+        )
+        if function_match is None:
+            continue
+        class_name, separator, name, raw_parameters = function_match.groups()
+        block: list[str] = []
+        cursor = index - 1
+        while cursor >= 0 and lines[cursor].startswith("---"):
+            block.append(lines[cursor])
+            cursor -= 1
+        block.reverse()
+        parameters: list[dict[str, object]] = []
+        returns: list[dict[str, str]] = []
+        overloads: list[str] = []
+        deprecated = False
+        for annotation in block:
+            parameter = re.match(
+                r"^---@param\s+(\w+)(\?)?\s+(.+)$", annotation)
+            if parameter:
+                parameter_name, optional, declaration = parameter.groups()
+                parameters.append(
+                    {
+                        "name": parameter_name,
+                        "optional": bool(optional),
+                        "declaration": declaration,
+                    }
+                )
+                continue
+            return_value = re.match(r"^---@return\s+(.+)$", annotation)
+            if return_value:
+                returns.append({"declaration": return_value.group(1)})
+                continue
+            overload = re.match(r"^---@overload\s+(.+)$", annotation)
+            if overload:
+                overloads.append(overload.group(1))
+            if annotation.startswith("---@deprecated"):
+                deprecated = True
+
+        raw_names = [
+            parameter.strip()
+            for parameter in raw_parameters.split(",")
+            if parameter.strip()
+        ]
+        annotated_names = [entry["name"] for entry in parameters]
+        if raw_names != annotated_names:
+            raise RuntimeError(
+                f"LuaLS parameter metadata for {class_name}.{name} is "
+                f"{annotated_names}, expected {raw_names}"
+            )
+        functions[(class_name, name)] = {
+            "class": class_name,
+            "name": name,
+            "style": "method" if separator == ":" else "function",
+            "parameters": parameters,
+            "returns": returns,
+            "overloads": overloads,
+            "errors": {
+                "mode": "lua-error",
+                "message_stability": "not-guaranteed",
+                "conditions": [
+                    "capability, validation, lifecycle, or native "
+                    "operation failure"
+                ],
+            },
+            "api_version": 5,
+            "since": "untracked-before-or-at-v5",
+            "deprecated": deprecated,
+            "deprecation_replacement": None,
+            "sources": [
+                {
+                    "path": relative(path),
+                    "line": index + 1,
+                    "authority": "LuaLS declaration",
+                }
+            ],
+        }
+
+    if len(classes) != 260:
+        raise RuntimeError(f"expected 260 LuaLS classes, found {len(classes)}")
+    result = {"classes": classes, "functions": functions, "contents": contents}
+    validate_confirmed_declaration_contracts(result)
+    return result
