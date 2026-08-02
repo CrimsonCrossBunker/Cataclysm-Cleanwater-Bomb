@@ -204,6 +204,11 @@ struct field_type {
         bool is_splattering = false;
         bool dirty_transparency_cache = false;
         bool has_fire = false;
+        struct fire_reaction_data {
+            int degrade_at = 0;
+            int clear_at = 0;
+            time_duration interval = 1_minutes;
+        } fire_reaction;
         bool has_acid = false;
         bool has_elec = false;
         bool has_fume = false;
