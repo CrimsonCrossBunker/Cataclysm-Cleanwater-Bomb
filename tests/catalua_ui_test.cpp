@@ -79,7 +79,6 @@
 #include <iterator>
 #include <list>
 #include <limits>
-#include <list>
 #include <map>
 #include <memory>
 #include <optional>
@@ -94,6 +93,9 @@ namespace
 {
 
 namespace fs = std::filesystem;
+
+static const efftype_id effect_cold( "cold" );
+static const efftype_id effect_downed( "downed" );
 
 class mutation_event_subscriber final : public event_subscriber
 {
@@ -303,8 +305,9 @@ class recording_ui_renderer final : public cata::lua_ui::script_ui_renderer
 class scoped_lua_user_script
 {
     public:
-        scoped_lua_user_script() : path_( fs::u8path( PATH_INFO::config_dir() ) / "lua" / "main.lua" ),
-            manifest_path_( path_.parent_path() / "manifest.json" ) {
+        scoped_lua_user_script() : path_( fs::u8path( PATH_INFO::config_dir() ) /
+                                          fs::u8path( "lua" ) / fs::u8path( "main.lua" ) ),
+            manifest_path_( path_.parent_path() / fs::u8path( "manifest.json" ) ) {
             std::error_code error;
             fs::create_directories( path_.parent_path(), error );
             if( error ) {
@@ -383,7 +386,7 @@ class scoped_lua_user_module
 {
     public:
         explicit scoped_lua_user_module( const fs::path &relative_path ) :
-            path_( fs::u8path( PATH_INFO::config_dir() ) / "lua" / relative_path ) {
+            path_( fs::u8path( PATH_INFO::config_dir() ) / fs::u8path( "lua" ) / relative_path ) {
             std::error_code error;
             fs::create_directories( path_.parent_path(), error );
             if( error ) {
@@ -488,7 +491,7 @@ class scoped_weather_state
             weather_.windspeed_override =
                 windspeed_override_;
             weather_.weather_override =
-                weather_override_;
+                weather_override_; // NOLINT(cata-tests-must-restore-global-state)
             weather_.nextweather = nextweather_;
             weather_.temperature_cache =
                 std::move( temperature_cache_ );
@@ -923,8 +926,8 @@ TEST_CASE( "lua_v4_modules_are_source_scoped_and_dependency_gated",
     using cata::lua_ui::script_module_resolver;
     using cata::lua_ui::script_module_source;
 
-    const fs::path builtin_root = fs::u8path( PATH_INFO::datadir() ) / "lua";
-    const fs::path empty_root = fs::u8path( PATH_INFO::config_dir() ) / "lua";
+    const fs::path builtin_root = fs::u8path( PATH_INFO::datadir() ) / fs::u8path( "lua" );
+    const fs::path empty_root = fs::u8path( PATH_INFO::config_dir() ) / fs::u8path( "lua" );
 
     script_manifest builtin;
     builtin.id = "builtin";
@@ -2033,7 +2036,7 @@ assert(game.effects.has(avatar, downed).value == false)
     std::string error;
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.empty() );
-    CHECK_FALSE( get_avatar().has_effect( efftype_id( "downed" ) ) );
+    CHECK_FALSE( get_avatar().has_effect( effect_downed ) );
 
     script.write_manifest( R"json({
         "id": "user",
@@ -2050,19 +2053,18 @@ game.effects.add(
 )lua" );
     CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.find( "game.write" ) != std::string::npos );
-    CHECK_FALSE( get_avatar().has_effect( efftype_id( "downed" ) ) );
+    CHECK_FALSE( get_avatar().has_effect( effect_downed ) );
 }
 
 TEST_CASE( "lua_v5_effect_updates_notify_the_owning_creature",
            "[lua][bindings][effects][integration][regression]" )
 {
     avatar &player = get_avatar();
-    const efftype_id cold( "cold" );
     const bodypart_id torso = bodypart_str_id( "torso" ).id();
-    player.remove_effect( cold, torso );
+    player.remove_effect( effect_cold, torso );
     player.clear_morale();
-    on_out_of_scope cleanup( [&player, &cold, &torso]() {
-        player.remove_effect( cold, torso );
+    on_out_of_scope cleanup( [&player, &torso]() {
+        player.remove_effect( effect_cold, torso );
         player.clear_morale();
         player.reset_bonuses();
         player.process_effects();
