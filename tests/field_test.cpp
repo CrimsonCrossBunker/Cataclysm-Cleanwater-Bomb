@@ -24,6 +24,8 @@
 static const efftype_id effect_test_rash( "test_rash" );
 
 static const field_type_str_id field_fd_acid( "fd_acid" );
+static const field_type_str_id field_fd_fungal_splinters( "fd_fungal_splinters" );
+static const field_type_str_id field_fd_spores( "fd_spores" );
 static const field_type_str_id field_fd_test( "fd_test" );
 static const field_type_str_id field_fd_test_fire_reaction( "fd_test_fire_reaction" );
 
@@ -196,6 +198,19 @@ TEST_CASE( "field fire reaction", "[field]" )
     m.process_fields();
 
     reaction_field = m.get_field( p, field_fd_test_fire_reaction );
+    CHECK( ( !reaction_field || !reaction_field->is_field_alive() ) );
+
+    CHECK( field_fd_spores->fire_reaction.degrade_at == 2 );
+    CHECK( field_fd_spores->fire_reaction.clear_at == 3 );
+    CHECK( field_fd_spores->fire_reaction.interval == 30_seconds );
+    CHECK( field_fd_fungal_splinters->fire_reaction.clear_at == 1 );
+
+    m.remove_field( p, fd_fire );
+    m.add_field( p, fd_fire, 1, 1_turns );
+    m.add_field( p, field_fd_fungal_splinters, 1, 1_turns );
+    m.process_fields();
+
+    reaction_field = m.get_field( p, field_fd_fungal_splinters );
     CHECK( ( !reaction_field || !reaction_field->is_field_alive() ) );
 
     fields_test_cleanup();
