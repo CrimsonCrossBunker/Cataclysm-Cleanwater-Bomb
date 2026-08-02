@@ -1875,6 +1875,61 @@ void calories_ass( double val, dialogue &d, char scope,
     d.actor( is_beta( scope ) )->mod_stored_kcal( difference, ignore_weariness );
 }
 
+double gut_calories_eval( const_dialogue const &d, char scope,
+                          std::vector<diag_value> const & /* params */,
+                          diag_kwargs const & /* kwargs */ )
+{
+    if( const Character *const chr = d.const_actor( is_beta( scope ) )->get_const_character() ) {
+        return chr->guts.get_calories();
+    }
+    throw math::runtime_error( "For gut_calories(), talker is not character" );
+}
+
+void gut_calories_ass( double val, dialogue &d, char scope,
+                       std::vector<diag_value> const & /* params */,
+                       diag_kwargs const & /* kwargs */ )
+{
+    if( Character *const chr = d.actor( is_beta( scope ) )->get_character() ) {
+        constexpr int maximum_gut_calories = 2000000;
+        const int desired = static_cast<int>( clamp( val, 0.0,
+                            static_cast<double>( maximum_gut_calories ) ) );
+        chr->guts.mod_calories( desired - chr->guts.get_calories() );
+        return;
+    }
+    throw math::runtime_error( "For gut_calories(), talker is not character" );
+}
+
+double gut_vitamin_eval( const_dialogue const &d, char scope,
+                         std::vector<diag_value> const &params,
+                         diag_kwargs const & /* kwargs */ )
+{
+    const vitamin_id vit( params[0].str( d ) );
+    if( !vit.is_valid() ) {
+        throw math::runtime_error( "Invalid vitamin for gut_vitamin()" );
+    }
+    if( const Character *const chr = d.const_actor( is_beta( scope ) )->get_const_character() ) {
+        return chr->guts.get_vitamin( vit );
+    }
+    throw math::runtime_error( "For gut_vitamin(), talker is not character" );
+}
+
+void gut_vitamin_ass( double val, dialogue &d, char scope,
+                      std::vector<diag_value> const &params,
+                      diag_kwargs const & /* kwargs */ )
+{
+    const vitamin_id vit( params[0].str( d ) );
+    if( !vit.is_valid() ) {
+        throw math::runtime_error( "Invalid vitamin for gut_vitamin()" );
+    }
+    if( Character *const chr = d.actor( is_beta( scope ) )->get_character() ) {
+        constexpr int maximum_gut_vitamin = 1000000000;
+        chr->guts.set_vitamin( vit, static_cast<int>( clamp( val, 0.0,
+                               static_cast<double>( maximum_gut_vitamin ) ) ) );
+        return;
+    }
+    throw math::runtime_error( "For gut_vitamin(), talker is not character" );
+}
+
 double weight_eval( const_dialogue const &d, char scope,
                     std::vector<diag_value> const & /* params */, diag_kwargs const & /* kwargs */ )
 {
@@ -2102,6 +2157,8 @@ std::map<std::string_view, dialogue_func> const dialogue_funcs{
     { "vision_range", { "un", 0, vision_range_eval } },
     { "vitamin", { "un", 1, vitamin_eval, vitamin_ass } },
     { "calories", { "un", 0, calories_eval, calories_ass, { "format", "dont_affect_weariness" } } },
+    { "gut_calories", { "un", 0, gut_calories_eval, gut_calories_ass } },
+    { "gut_vitamin", { "un", 1, gut_vitamin_eval, gut_vitamin_ass } },
     { "weight", { "un", 0, weight_eval } },
     { "volume", { "un", 0, volume_eval } },
     { "warmth", { "un", 1, warmth_eval } },
