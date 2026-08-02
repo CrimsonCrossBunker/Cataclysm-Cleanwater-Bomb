@@ -207,7 +207,10 @@ def classify(path: str, legacy: dict[str, dict]) -> dict:
         "keep_in_repo",
         "retain_third_party",
     }:
-        ccb_docs_ids.append(historical["stable_document_id"])
+        target_id = (
+            historical.get("merge_target") or historical["stable_document_id"]
+        )
+        ccb_docs_ids.append(target_id)
     return {
         "id": registry_id(path),
         "path": path,

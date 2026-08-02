@@ -33,6 +33,16 @@ KEEP_IN_REPO = {
     "SYNC_EXCLUDED_PRS.md",
     "TRANSLATION_CREDITS.md",
 }
+FROZEN_DOCUMENT_COUNT = 175
+TERMINAL_MIGRATION_STATUSES = {"verified", "stubbed", "archived"}
+TARGET_ID_OVERRIDES = {
+    "data/lua/README.md": "api.lua.v5.overview",
+    "data/lua/examples/api_v5_mod/README.md": "api.lua.v5.example-mod",
+    "doc/PLAYER_ACTIVITY.md": "cpp.activities",
+    "doc/RELEASE_DIFF.md": "maintenance.releases",
+    "doc/RELEASE_PROCESS.md": "maintenance.releases",
+    "doc/c++/COMPILING.md": "build.overview",
+}
 
 
 def git(*args: str) -> str:
@@ -192,6 +202,19 @@ def default_record(commit: str, path: str, names: list[object]) -> tuple[dict, l
     return record, anomalies
 
 
+def apply_target_id_override(record: dict) -> None:
+    """Apply a reviewed CCB-Docs ID without replacing the frozen source ID."""
+    target_id = TARGET_ID_OVERRIDES.get(record["original_path"])
+    if target_id is None:
+        return
+    record["merge_target"] = target_id
+    replacement = record.get("replacement")
+    if isinstance(replacement, str) and not replacement.startswith(
+        ("https://", "http://")
+    ):
+        record["replacement"] = target_id
+
+
 def build_inventory(
     commit: str,
     record_snapshot: dict[str, object] | None = None,
@@ -218,6 +241,7 @@ def build_inventory(
                 "log", commit, "--format=%aN", "--", path
             ).splitlines()
             record, anomalies = default_record(commit, path, names)
+        apply_target_id_override(record)
         if anomaly_sink is not None:
             anomaly_sink.extend(
                 {"original_path": path, **anomaly} for anomaly in anomalies
@@ -269,6 +293,57 @@ def inventory_for_check(output: Path) -> tuple[str, dict[str, dict]]:
     )
 
 
+def inventory_for_preservation(output: Path) -> tuple[str, dict[str, dict]]:
+    """Load a complete classified snapshot, refusing any scope change."""
+    if not output.exists():
+        raise FileNotFoundError(f"inventory does not exist: {output}")
+    data = yaml.safe_load(output.read_text(encoding="utf-8"))
+    if not isinstance(data, dict) or not isinstance(data.get("documents"), list):
+        raise ValueError("preserved inventory must contain a documents array")
+    documents = data["documents"]
+    if data.get("document_count") != FROZEN_DOCUMENT_COUNT or len(
+        documents
+    ) != FROZEN_DOCUMENT_COUNT:
+        raise ValueError(
+            f"preserved inventory must contain exactly {FROZEN_DOCUMENT_COUNT} documents"
+        )
+    if data.get("classification_summary", {}).get("review") != 0:
+        raise ValueError("preserved inventory still contains review classifications")
+    if any(entry.get("action") == "review" for entry in documents):
+        raise ValueError("preserved inventory contains a review action")
+    nonterminal = [
+        entry.get("original_path")
+        for entry in documents
+        if entry.get("migration_status") not in TERMINAL_MIGRATION_STATUSES
+    ]
+    if nonterminal:
+        sample = ", ".join(str(path) for path in nonterminal[:3])
+        raise ValueError(
+            f"preserved inventory contains non-terminal classifications: {sample}"
+        )
+
+    commit = resolve_commit(str(data["source_commit"]))
+    recorded_paths = [entry.get("original_path") for entry in documents]
+    if not all(isinstance(path, str) for path in recorded_paths):
+        raise ValueError("preserved inventory contains an invalid original_path")
+    if len(recorded_paths) != len(set(recorded_paths)):
+        raise ValueError("preserved inventory contains duplicate original paths")
+    if any(entry.get("source_commit") != commit for entry in documents):
+        raise ValueError("preserved records do not share the frozen source commit")
+    tracked_paths = tracked_markdown(commit)
+    if set(recorded_paths) != set(tracked_paths):
+        removed = sorted(set(recorded_paths) - set(tracked_paths))
+        added = sorted(set(tracked_paths) - set(recorded_paths))
+        raise ValueError(
+            "refusing to change the frozen classified Markdown scope; "
+            f"removed={removed[:3]}, added={added[:3]}"
+        )
+    return commit, {
+        entry["original_path"]: entry
+        for entry in documents
+    }
+
+
 def render_anomaly_report(commit: str, anomalies: list[dict]) -> str:
     data = {
         "schema_version": 1,
@@ -303,9 +378,12 @@ def main() -> int:
     parser.add_argument(
         "--anomaly-report", type=Path, default=DEFAULT_ANOMALY_REPORT
     )
-    parser.add_argument("--source-commit", default="HEAD")
+    parser.add_argument("--source-commit")
     parser.add_argument("--check", action="store_true")
+    parser.add_argument("--preserve-classification", action="store_true")
     args = parser.parse_args()
+    if args.check and args.preserve_classification:
+        parser.error("--check and --preserve-classification are mutually exclusive")
 
     output = args.output if args.output.is_absolute() else ROOT / args.output
     anomaly_report = (
@@ -315,8 +393,14 @@ def main() -> int:
     )
     if args.check:
         commit, record_snapshot = inventory_for_check(output)
+    elif args.preserve_classification:
+        commit, record_snapshot = inventory_for_preservation(output)
+        if args.source_commit and resolve_commit(args.source_commit) != commit:
+            raise ValueError(
+                "--preserve-classification cannot change the frozen source commit"
+            )
     else:
-        commit = resolve_commit(args.source_commit)
+        commit = resolve_commit(args.source_commit or "HEAD")
         record_snapshot = None
     anomalies: list[dict] = []
     rendered = render(build_inventory(commit, record_snapshot, anomalies))
@@ -332,8 +416,16 @@ def main() -> int:
         print(f"Markdown inventory is current at {commit}")
         return 0
 
+    if args.preserve_classification:
+        validate_anomaly_report(anomaly_report, commit)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(rendered, encoding="utf-8")
+    if args.preserve_classification:
+        print(
+            "synchronized deterministic inventory fields while preserving "
+            f"{FROZEN_DOCUMENT_COUNT} terminal classifications"
+        )
+        return 0
     anomaly_report.parent.mkdir(parents=True, exist_ok=True)
     anomaly_report.write_text(
         render_anomaly_report(commit, anomalies), encoding="utf-8"

@@ -28,7 +28,7 @@ entries:
     keywords: [JSON, item, recipe, monster, mapgen, content, 物品, 配方, 怪物, 内容]
     paths: [data/json/, data/core/, tools/json_tools/]
     project_ids: [core-data]
-    documentation_ids: [api.json.overview, compatibility.mods]
+    documentation_ids: [json.overview, compatibility.mods]
     source_symbols: []
     validation_ids: [json-load]
     compatibility:
@@ -39,7 +39,7 @@ entries:
     keywords: [EOC, effect_on_condition, condition, effect, talker, 条件, 效果]
     paths: [data/json/, data/mods/, src/condition.cpp, src/effect_on_condition.cpp]
     project_ids: [core-data, bundled-mods]
-    documentation_ids: [api.eoc.overview, api.eoc.conditions, api.eoc.effects]
+    documentation_ids: [eoc.overview, reference.eoc-conditions, reference.eoc-effects]
     source_symbols: [effect_on_condition]
     validation_ids: [json-load]
     compatibility:
@@ -50,7 +50,7 @@ entries:
     keywords: [Lua, LuaLS, manifest, capability, callback, hook, 脚本, 能力]
     paths: [data/lua/, tools/lua_api/, 'src/catalua*.cpp', 'src/catalua*.h']
     project_ids: [lua-api]
-    documentation_ids: [api.lua.v5.overview, api.lua.v5.reference]
+    documentation_ids: [api.lua.v5.overview, api.lua.v5.reference.modules]
     source_symbols: [ccb_api_v5]
     validation_ids: [lua-contract]
     compatibility:

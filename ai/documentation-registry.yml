@@ -1,6 +1,6 @@
 schema_version: 1
 kind: documentation_registry
-source_commit: 16bdf7a04a31e9ddb0733a00ee88685ec22e520d
+source_commit: af96b9d149fa7b269bb2c6ed5f51c8e126321204
 scope: Tracked documentation and machine contracts from the Git index; untracked build caches are never
   traversed.
 entry_count: 233
@@ -420,7 +420,7 @@ entries:
   source_of_truth: false
   stable_document_id: legacy.data-json-loading-order
   ccb_docs_ids:
-  - legacy.data-json-loading-order
+  - json.loading-order
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -465,7 +465,7 @@ entries:
   source_of_truth: false
   stable_document_id: lua.v5.overview
   ccb_docs_ids:
-  - lua.v5.overview
+  - api.lua.v5.overview
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -477,7 +477,7 @@ entries:
   source_of_truth: false
   stable_document_id: lua.v5.example-mod
   ccb_docs_ids:
-  - lua.v5.example-mod
+  - api.lua.v5.example-mod
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -897,7 +897,7 @@ entries:
   source_of_truth: false
   stable_document_id: mods.aftershock-exoplanet.lore.cyberpunk-future
   ccb_docs_ids:
-  - mods.aftershock-exoplanet.lore.cyberpunk-future
+  - mods.aftershock-exoplanet.lore.organizations
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1186,7 +1186,7 @@ entries:
   source_of_truth: false
   stable_document_id: contributing.developer-faq
   ccb_docs_ids:
-  - contributing.developer-faq
+  - how-to.common-tasks
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1234,7 +1234,7 @@ entries:
   source_of_truth: false
   stable_document_id: getting-started.how-you-can-help
   ccb_docs_ids:
-  - getting-started.how-you-can-help
+  - getting-started.first-contribution
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1474,7 +1474,7 @@ entries:
   source_of_truth: false
   stable_document_id: legacy.doc-json-json-loading-order
   ccb_docs_ids:
-  - legacy.doc-json-json-loading-order
+  - json.loading-order
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1510,7 +1510,7 @@ entries:
   source_of_truth: false
   stable_document_id: tutorial.mapgen-roofs
   ccb_docs_ids:
-  - tutorial.mapgen-roofs
+  - tutorial.mapgen-beginner
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1570,7 +1570,7 @@ entries:
   source_of_truth: false
   stable_document_id: json.map-smashing
   ccb_docs_ids:
-  - json.map-smashing
+  - json.terrain-and-furniture
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1858,7 +1858,7 @@ entries:
   source_of_truth: false
   stable_document_id: cpp-activities
   ccb_docs_ids:
-  - cpp-activities
+  - cpp.activities
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1870,7 +1870,7 @@ entries:
   source_of_truth: false
   stable_document_id: legacy.doc-release-diff
   ccb_docs_ids:
-  - legacy.doc-release-diff
+  - maintenance.releases
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -1882,7 +1882,7 @@ entries:
   source_of_truth: false
   stable_document_id: legacy.doc-release-process
   ccb_docs_ids:
-  - legacy.doc-release-process
+  - maintenance.releases
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2002,7 +2002,7 @@ entries:
   source_of_truth: false
   stable_document_id: legacy.doc-c-compiling-cmake-vcpkg
   ccb_docs_ids:
-  - legacy.doc-c-compiling-cmake-vcpkg
+  - build-windows-msvc
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2086,7 +2086,7 @@ entries:
   source_of_truth: false
   stable_document_id: build-overview
   ccb_docs_ids:
-  - build-overview
+  - build.overview
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2182,7 +2182,7 @@ entries:
   source_of_truth: false
   stable_document_id: legacy.doc-design-balance-lore-game-balance
   ccb_docs_ids:
-  - legacy.doc-design-balance-lore-game-balance
+  - design-balance
   generated: false
   generated_by: null
   include_in_ai_index: true
@@ -2510,7 +2510,7 @@ entries:
   source_of_truth: false
   stable_document_id: legacy.lang-notes-readme-all-translators
   ccb_docs_ids:
-  - legacy.lang-notes-readme-all-translators
+  - translation-guide
   generated: false
   generated_by: null
   include_in_ai_index: true

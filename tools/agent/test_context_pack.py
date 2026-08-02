@@ -21,7 +21,7 @@ class ContextPackTests(unittest.TestCase):
             4000,
         )
         self.assertIn("lua-api", pack["selected_routes"])
-        self.assertIn("api.lua.v5.reference", pack["documentation_ids"])
+        self.assertIn("api.lua.v5.reference.modules", pack["documentation_ids"])
         self.assertIn("lua-contract", {entry["id"] for entry in pack["tests"]})
         self.assertLessEqual(pack["estimated_tokens"], 4000)
 

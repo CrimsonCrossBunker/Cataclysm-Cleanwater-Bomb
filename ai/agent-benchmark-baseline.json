@@ -21,7 +21,7 @@
     },
     {
       "errors": [],
-      "estimated_tokens": 1541,
+      "estimated_tokens": 1540,
       "id": "json-content",
       "passed": true,
       "selected_routes": [
@@ -30,7 +30,7 @@
     },
     {
       "errors": [],
-      "estimated_tokens": 1947,
+      "estimated_tokens": 1949,
       "id": "eoc",
       "passed": true,
       "selected_routes": [
@@ -39,7 +39,7 @@
     },
     {
       "errors": [],
-      "estimated_tokens": 2168,
+      "estimated_tokens": 2170,
       "id": "lua-api",
       "passed": true,
       "selected_routes": [

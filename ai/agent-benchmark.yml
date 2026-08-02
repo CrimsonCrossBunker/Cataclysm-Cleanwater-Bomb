@@ -21,21 +21,21 @@ cases:
     files: [data/json/items/melee/misc.json]
     expected_routes: [json-content]
     expected_paths: [data/json/]
-    expected_documentation_ids: [api.json.overview]
+    expected_documentation_ids: [json.overview]
     expected_validation_ids: [json-load]
   - id: eoc
     task: Add an EOC condition and effect with the correct talker context.
     files: [src/condition.cpp]
     expected_routes: [eoc]
     expected_paths: [src/condition.cpp]
-    expected_documentation_ids: [api.eoc.conditions, api.eoc.effects]
+    expected_documentation_ids: [reference.eoc-conditions, reference.eoc-effects]
     expected_validation_ids: [json-load]
   - id: lua-api
     task: Extend the Lua API manifest capability contract.
     files: [data/lua/manifest.schema.json]
     expected_routes: [lua-api]
     expected_paths: [data/lua/]
-    expected_documentation_ids: [api.lua.v5.reference]
+    expected_documentation_ids: [api.lua.v5.reference.modules]
     expected_validation_ids: [lua-contract]
   - id: upstream-port
     task: Port an upstream CBN fix while preserving CCB differences.

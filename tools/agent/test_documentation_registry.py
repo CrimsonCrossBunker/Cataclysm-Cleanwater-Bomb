@@ -51,6 +51,30 @@ class DocumentationRegistryTest(unittest.TestCase):
         self.assertFalse(third_party["include_in_ai_index"])
         self.assertEqual(third_party["status"], "third_party")
 
+    def test_ccb_docs_ids_prefer_reviewed_merge_target(self):
+        legacy = {
+            "doc/merged.md": {
+                "action": "merge_into",
+                "migration_status": "stubbed",
+                "stable_document_id": "legacy.doc-merged",
+                "merge_target": "maintenance.releases",
+                "include_in_ai_index": True,
+            },
+            "doc/direct.md": {
+                "action": "migrate_rewrite",
+                "migration_status": "stubbed",
+                "stable_document_id": "cpp.activities",
+                "merge_target": None,
+                "include_in_ai_index": True,
+            },
+        }
+
+        merged = registry.classify("doc/merged.md", legacy)
+        direct = registry.classify("doc/direct.md", legacy)
+
+        self.assertEqual(merged["ccb_docs_ids"], ["maintenance.releases"])
+        self.assertEqual(direct["ccb_docs_ids"], ["cpp.activities"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,3 +1,4 @@
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -11,6 +12,65 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class MarkdownInventoryTest(unittest.TestCase):
+    def test_reviewed_target_ids_override_legacy_aliases(self):
+        for path, target_id in inventory.TARGET_ID_OVERRIDES.items():
+            with self.subTest(path=path):
+                record = {
+                    "original_path": path,
+                    "merge_target": None,
+                    "replacement": "old-non-url-id",
+                }
+
+                inventory.apply_target_id_override(record)
+
+                self.assertEqual(record["merge_target"], target_id)
+                self.assertEqual(record["replacement"], target_id)
+
+        record = {
+            "original_path": "data/lua/README.md",
+            "merge_target": None,
+            "replacement": "https://example.invalid/existing/",
+        }
+        inventory.apply_target_id_override(record)
+        self.assertEqual(
+            record["replacement"],
+            "https://example.invalid/existing/",
+        )
+
+    @mock.patch.object(inventory, "resolve_commit", return_value="frozen-commit")
+    @mock.patch.object(inventory, "tracked_markdown")
+    def test_preservation_refuses_a_changed_175_path_scope(
+        self, tracked_markdown, _resolve_commit
+    ):
+        paths = [f"doc/frozen-{index:03}.md" for index in range(175)]
+        documents = [
+            {
+                "original_path": path,
+                "source_commit": "frozen-commit",
+                "action": "migrate_rewrite",
+                "migration_status": "stubbed",
+            }
+            for path in paths
+        ]
+        data = {
+            "source_commit": "frozen-commit",
+            "document_count": 175,
+            "classification_summary": {"review": 0},
+            "documents": documents,
+        }
+        tracked_markdown.return_value = paths[:-1] + ["doc/unclassified-new.md"]
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "inventory.yml"
+            output.write_text(
+                yaml.safe_dump(data, sort_keys=False),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ValueError, "refusing to change"):
+                inventory.inventory_for_preservation(output)
+
+        tracked_markdown.assert_called_once_with("frozen-commit")
+
     @mock.patch.object(inventory, "git")
     @mock.patch.object(
         inventory,

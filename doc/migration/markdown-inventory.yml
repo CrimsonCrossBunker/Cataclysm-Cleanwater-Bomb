@@ -350,7 +350,7 @@ documents:
   last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
   ccb_specificity: ccb_specific
   upstream_relation: ccb_native_lua_v5_contract
-  merge_target: null
+  merge_target: api.lua.v5.overview
   source_paths:
   - data/lua/README.md
   - data/lua/manifest.schema.json
@@ -392,7 +392,7 @@ documents:
   last_applicable_commit: 5f23722ff28c5cc552baa0422b32b1f10fd890fa
   ccb_specificity: ccb_specific
   upstream_relation: ccb_native_lua_v5_example
-  merge_target: null
+  merge_target: api.lua.v5.example-mod
   source_paths:
   - data/lua/examples/api_v5_mod/README.md
   - data/lua/examples/api_v5_mod/lua/main.lua
@@ -4541,7 +4541,7 @@ documents:
   license: CC-BY-SA-3.0
   action: migrate_rewrite
   archive_reason: null
-  replacement: cpp-activities
+  replacement: cpp.activities
   migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: cpp-activities
@@ -4550,7 +4550,7 @@ documents:
   last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
   ccb_specificity: mixed
   upstream_relation: upstream_derived_revalidate
-  merge_target: null
+  merge_target: cpp.activities
   source_paths:
   - doc/PLAYER_ACTIVITY.md
   - src/activity_actor.h
@@ -4581,7 +4581,7 @@ documents:
   license: CC-BY-SA-3.0
   action: merge_into
   archive_reason: null
-  replacement: release-maintenance
+  replacement: maintenance.releases
   migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: legacy.doc-release-diff
@@ -4590,7 +4590,7 @@ documents:
   last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
   ccb_specificity: ccb_specific
   upstream_relation: ccb_workflow_replaces_upstream_process
-  merge_target: release-maintenance
+  merge_target: maintenance.releases
   source_paths:
   - doc/RELEASE_DIFF.md
   - .github/workflows/release.yml
@@ -4617,7 +4617,7 @@ documents:
   license: CC-BY-SA-3.0
   action: merge_into
   archive_reason: null
-  replacement: release-maintenance
+  replacement: maintenance.releases
   migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: legacy.doc-release-process
@@ -4626,7 +4626,7 @@ documents:
   last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
   ccb_specificity: ccb_specific
   upstream_relation: ccb_workflow_replaces_upstream_process
-  merge_target: release-maintenance
+  merge_target: maintenance.releases
   source_paths:
   - doc/RELEASE_PROCESS.md
   - .github/workflows/release.yml
@@ -5270,7 +5270,7 @@ documents:
   license: CC-BY-SA-3.0
   action: migrate_rewrite
   archive_reason: null
-  replacement: build-overview
+  replacement: build.overview
   migration_status: stubbed
   history_strategy: evaluate_filtered_history
   stable_document_id: build-overview
@@ -5279,7 +5279,7 @@ documents:
   last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
   ccb_specificity: mixed
   upstream_relation: upstream_derived_with_ccb_extensions
-  merge_target: null
+  merge_target: build.overview
   source_paths:
   - doc/c++/COMPILING.md
   - CMakeLists.txt
