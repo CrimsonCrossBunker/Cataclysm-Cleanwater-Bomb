@@ -3035,6 +3035,11 @@ assert(modified_calories.ok == true)
 assert(modified_calories.value.applied_delta == -25)
 assert(modified_calories.value.after == 75)
 
+local capped_calories = game.needs.modify_gut_calories(avatar, 2147483647)
+assert(capped_calories.ok == true)
+assert(capped_calories.value.applied_delta == 2147483572)
+assert(capped_calories.value.after == 2147483647)
+
 local vitamin = game.needs.get_gut_vitamin(avatar, vit_c)
 assert(vitamin.ok == true)
 assert(vitamin.value.id == vit_c)
@@ -3060,9 +3065,9 @@ end) == false)
     std::string error;
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.empty() );
-    CHECK( player.guts.get_calories() == 75 );
+    CHECK( player.guts.get_calories() == std::numeric_limits<int>::max() );
     CHECK( player.guts.get_vitamin( vitamin_c ) == 15 );
-    player.guts.mod_calories( original_calories - 75 );
+    player.guts.mod_calories( original_calories - std::numeric_limits<int>::max() );
     player.guts.set_vitamin( vitamin_c, original_vitamin );
 }
 
