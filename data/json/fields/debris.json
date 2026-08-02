@@ -131,6 +131,7 @@
     "mopsafe": true,
     "moppable": true,
     "percent_spread": 75,
+    "fire_reaction": { "degrade_at": 2, "clear_at": 3, "interval": "30 seconds" },
     "half_life": "6 hours",
     "phase": "gas",
     "has_fume": true,
@@ -145,7 +146,6 @@
         "sym": "%",
         "color": "light_gray",
         "transparent": true,
-        "dangerous": true,
         "concentration": 1
       }
     ],
