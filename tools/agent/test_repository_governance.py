@@ -6,6 +6,9 @@ from datetime import date
 
 from audit_repository_governance import (
     DEPENDABOT_PATH,
+    GOVERNANCE_PATH,
+    PROJECT_MAP_PATH,
+    governance_policy_errors,
     load_yaml,
     validate_dependabot,
     validate_repository,
@@ -59,6 +62,19 @@ class RepositoryGovernanceTest(unittest.TestCase):
         self.assertTrue(
             any("required_approving_review_count" in error for error in errors)
         )
+
+    def test_governance_prose_rejects_the_old_two_reviewer_gate(self) -> None:
+        governance = GOVERNANCE_PATH.read_text(encoding="utf-8")
+        project_map = PROJECT_MAP_PATH.read_text(encoding="utf-8")
+        self.assertEqual(governance_policy_errors(governance, project_map), [])
+
+        obsolete = governance.replace(
+            "One Responsible human is sufficient",
+            "maintainers need at least two active human reviewers",
+            1,
+        )
+        errors = governance_policy_errors(obsolete, project_map)
+        self.assertTrue(any("obsolete two-reviewer" in error for error in errors))
 
     def test_bypass_actor_cannot_be_invented_in_one_record(self) -> None:
         target = copy.deepcopy(self.target)

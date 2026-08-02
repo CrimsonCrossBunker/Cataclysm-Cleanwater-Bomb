@@ -77,4 +77,4 @@ entries:
     boundaries:
       - Every PR names a Responsible human.
       - Tracked targets never prove that an administrator setting is active.
-      - Do not enable non-author approval without two confirmed human reviewers.
+      - One Responsible human is sufficient; do not enable an approval gate that locks the sole maintainer's own pull requests.

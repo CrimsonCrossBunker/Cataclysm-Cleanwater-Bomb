@@ -3,7 +3,7 @@
   "cases": [
     {
       "errors": [],
-      "estimated_tokens": 1985,
+      "estimated_tokens": 1996,
       "id": "repository-navigation",
       "passed": true,
       "selected_routes": [
@@ -48,7 +48,7 @@
     },
     {
       "errors": [],
-      "estimated_tokens": 2630,
+      "estimated_tokens": 2642,
       "id": "upstream-port",
       "passed": true,
       "selected_routes": [
@@ -75,7 +75,7 @@
     },
     {
       "errors": [],
-      "estimated_tokens": 2309,
+      "estimated_tokens": 2321,
       "id": "documentation-impact",
       "passed": true,
       "selected_routes": [

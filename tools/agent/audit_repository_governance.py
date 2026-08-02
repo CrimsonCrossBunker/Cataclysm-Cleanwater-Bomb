@@ -19,6 +19,8 @@ TARGET_PATH = ROOT / "ai/repository-settings.target.yml"
 SCHEMA_PATH = ROOT / "ai/repository-settings.target.schema.json"
 DEPENDABOT_PATH = ROOT / ".github/dependabot.yml"
 OWNERSHIP_PATH = ROOT / "OWNERSHIP.md"
+GOVERNANCE_PATH = ROOT / "GOVERNANCE.md"
+PROJECT_MAP_PATH = ROOT / "ai/project-map.yml"
 ALLOWED_PERMISSION_LEVELS = {"none", "read", "write"}
 ALLOWED_PERMISSION_SCOPES = {
     "actions",
@@ -395,6 +397,32 @@ def validate_ownership(target: dict) -> list[str]:
     return errors
 
 
+def governance_policy_errors(governance: str, project_map: str) -> list[str]:
+    """Reject prose that would lock the sole Responsible human out of merges."""
+    errors: list[str] = []
+    normalized_governance = " ".join(governance.split())
+    normalized_project_map = " ".join(project_map.split())
+    obsolete_phrases = (
+        "at least two active human reviewers",
+        "Confirm two active human reviewer",
+        "two confirmed human reviewers",
+        "至少两名拥有审查权限",
+    )
+    for phrase in obsolete_phrases:
+        if phrase in normalized_governance or phrase in normalized_project_map:
+            errors.append(f"obsolete two-reviewer governance policy remains: {phrase}")
+    for phrase in (
+        "One Responsible human is sufficient",
+        "target approval count remains zero",
+        "一名 Responsible human 即可",
+    ):
+        if phrase not in normalized_governance:
+            errors.append(f"GOVERNANCE.md is missing single-maintainer policy: {phrase}")
+    if "One Responsible human is sufficient" not in normalized_project_map:
+        errors.append("ai/project-map.yml is missing the single-maintainer boundary")
+    return errors
+
+
 def validate_repository(
     *,
     as_of: date | None = None,
@@ -409,6 +437,12 @@ def validate_repository(
     errors.extend(validate_dependabot(load_yaml(DEPENDABOT_PATH)))
     errors.extend(validate_workflow_permissions())
     errors.extend(validate_ownership(target))
+    errors.extend(
+        governance_policy_errors(
+            GOVERNANCE_PATH.read_text(encoding="utf-8"),
+            PROJECT_MAP_PATH.read_text(encoding="utf-8"),
+        )
+    )
     return target, errors
 
 
