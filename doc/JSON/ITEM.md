@@ -930,6 +930,18 @@ Gun mods can be defined like this:
 "cooling_value_multiplier": 0.5,      // Multiply gun's "cooling_value" by this number; works the same as overheat_threshold_multiplier
 "heat_per_shot_modifier":  -2,        //  Add a flat amount to gun's "heat_per_shot"; works the same as overheat_threshold_modifier
 "heat_per_shot_multiplier": 2.0,      // Multiply the gun's "heat_per_shot" by this number; works the same as overheat_threshold_multiplier
+"throw_damage_multiplier": 1.1,       // Optional (default = 1.0) Multiplier to thrown damage while the gun with this mod installed is wielded
+"throw_range_multiplier": 1.1,        // Optional (default = 1.0) Multiplier to thrown range while the gun with this mod installed is wielded
+"throw_stamina_multiplier": 0.9,      // Optional (default = 1.0) Multiplier to throwing stamina cost while the gun with this mod installed is wielded
+"throw_dispersion_multiplier": 0.9,   // Optional (default = 1.0) Multiplier to throwing dispersion while the gun with this mod installed is wielded. Lower is more accurate
+"throw_speed_multiplier": 0.9,        // Optional (default = 1.0) Multiplier to throwing move cost while the gun with this mod installed is wielded. Lower is faster
+"throw_weight_multiplier": 0.9,       // Optional (default = 1.0) Multiplier to the thrown item's effective weight while the gun with this mod installed is wielded
+"throw_damage_add": 0.2,              // Optional (default = 0.0) Added to the final throwing damage coefficient after all multipliers
+"throw_range_add": 0.2,               // Optional (default = 0.0) Added to the final throwing range coefficient after all multipliers
+"throw_stamina_add": -0.1,            // Optional (default = 0.0) Added to the final throwing stamina cost coefficient after all multipliers
+"throw_dispersion_add": -0.1,         // Optional (default = 0.0) Added to the final throwing dispersion coefficient after all multipliers
+"throw_speed_add": -0.1,              // Optional (default = 0.0) Added to the final throwing move cost coefficient after all multipliers
+"throw_weight_add": -0.1,             // Optional (default = 0.0) Added to the final thrown effective weight coefficient after all multipliers. Combined formula per stat: wielded item multiplier x product of all mod multipliers + sum of all mod adds
 "is_bayonet": true,     // Optional, if true, the melee damage of this item is added to the base damage of the gun. Defaults to false.
 "is_visible_when_installed": false,   // optional, if true, this gunmod is shown in your inventory akin to items in pockets, making it possible to interact with it in 
 "blacklist_slot": [ "rail", "underbarrel" ],      // prevents installation of the gunmod if the specified slot(s) are present on the gun.

@@ -1518,23 +1518,25 @@ int throw_cost( const Character &c, const item &to_throw )
     // Differences:
     // Dex is more (2x) important for throwing speed
     // At 10 skill, the cost is down to 0.75%, not 0.66%
-    const int base_move_cost = to_throw.attack_time( c ) / 2;
+    const int base_move_cost = to_throw.attack_time( c ) * 4 / 5;
+    // Throw leverage multiplier: scale the weight-based portion of attack_time
+    const float weight_mult = c.throw_weight_multiplier();
+    const int weight_adjust = static_cast<int>( to_throw.weight() * ( weight_mult - 1.0f ) /
+                             60_gram / to_throw.count() / 2 );
+    const int effective_base_cost = base_move_cost + weight_adjust;
     const float throw_skill = std::min( static_cast<float>( MAX_SKILL ),
                                         c.get_skill_level( skill_throw ) );
     ///\EFFECT_THROW increases throwing speed
-    const int skill_cost = static_cast<int>( ( base_move_cost * ( 20 - throw_skill ) / 20 ) );
-    ///\EFFECT_DEX increases throwing speed
-    const int dexbonus = c.get_dex();
+    const int skill_cost = static_cast<int>( ( effective_base_cost * ( 20 - throw_skill ) / 20 ) );
     const float stamina_ratio = static_cast<float>( c.get_stamina() ) / c.get_stamina_max();
     const float stamina_penalty = 1.0 + std::max( ( 0.25f - stamina_ratio ) * 4.0f, 0.0f );
 
-    int move_cost = base_move_cost;
+    int move_cost = effective_base_cost;
     move_cost *= c.get_modifier( character_modifier_melee_thrown_move_lift_mod );
     move_cost *= c.get_modifier( character_modifier_melee_thrown_move_balance_mod );
     // Stamina penalty only affects base/2 and encumbrance parts of the cost
     move_cost *= stamina_penalty;
     move_cost += skill_cost;
-    move_cost -= dexbonus;
     move_cost = c.enchantment_cache->modify_value( enchant_vals::mod::ATTACK_SPEED, move_cost );
     move_cost = static_cast<int>( std::round( move_cost * c.throw_speed_multiplier() ) );
 
@@ -1610,7 +1612,7 @@ int Character::throw_dispersion_per_dodge( bool /* add_encumbrance */ ) const
 int Character::throwing_dispersion( const item &to_throw, Creature *critter,
                                     bool is_blind_throw ) const
 {
-    units::mass weight = to_throw.weight();
+    units::mass weight = to_throw.weight() * throw_weight_multiplier();
     units::volume volume = to_throw.volume();
     if( to_throw.count_by_charges() && to_throw.charges > 1 ) {
         weight /= to_throw.charges;
@@ -1682,7 +1684,7 @@ static float throwing_skill_adjusted( const Character &guy )
 // light items can approach the strength-based cap when the thrower is skilled.
 static double thrown_item_weight_damage( const Character &thrower, const item &thrown )
 {
-    const float weight_dmg = thrown.weight() / 100.0_gram;
+    const float weight_dmg = thrown.weight() * thrower.throw_weight_multiplier() / 100.0_gram;
     const float skill = throwing_skill_adjusted( thrower );
     const int dex = thrower.get_dex();
 
@@ -1810,7 +1812,7 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
     const int dex = get_dex();
     const int per = get_per();
     if( dex > 8 && per > 8 ) {
-        proj.critical_multiplier += 0.06f * std::min( dex, per );
+        proj.critical_multiplier += 0.06f * ( std::min( dex, per ) - 8 );
     }
 
     const bool do_railgun = has_active_bionic( fcl_bio_railgun ) && thrown.made_of_any( ferric ) &&
@@ -2239,7 +2241,7 @@ static std::vector<aim_type_prediction> calculate_ranged_chances(
     }
 
     const double start_recoil = mode == target_ui::TargetMode::Fire ?
-                                ui.get_predicted_recoil() : you.recoil;
+                                ui.get_predicted_recoil() : 0.0;
 
     double target_mobility_multiplier = 1.0;
     if( mode == target_ui::TargetMode::Fire ) {
@@ -2354,7 +2356,8 @@ static void print_confidence_rating_bar( const catacurses::window &w,
 }
 
 static int print_ranged_chance( const catacurses::window &w, int line_number,
-                                const std::vector<aim_type_prediction> &aim_chances, const int time )
+                                const std::vector<aim_type_prediction> &aim_chances, const int time,
+                                const target_ui::TargetMode mode )
 {
     std::vector<aim_type_prediction> sorted = aim_chances;
 
@@ -2371,13 +2374,17 @@ static int print_ranged_chance( const catacurses::window &w, int line_number,
     bool narrow = panel_manager::get_manager().get_current_layout().panels().begin()->get_width() <= 42;
     nc_color col = c_light_gray;
 
+    const bool is_throw = mode == target_ui::TargetMode::Throw ||
+                          mode == target_ui::TargetMode::ThrowBlind;
 
-    const auto &current_steadiness_it = std::find_if( sorted.begin(),
-    sorted.end(), []( const aim_type_prediction & atp ) {
-        return atp.is_default;
-    } );
-    if( current_steadiness_it != sorted.end() ) {
-        line_number = print_steadiness( w, line_number, current_steadiness_it->steadiness );
+    if( !is_throw ) {
+        const auto &current_steadiness_it = std::find_if( sorted.begin(),
+        sorted.end(), []( const aim_type_prediction & atp ) {
+            return atp.is_default;
+        } );
+        if( current_steadiness_it != sorted.end() ) {
+            line_number = print_steadiness( w, line_number, current_steadiness_it->steadiness );
+        }
     }
 
     // Start printing by available width of aim window
@@ -2404,11 +2411,16 @@ static int print_ranged_chance( const catacurses::window &w, int line_number,
         }
         for( const aim_type_prediction &out : sorted ) {
             if( display_numbers ) {
-                t_aims[aim_iter] = string_format( "<color_dark_gray>%s:</color>", out.name );
+                t_aims[aim_iter] = string_format( "<color_dark_gray>%s:</color>",
+                                                   is_throw ? _( "Throw" ) : out.name );
                 t_confidence[( aim_iter * 5 ) + 4] = string_format( "<color_light_blue>%d</color>", out.moves );
             } else {
-                print_colored_text( w, point( 1, line_number ), col, col, string_format( _( "%s %s:" ), out.name,
-                                    _( "Aim" ) ) );
+                if( is_throw ) {
+                    print_colored_text( w, point( 1, line_number ), col, col, _( "Throw:" ) );
+                } else {
+                    print_colored_text( w, point( 1, line_number ), col, col, string_format( _( "%s %s:" ), out.name,
+                                        _( "Aim" ) ) );
+                }
                 right_print( w, line_number++, 1, c_light_blue, _( "Moves" ) );
                 right_print( w, line_number, 1, c_light_blue, string_format( "%d", out.moves ) );
             }
@@ -2456,11 +2468,17 @@ static int print_ranged_chance( const catacurses::window &w, int line_number,
 
         for( const aim_type_prediction &out : sorted ) {
             std::string col_hl = out.is_default ? "light_green" : "light_gray";
-            std::string desc = time ==  0 ?
-                               string_format( "<color_white>[%s]</color> <color_%s>%s %s</color> | %s: <color_light_blue>%3d</color>",
-                                              out.hotkey, col_hl, out.name, _( "Aim" ), _( "Moves to fire" ), out.moves ) :
-                               string_format( "<color_white>[%s]</color> <color_%s>%s %s</color> | %s: <color_light_blue>%3d</color> (%d)",
-                                              out.hotkey, col_hl, out.name, _( "Aim" ), _( "Moves to fire" ), out.moves, time );
+            std::string desc;
+            if( is_throw ) {
+                desc = string_format( "<color_white>[%s]</color> <color_%s>%s</color> | %s: <color_light_blue>%3d</color>",
+                                      out.hotkey, col_hl, _( "Throw" ), _( "Moves to throw" ), out.moves );
+            } else {
+                desc = time == 0 ?
+                       string_format( "<color_white>[%s]</color> <color_%s>%s %s</color> | %s: <color_light_blue>%3d</color>",
+                                      out.hotkey, col_hl, out.name, _( "Aim" ), _( "Moves to fire" ), out.moves ) :
+                       string_format( "<color_white>[%s]</color> <color_%s>%s %s</color> | %s: <color_light_blue>%3d</color> (%d)",
+                                      out.hotkey, col_hl, out.name, _( "Aim" ), _( "Moves to fire" ), out.moves, time );
+            }
 
             print_colored_text( w, point( 1, line_number++ ), col, col, desc );
 
@@ -2525,7 +2543,7 @@ static int print_aim( const target_ui &ui, Character &you, const catacurses::win
 
     int time = RAS_time( you, load_loc );
 
-    return print_ranged_chance( w, line_number, aim_chances, time );
+    return print_ranged_chance( w, line_number, aim_chances, time, target_ui::TargetMode::Fire );
 }
 
 static void draw_throw_aim( const target_ui &ui, const Character &you, const catacurses::window &w,
@@ -2568,7 +2586,7 @@ static void draw_throw_aim( const target_ui &ui, const Character &you, const cat
             throwing_target_mode, ctxt, weapon, dispersion, confidence_config, attributes, target_pos,
             item_location() );
 
-    text_y = print_ranged_chance( w, text_y, aim_chances, 0 );
+    text_y = print_ranged_chance( w, text_y, aim_chances, 0, throwing_target_mode );
 }
 
 std::vector<aim_type> Character::get_aim_types( const item &gun ) const

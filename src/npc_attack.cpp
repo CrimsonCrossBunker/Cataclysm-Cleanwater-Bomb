@@ -886,6 +886,11 @@ npc_attack_rating npc_attack_throw::evaluate_tripoint(
         if( thrown_item.has_flag( flag_NPC_THROWN ) ) {
             suitable_item_mult = 0.08f * std::min( distance_to_me - 1, 5 );
         }
+        const item_location wielded_item = source.get_wielded_item();
+        if( wielded_item && !source.is_wielding( thrown_item ) &&
+            wielded_item->has_flag( flag_THROW_KEEP_WIELDED ) ) {
+            suitable_item_mult += 0.10f;
+        }
     } else {
         suitable_item_mult = -0.35f;
     }

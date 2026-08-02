@@ -1098,6 +1098,22 @@ struct islot_gunmod : common_ranged_data {
     //Manipulation of generated heat by fixed values and percentages
     double heat_per_shot_modifier = 0;
     float heat_per_shot_multiplier = 1.0f;
+
+    //Throw-related multipliers when this mod is installed on a wielded ranged weapon
+    float throw_damage_multiplier = 1.0f;
+    float throw_range_multiplier = 1.0f;
+    float throw_stamina_multiplier = 1.0f;
+    float throw_dispersion_multiplier = 1.0f;
+    float throw_speed_multiplier = 1.0f;
+    float throw_weight_multiplier = 1.0f;
+
+    //Throw-related additive bonuses, applied after all multipliers
+    float throw_damage_add = 0.0f;
+    float throw_range_add = 0.0f;
+    float throw_stamina_add = 0.0f;
+    float throw_dispersion_add = 0.0f;
+    float throw_speed_add = 0.0f;
+    float throw_weight_add = 0.0f;
 };
 
 struct islot_magazine {
@@ -1834,6 +1850,9 @@ struct itype {
 
         // returns true if it is one of the outcomes of cutting
         bool is_basic_component() const;
+
+        /** Multiplier applied to thrown weight (lever arm) for this item type */
+        float throw_weight_multiplier = 1.0f;
 
         // used for generic_factory for copy-from
         bool was_loaded = false;

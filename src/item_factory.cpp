@@ -3954,6 +3954,20 @@ void islot_gunmod::deserialize( const JsonObject &jo )
     optional( jo, was_loaded, "blacklist_slot", blacklist_slot, auto_flags_reader<gunmod_location> {} );
     optional( jo, was_loaded, "barrel_length", barrel_length );
     optional( jo, was_loaded, "add_mod", add_mod, weighted_string_id_reader<gunmod_location, int> {1} );
+    //Throw-related multipliers
+    optional( jo, was_loaded, "throw_damage_multiplier", throw_damage_multiplier, 1.0f );
+    optional( jo, was_loaded, "throw_range_multiplier", throw_range_multiplier, 1.0f );
+    optional( jo, was_loaded, "throw_stamina_multiplier", throw_stamina_multiplier, 1.0f );
+    optional( jo, was_loaded, "throw_dispersion_multiplier", throw_dispersion_multiplier, 1.0f );
+    optional( jo, was_loaded, "throw_speed_multiplier", throw_speed_multiplier, 1.0f );
+    optional( jo, was_loaded, "throw_weight_multiplier", throw_weight_multiplier, 1.0f );
+    //Throw-related additive bonuses
+    optional( jo, was_loaded, "throw_damage_add", throw_damage_add, 0.0f );
+    optional( jo, was_loaded, "throw_range_add", throw_range_add, 0.0f );
+    optional( jo, was_loaded, "throw_stamina_add", throw_stamina_add, 0.0f );
+    optional( jo, was_loaded, "throw_dispersion_add", throw_dispersion_add, 0.0f );
+    optional( jo, was_loaded, "throw_speed_add", throw_speed_add, 0.0f );
+    optional( jo, was_loaded, "throw_weight_add", throw_weight_add, 0.0f );
 }
 
 void islot_magazine::deserialize( const JsonObject &jo )
@@ -4735,6 +4749,8 @@ void itype::load( const JsonObject &jo, std::string_view src )
     JsonObject replace_val = jo.get_object( "replace_materials" );
     replace_val.allow_omitted_members();
     replace_materials( replace_val, *this );
+
+    optional( jo, was_loaded, "throw_weight_multiplier", throw_weight_multiplier, 1.0f );
 }
 
 void Item_factory::add_migration( const migration &m )

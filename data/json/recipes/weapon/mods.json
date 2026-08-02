@@ -1183,21 +1183,7 @@
     "qualities": [ { "id": "CUT", "level": 2 } ],
     "components": [ [ [ "splinter", 1 ] ], [ [ "cordage_short", 2, "LIST" ] ] ]
   },
-  {
-    "type": "recipe",
-    "activity_level": "LIGHT_EXERCISE",
-    "result": "staff_sling_grenade_cradle",
-    "category": "CC_WEAPON",
-    "subcategory": "CSC_WEAPON_MODS",
-    "skill_used": "fabrication",
-    "skills_required": [ [ "throw", 1 ], [ "tailor", 1 ] ],
-    "time": "20 m",
-    "reversible": true,
-    "autolearn": true,
-    "proficiencies": [ { "proficiency": "prof_leatherworking_basic" } ],
-    "qualities": [ { "id": "CUT", "level": 2 }, { "id": "SEW", "level": 1 } ],
-    "components": [ [ [ "filament", 20, "LIST" ], [ "sling", 1 ] ], [ [ "leather", 3 ], [ "fur", 3 ] ] ]
-  },
+
   {
     "type": "recipe",
     "activity_level": "LIGHT_EXERCISE",
