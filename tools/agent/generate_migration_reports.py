@@ -71,6 +71,50 @@ def render_report(data: dict) -> str:
     return "\n".join(lines)
 
 
+def build_batches(data: dict) -> dict:
+    grouped: dict[str, list[dict]] = defaultdict(list)
+    for item in data["documents"]:
+        if not item["migration_batch"]:
+            continue
+        grouped[item["migration_batch"]].append(
+            {
+                "stable_document_id": item["stable_document_id"],
+                "original_path": item["original_path"],
+                "action": item["action"],
+                "priority": item["priority"],
+                "domain": item["domain"],
+                "target_path": item["target_path"],
+                "blockers": item["blockers"],
+            }
+        )
+    batches = []
+    for batch_id, entries in sorted(grouped.items()):
+        priorities = sorted({entry["priority"] for entry in entries})
+        batches.append(
+            {
+                "id": batch_id,
+                "priorities": priorities,
+                "document_count": len(entries),
+                "documents": sorted(
+                    entries,
+                    key=lambda entry: (
+                        entry["priority"],
+                        entry["domain"],
+                        entry["original_path"],
+                    ),
+                ),
+            }
+        )
+    return {
+        "schema_version": 1,
+        "kind": "markdown_migration_batches",
+        "source_commit": data["source_commit"],
+        "batch_count": len(batches),
+        "document_count": sum(batch["document_count"] for batch in batches),
+        "batches": batches,
+    }
+
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
