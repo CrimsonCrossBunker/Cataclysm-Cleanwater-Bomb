@@ -2344,14 +2344,10 @@ class vehicle
         void use_dishwasher( map &here, int p );
         void use_mws( map &here, int p );
         void use_auto_cooker( map &here, int p );
-        // Process one turn of an enabled auto-process station part.
-        void process_auto_process_part( map &here, int p );
-        // Catch up auto-process progress after the vehicle was outside the reality bubble.
-        void catch_up_auto_process( map &here, int p, const time_duration &elapsed );
-        // Settle the off-map auto-process catch-up span for all stations at once.
-        // Called by update_time() after renewable charging (underground vehicles
-        // get it too); advances last_auto_process_update only when it settles a gap.
-        void settle_auto_process_catchup( map &here, const time_point &update_to );
+        // Process one turn of an enabled AUTO_COOKER part.
+        void process_auto_cooker_part( map &here, int p );
+        // Catch up auto-cooker progress after the vehicle was outside the reality bubble.
+        void catch_up_auto_cooker( map &here, int p, const time_duration &elapsed );
         void use_nl_boiler( map &here, int p );
         void use_monster_capture( int part, map *here, const tripoint_bub_ms &pos );
         void use_tiedown_furniture( int part, map *here, const tripoint_bub_ms & );
@@ -2543,10 +2539,6 @@ class vehicle
         int alternator_load = 0; // NOLINT(cata-serialize)
         // Turn the vehicle was last processed
         time_point last_update = calendar::before_time_starts;
-        // Turn auto-process parts were last advanced by per-turn processing.
-        // update_time() catch-up only settles time not covered by per-turn
-        // processing, so on-map vehicles don't get double energy/charge.
-        time_point last_auto_process_update = calendar::before_time_starts;
         // save values
         /**
          * Position of the vehicle *inside* the submap that contains the vehicle.
@@ -2666,19 +2658,12 @@ class vehicle
         // relative to vehicle pos, color and text}.
         std::vector<std::tuple<point_rel_ms, int, std::string>> get_debug_overlay_data() const;
 
-        // Auto-craft helpers.  Defined in vehicle.cpp so they can be reused by
-        // the off-map time catch-up logic.  Progress vars store joules.
-        static std::pair<item *, const auto_process_rule *> find_auto_process_item(
-            item &it, const auto_process_station &station );
-        std::vector<item> finish_auto_process_item( item &it, const auto_process_rule &rule,
-                const auto_process_station &station, int part );
-        std::vector<item> advance_auto_process_item( item &it, const auto_process_rule &rule,
-                int energy_per_turn_j, const auto_process_station &station, int part );
-        // Fire rule/station completion EOCs for a finished item.  Separate
-        // from finish_auto_process_item() so off-map catch-up can defer them
-        // until no cargo pointers are in use.
-        void fire_auto_process_completion_eocs( item &it, const auto_process_rule &rule,
-                                                const auto_process_station &station, int part );
+        // Auto-cooker helpers.  Defined in vehicle.cpp so they can be reused by
+        // the off-map time catch-up logic.
+        static bool is_auto_cookable( const item &it );
+        item *auto_cooker_current_item( vehicle_part &vp );
+        static void finish_auto_cooked_item( item &it, const islot_comestible &comest );
+        static bool advance_auto_cooker_item_once( item &it, int energy_per_turn_kj );
 };
 
 // For reference what each function is supposed to do, see their implementation in

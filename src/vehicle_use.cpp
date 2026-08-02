@@ -1693,22 +1693,17 @@ void vehicle::use_auto_cooker( map &here, int p )
     vehicle_part &vp = parts[p];
     vehicle_stack items = get_items( vp );
 
-    if( !vp.info().auto_process ) {
-        return;
-    }
-    const auto_process_station &station = *vp.info().auto_process;
-
     if( vp.enabled ) {
         vp.enabled = false;
-        add_msg( m_bad, _( "You turn off the auto-craft station." ) );
+        add_msg( m_bad, _( "You turn off the electric cooker." ) );
         return;
     }
 
     const auto has_cookable_recursive = [&]( const item & it, auto & check ) -> bool {
-        for( const auto_process_rule &rule : it.type->auto_process ) {
-            if( station.actions.count( rule.action ) ) {
-                return true;
-            }
+        if( it.is_comestible() && !it.get_comestible()->cook_result.is_null() &&
+            !it.get_comestible()->cook_result.is_empty() )
+        {
+            return true;
         }
         for( const item *content : it.all_items_top( pocket_type::CONTAINER ) )
         {
@@ -1728,20 +1723,33 @@ void vehicle::use_auto_cooker( map &here, int p )
     }
 
     if( !has_cookable ) {
-        add_msg( m_bad, _( "The auto-craft station has no items that can be processed." ) );
+        add_msg( m_bad, _( "The electric cooker has no raw food that can be automatically cooked." ) );
         return;
     }
 
     const auto [battery_remaining, battery_capacity] = connected_battery_power_level( here );
     if( battery_remaining <= 0 ) {
-        add_msg( m_bad, _( "The auto-craft station has no power." ) );
+        add_msg( m_bad, _( "The electric cooker has no power." ) );
         return;
     }
 
     vp.enabled = true;
-    // Progress vars on partially processed items are intentionally kept so that
-    // toggling the station off and on again resumes where it left off.
-    add_msg( m_good, _( "You turn on the auto-craft station." ) );
+    const auto reset_cookable_recursive = [&]( item & it, auto & reset ) -> void {
+        if( it.is_comestible() && !it.get_comestible()->cook_result.is_null() &&
+            !it.get_comestible()->cook_result.is_empty() )
+        {
+            it.set_var( "cook_energy_done", "0" );
+        }
+        for( item *content : it.all_items_top( pocket_type::CONTAINER ) )
+        {
+            reset( *content, reset );
+        }
+    };
+    for( item &it : items ) {
+        reset_cookable_recursive( it, reset_cookable_recursive );
+    }
+
+    add_msg( m_good, _( "You turn on the electric cooker." ) );
 }
 
 void vehicle::use_nl_boiler( map &here, int p )
@@ -2851,24 +2859,12 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
         .hotkey( "TOGGLE_MWS" )
         .on_submit( [this, dw_idx, here] { use_mws( *here, dw_idx ); } );
     }
-    const std::optional<vpart_reference> vp_auto_cooker = [&]() -> std::optional<vpart_reference> {
-        // Match the avail_part_with_feature() semantics used by the other
-        // appliance toggles below: only an available part at the interaction
-        // mount point can be switched.  Broken parts must not be activatable.
-        const vehicle &veh = vp.vehicle();
-        for( const vpart_reference &vpr : veh.get_all_parts() ) {
-            if( vpr.info().auto_process.has_value() && vpr.part().is_available() &&
-                vpr.mount_pos() == vp.mount_pos() ) {
-                return vpr;
-            }
-        }
-        return std::nullopt;
-    }();
+    const std::optional<vpart_reference> vp_auto_cooker = vp.avail_part_with_feature( "AUTO_COOKER" );
     if( vp_auto_cooker ) {
         const size_t ac_idx = vp_auto_cooker->part_index();
         menu.add( vp_auto_cooker->part().enabled
-                  ? _( "Deactivate the auto-craft station" )
-                  : _( "Activate the auto-craft station" ) )
+                  ? _( "Deactivate the electric cooker" )
+                  : _( "Activate the electric cooker" ) )
         .hotkey( "TOGGLE_AUTO_COOKER" )
         .on_submit( [this, ac_idx, here] { use_auto_cooker( *here, ac_idx ); } );
     }

@@ -258,4 +258,3 @@ VERSION.txt
 /replay_userdir/
 *.replay
 build-tracy/
-build_sdl2.bat
