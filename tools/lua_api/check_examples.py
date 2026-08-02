@@ -81,5 +81,60 @@ def validate_manifest(path: Path) -> dict[str, object]:
     return manifest
 
 
+def validate_example_mod() -> dict[str, int]:
+    manifest = validate_manifest(EXAMPLE_MANIFEST)
+    modinfo = load_json(EXAMPLE_MODINFO)
+    if not isinstance(modinfo, list) or len(modinfo) != 1:
+        raise RuntimeError(
+            "example modinfo.json must contain exactly one MOD_INFO")
+    entry = modinfo[0]
+    if not isinstance(entry, dict) or entry.get("type") != "MOD_INFO":
+        raise RuntimeError(
+            "example modinfo.json does not contain a MOD_INFO object")
+    if entry.get("id") != manifest.get("id"):
+        raise RuntimeError("example Mod id and Lua manifest id must match")
+    if entry.get("version") != manifest.get("version"):
+        raise RuntimeError("example Mod and Lua manifest versions must match")
+    if not (EXAMPLE_ROOT / "lua/main.lua").is_file():
+        raise RuntimeError("example Mod lacks lua/main.lua")
+    if not (EXAMPLE_ROOT / "lua/lib/model.lua").is_file():
+        raise RuntimeError("example Mod lacks its source-local module")
+    contract = load_json(DEFAULT_OUTPUT)
+    if not isinstance(contract, dict):
+        raise RuntimeError("public contract inventory must be an object")
+    contract_entries = {
+        entry["id"]: entry
+        for section in ("functions", "methods")
+        for entry in contract.get(section, [])
+        if isinstance(entry, dict) and isinstance(entry.get("id"), str)
+    }
+    missing_symbols = sorted(EXAMPLE_CONTRACT_IDS - set(contract_entries))
+    if missing_symbols:
+        raise RuntimeError(
+            f"example references missing public symbols {missing_symbols}"
+        )
+    capabilities = set(manifest.get("capabilities", []))
+    missing_capabilities = {
+        identity: sorted(
+            set(contract_entries[identity].get("capabilities", [])) -
+            capabilities
+        )
+        for identity in sorted(EXAMPLE_CONTRACT_IDS)
+        if set(contract_entries[identity].get("capabilities", [])) -
+        capabilities
+    }
+    if missing_capabilities:
+        raise RuntimeError(
+            "example manifest lacks capabilities for its public calls: "
+            f"{missing_capabilities}"
+        )
+    return {
+        "modinfo_entries": len(modinfo),
+        "capabilities": len(manifest["capabilities"]),
+        "lua_files": 2,
+        "contract_symbols": len(EXAMPLE_CONTRACT_IDS),
+    }
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
