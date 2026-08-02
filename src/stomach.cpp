@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <memory>
 #include <ostream>
 #include <string>
@@ -488,11 +489,30 @@ stomach_digest_rates stomach_contents::get_digest_rates( const needs_rates &meta
 
 void stomach_contents::mod_calories( int kcal )
 {
-    if( -kcal >= nutr.kcal() ) {
+    const int64_t calories = static_cast<int64_t>( kcal ) * 1000;
+    const int64_t maximum_calories = static_cast<int64_t>( std::numeric_limits<int>::max() ) * 1000;
+    nutr.calories = std::min( nutr.calories, maximum_calories );
+    if( calories <= -nutr.calories ) {
         nutr.calories = 0;
         return;
     }
-    nutr.calories += kcal * 1000;
+    nutr.calories = std::min( nutr.calories, maximum_calories - calories ) + calories;
+}
+
+void stomach_contents::set_vitamin( const vitamin_id &vit, int units )
+{
+    if( units <= 0 ) {
+        nutr.remove_vitamin( vit );
+        return;
+    }
+    nutr.set_vitamin( vit, units );
+}
+
+void stomach_contents::mod_vitamin( const vitamin_id &vit, int units )
+{
+    const int64_t adjusted = static_cast<int64_t>( nutr.get_vitamin( vit ) ) + units;
+    set_vitamin( vit, static_cast<int>( std::clamp<int64_t>( adjusted, 0,
+                 std::numeric_limits<int>::max() ) ) );
 }
 
 void stomach_contents::mod_nutr( int nutr )
@@ -525,6 +545,11 @@ void stomach_contents::mod_contents( const units::volume &vol )
 int stomach_contents::get_calories() const
 {
     return nutr.kcal();
+}
+
+int stomach_contents::get_vitamin( const vitamin_id &vit ) const
+{
+    return nutr.get_vitamin( vit );
 }
 
 units::volume stomach_contents::get_water() const

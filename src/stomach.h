@@ -187,10 +187,13 @@ class stomach_contents
         units::volume contains() const;
 
         int get_calories() const;
+        int get_vitamin( const vitamin_id &vit ) const;
         units::volume get_water() const;
 
         // changes calorie amount
         void mod_calories( int kcal );
+        void set_vitamin( const vitamin_id &vit, int units );
+        void mod_vitamin( const vitamin_id &vit, int units );
 
         // changes calorie amount based on old nutr value
         void mod_nutr( int nutr );

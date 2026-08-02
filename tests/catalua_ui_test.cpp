@@ -79,7 +79,6 @@
 #include <iterator>
 #include <list>
 #include <limits>
-#include <list>
 #include <map>
 #include <memory>
 #include <optional>
@@ -94,6 +93,9 @@ namespace
 {
 
 namespace fs = std::filesystem;
+
+static const efftype_id effect_cold( "cold" );
+static const efftype_id effect_downed( "downed" );
 
 class mutation_event_subscriber final : public event_subscriber
 {
@@ -303,8 +305,9 @@ class recording_ui_renderer final : public cata::lua_ui::script_ui_renderer
 class scoped_lua_user_script
 {
     public:
-        scoped_lua_user_script() : path_( fs::u8path( PATH_INFO::config_dir() ) / "lua" / "main.lua" ),
-            manifest_path_( path_.parent_path() / "manifest.json" ) {
+        scoped_lua_user_script() : path_( fs::u8path( PATH_INFO::config_dir() ) /
+                                          fs::u8path( "lua" ) / fs::u8path( "main.lua" ) ),
+            manifest_path_( path_.parent_path() / fs::u8path( "manifest.json" ) ) {
             std::error_code error;
             fs::create_directories( path_.parent_path(), error );
             if( error ) {
@@ -383,7 +386,7 @@ class scoped_lua_user_module
 {
     public:
         explicit scoped_lua_user_module( const fs::path &relative_path ) :
-            path_( fs::u8path( PATH_INFO::config_dir() ) / "lua" / relative_path ) {
+            path_( fs::u8path( PATH_INFO::config_dir() ) / fs::u8path( "lua" ) / relative_path ) {
             std::error_code error;
             fs::create_directories( path_.parent_path(), error );
             if( error ) {
@@ -488,7 +491,7 @@ class scoped_weather_state
             weather_.windspeed_override =
                 windspeed_override_;
             weather_.weather_override =
-                weather_override_;
+                weather_override_; // NOLINT(cata-tests-must-restore-global-state)
             weather_.nextweather = nextweather_;
             weather_.temperature_cache =
                 std::move( temperature_cache_ );
@@ -923,8 +926,8 @@ TEST_CASE( "lua_v4_modules_are_source_scoped_and_dependency_gated",
     using cata::lua_ui::script_module_resolver;
     using cata::lua_ui::script_module_source;
 
-    const fs::path builtin_root = fs::u8path( PATH_INFO::datadir() ) / "lua";
-    const fs::path empty_root = fs::u8path( PATH_INFO::config_dir() ) / "lua";
+    const fs::path builtin_root = fs::u8path( PATH_INFO::datadir() ) / fs::u8path( "lua" );
+    const fs::path empty_root = fs::u8path( PATH_INFO::config_dir() ) / fs::u8path( "lua" );
 
     script_manifest builtin;
     builtin.id = "builtin";
@@ -2033,7 +2036,7 @@ assert(game.effects.has(avatar, downed).value == false)
     std::string error;
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.empty() );
-    CHECK_FALSE( get_avatar().has_effect( efftype_id( "downed" ) ) );
+    CHECK_FALSE( get_avatar().has_effect( effect_downed ) );
 
     script.write_manifest( R"json({
         "id": "user",
@@ -2050,19 +2053,18 @@ game.effects.add(
 )lua" );
     CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.find( "game.write" ) != std::string::npos );
-    CHECK_FALSE( get_avatar().has_effect( efftype_id( "downed" ) ) );
+    CHECK_FALSE( get_avatar().has_effect( effect_downed ) );
 }
 
 TEST_CASE( "lua_v5_effect_updates_notify_the_owning_creature",
            "[lua][bindings][effects][integration][regression]" )
 {
     avatar &player = get_avatar();
-    const efftype_id cold( "cold" );
     const bodypart_id torso = bodypart_str_id( "torso" ).id();
-    player.remove_effect( cold, torso );
+    player.remove_effect( effect_cold, torso );
     player.clear_morale();
-    on_out_of_scope cleanup( [&player, &cold, &torso]() {
-        player.remove_effect( cold, torso );
+    on_out_of_scope cleanup( [&player, &torso]() {
+        player.remove_effect( effect_cold, torso );
         player.clear_morale();
         player.reset_bonuses();
         player.process_effects();
@@ -2995,6 +2997,80 @@ end) == false)
     player.set_sleepiness( original_sleepiness );
     player.set_sleep_deprivation(
         original_sleep_deprivation );
+}
+
+TEST_CASE( "lua_v5_gut_nutrients_are_generation_safe_and_bounded",
+           "[lua][bindings][needs][gut][integration]" )
+{
+    avatar &player = get_avatar();
+    const vitamin_id vitamin_c( "vitC" );
+    const int original_calories = player.guts.get_calories();
+    const int original_vitamin = player.guts.get_vitamin( vitamin_c );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local avatar = game.characters.avatar()
+local vit_c = game.types.id("vitamin", "vitC")
+
+local calories = game.needs.get_gut_calories(avatar)
+assert(calories.ok == true)
+assert(math.type(calories.value) == "integer")
+
+local large_calories = game.needs.set_gut_calories(avatar, 2000001)
+assert(large_calories.ok == true)
+assert(large_calories.value.after == 2000001)
+
+local assigned_calories = game.needs.set_gut_calories(avatar, 100)
+assert(assigned_calories.ok == true)
+assert(assigned_calories.value.before == calories.value)
+assert(assigned_calories.value.after == 100)
+
+local modified_calories = game.needs.modify_gut_calories(avatar, -25)
+assert(modified_calories.ok == true)
+assert(modified_calories.value.applied_delta == -25)
+assert(modified_calories.value.after == 75)
+
+local capped_calories = game.needs.modify_gut_calories(avatar, 2147483647)
+assert(capped_calories.ok == true)
+assert(capped_calories.value.applied_delta == 2147483572)
+assert(capped_calories.value.after == 2147483647)
+
+local vitamin = game.needs.get_gut_vitamin(avatar, vit_c)
+assert(vitamin.ok == true)
+assert(vitamin.value.id == vit_c)
+assert(math.type(vitamin.value.amount) == "integer")
+
+local assigned_vitamin = game.needs.set_gut_vitamin(avatar, vit_c, 20)
+assert(assigned_vitamin.ok == true)
+assert(assigned_vitamin.value.after.amount == 20)
+
+local modified_vitamin = game.needs.modify_gut_vitamin(avatar, vit_c, -5)
+assert(modified_vitamin.ok == true)
+assert(modified_vitamin.value.applied_delta == -5)
+assert(modified_vitamin.value.after.amount == 15)
+
+assert(pcall(function()
+    game.needs.get_gut_vitamin(avatar, game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.needs.set_gut_calories(avatar, -1)
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( player.guts.get_calories() == std::numeric_limits<int>::max() );
+    CHECK( player.guts.get_vitamin( vitamin_c ) == 15 );
+    player.guts.mod_calories( original_calories - std::numeric_limits<int>::max() );
+    player.guts.set_vitamin( vitamin_c, original_vitamin );
 }
 
 TEST_CASE( "lua_v5_calorie_sleep_and_health_services_use_native_rules",
