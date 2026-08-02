@@ -24,6 +24,7 @@
 #include "weather_type.h"
 
 static const efftype_id effect_grabbed( "grabbed" );
+static const efftype_id effect_crowd_crushed( "crowd_crushed" );
 
 static const itype_id itype_test_hazmat_suit( "test_hazmat_suit" );
 static const itype_id itype_test_longshirt( "test_longshirt" );
@@ -480,6 +481,28 @@ TEST_CASE( "suffering_from_asphyxiation", "[char][suffer][oxygen][grab]" )
             THEN( "they lose 0 or 1 oxygen per turn" ) {
                 test_suffer( dummy, 10_turns, true );
                 CHECK( dummy.oxygen == Approx( 41 ).margin( 5 ) );
+            }
+        }
+
+        WHEN( "their breathing parts are protected by armor" ) {
+            REQUIRE( dummy.wear_item( item( itype_test_hazmat_suit ), false ).has_value() );
+            dummy.oxygen = 0;
+
+            THEN( "they recover oxygen instead of suffocating" ) {
+                test_suffer( dummy, 3_turns, true );
+                CHECK( dummy.oxygen == 15 );
+                CHECK_FALSE( dummy.has_effect( effect_crowd_crushed ) );
+            }
+        }
+
+        WHEN( "crowd pressure is not a direct body attack" ) {
+            spawn_test_monster( "mon_debug_memory", dummy.pos_bub() + tripoint::north );
+            spawn_test_monster( "mon_debug_memory", dummy.pos_bub() + tripoint::south );
+            const int torso_hp = dummy.get_part_hp_cur( body_part_torso );
+
+            THEN( "it does not cause immediate torso damage" ) {
+                test_suffer( dummy, 1_turn );
+                CHECK( dummy.get_part_hp_cur( body_part_torso ) == torso_hp );
             }
         }
 
