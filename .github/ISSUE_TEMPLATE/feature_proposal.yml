@@ -1,0 +1,54 @@
+name: Feature proposal / 功能提案
+description: Propose an implementable outcome for a concrete CCB user problem
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: Early ideas and questions belong in GitHub Discussions. Use this form for a scoped proposal that can be reviewed and implemented.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / 问题
+      description: Describe the current user-visible problem without assuming a particular solution.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome / 期望结果
+      description: State observable acceptance criteria.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach / 建议方案
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and trade-offs / 替代方案与取舍
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility impact / 兼容性影响
+      description: Address saves, JSON IDs, mods, Lua API, platforms, translations, and upstream divergence as applicable.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence, prototype, or references / 证据、原型或参考资料
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks / 提交检查
+      options:
+        - label: I searched existing CCB issues and Discussions for this proposal.
+          required: true
+        - label: This proposal is for CCB and does not assume another project's policy automatically applies.
+          required: true

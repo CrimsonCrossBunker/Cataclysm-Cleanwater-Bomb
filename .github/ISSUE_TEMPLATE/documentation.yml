@@ -1,0 +1,62 @@
+name: Documentation / 文档问题
+description: Report incorrect, stale, missing, untranslated, inaccessible, or broken CCB documentation
+title: "[Docs] "
+labels: ["documentation"]
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Page URL or repository path / 页面 URL 或仓库路径
+    validations:
+      required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language / 语言
+      options:
+        - zh_CN
+        - en
+        - Both / 两者
+        - Not language-specific
+    validations:
+      required: true
+  - type: dropdown
+    id: problem_type
+    attributes:
+      label: Problem type / 问题类型
+      options:
+        - Incorrect or stale content
+        - Missing documentation
+        - Translation mismatch
+        - Broken link or anchor
+        - Navigation or search
+        - Accessibility
+        - Generated API/reference
+        - Migration or redirect
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Current content and problem / 当前内容与问题
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected correction / 预期修正
+    validations:
+      required: true
+  - type: textarea
+    id: authority
+    attributes:
+      label: Authoritative source paths or symbols / 权威源码路径或符号
+      description: If known, cite source, tests, schema, declaration, registration, build file, or governance policy.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks / 提交检查
+      options:
+        - label: I checked the corresponding language page and searched existing documentation issues.
+          required: true

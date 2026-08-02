@@ -1,0 +1,51 @@
+name: Mechanics and balance / 机制与平衡
+description: Discuss a gameplay rule, realism claim, difficulty, fairness, or tuning problem
+title: "[Mechanics] "
+labels: ["Game: Balance"]
+body:
+  - type: textarea
+    id: current
+    attributes:
+      label: Current behaviour / 当前行为
+      description: Identify the mechanic, version, scenario, and reproducible observations.
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Player-visible problem / 玩家可见问题
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Design goal and acceptance criteria / 设计目标与验收标准
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence / 证据
+      description: Cite primary or technically credible sources for realism claims; include measurements for numeric tuning.
+    validations:
+      required: true
+  - type: textarea
+    id: tradeoffs
+    attributes:
+      label: Gameplay trade-offs / 游戏性取舍
+      description: Explain effects on players, monsters, difficulty, clarity, and alternate play styles.
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Save, mod, and upstream compatibility / 存档、Mod 与上游兼容性
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks / 提交检查
+      options:
+        - label: I separated observed facts, cited evidence, and personal preference.
+          required: true

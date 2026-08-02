@@ -1,8 +1,11 @@
 blank_issues_enabled: false
 contact_links:
-  - name: 发现错别字 / 拼写错误？
-    url: https://docs.github.com/en/repositories/working-with-files/managing-files/editing-files#editing-files-in-another-users-repository
-    about: 这类问题即使是初学者也能轻松修复。自己动手改比报告还快，而且你还能因修复获得贡献署名！
-  - name: 翻译相关
-    url: https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/blob/master/doc/TRANSLATING.md
-    about: 翻译中的错别字或其他非技术性错误？请到这里。
+  - name: CCB developer documentation / CCB 开发文档
+    url: https://crimsoncrossbunker.github.io/CCB-Docs/
+    about: Contribution, build, architecture, API, and documentation guidance.
+  - name: Questions and support / 问题与支持
+    url: https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/discussions
+    about: Ask build questions, request help, or discuss an early idea before filing actionable work.
+  - name: Private security report / 私密安全报告
+    url: https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/security/advisories/new
+    about: Report vulnerabilities privately; do not publish exploit details in an issue.

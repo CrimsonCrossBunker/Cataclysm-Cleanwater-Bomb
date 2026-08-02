@@ -1,0 +1,57 @@
+name: Upstream sync or port / 上游同步或移植
+description: Propose a specific licensed change from another repository and document CCB divergence
+title: "[Upstream] "
+body:
+  - type: input
+    id: repository
+    attributes:
+      label: Source repository / 来源仓库
+      placeholder: owner/repository
+    validations:
+      required: true
+  - type: input
+    id: commits
+    attributes:
+      label: Source PR and exact commits / 来源 PR 与准确提交
+    validations:
+      required: true
+  - type: textarea
+    id: provenance
+    attributes:
+      label: Authors, attribution, and license / 作者、署名与许可证
+    validations:
+      required: true
+  - type: textarea
+    id: purpose
+    attributes:
+      label: CCB problem solved / 解决的 CCB 问题
+    validations:
+      required: true
+  - type: textarea
+    id: divergence
+    attributes:
+      label: CCB conflicts and intentional divergence / CCB 冲突与有意差异
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility impact / 兼容性影响
+      description: Address saves, stable IDs, mods, Lua/API, platforms, localization, and packaging.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation against current CCB master / 针对当前 CCB master 的验证
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks / 提交检查
+      options:
+        - label: I verified the source commits and license and will preserve original authorship where practical.
+          required: true
+        - label: I did not assume upstream policy or behaviour automatically applies to CCB.
+          required: true

@@ -1,0 +1,86 @@
+name: Bug report / 缺陷报告
+description: Report a reproducible CCB crash, regression, or incorrect behaviour
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search existing CCB issues first. Attachments are public: remove credentials and personal information.
+        请先搜索现有 CCB Issue。附件公开可见，请删除凭据和个人信息。
+  - type: input
+    id: version
+    attributes:
+      label: CCB version or commit / CCB 版本或提交
+      description: Use the complete version string, release tag, or Git commit SHA.
+      placeholder: 2026-08-01-2146 or 7a008bf28d7e
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform / 平台
+      options:
+        - Linux
+        - Windows MSYS2
+        - Windows MSVC
+        - WSL
+        - Android
+        - macOS
+        - Web/Emscripten
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: build
+    attributes:
+      label: Build variant / 构建变体
+      description: Include architecture, terminal/tiles, SDL backend, and package source where relevant.
+      placeholder: x86_64 tiles + sound, SDL2, official experimental archive
+    validations:
+      required: true
+  - type: textarea
+    id: mods
+    attributes:
+      label: Active mods / 已启用 Mod
+      description: Give the smallest mod list that still reproduces the issue; state whether third-party mods are required.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps / 复现步骤
+      placeholder: |
+        1. Load the attached minimal save.
+        2. Perform ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour / 预期行为
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour / 实际行为
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs, save, screenshots, and other evidence / 日志、存档与截图
+      description: Attach minimal debug.log, crash.log, save, or screenshots; explain when an attachment is unavailable.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks / 提交检查
+      options:
+        - label: I searched existing CCB issues and removed secrets/personal information from public attachments.
+          required: true
+        - label: I reproduced this on CCB, not only on Cataclysm-DDA or another fork.
+          required: true
