@@ -1864,14 +1864,17 @@ item &outfit::front()
 }
 
 void outfit::absorb_damage( Character &guy, damage_unit &elem, bodypart_id bp,
-                            std::list<item> &worn_remains, bool &armor_destroyed )
+                            std::list<item> &worn_remains, bool &armor_destroyed,
+                            const std::optional<sub_bodypart_id> &forced_sbp )
 {
     const map &here = get_map();
 
     sub_bodypart_id sbp;
     sub_bodypart_id secondary_sbp;
-    // if this body part has sub part locations roll one
-    if( !bp->sub_parts.empty() ) {
+    if( forced_sbp ) {
+        sbp = *forced_sbp;
+    } else if( !bp->sub_parts.empty() ) {
+        // if this body part has sub part locations roll one
         sbp = bp->random_sub_part( false );
         // the torso and legs has a second layer of hanging body parts
         secondary_sbp = bp->random_sub_part( true );
