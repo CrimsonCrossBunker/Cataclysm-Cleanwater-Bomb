@@ -1,0 +1,48 @@
+name: Performance regression / 性能问题
+description: Report a measured CPU, GPU, memory, I/O, loading, or latency regression
+title: "[Performance] "
+labels: ["Code: Performance"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: CCB version or commit / CCB 版本或提交
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Hardware, platform, and build / 硬件、平台与构建
+      description: Include CPU, GPU, RAM, OS, architecture, compiler, build flags, and terminal/tiles backend.
+    validations:
+      required: true
+  - type: textarea
+    id: scenario
+    attributes:
+      label: Reproducible scenario / 可复现场景
+      description: Include save/mod set, location, actions, warm-up, and sample duration.
+    validations:
+      required: true
+  - type: textarea
+    id: measurements
+    attributes:
+      label: Measurements / 测量结果
+      description: Give before/after values from the same scenario and identify the measurement tool.
+    validations:
+      required: true
+  - type: textarea
+    id: profiles
+    attributes:
+      label: Profiles and logs / Profile 与日志
+      description: Attach flame graphs, profiler captures, timing logs, or memory reports when available.
+  - type: textarea
+    id: suspected
+    attributes:
+      label: Suspected commit or subsystem / 疑似提交或子系统
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks / 提交检查
+      options:
+        - label: I compared equivalent builds and scenarios and reported the measurement method.
+          required: true

@@ -1,0 +1,67 @@
+name: JSON, EOC, or Mod content / JSON、EOC 或 Mod 内容
+description: Report an actionable data, stable-ID, EOC, map, recipe, item, monster, or bundled-mod issue
+title: "[JSON/Content] "
+labels: ["[JSON]"]
+body:
+  - type: dropdown
+    id: content_type
+    attributes:
+      label: Content type / 内容类型
+      options:
+        - Core JSON object
+        - EOC condition or effect
+        - Map or mapgen
+        - Recipe or construction
+        - Item, monster, mutation, or effect
+        - Bundled mod
+        - Translation-visible data
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: object
+    attributes:
+      label: Object type and stable ID / 对象类型与稳定 ID
+      placeholder: type=GENERIC, id=example_item
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Source path / 源文件路径
+      placeholder: data/json/items/example.json
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Current data and problem / 当前数据与问题
+      description: For EOCs include talkers, variables, conditions, effects, and context.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected data contract or behaviour / 预期契约或行为
+    validations:
+      required: true
+  - type: textarea
+    id: mods
+    attributes:
+      label: Load order and dependencies / 加载顺序与依赖
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation run / 已运行验证
+      placeholder: make -j2 json-check
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks / 提交检查
+      options:
+        - label: I checked for stable-ID and save/mod compatibility impact.
+          required: true

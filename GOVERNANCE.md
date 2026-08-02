@@ -41,7 +41,8 @@ Responsible human，负责理解修改、审查最终差异、确认测试、许
    source PR/head commit.
 3. After source merge, refresh the docs PR to the final commit, regenerate the
    catalog outputs, and rerun checks before human merge.
-4. During Phase 0/1, documentation-impact checks are advisory only.
+4. Enforcement is staged in `ai/docs-impact.yml`; a mapping becomes required
+   only after its referenced documentation and default-branch checks are ready.
 
 ## Legacy documentation paths / 旧文档路径
 

@@ -1,476 +1,335 @@
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-*Contents*
+# Contributing to Cataclysm: Cleanwater Bomb
 
-- [Contribute](#contribute)
-  - [Licensing, provenance, and AI-assisted contributions](#licensing-provenance-and-ai-assisted-contributions)
-  - [Using a good text editor](#using-a-good-text-editor)
-  - [All PRs must have a "Summary" section](#all-prs-must-have-a-summary-section)
-  - [Contributing via GitHub](#contributing-via-github)
-  - [Code Style](#code-style)
-  - [Translations](#translations)
-  - [Doxygen Comments](#doxygen-comments)
-    - [Guidelines for adding documentation](#guidelines-for-adding-documentation)
-    - [Building the documentation for viewing it locally](#building-the-documentation-for-viewing-it-locally)
-  - [Example Workflow](#example-workflow)
-      - [Setup your environment](#setup-your-environment)
-      - [Update your `master` branch](#update-your-master-branch)
-      - [Make your changes](#make-your-changes)
-  - [Drafts](#drafts)
-    - [Comment requests](#comment-requests)
-    - [Keep your PR description relevant](#keep-your-pr-description-relevant)
-    - [Closing issues using keywords](#closing-issues-using-keywords)
-  - [Tooling support](#tooling-support)
-  - [Advanced Techniques](#advanced-techniques)
-      - [Using remote tracking branches](#using-remote-tracking-branches)
-  - [Unit tests](#unit-tests)
-  - [In-game testing, test environment and the debug menu](#in-game-testing-test-environment-and-the-debug-menu)
-  - [Frequently Asked Questions](#frequently-asked-questions)
-      - [Why does `git pull --ff-only` result in an error?](#why-does-git-pull---ff-only-result-in-an-error)
-      - [Oh no! I've made my changes to `master` branch and have pushed it to my repo! What should I do now?](#oh-no-ive-made-my-changes-to-master-branch-and-have-pushed-it-to-my-repo-what-should-i-do-now)
+Thank you for improving Cataclysm: Cleanwater Bomb (CCB). CCB is an
+independent Cataclysm fork with its own repository, policies, releases,
+translation project, compatibility commitments, and public Lua API.
 
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+感谢你参与 Cataclysm: Cleanwater Bomb（CCB）。CCB 是独立维护的 Cataclysm
+分支，拥有自己的仓库、政策、发布、翻译项目、兼容性承诺和 Lua API。
 
-# Contribute
+- Source repository: <https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb>
+- Developer documentation: <https://crimsoncrossbunker.github.io/CCB-Docs/>
+- Issues: <https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/issues>
+- Discussions and support: <https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/discussions>
+- Security reports: [SECURITY.md](SECURITY.md)
 
-**Opening a new issue?** Please read [ISSUES.md](./ISSUES.md) first.
+Read [ISSUES.md](ISSUES.md) before opening an issue and the repository-root
+[AGENTS.md](AGENTS.md) before changing files. The closest nested `AGENTS.md`
+adds subsystem-specific boundaries and validation commands.
 
-**Want an introductory guide for creating game content?** You might want to
-read the [Guide to adding new content to CDDA for first time
-contributors](https://github.com/CleverRaven/Cataclysm-DDA/wiki/Guide-to-adding-new-content-to-CDDA-for-first-time-contributors)
-on the CDDA wiki.
+## Sources of truth
 
-Cataclysm:Dark Days Ahead is released under the Creative Commons Attribution ShareAlike 3.0 license. The code and content of the game is free to use, modify, and redistribute for any purpose whatsoever. See http://creativecommons.org/licenses/by-sa/3.0/ for details.
-This means any contribution you make to the project will also be covered by the same license, and this license is irrevocable.
+| Subject | Authority |
+| --- | --- |
+| Runtime behaviour | CCB source and tests |
+| JSON, Lua, and API contracts | Schemas, LuaLS declarations, registrations, and generated inventories |
+| Build and validation | CI, CMake, Makefile, Gradle, and repository validators |
+| Contribution and governance | `AGENTS.md`, this file, and `GOVERNANCE.md` |
+| Developer explanation and tutorials | CCB-Docs |
+| Player entry point | CCB website |
+| Game-data lookup | CCB-GUIDE |
 
-## Licensing, provenance, and AI-assisted contributions
+If CCB-Docs conflicts with a repository contract, mark the page stale and fix
+the page. Explanatory prose does not override source, tests, schemas, or build
+definitions.
 
-AI-assisted contributions and pull requests opened by automation are allowed.
-You do not have to disclose the tool or model.  Every pull request must instead
-name a **Responsible human** who understands the change, reviews the final
-diff, owns the reported test results, checks licenses and external sources, and
-answers review questions.  AI output is not evidence that a change is correct
-or that third-party material is license-compatible.
+如果 CCB-Docs 与仓库契约冲突，应把页面标为 stale 并按源码契约修复；不得用
+说明性文档覆盖源码、测试、Schema 或构建定义。
 
-允许使用 AI 辅助，也允许自动化账号创建 PR；不强制披露工具或模型。每个 PR
-必须指定一名 **Responsible human**，由该人理解修改、审查最终差异、确认测试
-结果、许可证和外部来源，并回答审阅问题。AI 输出本身不能证明修改正确，也不
-会消除第三方内容的许可证或署名义务。
+## License, attribution, and provenance
 
-Contributors must cite and comply with the license of any copied or adapted
-material.  When porting from another fork, preserve the original authorship and
-commit history where practical.  If history cannot be preserved, record the
-source repository, commit, contributors, and license so reviewers can verify
-provenance.  See `GOVERNANCE.md` for the authority model and cross-repository
-documentation protocol.
+CCB is distributed under CC-BY-SA 3.0 and compatible terms. Contributions are
+provided under the repository license. Cite copied or adapted material and
+verify that its license is compatible. Preserve original authorship and commit
+history when porting from another project where practical. Otherwise record
+the source repository, exact commit, contributors, license, and the reason
+history could not be retained.
 
-## Using a good text editor
+Do not submit copyrighted text, art, sound, code, or data without permission.
+Links and AI output are not proof of license compatibility.
 
-Most of the Cataclysm: Dark Days Ahead game data is defined in JSON files.
-These files are intended to be easy for you to edit, but there are some
-pitfalls.  Using Windows Notepad can get you into trouble, because it likes to
-insert a special character called a [BOM](https://en.wikipedia.org/wiki/Byte_order_mark) at the start of the file, which CDDA
-does not want.
+## Responsible human and AI-assisted work
 
-If you're going to be editing JSON files consider getting a more fully-featured
-editor such as [Notepad++](https://notepad-plus-plus.org/).
+AI-assisted contributions and bot-authored pull requests are allowed. Tool or
+model disclosure is optional. Every pull request must name one **Responsible
+human** who:
 
-## All PRs must have a "Summary" section
+- understands the change and its compatibility impact;
+- reviews the final diff, including generated files;
+- owns every reported test result;
+- verifies licenses, attribution, and external sources;
+- answers review questions and follows the PR through merge or closure.
 
-Summary is a *mandatory* one-line description of your change that will be extracted and added to [the project changelog](./data/changelog.txt).
-If the summary is invalid, your PR is unable to get merged.
+允许 AI 辅助及机器人创建 PR，不强制披露工具或模型。每个 PR 必须指定一名
+真实的 Responsible human，负责理解修改、审查最终差异、确认测试、许可证和
+外部来源，并回答审阅问题。
 
-The format is:
+## Prepare a development environment
+
+CCB supports several toolchains. Use the instructions matching your target:
+
+- Linux and general C++: `doc/c++/COMPILING.md`
+- CMake: `doc/c++/COMPILING-CMAKE.md`
+- MSYS2: `doc/c++/COMPILING-MSYS.md`
+- MSVC with vcpkg: `doc/c++/COMPILING-VS-VCPKG.md`
+- Android: `android/` and `android/AGENTS.md`
+- Repository routing and validation: `ai/project-map.yml` and `ai/test-matrix.yml`
+
+Prefer the narrowest validation that proves your change. Platform dependencies
+and expensive commands must be reported honestly; never claim a command passed
+if it was not run.
+
+### Fork, clone, and branch
+
+Fork the CCB repository, not Cataclysm-DDA. Replace `YOUR_USERNAME` below:
+
+```sh
+git clone https://github.com/YOUR_USERNAME/Cataclysm-Cleanwater-Bomb.git
+cd Cataclysm-Cleanwater-Bomb
+git remote add upstream https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb.git
+git fetch upstream --tags
+git switch --create topic/short-description upstream/master
+```
+
+Keep one coherent change per branch. Do not develop directly on `master`.
+Before requesting review, update from CCB `master` without rewriting commits
+that preserve third-party authorship.
+
+### Commits
+
+- Make each commit buildable or otherwise independently understandable.
+- Use an imperative subject that describes the change.
+- Keep generated output in the same commit as the contract change that creates it.
+- Preserve author information for upstream ports.
+- Do not mix formatting, generated churn, or unrelated cleanup into a feature.
+- Never commit build caches, credentials, SDK paths, APKs, or `obj-lua/`.
+
+## Choose the correct contribution path
+
+### C++
+
+Read `src/AGENTS.md`, `doc/c++/CODE_STYLE.md`, and the relevant tests. Trace
+ownership, serialization, registrations, and public names before editing.
+
+Typical checks:
+
+```sh
+make astyle-check
+make -j2 tests
+./tests/cata_test "<focused test filter>"
+```
+
+Add a focused deterministic regression test. A successful compilation alone
+does not prove behaviour.
+
+### JSON content
+
+Read `data/AGENTS.md` and the nearest mod instructions. Preserve stable IDs or
+provide an explicit migration/obsolete entry. Build the formatter before using
+it and validate actual loading:
+
+```sh
+make -j2 tools/format/json_formatter.cgi
+tools/format/json_formatter.cgi path/to/changed.json
+make -j2 json-check
+```
+
+Format only files you changed. Do not infer a field from prose when the loader,
+factory, schema, validator, or tests say otherwise.
+
+### EOC
+
+Effects on Condition are JSON contracts. Identify every condition/effect,
+talker, variable, context, nesting rule, and value type used by the change.
+Validate formatting and the full JSON load. Add a focused test when a parser or
+runtime edge case is involved.
+
+```sh
+make -j2 tools/format/json_formatter.cgi
+make -j2 json-check
+```
+
+### Lua
+
+New Lua code targets public API v5. Read `data/lua/AGENTS.md`; treat the
+manifest schema, LuaLS declarations, native registrations, and generated
+inventories as one contract. Declare only the capabilities the mod needs.
+
+```sh
+python3 tools/lua_api/check_luals_declarations.py
+python3 tools/lua_api/check_coverage.py
+python3 -m unittest discover -s tools/lua_api -p 'test_*.py'
+```
+
+Never hand-edit generated API inventories. Regenerate them with the command in
+`ai/generated-files.yml` and include the generated diff.
+
+### Mods
+
+Each bundled mod is a compatibility boundary. Read its `README`, `modinfo.json`,
+dependencies, tests, and `data/mods/AGENTS.md`. Avoid undeclared cross-mod IDs
+or load-order dependencies. Test the affected mod with the core JSON loader and
+state which mod set was loaded.
+
+### Android
+
+Read `android/AGENTS.md`. Keep SDK locations, signing keys, local Gradle state,
+and generated APKs out of Git. Start with unit tests:
+
+```sh
+cd android
+./gradlew test
+```
+
+APK assembly additionally requires a configured Android SDK/NDK. Report the
+variant and ABI used. Android uses SDL3; desktop Linux and Windows use SDL2
+unless an authoritative build configuration says otherwise.
+
+### Translation
+
+CCB uses its own Transifex project configured in `.tx/config`. The commented
+Cataclysm-DDA resources are not the CCB contribution target. Do not overwrite
+translator attribution or edit generated MO files as source.
+
+Useful local validation:
+
+```sh
+lang/update_pot.sh
+msgfmt -c --statistics -o /dev/null lang/po/zh_CN.po
+make -C lang LANGUAGES=zh_CN -B
+```
+
+Changes to extraction, templates, or workflow credentials require maintainer
+review. Never commit a Transifex token.
+
+### Tiles, fonts, and sound
+
+Respect asset licenses and attribution. Keep source assets separate from
+generated packages and do not re-encode unrelated assets. For a Linux SDL2
+tiles and sound build, the repository-supported shape is:
+
+```sh
+make -j2 RELEASE=1 TILES=1 SOUND=1 SDL3=0
+```
+
+Tileset composition, shaders, fonts, and release packages have their own CI
+contracts under `.github/workflows/` and `build-scripts/`. Use the relevant
+workflow or narrow local check and record assets that were not exercised.
+
+### Upstream ports
+
+CCB selectively ports from Cataclysm-DDA, Cataclysm: Bright Nights, and other
+compatible sources; it does not automatically adopt their policy or runtime
+semantics. A port must record:
+
+- source repository, PR, and exact commit range;
+- original authors and license;
+- CCB conflicts and intentional divergence;
+- save, data-ID, mod, and platform compatibility impact;
+- tests run against current CCB `master`.
+
+Preserve source commits when practical. Do not silently replace a CCB-specific
+behaviour with upstream behaviour.
+
+## Testing and validation
+
+Use `ai/test-matrix.yml` to select checks. Common entry points include:
+
+```sh
+# Agent metadata and documentation impact
+python3 tools/agent/check_project_metadata.py
+python3 -m unittest discover -s tools/agent -p 'test_*.py'
+
+# Python maintenance tools
+make python-check
+
+# C++ and JSON
+make astyle-check
+make -j2 tests
+make -j2 json-check
+
+# Lua public contract
+python3 tools/lua_api/check_luals_declarations.py
+python3 tools/lua_api/check_coverage.py
+```
+
+In the PR, list exact commands, platform/toolchain, result, skipped checks, and
+why they were skipped. For gameplay or UI changes, include reproducible manual
+steps. For performance changes, include before/after measurements and the
+scenario used.
+
+## Compatibility requirements
+
+CCB avoids unnecessary breakage. Explicitly review:
+
+- save serialization and migration;
+- stable JSON IDs and obsolete/migration entries;
+- bundled and third-party mod compatibility;
+- Lua API version, capabilities, and deprecations;
+- desktop and Android differences;
+- localization and translated strings;
+- CCB divergence from upstream.
+
+Breaking a public contract requires a migration or deprecation plan, tests,
+release-note impact, and generated-reference updates. Do not hide a breaking
+change in a cleanup PR.
+
+## Pull requests
+
+Open a Draft PR early for multi-commit work. Keep the template headings and
+update the body when the diff changes. Resolve review conversations and keep
+the branch scoped.
+
+### Required Summary
+
+The `Summary` is a one-line changelog entry:
 
 ```markdown
 #### Summary
-Category "description"
+Category "short description"
 ```
 
-The categories to choose from are: Features, Content, Interface, Mods, Balance, Bugfixes, Performance, Infrastructure, Build, I18N.
+Allowed categories are `Features`, `Content`, `Interface`, `Mods`, `Balance`,
+`Bugfixes`, `Performance`, `Infrastructure`, `Build`, and `I18N`. Use `None`
+for changes that should not enter the player changelog. See
+`doc/CHANGELOG_GUIDELINES.md`.
 
-Example:
+### Documentation impact
 
-```markdown
-#### Summary
-Content "Adds new mutation category 'Mouse'"
-```
+Every PR must describe:
 
-Or, if you want it treated as a minor tweak that doesn't appear in the changelog:
+- documentation impact;
+- related CCB-Docs PR, if any;
+- affected stable documentation IDs;
+- generated-reference impact.
 
-```markdown
-#### Summary
-None
-```
+A CCB-Docs PR may be prepared before the source PR merges, but must remain
+Draft. After source merge, refresh its metadata to the final source commit,
+regenerate derived files, rerun checks, and then request human review.
 
-See [the Changelog Guidelines](./doc/CHANGELOG_GUIDELINES.md) for explanations of the categories.
+## Definition of Ready
 
-## Contributing via GitHub
+A change is ready for implementation when:
 
-Contributing to Cataclysm: Dark Days Ahead is easy — simply [fork](https://github.com/CleverRaven/Cataclysm-DDA/fork) the repository here on GitHub, make your changes, and then send us a pull request.
+- the problem and intended outcome are clear;
+- authoritative source paths and existing tests are identified;
+- scope excludes unrelated behaviour and cleanup;
+- compatibility, license, provenance, and documentation risks are known;
+- the narrowest validation commands are identified;
+- a Responsible human is prepared to own the final result.
 
-There are a couple of guidelines we suggest sticking to (see [#Example Workflow](#example-workflow)):
+## Definition of Done
 
-* Keep your `master` branch clean. This means you can easily pull changes made to this repository into yours.
-* Create a new branch for each new feature or set of related bug fixes.
-* Never merge from your local branches into your `master` branch. Only update that by pulling from `upstream/master`. GitHub has a button to update the master branch of your fork, so you do not need to know how to use git for this.
+A contribution is done only when:
 
-## Code Style
+- the final diff is coherent and reviewed by the Responsible human;
+- source, tests, schema, declarations, registrations, and generated files agree;
+- applicable automated and manual checks pass and skipped checks are disclosed;
+- compatibility and upstream-divergence impacts are addressed;
+- licenses and attribution are verified;
+- documentation-impact fields and dependent CCB-Docs work are current;
+- no credentials, local paths, caches, or unrelated changes are included;
+- review questions and conversations are resolved.
 
-Code style is enforced across the codebase by `astyle`.
-See [CODE_STYLE](./doc/c++/CODE_STYLE.md) for details.
-
-## Translations
-
-The translation of Cataclysm: DDA is done using Transifex.
-Look at the [translation project](https://explore.transifex.com/cataclysm-dda-translators/cataclysm-dda/) for an up-to-date list of supported languages.
-
-See [TRANSLATING.md](./doc/TRANSLATING.md) for more information:
-
-* [For translators](./doc/TRANSLATING.md#translators)
-* [For developers](./doc/TRANSLATING.md#developers)
-* [For maintainers](./doc/TRANSLATING.md#maintainers)
-
-## Doxygen Comments
-
-Extensive documentation of classes and class members will make the code more readable. New Doxygen comments for existing classes are a welcomed contribution.
-
-Use the following template for commenting classes:
-
-```cpp
-/**
- * Brief description
- *
- * Lengthy description with many words. (optional)
- */
-class foo {
-```
-
-Use the following template for commenting functions:
-
-```cpp
-/**
- * Brief description
- *
- * Lengthy description with many words. (optional)
- * @param param1 Description of param1 (optional)
- * @return Description of return (optional)
- */
-int foo(int param1);
-```
-
-Use the following template for commenting member variables:
-
-```cpp
-/** Brief description **/
-int foo;
-```
-
-Helpful pages:
-
-* [Doxygen Manual - Special Commands](https://www.doxygen.nl/manual/commands.html)
-* [Doxygen Manual - Standard Markdown](https://www.doxygen.nl/manual/markdown.html#markdown_std)
-* [Doxygen Manual - Frequently Asked Questions](https://www.doxygen.nl/manual/faq.html)
-
-### Guidelines for adding documentation
-
-* Doxygen comments should describe behavior towards the outside, not implementation, but since many classes in Cataclysm are intertwined, it's often necessary to describe implementation.
-* Describe things that aren't obvious just from the name.
-* Don't describe redundantly: `/** Map **/; map* map;` is not a helpful comment.
-* When documenting X, describe how X interacts with other components, not just what X itself does.
-
-### Building the documentation for viewing it locally
-
-* Install doxygen
-* `doxygen doxygen_doc/doxygen_conf.txt `
-* `firefox doxygen_doc/html/index.html` (replace firefox with your browser of choice)
-
-## Example Workflow
-
-#### Setup your environment
-
-*(This only needs to be done once.)*
-
-1. [Fork](https://github.com/CleverRaven/Cataclysm-DDA/fork) this repository here on GitHub.
-
-**Note:** Fork is different from branch, branches are covered [later](#make-your-changes).
-
-2. Clone your fork locally.
-
-    ```bash
-    # Clones your fork of the repository into the current directory in terminal
-    $ git clone https://github.com/YOUR_USERNAME/Cataclysm-DDA.git
-    # Alternatively if you don't want to clone an entire big history (5GB!)
-    $ git clone --depth=1 https://github.com/YOUR_USERNAME/Cataclysm-DDA.git
-    ```
-
-3. Set commit message template.
-
-    ```bash
-    # Changes the active directory in the prompt to the newly cloned "Cataclysm-DDA" directory
-    $ cd Cataclysm-DDA
-    # Set commit message template to the custom one in the repo
-    $ git config --local commit.template .gitmessage
-    ```
-
-4. Add this repository as a remote.
-
-    ```bash
-    # Assigns the original repository to a remote called "upstream"
-    $ git remote add -f upstream https://github.com/CleverRaven/Cataclysm-DDA.git
-    ```
-
-For further details about commit message guidelines please visit:
-- [codeinthehole.com](https://codeinthehole.com/tips/a-useful-template-for-commit-messages/)
-- [chris.beams.io](https://chris.beams.io/posts/git-commit/)
-- [help.github.com](https://help.github.com/articles/closing-issues-using-keywords/)
-
-#### Update your `master` branch
-
-1. Make sure you have your `master` branch checked out.
-
-```bash
-$ git checkout master
-```
-
-2. Pull the changes from the `upstream/master` branch.
-
-```bash
-$ git pull --ff-only upstream master
-# gets changes from "master" branch on the "upstream" remote
-```
-
- * Note: If this gives you an error, it means you have committed directly to your local `master` branch. [Click here for instructions on how to fix this issue](#why-does-git-pull---ff-only-result-in-an-error).
-
-3. Pull new tags from the `upstream` remote repo.
-
-This step is not necessary to compile or contribute, but skipping it can result in outdated version numbers on your builds.
-
-```bash
-$ git fetch upstream --tags
-# gets new tags from the "upstream" remote
-```
-
-4. Optionally, push the synced master state to the `origin/master` branch.
-
-```bash
-$ git push origin master
-# push the synced master state to your fork
-```
-
-#### Make your changes
-
-0. Update your `master` branch, if you haven't already.
-
-1. For each new feature or bug fix, create a new branch.
-
-```bash
-# Creates a new branch called "new_feature" and switches to it
-$ git checkout -b new_feature
-```
-
-2. Once you've committed some changes locally, you need to push them to your fork here on GitHub.
-
-```bash
-# origin was automatically set to point to your fork when you cloned it
-$ git push origin new_feature
-```
-
-3. Once you're finished working on your branch, and have committed and pushed all your changes, submit a pull request from your `new_feature` branch to this repository's `master` branch.
-
- * Note: any new commits to the `new_feature` branch on GitHub will automatically be included in the pull request, so make sure to only commit related changes to the same branch.
-
-## Drafts
-
-If you file a PR but you're still working on it, please make it a [Draft](https://docs.github.com/en/free-pro-team@latest/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request-from-a-fork).
-
-![screenshot](https://docs.github.com/assets/images/help/pull_requests/pullrequest-send.png)
-
-This will tell the reviewers that you still intend to add more to the PR and we don't need to review it yet. When it's ready to be reviewed for a merger, just click the [`Ready for review`](https://docs.github.com/en/free-pro-team@latest/github/collaborating-with-issues-and-pull-requests/changing-the-stage-of-a-pull-request) button.
-
-![screenshot](https://docs.github.com/assets/images/help/pull_requests/ready-for-review-button.png)
-
-Please convert all your existing PRs with `[WIP]` in the title to Drafts.
-
-![screenshot](https://docs.github.com/assets/images/help/pull_requests/convert-to-draft-link.png)
-
-This can help speed up our review process by allowing us to only review the things that are ready for it, and will help prevent merging in anything that isn't completely ready.
-
-### Comment requests
-
-If you are also looking for suggestions then add a [CR] before the title text — "comments requested". Feel free to remove [CR] when you feel you got enough information to proceed.
-
-It is not required to solve or reference an open issue to file a PR, however, if you do so, you need to explain the problem your PR is solving in full detail.
-
-### Keep your PR description relevant
-
-Make sure your PR description is still relevant every time you change your branch after discussion or additional thought.
-
-### Closing issues using keywords
-
-When your PR should close an issue, please include [closing keywords](https://help.github.com/articles/closing-issues-using-keywords/):
-
-* close
-* closes
-* closed
-* fix
-* fixes
-* fixed
-* resolve
-* resolves
-* resolved
-
-## Tooling support
-
-Various tools are available to help you keep your contributions conforming to the appropriate style. See [DEVELOPER_TOOLING.md](./doc/c++/DEVELOPER_TOOLING.md) for more details.
-
-## Advanced Techniques
-
-These guidelines aren't essential, but they can make keeping things in order much easier.
-
-#### Using remote tracking branches
-
-Remote tracking branches allow you to easily stay in touch with this repository's `master` branch, as they automatically know which remote branch to get changes from.
-
-```bash
-$ git branch -vv
-* master      xxxx [origin/master] ....
-  new_feature xxxx ....
-```
-
-Here you can see we have two branches; `master` which is tracking `origin/master`, and `new_feature` which isn't tracking any branch. In practice, what this means is that git won't know where to get changes from.
-
-```bash
-$ git checkout new_feature
-Switched to branch 'new_feature'
-$ git pull
-There is no tracking information for the current branch.
-Please specify which branch you want to merge with.
-```
-
-In order to easily pull changes from `upstream/master` into the `new_feature` branch, we can tell git which branch it should track. (You can even do this for your local master branch.)
-
-```bash
-$ git branch -u upstream/master new_feature
-Branch new_feature set up to track remote branch master from upstream.
-$ git pull
-Updating xxxx..xxxx
-....
-```
-
-You can also set the tracking information at the same time as creating the branch.
-
-    $ git branch new_feature_2 --track upstream/master
-    Branch new_feature_2 set up to track remote branch master from upstream.
-
- * Note: Although this makes it easier to pull from `upstream/master`, it doesn't change anything with regards to pushing. `git push` fails because you don't have permission to push to `upstream/master`.
-
-    ```bash
-    $ git push
-    error: The requested URL returned error: 403 while accessing https://github.com/CleverRaven/Cataclysm-DDA.git
-    fatal: HTTP request failed
-    $ git push origin
-    ....
-    To https://github.com/YOUR_USERNAME/Cataclysm-DDA.git
-    xxxx..xxxx  new_feature -> new_feature
-    ```
-
-## Unit tests
-
-There is a suite of tests built into the source tree at tests/  
-You should run the test suite after ANY change to the game source.  
-An ordinary invocation of `make` will build the test executable at `tests/cata_test`, and it can be invoked like any ordinary executable, or via `make check`.
-Running `tests/cata_test` with no arguments will run the entire test suite; running it with `--help` will print a number of invocation options you can use to adjust its operation.
-
-```bash
-$ make
-... compilation details ...
-$ tests/cata_test
-Starting the actual test at Fri Nov  9 04:37:03 2018
-===============================================================================
-All tests passed (1324684 assertions in 94 test cases)
-Ended test at Fri Nov  9 04:37:45 2018
-The test took 41.772 seconds
-```
-
-It is recommended to habitually invoke make like ``make YOUR BUILD OPTIONS && make check``.
-
-If you're working with Visual Studio (and don't have `make`), see [Visual Studio-specific advice](./doc/c++/COMPILING-VS-VCPKG.md#running-unit-tests).
-
-If you want/need to add a test, see [TESTING.md](./doc/c++/TESTING.md)
-
-## In-game testing, test environment and the debug menu
-
-Whether you are implementing a new feature or whether you are fixing a bug, it is always a good practice to test your changes in-game. It can be a hard task to create the exact conditions by playing a normal game to be able to test your changes, which is why there is a debug menu. There is no default key to bring up the menu so you will need to assign one first.
-
-Bring up the keybindings menu (press `Escape` then `1`), scroll down almost to the bottom and press `+` to add a new keybinding. Press the letter that corresponds to the *Debug menu* item, then press the key you want to use to bring up the debug menu. To test your changes, create a new world with a new character. Once you are in that world, press the key you just assigned for the debug menu and you should see:
-
-```
-┌───────────────────────────────────────────────────────────────────────────┐
-│ Debug Functions - Using these will cheat not only the game, but yourself. │
-│ You won't grow. You won't improve.                                        │
-│ Taking this shortcut will gain you nothing. Your victory will be hollow.  │
-│ Nothing will be risked and nothing will be gained.                        │
-├───────────────────────────────────────────────────────────────────────────┤
-│ i Info…                                                                   │
-│ g Game…                                                                   │
-│ s Spawning…                                                               │
-│ p Player…                                                                 │
-│ c Monster…                                                                │
-│ f Faction…                                                                │
-│ v Vehicle…                                                                │
-│ t Teleport…                                                               │
-│ m Map…                                                                    │
-│ d Dialogue…                                                               │
-│ q Quick setup…                                                            │
-└───────────────────────────────────────────────────────────────────────────┘
-```
-
-With the commands in this menu, you should be able to recreate the proper conditions to test your changes.  Most commands change one thing at a time.
-
-The last command, "Quick setup", does many things at once:
-* Gives you debug traits such as clairvoyance, invincibility, near infinite stamina and mana, etc
-* Gives you a nearly infinite backpack
-* Maxes your skills (but not your stats!)
-* Reveals the map
-
-### Debug names
-
-If you name a character starting with one of "Debug", "Test", "Sandbox", "Staging", "QA", or "UAT", they will spawn with the debug quick setup performed automatically.
-
-If you name a world one of those names, every character will spawn that way.
-
-## Frequently Asked Questions
-
-#### Why does `git pull --ff-only` result in an error?
-
-If `git pull --ff-only` shows an error, it means that you've committed directly to your local `master` branch. To fix this, we create a new branch with these commits, find the point at which we diverged from `upstream/master`, and then reset `master` to that point.
-
-```bash
-$ git pull --ff-only upstream master
-From https://github.com/CleverRaven/Cataclysm-DDA
- * branch            master     -> FETCH_HEAD
-fatal: Not possible to fast-forward, aborting.
-$ git branch new_branch master          # mark the current commit with a tmp branch
-$ git merge-base master upstream/master
-cc31d0... # the last commit before we committed directly to master
-$ git reset --hard cc31d0....
-HEAD is now at cc31d0... ...
-```
-
-Now that `master` has been cleaned up, we can easily pull from `upstream/master`, and then continue working on `new_branch`.
-
-```bash
-$ git pull --ff-only upstream master
-# gets changes from the "upstream" remote for the matching branch, in this case "master"
-$ git checkout new_branch
-```
-
-#### Oh no! I've made my changes to `master` branch and have pushed it to my repo! What should I do now?
-Assuming `upstream` is `CleverRaven/Cataclysm-DDA` and `origin` is your fork, do the commands:
-```bash
-git reset upstream/master
-git push --repo=origin --force
-```
-
-For more frequently asked questions, see the [developer FAQ](./doc/DEVELOPER_FAQ.md).
+Questions that are not actionable issues belong in GitHub Discussions. Security
+vulnerabilities must follow [SECURITY.md](SECURITY.md), not a public issue.

@@ -67,7 +67,8 @@ https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/blob/master/data
 <!-- 描述你采取了哪些步骤来测试这个 PR 是否修复了 bug 或添加了特性，以及你做了哪些测试以确保没有引入回归问题。也请为审阅者和维护者提供测试建议。参见 TESTING_YOUR_CHANGES.md -->
 
 #### Documentation impact
-<!-- None，或说明需要新增/更新/标记 stale 的开发文档。Phase 0/1 期间此项只提示。 -->
+<!-- None，或说明需要新增、更新、迁移、归档或标记 stale 的开发文档。
+实际执行级别以 ai/docs-impact.yml 为准。 -->
 
 None
 
