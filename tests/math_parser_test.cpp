@@ -2,6 +2,7 @@
 #include <clocale>
 #include <cmath>
 #include <functional>
+#include <limits>
 #include <locale>
 #include <memory>
 #include <stdexcept>
@@ -387,6 +388,9 @@ TEST_CASE( "math_parser_dialogue_integration", "[math_parser]" )
     CHECK( get_avatar().guts.get_calories() == 100 );
     CHECK( testexp.parse( "u_gut_calories()" ) );
     CHECK( testexp.eval( d ) == Approx( 100 ) );
+    CHECK( testexp.parse( "u_gut_calories() = 2147483648" ) );
+    testexp.eval( d );
+    CHECK( get_avatar().guts.get_calories() == std::numeric_limits<int>::max() );
     CHECK( testexp.parse( "n_gut_calories() = 200" ) );
     testexp.eval( d );
     CHECK( dude.guts.get_calories() == 200 );
@@ -398,7 +402,8 @@ TEST_CASE( "math_parser_dialogue_integration", "[math_parser]" )
     CHECK( testexp.parse( "n_gut_vitamin('vitC') = 24" ) );
     testexp.eval( d );
     CHECK( dude.guts.get_vitamin( vit_c ) == 24 );
-    get_avatar().guts.mod_calories( original_avatar_gut_calories - 100 );
+    get_avatar().guts.mod_calories( original_avatar_gut_calories -
+                                    std::numeric_limits<int>::max() );
     dude.guts.mod_calories( original_npc_gut_calories - 200 );
     get_avatar().guts.set_vitamin( vit_c, original_avatar_gut_vitamin );
     dude.guts.set_vitamin( vit_c, original_npc_gut_vitamin );
