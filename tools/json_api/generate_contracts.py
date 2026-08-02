@@ -42,3 +42,32 @@ VALUE_HELPERS = (
     "translation_or_var",
     "eoc_math",
 )
+
+def git_tracked_files(root: Path, *pathspecs: str) -> list[str]:
+    """Return tracked paths without walking the checkout."""
+    completed = subprocess.run(
+        ["git", "ls-files", "-z", "--", *pathspecs],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    return sorted(
+        item.decode("utf-8")
+        for item in completed.stdout.split(b"\0")
+        if item
+    )
+
+def read_text(root: Path, relative_path: str) -> str:
+    return (root / relative_path).read_text(encoding="utf-8")
+
+def line_number(text: str, offset: int) -> int:
+    return text.count("\n", 0, offset) + 1
+
+def source_reference(
+    path: str, text: str, offset: int, symbol: str
+) -> dict[str, object]:
+    return {
+        "path": path,
+        "line": line_number(text, offset),
+        "symbol": symbol,
+    }
