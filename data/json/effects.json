@@ -4118,6 +4118,13 @@
   },
   {
     "type": "effect_type",
+    "id": "crowd_crushed",
+    "name": [ "Crowd crushed" ],
+    "desc": [ "You are being crushed by a crowd." ],
+    "max_duration": "2 turns"
+  },
+  {
+    "type": "effect_type",
     "id": "grabbing",
     "name": [ "Grabbing" ],
     "desc": [ "Grabbing another creature and holding them in place." ],
