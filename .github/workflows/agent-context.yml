@@ -2,6 +2,9 @@ name: Agent context and documentation impact
 
 on:
   pull_request:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,10 +15,11 @@ concurrency:
 
 jobs:
   validate-agent-context:
+    name: Agent context and documentation impact
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Check out pull request
+      - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -42,6 +46,7 @@ jobs:
           python3 -m unittest discover -s tools/json_api -p 'test_*.py'
 
       - name: Report documentation impact and validate PR responsibility
+        if: github.event_name == 'pull_request'
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -51,3 +56,9 @@ jobs:
           --base "$BASE_SHA"
           --head "$HEAD_SHA"
           --check-pr-body
+
+      - name: Validate staged impact configuration outside pull requests
+        if: github.event_name != 'pull_request'
+        run: >-
+          python3 tools/agent/check_docs_impact.py
+          --changed-file ai/docs-impact.yml

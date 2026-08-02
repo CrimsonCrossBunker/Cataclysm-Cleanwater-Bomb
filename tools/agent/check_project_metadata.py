@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import fnmatch
 import json
+import re
 import subprocess
 from collections import Counter
 from pathlib import Path
@@ -119,14 +120,82 @@ def validate_context() -> None:
                     )
 
     impact = documents["docs-impact.yml"]
-    if impact.get("enforcement") != "advisory":
-        raise ValueError("Phase 0/1 documentation impact must remain advisory")
+    if impact.get("enforcement") != "staged":
+        raise ValueError("documentation impact must use staged enforcement")
     for entry in impact["entries"]:
+        enforcement = entry.get("enforcement")
+        if enforcement not in {"advisory", "required"}:
+            raise ValueError(
+                f"invalid documentation enforcement for {entry['id']}"
+            )
+        documentation_ids = entry.get("documentation_ids", [])
+        if len(documentation_ids) != len(set(documentation_ids)):
+            raise ValueError(
+                f"duplicate documentation ID in impact {entry['id']}"
+            )
+        required_checks = entry.get("required_check_ids", [])
+        unknown_checks = sorted(set(required_checks) - test_ids)
+        if unknown_checks:
+            raise ValueError(
+                f"unknown required checks in {entry['id']}: {unknown_checks}"
+            )
         for pattern in entry.get("patterns", []):
             if not path_pattern_exists(pattern, known):
                 raise ValueError(
                     f"unmatched documentation impact pattern: {pattern}"
                 )
+        if enforcement != "required":
+            continue
+        if not documentation_ids:
+            raise ValueError(
+                f"required impact {entry['id']} needs documentation IDs"
+            )
+        if not required_checks:
+            raise ValueError(
+                f"required impact {entry['id']} needs validation checks"
+            )
+        if entry.get("risk_level") != "high":
+            raise ValueError(
+                f"required impact {entry['id']} must be high risk"
+            )
+        readiness = entry.get("documentation_readiness")
+        if not isinstance(readiness, dict):
+            raise ValueError(
+                f"required impact {entry['id']} needs docs provenance"
+            )
+        if readiness.get("state") not in {"bilingual_draft", "active"}:
+            raise ValueError(
+                f"required impact {entry['id']} has invalid docs readiness"
+            )
+        if set(readiness.get("languages", [])) != {"zh_CN", "en"}:
+            raise ValueError(
+                f"required impact {entry['id']} needs zh_CN and en docs"
+            )
+        if readiness.get("repository") != "CrimsonCrossBunker/CCB-Docs":
+            raise ValueError(
+                f"required impact {entry['id']} has invalid docs repository"
+            )
+        if not readiness.get("ref"):
+            raise ValueError(
+                f"required impact {entry['id']} needs a docs ref"
+            )
+        if not re.fullmatch(r"[0-9a-f]{40}", readiness.get("commit", "")):
+            raise ValueError(
+                f"required impact {entry['id']} needs a docs commit"
+            )
+        if not re.fullmatch(
+            r"[0-9a-f]{40}", readiness.get("source_commit", "")
+        ):
+            raise ValueError(
+                f"required impact {entry['id']} needs a source commit"
+            )
+        if readiness["state"] == "bilingual_draft" and not readiness.get(
+            "activation_gate"
+        ):
+            raise ValueError(
+                f"draft documentation for {entry['id']} needs an "
+                "activation gate"
+            )
 
     router = load_yaml(ROOT / "ai/task-router.yml")
     router_schema = json.loads(
@@ -193,10 +262,14 @@ def validate_inventory() -> None:
         raise ValueError("duplicate Markdown path in inventory")
     if any(path == "obj-lua" or path.startswith("obj-lua/") for path in paths):
         raise ValueError("obj-lua must not be scanned or inventoried")
-    stable_ids = [entry["stable_document_id"] for entry in inventory["documents"]]
+    stable_ids = [
+        entry["stable_document_id"] for entry in inventory["documents"]
+    ]
     if len(stable_ids) != len(set(stable_ids)):
         raise ValueError("duplicate stable_document_id in Markdown inventory")
-    action_counts = Counter(entry["action"] for entry in inventory["documents"])
+    action_counts = Counter(
+        entry["action"] for entry in inventory["documents"]
+    )
     status_counts = Counter(
         entry["migration_status"] for entry in inventory["documents"]
     )
@@ -209,7 +282,10 @@ def validate_inventory() -> None:
         raise ValueError("Markdown migration-status summary is stale")
     known_paths = set(tracked_paths())
     for entry in inventory["documents"]:
-        if any("obj-lua" in Path(path).parts for path in entry["source_paths"]):
+        if any(
+            "obj-lua" in Path(path).parts
+            for path in entry["source_paths"]
+        ):
             raise ValueError("obj-lua is forbidden in inventory source paths")
         for contributor in entry["contributors"]:
             reason = contributor_rejection_reason(contributor)
@@ -241,16 +317,24 @@ def validate_inventory() -> None:
             )
 
     anomaly_path = ROOT / "doc/migration/contributor-anomalies.yml"
-    anomaly_schema_path = ROOT / "doc/migration/contributor-anomalies.schema.json"
+    anomaly_schema_path = (
+        ROOT / "doc/migration/contributor-anomalies.schema.json"
+    )
     anomalies = load_yaml(anomaly_path)
-    anomaly_schema = json.loads(anomaly_schema_path.read_text(encoding="utf-8"))
+    anomaly_schema = json.loads(
+        anomaly_schema_path.read_text(encoding="utf-8")
+    )
     jsonschema.Draft202012Validator(anomaly_schema).validate(anomalies)
     if anomalies["source_commit"] != inventory["source_commit"]:
-        raise ValueError("contributor anomaly report uses another source commit")
+        raise ValueError(
+            "contributor anomaly report uses another source commit"
+        )
     if anomalies["rejected_count"] != len(anomalies["entries"]):
         raise ValueError("contributor anomaly report count is stale")
     if any("value" in entry for entry in anomalies["entries"]):
-        raise ValueError("raw rejected contributor identities must not be published")
+        raise ValueError(
+            "raw rejected contributor identities must not be published"
+        )
 
     batches_path = ROOT / "doc/migration/migration-batches.yml"
     batches_schema_path = ROOT / "doc/migration/migration-batches.schema.json"
@@ -271,9 +355,8 @@ def validate_inventory() -> None:
     expected_batched = {
         entry["stable_document_id"]
         for entry in inventory["documents"]
-        if entry["migration_batch"] and (
-            entry["migration_status"] not in {"verified", "stubbed", "archived"}
-        )
+        if entry["migration_batch"]
+        if entry["migration_status"] not in {"verified", "stubbed", "archived"}
     }
     actual_batched = {
         entry["stable_document_id"] for entry in batch_documents

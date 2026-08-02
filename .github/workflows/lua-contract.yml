@@ -2,16 +2,6 @@ name: Lua public contract
 
 on:
   pull_request:
-    paths:
-      - '.github/workflows/lua-contract.yml'
-      - 'ai/docs-impact.yml'
-      - 'ai/generated-files.yml'
-      - 'ai/test-matrix.yml'
-      - 'data/lua/**'
-      - 'src/catalua*.cpp'
-      - 'src/catalua*.h'
-      - 'src/event.h'
-      - 'tools/lua_api/**'
   push:
     branches: [ master ]
     paths:
@@ -35,21 +25,53 @@ concurrency:
 
 jobs:
   validate:
+    name: Lua public contract
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
 
+      - name: Detect public-contract changes
+        id: detect
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "required=true" >> "$GITHUB_OUTPUT"
+          elif git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- \
+            '.github/workflows/lua-contract.yml' \
+            'ai/docs-impact.yml' \
+            'ai/generated-files.yml' \
+            'ai/test-matrix.yml' \
+            ':(glob)data/lua/**' \
+            ':(glob)src/catalua*.cpp' \
+            ':(glob)src/catalua*.h' \
+            'src/event.h' \
+            ':(glob)tools/lua_api/**'; then
+            echo "required=false" >> "$GITHUB_OUTPUT"
+          else
+            diff_status=$?
+            if [ "$diff_status" -ne 1 ]; then
+              exit "$diff_status"
+            fi
+            echo "required=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install pinned validation dependencies
+        if: steps.detect.outputs.required == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install --no-install-recommends lua5.4
           python3 -m pip install --disable-pip-version-check -r tools/lua_api/requirements.txt
 
       - name: Validate Lua v5 declarations and generated contract
+        if: steps.detect.outputs.required == 'true'
         run: |
           python3 tools/lua_api/check_luals_declarations.py
           python3 tools/lua_api/check_ccb_inventory.py

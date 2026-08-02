@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Report documentation impact without blocking source changes in Phase 0/1."""
+"""Report mapped documentation impact and enforce staged PR fields."""
 
 from __future__ import annotations
 
@@ -23,16 +23,62 @@ DOCUMENTATION_PR_FIELDS = (
     "Generated reference impact",
 )
 RESPONSIBLE_HUMAN_FIELD = "Responsible human"
+VALID_ENFORCEMENT = {"advisory", "required", "staged"}
+PLACEHOLDER_VALUES = {
+    "-",
+    "n/a",
+    "na",
+    "no",
+    "none",
+    "not applicable",
+    "tbd",
+    "todo",
+    "待定",
+    "无",
+    "无影响",
+}
 GITHUB_USER_MENTION = re.compile(
     r"(?<![\w/-])@[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?(?![\w/-])"
+)
+CCB_DOCS_PR_REFERENCE = re.compile(
+    r"(?:https://github\.com/CrimsonCrossBunker/CCB-Docs/pull/[1-9][0-9]*"
+    r"|CrimsonCrossBunker/CCB-Docs#[1-9][0-9]*)",
+    re.IGNORECASE,
 )
 
 
 def load_rules(path: Path = MAP_PATH) -> list[dict]:
+    """Load mappings and resolve the staged top-level enforcement mode."""
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    if data.get("enforcement") != "advisory":
-        raise ValueError("Phase 0/1 documentation impact must be advisory")
-    return data["entries"]
+    if not isinstance(data, dict):
+        raise ValueError("documentation impact map must contain a mapping")
+    mode = data.get("enforcement")
+    if mode not in VALID_ENFORCEMENT:
+        raise ValueError(
+            f"unsupported documentation impact enforcement: {mode}"
+        )
+    entries = data.get("entries")
+    if not isinstance(entries, list):
+        raise ValueError("documentation impact entries must be a list")
+
+    rules: list[dict] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise ValueError("documentation impact entry must be a mapping")
+        enforcement = entry.get("enforcement")
+        if mode == "staged" and enforcement is None:
+            raise ValueError(
+                f"staged documentation impact entry {entry.get('id')} "
+                "must declare enforcement"
+            )
+        if enforcement is None:
+            enforcement = mode
+        if enforcement not in {"advisory", "required"}:
+            raise ValueError(
+                f"invalid enforcement for {entry.get('id')}: {enforcement}"
+            )
+        rules.append({**entry, "enforcement": enforcement})
+    return rules
 
 
 def changed_files(base: str, head: str) -> list[str]:
@@ -72,29 +118,100 @@ def field_value(body: str, heading: str) -> str | None:
     match = pattern.search(body)
     if not match:
         return None
-    visible = re.sub(
+    return re.sub(
         r"<!--.*?-->", "", match.group(1), flags=re.DOTALL
     ).strip()
-    return visible
 
 
-def validate_pr_body(body: str) -> list[str]:
-    """Return blocking responsibility errors only."""
+def is_placeholder(value: str | None) -> bool:
+    if value is None:
+        return True
+    normalized = re.sub(r"[`*_]", "", value).strip().lower().rstrip(".。")
+    return not normalized or normalized in PLACEHOLDER_VALUES
+
+
+def mentioned_document_ids(value: str, expected: set[str]) -> set[str]:
+    mentioned = set()
+    for identifier in expected:
+        pattern = re.compile(
+            rf"(?<![A-Za-z0-9_.-]){re.escape(identifier)}"
+            r"(?![A-Za-z0-9_.-])"
+        )
+        if pattern.search(value):
+            mentioned.add(identifier)
+    return mentioned
+
+
+def required_field_errors(body: str, result: list[dict]) -> list[str]:
+    """Return blocking errors for mappings explicitly marked required."""
+    required = [
+        item for item in result if item.get("enforcement") == "required"
+    ]
+    if not required:
+        return []
+
+    errors: list[str] = []
+    values = {
+        heading: field_value(body, heading)
+        for heading in DOCUMENTATION_PR_FIELDS
+    }
+    for heading, value in values.items():
+        if value is None:
+            errors.append(f"missing required PR field: {heading}")
+        elif is_placeholder(value):
+            errors.append(
+                f"required PR field must not be a placeholder: {heading}"
+            )
+
+    related = values["Related CCB-Docs PR"]
+    if related and not is_placeholder(related):
+        if not CCB_DOCS_PR_REFERENCE.search(related):
+            errors.append(
+                "Related CCB-Docs PR must link a CrimsonCrossBunker/CCB-Docs "
+                "pull request for required documentation impact"
+            )
+
+    affected = values["Affected documentation IDs"]
+    if affected and not is_placeholder(affected):
+        for item in required:
+            expected_ids = set(item.get("documentation_ids", []))
+            if expected_ids and not mentioned_document_ids(
+                affected, expected_ids
+            ):
+                identifiers = ", ".join(sorted(expected_ids))
+                errors.append(
+                    "Affected documentation IDs must name at least one mapped "
+                    f"ID for {item['id']}: {identifiers}"
+                )
+    return errors
+
+
+def validate_pr_body(body: str, result: list[dict] | None = None) -> list[str]:
+    """Return all blocking responsibility and staged-impact errors."""
+    errors: list[str] = []
     responsible = field_value(body, RESPONSIBLE_HUMAN_FIELD)
     if responsible is None:
-        return [f"missing PR field: {RESPONSIBLE_HUMAN_FIELD}"]
-    mentions = GITHUB_USER_MENTION.findall(responsible)
-    if not mentions or all(
-        mention.lower() == "@username" for mention in mentions
+        errors.append(f"missing PR field: {RESPONSIBLE_HUMAN_FIELD}")
+    else:
+        mentions = GITHUB_USER_MENTION.findall(responsible)
+        if not mentions or all(
+            mention.lower() == "@username" for mention in mentions
+        ):
+            errors.append("Responsible human must name a real GitHub account")
+        elif "[bot]" in responsible.lower():
+            errors.append("Responsible human must not be a bot account")
+    errors.extend(required_field_errors(body, result or []))
+    return errors
+
+
+def documentation_field_warnings(
+    body: str, result: list[dict] | None = None
+) -> list[str]:
+    """Return warnings for fields that are not already required."""
+    if any(
+        item.get("enforcement") == "required" for item in (result or [])
     ):
-        return ["Responsible human must name a real GitHub account"]
-    if "[bot]" in responsible.lower():
-        return ["Responsible human must not be a bot account"]
-    return []
-
-
-def documentation_field_warnings(body: str) -> list[str]:
-    """Return non-blocking Phase 0/1 documentation-field warnings."""
+        return []
     warnings = []
     for heading in DOCUMENTATION_PR_FIELDS:
         if field_value(body, heading) is None:
@@ -104,15 +221,15 @@ def documentation_field_warnings(body: str) -> list[str]:
 
 def report(result: list[dict]) -> str:
     if not result:
-        return "Documentation impact advisory: no mapped documentation IDs."
-    lines = ["Documentation impact advisory (non-blocking in Phase 0/1):"]
+        return "Documentation impact: no mapped documentation IDs."
+    lines = ["Documentation impact (staged enforcement):"]
     for item in result:
-        ids = ", ".join(item.get("documentation_ids", [])) or (
-            "no Phase 0/1 page yet"
-        )
+        ids = ", ".join(item.get("documentation_ids", [])) or "none mapped"
         generated = "yes" if item.get("generated_reference_impact") else "no"
+        checks = ", ".join(item.get("required_check_ids", [])) or "none"
         lines.append(
-            f"- {item['id']}: docs={ids}; generated-reference={generated}; "
+            f"- [{item['enforcement']}] {item['id']}: docs={ids}; "
+            f"generated-reference={generated}; checks={checks}; "
             f"files={', '.join(item['matched_files'])}"
         )
     return "\n".join(lines)
@@ -133,7 +250,8 @@ def main() -> int:
         files.extend(changed_files(args.base, args.head))
     files = sorted(set(files))
 
-    message = report(impacts(files, load_rules()))
+    result = impacts(files, load_rules())
+    message = report(result)
     print(message)
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary_path:
@@ -141,8 +259,9 @@ def main() -> int:
             summary.write("## Documentation impact\n\n" + message + "\n")
 
     if args.check_pr_body:
-        errors = validate_pr_body(os.environ.get("PR_BODY", ""))
-        warnings = documentation_field_warnings(os.environ.get("PR_BODY", ""))
+        body = os.environ.get("PR_BODY", "")
+        errors = validate_pr_body(body, result)
+        warnings = documentation_field_warnings(body, result)
         for warning in warnings:
             print(f"::warning::{warning}", file=sys.stderr)
         for error in errors:
