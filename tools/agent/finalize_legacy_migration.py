@@ -193,3 +193,61 @@ def expected_sources(data: dict) -> dict[Path, str]:
             )
         outputs[physical] = banner([entry for _, entry in members]) + body
     return outputs
+
+
+def validate_terminal(data: dict) -> None:
+    if len(data["documents"]) != 175:
+        raise ValueError("frozen migration inventory must contain 175 documents")
+    for entry in data["documents"]:
+        expected = "verified" if entry["action"] in TERMINAL_IN_REPO else (
+            "archived" if entry["action"] == ARCHIVE_ACTION else "stubbed"
+        )
+        if entry["migration_status"] != expected:
+            raise ValueError(
+                f"non-terminal migration status for {entry['original_path']}: "
+                f"{entry['migration_status']}"
+            )
+        if entry["blockers"]:
+            raise ValueError(f"terminal entry retains blockers: {entry['original_path']}")
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--moved-date", type=date.fromisoformat, required=True)
+    parser.add_argument("--check", action="store_true")
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+    try:
+        current = load_inventory()
+        expected_inventory = finalized_inventory(current, args.moved_date)
+        validate_terminal(expected_inventory)
+        source_outputs = expected_sources(expected_inventory)
+        inventory_output = render_yaml(expected_inventory)
+        if args.check:
+            stale = []
+            if INVENTORY.read_text(encoding="utf-8") != inventory_output:
+                stale.append(INVENTORY)
+            stale.extend(
+                path
+                for path, content in source_outputs.items()
+                if path.read_text(encoding="utf-8") != content
+            )
+            if stale:
+                for path in stale:
+                    print(f"stale moved entry: {path.relative_to(ROOT)}", file=sys.stderr)
+                return 1
+        else:
+            INVENTORY.write_text(inventory_output, encoding="utf-8")
+            for path, content in source_outputs.items():
+                path.write_text(content, encoding="utf-8")
+    except (OSError, ValueError, yaml.YAMLError) as error:
+        print(error, file=sys.stderr)
+        return 2
+    print(
+        "legacy migration entries: 111 paths with permanent banners, "
+        f"{len(expected_inventory['documents'])} terminal records"
+    )
+    return 0
