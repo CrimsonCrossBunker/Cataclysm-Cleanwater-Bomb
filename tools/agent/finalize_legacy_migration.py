@@ -63,3 +63,61 @@ def english_url(chinese_url: str) -> str:
     else:
         english_path = before + marker + "en/" + after
     return urlunsplit((split.scheme, split.netloc, english_path, split.query, split.fragment))
+
+
+def strip_banner(content: str) -> str:
+    if not content.startswith(START):
+        return content.lstrip("\n")
+    end = content.find(END)
+    if end < 0:
+        raise ValueError("unterminated CCB moved banner")
+    return content[end + len(END):].lstrip("\n")
+
+
+def banner(entry: dict | list[dict]) -> str:
+    entries = entry if isinstance(entry, list) else [entry]
+    primary = entries[0]
+    archived = all(item["action"] == ARCHIVE_ACTION for item in entries)
+    state_en = "Archived" if archived else "Moved"
+    state_zh = "已归档" if archived else "已迁移"
+    default_reason = "The maintained documentation now lives in CCB-Docs."
+    reasons = sorted({item.get("archive_reason") or default_reason for item in entries})
+    lines = [
+        START,
+        f"> [!IMPORTANT] **{state_en} / {state_zh}**",
+        ">",
+    ]
+    if len(entries) == 1:
+        lines.extend(
+            [
+                f"> Stable document ID / 稳定文档 ID: `{primary['stable_document_id']}`",
+                f"> 中文: {primary['zh_url']}",
+                f"> English: {primary['en_url']}",
+                f"> Moved date / 迁移日期: `{primary['moved_at']}`",
+                "> Last in-repository commit / 仓库内最后适用 commit: "
+                f"`{primary['source_commit']}`",
+            ]
+        )
+    else:
+        lines.append("> Stable document IDs and last commits / 稳定文档 ID 与最后 commit:")
+        lines.extend(
+            f"> - `{item['stable_document_id']}`: `{item['source_commit']}`"
+            for item in sorted(entries, key=lambda value: value["stable_document_id"])
+        )
+        for chinese in sorted({item["zh_url"] for item in entries}):
+            lines.append(f"> 中文: {chinese}")
+        for english in sorted({item["en_url"] for item in entries}):
+            lines.append(f"> English: {english}")
+        lines.append(f"> Moved date / 迁移日期: `{primary['moved_at']}`")
+    lines.extend(
+        [
+            *(f"> {reason}" for reason in reasons),
+            "> This in-repository body is no longer maintained. The historical body "
+            f"is retained through `{primary['retained_body_until']}` and may then be "
+            "removed; this bilingual entry banner remains permanently.",
+            "> 本仓库正文不再维护；历史正文至少保留到上述日期，之后可删除，但本双语迁移入口永久保留。",
+            END,
+            "",
+        ]
+    )
+    return "\n".join(lines)
