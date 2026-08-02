@@ -3342,6 +3342,10 @@ function CcbAddictionsApi.run_effect(handle, id) end
 ---@field sleepiness? integer
 ---@field sleep_deprivation? integer
 
+---@class CcbGutVitaminSnapshot
+---@field id GameId
+---@field amount integer
+
 ---@class CcbSleepAdjustments
 ---@field daily? TimeDuration
 ---@field continuous? TimeDuration
@@ -3381,6 +3385,37 @@ function CcbNeedsApi.set_calories(handle, kcal) end
 ---@param ignore_weariness? boolean
 ---@return CcbResult
 function CcbNeedsApi.modify_calories(handle, delta, ignore_weariness) end
+
+---@param handle GameHandle
+---@return CcbResult
+function CcbNeedsApi.get_gut_calories(handle) end
+
+---@param handle GameHandle
+---@param kcal integer
+---@return CcbResult
+function CcbNeedsApi.set_gut_calories(handle, kcal) end
+
+---@param handle GameHandle
+---@param delta integer
+---@return CcbResult
+function CcbNeedsApi.modify_gut_calories(handle, delta) end
+
+---@param handle GameHandle
+---@param id GameId
+---@return CcbResult
+function CcbNeedsApi.get_gut_vitamin(handle, id) end
+
+---@param handle GameHandle
+---@param id GameId
+---@param amount integer
+---@return CcbResult
+function CcbNeedsApi.set_gut_vitamin(handle, id, amount) end
+
+---@param handle GameHandle
+---@param id GameId
+---@param delta integer
+---@return CcbResult
+function CcbNeedsApi.modify_gut_vitamin(handle, id, delta) end
 
 ---@param handle GameHandle
 ---@param adjustments CcbSleepAdjustments
