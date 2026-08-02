@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crimsoncrossbunker.github.io/schemas/context-pack-v1.json",
+  "title": "CCB bounded agent context pack",
+  "type": "object",
+  "required": [
+    "schema_version", "task", "selected_routes", "requested_files",
+    "token_limit", "estimated_tokens", "truncated", "agents", "source_paths",
+    "source_symbols", "documentation_ids", "tests", "generated_boundaries",
+    "compatibility", "upstream_differences", "acceptance_commands"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "task": { "type": "string" },
+    "selected_routes": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "requested_files": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "token_limit": { "type": "integer", "minimum": 512 },
+    "estimated_tokens": { "type": "integer", "minimum": 0 },
+    "truncated": { "type": "boolean" },
+    "agents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [ "path", "content", "truncated" ],
+        "properties": {
+          "path": { "type": "string", "pattern": "(^|/)AGENTS\\.md$" },
+          "content": { "type": "string" },
+          "truncated": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "source_paths": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "source_symbols": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "documentation_ids": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "tests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [ "id", "workdir", "command", "cost" ],
+        "additionalProperties": true
+      }
+    },
+    "generated_boundaries": { "type": "array", "items": { "type": "object" } },
+    "compatibility": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "upstream_differences": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "acceptance_commands": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+  },
+  "additionalProperties": false
+}

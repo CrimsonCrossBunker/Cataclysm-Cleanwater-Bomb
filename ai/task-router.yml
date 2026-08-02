@@ -1,0 +1,103 @@
+schema_version: 1
+kind: task_router
+description: Deterministic task-to-context routing for contributors and agents.
+entries:
+  - id: repository-navigation
+    keywords: [navigate, locate, repository, project map, 定位, 仓库, 项目地图]
+    paths: [AGENTS.md, ai/, tools/agent/]
+    project_ids: [governance, developer-tools]
+    documentation_ids: [architecture.project-map, architecture.subsystem-map]
+    source_symbols: []
+    validation_ids: [agent-context]
+    compatibility:
+      - Respect generated-file and nested AGENTS boundaries before editing.
+    upstream_differences:
+      - CCB paths and validation metadata override upstream repository guides.
+  - id: cpp-bug
+    keywords: [C++, crash, bug, segfault, assertion, 崩溃, 错误, 断言]
+    paths: [src/, tests/]
+    project_ids: [engine, tests]
+    documentation_ids: [architecture.overview, validation.debugging, validation.testing]
+    source_symbols: []
+    validation_ids: [cpp-format, cpp-tests]
+    compatibility:
+      - Review object ownership, lifecycle, serialization, and public IDs.
+    upstream_differences:
+      - Upstream fixes require a CCB divergence and compatibility review.
+  - id: json-content
+    keywords: [JSON, item, recipe, monster, mapgen, content, 物品, 配方, 怪物, 内容]
+    paths: [data/json/, data/core/, tools/json_tools/]
+    project_ids: [core-data]
+    documentation_ids: [api.json.overview, compatibility.mods]
+    source_symbols: []
+    validation_ids: [json-load]
+    compatibility:
+      - Preserve stable IDs or provide explicit migration or obsoletion data.
+    upstream_differences:
+      - Confirm the CCB loader and registered type before copying upstream JSON.
+  - id: eoc
+    keywords: [EOC, effect_on_condition, condition, effect, talker, 条件, 效果]
+    paths: [data/json/, data/mods/, src/condition.cpp, src/effect_on_condition.cpp]
+    project_ids: [core-data, bundled-mods]
+    documentation_ids: [api.eoc.overview, api.eoc.conditions, api.eoc.effects]
+    source_symbols: [effect_on_condition]
+    validation_ids: [json-load]
+    compatibility:
+      - Validate talkers, variable scope, nesting, defaults, and load context.
+    upstream_differences:
+      - EOC syntax may differ when CCB registrations lag or diverge from upstream.
+  - id: lua-api
+    keywords: [Lua, LuaLS, manifest, capability, callback, hook, 脚本, 能力]
+    paths: [data/lua/, tools/lua_api/, 'src/catalua*.cpp', 'src/catalua*.h']
+    project_ids: [lua-api]
+    documentation_ids: [api.lua.v5.overview, api.lua.v5.reference]
+    source_symbols: [ccb_api_v5]
+    validation_ids: [lua-contract]
+    compatibility:
+      - Keep manifest, LuaLS, native registration, inventory, and examples in parity.
+    upstream_differences:
+      - CCB Lua v5 is a CCB contract and is not inferred from CBN or CDDA APIs.
+  - id: upstream-port
+    keywords: [upstream, port, cherry-pick, CDDA, CBN, 上游, 移植]
+    paths: [CONTRIBUTING.md, SYNC_EXCLUDED_PRS.md, src/, data/]
+    project_ids: [governance, engine, core-data]
+    documentation_ids: [maintenance.upstream-sync]
+    source_symbols: []
+    validation_ids: [cpp-format, cpp-tests, json-load]
+    compatibility:
+      - Record provenance and inspect save, JSON ID, mod, Lua, and platform impact.
+    upstream_differences:
+      - Shared ancestry does not make newer upstream behaviour authoritative for CCB.
+  - id: save-compatibility
+    keywords: [save, load, serialization, migration, world, 存档, 加载, 序列化, 迁移]
+    paths: [src/savegame.cpp, src/savegame_json.cpp, src/savegame_legacy.cpp, src/worldfactory.cpp]
+    project_ids: [engine, tests]
+    documentation_ids: [compatibility.save]
+    source_symbols: []
+    validation_ids: [cpp-format, cpp-tests]
+    compatibility:
+      - Test migrations on copies through two save/load cycles and preserve stable IDs.
+    upstream_differences:
+      - Compare the exact CCB save version and migrations before adopting upstream code.
+  - id: generated-file-detection
+    keywords: [generated, generator, inventory, schema, 生成, 生成器, 清单]
+    paths: [ai/generated-files.yml, tools/]
+    project_ids: [developer-tools]
+    documentation_ids: [contributing.documentation-policy]
+    source_symbols: []
+    validation_ids: [agent-context, python-tools]
+    compatibility:
+      - Modify the source or generator and use its non-mutating check mode.
+    upstream_differences:
+      - Generated boundaries are repository-specific and must be re-discovered in CCB.
+  - id: documentation-impact
+    keywords: [documentation, docs impact, stale, translation, 文档, 影响, 翻译]
+    paths: [ai/docs-impact.yml, ai/documentation-registry.yml, doc/migration/, .github/pull_request_template.md]
+    project_ids: [governance, developer-tools]
+    documentation_ids: [contributing.documentation-policy]
+    source_symbols: []
+    validation_ids: [agent-context]
+    compatibility:
+      - Scope drift to declared source paths and preserve permanent moved stubs.
+    upstream_differences:
+      - CCB-Docs explains CCB contracts and never overrides upstream or CCB source.
