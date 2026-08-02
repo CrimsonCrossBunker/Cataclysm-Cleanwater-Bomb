@@ -29,10 +29,11 @@ python3 tools/lua_api/check_cmake_contract.py
 python3 -m unittest discover -s tools/lua_api -p 'test_*.py'
 ```
 
-`check_cmake_contract.py` protects the final executable link boundary for all
-three CMake backends. Lua-disabled builds remain dependency-free; Lua-enabled
-tiles, curses, and headless executables must explicitly link the bundled Lua
-archive after their object libraries so static-link order cannot drop it.
+`check_cmake_contract.py` keeps bundled Lua on the same ABI in Make and CMake.
+Make compiles the bundled `.c` sources as C++, so CMake must also apply
+`LANGUAGE CXX`; otherwise sol2 and the native bridge request C++-mangled
+`lua_*` symbols from a C ABI archive. The checker also preserves `libsol`
+propagation through `configure_lua_ui` while Lua-disabled builds remain inert.
 
 Generated JSON must not be edited by hand. The coverage file distinguishes
 100% inventory coverage from CCB-Docs publication coverage; the latter stays

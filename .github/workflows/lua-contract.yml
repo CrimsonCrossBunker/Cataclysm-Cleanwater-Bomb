@@ -11,6 +11,7 @@ on:
       - 'ai/test-matrix.yml'
       - 'data/lua/**'
       - 'src/CMakeLists.txt'
+      - 'src/lua/CMakeLists.txt'
       - 'src/catalua*.cpp'
       - 'src/catalua*.h'
       - 'src/event.h'
@@ -52,6 +53,7 @@ jobs:
             'ai/test-matrix.yml' \
             ':(glob)data/lua/**' \
             'src/CMakeLists.txt' \
+            'src/lua/CMakeLists.txt' \
             ':(glob)src/catalua*.cpp' \
             ':(glob)src/catalua*.h' \
             'src/event.h' \

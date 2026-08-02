@@ -3,34 +3,46 @@ from __future__ import annotations
 import unittest
 
 try:
-    from .check_cmake_contract import CMAKE_PATH, validate_cmake_contract
+    from .check_cmake_contract import (
+        ENGINE_CMAKE_PATH,
+        LUA_CMAKE_PATH,
+        validate_cmake_contract,
+    )
 except ImportError:
-    from check_cmake_contract import CMAKE_PATH, validate_cmake_contract
+    from check_cmake_contract import (
+        ENGINE_CMAKE_PATH,
+        LUA_CMAKE_PATH,
+        validate_cmake_contract,
+    )
 
 
 class CMakeContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.source = CMAKE_PATH.read_text(encoding="utf-8")
+        cls.engine_source = ENGINE_CMAKE_PATH.read_text(encoding="utf-8")
+        cls.lua_source = LUA_CMAKE_PATH.read_text(encoding="utf-8")
 
     def test_checked_in_contract_is_complete(self) -> None:
-        self.assertEqual(validate_cmake_contract(self.source), [])
-
-    def test_missing_final_lua_archive_is_rejected(self) -> None:
-        source = self.source.replace(
-            "target_link_libraries(${TARGET} PRIVATE liblua)",
-            "target_link_libraries(${TARGET} PRIVATE libsol)",
+        self.assertEqual(
+            validate_cmake_contract(self.engine_source, self.lua_source), []
         )
-        errors = validate_cmake_contract(source)
-        self.assertTrue(any("link liblua explicitly" in error for error in errors), errors)
 
-    def test_missing_headless_executable_link_is_rejected(self) -> None:
-        prefix, separator, suffix = self.source.rpartition(
-            "    link_lua_ui_runtime(cataclysm)\n"
+    def test_c_abi_for_bundled_lua_is_rejected(self) -> None:
+        lua_source = self.lua_source.replace(
+            "PROPERTIES LANGUAGE CXX", "PROPERTIES LANGUAGE C"
         )
-        self.assertTrue(separator)
-        errors = validate_cmake_contract(prefix + suffix)
-        self.assertTrue(any("curses and headless" in error for error in errors), errors)
+        self.assertNotEqual(lua_source, self.lua_source)
+        errors = validate_cmake_contract(self.engine_source, lua_source)
+        self.assertTrue(any("LANGUAGE CXX" in error for error in errors), errors)
+
+    def test_missing_libsol_propagation_is_rejected(self) -> None:
+        engine_source = self.engine_source.replace(
+            "target_link_libraries(${TARGET} PUBLIC libsol)",
+            "target_link_libraries(${TARGET} PUBLIC third-party)",
+        )
+        self.assertNotEqual(engine_source, self.engine_source)
+        errors = validate_cmake_contract(engine_source, self.lua_source)
+        self.assertTrue(any("propagate libsol" in error for error in errors), errors)
 
 
 if __name__ == "__main__":
