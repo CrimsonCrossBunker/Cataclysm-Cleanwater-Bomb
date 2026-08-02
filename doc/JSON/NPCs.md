@@ -1553,6 +1553,9 @@ _some functions support array arguments or kwargs, denoted with square brackets 
 | gender() |  ✅  |  ✅  | u, n | Character's current gender. (Boolean value currently. Value is 1/true for male, 0/false for female).<br/><br/>Examples:<br/>`"condition: { "math": [ " u_gender() == 1 " ] }`<br/>`{ "math": [ "u_gender() = 0" ] }` |
 | enchant_val( `s` / `v` ) |  ✅  |  ❌  | u, n | Returns the final result of a custom enchantment attribute. It requires two arguments: the first is the custom attribute key, and the second is the default value for the attribute. Ultimately, it returns the result after adjusting the default value for the enchantment attribute.<br/><br/>Examples:<br/>`{ "math": [ " _my_attr = u_enchant_val('my_attr', 100) " ] }`<br/>Returns `(100 + Σadd) × (1 + Σmultiply)`. |
 
+| gut_calories() | ✅ | ✅ | u, n | Return or set calories currently held in the character's guts and awaiting absorption.  This is separate from stored calories; assigning it does not immediately change body calories, hunger, or digestion timing.  Values below zero are clamped to zero.  This function can only be used with a character talker.<br/><br/>Example:<br/>`{ "math": [ "u_gut_calories() += 250" ] }` |
+| gut_vitamin(`s`/`v`) | ✅ | ✅ | u, n | Return or set the amount of a vitamin currently held in the character's guts and awaiting absorption.  Argument is a valid vitamin ID.  This does not immediately alter the character's vitamin pool; normal digestion absorbs it later.  Values at or below zero remove the vitamin from the gut pool.  This function can only be used with a character talker.<br/><br/>Example:<br/>`{ "math": [ "u_gut_vitamin('vitC') += 24" ] }` |
+
 #### List of Character and item aspects
 These can be read or written to with `val()`.
 
