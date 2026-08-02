@@ -67,6 +67,14 @@ entries:
     tracked: true
     generated_by: python3 tools/lua_api/generate_public_contract.py
     validation_id: lua-contract
+  - id: json-eoc-contract-inventories
+    paths:
+      - data/reference/json/ccb_json_object_types.json
+      - data/reference/json/ccb_eoc_conditions.json
+      - data/reference/json/ccb_eoc_effects.json
+    tracked: true
+    generated_by: python3 tools/json_api/generate_contracts.py
+    validation_id: json-eoc-contract
   - id: shader-artifacts
     paths: [data/shaders/*.spv, data/shaders/*.dxil, data/shaders/*.msl, data/shaders/build-*.stamp]
     tracked: false

@@ -27,9 +27,22 @@ entries:
     generated_reference_impact: true
     risk_group: lua-api
     risk_level: high
-  - id: json-contracts
-    patterns: [data/json/*, data/core/*, src/*factory*, src/*json*]
+  - id: json-eoc-contracts
+    patterns:
+      - data/json/*
+      - data/core/*
+      - data/mods/*
+      - data/sound/*
+      - data/reference/json/*
+      - doc/JSON/*
+      - src/*factory*
+      - src/*json*
+      - src/init.cpp
+      - src/condition.cpp
+      - src/npctalk.cpp
+      - src/effect_on_condition.cpp
+      - tools/json_api/*
     documentation_ids: []
     generated_reference_impact: true
-    risk_group: json-api
+    risk_group: json-eoc-api
     risk_level: high
