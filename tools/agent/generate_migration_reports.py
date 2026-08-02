@@ -115,6 +115,40 @@ def build_batches(data: dict) -> dict:
     }
 
 
+def render_yaml(data: dict) -> str:
+    return yaml.safe_dump(data, allow_unicode=True, sort_keys=False, width=100)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--inventory", type=Path, default=INVENTORY)
+    parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
+    parser.add_argument("--batches", type=Path, default=DEFAULT_BATCHES)
+    parser.add_argument("--check", action="store_true")
+    args = parser.parse_args()
+
+    inventory_path = args.inventory if args.inventory.is_absolute() else ROOT / args.inventory
+    report_path = args.report if args.report.is_absolute() else ROOT / args.report
+    batches_path = args.batches if args.batches.is_absolute() else ROOT / args.batches
+    data = load_inventory(inventory_path)
+    outputs = {
+        report_path: render_report(data),
+        batches_path: render_yaml(build_batches(data)),
+    }
+    if args.check:
+        stale = [path for path, content in outputs.items() if path.read_text() != content]
+        if stale:
+            for path in stale:
+                print(f"stale migration output: {path.relative_to(ROOT)}", file=sys.stderr)
+            return 1
+        print("migration classification report and batches are current")
+        return 0
+    for path, content in outputs.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+    print(f"wrote {len(outputs)} migration outputs")
+    return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
