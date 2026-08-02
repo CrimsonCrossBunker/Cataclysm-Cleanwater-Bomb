@@ -28,6 +28,7 @@ static const efftype_id effect_grabbed( "grabbed" );
 static const efftype_id effect_crowd_crushed( "crowd_crushed" );
 
 static const damage_type_id damage_bash( "bash" );
+static const sub_bodypart_str_id sub_body_part_torso_upper( "torso_upper" );
 static const sub_bodypart_str_id sub_body_part_torso_neck( "torso_neck" );
 
 static const itype_id itype_test_hazmat_suit( "test_hazmat_suit" );
@@ -503,6 +504,16 @@ TEST_CASE( "suffering_from_asphyxiation", "[char][suffer][oxygen][grab]" )
             REQUIRE( dummy.wear_item( item( itype_test_hazmat_suit ), false ).has_value() );
             damage_instance pressure( damage_bash, 1 );
             dummy.absorb_hit( sub_body_part_torso_neck.id(), pressure );
+
+            THEN( "the pressure is absorbed without harming the character" ) {
+                CHECK( pressure.total_damage() == 0.0f );
+            }
+        }
+
+        WHEN( "their upper torso is protected by armor" ) {
+            REQUIRE( dummy.wear_item( item( itype_test_hazmat_suit ), false ).has_value() );
+            damage_instance pressure( damage_bash, 1 );
+            dummy.absorb_hit( sub_body_part_torso_upper.id(), pressure );
 
             THEN( "the pressure is absorbed without harming the character" ) {
                 CHECK( pressure.total_damage() == 0.0f );
