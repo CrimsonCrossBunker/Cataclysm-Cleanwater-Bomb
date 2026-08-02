@@ -419,3 +419,115 @@ def parse_luals(path: Path = DECLARATIONS) -> dict[str, object]:
     result = {"classes": classes, "functions": functions, "contents": contents}
     validate_confirmed_declaration_contracts(result)
     return result
+
+def validate_confirmed_declaration_contracts(luals: dict[str, object]) -> None:
+    """Lock in declaration fixes that previously disagreed with runtime."""
+    classes = luals["classes"]
+    functions = luals["functions"]
+    assert isinstance(classes, dict)
+    assert isinstance(functions, dict)
+    handle_fields = {entry["name"]
+                     for entry in classes["GameHandle"]["fields"]}
+    if ("locator" in handle_fields or
+            ("GameHandle", "locator") not in functions):
+        raise RuntimeError("GameHandle.locator must be declared as a method")
+    if ("TripointCoord", "add_xy") in functions or (
+        "TripointCoord",
+        "subtract_xy",
+    ) in functions:
+        raise RuntimeError(
+            "TripointCoord add_xy/subtract_xy are not runtime methods")
+    for name in ("add", "subtract"):
+        overloads = functions[("TripointCoord", name)]["overloads"]
+        if not any("PointCoord" in value for value in overloads):
+            raise RuntimeError(
+                f"TripointCoord.{name} must declare its PointCoord overload"
+            )
+    callback_fields = {
+        entry["name"]: entry["declaration"]
+        for entry in classes["CcbCallbackMethodSpec"]["fields"]
+    }
+    if callback_fields.get("consuming") != "boolean":
+        raise RuntimeError("CcbCallbackMethodSpec.consuming must be boolean")
+
+def parse_table_paths() -> tuple[dict[str, set[str]], list[dict[str, object]]]:
+    paths: dict[str, set[str]] = defaultdict(set)
+    namespaces: dict[str, dict[str, object]] = {}
+    assignments: list[tuple[str, str, str, Path, str, int]] = []
+    named_pattern = re.compile(
+        r"sol::table\s+(\w+)\s*=\s*(?:state\.)?lua\.create_named_table"
+        r"\s*\(\s*\"([^\"]+)\"\s*\)",
+        re.DOTALL,
+    )
+    assignment_pattern = re.compile(
+        r"\b(\w+)\s*\[\s*\"([^\"]+)\"\s*\]\s*=\s*"
+        r"(?:std::move\s*\(\s*)?(\w+)\s*\)?\s*;"
+    )
+    for path in cpp_sources():
+        contents = path.read_text(encoding="utf-8", errors="replace")
+        for match in named_pattern.finditer(contents):
+            variable, public_name = match.groups()
+            paths[variable].add(public_name)
+            namespaces.setdefault(
+                public_name,
+                {
+                    "id": public_name,
+                    "kind": "global",
+                    "class": TABLE_CLASSES.get(variable),
+                    "sources": [
+                        source(
+                            path,
+                            contents,
+                            match.start(),
+                            "native registration",
+                        )
+                    ],
+                    "documentation": documentation("namespace", public_name),
+                },
+            )
+        for match in assignment_pattern.finditer(contents):
+            container, public_name, variable = match.groups()
+            if variable not in TABLE_CLASSES:
+                continue
+            assignments.append(
+                (
+                    container,
+                    public_name,
+                    variable,
+                    path,
+                    contents,
+                    match.start(),
+                )
+            )
+    changed = True
+    while changed:
+        changed = False
+        for (
+            container,
+            public_name,
+            variable,
+            path,
+            contents,
+            offset,
+        ) in assignments:
+            for container_path in sorted(paths.get(container, set())):
+                public_path = f"{container_path}.{public_name}"
+                if public_path not in paths[variable]:
+                    paths[variable].add(public_path)
+                    changed = True
+                namespaces.setdefault(
+                    public_path,
+                    {
+                        "id": public_path,
+                        "kind": "child",
+                        "class": TABLE_CLASSES.get(variable),
+                        "sources": [
+                            source(path, contents, offset,
+                                   "native registration")
+                        ],
+                        "documentation": documentation(
+                            "namespace", public_path
+                        ),
+                    },
+                )
+    return paths, [namespaces[key] for key in sorted(namespaces)]
