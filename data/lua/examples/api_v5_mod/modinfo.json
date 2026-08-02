@@ -1,0 +1,12 @@
+[
+  {
+    "type": "MOD_INFO",
+    "id": "ccb_lua_v5_example",
+    "name": "CCB Lua API v5 Example",
+    "authors": [ "CCB contributors" ],
+    "description": "A small, complete example of the CCB Lua API v5 public contract.",
+    "category": "misc_additions",
+    "dependencies": [ "dda" ],
+    "version": "1.0.0"
+  }
+]
