@@ -71,3 +71,71 @@ def source_reference(
         "line": line_number(text, offset),
         "symbol": symbol,
     }
+
+def mask_comments(text: str) -> str:
+    """Replace C++ comments with spaces while retaining offsets and strings."""
+    result = list(text)
+    quote: str | None = None
+    escaped = False
+    index = 0
+    while index < len(text):
+        char = text[index]
+        following = text[index + 1] if index + 1 < len(text) else ""
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            index += 1
+            continue
+        if char in {'"', "'"}:
+            quote = char
+            index += 1
+            continue
+        if char == "/" and following == "/":
+            end = text.find("\n", index)
+            if end < 0:
+                end = len(text)
+            for position in range(index, end):
+                result[position] = " "
+            index = end
+            continue
+        if char == "/" and following == "*":
+            end = text.find("*/", index + 2)
+            if end < 0:
+                raise RuntimeError("unterminated C++ block comment")
+            for position in range(index, end + 2):
+                if result[position] != "\n":
+                    result[position] = " "
+            index = end + 2
+            continue
+        index += 1
+    return "".join(result)
+
+def find_matching(text: str, opening: int, left: str, right: str) -> int:
+    """Find a balanced delimiter while ignoring strings and comments."""
+    masked = mask_comments(text)
+    depth = 0
+    quote: str | None = None
+    escaped = False
+    for index in range(opening, len(masked)):
+        char = masked[index]
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in {'"', "'"}:
+            quote = char
+        elif char == left:
+            depth += 1
+        elif char == right:
+            depth -= 1
+            if depth == 0:
+                return index
+    raise RuntimeError(f"unbalanced {left}{right} delimiters")
