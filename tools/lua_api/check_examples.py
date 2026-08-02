@@ -54,5 +54,32 @@ EXAMPLE_CONTRACT_IDS = {
 }
 
 
+def load_json(path: Path) -> object:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def validate_manifest(path: Path) -> dict[str, object]:
+    schema = load_json(MANIFEST_SCHEMA)
+    manifest = load_json(path)
+    if not isinstance(schema, dict) or not isinstance(manifest, dict):
+        raise RuntimeError(f"{path} and its Schema must contain JSON objects")
+    try:
+        import jsonschema
+    except ImportError:
+        required = schema.get("required", [])
+        missing = [name for name in required if name not in manifest]
+        if missing:
+            raise RuntimeError(f"{path} lacks required fields {missing}")
+        capabilities = manifest.get("capabilities")
+        allowed = schema["properties"]["capabilities"]["items"]["enum"]
+        if (not isinstance(capabilities, list) or
+                not set(capabilities) <= set(allowed)):
+            raise RuntimeError(f"{path} has invalid capabilities")
+    else:
+        jsonschema.Draft202012Validator.check_schema(schema)
+        jsonschema.validate(manifest, schema)
+    return manifest
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
