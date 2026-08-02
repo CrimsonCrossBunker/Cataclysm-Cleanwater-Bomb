@@ -119,3 +119,13 @@ OPERATOR_SIGNATURES = {
     "__tostring": (["self"], ["string"]),
     "__unm": (["self"], ["same type"]),
 }
+
+def relative(path: Path) -> str:
+    try:
+        return path.relative_to(REPOSITORY_ROOT).as_posix()
+    except ValueError:
+        # Parser regression tests intentionally use temporary files.
+        return path.as_posix()
+
+def line_number(contents: str, offset: int) -> int:
+    return contents.count("\n", 0, offset) + 1
