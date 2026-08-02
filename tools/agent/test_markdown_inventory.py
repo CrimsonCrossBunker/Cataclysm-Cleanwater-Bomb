@@ -11,16 +11,16 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class MarkdownInventoryTest(unittest.TestCase):
-    @mock.patch.object(inventory, "contributors")
+    @mock.patch.object(inventory, "git")
     @mock.patch.object(
         inventory,
         "tracked_markdown",
         return_value=["doc/existing.md", "doc/new.md"],
     )
     def test_recorded_contributors_are_stable_in_check_mode(
-        self, tracked_markdown, contributors
+        self, tracked_markdown, git
     ):
-        contributors.return_value = ["Visible in this clone"]
+        git.return_value = "Visible in this clone\n"
 
         data = inventory.build_inventory(
             "frozen-commit",
@@ -36,7 +36,13 @@ class MarkdownInventoryTest(unittest.TestCase):
             data["documents"][1]["contributors"],
         )
         tracked_markdown.assert_called_once_with("frozen-commit")
-        contributors.assert_called_once_with("frozen-commit", "doc/new.md")
+        git.assert_called_once_with(
+            "log",
+            "frozen-commit",
+            "--format=%aN",
+            "--",
+            "doc/new.md",
+        )
 
     def test_frozen_phase_zero_scope(self):
         path = ROOT / "doc/migration/markdown-inventory.yml"
@@ -52,7 +58,6 @@ class MarkdownInventoryTest(unittest.TestCase):
         for item in data["documents"]:
             self.assertTrue(item["contributors"])
             self.assertEqual(data["source_commit"], item["source_commit"])
-
 
 if __name__ == "__main__":
     unittest.main()
