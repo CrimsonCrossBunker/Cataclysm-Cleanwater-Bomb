@@ -724,3 +724,27 @@ def capabilities_for_call(identity: str, call_body: str) -> list[str]:
         if identity == prefix or identity.startswith(prefix + "."):
             capabilities.update(values)
     return sorted(capabilities)
+
+def example_files() -> list[Path]:
+    return sorted((REPOSITORY_ROOT / "data/lua/examples").glob("**/*.lua"))
+
+def examples_for_symbol(identity: str) -> list[dict[str, object]]:
+    needles = {identity}
+    if identity == "require":
+        needles.add("require(")
+    result: list[dict[str, object]] = []
+    for path in example_files():
+        contents = path.read_text(encoding="utf-8")
+        offsets = [contents.find(needle) for needle in needles]
+        offsets = [offset for offset in offsets if offset >= 0]
+        if not offsets:
+            continue
+        offset = min(offsets)
+        result.append(
+            {
+                "id": "lua-example." + relative(path).replace("/", "."),
+                "path": relative(path),
+                "line": line_number(contents, offset),
+            }
+        )
+    return result
