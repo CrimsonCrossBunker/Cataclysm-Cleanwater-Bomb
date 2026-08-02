@@ -982,3 +982,58 @@ def build_contracts(
     }
     validate_contracts(payloads, root)
     return payloads
+
+def resolve_json_pointer(value: object, pointer: str) -> object:
+    """Resolve an RFC 6901 pointer and fail closed on malformed evidence."""
+    if pointer == "":
+        return value
+    if not pointer.startswith("/"):
+        raise RuntimeError(f"invalid JSON Pointer: {pointer!r}")
+    current = value
+    for raw_token in pointer[1:].split("/"):
+        token = raw_token.replace("~1", "/").replace("~0", "~")
+        if isinstance(current, list):
+            try:
+                current = current[int(token)]
+            except (ValueError, IndexError) as error:
+                raise RuntimeError(
+                    f"unresolved JSON Pointer: {pointer!r}"
+                ) from error
+        elif isinstance(current, dict) and token in current:
+            current = current[token]
+        else:
+            raise RuntimeError(f"unresolved JSON Pointer: {pointer!r}")
+    return current
+
+def validate_source_reference(
+    evidence: object,
+    token: str,
+    tracked_sources: set[str],
+    source_cache: dict[str, str],
+    root: Path,
+) -> None:
+    if not isinstance(evidence, dict):
+        raise RuntimeError(f"invalid source evidence: {evidence!r}")
+    path = evidence.get("path")
+    line = evidence.get("line")
+    symbol = evidence.get("symbol")
+    valid = (isinstance(path, str) and
+             isinstance(line, int) and
+             isinstance(symbol, str) and
+             path in tracked_sources)
+    if not valid:
+        raise RuntimeError(f"invalid source evidence: {evidence!r}")
+    if path not in source_cache:
+        source_cache[path] = read_text(root, path)
+    contents = source_cache[path]
+    lines = contents.splitlines()
+    if line < 1 or line > len(lines):
+        raise RuntimeError(f"source evidence line is stale: {path}:{line}")
+    if symbol not in contents:
+        raise RuntimeError(
+            f"source evidence symbol is stale: {path}#{symbol}"
+        )
+    if token not in lines[line - 1]:
+        raise RuntimeError(
+            f"source evidence token is stale: {path}:{line}: {token}"
+        )
