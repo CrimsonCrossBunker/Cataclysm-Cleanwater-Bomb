@@ -118,6 +118,18 @@ def build_inventory(
         },
         "documents": documents,
     }
+def render_anomaly_report(commit: str, anomalies: list[dict]) -> str:
+    data = {
+        "schema_version": 1,
+        "kind": "contributor_anomaly_report",
+        "source_commit": commit,
+        "rejected_count": len(anomalies),
+        "entries": sorted(
+            anomalies,
+            key=lambda item: (item["original_path"], item["fingerprint"]),
+        ),
+    }
+    return render(data)
 def render(data: dict) -> str:
     return yaml.safe_dump(data, allow_unicode=True, sort_keys=False, width=100)
 def inventory_for_check(output: Path) -> tuple[str, dict[str, dict]]:
