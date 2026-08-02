@@ -28,6 +28,49 @@ def counter_table(title: str, values: Counter) -> list[str]:
     return lines
 
 
+def render_report(data: dict) -> str:
+    documents = data["documents"]
+    actions = Counter(item["action"] for item in documents)
+    statuses = Counter(item["migration_status"] for item in documents)
+    domains = Counter(item["domain"] for item in documents)
+    priorities = Counter(item["priority"] for item in documents)
+    anomaly_count = sum(item["contributor_anomaly_count"] for item in documents)
+    lines = [
+        "# Legacy Markdown classification report",
+        "",
+        "This file is generated from `markdown-inventory.yml`; do not edit it by hand.",
+        "",
+        f"- Frozen source commit: `{data['source_commit']}`",
+        f"- Documents: **{len(documents)}**",
+        f"- Remaining `review` actions: **{data['classification_summary']['review']}**",
+        f"- Rejected contributor identities: **{anomaly_count}**",
+        "- `obj-lua/` is outside the tracked inventory and was not traversed.",
+        "",
+    ]
+    lines.extend(counter_table("Actions", actions))
+    lines.extend(counter_table("Migration status", statuses))
+    lines.extend(counter_table("Domains", domains))
+    lines.extend(counter_table("Priorities", priorities))
+    lines.extend(
+        [
+            "## Documents",
+            "",
+            "| Original path | Stable ID | Action | Status | Priority | Batch | Target |",
+            "| --- | --- | --- | --- | --- | --- | --- |",
+        ]
+    )
+    for item in documents:
+        target = item["target_path"] or item["replacement"] or "—"
+        batch = item["migration_batch"] or "—"
+        lines.append(
+            f"| `{item['original_path']}` | `{item['stable_document_id']}` | "
+            f"`{item['action']}` | `{item['migration_status']}` | "
+            f"`{item['priority']}` | `{batch}` | `{target}` |"
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
