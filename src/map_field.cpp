@@ -979,6 +979,22 @@ void field_processor_fd_fire( const tripoint_bub_ms &p, field_entry &cur, field_
     const ter_t &ter = map_tile.get_ter_t();
     const furn_t &frn = map_tile.get_furn_t();
 
+    const int fire_intensity = cur.get_field_intensity();
+    for( const std::pair<const field_type_id, field_entry> &entry : map_tile.get_field() ) {
+        const field_type &other_type = entry.first.obj();
+        const field_type::fire_reaction_data &reaction = other_type.fire_reaction;
+        if( other_type.has_fire ) {
+            continue;
+        }
+        if( reaction.clear_at > 0 && fire_intensity >= reaction.clear_at ) {
+            here.remove_field( p, entry.first );
+        } else if( reaction.degrade_at > 0 && reaction.interval > 0_turns &&
+                   fire_intensity >= reaction.degrade_at &&
+                   calendar::once_every( reaction.interval ) ) {
+            here.mod_field_intensity( p, entry.first, -1 );
+        }
+    }
+
     // We've got ter/furn cached, so let's use that
     const bool is_sealed = ter_furn_has_flag( ter, frn, ter_furn_flag::TFLAG_SEALED ) &&
                            !ter_furn_has_flag( ter, frn, ter_furn_flag::TFLAG_ALLOW_FIELD_EFFECT );
