@@ -129,3 +129,15 @@ def relative(path: Path) -> str:
 
 def line_number(contents: str, offset: int) -> int:
     return contents.count("\n", 0, offset) + 1
+
+def source(
+    path: Path, contents: str, offset: int, authority: str
+) -> dict[str, object]:
+    return {
+        "path": relative(path),
+        "line": line_number(contents, offset),
+        "authority": authority,
+    }
+
+def sha256_bytes(value: bytes) -> str:
+    return hashlib.sha256(value).hexdigest()
