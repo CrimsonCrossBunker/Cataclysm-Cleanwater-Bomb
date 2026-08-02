@@ -1080,10 +1080,8 @@ int main( int argc, const char *argv[] )
 #endif
 
 #if !defined(TILES)
-    if( !cli.check_mods ) {
-        get_options().init();
-        get_options().load();
-    }
+    get_options().init();
+    get_options().load();
 #endif
 
     // in test mode don't initialize curses to avoid escape sequences being inserted into output stream

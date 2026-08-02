@@ -50,6 +50,7 @@
 #include "martialarts.h"
 #include "mission.h"
 #include "monster.h"
+#include "mod_manager.h"
 #include "npc.h"
 #include "overmapbuffer.h"
 #include "panels.h"
@@ -424,6 +425,105 @@ class scoped_lua_user_module
     private:
         fs::path path_;
         std::optional<std::string> previous_;
+};
+
+class scoped_lua_test_mod
+{
+    public:
+        scoped_lua_test_mod( std::string id, const std::string &source ) :
+            id_( std::move( id ) ),
+            root_( PATH_INFO::user_moddir_path().get_unrelative_path() / id_ ) {
+            if( fs::exists( root_ ) ) {
+                throw std::runtime_error( "Refusing to replace existing Lua test Mod: " +
+                                          root_.string() );
+            }
+            std::error_code error;
+            fs::create_directories( root_ / "lua", error );
+            if( error ) {
+                throw std::runtime_error( "Unable to create Lua test Mod: " + error.message() );
+            }
+            active_ = true;
+            try {
+                write_file( root_ / "modinfo.json",
+                            "[{\"type\":\"MOD_INFO\",\"id\":\"" + id_ +
+                            "\",\"name\":\"Lua validation test\",\"authors\":[\"CCB tests\"],"
+                            "\"description\":\"Execution-sensitive Lua validation fixture\","
+                            "\"category\":\"content\",\"dependencies\":[\"dda\"]}]" );
+                write_file( root_ / "lua" / "manifest.json",
+                            "{\"id\":\"" + id_ +
+                            "\",\"version\":\"1.0.0\",\"api_version\":5,"
+                            "\"capabilities\":[],\"dependencies\":[\"builtin\"]}" );
+                write( source );
+                world_generator->get_mod_manager().refresh_mod_list();
+            } catch( ... ) {
+                try {
+                    std::string ignored;
+                    cleanup( ignored );
+                } catch( ... ) {
+                    // Preserve the construction failure.  The test user directory is disposable.
+                }
+                throw;
+            }
+        }
+
+        scoped_lua_test_mod( const scoped_lua_test_mod & ) = delete;
+        scoped_lua_test_mod &operator=( const scoped_lua_test_mod & ) = delete;
+
+        ~scoped_lua_test_mod() noexcept {
+            try {
+                std::string ignored;
+                cleanup( ignored );
+            } catch( ... ) {
+                // A test fixture destructor must not terminate the test process.
+            }
+        }
+
+        void write( const std::string &source ) const {
+            write_file( root_ / "lua" / "main.lua", source );
+        }
+
+        const std::string &id() const {
+            return id_;
+        }
+
+        bool cleanup( std::string &error ) {
+            if( !active_ ) {
+                error.clear();
+                return true;
+            }
+            std::error_code filesystem_error;
+            fs::remove_all( root_, filesystem_error );
+            if( filesystem_error ) {
+                error = "Unable to remove Lua test Mod: " + filesystem_error.message();
+                return false;
+            }
+            try {
+                world_generator->get_mod_manager().refresh_mod_list();
+            } catch( const std::exception &exception ) {
+                error = "Unable to refresh Mods after Lua validation test: " +
+                        std::string( exception.what() );
+                return false;
+            } catch( ... ) {
+                error = "Unable to refresh Mods after Lua validation test";
+                return false;
+            }
+            active_ = false;
+            error.clear();
+            return true;
+        }
+
+    private:
+        static void write_file( const fs::path &path, const std::string &contents ) {
+            std::ofstream output( path, std::ios::binary | std::ios::trunc );
+            output << contents;
+            if( !output ) {
+                throw std::runtime_error( "Unable to write Lua test Mod file: " + path.string() );
+            }
+        }
+
+        std::string id_;
+        fs::path root_;
+        bool active_ = false;
 };
 
 class scoped_calendar_turn
@@ -9096,6 +9196,32 @@ return true
                          "return string.rep('x', 40 * 1024 * 1024)", 1000, error ) );
         CHECK_FALSE( error.empty() );
     }
+}
+
+TEST_CASE( "lua_mod_validation_executes_registered_sources_without_activation",
+           "[lua][ui][mod][integration]" )
+{
+    cata::lua_ui::shutdown();
+    scoped_lua_test_mod test_mod( "ccb_lua_validation_test",
+                                  "error(\"validation execution sentinel\")\n" );
+    std::string error;
+    REQUIRE( mod_id( test_mod.id() ).is_valid() );
+    CHECK_FALSE( cata::lua_ui::validate_mod_scripts( { test_mod.id() }, error ) );
+    CHECK( error.find( "validation execution sentinel" ) != std::string::npos );
+    CHECK_FALSE( cata::lua_ui::status().loaded );
+
+    test_mod.write( "return true\n" );
+    CHECK( cata::lua_ui::validate_mod_scripts( { test_mod.id() }, error ) );
+    CHECK( error.empty() );
+    CHECK_FALSE( cata::lua_ui::status().loaded );
+
+    CHECK_FALSE( cata::lua_ui::validate_mod_scripts( { "invalid_lua_mod" }, error ) );
+    CHECK( error.find( "Unknown Lua Mod source" ) != std::string::npos );
+    CHECK_FALSE( cata::lua_ui::status().loaded );
+
+    std::string cleanup_error;
+    CHECK( test_mod.cleanup( cleanup_error ) );
+    CHECK( cleanup_error.empty() );
 }
 
 TEST_CASE( "bundled_lua_ui_script_registers_api_v4", "[lua][ui][integration]" )

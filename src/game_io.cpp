@@ -128,6 +128,7 @@ void game::load_static_data()
 bool game::check_mod_data( const std::vector<mod_id> &opts )
 {
     dependency_tree &tree = world_generator->get_mod_manager().get_tree();
+    bool data_valid = true;
 
     // deduplicated list of mods to check
     std::set<mod_id> check( opts.begin(), opts.end() );
@@ -154,6 +155,7 @@ bool game::check_mod_data( const std::vector<mod_id> &opts )
             DynamicDataLoader::get_instance().finalize_loaded_data();
         } catch( const std::exception &err ) {
             std::cerr << "Error loading data from json: " << err.what() << std::endl;
+            data_valid = false;
         }
 
         std::string world_name = world_generator->active_world->world_name;
@@ -185,6 +187,7 @@ bool game::check_mod_data( const std::vector<mod_id> &opts )
 
         std::cout << "Checking mod " << mod.name() << " [" << mod.ident.str() << "]" << std::endl;
 
+        bool mod_valid = true;
         try {
             load_core_data();
 
@@ -198,8 +201,26 @@ bool game::check_mod_data( const std::vector<mod_id> &opts )
             // Load mod itself
             load_data_from_dir( mod.path, mod.ident.str() );
             DynamicDataLoader::get_instance().finalize_loaded_data();
+
+            std::vector<std::string> lua_mod_ids;
+            lua_mod_ids.reserve( dep_vector.size() + 1 );
+            std::set<std::string> seen_lua_mod_ids;
+            for( const mod_id &dep : dep_vector ) {
+                if( seen_lua_mod_ids.insert( dep.str() ).second ) {
+                    lua_mod_ids.push_back( dep.str() );
+                }
+            }
+            if( seen_lua_mod_ids.insert( mod.ident.str() ).second ) {
+                lua_mod_ids.push_back( mod.ident.str() );
+            }
+            std::string lua_error;
+            if( !cata::lua_ui::validate_mod_scripts( lua_mod_ids, lua_error ) ) {
+                std::cerr << "Error loading Lua Mod scripts: " << lua_error << std::endl;
+                mod_valid = false;
+            }
         } catch( const std::exception &err ) {
             std::cerr << "Error loading data: " << err.what() << std::endl;
+            mod_valid = false;
         }
 
         std::string world_name = world_generator->active_world->world_name;
@@ -207,8 +228,11 @@ bool game::check_mod_data( const std::vector<mod_id> &opts )
 
         MAPBUFFER.clear();
         overmap_buffer.clear();
+        if( !mod_valid ) {
+            return false;
+        }
     }
-    return true;
+    return data_valid;
 }
 
 bool game::is_core_data_loaded() const

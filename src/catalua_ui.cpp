@@ -4204,6 +4204,48 @@ std::vector<script_source> active_script_sources()
     return sources;
 }
 
+std::vector<script_source> explicit_mod_script_sources(
+    const std::vector<std::string> &mod_ids )
+{
+    std::vector<script_source> sources;
+    const fs::path built_in_root = fs::u8path( PATH_INFO::datadir() ) / "lua";
+    sources.push_back( script_source{
+        load_source_manifest( built_in_root, "builtin", true, true ), built_in_root,
+        built_in_root / "main.lua"
+    } );
+
+    std::set<std::string> seen = { "builtin" };
+    for( const std::string &id : mod_ids ) {
+        if( !seen.insert( id ).second ) {
+            continue;
+        }
+        const mod_id mod( id );
+        if( !mod.is_valid() ) {
+            throw std::runtime_error( "Unknown Lua Mod source: " + id );
+        }
+        const fs::path root = mod->path.get_unrelative_path() / "lua";
+        const fs::path entry = root / "main.lua";
+        if( !file_exist( entry.string() ) ) {
+            continue;
+        }
+        sources.push_back( script_source{
+            load_source_manifest( root, id, false, false ), root, entry
+        } );
+    }
+
+    std::vector<script_manifest> manifests;
+    manifests.reserve( sources.size() );
+    for( const script_source &source : sources ) {
+        if( !file_exist( source.entry.string() ) ) {
+            throw std::runtime_error( "Lua source '" + source.manifest.id +
+                                      "' is missing main.lua" );
+        }
+        manifests.push_back( source.manifest );
+    }
+    validate_script_manifests( manifests );
+    return sources;
+}
+
 cata_path persistent_state_path()
 {
     return PATH_INFO::player_base_save_path() + ".lua_ui.json";
@@ -6265,6 +6307,30 @@ bool reload_scripts( std::string &error )
         record_runtime_error( "UI profile reload failed", profile_error );
     }
     return reloaded;
+}
+
+bool validate_mod_scripts( const std::vector<std::string> &mod_ids,
+                           std::string &error )
+{
+    try {
+        runtime_state validation;
+        validation.generation = 1;
+        validation.world_generation = 1;
+        validation.sources = explicit_mod_script_sources( mod_ids );
+        if( validation.sources.size() == 1 ) {
+            error.clear();
+            return true;
+        }
+        initialize_state( validation );
+        for( std::size_t index = 0; index < validation.sources.size(); ++index ) {
+            run_script( validation, validation.sources[index].entry, index );
+        }
+        error.clear();
+        return true;
+    } catch( const std::exception &exception ) {
+        error = exception.what();
+        return false;
+    }
 }
 
 void on_turn()
