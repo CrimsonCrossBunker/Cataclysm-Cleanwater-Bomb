@@ -377,6 +377,32 @@ TEST_CASE( "math_parser_dialogue_integration", "[math_parser]" )
     CHECK( testexp.parse( "u_val('stamina')" ) );
     CHECK( testexp.eval( d ) == get_avatar().get_stamina() );
 
+    const vitamin_id vit_c( "vitC" );
+    const int original_avatar_gut_calories = get_avatar().guts.get_calories();
+    const int original_npc_gut_calories = dude.guts.get_calories();
+    const int original_avatar_gut_vitamin = get_avatar().guts.get_vitamin( vit_c );
+    const int original_npc_gut_vitamin = dude.guts.get_vitamin( vit_c );
+    CHECK( testexp.parse( "u_gut_calories() = 100" ) );
+    testexp.eval( d );
+    CHECK( get_avatar().guts.get_calories() == 100 );
+    CHECK( testexp.parse( "u_gut_calories()" ) );
+    CHECK( testexp.eval( d ) == Approx( 100 ) );
+    CHECK( testexp.parse( "n_gut_calories() = 200" ) );
+    testexp.eval( d );
+    CHECK( dude.guts.get_calories() == 200 );
+    CHECK( testexp.parse( "u_gut_vitamin('vitC') = 12" ) );
+    testexp.eval( d );
+    CHECK( get_avatar().guts.get_vitamin( vit_c ) == 12 );
+    CHECK( testexp.parse( "u_gut_vitamin('vitC')" ) );
+    CHECK( testexp.eval( d ) == Approx( 12 ) );
+    CHECK( testexp.parse( "n_gut_vitamin('vitC') = 24" ) );
+    testexp.eval( d );
+    CHECK( dude.guts.get_vitamin( vit_c ) == 24 );
+    get_avatar().guts.mod_calories( original_avatar_gut_calories - 100 );
+    dude.guts.mod_calories( original_npc_gut_calories - 200 );
+    get_avatar().guts.set_vitamin( vit_c, original_avatar_gut_vitamin );
+    dude.guts.set_vitamin( vit_c, original_npc_gut_vitamin );
+
     // units test
     CHECK( testexp.parse( "time('1 m')" ) );
     CHECK( testexp.eval( d ) == 60 );
