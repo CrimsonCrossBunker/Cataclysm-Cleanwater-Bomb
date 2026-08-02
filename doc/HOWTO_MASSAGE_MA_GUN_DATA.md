@@ -1,3 +1,15 @@
+<!-- CCB-DOC-MOVED-START -->
+> [!IMPORTANT] **Archived / 已归档**
+>
+> Stable document ID / 稳定文档 ID: `archive.firearms-massachusetts-data-workflow`
+> 中文: https://crimsoncrossbunker.github.io/CCB-Docs/archive/firearms/massachusetts-data-workflow/
+> English: https://crimsoncrossbunker.github.io/CCB-Docs/en/archive/firearms/massachusetts-data-workflow/
+> Moved date / 迁移日期: `2026-08-02`
+> Last in-repository commit / 仓库内最后适用 commit: `0378ca2b84303cf614c617c9d9eaa50138cd21ff`
+> 全文是针对 2004–2023 马萨诸塞州 CSV 的一次性 sqlite/sed 清洗笔记，引用的 fix_serial_numbers.sql 与 remove_empty_entroes.sql 未被 Git 跟踪，也不是游戏构建或数据契约。
+> This in-repository body is no longer maintained. The historical body is retained through `2027-02-02` and may then be removed; this bilingual entry banner remains permanently.
+> 本仓库正文不再维护；历史正文至少保留到上述日期，之后可删除，但本双语迁移入口永久保留。
+<!-- CCB-DOC-MOVED-END -->
 These instructions are built around pretty standard linux command line tools, plus sqlite3 and moreutils.
 
 First, retrieve the .csv files from https://www.mass.gov/info-details/data-about-firearms-licensing-and-transactions
