@@ -219,3 +219,21 @@ def contributor_rejection_reason(value: object) -> str | None:
     if any(pattern.search(clean) for pattern in UNSAFE_CONTRIBUTOR_PATTERNS):
         return "identity contains a command fragment or control syntax"
     return None
+def stable_id_for(path: str) -> str:
+    stem = path.rsplit(".", 1)[0].lower()
+    slug = re.sub(r"[^a-z0-9]+", "-", stem).strip("-")
+    return "legacy." + slug
+def domain_for(path: str) -> str:
+    if path.startswith("data/mods/"):
+        return "mods"
+    if path.startswith("data/lua/") or path.startswith("src/lua"):
+        return "lua"
+    if path.startswith("doc/JSON/") or path.startswith("data/json/"):
+        return "json"
+    if path.startswith("doc/c++/"):
+        return "cpp"
+    if path.startswith("lang/"):
+        return "translation"
+    if path.startswith("src/third-party/"):
+        return "third-party"
+    return "governance" if "/" not in path else "legacy"
