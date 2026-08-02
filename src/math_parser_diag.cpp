@@ -1890,10 +1890,8 @@ void gut_calories_ass( double val, dialogue &d, char scope,
                        diag_kwargs const & /* kwargs */ )
 {
     if( Character *const chr = d.actor( is_beta( scope ) )->get_character() ) {
-        constexpr int maximum_gut_calories = 2000000;
-        const int desired = static_cast<int>( clamp( val, 0.0,
-                            static_cast<double>( maximum_gut_calories ) ) );
-        chr->guts.mod_calories( desired - chr->guts.get_calories() );
+        const int difference = val - chr->guts.get_calories();
+        chr->guts.mod_calories( difference );
         return;
     }
     throw math::runtime_error( "For gut_calories(), talker is not character" );
@@ -1922,9 +1920,7 @@ void gut_vitamin_ass( double val, dialogue &d, char scope,
         throw math::runtime_error( "Invalid vitamin for gut_vitamin()" );
     }
     if( Character *const chr = d.actor( is_beta( scope ) )->get_character() ) {
-        constexpr int maximum_gut_vitamin = 1000000000;
-        chr->guts.set_vitamin( vit, static_cast<int>( clamp( val, 0.0,
-                               static_cast<double>( maximum_gut_vitamin ) ) ) );
+        chr->guts.set_vitamin( vit, val );
         return;
     }
     throw math::runtime_error( "For gut_vitamin(), talker is not character" );
