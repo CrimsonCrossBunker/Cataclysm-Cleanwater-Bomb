@@ -141,3 +141,13 @@ def source(
 
 def sha256_bytes(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
+
+def documentation_id(section: str, identity: str) -> str:
+    normalized = re.sub(r"[^A-Za-z0-9_.-]+", "-", identity).strip("-")
+    return f"api.lua.v5.generated.{section}.{normalized}"
+
+def documentation(section: str, identity: str) -> dict[str, str]:
+    return {
+        "id": documentation_id(section, identity),
+        "status": "generated-contract-source",
+    }
