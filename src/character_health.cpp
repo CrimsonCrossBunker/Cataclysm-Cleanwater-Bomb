@@ -399,6 +399,10 @@ void Character::calc_all_parts_hp( float hp_mod, float hp_adjustment, int str_ma
             new_max *= 0.8;
         }
 
+        // per-bodypart max HP modifiers from enchantments
+        new_max = new_max * ( 1.0f + enchantment_cache->get_max_hp_multiply( part.first ) ) +
+                  enchantment_cache->get_max_hp_add( part.first );
+
         new_max = std::max( 1, new_max );
 
         float max_hp_ratio = static_cast<float>( new_max ) /

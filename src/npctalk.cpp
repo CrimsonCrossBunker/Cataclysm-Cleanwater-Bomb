@@ -3931,6 +3931,16 @@ talk_effect_fun_t::func f_add_wound( const JsonObject &jo, std::string_view memb
     };
 }
 
+talk_effect_fun_t::func f_recalculate_enchantment_cache( const JsonObject &, std::string_view,
+        std::string_view, bool is_npc )
+{
+    return [is_npc]( dialogue & d ) {
+        if( d.actor( is_npc )->get_character() ) {
+            d.actor( is_npc )->get_character()->recalculate_enchantment_cache();
+        }
+    };
+}
+
 talk_effect_fun_t::func f_remove_wound( const JsonObject &jo, std::string_view member,
                                         std::string_view, bool is_npc )
 {
@@ -8724,6 +8734,7 @@ parsers = {
     { "u_pick_bodypart", "npc_pick_bodypart", jarg::member, &talk_effect_fun::f_pick_bodypart },
     { "u_add_wound", "npc_add_wound", jarg::member, &talk_effect_fun::f_add_wound },
     { "u_remove_wound", "npc_remove_wound", jarg::member, &talk_effect_fun::f_remove_wound },
+    { "u_recalculate_enchantment_cache", "npc_recalculate_enchantment_cache", jarg::member, &talk_effect_fun::f_recalculate_enchantment_cache },
     { "toggle_npc_rule", jarg::member, &talk_effect_fun::f_toggle_npc_rule },
     { "set_npc_rule", jarg::member, &talk_effect_fun::f_set_npc_rule },
     { "clear_npc_rule", jarg::member, &talk_effect_fun::f_clear_npc_rule },
