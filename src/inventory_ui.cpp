@@ -3218,7 +3218,7 @@ void inventory_selector::refresh_window()
 }
 
 std::pair< bool, std::string > inventory_selector::query_string( const std::string &val,
-        bool end_with_toggle )
+        bool end_with_toggle, bool live_filter )
 {
     spopup = std::make_unique<string_input_popup>();
     spopup->max_length( 256 )
@@ -3241,6 +3241,12 @@ std::pair< bool, std::string > inventory_selector::query_string( const std::stri
     do {
         ui_manager::redraw();
         spopup->query_string( /*loop=*/false );
+        if( live_filter && !spopup->canceled() && spopup->text() != filter ) {
+            set_filter( spopup->text() );
+            if( ui.lock() ) {
+                ui.lock()->mark_resize();
+            }
+        }
     } while( !spopup->confirmed() && !spopup->canceled() );
 
     std::string rval;
@@ -3255,7 +3261,8 @@ std::pair< bool, std::string > inventory_selector::query_string( const std::stri
 
 void inventory_selector::query_set_filter()
 {
-    std::pair< bool, std::string > query = query_string( filter );
+    std::pair< bool, std::string > query = query_string(
+            filter, /*end_with_toggle=*/false, /*live_filter=*/true );
     if( query.first ) {
         set_filter( query.second );
     }

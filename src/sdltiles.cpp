@@ -6416,10 +6416,27 @@ static void CheckMessages()
             // context so the widget redraws, but do not also resolve the same
             // keystroke through gameplay/menu bindings (for example, typing
             // 'a' in a name field must not invoke CHANGE_AGE).
-            last_input = input_event();
-            last_input.type = input_event_t::timeout;
-            text_refresh = true;
-            ui_manager::redraw_invalidated();
+            //
+            // Enter and Escape are exceptions: ImGui consumes them to commit
+            // or dismiss the focused text widget, so without forwarding the
+            // game would require a second press of the same key to confirm or
+            // cancel the surrounding input loop.
+            const bool commit_or_cancel =
+                ev.type == CATA_KEYDOWN &&
+                ( GetKeysym( ev ).sym == SDLK_RETURN ||
+                  GetKeysym( ev ).sym == SDLK_RETURN2 ||
+                  GetKeysym( ev ).sym == SDLK_KP_ENTER ||
+                  GetKeysym( ev ).sym == SDLK_ESCAPE );
+            if( commit_or_cancel ) {
+                const int lc = sdl_keysym_to_curses( GetKeysym( ev ) );
+                last_input = input_event( lc, input_event_t::keyboard_char );
+                text_refresh = true;
+            } else {
+                last_input = input_event();
+                last_input.type = input_event_t::timeout;
+                text_refresh = true;
+                ui_manager::redraw_invalidated();
+            }
         } else if( IsWindowEvent( ev ) ) {
             switch( GetWindowEventID( ev ) ) {
 #if defined(__ANDROID__)
