@@ -7,10 +7,13 @@ import argparse
 import fnmatch
 import json
 import subprocess
+from collections import Counter
 from pathlib import Path
 
 import jsonschema
 import yaml
+
+from generate_markdown_inventory import contributor_rejection_reason
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -138,6 +141,91 @@ def validate_inventory() -> None:
         raise ValueError("duplicate Markdown path in inventory")
     if any(path == "obj-lua" or path.startswith("obj-lua/") for path in paths):
         raise ValueError("obj-lua must not be scanned or inventoried")
+    stable_ids = [entry["stable_document_id"] for entry in inventory["documents"]]
+    if len(stable_ids) != len(set(stable_ids)):
+        raise ValueError("duplicate stable_document_id in Markdown inventory")
+    action_counts = Counter(entry["action"] for entry in inventory["documents"])
+    status_counts = Counter(
+        entry["migration_status"] for entry in inventory["documents"]
+    )
+    summary = inventory["classification_summary"]
+    if summary["review"] != action_counts.get("review", 0):
+        raise ValueError("Markdown review count is stale")
+    if summary["actions"] != dict(sorted(action_counts.items())):
+        raise ValueError("Markdown action summary is stale")
+    if summary["migration_statuses"] != dict(sorted(status_counts.items())):
+        raise ValueError("Markdown migration-status summary is stale")
+    known_paths = set(tracked_paths())
+    for entry in inventory["documents"]:
+        if any("obj-lua" in Path(path).parts for path in entry["source_paths"]):
+            raise ValueError("obj-lua is forbidden in inventory source paths")
+        for contributor in entry["contributors"]:
+            reason = contributor_rejection_reason(contributor)
+            if reason:
+                raise ValueError(
+                    f"unsafe contributor in {entry['original_path']}: {reason}"
+                )
+        missing_sources = sorted(
+            path for path in entry["source_paths"] if path not in known_paths
+        )
+        if missing_sources:
+            raise ValueError(
+                f"missing source paths for {entry['original_path']}: "
+                f"{missing_sources}"
+            )
+        source_text = "\n".join(
+            (ROOT / path).read_text(encoding="utf-8", errors="replace")
+            for path in entry["source_paths"]
+        )
+        missing_symbols = sorted(
+            symbol
+            for symbol in entry["source_symbols"]
+            if symbol not in source_text
+        )
+        if missing_symbols:
+            raise ValueError(
+                f"missing source symbols for {entry['original_path']}: "
+                f"{missing_symbols}"
+            )
+
+    anomaly_path = ROOT / "doc/migration/contributor-anomalies.yml"
+    anomaly_schema_path = ROOT / "doc/migration/contributor-anomalies.schema.json"
+    anomalies = load_yaml(anomaly_path)
+    anomaly_schema = json.loads(anomaly_schema_path.read_text(encoding="utf-8"))
+    jsonschema.Draft202012Validator(anomaly_schema).validate(anomalies)
+    if anomalies["source_commit"] != inventory["source_commit"]:
+        raise ValueError("contributor anomaly report uses another source commit")
+    if anomalies["rejected_count"] != len(anomalies["entries"]):
+        raise ValueError("contributor anomaly report count is stale")
+    if any("value" in entry for entry in anomalies["entries"]):
+        raise ValueError("raw rejected contributor identities must not be published")
+
+
+def validate_documentation_registry() -> None:
+    registry_path = ROOT / "ai/documentation-registry.yml"
+    schema_path = ROOT / "ai/documentation-registry.schema.json"
+    registry = load_yaml(registry_path)
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    jsonschema.Draft202012Validator(schema).validate(registry)
+    if registry["entry_count"] != len(registry["entries"]):
+        raise ValueError("documentation registry entry_count is stale")
+    paths = [entry["path"] for entry in registry["entries"]]
+    ids = [entry["id"] for entry in registry["entries"]]
+    if len(paths) != len(set(paths)):
+        raise ValueError("duplicate path in documentation registry")
+    if len(ids) != len(set(ids)):
+        raise ValueError("duplicate id in documentation registry")
+    known = set(tracked_paths())
+    missing = sorted(path for path in paths if path not in known)
+    if missing:
+        raise ValueError(f"untracked documentation registry paths: {missing}")
+    if any("obj-lua" in Path(path).parts for path in paths):
+        raise ValueError("obj-lua must not enter the documentation registry")
+    for entry in registry["entries"]:
+        if entry["generated"] != bool(entry["generated_by"]):
+            raise ValueError(
+                f"generated boundary mismatch for documentation {entry['id']}"
+            )
 
 
 def main() -> int:
@@ -145,6 +233,7 @@ def main() -> int:
     parser.parse_args()
     validate_context()
     validate_inventory()
+    validate_documentation_registry()
     print("agent metadata and Markdown inventory are valid")
     return 0
 
