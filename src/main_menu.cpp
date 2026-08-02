@@ -2381,13 +2381,26 @@ void main_menu::world_tab( const std::string &worldname )
 
     auto clear_world = [this, &worldname]( bool do_delete ) {
         // NOLINTNEXTLINE(cata-use-localized-sorting)
-        if( last_world_pos > 0 && worldname <= world_generator->all_worldnames()[last_world_pos] ) {
-            last_world_pos--;
-        }
-        world_generator->delete_world( worldname, do_delete );
+        const bool shift_last_world_pos = last_world_pos > 0 &&
+                                          worldname <= world_generator->all_worldnames()[last_world_pos];
+
+        // Release save and map resources before removing the directory.  Windows
+        // will otherwise keep the world folder alive while one of these resources
+        // still has an open handle inside it.
         savegames.clear();
         MAPBUFFER.clear();
         overmap_buffer.clear();
+        if( !world_generator->delete_world( worldname, do_delete ) ) {
+            if( do_delete ) {
+                popup( _( "Unable to delete world \"%s\".  Some files or its folder could not be "
+                          "removed.  Close programs using the save directory, check its permissions, "
+                          "and try again." ), worldname );
+            }
+            return;
+        }
+        if( shift_last_world_pos ) {
+            last_world_pos--;
+        }
         if( do_delete ) {
             sel2 = 0; // reset to create world selection
         }
