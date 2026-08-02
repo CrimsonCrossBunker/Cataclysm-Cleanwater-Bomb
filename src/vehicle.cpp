@@ -9031,150 +9031,165 @@ void vehicle::update_time( map &here, const time_point &update_to )
         return;
     }
 
+    if( sm_pos.z() < 0 ) {
+        // Underground vehicles have no weather-driven generation; settle
+        // auto-process stations here (matching furniture stations), then stop.
+        settle_auto_process_catchup( here, update_to );
+        last_update = update_to;
+        return;
+    }
+
+    if( update_to >= update_from && update_to - update_from >= 1_minutes ) {
+        // We don't need to check every turn
+        time_duration elapsed = update_to - last_update;
+        last_update = update_to;
+
+        // Weather stuff, only for z-levels >= 0
+        // TODO: Have it wash cars from blood?
+        if( !funnels.empty() || !solar_panels.empty() || !wind_turbines.empty() || !water_wheels.empty() ) {
+            // Get one weather data set per vehicle, they don't differ much across vehicle area
+            const weather_sum accum_weather = sum_conditions( update_from, update_to,
+                                              pos_abs() );
+            // make some reference objects to use to check for reload
+            const item water( itype_water );
+            const item water_clean( itype_water_clean );
+
+            for( int idx : funnels ) {
+                const vehicle_part &pt = parts[idx];
+
+                // we need an unbroken funnel mounted on the exterior of the vehicle
+                if( pt.is_unavailable() || !is_sm_tile_outside( abs_part_pos( pt ) ) ) {
+                    continue;
+                }
+
+                // we need an empty tank (or one already containing water) below the funnel
+                auto tank = std::find_if( parts.begin(), parts.end(), [&]( const vehicle_part & e ) {
+                    return pt.mount == e.mount && e.is_tank() &&
+                           ( e.can_reload( water ) || e.can_reload( water_clean ) );
+                } );
+
+                if( tank == parts.end() ) {
+                    continue;
+                }
+
+                const double area_in_mm2 = std::pow( pt.info().bonus, 2 ) * M_PI;
+                const int qty = roll_remainder( funnel_charges_per_turn( area_in_mm2, accum_weather.rain_amount ) );
+                int c_qty = qty + ( tank->can_reload( water_clean ) ?  tank->ammo_remaining( ) : 0 );
+
+                if( qty > 0 ) {
+                    const std::optional<vpart_reference> vp_purifier = vpart_position( *this, idx )
+                            .part_with_tool( here, itype_water_purifier );
+                    const int64_t per_use = itype_water_purifier->charges_to_use();
+                    const bool can_purify_all = vp_purifier &&
+                                                fuel_left( here, itype_battery ) >=
+                                                static_cast<int64_t>( c_qty ) * per_use;
+
+                    if( can_purify_all ) {
+                        run_legacy_charge_tool_uses( here, itype_water_purifier, c_qty );
+                        tank->ammo_set( itype_water_clean, c_qty );
+                    } else {
+                        tank->ammo_set( itype_water, tank->ammo_remaining( ) + qty );
+                    }
+                    invalidate_mass();
+                }
+            }
+            if( !solar_panels.empty() ) {
+                units::power epower = 0_W;
+                for( const int p : solar_panels ) {
+                    const vehicle_part &vp = parts[p];
+                    const tripoint_bub_ms pos = bub_part_pos( here, vp );
+                    if( vp.is_unavailable() || !is_sm_tile_outside( here.get_abs( pos ) ) ) {
+                        continue;
+                    }
+                    epower += part_epower( vp );
+                }
+                double intensity = accum_weather.radiant_exposure / max_sun_irradiance() / to_seconds<float>
+                                   ( elapsed );
+                int energy_bat = power_to_energy_bat( epower * intensity, elapsed );
+                if( energy_bat > 0 ) {
+                    add_msg_debug( debugmode::DF_VEHICLE, "%s got %d kJ energy from solar panels", name, energy_bat );
+                    charge_battery( here, energy_bat );
+                }
+            }
+            if( !wind_turbines.empty() ) {
+                // TODO: use accum_weather wind data to backfill wind turbine
+                // generation capacity.
+                units::power epower = total_wind_epower( here );
+                int energy_bat = power_to_energy_bat( epower, elapsed );
+                if( energy_bat > 0 ) {
+                    add_msg_debug( debugmode::DF_VEHICLE, "%s got %d kJ energy from wind turbines", name, energy_bat );
+                    charge_battery( here, energy_bat );
+                }
+            }
+            if( !water_wheels.empty() ) {
+                units::power epower = total_water_wheel_epower( here );
+                int energy_bat = power_to_energy_bat( epower, elapsed );
+                if( energy_bat > 0 ) {
+                    add_msg_debug( debugmode::DF_VEHICLE, "%s got %d kJ energy from water wheels", name, energy_bat );
+                    charge_battery( here, energy_bat );
+                }
+            }
+        }
+    }
+
+    // Auto-process catch-up runs after renewable charging so stations see
+    // the power that solar/wind/water generated during the off-map span;
+    // the old auto-cooker path ran after renewable charging.
+    settle_auto_process_catchup( here, update_to );
+}
+
+void vehicle::settle_auto_process_catchup( map &here, const time_point &update_to )
+{
     // Catch up auto-process stations that were running while the vehicle was
     // off-map.  Only settle time not already covered by per-turn processing
     // (see last_auto_process_update): on-map vehicles are advanced every turn
     // by process_auto_process_part() and drained by power_parts(), and idle()
     // marks every processed turn as covered, so ap_elapsed spans genuine
-    // off-grid off-map time only.  This is independent of weather, so it also
-    // runs for underground vehicles (matching furniture stations).
+    // off-grid off-map time only.
     const time_duration ap_elapsed = update_to - last_auto_process_update;
+    if( ap_elapsed <= 1_turns ) {
+        // A single covered turn (the normal on-map cadence: idle() marks each
+        // processed turn) has nothing to settle.  Leave the stamp unchanged so
+        // spans are only consumed when catch-up actually runs; short off-map
+        // stints near the reality-bubble edge are then settled on the next
+        // processing instead of being discarded.
+        return;
+    }
     last_auto_process_update = update_to;
-    if( ap_elapsed >= 1_minutes ) {
-        // Non-station accessory drains (fridges etc.) are discharged for the
-        // full span, matching on-map power_parts() semantics; each station
-        // discharges only the energy it actually injects into its cargo
-        // (see catch_up_auto_process).
-        std::vector<int> station_parts;
-        units::power station_power = 0_W;
-        for( const vpart_reference &vp : get_all_parts() ) {
-            if( vp.info().auto_process.has_value() && vp.part().enabled ) {
-                station_power += part_epower( vp.part() );
-                station_parts.push_back( vp.part_index() );
-            }
+    // Non-station accessory drains (fridges etc.) are discharged for the
+    // full span, matching on-map power_parts() semantics; each station
+    // discharges only the energy it actually injects into its cargo
+    // (see catch_up_auto_process).
+    std::vector<int> station_parts;
+    units::power station_power = 0_W;
+    for( const vpart_reference &vp : get_all_parts() ) {
+        if( vp.info().auto_process.has_value() && vp.part().enabled ) {
+            station_power += part_epower( vp.part() );
+            station_parts.push_back( vp.part_index() );
         }
-        const units::power standby_power = total_accessory_epower() - station_power;
-        if( standby_power < 0_W ) {
-            const int standby_energy = std::abs( power_to_energy_bat( standby_power,
-                                                 ap_elapsed ) );
-            const int standby_deficit = discharge_battery( here, standby_energy );
-            if( standby_deficit > 0 ) {
-                for( const vpart_reference &drain_vp : get_enabled_parts(
-                         VPFLAG_ENABLED_DRAINS_EPOWER ) ) {
-                    vehicle_part &pt = drain_vp.part();
-                    if( pt.info().epower < 0_W ) {
-                        pt.enabled = false;
-                        pt.power_disabled = true;
-                    }
+    }
+    const units::power standby_power = total_accessory_epower() - station_power;
+    if( standby_power < 0_W ) {
+        const int standby_energy = std::abs( power_to_energy_bat( standby_power,
+                                             ap_elapsed ) );
+        const int standby_deficit = discharge_battery( here, standby_energy );
+        if( standby_deficit > 0 ) {
+            for( const vpart_reference &drain_vp : get_enabled_parts(
+                     VPFLAG_ENABLED_DRAINS_EPOWER ) ) {
+                vehicle_part &pt = drain_vp.part();
+                if( pt.info().epower < 0_W ) {
+                    pt.enabled = false;
+                    pt.power_disabled = true;
                 }
             }
         }
-        // Re-validate indices inside the loop: completion EOCs fired during
-        // catch-up may add or remove parts and invalidate earlier references.
-        for( const int sp : station_parts ) {
-            if( sp < static_cast<int>( parts.size() ) && parts[sp].enabled &&
-                parts[sp].info().auto_process ) {
-                catch_up_auto_process( here, sp, ap_elapsed );
-            }
-        }
     }
-
-    if( sm_pos.z() < 0 ) {
-        last_update = update_to;
-        return;
-    }
-
-    if( update_to >= update_from && update_to - update_from < 1_minutes ) {
-        // We don't need to check every turn
-        return;
-    }
-    time_duration elapsed = update_to - last_update;
-    last_update = update_to;
-
-    // Weather stuff, only for z-levels >= 0
-    // TODO: Have it wash cars from blood?
-    if( !funnels.empty() || !solar_panels.empty() || !wind_turbines.empty() || !water_wheels.empty() ) {
-        // Get one weather data set per vehicle, they don't differ much across vehicle area
-        const weather_sum accum_weather = sum_conditions( update_from, update_to,
-                                          pos_abs() );
-        // make some reference objects to use to check for reload
-        const item water( itype_water );
-        const item water_clean( itype_water_clean );
-
-        for( int idx : funnels ) {
-            const vehicle_part &pt = parts[idx];
-
-            // we need an unbroken funnel mounted on the exterior of the vehicle
-            if( pt.is_unavailable() || !is_sm_tile_outside( abs_part_pos( pt ) ) ) {
-                continue;
-            }
-
-            // we need an empty tank (or one already containing water) below the funnel
-            auto tank = std::find_if( parts.begin(), parts.end(), [&]( const vehicle_part & e ) {
-                return pt.mount == e.mount && e.is_tank() &&
-                       ( e.can_reload( water ) || e.can_reload( water_clean ) );
-            } );
-
-            if( tank == parts.end() ) {
-                continue;
-            }
-
-            const double area_in_mm2 = std::pow( pt.info().bonus, 2 ) * M_PI;
-            const int qty = roll_remainder( funnel_charges_per_turn( area_in_mm2, accum_weather.rain_amount ) );
-            int c_qty = qty + ( tank->can_reload( water_clean ) ?  tank->ammo_remaining( ) : 0 );
-
-            if( qty > 0 ) {
-                const std::optional<vpart_reference> vp_purifier = vpart_position( *this, idx )
-                        .part_with_tool( here, itype_water_purifier );
-                const int64_t per_use = itype_water_purifier->charges_to_use();
-                const bool can_purify_all = vp_purifier &&
-                                            fuel_left( here, itype_battery ) >=
-                                            static_cast<int64_t>( c_qty ) * per_use;
-
-                if( can_purify_all ) {
-                    run_legacy_charge_tool_uses( here, itype_water_purifier, c_qty );
-                    tank->ammo_set( itype_water_clean, c_qty );
-                } else {
-                    tank->ammo_set( itype_water, tank->ammo_remaining( ) + qty );
-                }
-                invalidate_mass();
-            }
-        }
-        if( !solar_panels.empty() ) {
-            units::power epower = 0_W;
-            for( const int p : solar_panels ) {
-                const vehicle_part &vp = parts[p];
-                const tripoint_bub_ms pos = bub_part_pos( here, vp );
-                if( vp.is_unavailable() || !is_sm_tile_outside( here.get_abs( pos ) ) ) {
-                    continue;
-                }
-                epower += part_epower( vp );
-            }
-            double intensity = accum_weather.radiant_exposure / max_sun_irradiance() / to_seconds<float>
-                               ( elapsed );
-            int energy_bat = power_to_energy_bat( epower * intensity, elapsed );
-            if( energy_bat > 0 ) {
-                add_msg_debug( debugmode::DF_VEHICLE, "%s got %d kJ energy from solar panels", name, energy_bat );
-                charge_battery( here, energy_bat );
-            }
-        }
-        if( !wind_turbines.empty() ) {
-            // TODO: use accum_weather wind data to backfill wind turbine
-            // generation capacity.
-            units::power epower = total_wind_epower( here );
-            int energy_bat = power_to_energy_bat( epower, elapsed );
-            if( energy_bat > 0 ) {
-                add_msg_debug( debugmode::DF_VEHICLE, "%s got %d kJ energy from wind turbines", name, energy_bat );
-                charge_battery( here, energy_bat );
-            }
-        }
-        if( !water_wheels.empty() ) {
-            units::power epower = total_water_wheel_epower( here );
-            int energy_bat = power_to_energy_bat( epower, elapsed );
-            if( energy_bat > 0 ) {
-                add_msg_debug( debugmode::DF_VEHICLE, "%s got %d kJ energy from water wheels", name, energy_bat );
-                charge_battery( here, energy_bat );
-            }
+    // Re-validate indices inside the loop: completion EOCs fired during
+    // catch-up may add or remove parts and invalidate earlier references.
+    for( const int sp : station_parts ) {
+        if( sp < static_cast<int>( parts.size() ) && parts[sp].enabled &&
+            parts[sp].info().auto_process ) {
+            catch_up_auto_process( here, sp, ap_elapsed );
         }
     }
 }

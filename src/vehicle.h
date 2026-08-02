@@ -2348,6 +2348,10 @@ class vehicle
         void process_auto_process_part( map &here, int p );
         // Catch up auto-process progress after the vehicle was outside the reality bubble.
         void catch_up_auto_process( map &here, int p, const time_duration &elapsed );
+        // Settle the off-map auto-process catch-up span for all stations at once.
+        // Called by update_time() after renewable charging (underground vehicles
+        // get it too); advances last_auto_process_update only when it settles a gap.
+        void settle_auto_process_catchup( map &here, const time_point &update_to );
         void use_nl_boiler( map &here, int p );
         void use_monster_capture( int part, map *here, const tripoint_bub_ms &pos );
         void use_tiedown_furniture( int part, map *here, const tripoint_bub_ms & );
