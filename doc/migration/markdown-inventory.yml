@@ -5,19 +5,19 @@ document_count: 175
 scope: Tracked Markdown at source_commit, excluding dot-prefixed tool/config paths; filesystem caches
   are never traversed.
 classification_summary:
-  review: 85
+  review: 78
   actions:
     archive_public: 1
     generated_reference: 3
     keep_in_repo: 54
-    merge_into: 4
-    migrate_preserve: 13
-    migrate_rewrite: 9
+    merge_into: 6
+    migrate_preserve: 14
+    migrate_rewrite: 13
     retain_third_party: 6
-    review: 85
+    review: 78
   migration_statuses:
-    classified: 78
-    inventoried: 85
+    classified: 85
+    inventoried: 78
     verified: 12
 documents:
 - original_path: CODE_OF_CONDUCT.md
@@ -2924,204 +2924,239 @@ documents:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_preserve
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-json-inheritance
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/inheritance/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: json.inheritance
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: ccb_extended
+  upstream_relation: forked_and_locally_extended
   merge_target: null
   source_paths:
-  - doc/JSON/JSON_INHERITANCE.md
-  source_symbols: []
+  - src/generic_factory.h
+  - src/generic_factory.cpp
+  - src/init.cpp
+  - tests/generic_factory_test.cpp
+  source_symbols:
+  - generic_factory::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 示例源码链接指向 CleverRaven master；应改为本地 source badge 和固定 verified commit。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 217 行系统解释 copy-from、extend/delete、relative/proportional 与支持范围；2026-07 加入 CCB vitamin 和 overmap special
+    支持，generic_factory tests 可验证基础语义。
+  - Import-time source-symbol correction was verified against the tracked implementation.
+  migration_batch: phase-0-json
 - original_path: doc/JSON/JSON_LOADING_ORDER.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/loading-order.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: merge_into
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/loading-order/
+  migration_status: classified
+  history_strategy: merge_attribution_and_source_history
   stable_document_id: legacy.doc-json-json-loading-order
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
-  merge_target: null
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: exact_duplicate_in_repository
+  merge_target: json.loading-order
   source_paths:
-  - doc/JSON/JSON_LOADING_ORDER.md
-  source_symbols: []
+  - src/init.cpp
+  - src/game_io.cpp
+  - data/json/LOADING_ORDER.md
+  source_symbols:
+  - DynamicDataLoader::load_data_from_path
+  - DynamicDataLoader::load_all_from_json
+  - DynamicDataLoader::finalize_loaded_data
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 与 data/json/LOADING_ORDER.md 字节级相同；两个旧路径都应指向同一稳定文档 ID，避免重复维护。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - diff 显示两个文件完全相同；内容描述目录深度和同深度字母顺序，应从实际 loader 行为生成/测试并只发布一份页面。
+  migration_batch: phase-1-json
 - original_path: doc/JSON/JSON_Mapping_Guides/Guide_for_beginning_mapgen.md
-  target_path: null
+  target_path: docs/zh_CN/tutorials/json-mapgen/beginner.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-json-mapping-guides-guide-for-beginning-mapgen
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/tutorials/json-mapgen/beginner/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: tutorial.mapgen-beginner
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_tutorial_with_upstream_links
   merge_target: null
   source_paths:
-  - doc/JSON/JSON_Mapping_Guides/Guide_for_beginning_mapgen.md
-  source_symbols: []
+  - src/mapgen.cpp
+  - src/overmap_terrain.cpp
+  - data/json/mapgen/abandoned_barn.json
+  - data/json/overmap/overmap_terrain/overmap_terrain.json
+  - tests/mapgen_function_test.cpp
+  source_symbols:
+  - mapgen_function_json::setup_internal
+  - overmap_terrains::load
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 教程含 11 个 CleverRaven 文件/文档链接和若干作者经验性结论；所有示例需改成本地固定来源并实际加载。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 616 行从 OMT、ASCII map、屋顶、palette 到 special 的完整入门教程仍有价值，但仓库身份和链接全部需要 CCB 化。
+  migration_batch: phase-1-json
 - original_path: doc/JSON/JSON_Mapping_Guides/Guide_for_intermediate_mapgen.md
-  target_path: null
+  target_path: docs/zh_CN/tutorials/json-mapgen/intermediate.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-json-mapping-guides-guide-for-intermediate-mapgen
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/tutorials/json-mapgen/intermediate/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: tutorial.mapgen-intermediate
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P1
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_tutorial_with_upstream_links
   merge_target: null
   source_paths:
-  - doc/JSON/JSON_Mapping_Guides/Guide_for_intermediate_mapgen.md
-  source_symbols: []
+  - src/mapgen.cpp
+  - src/mapgen.h
+  - data/json/mapgen/nested/road_vehicles_nested.json
+  - tests/nest_conditional_placement_test.cpp
+  - tests/mapgen_function_test.cpp
+  source_symbols:
+  - mapgen_function_json::setup_internal
+  - jmapgen_objects::load_objects
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - Magiclysm/micro_lab 示例与上游锚点需在 CCB 当前数据中逐项重跑；代码块应加入可提取验证标记。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 614 行聚焦 layered/nested mapgen、条件放置与复杂生成，概念仍由 mapgen loader 支持；应保留教程层次但重做可执行示例。
+  migration_batch: phase-1-json
 - original_path: doc/JSON/JSON_Mapping_Guides/JSON_ROOF_MAPGEN.md
-  target_path: null
+  target_path: docs/zh_CN/tutorials/json-mapgen/beginner.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: merge_into
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-json-mapping-guides-json-roof-mapgen
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/tutorials/json-mapgen/beginner/
+  migration_status: classified
+  history_strategy: merge_attribution_and_source_history
+  stable_document_id: tutorial.mapgen-roofs
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
-  merge_target: null
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_narrow_tutorial
+  merge_target: tutorial.mapgen-beginner
   source_paths:
-  - doc/JSON/JSON_Mapping_Guides/JSON_ROOF_MAPGEN.md
-  source_symbols: []
+  - src/mapgen.cpp
+  - data/json/mapgen/apartment_complex/apartment_complex_roof.json
+  - data/json/overmap/overmap_terrain/overmap_terrain.json
+  source_symbols:
+  - mapgen_function_json::setup_internal
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 引用 CleverRaven MAPGEN 和已过时的 dev.narc.ro formatter；示例需并入可验证的初级 mapgen 路线。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 180 行只讲 roof map、overmap special/terrain 与 region settings 的衔接，内容与初级教程高度重叠，合并可减少重复且保留旧路径 stub。
+  migration_batch: phase-2-json
 - original_path: doc/JSON/JSON_STYLE.md
-  target_path: null
+  target_path: docs/zh_CN/contributing/json-style.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-json-style
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/contributing/json-style/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: contributing.json-style
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P0
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_workflow_with_live_targets
   merge_target: null
   source_paths:
-  - doc/JSON/JSON_STYLE.md
-  source_symbols: []
+  - Makefile
+  - .github/workflows/json.yml
+  - tools/format/format_main.cpp
+  - data/AGENTS.md
+  source_symbols:
+  - main
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 正文仍称 Cataclysm-DDA root 并推荐 dev.narc.ro；命令应以当前 Makefile/CI 为准且实际运行。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 107 行样式规则本身仍适用，Makefile 仍有 style-json 且 CI 使用 formatter；站点页需用当前 CCB 命令替换旧网站和上游身份。
+  migration_batch: phase-0-json
 - original_path: doc/JSON/JSON_TOOLS.md
-  target_path: null
+  target_path: docs/zh_CN/how-to/json/tools.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - thaelina
   contributor_anomaly_count: 1
   license: CC-BY-SA-3.0
-  action: review
+  action: migrate_rewrite
   archive_reason: null
-  replacement: null
-  migration_status: inventoried
-  history_strategy: evaluate_filtered_history
-  stable_document_id: legacy.doc-json-json-tools
+  replacement: https://crimsoncrossbunker.github.io/CCB-Docs/how-to/json/tools/
+  migration_status: classified
+  history_strategy: preserve_source_commit_and_history_url
+  stable_document_id: how-to.json-tools
   domain: json
-  priority: P3
-  last_applicable_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
-  ccb_specificity: pending_review
-  upstream_relation: pending_review
+  priority: P2
+  last_applicable_commit: 7a008bf28d7ee7ebef549514228a0d0b45b7bac4
+  ccb_specificity: upstream_inherited
+  upstream_relation: inherited_tooling_guide
   merge_target: null
   source_paths:
-  - doc/JSON/JSON_TOOLS.md
-  source_symbols: []
+  - tools/json_tools/keys.py
+  - tools/json_tools/values.py
+  - tools/json_tools/pluck.py
+  - tools/json_tools/table.py
+  - tools/json_tools/lister.py
+  source_symbols:
+  - main
   translation_required: true
   include_in_ai_index: true
   blockers:
-  - Full-text source review is pending.
+  - 正文泛称 Cataclysm-DDA 且不覆盖每个脚本的当前参数；命令必须通过 --help/样例运行验证。
   evidence:
-  - Frozen tracked Markdown path at source_commit.
-  migration_batch: null
+  - 153 行介绍 keys/values/pluck/table/lister 与 jq，用例仍对应已跟踪脚本；适合作为操作指南按当前 CLI 重写。
+  migration_batch: phase-2-json
 - original_path: doc/JSON/MAGIC.md
-  target_path: null
+  target_path: docs/zh_CN/reference/json/magic-spells-enchantments.md
   source_commit: 0378ca2b84303cf614c617c9d9eaa50138cd21ff
   contributors:
   - LYHGLYTX
