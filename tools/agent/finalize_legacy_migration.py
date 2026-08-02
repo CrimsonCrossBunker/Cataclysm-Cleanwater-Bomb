@@ -121,3 +121,75 @@ def banner(entry: dict | list[dict]) -> str:
         ]
     )
     return "\n".join(lines)
+
+
+def final_entry(entry: dict, moved: date) -> dict:
+    result = copy.deepcopy(entry)
+    if entry["action"] in TERMINAL_IN_REPO:
+        result["migration_status"] = "verified"
+        result["moved_at"] = None
+        result["zh_url"] = None
+        result["en_url"] = None
+        result["retained_body_until"] = None
+        result["blockers"] = []
+        return result
+
+    chinese = target_url(entry)
+    result["migration_status"] = (
+        "archived" if entry["action"] == ARCHIVE_ACTION else "stubbed"
+    )
+    result["moved_at"] = moved.isoformat()
+    result["zh_url"] = chinese
+    result["en_url"] = english_url(chinese)
+    result["retained_body_until"] = add_months(moved, 6).isoformat()
+    result["blockers"] = []
+    evidence = list(result["evidence"])
+    statement = (
+        "Permanent bilingual repository entry prepared at "
+        f"{moved.isoformat()}; the historical body remains during retention."
+    )
+    if statement not in evidence:
+        evidence.append(statement)
+    result["evidence"] = evidence
+    return result
+
+
+def finalized_inventory(data: dict, moved: date) -> dict:
+    result = copy.deepcopy(data)
+    result["documents"] = [final_entry(entry, moved) for entry in data["documents"]]
+    actions = Counter(entry["action"] for entry in result["documents"])
+    statuses = Counter(entry["migration_status"] for entry in result["documents"])
+    result["classification_summary"] = {
+        "review": actions.get("review", 0),
+        "actions": dict(sorted(actions.items())),
+        "migration_statuses": dict(sorted(statuses.items())),
+    }
+    return result
+
+
+def render_yaml(data: dict) -> str:
+    return yaml.safe_dump(data, allow_unicode=True, sort_keys=False, width=100)
+
+
+def expected_sources(data: dict) -> dict[Path, str]:
+    grouped: dict[Path, list[tuple[Path, dict]]] = {}
+    for entry in data["documents"]:
+        if entry["action"] in TERMINAL_IN_REPO:
+            continue
+        path = ROOT / entry["original_path"]
+        if not path.is_file():
+            raise ValueError(f"missing legacy source: {entry['original_path']}")
+        grouped.setdefault(path.resolve(), []).append((path, entry))
+
+    outputs = {}
+    for resolved, members in grouped.items():
+        physical = next((path for path, _ in members if not path.is_symlink()), resolved)
+        body = strip_banner(physical.read_text(encoding="utf-8"))
+        retention_required = any(entry["retained_body_until"] for _, entry in members)
+        if retention_required and not body.strip():
+            paths = ", ".join(entry["original_path"] for _, entry in members)
+            raise ValueError(
+                f"historical body was removed before retention: {paths}"
+            )
+        outputs[physical] = banner([entry for _, entry in members]) + body
+    return outputs
