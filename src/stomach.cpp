@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <memory>
 #include <ostream>
 #include <string>
@@ -484,6 +485,22 @@ void stomach_contents::mod_calories( int kcal )
     nutr.calories += kcal * 1000;
 }
 
+void stomach_contents::set_vitamin( const vitamin_id &vit, int units )
+{
+    if( units <= 0 ) {
+        nutr.remove_vitamin( vit );
+        return;
+    }
+    nutr.set_vitamin( vit, units );
+}
+
+void stomach_contents::mod_vitamin( const vitamin_id &vit, int units )
+{
+    const int64_t adjusted = static_cast<int64_t>( nutr.get_vitamin( vit ) ) + units;
+    set_vitamin( vit, static_cast<int>( std::clamp<int64_t>( adjusted, 0,
+                 std::numeric_limits<int>::max() ) ) );
+}
+
 void stomach_contents::mod_nutr( int nutr )
 {
     // nutr is legacy type code, this function simply converts old nutrition to new kcal
@@ -514,6 +531,11 @@ void stomach_contents::mod_contents( const units::volume &vol )
 int stomach_contents::get_calories() const
 {
     return nutr.kcal();
+}
+
+int stomach_contents::get_vitamin( const vitamin_id &vit ) const
+{
+    return nutr.get_vitamin( vit );
 }
 
 units::volume stomach_contents::get_water() const
