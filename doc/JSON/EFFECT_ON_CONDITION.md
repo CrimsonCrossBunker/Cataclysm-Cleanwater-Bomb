@@ -1,4 +1,15 @@
-
+<!-- CCB-DOC-MOVED-START -->
+> [!IMPORTANT] **Moved / 已迁移**
+>
+> Stable document ID / 稳定文档 ID: `eoc.reference`
+> 中文: https://crimsoncrossbunker.github.io/CCB-Docs/reference/eoc/
+> English: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/eoc/
+> Moved date / 迁移日期: `2026-08-02`
+> Last in-repository commit / 仓库内最后适用 commit: `0378ca2b84303cf614c617c9d9eaa50138cd21ff`
+> The maintained documentation now lives in CCB-Docs.
+> This in-repository body is no longer maintained. The historical body is retained through `2027-02-02` and may then be removed; this bilingual entry banner remains permanently.
+> 本仓库正文不再维护；历史正文至少保留到上述日期，之后可删除，但本双语迁移入口永久保留。
+<!-- CCB-DOC-MOVED-END -->
 # Effect On Condition
 
 An effect_on_condition is an object allowing the combination of dialog conditions and effects with their usage outside of a dialog.  When invoked, they will test their condition; on a pass, they will cause their effect. They can be activated automatically with any given frequency.  (Note: effect_on_conditions use the npc dialog conditions and effects syntax, which allows checking related to, or targeting an effect at, an npc (for example: `npc_has_trait`).  Using these commands in an effect_on_condition is not supported.)

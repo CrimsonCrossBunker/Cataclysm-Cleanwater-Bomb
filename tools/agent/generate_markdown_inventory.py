@@ -184,6 +184,10 @@ def default_record(commit: str, path: str, names: list[object]) -> tuple[dict, l
         "blockers": [] if terminal else ["Full-text source review is pending."],
         "evidence": ["Frozen tracked Markdown path at source_commit."],
         "migration_batch": None,
+        "moved_at": None,
+        "zh_url": None,
+        "en_url": None,
+        "retained_body_until": None,
     }
     return record, anomalies
 

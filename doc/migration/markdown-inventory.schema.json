@@ -66,6 +66,10 @@
           "blockers",
           "evidence",
           "migration_batch"
+          , "moved_at"
+          , "zh_url"
+          , "en_url"
+          , "retained_body_until"
         ],
         "properties": {
           "original_path": { "type": "string", "minLength": 1 },
@@ -144,6 +148,10 @@
             "minItems": 1
           },
           "migration_batch": { "type": [ "string", "null" ] }
+          , "moved_at": { "type": [ "string", "null" ], "format": "date" }
+          , "zh_url": { "type": [ "string", "null" ], "format": "uri" }
+          , "en_url": { "type": [ "string", "null" ], "format": "uri" }
+          , "retained_body_until": { "type": [ "string", "null" ], "format": "date" }
         },
         "additionalProperties": false
       }

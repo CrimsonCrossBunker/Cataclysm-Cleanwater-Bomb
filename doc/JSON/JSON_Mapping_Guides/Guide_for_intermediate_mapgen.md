@@ -1,3 +1,15 @@
+<!-- CCB-DOC-MOVED-START -->
+> [!IMPORTANT] **Moved / 已迁移**
+>
+> Stable document ID / 稳定文档 ID: `tutorial.mapgen-intermediate`
+> 中文: https://crimsoncrossbunker.github.io/CCB-Docs/tutorials/json-mapgen/intermediate/
+> English: https://crimsoncrossbunker.github.io/CCB-Docs/en/tutorials/json-mapgen/intermediate/
+> Moved date / 迁移日期: `2026-08-02`
+> Last in-repository commit / 仓库内最后适用 commit: `0378ca2b84303cf614c617c9d9eaa50138cd21ff`
+> The maintained documentation now lives in CCB-Docs.
+> This in-repository body is no longer maintained. The historical body is retained through `2027-02-02` and may then be removed; this bilingual entry banner remains permanently.
+> 本仓库正文不再维护；历史正文至少保留到上述日期，之后可删除，但本双语迁移入口永久保留。
+<!-- CCB-DOC-MOVED-END -->
 ## Guide For Intermediate Mapgen
 
 This guide assumes you are comfortable with basic mapgen elements and adding regular mapgen.  It is meant as a supplement to the mapgen.md and overmap.md documents.

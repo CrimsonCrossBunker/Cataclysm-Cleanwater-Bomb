@@ -1,3 +1,15 @@
+<!-- CCB-DOC-MOVED-START -->
+> [!IMPORTANT] **Moved / 已迁移**
+>
+> Stable document ID / 稳定文档 ID: `mods.mind-over-matter.power-reference`
+> 中文: https://crimsoncrossbunker.github.io/CCB-Docs/data/mods/MindOverMatter/PowerDescriptionSpoilers/
+> English: https://crimsoncrossbunker.github.io/CCB-Docs/en/data/mods/MindOverMatter/PowerDescriptionSpoilers/
+> Moved date / 迁移日期: `2026-08-02`
+> Last in-repository commit / 仓库内最后适用 commit: `0378ca2b84303cf614c617c9d9eaa50138cd21ff`
+> The maintained documentation now lives in CCB-Docs.
+> This in-repository body is no longer maintained. The historical body is retained through `2027-02-02` and may then be removed; this bilingual entry banner remains permanently.
+> 本仓库正文不再维护；历史正文至少保留到上述日期，之后可删除，但本双语迁移入口永久保留。
+<!-- CCB-DOC-MOVED-END -->
 # Power Descriptions
 Note that every power, unless otherwise specified, is affected by Intelligence scaling and Nether Attunement scaling. Intelligence scaling is normalized at 10 with +/- 5% per point in either direction—-Intelligence 9 makes powers 95% as effective, Intelligence 12 makes powers 110% as effective, and so on. 
 
