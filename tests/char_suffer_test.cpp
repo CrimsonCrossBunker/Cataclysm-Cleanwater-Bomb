@@ -10,6 +10,7 @@
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
+#include "damage.h"
 #include "flag.h"
 #include "game.h"
 #include "item.h"
@@ -24,6 +25,10 @@
 #include "weather_type.h"
 
 static const efftype_id effect_grabbed( "grabbed" );
+static const efftype_id effect_crowd_crushed( "crowd_crushed" );
+
+static const damage_type_id damage_bash( "bash" );
+static const sub_bodypart_str_id sub_body_part_torso_upper( "torso_upper" );
 
 static const itype_id itype_test_hazmat_suit( "test_hazmat_suit" );
 static const itype_id itype_test_longshirt( "test_longshirt" );
@@ -483,6 +488,38 @@ TEST_CASE( "suffering_from_asphyxiation", "[char][suffer][oxygen][grab]" )
             }
         }
 
+        WHEN( "their breathing parts are protected by armor" ) {
+            REQUIRE( dummy.wear_item( item( itype_test_hazmat_suit ), false ).has_value() );
+            dummy.oxygen = 0;
+
+            THEN( "they recover oxygen instead of suffocating" ) {
+                test_suffer( dummy, 3_turns, true );
+                CHECK( dummy.oxygen == 15 );
+                CHECK_FALSE( dummy.has_effect( effect_crowd_crushed ) );
+            }
+        }
+
+        WHEN( "their upper torso is protected by armor" ) {
+            REQUIRE( dummy.wear_item( item( itype_test_hazmat_suit ), false ).has_value() );
+            damage_instance pressure( damage_bash, 1 );
+            dummy.absorb_hit( sub_body_part_torso_upper.id(), pressure );
+
+            THEN( "the pressure is absorbed without harming the character" ) {
+                CHECK( pressure.total_damage() == 0.0f );
+            }
+        }
+
+        WHEN( "crowd pressure is not a direct body attack" ) {
+            spawn_test_monster( "mon_debug_memory", dummy.pos_bub() + tripoint::north );
+            spawn_test_monster( "mon_debug_memory", dummy.pos_bub() + tripoint::south );
+            const int torso_hp = dummy.get_part_hp_cur( body_part_torso );
+
+            THEN( "it does not cause immediate torso damage" ) {
+                test_suffer( dummy, 1_turns );
+                CHECK( dummy.get_part_hp_cur( body_part_torso ) == torso_hp );
+            }
+        }
+
         WHEN( "four grabbers" ) {
             spawn_test_monster( "mon_debug_memory", dummy.pos_bub() + tripoint::north );
             spawn_test_monster( "mon_debug_memory", dummy.pos_bub() + tripoint::south );
@@ -527,6 +564,19 @@ TEST_CASE( "suffering_from_asphyxiation", "[char][suffer][oxygen][grab]" )
                 test_suffer( dummy, 10_turns, true );
                 CHECK( dummy.oxygen == 36 );
             }
+        }
+    }
+
+    GIVEN( "character is grabbed by a harmless crowd" ) {
+        spawn_test_monster( "mon_debug_group_bash_no_damage", dummy.pos_bub() + tripoint::east );
+        spawn_test_monster( "mon_debug_group_bash_no_damage", dummy.pos_bub() + tripoint::west );
+        dummy.add_effect( effect_grabbed, 20_turns, body_part_torso, false, 2, true );
+        dummy.oxygen = 0;
+
+        THEN( "they recover oxygen" ) {
+            test_suffer( dummy, 3_turns, true );
+            CHECK( dummy.oxygen == 15 );
+            CHECK_FALSE( dummy.has_effect( effect_crowd_crushed ) );
         }
     }
 }
