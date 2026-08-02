@@ -23,14 +23,14 @@ class RepositoryGovernanceTest(unittest.TestCase):
         self.assertEqual(self.target["audit"]["repository"]["rulesets"], [])
         self.assertFalse(self.target["entries"][0]["enabled"])
 
-    def test_ruleset_cannot_activate_without_reviewers(self) -> None:
+    def test_single_reviewer_policy_still_requires_a_confirmed_human(self) -> None:
         target = copy.deepcopy(self.target)
-        target["entries"][0]["enabled"] = True
-        target["entries"][0]["target"]["github_ruleset"][
-            "enforcement"
-        ] = "active"
+        target["audit"]["reviewer_confirmation"]["confirmed_willing_humans"] = 0
+        target["entries"][0]["manual_record"]["confirmed_reviewers"] = []
         errors = validate_target(target)
-        self.assertTrue(any("open blockers" in error for error in errors))
+        self.assertTrue(
+            any("missing open reviewer-quorum blocker" in error for error in errors)
+        )
 
     def test_unverified_checks_cannot_enter_applied_record(self) -> None:
         target = copy.deepcopy(self.target)
@@ -48,16 +48,16 @@ class RepositoryGovernanceTest(unittest.TestCase):
         errors = validate_target(target)
         self.assertTrue(any("one deletion rule" in error for error in errors))
 
-    def test_pull_request_rule_keeps_non_author_gate(self) -> None:
+    def test_pull_request_rule_does_not_require_non_author_approval(self) -> None:
         target = copy.deepcopy(self.target)
         rules = target["entries"][0]["target"]["github_ruleset"]["rules"]
         pull_rule = next(
             rule for rule in rules if rule["type"] == "pull_request"
         )
-        pull_rule["parameters"]["require_last_push_approval"] = False
+        pull_rule["parameters"]["required_approving_review_count"] = 1
         errors = validate_target(target)
         self.assertTrue(
-            any("require_last_push_approval" in error for error in errors)
+            any("required_approving_review_count" in error for error in errors)
         )
 
     def test_bypass_actor_cannot_be_invented_in_one_record(self) -> None:

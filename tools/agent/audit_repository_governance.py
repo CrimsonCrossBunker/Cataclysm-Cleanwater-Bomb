@@ -162,6 +162,8 @@ def validate_target(
         reviewer_blocker = blocker(entry, "reviewer-quorum")
         if not reviewer_blocker or reviewer_blocker.get("state") != "open":
             errors.append("missing open reviewer-quorum blocker")
+    elif blocker(entry, "reviewer-quorum"):
+        errors.append("satisfied reviewer policy retains reviewer-quorum blocker")
     if check_audit["default_branch_success_confirmed"] != (
         check_audit["status"] == "default_branch_stable"
     ):
@@ -224,10 +226,10 @@ def validate_target(
     if len(pull_rules) == 1:
         parameters = pull_rules[0].get("parameters", {})
         expected = {
-            "dismiss_stale_reviews_on_push": True,
+            "dismiss_stale_reviews_on_push": False,
             "require_code_owner_review": False,
-            "require_last_push_approval": True,
-            "required_approving_review_count": 1,
+            "require_last_push_approval": False,
+            "required_approving_review_count": 0,
             "required_review_thread_resolution": True,
         }
         for name, value in expected.items():

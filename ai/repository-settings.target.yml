@@ -1,6 +1,6 @@
 schema_version: 1
 kind: repository_settings_target
-description: Audited GitHub state, disabled ruleset target, and human activation gates; this file never applies settings by itself.
+description: Audited GitHub state, disabled ruleset target, and single-Responsible-human review policy; this file never applies settings by itself.
 enforcement: deferred
 
 audit:
@@ -34,8 +34,10 @@ audit:
   reviewer_confirmation:
     tracking_issue: 563
     issue_comments_at_audit: 0
-    confirmed_willing_humans: 0
-    required_willing_humans: 2
+    confirmed_willing_humans: 1
+    required_willing_humans: 1
+    review_model: single_responsible_human
+    policy_decision_at: '2026-08-02T19:24:37+08:00'
   required_check_evidence:
     pull_requests: [568, 569]
     status: pr_branch_only
@@ -49,7 +51,7 @@ entries:
     branch: master
     enabled: false
     prerequisites:
-      minimum_confirmed_human_reviewers: 2
+      minimum_confirmed_human_reviewers: 1
       required_checks_must_succeed_on_default_branch: true
       emergency_bypass_actor_must_be_confirmed: true
     target:
@@ -67,10 +69,10 @@ entries:
           - type: non_fast_forward
           - type: pull_request
             parameters:
-              dismiss_stale_reviews_on_push: true
+              dismiss_stale_reviews_on_push: false
               require_code_owner_review: false
-              require_last_push_approval: true
-              required_approving_review_count: 1
+              require_last_push_approval: false
+              required_approving_review_count: 0
               required_review_thread_resolution: true
           - type: required_status_checks
             parameters:
@@ -84,10 +86,6 @@ entries:
         reason_required: true
         configured_actors: []
     blockers:
-      - id: reviewer-quorum
-        state: open
-        tracking_issue: 563
-        reason: No comments or two explicitly willing human reviewers were confirmed at audit time.
       - id: default-branch-check-stability
         state: open
         evidence_pull_requests: [568, 569]
@@ -97,7 +95,11 @@ entries:
         tracking_issue: null
         reason: No real emergency bypass actor and escalation owner has been confirmed.
     manual_record:
-      confirmed_reviewers: []
+      confirmed_reviewers:
+        - login: LYHGLYTX
+          permission_verified_at: '2026-08-02'
+          willingness_confirmed_at: '2026-08-02'
+          scope: Responsible-human review for all repository changes, including self-authored changes.
       required_checks: []
       emergency_bypass_actors: []
       enabled_at: null

@@ -27,24 +27,38 @@ class ProjectMetadataTest(unittest.TestCase):
     def test_context_is_valid(self):
         validate_context()
 
-    def test_repository_rules_cannot_activate_without_two_reviewers(self):
+    def test_repository_uses_one_responsible_human_without_approval_gate(self):
         path = ROOT / "ai/repository-settings.target.yml"
         settings = yaml.safe_load(path.read_text(encoding="utf-8"))
-        settings = copy.deepcopy(settings)
-        settings["entries"][0]["enabled"] = True
-
-        with self.assertRaisesRegex(ValueError, "without two reviewers"):
-            validate_repository_settings(settings)
+        reviewer = settings["audit"]["reviewer_confirmation"]
+        self.assertEqual(reviewer["confirmed_willing_humans"], 1)
+        self.assertEqual(reviewer["required_willing_humans"], 1)
+        self.assertEqual(
+            settings["entries"][0]["manual_record"]["confirmed_reviewers"][0][
+                "login"
+            ],
+            "LYHGLYTX",
+        )
+        pull_rule = next(
+            rule
+            for rule in settings["entries"][0]["target"]["github_ruleset"]["rules"]
+            if rule["type"] == "pull_request"
+        )
+        self.assertEqual(
+            pull_rule["parameters"]["required_approving_review_count"], 0
+        )
+        self.assertFalse(pull_rule["parameters"]["require_last_push_approval"])
+        validate_repository_settings(settings)
 
     def test_repository_target_prohibits_bot_approval(self):
         path = ROOT / "ai/repository-settings.target.yml"
         settings = yaml.safe_load(path.read_text(encoding="utf-8"))
         settings = copy.deepcopy(settings)
-        settings["entries"][0]["target"]["actions"][
-            "bot_may_approve_pull_requests"
+        settings["audit"]["actions"][
+            "can_approve_pull_request_reviews"
         ] = True
 
-        with self.assertRaisesRegex(ValueError, "must not approve"):
+        with self.assertRaisesRegex(ValueError, "must not be allowed"):
             validate_repository_settings(settings)
 
     def test_inventory_is_valid(self):

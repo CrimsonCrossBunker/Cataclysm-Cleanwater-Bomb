@@ -102,12 +102,14 @@
     "tracking_count": {
       "type": "object",
       "additionalProperties": false,
-      "required": [ "tracking_issue", "issue_comments_at_audit", "confirmed_willing_humans", "required_willing_humans" ],
+          "required": [ "tracking_issue", "issue_comments_at_audit", "confirmed_willing_humans", "required_willing_humans", "review_model", "policy_decision_at" ],
       "properties": {
         "tracking_issue": { "type": "integer", "minimum": 1 },
         "issue_comments_at_audit": { "type": "integer", "minimum": 0 },
         "confirmed_willing_humans": { "type": "integer", "minimum": 0 },
-        "required_willing_humans": { "type": "integer", "minimum": 2 }
+            "required_willing_humans": { "type": "integer", "minimum": 1 },
+            "review_model": { "const": "single_responsible_human" },
+            "policy_decision_at": { "type": "string", "format": "date-time" }
       }
     },
     "entry": {
@@ -123,7 +125,7 @@
           "additionalProperties": false,
           "required": [ "minimum_confirmed_human_reviewers", "required_checks_must_succeed_on_default_branch", "emergency_bypass_actor_must_be_confirmed" ],
           "properties": {
-            "minimum_confirmed_human_reviewers": { "type": "integer", "minimum": 2 },
+            "minimum_confirmed_human_reviewers": { "type": "integer", "minimum": 1 },
             "required_checks_must_succeed_on_default_branch": { "const": true },
             "emergency_bypass_actor_must_be_confirmed": { "const": true }
           }

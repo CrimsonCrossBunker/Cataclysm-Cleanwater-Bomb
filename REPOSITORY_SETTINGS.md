@@ -24,11 +24,13 @@ Observed by `LYHGLYTX` at 2026-08-02 02:52:24+08:00 for
 | Vulnerability alerts API | HTTP 204 (enabled) |
 | Automated security fixes | enabled |
 | Organization 2FA requirement | false |
-| Confirmed willing human reviewers | 0/2 |
+| Confirmed Responsible-human reviewers | 1/1 (`LYHGLYTX`) |
 
 Issue
 [#563](https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/issues/563)
-had zero comments at audit time, so it does not establish two willing humans.
+was resolved by the maintainer's 2026-08-02 decision that one Responsible human
+is sufficient.  The target deliberately requires zero GitHub approving reviews
+so self-authored maintenance is not locked.
 Issue
 [#564](https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/issues/564)
 tracks the member audit and notice required before an organization 2FA rollout.
@@ -46,8 +48,6 @@ prevent an unresolved target from being represented as active.
 
 The `master` ruleset must remain disabled until all of these are resolved:
 
-- two active, non-bot humans with review permission explicitly agree to
-  continuing review and are recorded in `OWNERSHIP.md`;
 - `Agent context and documentation impact` and `Lua public contract` have
   stable successful runs on `master`; and
 - a real emergency bypass actor and escalation owner are selected and tested.
@@ -63,8 +63,9 @@ organization-wide action.
 Once the blockers are resolved, the target requires:
 
 - pull requests for changes;
-- one non-author human approval, with the last push approved by someone else;
-- stale approvals dismissed and review conversations resolved;
+- one named Responsible human for review accountability, without a GitHub
+  approval-count or last-push-approval gate;
+- review conversations resolved;
 - stable named status checks, using strict up-to-date branch validation;
 - force pushes and branch deletion prohibited; and
 - an emergency-only bypass whose real actor and reason are recorded.
@@ -77,15 +78,15 @@ remains disabled.
 
 1. Merge the workflows and observe the intended check names succeeding on
    `master` repeatedly.
-2. Verify and record two qualified reviewers under the protocol in
-   `OWNERSHIP.md`.
+2. Verify that `LYHGLYTX` remains an active, review-capable Responsible human
+   and that the pull-request rule still requires zero approving reviews.
 3. Select a real emergency bypass actor and escalation owner; do not invent an
    actor ID in tracked configuration.
 4. Generate the disabled Ruleset payload locally and compare it with the target.
 5. Create the Ruleset as disabled, inspect it in GitHub, then activate it only
    after every prerequisite is recorded.
-6. Test an ordinary Draft PR and the emergency path without self-approval or
-   automatic merge.
+6. Test an ordinary Draft PR and the emergency path without fabricating an
+   approval or using automatic merge.
 7. Record the Ruleset ID, exact check names, reviewers, bypass actors, operator,
    timestamp, and bypass-test time in `ai/repository-settings.target.yml`.
 8. For organization 2FA, separately complete the member audit and notice from
