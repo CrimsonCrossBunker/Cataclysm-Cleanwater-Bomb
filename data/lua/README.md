@@ -467,7 +467,7 @@ file gives every method's exact parameters and result type.
 | `game.skills` | skill definitions and character levels/training | bounded level, exercise, training and practice updates |
 | `game.proficiencies` | definitions, categories and learning progress | grant/remove/practice/set progress |
 | `game.vitamins` / `game.addictions` | definitions and character pools/state | bounded pool, exposure and withdrawal updates |
-| `game.needs` | hunger, thirst, calories, sleep and health | checked set/modify/reset operations |
+| `game.needs` | hunger, thirst, calories, gut nutrients awaiting absorption, sleep and health | checked set/modify/reset operations |
 | `game.martial_arts` | style definitions, known and selected state | learn/remove/select/trigger and hand policy |
 | `game.vehicles` | prototypes, live state, lift, parts and fuels | rename, cruise/stop/tracking and part enablement |
 | `game.npcs` | class catalogue and live NPC snapshots | rename, attitude and opinion updates |
