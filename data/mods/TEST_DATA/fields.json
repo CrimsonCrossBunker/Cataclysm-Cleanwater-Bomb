@@ -112,6 +112,18 @@
     "phase": "solid"
   },
   {
+    "id": "fd_test_fire_reaction_source",
+    "type": "field_type",
+    "intensity_levels": [
+      { "name": "test fire source", "sym": "1" },
+      { "name": "test fire source", "sym": "2" },
+      { "name": "test fire source", "sym": "3" }
+    ],
+    "has_fire": true,
+    "half_life": "1 hours",
+    "phase": "solid"
+  },
+  {
     "id": "test_fd_migration_new_id",
     "type": "field_type",
     "intensity_levels": [ { "name": "migrated" } ]
