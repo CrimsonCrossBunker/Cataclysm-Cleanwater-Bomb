@@ -1321,3 +1321,118 @@ def parse_manifest_and_capabilities(
         ],
     }
     return fields, capabilities, permissions
+
+def build_modules(
+    functions: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    by_id = {entry["id"]: entry for entry in functions}
+    modules = []
+    for identity, mode in (
+        ("require", "source-local"),
+        ("modules.import", "declared-dependency"),
+        ("modules.source_id", "source-identity"),
+    ):
+        function = by_id.get(identity)
+        if function is None:
+            raise RuntimeError(f"module loader surface {identity} is missing")
+        modules.append(
+            {
+                "id": identity,
+                "mode": mode,
+                "function": identity,
+                "sources": function["sources"],
+                "documentation": documentation("module", identity),
+            }
+        )
+    return modules
+
+def add_class_documentation(classes: Iterable[dict[str, object]]) -> None:
+    for class_entry in classes:
+        for field in class_entry["fields"]:
+            if "documentation" not in field:
+                identity = f"{class_entry['id']}.{field['name']}"
+                field["documentation"] = documentation("property", identity)
+
+def build_contract() -> dict[str, object]:
+    luals = parse_luals()
+    table_paths, namespaces = parse_table_paths()
+    functions = parse_set_functions(luals, table_paths)
+    methods, native_properties, operators = parse_usertypes(luals)
+    classes_map = luals["classes"]
+    assert isinstance(classes_map, dict)
+    classes = [classes_map[key] for key in sorted(classes_map)]
+    add_class_documentation(classes)
+    events = parse_event_specs()
+    hooks = parse_hooks()
+    callbacks = parse_callbacks()
+    enums = parse_enums()
+    manifest_fields, capabilities, permissions = (
+        parse_manifest_and_capabilities(luals)
+    )
+    native_expected = build_native_inventory()
+    native_actual = json.loads(NATIVE_INVENTORY.read_text(encoding="utf-8"))
+    if native_expected != native_actual:
+        raise RuntimeError(
+            "ccb_native_inventory.json is stale; regenerate it before "
+            "the public contract"
+        )
+    contract = {
+        "$schema": (
+            "https://github.com/CrimsonCrossBunker/"
+            "Cataclysm-Cleanwater-Bomb/raw/master/data/lua/reference/"
+            "ccb_public_api_v5.schema.json"
+        ),
+        "schema_version": 1,
+        "api_version": 5,
+        "generated_by": "python3 tools/lua_api/generate_public_contract.py",
+        "denominator": {
+            "definition": (
+                "Every callable access path and native usertype member "
+                "registered by tracked catalua sources, plus every API v5 "
+                "LuaLS class/field, native event spec, hook spec, callback "
+                "kind-method pair, enum "
+                "family, capability, and manifest field."
+            ),
+            "exclusions": [
+                "restricted Lua standard-library implementation helpers",
+                "dynamic enum member values whose authoritative set exists "
+                "only at runtime",
+                "private C++ helpers without a registered Lua access path",
+            ],
+        },
+        "authority": {
+            "native_registration": "src/catalua*.cpp",
+            "luals": relative(DECLARATIONS),
+            "manifest_schema": relative(MANIFEST_SCHEMA),
+            "native_inventory": relative(NATIVE_INVENTORY),
+            "event_specs": "src/event.h",
+        },
+        "parity": {
+            "native_inventory_sha256": sha256_bytes(
+                NATIVE_INVENTORY.read_bytes()
+            ),
+            "native_inventory_counts": {
+                "id_kinds": len(native_expected["id_kinds"]),
+                "json_types": len(native_expected["json_types"]),
+                "events": len(native_expected["event_types"]),
+                "domains": len(native_expected["native_domains"]),
+            },
+            "native_luals_callable_parity": "100%",
+            "manifest_schema_runtime_luals_parity": True,
+        },
+        "modules": build_modules(functions),
+        "namespaces": namespaces,
+        "classes": classes,
+        "functions": functions,
+        "methods": methods,
+        "properties": native_properties,
+        "operators": operators,
+        "enums": enums,
+        "events": events,
+        "hooks": hooks,
+        "callbacks": callbacks,
+        "capabilities": capabilities,
+        "permissions": permissions,
+        "manifest_fields": manifest_fields,
+    }
+    return contract
