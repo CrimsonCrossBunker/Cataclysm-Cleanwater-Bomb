@@ -1520,7 +1520,8 @@ int throw_cost( const Character &c, const item &to_throw )
     // At 10 skill, the cost is down to 0.75%, not 0.66%
     const int base_move_cost = to_throw.attack_time( c ) * 4 / 5;
     // Throw leverage multiplier: scale the weight-based portion of attack_time
-    const float weight_mult = c.throw_weight_multiplier();
+    const bool do_railgun = c.is_fcl_railgun_throw( to_throw );
+    const float weight_mult = do_railgun ? 1.0f : c.throw_weight_multiplier();
     const int weight_adjust = static_cast<int>( to_throw.weight() * ( weight_mult - 1.0f ) /
                              60_gram / to_throw.count() / 2 );
     const int effective_base_cost = base_move_cost + weight_adjust;
@@ -1538,7 +1539,8 @@ int throw_cost( const Character &c, const item &to_throw )
     move_cost *= stamina_penalty;
     move_cost += skill_cost;
     move_cost = c.enchantment_cache->modify_value( enchant_vals::mod::ATTACK_SPEED, move_cost );
-    move_cost = static_cast<int>( std::round( move_cost * c.throw_speed_multiplier() ) );
+    move_cost = static_cast<int>( std::round( move_cost *
+                                              ( do_railgun ? 1.0f : c.throw_speed_multiplier() ) ) );
 
     return std::max( 25, move_cost );
 }
