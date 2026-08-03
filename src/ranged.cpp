@@ -1614,7 +1614,9 @@ int Character::throw_dispersion_per_dodge( bool /* add_encumbrance */ ) const
 int Character::throwing_dispersion( const item &to_throw, Creature *critter,
                                     bool is_blind_throw ) const
 {
-    units::mass weight = to_throw.weight() * throw_weight_multiplier();
+    const bool do_railgun = is_fcl_railgun_throw( to_throw );
+    units::mass weight = to_throw.weight() *
+                         ( do_railgun ? 1.0f : throw_weight_multiplier() );
     units::volume volume = to_throw.volume();
     if( to_throw.count_by_charges() && to_throw.charges > 1 ) {
         weight /= to_throw.charges;
@@ -1654,7 +1656,8 @@ int Character::throwing_dispersion( const item &to_throw, Creature *critter,
         dispersion *= 4;
     }
 
-    dispersion = static_cast<int>( std::round( dispersion * throw_dispersion_multiplier() ) );
+    dispersion = static_cast<int>( std::round( dispersion *
+                                               ( do_railgun ? 1.0f : throw_dispersion_multiplier() ) ) );
 
     return std::max( 0, dispersion );
 }
