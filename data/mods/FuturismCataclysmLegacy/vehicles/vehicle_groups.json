@@ -67,9 +67,9 @@
       [ "fcl_plating_alloy_humvee_gl", 25 ],
       [ "fcl_plating_alloy_humvee_tow", 12 ],
       [ "fcl_plating_alloy_apc", 50 ],
-      [ "fcl_plating_alloy_apc_gl", 25 ],
-      [ "fcl_plating_alloy_aapc_mg", 25 ],
-      [ "fcl_plating_alloy_aapc_gl", 12 ]
+      [ "fcl_plating_alloy_apc-gl", 25 ],
+      [ "fcl_plating_alloy_aapc-mg", 25 ],
+      [ "fcl_plating_alloy_aapc-gl", 12 ]
     ]
   }
 ]
