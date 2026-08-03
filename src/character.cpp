@@ -3851,6 +3851,14 @@ static float throw_bonus_with_mods( const item_location &wielded, float base,
     return base * mult_total + add_total;
 }
 
+bool Character::is_fcl_railgun_throw( const item &thrown ) const
+{
+    if( !has_active_bionic( fcl_bio_railgun ) || !thrown.made_of_any( ferric ) ) {
+        return false;
+    }
+    return !is_mounted() || mounted_creature->mech_str_addition() == 0;
+}
+
 float Character::throw_damage_multiplier() const
 {
     const item_location wielded = get_wielded_item();
