@@ -1796,11 +1796,13 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
     const units::volume volume = to_throw.volume();
     const units::mass weight = to_throw.weight();
     const std::optional<int> throw_assist = character_throw_assist( *this );
+    const bool fcl_railgun_throw = is_fcl_railgun_throw( thrown );
 
     if( !throw_assist ) {
         const int stamina_cost = get_standard_stamina_cost( &thrown );
         mod_stamina( static_cast<int>( std::round(
-                                           ( stamina_cost + throwing_skill ) * throw_stamina_multiplier() ) ) );
+                                           ( stamina_cost + throwing_skill ) *
+                                           ( fcl_railgun_throw ? 1.0f : throw_stamina_multiplier() ) ) ) );
     }
 
     const float skill_level = throwing_skill_adjusted( *this );
