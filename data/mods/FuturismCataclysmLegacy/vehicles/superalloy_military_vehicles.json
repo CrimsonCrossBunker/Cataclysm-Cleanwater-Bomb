@@ -30,11 +30,11 @@
       {
         "x": 3,
         "y": -1,
-        "parts": [ "hdframe#vertical_2", "hdroof", "controls", "integrated_heater_small", "dashboard" ]
+        "parts": [ "hdframe#vertical_2", "hdroof", "fcl_control_station", "integrated_heater_small", "dashboard" ]
       },
       { "x": 3, "y": -2, "parts": [ "hdframe#vertical_left", "hdboard#vertical_left" ] },
       { "x": 3, "y": -2, "parts": [ "plating_superalloy", "wheel_mount_heavy_steerable" ] },
-      { "x": 3, "y": -2, "parts": [ "wheel_armor", "omnicam" ] },
+      { "x": 3, "y": -2, "parts": [ "wheel_armor", "fcl_smart_omnicamera" ] },
       { "x": 3, "y": -1, "parts": [ "cam_control", "seat" ] },
       { "x": 3, "y": -1, "parts": [ "seatbelt_heavyduty" ] },
       { "x": 3, "y": 0, "parts": [ "hdframe#vertical_2", "stowboard#vertical", "hdroof" ] },
@@ -51,7 +51,7 @@
       { "x": 3, "y": 1, "parts": [ "seat", "seatbelt_heavyduty" ] },
       { "x": 3, "y": 2, "parts": [ "hdframe#vertical_right", "hdboard#vertical_right" ] },
       { "x": 3, "y": 2, "parts": [ "plating_superalloy", "wheel_mount_heavy_steerable" ] },
-      { "x": 3, "y": 2, "parts": [ "wheel_armor", "omnicam" ] },
+      { "x": 3, "y": 2, "parts": [ "wheel_armor", "fcl_smart_omnicamera" ] },
       { "x": 4, "y": -1, "parts": [ "hdframe#horizontal_2", "plating_superalloy" ] },
       { "x": 4, "y": -2, "parts": [ "hdframe#vertical_T_left", "hdboard#nw" ] },
       { "x": 4, "y": -2, "parts": [ "plating_superalloy" ] },
@@ -81,7 +81,7 @@
       { "x": -2, "y": -1, "parts": [ "hdframe#horizontal_rear", "hdboard#horizontal_rear" ] },
       { "x": -2, "y": -1, "parts": [ "plating_superalloy" ] },
       { "x": -2, "y": -2, "parts": [ "hdframe#sw", "hdboard#sw", "muffler", "plating_superalloy" ] },
-      { "x": -2, "y": 0, "parts": [ "hdframe#horizontal_rear", "hddoor_opaque#rear", "omnicam" ] },
+      { "x": -2, "y": 0, "parts": [ "hdframe#horizontal_rear", "hddoor_opaque#rear", "fcl_smart_omnicamera" ] },
       { "x": -2, "y": 0, "parts": [ "plating_superalloy" ] },
       { "x": -2, "y": 1, "parts": [ "hdframe#horizontal_rear", "hdboard#horizontal_rear" ] },
       { "x": -2, "y": 1, "parts": [ "plating_superalloy" ] },
@@ -137,11 +137,11 @@
       {
         "x": 3,
         "y": -1,
-        "parts": [ "hdframe#vertical_2", "hdroof", "controls", "integrated_heater_small", "dashboard" ]
+        "parts": [ "hdframe#vertical_2", "hdroof", "fcl_control_station", "integrated_heater_small", "dashboard" ]
       },
       { "x": 3, "y": -2, "parts": [ "hdframe#vertical_left", "hdboard#vertical_left" ] },
       { "x": 3, "y": -2, "parts": [ "plating_superalloy", "wheel_mount_heavy_steerable" ] },
-      { "x": 3, "y": -2, "parts": [ "wheel_armor", "omnicam" ] },
+      { "x": 3, "y": -2, "parts": [ "wheel_armor", "fcl_smart_omnicamera" ] },
       { "x": 3, "y": -1, "parts": [ "cam_control", "seat" ] },
       { "x": 3, "y": -1, "parts": [ "seatbelt_heavyduty" ] },
       { "x": 3, "y": 0, "parts": [ "hdframe#vertical_2", "stowboard#vertical", "hdroof" ] },
@@ -154,7 +154,7 @@
       { "x": 3, "y": 1, "parts": [ "seat", "seatbelt_heavyduty" ] },
       { "x": 3, "y": 2, "parts": [ "hdframe#vertical_right", "hdboard#vertical_right" ] },
       { "x": 3, "y": 2, "parts": [ "plating_superalloy", "wheel_mount_heavy_steerable" ] },
-      { "x": 3, "y": 2, "parts": [ "wheel_armor", "omnicam" ] },
+      { "x": 3, "y": 2, "parts": [ "wheel_armor", "fcl_smart_omnicamera" ] },
       { "x": 4, "y": -1, "parts": [ "hdframe#horizontal_2", "plating_superalloy" ] },
       { "x": 4, "y": -2, "parts": [ "hdframe#vertical_T_left", "hdboard#nw" ] },
       { "x": 4, "y": -2, "parts": [ "plating_superalloy" ] },
@@ -184,7 +184,7 @@
       { "x": -2, "y": -1, "parts": [ "hdframe#horizontal_rear", "hdboard#horizontal_rear" ] },
       { "x": -2, "y": -1, "parts": [ "plating_superalloy" ] },
       { "x": -2, "y": -2, "parts": [ "hdframe#sw", "hdboard#sw", "muffler", "plating_superalloy" ] },
-      { "x": -2, "y": 0, "parts": [ "hdframe#horizontal_rear", "hddoor_opaque#rear", "omnicam" ] },
+      { "x": -2, "y": 0, "parts": [ "hdframe#horizontal_rear", "hddoor_opaque#rear", "fcl_smart_omnicamera" ] },
       { "x": -2, "y": 0, "parts": [ "plating_superalloy" ] },
       { "x": -2, "y": 1, "parts": [ "hdframe#horizontal_rear", "hdboard#horizontal_rear" ] },
       { "x": -2, "y": 1, "parts": [ "plating_superalloy" ] },
@@ -240,11 +240,11 @@
       {
         "x": 3,
         "y": -1,
-        "parts": [ "hdframe#vertical_2", "hdroof", "controls", "integrated_heater_small", "dashboard" ]
+        "parts": [ "hdframe#vertical_2", "hdroof", "fcl_control_station", "integrated_heater_small", "dashboard" ]
       },
       { "x": 3, "y": -2, "parts": [ "hdframe#vertical_left", "hdboard#vertical_left" ] },
       { "x": 3, "y": -2, "parts": [ "plating_superalloy", "wheel_mount_heavy_steerable" ] },
-      { "x": 3, "y": -2, "parts": [ "wheel_armor", "omnicam" ] },
+      { "x": 3, "y": -2, "parts": [ "wheel_armor", "fcl_smart_omnicamera" ] },
       { "x": 3, "y": -1, "parts": [ "cam_control", "seat" ] },
       { "x": 3, "y": -1, "parts": [ "seatbelt_heavyduty" ] },
       { "x": 3, "y": 0, "parts": [ "hdframe#vertical_2", "stowboard#vertical", "hdroof" ] },
@@ -257,7 +257,7 @@
       { "x": 3, "y": 1, "parts": [ "seat", "seatbelt_heavyduty" ] },
       { "x": 3, "y": 2, "parts": [ "hdframe#vertical_right", "hdboard#vertical_right" ] },
       { "x": 3, "y": 2, "parts": [ "plating_superalloy", "wheel_mount_heavy_steerable" ] },
-      { "x": 3, "y": 2, "parts": [ "wheel_armor", "omnicam" ] },
+      { "x": 3, "y": 2, "parts": [ "wheel_armor", "fcl_smart_omnicamera" ] },
       { "x": 4, "y": -1, "parts": [ "hdframe#horizontal_2", "plating_superalloy" ] },
       { "x": 4, "y": -2, "parts": [ "hdframe#vertical_T_left", "hdboard#nw" ] },
       { "x": 4, "y": -2, "parts": [ "plating_superalloy" ] },
@@ -287,7 +287,7 @@
       { "x": -2, "y": -1, "parts": [ "hdframe#horizontal_rear", "hdboard#horizontal_rear" ] },
       { "x": -2, "y": -1, "parts": [ "plating_superalloy" ] },
       { "x": -2, "y": -2, "parts": [ "hdframe#sw", "hdboard#sw", "muffler", "plating_superalloy" ] },
-      { "x": -2, "y": 0, "parts": [ "hdframe#horizontal_rear", "hddoor_opaque#rear", "omnicam" ] },
+      { "x": -2, "y": 0, "parts": [ "hdframe#horizontal_rear", "hddoor_opaque#rear", "fcl_smart_omnicamera" ] },
       { "x": -2, "y": 0, "parts": [ "plating_superalloy" ] },
       { "x": -2, "y": 1, "parts": [ "hdframe#horizontal_rear", "hdboard#horizontal_rear" ] },
       { "x": -2, "y": 1, "parts": [ "plating_superalloy" ] },
@@ -329,11 +329,11 @@
       {
         "x": 3,
         "y": -1,
-        "parts": [ "hdframe#vertical_2", "hdroof", "controls", "integrated_heater_small", "dashboard" ]
+        "parts": [ "hdframe#vertical_2", "hdroof", "fcl_control_station", "integrated_heater_small", "dashboard" ]
       },
       { "x": 3, "y": -2, "parts": [ "hdframe#vertical_left", "hdboard#vertical_left" ] },
       { "x": 3, "y": -2, "parts": [ "plating_superalloy", "wheel_mount_heavy_steerable" ] },
-      { "x": 3, "y": -2, "parts": [ "wheel_armor", "omnicam" ] },
+      { "x": 3, "y": -2, "parts": [ "wheel_armor", "fcl_smart_omnicamera" ] },
       { "x": 3, "y": -1, "parts": [ "cam_control", "seat" ] },
       { "x": 3, "y": -1, "parts": [ "seatbelt_heavyduty" ] },
       { "x": 3, "y": 0, "parts": [ "hdframe#vertical_2", "stowboard#vertical", "hdroof" ] },
@@ -350,7 +350,7 @@
       { "x": 3, "y": 1, "parts": [ "seat", "seatbelt_heavyduty" ] },
       { "x": 3, "y": 2, "parts": [ "hdframe#vertical_right", "hdboard#vertical_right" ] },
       { "x": 3, "y": 2, "parts": [ "plating_superalloy", "wheel_mount_heavy_steerable" ] },
-      { "x": 3, "y": 2, "parts": [ "wheel_armor", "omnicam" ] },
+      { "x": 3, "y": 2, "parts": [ "wheel_armor", "fcl_smart_omnicamera" ] },
       { "x": 4, "y": -1, "parts": [ "hdframe#horizontal_2", "plating_superalloy" ] },
       { "x": 4, "y": -2, "parts": [ "hdframe#vertical_T_left", "hdboard#nw" ] },
       { "x": 4, "y": -2, "parts": [ "plating_superalloy" ] },
@@ -380,7 +380,7 @@
       { "x": -2, "y": -1, "parts": [ "hdframe#horizontal_rear", "hdboard#horizontal_rear" ] },
       { "x": -2, "y": -2, "parts": [ "hdframe#sw", "hdboard#sw", "muffler", "plating_superalloy" ] },
       { "x": -2, "y": -1, "parts": [ "plating_superalloy" ] },
-      { "x": -2, "y": 0, "parts": [ "hdframe#horizontal_rear", "hddoor_opaque#rear", "omnicam" ] },
+      { "x": -2, "y": 0, "parts": [ "hdframe#horizontal_rear", "hddoor_opaque#rear", "fcl_smart_omnicamera" ] },
       { "x": -2, "y": 0, "parts": [ "plating_superalloy" ] },
       { "x": -2, "y": 1, "parts": [ "hdframe#horizontal_rear", "hdboard#horizontal_rear" ] },
       { "x": -2, "y": 1, "parts": [ "plating_superalloy" ] },
@@ -406,7 +406,7 @@
       {
         "x": 0,
         "y": 0,
-        "parts": [ { "part": "tank", "fuel": "jp8" }, "controls", "integrated_heater_small", "dashboard" ]
+        "parts": [ { "part": "tank", "fuel": "jp8" }, "fcl_control_station", "integrated_heater_small", "dashboard" ]
       },
       { "x": 0, "y": 0, "parts": [ "horn_big", "seat", "seatbelt" ] },
       { "x": 0, "y": -1, "parts": [ "hdframe#vertical_left", "hddoor#left" ] },
@@ -493,7 +493,7 @@
       {
         "x": 0,
         "y": 0,
-        "parts": [ { "part": "tank", "fuel": "jp8" }, "controls", "integrated_heater_small", "dashboard" ]
+        "parts": [ { "part": "tank", "fuel": "jp8" }, "fcl_control_station", "integrated_heater_small", "dashboard" ]
       },
       { "x": 0, "y": 0, "parts": [ "horn_big", "seat", "seatbelt" ] },
       { "x": 0, "y": -1, "parts": [ "hdframe#vertical_left", "hddoor#left" ] },
@@ -579,7 +579,7 @@
       {
         "x": 0,
         "y": 0,
-        "parts": [ { "part": "tank", "fuel": "jp8" }, "controls", "integrated_heater_small", "dashboard" ]
+        "parts": [ { "part": "tank", "fuel": "jp8" }, "fcl_control_station", "integrated_heater_small", "dashboard" ]
       },
       { "x": 0, "y": 0, "parts": [ "horn_big", "seat", "seatbelt" ] },
       { "x": 0, "y": -1, "parts": [ "hdframe#vertical_left", "hddoor#left" ] },
@@ -668,7 +668,7 @@
       {
         "x": 0,
         "y": 0,
-        "parts": [ "hdroof", "seat", "seatbelt", "controls", "integrated_heater_small", "dashboard" ]
+        "parts": [ "hdroof", "seat", "seatbelt", "fcl_control_station", "integrated_heater_small", "dashboard" ]
       },
       { "x": 0, "y": 0, "parts": [ "horn_big" ] },
       { "x": 0, "y": -1, "parts": [ "hdframe#vertical_left", "hddoor#left" ] },
@@ -771,7 +771,7 @@
       {
         "x": 0,
         "y": 0,
-        "parts": [ "hdroof", "seat", "seatbelt", "controls", "integrated_heater_small", "dashboard" ]
+        "parts": [ "hdroof", "seat", "seatbelt", "fcl_control_station", "integrated_heater_small", "dashboard" ]
       },
       { "x": 0, "y": 0, "parts": [ "horn_big" ] },
       { "x": 0, "y": -1, "parts": [ "hdframe#vertical_left", "hddoor#left" ] },
