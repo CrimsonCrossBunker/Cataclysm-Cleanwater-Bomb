@@ -151,6 +151,7 @@ target_compile_definitions(
           USE_SDL3
           CCB_ANDROID_NEW_UI=$<BOOL:${CCB_ANDROID_NEW_UI}>
           CATA_ENABLE_LUA_UI=$<BOOL:${CATA_ENABLE_LUA_UI}>
+          CMAKE
           BACKTRACE
           LOCALIZE
           ZSTD_STATIC_LINKING_ONLY
