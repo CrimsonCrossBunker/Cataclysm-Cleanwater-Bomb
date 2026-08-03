@@ -1520,12 +1520,15 @@ static float railgun_throw_multiplier( const Character &character, float base,
     if( !wielded ) {
         return multiplier;
     }
-    if( wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
+    const bool has_railgun_throw_multiplier = flag_RAILGUN_THROW_MULTIPLIER.is_valid();
+    if( has_railgun_throw_multiplier &&
+        wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
         multiplier *= wielded->type->*item_mult;
     }
     if( wielded->is_gun() ) {
         for( const item *mod : wielded->gunmods() ) {
-            if( mod->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
+            if( has_railgun_throw_multiplier &&
+                mod->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
                 multiplier *= ( *mod->type->gunmod ).*gunmod_mult;
             }
         }

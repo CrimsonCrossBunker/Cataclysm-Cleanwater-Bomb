@@ -117,6 +117,7 @@
 #include "vitamin.h"
 #include "vpart_position.h"
 #include "weather.h"
+#include "worldfactory.h"
 
 static const activity_id ACT_AUTODRIVE( "ACT_AUTODRIVE" );
 static const activity_id ACT_FISH( "ACT_FISH" );
@@ -154,6 +155,17 @@ static const bionic_id bio_uncanny_dodge( "bio_uncanny_dodge" );
 static const bionic_id bio_ups( "bio_ups" );
 static const bionic_id bio_voice( "bio_voice" );
 static const bionic_id fcl_bio_railgun( "fcl_bio_railgun" );
+
+static const mod_id MOD_INFORMATION_catalegacy_future( "catalegacy_future" );
+
+static bool fcl_mod_is_active()
+{
+    return world_generator && world_generator->active_world &&
+           std::find( world_generator->active_world->active_mod_order.begin(),
+                      world_generator->active_world->active_mod_order.end(),
+                      MOD_INFORMATION_catalegacy_future ) !=
+           world_generator->active_world->active_mod_order.end();
+}
 
 static const character_modifier_id character_modifier_aim_speed_dex_mod( "aim_speed_dex_mod" );
 static const character_modifier_id character_modifier_aim_speed_mod( "aim_speed_mod" );
@@ -3827,12 +3839,16 @@ int Character::throw_range( const item &it ) const
     float range_multiplier = 3.0f;
     if( do_railgun ) {
         const item_location wielded = get_wielded_item();
-        if( wielded && wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
+        const bool has_railgun_throw_multiplier = fcl_mod_is_active() &&
+                                                  flag_RAILGUN_THROW_MULTIPLIER.is_valid();
+        if( has_railgun_throw_multiplier && wielded &&
+            wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
             range_multiplier *= wielded->type->throw_range_multiplier;
         }
         if( wielded && wielded->is_gun() ) {
             for( const item *mod : wielded->gunmods() ) {
-                if( mod->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
+                if( has_railgun_throw_multiplier &&
+                    mod->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
                     range_multiplier *= mod->type->gunmod->throw_range_multiplier;
                 }
             }
@@ -3855,14 +3871,18 @@ int Character::throw_range( const item &it ) const
 static float throw_bonus_with_mods( const item_location &wielded, float base,
                                     float islot_gunmod::*mult, float islot_gunmod::*add )
 {
-    if( wielded && wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
+    const bool has_railgun_throw_multiplier = fcl_mod_is_active() &&
+                                              flag_RAILGUN_THROW_MULTIPLIER.is_valid();
+    if( has_railgun_throw_multiplier && wielded &&
+        wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
         base = 1.0f;
     }
     float mult_total = 1.0f;
     float add_total = 0.0f;
     if( wielded && wielded->is_gun() ) {
         for( const item *mod : wielded->gunmods() ) {
-            if( mod->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
+            if( has_railgun_throw_multiplier &&
+                mod->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
                 continue;
             }
             const islot_gunmod &slot = *mod->type->gunmod;
@@ -3875,7 +3895,8 @@ static float throw_bonus_with_mods( const item_location &wielded, float base,
 
 bool Character::is_fcl_railgun_throw( const item &thrown ) const
 {
-    if( !has_active_bionic( fcl_bio_railgun ) || !thrown.made_of_any( ferric ) ) {
+    if( !fcl_mod_is_active() || !has_active_bionic( fcl_bio_railgun ) ||
+        !thrown.made_of_any( ferric ) ) {
         return false;
     }
     return !is_mounted() || mounted_creature->mech_str_addition() == 0;
