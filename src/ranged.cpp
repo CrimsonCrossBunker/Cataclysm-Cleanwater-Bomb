@@ -1893,7 +1893,7 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
     }
 
     // Apply wielded-item throwing damage multiplier.
-    impact.mult_damage( throw_damage_multiplier() );
+    impact.mult_damage( do_railgun ? 1.0f : throw_damage_multiplier() );
 
     Creature *critter = get_creature_tracker().creature_at( target, true );
     const dispersion_sources dispersion( throwing_dispersion( thrown, critter,
