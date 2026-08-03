@@ -35,7 +35,7 @@ class PublicContractCheckTest(unittest.TestCase):
 
     def test_checked_contract_matches_all_authorities(self) -> None:
         summary = check(DEFAULT_OUTPUT, DEFAULT_COVERAGE)
-        self.assertEqual(summary["functions"], 482)
+        self.assertEqual(summary["functions"], 488)
         self.assertEqual(summary["methods"], 142)
         self.assertEqual(summary["events"], 113)
 

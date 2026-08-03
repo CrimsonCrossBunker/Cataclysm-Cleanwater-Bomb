@@ -36,7 +36,7 @@ class LuaLsDeclarationTest(unittest.TestCase):
     def test_committed_declarations_cover_the_native_surface(self) -> None:
         result = check(DECLARATIONS)
         self.assertEqual(result["tables"], 66)
-        self.assertEqual(result["methods"], 438)
+        self.assertEqual(result["methods"], 444)
         self.assertEqual(result["game_tables"], 55)
         self.assertEqual(result["usertypes"], 15)
         self.assertEqual(result["coordinate_factories"], 36)
