@@ -56,5 +56,20 @@
     "type": "vehicle_group",
     "id": "atomic_city_cars",
     "vehicles": [ [ "car_atomic", 1500 ], [ "suv_atomic", 1500 ], [ "compact_atomic", 300 ] ]
+  },
+  {
+    "type": "vehicle_group",
+    "id": "military_vehicles",
+    "vehicles": [
+      [ "fcl_plating_alloy_military_cargo_truck", 100 ],
+      [ "fcl_plating_alloy_military_cargo_truck_b", 100 ],
+      [ "fcl_plating_alloy_humvee", 50 ],
+      [ "fcl_plating_alloy_humvee_gl", 25 ],
+      [ "fcl_plating_alloy_humvee_tow", 12 ],
+      [ "fcl_plating_alloy_apc", 50 ],
+      [ "fcl_plating_alloy_apc_gl", 25 ],
+      [ "fcl_plating_alloy_aapc_mg", 25 ],
+      [ "fcl_plating_alloy_aapc_gl", 12 ]
+    ]
   }
 ]
