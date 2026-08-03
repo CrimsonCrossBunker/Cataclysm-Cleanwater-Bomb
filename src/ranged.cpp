@@ -1855,7 +1855,7 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
 
     const bool do_railgun = fcl_railgun_throw;
     if( do_railgun && get_int() > 8 ) {
-        proj.critical_multiplier += 0.06f * std::min( get_int() / 2, get_int() - 8 );
+        proj.critical_multiplier += 0.06f * std::max( 0, std::min( get_int() / 2, get_int() - 8 ) );
     }
 
     impact.add_damage( damage_bash, thrown_item_weight_damage( *this, thrown ) );
