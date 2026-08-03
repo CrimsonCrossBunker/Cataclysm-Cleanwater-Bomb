@@ -1689,7 +1689,10 @@ static float throwing_skill_adjusted( const Character &guy )
 // light items can approach the strength-based cap when the thrower is skilled.
 static double thrown_item_weight_damage( const Character &thrower, const item &thrown )
 {
-    const float weight_dmg = thrown.weight() * thrower.throw_weight_multiplier() / 100.0_gram;
+    const bool do_railgun = thrower.is_fcl_railgun_throw( thrown );
+    const float weight_dmg = thrown.weight() *
+                             ( do_railgun ? 1.0f : thrower.throw_weight_multiplier() ) /
+                             100.0_gram;
     const float skill = throwing_skill_adjusted( thrower );
     const int dex = thrower.get_dex();
 
@@ -1700,13 +1703,6 @@ static double thrown_item_weight_damage( const Character &thrower, const item &t
                             + 0.03f * std::max( 0, dex - 8 );
 
     // When using bionic railgun, it is not considered a normal throw; a special algorithm is employed.
-    bool do_railgun = thrower.has_active_bionic( fcl_bio_railgun ) && thrown.made_of_any( ferric );
-    if( do_railgun && thrower.is_mounted() ) {
-        auto *mons = thrower.mounted_creature.get();
-        if( mons->mech_str_addition() != 0 ) {
-            do_railgun = false;
-        }
-    }
     if( do_railgun ) {
         velocity_factor += std::max( ( thrower.get_int() / 10.0 ), 1.0 );
     }
