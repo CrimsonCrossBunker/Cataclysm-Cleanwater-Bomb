@@ -3824,8 +3824,23 @@ int Character::throw_range( const item &it ) const
         }
     }
 
-    ret = static_cast<int>( std::round( ret *
-                                        ( do_railgun ? 1.0f : throw_range_multiplier() ) ) );
+    float range_multiplier = 3.0f;
+    if( do_railgun ) {
+        const item_location wielded = get_wielded_item();
+        if( wielded && wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
+            range_multiplier *= wielded->type->throw_range_multiplier;
+        }
+        if( wielded && wielded->is_gun() ) {
+            for( const item *mod : wielded->gunmods() ) {
+                if( mod->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
+                    range_multiplier *= mod->type->gunmod->throw_range_multiplier;
+                }
+            }
+        }
+    } else {
+        range_multiplier = throw_range_multiplier();
+    }
+    ret = static_cast<int>( std::round( ret * range_multiplier ) );
 
     if( ret < 1 ) {
         return 1;
