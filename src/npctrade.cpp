@@ -6,6 +6,7 @@
 #include <functional>
 #include <iterator>
 #include <list>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <ostream>
@@ -23,6 +24,7 @@
 #include "item_contents.h"
 #include "item_location.h"
 #include "item_pocket.h"
+#include "map_selector.h"
 #include "npc.h"
 #include "npc_opinion.h"
 #include "npctrade_utils.h"
@@ -230,6 +232,36 @@ int npc_trading::trading_price( Character const &buyer, Character const &seller,
                                 trade_selector::entry_t const &it )
 {
     return _trading_price( buyer, seller, it.first, it.second );
+}
+
+int npc_trading::trading_price_for_order( Character const &buyer, Character const &seller,
+        item const &it, int count )
+{
+    if( count <= 0 ) {
+        return 0;
+    }
+
+    item quote_item = it;
+    quote_item.set_owner( seller );
+    if( quote_item.count_by_charges() ) {
+        quote_item.charges = count;
+    }
+
+    trade_selector::entry_t entry{ item_location{ map_cursor{ tripoint_bub_ms::zero },
+                                                  &quote_item },
+                                   quote_item.count_by_charges() ? count : 1 };
+    const int price = npc_trading::trading_price( buyer, seller, entry );
+    if( quote_item.count_by_charges() ) {
+        return price;
+    }
+
+    if( price <= 0 ) {
+        return price;
+    }
+    if( count > std::numeric_limits<int>::max() / price ) {
+        return std::numeric_limits<int>::max();
+    }
+    return price * count;
 }
 
 void item_pricing::set_values( int ip_count )
