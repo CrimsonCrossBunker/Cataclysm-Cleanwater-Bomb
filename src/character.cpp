@@ -3756,10 +3756,10 @@ int Character::throw_range( const item &it ) const
     int str = get_arm_str() + ench_bonus;
     int attr_int = get_int();
 
-    const bool do_railgun = has_active_bionic( fcl_bio_railgun ) && tmp.made_of_any( ferric );
+    const bool do_railgun = is_fcl_railgun_throw( tmp );
 
     /** @ARM_STR determines maximum weight that can be thrown */
-    const float weight_mult = throw_weight_multiplier();
+    const float weight_mult = do_railgun ? 1.0f : throw_weight_multiplier();
     const units::mass effective_weight = tmp.weight() * weight_mult;
     if( ( effective_weight / 113_gram ) > str * 15 )  {
         return 0;
@@ -3802,7 +3802,7 @@ int Character::throw_range( const item &it ) const
     }
 
     // When using bionic railgun, it is not considered a normal throw; a special algorithm is employed.
-    if( do_railgun && !throw_assist ) {
+    if( do_railgun ) {
         int ench_range = enchantment_cache->get_value_add( enchant_vals::mod::RANGE );
         double ench_range_mult = 1.0 + enchantment_cache->get_value_multiply( enchant_vals::mod::RANGE );
         const int railgun_range_cap_max = round( ( attr_int * 3 + get_skill_level(
@@ -3824,7 +3824,8 @@ int Character::throw_range( const item &it ) const
         }
     }
 
-    ret = static_cast<int>( std::round( ret * throw_range_multiplier() ) );
+    ret = static_cast<int>( std::round( ret *
+                                        ( do_railgun ? 1.0f : throw_range_multiplier() ) ) );
 
     if( ret < 1 ) {
         return 1;
