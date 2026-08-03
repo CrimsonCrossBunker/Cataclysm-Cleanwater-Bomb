@@ -3855,10 +3855,16 @@ int Character::throw_range( const item &it ) const
 static float throw_bonus_with_mods( const item_location &wielded, float base,
                                     float islot_gunmod::*mult, float islot_gunmod::*add )
 {
+    if( wielded && wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
+        base = 1.0f;
+    }
     float mult_total = 1.0f;
     float add_total = 0.0f;
     if( wielded && wielded->is_gun() ) {
         for( const item *mod : wielded->gunmods() ) {
+            if( mod->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
+                continue;
+            }
             const islot_gunmod &slot = *mod->type->gunmod;
             mult_total *= slot.*mult;
             add_total += slot.*add;
