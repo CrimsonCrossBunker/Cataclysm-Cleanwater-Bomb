@@ -305,7 +305,7 @@ jobs:
           HOMEBREW_NO_AUTO_UPDATE=yes HOMEBREW_NO_INSTALL_CLEANUP=yes brew install gettext ccache parallel
     - name: install SDL2 frameworks (mac)
       if: ${{ env.SKIP == 'false' && runner.os == 'macOS' && matrix.tiles == 1 && matrix.sdl3 != 1 }}
-      uses: BrettDong/setup-sdl2-frameworks@8ec523df88d65b2af0e1ae520695badd88851497 # v1
+      uses: BrettDong/setup-sdl2-frameworks@a8ca795ef904417e9ddcb010ef6bf2d11779dbe3 # v2
       with:
         sdl2: 2.30.11
         sdl2-ttf: 2.24.0
@@ -351,7 +351,7 @@ jobs:
 
     - name: Set up JDK (android)
       if: runner.os == 'Linux' && matrix.android != 'none'
-      uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+      uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
       with:
         java-version: '17'
         distribution: 'temurin'
