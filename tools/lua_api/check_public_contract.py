@@ -200,8 +200,8 @@ def validate_contract(contract: dict[str, object]) -> dict[str, int]:
     expected_counts = {
         "modules": 3,
         "namespaces": 68,
-        "classes": 260,
-        "functions": 482,
+        "classes": 261,
+        "functions": 488,
         "methods": 142,
         "properties": 51,
         "operators": 47,
