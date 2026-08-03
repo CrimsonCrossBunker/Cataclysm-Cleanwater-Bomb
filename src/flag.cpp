@@ -294,6 +294,7 @@ const flag_id flag_RAINPROOF( "RAINPROOF" );
 const flag_id flag_RAIN_PROTECT( "RAIN_PROTECT" );
 const flag_id flag_RAT( "RAT" );
 const flag_id flag_RAW( "RAW" );
+const flag_id flag_RAILGUN_THROW_MULTIPLIER( "RAILGUN_THROW_MULTIPLIER" );
 const flag_id flag_REACH( "REACH" );
 const flag_id flag_REACH3( "REACH3" );
 const flag_id flag_REACH_ATTACK( "REACH_ATTACK" );
