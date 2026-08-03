@@ -2613,6 +2613,15 @@ void parse_tags( std::string &phrase, const_talker const &u, const_talker const 
             // resolve nest
             parse_tags( var, u, me, d, item_type );
             phrase.replace( fa, l, d.get_value( var ).to_string() );
+        } else if( tag.find( "<money:" ) == 0 ) {
+            std::string var = tag.substr( tag.find( ':' ) + 1 );
+            // remove the trailing >
+            var.pop_back();
+            // resolve nest
+            parse_tags( var, u, me, d, item_type );
+            const diag_value &value = d.get_value( var );
+            const int amount = value.is_dbl() ? static_cast<int>( value.dbl() ) : 0;
+            phrase.replace( fa, l, format_money( amount ) );
         } else if( tag.find( "<item_name:" ) == 0 ) {
             //embedding an items name in the string
             std::string var = tag.substr( tag.find( ':' ) + 1 );
@@ -4168,6 +4177,50 @@ talk_effect_fun_t f_spawn_item( const JsonObject &jo, std::string_view member,
     } );
     ret.get_likely_rewards().emplace_back( count, item_name );
     return ret;
+}
+
+talk_effect_fun_t::func f_quote_npc_trade_item( const JsonObject &jo, std::string_view member,
+        std::string_view )
+{
+    str_or_var item_name = get_str_or_var( jo.get_member( member ), member, true );
+    dbl_or_var count;
+    optional( jo, false, "count", count, 1 );
+    const std::string prefix = jo.get_string( "prefix", "quote" );
+
+    return [item_name, count, prefix]( dialogue & d ) {
+        const auto set_quote = [&d, &prefix]( const std::string & item_id,
+                                              const std::string & display_name,
+                                              int item_count, int cost ) {
+            d.set_value( prefix + "_item_id", item_id );
+            d.set_value( prefix + "_item_name", display_name );
+            d.set_value( prefix + "_count", item_count );
+            d.set_value( prefix + "_cost", cost );
+        };
+
+        const std::string current_item_name = item_name.evaluate( d );
+        const itype_id item_id( current_item_name );
+        const int current_count = count.evaluate( d );
+        const int stored_count = current_count > 0 ? current_count : 0;
+        Character *buyer = d.actor( false )->get_character();
+        Character *seller = d.actor( true )->get_character();
+        if( npc *seller_npc = d.actor( true )->get_npc() ) {
+            seller = &seller_npc->get_trade_delegate();
+        }
+
+        if( buyer == nullptr || seller == nullptr || current_count <= 0 || !item_id.is_valid() ) {
+            set_quote( current_item_name, current_item_name, stored_count, -1 );
+            return;
+        }
+
+        item quote_item( item_id, calendar::turn );
+        if( quote_item.count_by_charges() ) {
+            quote_item.charges = current_count;
+        }
+        const int quoted_cost = npc_trading::trading_price_for_order( *buyer, *seller, quote_item,
+                                current_count );
+        set_quote( item_id.str(), item::nname( item_id, current_count ), current_count,
+                   quoted_cost > 0 ? quoted_cost : -1 );
+    };
 }
 
 talk_effect_fun_t::func f_u_buy_item( const JsonObject &jo, std::string_view member,
@@ -8730,6 +8783,7 @@ parsers = {
     { "add_mission", jarg::member, &talk_effect_fun::f_add_mission },
     { "u_sell_item", jarg::member, &talk_effect_fun::f_u_sell_item },
     { "u_buy_item", jarg::member, &talk_effect_fun::f_u_buy_item },
+    { "quote_npc_trade_item", jarg::member, &talk_effect_fun::f_quote_npc_trade_item },
     { "u_spawn_item", jarg::member, &talk_effect_fun::f_spawn_item },
     { "u_pick_bodypart", "npc_pick_bodypart", jarg::member, &talk_effect_fun::f_pick_bodypart },
     { "u_add_wound", "npc_add_wound", jarg::member, &talk_effect_fun::f_add_wound },

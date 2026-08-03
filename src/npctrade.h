@@ -51,6 +51,8 @@ int bionic_install_price( Character &installer, Character &patient, item_locatio
 int adjusted_price( item const *it, int amount, Character const &buyer, Character const &seller );
 int trading_price( Character const &buyer, Character const &seller,
                    trade_selector::entry_t const &it );
+int trading_price_for_order( Character const &buyer, Character const &seller,
+                             item const &it, int count );
 int calc_npc_owes_you( const npc &np, int your_balance );
 bool npc_will_accept_trade( npc const &np, int your_balance );
 bool npc_can_fit_items( npc const &np, trade_selector::select_t const &to_trade );
