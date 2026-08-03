@@ -1727,8 +1727,7 @@ static double thrown_item_weight_damage( const Character &thrower, const item &t
 int Character::thrown_item_adjusted_damage( const item &thrown ) const
 {
     const std::optional<int> throw_assist = character_throw_assist( *this );
-    const bool do_railgun = has_active_bionic( fcl_bio_railgun ) && thrown.made_of_any( ferric ) &&
-                            !throw_assist;
+    const bool do_railgun = is_fcl_railgun_throw( thrown );
 
     // The damage dealt due to item's weight, player's strength, and skill level
     // Up to str/2 or weight/100g (lower), so 10 str is 5 damage before multipliers
