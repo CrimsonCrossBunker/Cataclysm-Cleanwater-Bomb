@@ -151,6 +151,7 @@ These fields can be read by any ITEM regardless of subtypes:
 "throw_stamina_multiplier": 0.9,             // (Optional, default = 1.0) Multiplier to throwing stamina cost when this item is wielded.
 "throw_dispersion_multiplier": 0.9,          // (Optional, default = 1.0) Multiplier to throwing dispersion when this item is wielded.  Lower is more accurate.
 "throw_speed_multiplier": 0.9,               // (Optional, default = 1.0) Multiplier to throwing move cost when this item is wielded.  Lower is faster.
+"throw_weight_multiplier": 1.1,              // (Optional, default = 1.0) Multiplier to the thrown item's effective weight when this item is wielded.
 "material": [                                // Material types, can be as many as you want.  See materials.json for possible options
   { "type": "cotton", "portion": 9 },        // type indicates the material's ID, portion indicates proportionally how much of the item is composed of that material
   { "type": "plastic" }                      // portion can be omitted and will default to 1. In this case, the item is 90% cotton and 10% plastic.

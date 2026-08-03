@@ -2324,6 +2324,7 @@ class Character : public Creature, public visitable
         float throw_dispersion_multiplier() const;
         float throw_speed_multiplier() const;
         float throw_weight_multiplier() const;
+        bool is_fcl_railgun_throw( const item &thrown ) const;
 
         /** True if unarmed */
         bool unarmed_attack() const;

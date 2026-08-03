@@ -1,0 +1,7 @@
+[
+  {
+    "id": "RAILGUN_THROW_MULTIPLIER",
+    "type": "json_flag",
+    "info": "Its throwing multipliers apply only to throws powered by an active Railgun CBM."
+  }
+]

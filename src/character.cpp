@@ -117,6 +117,7 @@
 #include "vitamin.h"
 #include "vpart_position.h"
 #include "weather.h"
+#include "worldfactory.h"
 
 static const activity_id ACT_AUTODRIVE( "ACT_AUTODRIVE" );
 static const activity_id ACT_FISH( "ACT_FISH" );
@@ -154,6 +155,17 @@ static const bionic_id bio_uncanny_dodge( "bio_uncanny_dodge" );
 static const bionic_id bio_ups( "bio_ups" );
 static const bionic_id bio_voice( "bio_voice" );
 static const bionic_id fcl_bio_railgun( "fcl_bio_railgun" );
+
+static const mod_id MOD_INFORMATION_catalegacy_future( "catalegacy_future" );
+
+static bool fcl_mod_is_active()
+{
+    return world_generator && world_generator->active_world &&
+           std::find( world_generator->active_world->active_mod_order.begin(),
+                      world_generator->active_world->active_mod_order.end(),
+                      MOD_INFORMATION_catalegacy_future ) !=
+           world_generator->active_world->active_mod_order.end();
+}
 
 static const character_modifier_id character_modifier_aim_speed_dex_mod( "aim_speed_dex_mod" );
 static const character_modifier_id character_modifier_aim_speed_mod( "aim_speed_mod" );
@@ -3756,10 +3768,10 @@ int Character::throw_range( const item &it ) const
     int str = get_arm_str() + ench_bonus;
     int attr_int = get_int();
 
-    const bool do_railgun = has_active_bionic( fcl_bio_railgun ) && tmp.made_of_any( ferric );
+    const bool do_railgun = is_fcl_railgun_throw( tmp );
 
     /** @ARM_STR determines maximum weight that can be thrown */
-    const float weight_mult = throw_weight_multiplier();
+    const float weight_mult = do_railgun ? 1.0f : throw_weight_multiplier();
     const units::mass effective_weight = tmp.weight() * weight_mult;
     if( ( effective_weight / 113_gram ) > str * 15 )  {
         return 0;
@@ -3802,7 +3814,7 @@ int Character::throw_range( const item &it ) const
     }
 
     // When using bionic railgun, it is not considered a normal throw; a special algorithm is employed.
-    if( do_railgun && !throw_assist ) {
+    if( do_railgun ) {
         int ench_range = enchantment_cache->get_value_add( enchant_vals::mod::RANGE );
         double ench_range_mult = 1.0 + enchantment_cache->get_value_multiply( enchant_vals::mod::RANGE );
         const int railgun_range_cap_max = round( ( attr_int * 3 + get_skill_level(
@@ -3824,7 +3836,27 @@ int Character::throw_range( const item &it ) const
         }
     }
 
-    ret = static_cast<int>( std::round( ret * throw_range_multiplier() ) );
+    float range_multiplier = 3.0f;
+    if( do_railgun ) {
+        const item_location wielded = get_wielded_item();
+        const bool has_railgun_throw_multiplier = fcl_mod_is_active() &&
+                                                  flag_RAILGUN_THROW_MULTIPLIER.is_valid();
+        if( has_railgun_throw_multiplier && wielded &&
+            wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
+            range_multiplier *= wielded->type->throw_range_multiplier;
+        }
+        if( wielded && wielded->is_gun() ) {
+            for( const item *mod : wielded->gunmods() ) {
+                if( has_railgun_throw_multiplier &&
+                    mod->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
+                    range_multiplier *= mod->type->gunmod->throw_range_multiplier;
+                }
+            }
+        }
+    } else {
+        range_multiplier = throw_range_multiplier();
+    }
+    ret = static_cast<int>( std::round( ret * range_multiplier ) );
 
     if( ret < 1 ) {
         return 1;
@@ -3839,16 +3871,35 @@ int Character::throw_range( const item &it ) const
 static float throw_bonus_with_mods( const item_location &wielded, float base,
                                     float islot_gunmod::*mult, float islot_gunmod::*add )
 {
+    const bool has_railgun_throw_multiplier = fcl_mod_is_active() &&
+                                              flag_RAILGUN_THROW_MULTIPLIER.is_valid();
+    if( has_railgun_throw_multiplier && wielded &&
+        wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
+        base = 1.0f;
+    }
     float mult_total = 1.0f;
     float add_total = 0.0f;
     if( wielded && wielded->is_gun() ) {
         for( const item *mod : wielded->gunmods() ) {
+            if( has_railgun_throw_multiplier &&
+                mod->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
+                continue;
+            }
             const islot_gunmod &slot = *mod->type->gunmod;
             mult_total *= slot.*mult;
             add_total += slot.*add;
         }
     }
     return base * mult_total + add_total;
+}
+
+bool Character::is_fcl_railgun_throw( const item &thrown ) const
+{
+    if( !fcl_mod_is_active() || !has_active_bionic( fcl_bio_railgun ) ||
+        !thrown.made_of_any( ferric ) ) {
+        return false;
+    }
+    return !is_mounted() || mounted_creature->mech_str_addition() == 0;
 }
 
 float Character::throw_damage_multiplier() const

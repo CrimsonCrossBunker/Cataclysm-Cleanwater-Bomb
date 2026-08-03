@@ -1511,6 +1511,31 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
     return curshot;
 }
 
+static float railgun_throw_multiplier( const Character &character, float base,
+                                       float itype::*item_mult,
+                                       float islot_gunmod::*gunmod_mult )
+{
+    float multiplier = base;
+    const item_location wielded = character.get_wielded_item();
+    if( !wielded ) {
+        return multiplier;
+    }
+    const bool has_railgun_throw_multiplier = flag_RAILGUN_THROW_MULTIPLIER.is_valid();
+    if( has_railgun_throw_multiplier &&
+        wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
+        multiplier *= wielded->type->*item_mult;
+    }
+    if( wielded->is_gun() ) {
+        for( const item *mod : wielded->gunmods() ) {
+            if( has_railgun_throw_multiplier &&
+                mod->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
+                multiplier *= ( *mod->type->gunmod ).*gunmod_mult;
+            }
+        }
+    }
+    return multiplier;
+}
+
 int throw_cost( const Character &c, const item &to_throw )
 {
     // Very similar to player::attack_speed
@@ -1520,7 +1545,8 @@ int throw_cost( const Character &c, const item &to_throw )
     // At 10 skill, the cost is down to 0.75%, not 0.66%
     const int base_move_cost = to_throw.attack_time( c ) * 4 / 5;
     // Throw leverage multiplier: scale the weight-based portion of attack_time
-    const float weight_mult = c.throw_weight_multiplier();
+    const bool do_railgun = c.is_fcl_railgun_throw( to_throw );
+    const float weight_mult = do_railgun ? 1.0f : c.throw_weight_multiplier();
     const int weight_adjust = static_cast<int>( to_throw.weight() * ( weight_mult - 1.0f ) /
                              60_gram / to_throw.count() / 2 );
     const int effective_base_cost = base_move_cost + weight_adjust;
@@ -1537,8 +1563,12 @@ int throw_cost( const Character &c, const item &to_throw )
     // Stamina penalty only affects base/2 and encumbrance parts of the cost
     move_cost *= stamina_penalty;
     move_cost += skill_cost;
+    if( do_railgun ) {
+        move_cost -= c.get_dex();
+    }
     move_cost = c.enchantment_cache->modify_value( enchant_vals::mod::ATTACK_SPEED, move_cost );
-    move_cost = static_cast<int>( std::round( move_cost * c.throw_speed_multiplier() ) );
+    move_cost = static_cast<int>( std::round( move_cost *
+                                              ( do_railgun ? 1.0f : c.throw_speed_multiplier() ) ) );
 
     return std::max( 25, move_cost );
 }
@@ -1612,7 +1642,9 @@ int Character::throw_dispersion_per_dodge( bool /* add_encumbrance */ ) const
 int Character::throwing_dispersion( const item &to_throw, Creature *critter,
                                     bool is_blind_throw ) const
 {
-    units::mass weight = to_throw.weight() * throw_weight_multiplier();
+    const bool do_railgun = is_fcl_railgun_throw( to_throw );
+    units::mass weight = to_throw.weight() *
+                         ( do_railgun ? 1.0f : throw_weight_multiplier() );
     units::volume volume = to_throw.volume();
     if( to_throw.count_by_charges() && to_throw.charges > 1 ) {
         weight /= to_throw.charges;
@@ -1652,7 +1684,11 @@ int Character::throwing_dispersion( const item &to_throw, Creature *critter,
         dispersion *= 4;
     }
 
-    dispersion = static_cast<int>( std::round( dispersion * throw_dispersion_multiplier() ) );
+    const float dispersion_multiplier = do_railgun ? railgun_throw_multiplier( *this, 0.5f,
+                                       &itype::throw_dispersion_multiplier,
+                                       &islot_gunmod::throw_dispersion_multiplier ) :
+                                       throw_dispersion_multiplier();
+    dispersion = static_cast<int>( std::round( dispersion * dispersion_multiplier ) );
 
     return std::max( 0, dispersion );
 }
@@ -1684,7 +1720,13 @@ static float throwing_skill_adjusted( const Character &guy )
 // light items can approach the strength-based cap when the thrower is skilled.
 static double thrown_item_weight_damage( const Character &thrower, const item &thrown )
 {
-    const float weight_dmg = thrown.weight() * thrower.throw_weight_multiplier() / 100.0_gram;
+    const bool do_railgun = thrower.is_fcl_railgun_throw( thrown );
+    const float weight_dmg = thrown.weight() *
+                             ( do_railgun ? railgun_throw_multiplier( thrower, 1.8f,
+                               &itype::throw_weight_multiplier,
+                               &islot_gunmod::throw_weight_multiplier ) :
+                               thrower.throw_weight_multiplier() ) /
+                             100.0_gram;
     const float skill = throwing_skill_adjusted( thrower );
     const int dex = thrower.get_dex();
 
@@ -1695,13 +1737,6 @@ static double thrown_item_weight_damage( const Character &thrower, const item &t
                             + 0.03f * std::max( 0, dex - 8 );
 
     // When using bionic railgun, it is not considered a normal throw; a special algorithm is employed.
-    bool do_railgun = thrower.has_active_bionic( fcl_bio_railgun ) && thrown.made_of_any( ferric );
-    if( do_railgun && thrower.is_mounted() ) {
-        auto *mons = thrower.mounted_creature.get();
-        if( mons->mech_str_addition() != 0 ) {
-            do_railgun = false;
-        }
-    }
     if( do_railgun ) {
         velocity_factor += std::max( ( thrower.get_int() / 10.0 ), 1.0 );
     }
@@ -1726,8 +1761,7 @@ static double thrown_item_weight_damage( const Character &thrower, const item &t
 int Character::thrown_item_adjusted_damage( const item &thrown ) const
 {
     const std::optional<int> throw_assist = character_throw_assist( *this );
-    const bool do_railgun = has_active_bionic( fcl_bio_railgun ) && thrown.made_of_any( ferric ) &&
-                            !throw_assist;
+    const bool do_railgun = is_fcl_railgun_throw( thrown );
 
     // The damage dealt due to item's weight, player's strength, and skill level
     // Up to str/2 or weight/100g (lower), so 10 str is 5 damage before multipliers
@@ -1777,7 +1811,12 @@ int Character::thrown_item_total_damage_raw( const item &thrown ) const
     for( damage_unit &du : proj.impact.damage_units ) {
         total_damage += du.amount * du.damage_multiplier;
     }
-    return std::round( total_damage * throw_damage_multiplier() );
+    const float throw_damage_mult = is_fcl_railgun_throw( thrown ) ?
+                                   railgun_throw_multiplier( *this, 3.5f,
+                                           &itype::throw_damage_multiplier,
+                                           &islot_gunmod::throw_damage_multiplier ) :
+                                   throw_damage_multiplier();
+    return std::round( total_damage * throw_damage_mult );
 }
 
 dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, const item &to_throw,
@@ -1794,11 +1833,13 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
     const units::volume volume = to_throw.volume();
     const units::mass weight = to_throw.weight();
     const std::optional<int> throw_assist = character_throw_assist( *this );
+    const bool fcl_railgun_throw = is_fcl_railgun_throw( thrown );
 
     if( !throw_assist ) {
         const int stamina_cost = get_standard_stamina_cost( &thrown );
         mod_stamina( static_cast<int>( std::round(
-                                           ( stamina_cost + throwing_skill ) * throw_stamina_multiplier() ) ) );
+                                           ( stamina_cost + throwing_skill ) *
+                                           ( fcl_railgun_throw ? 1.0f : throw_stamina_multiplier() ) ) ) );
     }
 
     const float skill_level = throwing_skill_adjusted( *this );
@@ -1815,8 +1856,10 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
         proj.critical_multiplier += 0.06f * ( std::min( dex, per ) - 8 );
     }
 
-    const bool do_railgun = has_active_bionic( fcl_bio_railgun ) && thrown.made_of_any( ferric ) &&
-                            !throw_assist;
+    const bool do_railgun = fcl_railgun_throw;
+    if( do_railgun && get_int() > 8 ) {
+        proj.critical_multiplier += 0.06f * std::max( 0, std::min( get_int() / 2, get_int() - 8 ) );
+    }
 
     impact.add_damage( damage_bash, thrown_item_weight_damage( *this, thrown ) );
 
@@ -1889,7 +1932,9 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
     }
 
     // Apply wielded-item throwing damage multiplier.
-    impact.mult_damage( throw_damage_multiplier() );
+    impact.mult_damage( do_railgun ? railgun_throw_multiplier( *this, 3.5f,
+                        &itype::throw_damage_multiplier,
+                        &islot_gunmod::throw_damage_multiplier ) : throw_damage_multiplier() );
 
     Creature *critter = get_creature_tracker().creature_at( target, true );
     const dispersion_sources dispersion( throwing_dispersion( thrown, critter,
