@@ -1777,7 +1777,9 @@ int Character::thrown_item_total_damage_raw( const item &thrown ) const
     for( damage_unit &du : proj.impact.damage_units ) {
         total_damage += du.amount * du.damage_multiplier;
     }
-    return std::round( total_damage * throw_damage_multiplier() );
+    const float throw_damage_mult = is_fcl_railgun_throw( thrown ) ? 1.0f :
+                                   throw_damage_multiplier();
+    return std::round( total_damage * throw_damage_mult );
 }
 
 dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, const item &to_throw,
