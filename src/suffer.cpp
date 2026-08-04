@@ -21,6 +21,7 @@
 #include "calendar.h"
 #include "cata_utility.h"
 #include "catalua_lua_call.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "character_attire.h"
 #include "color.h"
