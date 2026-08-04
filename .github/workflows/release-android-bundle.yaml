@@ -33,7 +33,7 @@ jobs:
         id: vars
         run: |
           timestamp=$(TZ=Asia/Shanghai date "+%Y-%m-%d-%H%M")
-          title_time=$(TZ=Asia/Shanghai date "+%Y-%m-%d %H:%M")
+          title_time=$(TZ=Asia/Shanghai date "+%Y-%m-%d_%H:%M")
           echo "timestamp=$timestamp" >> $GITHUB_OUTPUT
           echo "tag_name=android-aab-$timestamp" >> $GITHUB_OUTPUT
           echo "release_name=Android AAB $title_time" >> $GITHUB_OUTPUT
