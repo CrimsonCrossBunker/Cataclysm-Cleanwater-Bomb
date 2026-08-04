@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <utility>
 
+#include "generic_factory.h"
 #include "json_loader.h"
 
 namespace cata::lua_ui
