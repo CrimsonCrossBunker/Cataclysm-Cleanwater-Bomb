@@ -429,13 +429,28 @@ void mutation_branch::load( const JsonObject &jo, std::string_view src )
     for( JsonValue jv : jo.get_array( "activated_eocs" ) ) {
         activated_eocs.push_back( effect_on_conditions::load_inline_eoc( jv, src ) );
     }
+    for( JsonObject lua : jo.get_array( "activated_luas" ) ) {
+        cata::lua_ui::lua_call call;
+        call.load( lua );
+        activated_luas.push_back( std::move( call ) );
+    }
 
     for( JsonValue jv : jo.get_array( "processed_eocs" ) ) {
         processed_eocs.push_back( effect_on_conditions::load_inline_eoc( jv, src ) );
     }
+    for( JsonObject lua : jo.get_array( "processed_luas" ) ) {
+        cata::lua_ui::lua_call call;
+        call.load( lua );
+        processed_luas.push_back( std::move( call ) );
+    }
 
     for( JsonValue jv : jo.get_array( "deactivated_eocs" ) ) {
         deactivated_eocs.push_back( effect_on_conditions::load_inline_eoc( jv, src ) );
+    }
+    for( JsonObject lua : jo.get_array( "deactivated_luas" ) ) {
+        cata::lua_ui::lua_call call;
+        call.load( lua );
+        deactivated_luas.push_back( std::move( call ) );
     }
 
     optional( jo, was_loaded, "activated_is_setup", activated_is_setup, false );
