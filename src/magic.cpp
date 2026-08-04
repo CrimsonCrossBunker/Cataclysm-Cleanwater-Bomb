@@ -339,8 +339,10 @@ void spell_type::load( const JsonObject &jo, std::string_view src )
     optional( jo, was_loaded, "sound_variant", sound_variant, sound_variant_default );
     mandatory( jo, was_loaded, "effect", effect_name );
     if( effect_name == "lua" ) {
-        lua_effect.emplace();
-        lua_effect->load( jo, "lua" );
+        if( jo.has_member( "lua" ) || !was_loaded ) {
+            lua_effect.emplace();
+            lua_effect->load( jo, "lua" );
+        }
     } else {
         lua_effect.reset();
     }
