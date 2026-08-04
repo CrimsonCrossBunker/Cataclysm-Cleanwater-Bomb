@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "catalua_lua_call.h"
 #include "color.h"
 #include "condition.h"
 #include "debug.h"
