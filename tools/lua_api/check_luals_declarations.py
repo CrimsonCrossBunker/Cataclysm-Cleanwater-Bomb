@@ -20,6 +20,7 @@ TABLE_CLASSES = {
     "bionics": "CcbBionicsApi",
     "callbacks": "CcbCallbacksApi",
     "camps": "CcbCampsApi",
+    "handlers": "CcbHandlersApi",
     "character_state": "CcbStateStore",
     "characters": "CcbCharactersApi",
     "constants": "CcbConstantsApi",
