@@ -375,13 +375,28 @@ void bionic_data::load( const JsonObject &jsobj, std::string_view src )
     for( JsonValue jv : jsobj.get_array( "activated_eocs" ) ) {
         activated_eocs.push_back( effect_on_conditions::load_inline_eoc( jv, src ) );
     }
+    for( JsonObject lua : jsobj.get_array( "activated_luas" ) ) {
+        cata::lua_ui::lua_call call;
+        call.load( lua );
+        activated_luas.push_back( std::move( call ) );
+    }
 
     for( JsonValue jv : jsobj.get_array( "processed_eocs" ) ) {
         processed_eocs.push_back( effect_on_conditions::load_inline_eoc( jv, src ) );
     }
+    for( JsonObject lua : jsobj.get_array( "processed_luas" ) ) {
+        cata::lua_ui::lua_call call;
+        call.load( lua );
+        processed_luas.push_back( std::move( call ) );
+    }
 
     for( JsonValue jv : jsobj.get_array( "deactivated_eocs" ) ) {
         deactivated_eocs.push_back( effect_on_conditions::load_inline_eoc( jv, src ) );
+    }
+    for( JsonObject lua : jsobj.get_array( "deactivated_luas" ) ) {
+        cata::lua_ui::lua_call call;
+        call.load( lua );
+        deactivated_luas.push_back( std::move( call ) );
     }
 
     int enchant_num = 0;
@@ -828,6 +843,13 @@ bool Character::activate_bionic( bionic &bio, bool eff_only, bool *close_bionics
         write_var_value( var_type::context, "act_cost", &d,
                          units::to_millijoule( bio.info().power_activate ) );
         eoc->activate_activation_only( d, "a bionic activation", "bionic being activated", "bionic" );
+    }
+    for( const cata::lua_ui::lua_call &call : bio.id->activated_luas ) {
+        cata::lua_ui::invoke_lua_call( call, "bionic_activated", {
+            { "character", this },
+            { "bionic", cata::lua_ui::native_callback_id{ "bionic", bio.id.str() } },
+            { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) }
+        } );
     }
 
     item tmp_item;
@@ -1310,6 +1332,13 @@ bool Character::deactivate_bionic( bionic &bio, bool eff_only )
         dialogue d( get_talker_for( *this ), nullptr );
         eoc->activate_activation_only( d, "a bionic deactivation", "bionic being activated", "bionic" );
     }
+    for( const cata::lua_ui::lua_call &call : bio.id->deactivated_luas ) {
+        cata::lua_ui::invoke_lua_call( call, "bionic_deactivated", {
+            { "character", this },
+            { "bionic", cata::lua_ui::native_callback_id{ "bionic", bio.id.str() } },
+            { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) }
+        } );
+    }
 
     if( bio.info().has_flag( json_flag_BIONIC_WEAPON ) ) {
         if( bio.get_uid() == get_weapon_bionic_uid() ) {
@@ -1712,6 +1741,13 @@ void Character::process_bionic( bionic &bio )
     for( const effect_on_condition_id &eoc : bio.id->processed_eocs ) {
         dialogue d( get_talker_for( *this ), nullptr );
         eoc->activate_activation_only( d, "a bionic process", "bionic being activated", "bionic" );
+    }
+    for( const cata::lua_ui::lua_call &call : bio.id->processed_luas ) {
+        cata::lua_ui::invoke_lua_call( call, "bionic_processed", {
+            { "character", this },
+            { "bionic", cata::lua_ui::native_callback_id{ "bionic", bio.id.str() } },
+            { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) }
+        } );
     }
 
     // Bionic effects on every turn they are active go here.
