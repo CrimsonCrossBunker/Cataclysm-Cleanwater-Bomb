@@ -19,7 +19,7 @@
     "event_specs": "src/event.h"
   },
   "parity": {
-    "native_inventory_sha256": "b43d80f924937f9f9f3e4982c15e1f3e9f87758172c6c2f5eb33fc6b34796e71",
+    "native_inventory_sha256": "e59af889e88adc3fa9503a9069e65b846306c31f1b14d6d3215878ce075ecd36",
     "native_inventory_counts": {
       "id_kinds": 132,
       "json_types": 190,
@@ -37,7 +37,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3054,
+          "line": 3098,
           "authority": "native registration"
         }
       ],
@@ -53,7 +53,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3064,
+          "line": 3108,
           "authority": "native registration"
         },
         {
@@ -74,7 +74,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3073,
+          "line": 3117,
           "authority": "native registration"
         },
         {
@@ -97,7 +97,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3221,
+          "line": 3265,
           "authority": "native registration"
         }
       ],
@@ -113,7 +113,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3311,
+          "line": 3355,
           "authority": "native registration"
         }
       ],
@@ -145,7 +145,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3391,
+          "line": 3442,
           "authority": "native registration"
         }
       ],
@@ -209,7 +209,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3519,
+          "line": 3570,
           "authority": "native registration"
         }
       ],
@@ -337,7 +337,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 4037,
+          "line": 4088,
           "authority": "native registration"
         }
       ],
@@ -427,6 +427,22 @@
       }
     },
     {
+      "id": "game.handlers",
+      "kind": "child",
+      "class": "CcbHandlersApi",
+      "sources": [
+        {
+          "path": "src/catalua_ui.cpp",
+          "line": 3363,
+          "authority": "native registration"
+        }
+      ],
+      "documentation": {
+        "id": "api.lua.v5.generated.namespace.game.handlers",
+        "status": "generated-contract-source"
+      }
+    },
+    {
       "id": "game.handles",
       "kind": "child",
       "class": "CcbHandlesApi",
@@ -449,7 +465,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3494,
+          "line": 3545,
           "authority": "native registration"
         }
       ],
@@ -513,7 +529,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3539,
+          "line": 3590,
           "authority": "native registration"
         }
       ],
@@ -593,7 +609,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3368,
+          "line": 3419,
           "authority": "native registration"
         }
       ],
@@ -753,7 +769,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3430,
+          "line": 3481,
           "authority": "native registration"
         }
       ],
@@ -1025,7 +1041,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3063,
+          "line": 3107,
           "authority": "native registration"
         }
       ],
@@ -1057,7 +1073,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3077,
+          "line": 3121,
           "authority": "native registration"
         }
       ],
@@ -1073,7 +1089,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3096,
+          "line": 3140,
           "authority": "native registration"
         }
       ],
@@ -1089,7 +1105,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3392,
+          "line": 3443,
           "authority": "native registration"
         }
       ],
@@ -1105,7 +1121,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 4046,
+          "line": 4097,
           "authority": "native registration"
         }
       ],
@@ -1121,7 +1137,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 4063,
+          "line": 4114,
           "authority": "native registration"
         }
       ],
@@ -1137,7 +1153,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 4099,
+          "line": 4150,
           "authority": "native registration"
         }
       ],
@@ -1153,7 +1169,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 4081,
+          "line": 4132,
           "authority": "native registration"
         }
       ],
@@ -1169,7 +1185,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3204,
+          "line": 3248,
           "authority": "native registration"
         }
       ],
@@ -1192,7 +1208,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3608,
+              "line": 3629,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1208,7 +1224,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3609,
+              "line": 3630,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1224,7 +1240,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3610,
+              "line": 3631,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1240,7 +1256,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3611,
+              "line": 3632,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1256,7 +1272,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3612,
+              "line": 3633,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1272,7 +1288,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3613,
+              "line": 3634,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1288,7 +1304,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3614,
+              "line": 3635,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1304,7 +1320,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3615,
+              "line": 3636,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1320,7 +1336,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3616,
+              "line": 3637,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1336,7 +1352,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3617,
+              "line": 3638,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1349,7 +1365,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3607,
+          "line": 3628,
           "authority": "LuaLS declaration"
         }
       ],
@@ -1370,7 +1386,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3629,
+              "line": 3650,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1386,7 +1402,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3630,
+              "line": 3651,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1402,7 +1418,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3631,
+              "line": 3652,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1418,7 +1434,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3632,
+              "line": 3653,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1431,7 +1447,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3628,
+          "line": 3649,
           "authority": "LuaLS declaration"
         }
       ],
@@ -1452,7 +1468,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3620,
+              "line": 3641,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1468,7 +1484,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3621,
+              "line": 3642,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1484,7 +1500,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3622,
+              "line": 3643,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1500,7 +1516,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3623,
+              "line": 3644,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1516,7 +1532,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3624,
+              "line": 3645,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1532,7 +1548,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3625,
+              "line": 3646,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1548,7 +1564,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3626,
+              "line": 3647,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1561,7 +1577,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3619,
+          "line": 3640,
           "authority": "LuaLS declaration"
         }
       ],
@@ -1582,7 +1598,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3602,
+              "line": 3623,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1598,7 +1614,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3603,
+              "line": 3624,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1614,7 +1630,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3604,
+              "line": 3625,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1630,7 +1646,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3605,
+              "line": 3626,
               "authority": "LuaLS declaration"
             }
           ],
@@ -1643,7 +1659,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3601,
+          "line": 3622,
           "authority": "LuaLS declaration"
         }
       ],
@@ -1660,7 +1676,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3634,
+          "line": 3655,
           "authority": "LuaLS declaration"
         }
       ],
@@ -5141,7 +5157,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4109,
+              "line": 4130,
               "authority": "LuaLS declaration"
             }
           ],
@@ -5154,7 +5170,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4108,
+          "line": 4129,
           "authority": "LuaLS declaration"
         }
       ],
@@ -5175,7 +5191,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4112,
+              "line": 4133,
               "authority": "LuaLS declaration"
             }
           ],
@@ -5191,7 +5207,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4113,
+              "line": 4134,
               "authority": "LuaLS declaration"
             }
           ],
@@ -5207,7 +5223,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4114,
+              "line": 4135,
               "authority": "LuaLS declaration"
             }
           ],
@@ -5223,7 +5239,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4115,
+              "line": 4136,
               "authority": "LuaLS declaration"
             }
           ],
@@ -5239,7 +5255,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4116,
+              "line": 4137,
               "authority": "LuaLS declaration"
             }
           ],
@@ -5255,7 +5271,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4117,
+              "line": 4138,
               "authority": "LuaLS declaration"
             }
           ],
@@ -5271,7 +5287,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4118,
+              "line": 4139,
               "authority": "LuaLS declaration"
             }
           ],
@@ -5287,7 +5303,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4119,
+              "line": 4140,
               "authority": "LuaLS declaration"
             }
           ],
@@ -5303,7 +5319,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4120,
+              "line": 4141,
               "authority": "LuaLS declaration"
             }
           ],
@@ -5319,7 +5335,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4121,
+              "line": 4142,
               "authority": "LuaLS declaration"
             }
           ],
@@ -5335,7 +5351,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4122,
+              "line": 4143,
               "authority": "LuaLS declaration"
             }
           ],
@@ -5351,7 +5367,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4123,
+              "line": 4144,
               "authority": "LuaLS declaration"
             }
           ],
@@ -5367,7 +5383,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4124,
+              "line": 4145,
               "authority": "LuaLS declaration"
             }
           ],
@@ -5380,7 +5396,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4111,
+          "line": 4132,
           "authority": "LuaLS declaration"
         }
       ],
@@ -5397,7 +5413,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4126,
+          "line": 4147,
           "authority": "LuaLS declaration"
         }
       ],
@@ -6536,7 +6552,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4317,
+              "line": 4338,
               "authority": "LuaLS declaration"
             }
           ],
@@ -6552,7 +6568,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4318,
+              "line": 4339,
               "authority": "LuaLS declaration"
             }
           ],
@@ -6568,7 +6584,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4319,
+              "line": 4340,
               "authority": "LuaLS declaration"
             }
           ],
@@ -6584,7 +6600,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4320,
+              "line": 4341,
               "authority": "LuaLS declaration"
             }
           ],
@@ -6600,7 +6616,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4321,
+              "line": 4342,
               "authority": "LuaLS declaration"
             }
           ],
@@ -6616,7 +6632,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4322,
+              "line": 4343,
               "authority": "LuaLS declaration"
             }
           ],
@@ -6632,7 +6648,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4323,
+              "line": 4344,
               "authority": "LuaLS declaration"
             }
           ],
@@ -6648,7 +6664,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4324,
+              "line": 4345,
               "authority": "LuaLS declaration"
             }
           ],
@@ -6664,7 +6680,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4325,
+              "line": 4346,
               "authority": "LuaLS declaration"
             }
           ],
@@ -6680,7 +6696,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4326,
+              "line": 4347,
               "authority": "LuaLS declaration"
             }
           ],
@@ -6696,7 +6712,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4327,
+              "line": 4348,
               "authority": "LuaLS declaration"
             }
           ],
@@ -6712,7 +6728,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4328,
+              "line": 4349,
               "authority": "LuaLS declaration"
             }
           ],
@@ -6728,7 +6744,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4329,
+              "line": 4350,
               "authority": "LuaLS declaration"
             }
           ],
@@ -6744,7 +6760,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4330,
+              "line": 4351,
               "authority": "LuaLS declaration"
             }
           ],
@@ -6757,7 +6773,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4316,
+          "line": 4337,
           "authority": "LuaLS declaration"
         }
       ],
@@ -9098,7 +9114,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3995,
+              "line": 4016,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9114,7 +9130,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3996,
+              "line": 4017,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9130,7 +9146,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3997,
+              "line": 4018,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9146,7 +9162,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3998,
+              "line": 4019,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9159,7 +9175,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3994,
+          "line": 4015,
           "authority": "LuaLS declaration"
         }
       ],
@@ -9180,7 +9196,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4025,
+              "line": 4046,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9196,7 +9212,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4026,
+              "line": 4047,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9209,7 +9225,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4024,
+          "line": 4045,
           "authority": "LuaLS declaration"
         }
       ],
@@ -9230,7 +9246,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4029,
+              "line": 4050,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9246,7 +9262,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4030,
+              "line": 4051,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9262,7 +9278,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4031,
+              "line": 4052,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9278,7 +9294,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4032,
+              "line": 4053,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9294,7 +9310,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4033,
+              "line": 4054,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9310,7 +9326,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4034,
+              "line": 4055,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9326,7 +9342,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4035,
+              "line": 4056,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9342,7 +9358,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4036,
+              "line": 4057,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9355,7 +9371,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4028,
+          "line": 4049,
           "authority": "LuaLS declaration"
         }
       ],
@@ -9376,7 +9392,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3980,
+              "line": 4001,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9392,7 +9408,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3981,
+              "line": 4002,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9408,7 +9424,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3982,
+              "line": 4003,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9424,7 +9440,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3983,
+              "line": 4004,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9440,7 +9456,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3984,
+              "line": 4005,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9453,7 +9469,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3979,
+          "line": 4000,
           "authority": "LuaLS declaration"
         }
       ],
@@ -9474,7 +9490,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4015,
+              "line": 4036,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9490,7 +9506,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4016,
+              "line": 4037,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9506,7 +9522,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4017,
+              "line": 4038,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9519,7 +9535,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4014,
+          "line": 4035,
           "authority": "LuaLS declaration"
         }
       ],
@@ -9540,7 +9556,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4020,
+              "line": 4041,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9556,7 +9572,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4021,
+              "line": 4042,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9572,7 +9588,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4022,
+              "line": 4043,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9585,7 +9601,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4019,
+          "line": 4040,
           "authority": "LuaLS declaration"
         }
       ],
@@ -9606,7 +9622,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3987,
+              "line": 4008,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9622,7 +9638,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3988,
+              "line": 4009,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9638,7 +9654,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3989,
+              "line": 4010,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9654,7 +9670,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3990,
+              "line": 4011,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9670,7 +9686,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3991,
+              "line": 4012,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9686,7 +9702,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3992,
+              "line": 4013,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9699,7 +9715,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3986,
+          "line": 4007,
           "authority": "LuaLS declaration"
         }
       ],
@@ -9720,7 +9736,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4001,
+              "line": 4022,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9736,7 +9752,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4002,
+              "line": 4023,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9752,7 +9768,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4003,
+              "line": 4024,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9768,7 +9784,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4004,
+              "line": 4025,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9784,7 +9800,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4005,
+              "line": 4026,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9800,7 +9816,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4006,
+              "line": 4027,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9816,7 +9832,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4007,
+              "line": 4028,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9832,7 +9848,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4008,
+              "line": 4029,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9848,7 +9864,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4009,
+              "line": 4030,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9864,7 +9880,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4010,
+              "line": 4031,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9880,7 +9896,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4011,
+              "line": 4032,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9896,7 +9912,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4012,
+              "line": 4033,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9909,7 +9925,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4000,
+          "line": 4021,
           "authority": "LuaLS declaration"
         }
       ],
@@ -9926,7 +9942,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4038,
+          "line": 4059,
           "authority": "LuaLS declaration"
         }
       ],
@@ -9981,7 +9997,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4453,
+              "line": 4474,
               "authority": "LuaLS declaration"
             }
           ],
@@ -9997,7 +10013,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4454,
+              "line": 4475,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10013,7 +10029,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4455,
+              "line": 4476,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10029,7 +10045,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4456,
+              "line": 4477,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10045,7 +10061,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4457,
+              "line": 4478,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10061,7 +10077,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4458,
+              "line": 4479,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10077,7 +10093,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4459,
+              "line": 4480,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10093,7 +10109,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4460,
+              "line": 4481,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10109,7 +10125,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4461,
+              "line": 4482,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10125,7 +10141,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4462,
+              "line": 4483,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10141,7 +10157,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4463,
+              "line": 4484,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10157,7 +10173,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4464,
+              "line": 4485,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10173,7 +10189,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4465,
+              "line": 4486,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10189,7 +10205,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4466,
+              "line": 4487,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10205,7 +10221,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4467,
+              "line": 4488,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10221,7 +10237,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4468,
+              "line": 4489,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10237,7 +10253,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4469,
+              "line": 4490,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10253,7 +10269,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4470,
+              "line": 4491,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10269,7 +10285,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4471,
+              "line": 4492,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10285,7 +10301,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4472,
+              "line": 4493,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10301,7 +10317,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4473,
+              "line": 4494,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10317,7 +10333,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4474,
+              "line": 4495,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10333,7 +10349,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4475,
+              "line": 4496,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10349,7 +10365,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4476,
+              "line": 4497,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10365,7 +10381,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4477,
+              "line": 4498,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10381,7 +10397,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4478,
+              "line": 4499,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10397,7 +10413,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4479,
+              "line": 4500,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10413,7 +10429,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4480,
+              "line": 4501,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10429,7 +10445,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4481,
+              "line": 4502,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10445,7 +10461,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4482,
+              "line": 4503,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10461,7 +10477,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4483,
+              "line": 4504,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10477,12 +10493,28 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4484,
+              "line": 4505,
               "authority": "LuaLS declaration"
             }
           ],
           "documentation": {
             "id": "api.lua.v5.generated.property.CcbGameApi.eocs",
+            "status": "generated-contract-source"
+          }
+        },
+        {
+          "name": "handlers",
+          "optional": false,
+          "declaration": "CcbHandlersApi",
+          "sources": [
+            {
+              "path": "data/lua/types/ccb_api_v5.d.lua",
+              "line": 4506,
+              "authority": "LuaLS declaration"
+            }
+          ],
+          "documentation": {
+            "id": "api.lua.v5.generated.property.CcbGameApi.handlers",
             "status": "generated-contract-source"
           }
         },
@@ -10493,7 +10525,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4485,
+              "line": 4507,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10509,7 +10541,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4486,
+              "line": 4508,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10525,7 +10557,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4487,
+              "line": 4509,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10541,7 +10573,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4488,
+              "line": 4510,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10557,7 +10589,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4489,
+              "line": 4511,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10573,7 +10605,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4490,
+              "line": 4512,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10589,7 +10621,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4491,
+              "line": 4513,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10605,7 +10637,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4492,
+              "line": 4514,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10621,7 +10653,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4493,
+              "line": 4515,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10637,7 +10669,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4494,
+              "line": 4516,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10653,7 +10685,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4495,
+              "line": 4517,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10669,7 +10701,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4496,
+              "line": 4518,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10685,7 +10717,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4497,
+              "line": 4519,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10701,7 +10733,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4498,
+              "line": 4520,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10717,7 +10749,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4499,
+              "line": 4521,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10733,7 +10765,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4500,
+              "line": 4522,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10749,7 +10781,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4501,
+              "line": 4523,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10765,7 +10797,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4502,
+              "line": 4524,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10781,7 +10813,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4503,
+              "line": 4525,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10797,7 +10829,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4504,
+              "line": 4526,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10813,7 +10845,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4505,
+              "line": 4527,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10829,7 +10861,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4506,
+              "line": 4528,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10845,7 +10877,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4507,
+              "line": 4529,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10861,7 +10893,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4508,
+              "line": 4530,
               "authority": "LuaLS declaration"
             }
           ],
@@ -10874,7 +10906,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4452,
+          "line": 4473,
           "authority": "LuaLS declaration"
         }
       ],
@@ -11128,6 +11160,23 @@
       ],
       "documentation": {
         "id": "api.lua.v5.generated.class.CcbHandleLocator",
+        "status": "generated-contract-source"
+      }
+    },
+    {
+      "id": "CcbHandlersApi",
+      "kind": "record",
+      "declaration": "",
+      "fields": [],
+      "sources": [
+        {
+          "path": "data/lua/types/ccb_api_v5.d.lua",
+          "line": 3596,
+          "authority": "LuaLS declaration"
+        }
+      ],
+      "documentation": {
+        "id": "api.lua.v5.generated.class.CcbHandlersApi",
         "status": "generated-contract-source"
       }
     },
@@ -12623,6 +12672,216 @@
       ],
       "documentation": {
         "id": "api.lua.v5.generated.class.CcbLegacyHordeSpawnOptions",
+        "status": "generated-contract-source"
+      }
+    },
+    {
+      "id": "CcbLuaHandlerContext",
+      "kind": "record",
+      "declaration": "",
+      "fields": [
+        {
+          "name": "handler",
+          "optional": false,
+          "declaration": "string",
+          "sources": [
+            {
+              "path": "data/lua/types/ccb_api_v5.d.lua",
+              "line": 3583,
+              "authority": "LuaLS declaration"
+            }
+          ],
+          "documentation": {
+            "id": "api.lua.v5.generated.property.CcbLuaHandlerContext.handler",
+            "status": "generated-contract-source"
+          }
+        },
+        {
+          "name": "kind",
+          "optional": false,
+          "declaration": "string",
+          "sources": [
+            {
+              "path": "data/lua/types/ccb_api_v5.d.lua",
+              "line": 3584,
+              "authority": "LuaLS declaration"
+            }
+          ],
+          "documentation": {
+            "id": "api.lua.v5.generated.property.CcbLuaHandlerContext.kind",
+            "status": "generated-contract-source"
+          }
+        },
+        {
+          "name": "args",
+          "optional": false,
+          "declaration": "CcbScalarMap",
+          "sources": [
+            {
+              "path": "data/lua/types/ccb_api_v5.d.lua",
+              "line": 3585,
+              "authority": "LuaLS declaration"
+            }
+          ],
+          "documentation": {
+            "id": "api.lua.v5.generated.property.CcbLuaHandlerContext.args",
+            "status": "generated-contract-source"
+          }
+        },
+        {
+          "name": "alpha",
+          "optional": true,
+          "declaration": "GameHandle",
+          "sources": [
+            {
+              "path": "data/lua/types/ccb_api_v5.d.lua",
+              "line": 3586,
+              "authority": "LuaLS declaration"
+            }
+          ],
+          "documentation": {
+            "id": "api.lua.v5.generated.property.CcbLuaHandlerContext.alpha",
+            "status": "generated-contract-source"
+          }
+        },
+        {
+          "name": "beta",
+          "optional": true,
+          "declaration": "GameHandle",
+          "sources": [
+            {
+              "path": "data/lua/types/ccb_api_v5.d.lua",
+              "line": 3587,
+              "authority": "LuaLS declaration"
+            }
+          ],
+          "documentation": {
+            "id": "api.lua.v5.generated.property.CcbLuaHandlerContext.beta",
+            "status": "generated-contract-source"
+          }
+        },
+        {
+          "name": "character",
+          "optional": true,
+          "declaration": "GameHandle",
+          "sources": [
+            {
+              "path": "data/lua/types/ccb_api_v5.d.lua",
+              "line": 3588,
+              "authority": "LuaLS declaration"
+            }
+          ],
+          "documentation": {
+            "id": "api.lua.v5.generated.property.CcbLuaHandlerContext.character",
+            "status": "generated-contract-source"
+          }
+        },
+        {
+          "name": "caster",
+          "optional": true,
+          "declaration": "GameHandle",
+          "sources": [
+            {
+              "path": "data/lua/types/ccb_api_v5.d.lua",
+              "line": 3589,
+              "authority": "LuaLS declaration"
+            }
+          ],
+          "documentation": {
+            "id": "api.lua.v5.generated.property.CcbLuaHandlerContext.caster",
+            "status": "generated-contract-source"
+          }
+        },
+        {
+          "name": "mutation",
+          "optional": true,
+          "declaration": "GameId",
+          "sources": [
+            {
+              "path": "data/lua/types/ccb_api_v5.d.lua",
+              "line": 3590,
+              "authority": "LuaLS declaration"
+            }
+          ],
+          "documentation": {
+            "id": "api.lua.v5.generated.property.CcbLuaHandlerContext.mutation",
+            "status": "generated-contract-source"
+          }
+        },
+        {
+          "name": "bionic",
+          "optional": true,
+          "declaration": "GameId",
+          "sources": [
+            {
+              "path": "data/lua/types/ccb_api_v5.d.lua",
+              "line": 3591,
+              "authority": "LuaLS declaration"
+            }
+          ],
+          "documentation": {
+            "id": "api.lua.v5.generated.property.CcbLuaHandlerContext.bionic",
+            "status": "generated-contract-source"
+          }
+        },
+        {
+          "name": "bionic_uid",
+          "optional": true,
+          "declaration": "integer",
+          "sources": [
+            {
+              "path": "data/lua/types/ccb_api_v5.d.lua",
+              "line": 3592,
+              "authority": "LuaLS declaration"
+            }
+          ],
+          "documentation": {
+            "id": "api.lua.v5.generated.property.CcbLuaHandlerContext.bionic_uid",
+            "status": "generated-contract-source"
+          }
+        },
+        {
+          "name": "spell",
+          "optional": true,
+          "declaration": "GameId",
+          "sources": [
+            {
+              "path": "data/lua/types/ccb_api_v5.d.lua",
+              "line": 3593,
+              "authority": "LuaLS declaration"
+            }
+          ],
+          "documentation": {
+            "id": "api.lua.v5.generated.property.CcbLuaHandlerContext.spell",
+            "status": "generated-contract-source"
+          }
+        },
+        {
+          "name": "target",
+          "optional": true,
+          "declaration": "table",
+          "sources": [
+            {
+              "path": "data/lua/types/ccb_api_v5.d.lua",
+              "line": 3594,
+              "authority": "LuaLS declaration"
+            }
+          ],
+          "documentation": {
+            "id": "api.lua.v5.generated.property.CcbLuaHandlerContext.target",
+            "status": "generated-contract-source"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "path": "data/lua/types/ccb_api_v5.d.lua",
+          "line": 3582,
+          "authority": "LuaLS declaration"
+        }
+      ],
+      "documentation": {
+        "id": "api.lua.v5.generated.class.CcbLuaHandlerContext",
         "status": "generated-contract-source"
       }
     },
@@ -14531,7 +14790,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3699,
+              "line": 3720,
               "authority": "LuaLS declaration"
             }
           ],
@@ -14547,7 +14806,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3700,
+              "line": 3721,
               "authority": "LuaLS declaration"
             }
           ],
@@ -14563,7 +14822,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3701,
+              "line": 3722,
               "authority": "LuaLS declaration"
             }
           ],
@@ -14579,7 +14838,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3702,
+              "line": 3723,
               "authority": "LuaLS declaration"
             }
           ],
@@ -14595,7 +14854,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3703,
+              "line": 3724,
               "authority": "LuaLS declaration"
             }
           ],
@@ -14611,7 +14870,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3704,
+              "line": 3725,
               "authority": "LuaLS declaration"
             }
           ],
@@ -14624,7 +14883,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3698,
+          "line": 3719,
           "authority": "LuaLS declaration"
         }
       ],
@@ -15568,7 +15827,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3888,
+              "line": 3909,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15584,7 +15843,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3889,
+              "line": 3910,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15600,7 +15859,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3890,
+              "line": 3911,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15616,7 +15875,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3891,
+              "line": 3912,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15632,7 +15891,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3892,
+              "line": 3913,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15648,7 +15907,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3893,
+              "line": 3914,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15664,7 +15923,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3894,
+              "line": 3915,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15680,7 +15939,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3895,
+              "line": 3916,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15696,7 +15955,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3896,
+              "line": 3917,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15712,7 +15971,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3897,
+              "line": 3918,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15728,7 +15987,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3898,
+              "line": 3919,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15741,7 +16000,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3887,
+          "line": 3908,
           "authority": "LuaLS declaration"
         }
       ],
@@ -15762,7 +16021,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3901,
+              "line": 3922,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15778,7 +16037,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3902,
+              "line": 3923,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15794,7 +16053,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3903,
+              "line": 3924,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15810,7 +16069,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3904,
+              "line": 3925,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15826,7 +16085,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3905,
+              "line": 3926,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15842,7 +16101,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3906,
+              "line": 3927,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15855,7 +16114,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3900,
+          "line": 3921,
           "authority": "LuaLS declaration"
         }
       ],
@@ -15876,7 +16135,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3938,
+              "line": 3959,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15892,7 +16151,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3939,
+              "line": 3960,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15908,7 +16167,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3940,
+              "line": 3961,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15924,7 +16183,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3941,
+              "line": 3962,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15940,7 +16199,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3942,
+              "line": 3963,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15956,7 +16215,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3943,
+              "line": 3964,
               "authority": "LuaLS declaration"
             }
           ],
@@ -15969,7 +16228,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3937,
+          "line": 3958,
           "authority": "LuaLS declaration"
         }
       ],
@@ -15990,7 +16249,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3909,
+              "line": 3930,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16006,7 +16265,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3910,
+              "line": 3931,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16022,7 +16281,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3911,
+              "line": 3932,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16038,7 +16297,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3912,
+              "line": 3933,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16054,7 +16313,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3913,
+              "line": 3934,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16070,7 +16329,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3914,
+              "line": 3935,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16086,7 +16345,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3915,
+              "line": 3936,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16102,7 +16361,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3916,
+              "line": 3937,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16118,7 +16377,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3917,
+              "line": 3938,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16134,7 +16393,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3918,
+              "line": 3939,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16150,7 +16409,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3919,
+              "line": 3940,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16166,7 +16425,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3920,
+              "line": 3941,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16182,7 +16441,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3921,
+              "line": 3942,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16198,7 +16457,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3922,
+              "line": 3943,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16214,7 +16473,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3923,
+              "line": 3944,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16230,7 +16489,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3924,
+              "line": 3945,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16246,7 +16505,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3925,
+              "line": 3946,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16262,7 +16521,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3926,
+              "line": 3947,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16278,7 +16537,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3927,
+              "line": 3948,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16294,7 +16553,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3928,
+              "line": 3949,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16310,7 +16569,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3929,
+              "line": 3950,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16326,7 +16585,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3930,
+              "line": 3951,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16342,7 +16601,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3931,
+              "line": 3952,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16358,7 +16617,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3932,
+              "line": 3953,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16374,7 +16633,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3933,
+              "line": 3954,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16390,7 +16649,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3934,
+              "line": 3955,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16406,7 +16665,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3935,
+              "line": 3956,
               "authority": "LuaLS declaration"
             }
           ],
@@ -16419,7 +16678,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3908,
+          "line": 3929,
           "authority": "LuaLS declaration"
         }
       ],
@@ -16436,7 +16695,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3945,
+          "line": 3966,
           "authority": "LuaLS declaration"
         }
       ],
@@ -18678,7 +18937,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4434,
+              "line": 4455,
               "authority": "LuaLS declaration"
             }
           ],
@@ -18694,7 +18953,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4435,
+              "line": 4456,
               "authority": "LuaLS declaration"
             }
           ],
@@ -18710,7 +18969,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4436,
+              "line": 4457,
               "authority": "LuaLS declaration"
             }
           ],
@@ -18726,7 +18985,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4437,
+              "line": 4458,
               "authority": "LuaLS declaration"
             }
           ],
@@ -18742,7 +19001,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4438,
+              "line": 4459,
               "authority": "LuaLS declaration"
             }
           ],
@@ -18758,7 +19017,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4439,
+              "line": 4460,
               "authority": "LuaLS declaration"
             }
           ],
@@ -18774,7 +19033,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4440,
+              "line": 4461,
               "authority": "LuaLS declaration"
             }
           ],
@@ -18790,7 +19049,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4441,
+              "line": 4462,
               "authority": "LuaLS declaration"
             }
           ],
@@ -18806,7 +19065,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4442,
+              "line": 4463,
               "authority": "LuaLS declaration"
             }
           ],
@@ -18822,7 +19081,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4443,
+              "line": 4464,
               "authority": "LuaLS declaration"
             }
           ],
@@ -18838,7 +19097,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4444,
+              "line": 4465,
               "authority": "LuaLS declaration"
             }
           ],
@@ -18854,7 +19113,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4445,
+              "line": 4466,
               "authority": "LuaLS declaration"
             }
           ],
@@ -18870,7 +19129,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4446,
+              "line": 4467,
               "authority": "LuaLS declaration"
             }
           ],
@@ -18886,7 +19145,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4447,
+              "line": 4468,
               "authority": "LuaLS declaration"
             }
           ],
@@ -18902,7 +19161,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4448,
+              "line": 4469,
               "authority": "LuaLS declaration"
             }
           ],
@@ -18918,7 +19177,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4449,
+              "line": 4470,
               "authority": "LuaLS declaration"
             }
           ],
@@ -18934,7 +19193,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4450,
+              "line": 4471,
               "authority": "LuaLS declaration"
             }
           ],
@@ -18947,7 +19206,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4433,
+          "line": 4454,
           "authority": "LuaLS declaration"
         }
       ],
@@ -20444,7 +20703,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3673,
+              "line": 3694,
               "authority": "LuaLS declaration"
             }
           ],
@@ -20460,7 +20719,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3674,
+              "line": 3695,
               "authority": "LuaLS declaration"
             }
           ],
@@ -20476,7 +20735,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3675,
+              "line": 3696,
               "authority": "LuaLS declaration"
             }
           ],
@@ -20492,7 +20751,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3676,
+              "line": 3697,
               "authority": "LuaLS declaration"
             }
           ],
@@ -20508,7 +20767,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3677,
+              "line": 3698,
               "authority": "LuaLS declaration"
             }
           ],
@@ -20524,7 +20783,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3678,
+              "line": 3699,
               "authority": "LuaLS declaration"
             }
           ],
@@ -20537,7 +20796,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3672,
+          "line": 3693,
           "authority": "LuaLS declaration"
         }
       ],
@@ -20558,7 +20817,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3688,
+              "line": 3709,
               "authority": "LuaLS declaration"
             }
           ],
@@ -20574,7 +20833,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3689,
+              "line": 3710,
               "authority": "LuaLS declaration"
             }
           ],
@@ -20590,7 +20849,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3690,
+              "line": 3711,
               "authority": "LuaLS declaration"
             }
           ],
@@ -20606,7 +20865,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3691,
+              "line": 3712,
               "authority": "LuaLS declaration"
             }
           ],
@@ -20619,7 +20878,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3687,
+          "line": 3708,
           "authority": "LuaLS declaration"
         }
       ],
@@ -20640,7 +20899,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3694,
+              "line": 3715,
               "authority": "LuaLS declaration"
             }
           ],
@@ -20656,7 +20915,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3695,
+              "line": 3716,
               "authority": "LuaLS declaration"
             }
           ],
@@ -20672,7 +20931,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3696,
+              "line": 3717,
               "authority": "LuaLS declaration"
             }
           ],
@@ -20685,7 +20944,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3693,
+          "line": 3714,
           "authority": "LuaLS declaration"
         }
       ],
@@ -20706,7 +20965,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3681,
+              "line": 3702,
               "authority": "LuaLS declaration"
             }
           ],
@@ -20722,7 +20981,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3682,
+              "line": 3703,
               "authority": "LuaLS declaration"
             }
           ],
@@ -20738,7 +20997,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3683,
+              "line": 3704,
               "authority": "LuaLS declaration"
             }
           ],
@@ -20754,7 +21013,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3684,
+              "line": 3705,
               "authority": "LuaLS declaration"
             }
           ],
@@ -20770,7 +21029,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3685,
+              "line": 3706,
               "authority": "LuaLS declaration"
             }
           ],
@@ -20783,7 +21042,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3680,
+          "line": 3701,
           "authority": "LuaLS declaration"
         }
       ],
@@ -20804,7 +21063,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3667,
+              "line": 3688,
               "authority": "LuaLS declaration"
             }
           ],
@@ -20820,7 +21079,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3668,
+              "line": 3689,
               "authority": "LuaLS declaration"
             }
           ],
@@ -20836,7 +21095,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3669,
+              "line": 3690,
               "authority": "LuaLS declaration"
             }
           ],
@@ -20852,7 +21111,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3670,
+              "line": 3691,
               "authority": "LuaLS declaration"
             }
           ],
@@ -20865,7 +21124,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3666,
+          "line": 3687,
           "authority": "LuaLS declaration"
         }
       ],
@@ -20882,7 +21141,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3706,
+          "line": 3727,
           "authority": "LuaLS declaration"
         }
       ],
@@ -21572,7 +21831,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3582,
+          "line": 3603,
           "authority": "LuaLS declaration"
         }
       ],
@@ -21659,7 +21918,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3776,
+              "line": 3797,
               "authority": "LuaLS declaration"
             }
           ],
@@ -21675,7 +21934,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3777,
+              "line": 3798,
               "authority": "LuaLS declaration"
             }
           ],
@@ -21691,7 +21950,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3778,
+              "line": 3799,
               "authority": "LuaLS declaration"
             }
           ],
@@ -21707,7 +21966,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3779,
+              "line": 3800,
               "authority": "LuaLS declaration"
             }
           ],
@@ -21723,7 +21982,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3780,
+              "line": 3801,
               "authority": "LuaLS declaration"
             }
           ],
@@ -21739,7 +21998,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3781,
+              "line": 3802,
               "authority": "LuaLS declaration"
             }
           ],
@@ -21755,7 +22014,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3782,
+              "line": 3803,
               "authority": "LuaLS declaration"
             }
           ],
@@ -21771,7 +22030,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3783,
+              "line": 3804,
               "authority": "LuaLS declaration"
             }
           ],
@@ -21787,7 +22046,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3784,
+              "line": 3805,
               "authority": "LuaLS declaration"
             }
           ],
@@ -21803,7 +22062,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3785,
+              "line": 3806,
               "authority": "LuaLS declaration"
             }
           ],
@@ -21819,7 +22078,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3786,
+              "line": 3807,
               "authority": "LuaLS declaration"
             }
           ],
@@ -21835,7 +22094,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3787,
+              "line": 3808,
               "authority": "LuaLS declaration"
             }
           ],
@@ -21851,7 +22110,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3788,
+              "line": 3809,
               "authority": "LuaLS declaration"
             }
           ],
@@ -21864,7 +22123,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3775,
+          "line": 3796,
           "authority": "LuaLS declaration"
         }
       ],
@@ -21885,7 +22144,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3761,
+              "line": 3782,
               "authority": "LuaLS declaration"
             }
           ],
@@ -21901,7 +22160,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3762,
+              "line": 3783,
               "authority": "LuaLS declaration"
             }
           ],
@@ -21917,7 +22176,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3763,
+              "line": 3784,
               "authority": "LuaLS declaration"
             }
           ],
@@ -21933,7 +22192,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3764,
+              "line": 3785,
               "authority": "LuaLS declaration"
             }
           ],
@@ -21949,7 +22208,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3765,
+              "line": 3786,
               "authority": "LuaLS declaration"
             }
           ],
@@ -21965,7 +22224,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3766,
+              "line": 3787,
               "authority": "LuaLS declaration"
             }
           ],
@@ -21981,7 +22240,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3767,
+              "line": 3788,
               "authority": "LuaLS declaration"
             }
           ],
@@ -21997,7 +22256,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3768,
+              "line": 3789,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22013,7 +22272,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3769,
+              "line": 3790,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22029,7 +22288,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3770,
+              "line": 3791,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22045,7 +22304,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3771,
+              "line": 3792,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22061,7 +22320,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3772,
+              "line": 3793,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22077,7 +22336,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3773,
+              "line": 3794,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22090,7 +22349,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3760,
+          "line": 3781,
           "authority": "LuaLS declaration"
         }
       ],
@@ -22111,7 +22370,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3805,
+              "line": 3826,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22127,7 +22386,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3806,
+              "line": 3827,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22143,7 +22402,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3807,
+              "line": 3828,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22159,7 +22418,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3808,
+              "line": 3829,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22175,7 +22434,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3809,
+              "line": 3830,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22191,7 +22450,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3810,
+              "line": 3831,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22207,7 +22466,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3811,
+              "line": 3832,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22223,7 +22482,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3812,
+              "line": 3833,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22239,7 +22498,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3813,
+              "line": 3834,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22255,7 +22514,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3814,
+              "line": 3835,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22271,7 +22530,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3815,
+              "line": 3836,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22287,7 +22546,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3816,
+              "line": 3837,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22303,7 +22562,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3817,
+              "line": 3838,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22319,7 +22578,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3818,
+              "line": 3839,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22335,7 +22594,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3819,
+              "line": 3840,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22351,7 +22610,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3820,
+              "line": 3841,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22367,7 +22626,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3821,
+              "line": 3842,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22383,7 +22642,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3822,
+              "line": 3843,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22399,7 +22658,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3823,
+              "line": 3844,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22415,7 +22674,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3824,
+              "line": 3845,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22431,7 +22690,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3825,
+              "line": 3846,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22447,7 +22706,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3826,
+              "line": 3847,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22460,7 +22719,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3804,
+          "line": 3825,
           "authority": "LuaLS declaration"
         }
       ],
@@ -22481,7 +22740,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3829,
+              "line": 3850,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22497,7 +22756,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3830,
+              "line": 3851,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22510,7 +22769,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3828,
+          "line": 3849,
           "authority": "LuaLS declaration"
         }
       ],
@@ -22531,7 +22790,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3752,
+              "line": 3773,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22547,7 +22806,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3753,
+              "line": 3774,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22563,7 +22822,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3754,
+              "line": 3775,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22579,7 +22838,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3755,
+              "line": 3776,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22595,7 +22854,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3756,
+              "line": 3777,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22611,7 +22870,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3757,
+              "line": 3778,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22627,7 +22886,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3758,
+              "line": 3779,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22640,7 +22899,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3751,
+          "line": 3772,
           "authority": "LuaLS declaration"
         }
       ],
@@ -22661,7 +22920,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3791,
+              "line": 3812,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22677,7 +22936,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3792,
+              "line": 3813,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22693,7 +22952,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3793,
+              "line": 3814,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22709,7 +22968,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3794,
+              "line": 3815,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22725,7 +22984,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3795,
+              "line": 3816,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22741,7 +23000,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3796,
+              "line": 3817,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22757,7 +23016,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3797,
+              "line": 3818,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22773,7 +23032,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3798,
+              "line": 3819,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22789,7 +23048,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3799,
+              "line": 3820,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22805,7 +23064,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3800,
+              "line": 3821,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22821,7 +23080,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3801,
+              "line": 3822,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22837,7 +23096,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3802,
+              "line": 3823,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22850,7 +23109,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3790,
+          "line": 3811,
           "authority": "LuaLS declaration"
         }
       ],
@@ -22871,7 +23130,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3833,
+              "line": 3854,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22887,7 +23146,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3834,
+              "line": 3855,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22903,7 +23162,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 3835,
+              "line": 3856,
               "authority": "LuaLS declaration"
             }
           ],
@@ -22916,7 +23175,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3832,
+          "line": 3853,
           "authority": "LuaLS declaration"
         }
       ],
@@ -22933,7 +23192,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3837,
+          "line": 3858,
           "authority": "LuaLS declaration"
         }
       ],
@@ -23357,7 +23616,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4385,
+          "line": 4406,
           "authority": "LuaLS declaration"
         }
       ],
@@ -23378,7 +23637,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4362,
+              "line": 4383,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23394,7 +23653,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4363,
+              "line": 4384,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23410,7 +23669,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4364,
+              "line": 4385,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23426,7 +23685,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4365,
+              "line": 4386,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23442,7 +23701,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4366,
+              "line": 4387,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23458,7 +23717,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4367,
+              "line": 4388,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23474,7 +23733,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4368,
+              "line": 4389,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23487,7 +23746,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4361,
+          "line": 4382,
           "authority": "LuaLS declaration"
         }
       ],
@@ -23508,7 +23767,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4355,
+              "line": 4376,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23524,7 +23783,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4356,
+              "line": 4377,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23540,7 +23799,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4357,
+              "line": 4378,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23556,7 +23815,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4358,
+              "line": 4379,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23572,7 +23831,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4359,
+              "line": 4380,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23585,7 +23844,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4354,
+          "line": 4375,
           "authority": "LuaLS declaration"
         }
       ],
@@ -23606,7 +23865,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4337,
+              "line": 4358,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23622,7 +23881,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4338,
+              "line": 4359,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23638,7 +23897,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4339,
+              "line": 4360,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23654,7 +23913,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4340,
+              "line": 4361,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23670,7 +23929,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4341,
+              "line": 4362,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23686,7 +23945,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4342,
+              "line": 4363,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23702,7 +23961,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4343,
+              "line": 4364,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23718,7 +23977,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4344,
+              "line": 4365,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23734,7 +23993,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4345,
+              "line": 4366,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23750,7 +24009,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4346,
+              "line": 4367,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23766,7 +24025,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4347,
+              "line": 4368,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23782,7 +24041,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4348,
+              "line": 4369,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23795,7 +24054,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4336,
+          "line": 4357,
           "authority": "LuaLS declaration"
         }
       ],
@@ -23816,7 +24075,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4377,
+              "line": 4398,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23832,7 +24091,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4378,
+              "line": 4399,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23848,7 +24107,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4379,
+              "line": 4400,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23864,7 +24123,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4380,
+              "line": 4401,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23880,7 +24139,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4381,
+              "line": 4402,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23896,7 +24155,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4382,
+              "line": 4403,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23912,7 +24171,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4383,
+              "line": 4404,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23925,7 +24184,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4376,
+          "line": 4397,
           "authority": "LuaLS declaration"
         }
       ],
@@ -23946,7 +24205,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4351,
+              "line": 4372,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23962,7 +24221,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4352,
+              "line": 4373,
               "authority": "LuaLS declaration"
             }
           ],
@@ -23975,7 +24234,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4350,
+          "line": 4371,
           "authority": "LuaLS declaration"
         }
       ],
@@ -23996,7 +24255,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4299,
+              "line": 4320,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24012,7 +24271,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4300,
+              "line": 4321,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24028,7 +24287,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4301,
+              "line": 4322,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24044,7 +24303,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4302,
+              "line": 4323,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24060,7 +24319,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4303,
+              "line": 4324,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24076,7 +24335,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4304,
+              "line": 4325,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24092,7 +24351,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4305,
+              "line": 4326,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24108,7 +24367,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4306,
+              "line": 4327,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24124,7 +24383,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4307,
+              "line": 4328,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24140,7 +24399,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4308,
+              "line": 4329,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24156,7 +24415,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4309,
+              "line": 4330,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24172,7 +24431,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4310,
+              "line": 4331,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24188,7 +24447,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4311,
+              "line": 4332,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24204,7 +24463,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4312,
+              "line": 4333,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24220,7 +24479,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4313,
+              "line": 4334,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24236,7 +24495,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4314,
+              "line": 4335,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24249,7 +24508,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4298,
+          "line": 4319,
           "authority": "LuaLS declaration"
         }
       ],
@@ -24270,7 +24529,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4333,
+              "line": 4354,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24286,7 +24545,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4334,
+              "line": 4355,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24299,7 +24558,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4332,
+          "line": 4353,
           "authority": "LuaLS declaration"
         }
       ],
@@ -24482,7 +24741,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4274,
+              "line": 4295,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24498,7 +24757,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4275,
+              "line": 4296,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24514,7 +24773,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4276,
+              "line": 4297,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24530,7 +24789,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4277,
+              "line": 4298,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24546,7 +24805,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4278,
+              "line": 4299,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24562,7 +24821,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4279,
+              "line": 4300,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24578,7 +24837,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4280,
+              "line": 4301,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24594,7 +24853,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4281,
+              "line": 4302,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24610,7 +24869,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4282,
+              "line": 4303,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24626,7 +24885,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4283,
+              "line": 4304,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24642,7 +24901,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4284,
+              "line": 4305,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24658,7 +24917,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4285,
+              "line": 4306,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24674,7 +24933,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4286,
+              "line": 4307,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24690,7 +24949,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4287,
+              "line": 4308,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24706,7 +24965,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4288,
+              "line": 4309,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24722,7 +24981,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4289,
+              "line": 4310,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24738,7 +24997,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4290,
+              "line": 4311,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24754,7 +25013,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4291,
+              "line": 4312,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24770,7 +25029,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4292,
+              "line": 4313,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24786,7 +25045,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4293,
+              "line": 4314,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24802,7 +25061,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4294,
+              "line": 4315,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24818,7 +25077,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4295,
+              "line": 4316,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24834,7 +25093,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4296,
+              "line": 4317,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24847,7 +25106,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4273,
+          "line": 4294,
           "authority": "LuaLS declaration"
         }
       ],
@@ -24868,7 +25127,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4371,
+              "line": 4392,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24884,7 +25143,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4372,
+              "line": 4393,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24900,7 +25159,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4373,
+              "line": 4394,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24916,7 +25175,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4374,
+              "line": 4395,
               "authority": "LuaLS declaration"
             }
           ],
@@ -24929,7 +25188,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4370,
+          "line": 4391,
           "authority": "LuaLS declaration"
         }
       ],
@@ -25116,7 +25375,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4206,
+              "line": 4227,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25132,7 +25391,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4207,
+              "line": 4228,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25148,7 +25407,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4208,
+              "line": 4229,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25164,7 +25423,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4209,
+              "line": 4230,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25180,7 +25439,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4210,
+              "line": 4231,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25196,7 +25455,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4211,
+              "line": 4232,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25212,7 +25471,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4212,
+              "line": 4233,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25228,7 +25487,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4213,
+              "line": 4234,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25241,7 +25500,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4205,
+          "line": 4226,
           "authority": "LuaLS declaration"
         }
       ],
@@ -25262,7 +25521,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4202,
+              "line": 4223,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25278,7 +25537,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4203,
+              "line": 4224,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25291,7 +25550,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4201,
+          "line": 4222,
           "authority": "LuaLS declaration"
         }
       ],
@@ -25312,7 +25571,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4184,
+              "line": 4205,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25328,7 +25587,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4185,
+              "line": 4206,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25344,7 +25603,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4186,
+              "line": 4207,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25360,7 +25619,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4187,
+              "line": 4208,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25376,7 +25635,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4188,
+              "line": 4209,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25392,7 +25651,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4189,
+              "line": 4210,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25408,7 +25667,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4190,
+              "line": 4211,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25424,7 +25683,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4191,
+              "line": 4212,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25440,7 +25699,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4192,
+              "line": 4213,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25456,7 +25715,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4193,
+              "line": 4214,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25472,7 +25731,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4194,
+              "line": 4215,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25488,7 +25747,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4195,
+              "line": 4216,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25504,7 +25763,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4196,
+              "line": 4217,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25520,7 +25779,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4197,
+              "line": 4218,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25536,7 +25795,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4198,
+              "line": 4219,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25552,7 +25811,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4199,
+              "line": 4220,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25565,7 +25824,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4183,
+          "line": 4204,
           "authority": "LuaLS declaration"
         }
       ],
@@ -25586,7 +25845,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4174,
+              "line": 4195,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25602,7 +25861,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4175,
+              "line": 4196,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25618,7 +25877,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4176,
+              "line": 4197,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25634,7 +25893,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4177,
+              "line": 4198,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25650,7 +25909,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4178,
+              "line": 4199,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25666,7 +25925,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4179,
+              "line": 4200,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25682,7 +25941,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4180,
+              "line": 4201,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25698,7 +25957,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4181,
+              "line": 4202,
               "authority": "LuaLS declaration"
             }
           ],
@@ -25711,7 +25970,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4173,
+          "line": 4194,
           "authority": "LuaLS declaration"
         }
       ],
@@ -25728,7 +25987,7 @@
       "sources": [
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4215,
+          "line": 4236,
           "authority": "LuaLS declaration"
         }
       ],
@@ -26258,7 +26517,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3276,
+          "line": 3320,
           "authority": "native registration"
         },
         {
@@ -26280,7 +26539,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3142,
+          "line": 3186,
           "authority": "native registration"
         },
         {
@@ -26511,7 +26770,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3126,
+          "line": 3170,
           "authority": "native registration"
         },
         {
@@ -26789,7 +27048,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4159,
+              "line": 4180,
               "authority": "LuaLS declaration"
             }
           ],
@@ -26805,7 +27064,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4160,
+              "line": 4181,
               "authority": "LuaLS declaration"
             }
           ],
@@ -26821,7 +27080,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4161,
+              "line": 4182,
               "authority": "LuaLS declaration"
             }
           ],
@@ -26837,7 +27096,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4162,
+              "line": 4183,
               "authority": "LuaLS declaration"
             }
           ],
@@ -26853,7 +27112,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4163,
+              "line": 4184,
               "authority": "LuaLS declaration"
             }
           ],
@@ -26869,7 +27128,7 @@
           "sources": [
             {
               "path": "data/lua/types/ccb_api_v5.d.lua",
-              "line": 4164,
+              "line": 4185,
               "authority": "LuaLS declaration"
             }
           ],
@@ -26887,7 +27146,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4158,
+          "line": 4179,
           "authority": "LuaLS declaration"
         }
       ],
@@ -26929,7 +27188,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3258,
+          "line": 3302,
           "authority": "native registration"
         },
         {
@@ -26985,7 +27244,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3263,
+          "line": 3307,
           "authority": "native registration"
         },
         {
@@ -27036,7 +27295,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3255,
+          "line": 3299,
           "authority": "native registration"
         },
         {
@@ -27087,7 +27346,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3252,
+          "line": 3296,
           "authority": "native registration"
         },
         {
@@ -27145,7 +27404,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3222,
+          "line": 3266,
           "authority": "native registration"
         },
         {
@@ -27214,7 +27473,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3237,
+          "line": 3281,
           "authority": "native registration"
         },
         {
@@ -27270,7 +27529,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3643,
+          "line": 3664,
           "authority": "LuaLS declaration"
         }
       ],
@@ -27321,7 +27580,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3639,
+          "line": 3660,
           "authority": "LuaLS declaration"
         }
       ],
@@ -27372,7 +27631,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3651,
+          "line": 3672,
           "authority": "LuaLS declaration"
         }
       ],
@@ -27423,7 +27682,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3647,
+          "line": 3668,
           "authority": "LuaLS declaration"
         }
       ],
@@ -27479,7 +27738,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3660,
+          "line": 3681,
           "authority": "LuaLS declaration"
         }
       ],
@@ -27530,7 +27789,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3664,
+          "line": 3685,
           "authority": "LuaLS declaration"
         }
       ],
@@ -27581,7 +27840,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3655,
+          "line": 3676,
           "authority": "LuaLS declaration"
         }
       ],
@@ -27621,7 +27880,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3386,
+          "line": 3437,
           "authority": "native registration"
         },
         {
@@ -27666,7 +27925,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3381,
+          "line": 3432,
           "authority": "native registration"
         },
         {
@@ -27717,7 +27976,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3377,
+          "line": 3428,
           "authority": "native registration"
         },
         {
@@ -27773,7 +28032,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3370,
+          "line": 3421,
           "authority": "native registration"
         },
         {
@@ -28100,7 +28359,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4571,
+          "line": 4593,
           "authority": "LuaLS declaration"
         }
       ],
@@ -28142,12 +28401,12 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3938,
+          "line": 3989,
           "authority": "native registration"
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4512,
+          "line": 4534,
           "authority": "LuaLS declaration"
         }
       ],
@@ -28651,7 +28910,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4582,
+          "line": 4604,
           "authority": "LuaLS declaration"
         }
       ],
@@ -28702,7 +28961,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4586,
+          "line": 4608,
           "authority": "LuaLS declaration"
         }
       ],
@@ -29364,7 +29623,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4563,
+          "line": 4585,
           "authority": "LuaLS declaration"
         }
       ],
@@ -29410,7 +29669,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3508,
+          "line": 3559,
           "authority": "native registration"
         },
         {
@@ -29455,7 +29714,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3516,
+          "line": 3567,
           "authority": "native registration"
         },
         {
@@ -29500,7 +29759,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3513,
+          "line": 3564,
           "authority": "native registration"
         },
         {
@@ -29551,7 +29810,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3504,
+          "line": 3555,
           "authority": "native registration"
         },
         {
@@ -29612,7 +29871,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3496,
+          "line": 3547,
           "authority": "native registration"
         },
         {
@@ -29668,7 +29927,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4140,
+          "line": 4161,
           "authority": "LuaLS declaration"
         }
       ],
@@ -29719,7 +29978,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4131,
+          "line": 4152,
           "authority": "LuaLS declaration"
         }
       ],
@@ -29775,7 +30034,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4136,
+          "line": 4157,
           "authority": "LuaLS declaration"
         }
       ],
@@ -29831,7 +30090,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4145,
+          "line": 4166,
           "authority": "LuaLS declaration"
         }
       ],
@@ -29887,7 +30146,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4155,
+          "line": 4176,
           "authority": "LuaLS declaration"
         }
       ],
@@ -29943,7 +30202,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4150,
+          "line": 4171,
           "authority": "LuaLS declaration"
         }
       ],
@@ -33308,7 +33567,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4555,
+          "line": 4577,
           "authority": "LuaLS declaration"
         }
       ],
@@ -33653,7 +33912,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 4028,
+          "line": 4079,
           "authority": "native registration"
         },
         {
@@ -33698,7 +33957,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 4021,
+          "line": 4072,
           "authority": "native registration"
         },
         {
@@ -34120,7 +34379,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4538,
+          "line": 4560,
           "authority": "LuaLS declaration"
         }
       ],
@@ -34760,7 +35019,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4546,
+          "line": 4568,
           "authority": "LuaLS declaration"
         }
       ],
@@ -34816,7 +35075,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4070,
+          "line": 4091,
           "authority": "LuaLS declaration"
         }
       ],
@@ -34867,7 +35126,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4047,
+          "line": 4068,
           "authority": "LuaLS declaration"
         }
       ],
@@ -34918,7 +35177,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4043,
+          "line": 4064,
           "authority": "LuaLS declaration"
         }
       ],
@@ -34974,7 +35233,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4055,
+          "line": 4076,
           "authority": "LuaLS declaration"
         }
       ],
@@ -35030,7 +35289,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4095,
+          "line": 4116,
           "authority": "LuaLS declaration"
         }
       ],
@@ -35086,7 +35345,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4085,
+          "line": 4106,
           "authority": "LuaLS declaration"
         }
       ],
@@ -35142,7 +35401,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4090,
+          "line": 4111,
           "authority": "LuaLS declaration"
         }
       ],
@@ -35187,7 +35446,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4050,
+          "line": 4071,
           "authority": "LuaLS declaration"
         }
       ],
@@ -35243,7 +35502,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4065,
+          "line": 4086,
           "authority": "LuaLS declaration"
         }
       ],
@@ -35299,7 +35558,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4060,
+          "line": 4081,
           "authority": "LuaLS declaration"
         }
       ],
@@ -35355,7 +35614,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4075,
+          "line": 4096,
           "authority": "LuaLS declaration"
         }
       ],
@@ -35411,7 +35670,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4080,
+          "line": 4101,
           "authority": "LuaLS declaration"
         }
       ],
@@ -35467,7 +35726,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4100,
+          "line": 4121,
           "authority": "LuaLS declaration"
         }
       ],
@@ -35528,7 +35787,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4106,
+          "line": 4127,
           "authority": "LuaLS declaration"
         }
       ],
@@ -35691,6 +35950,58 @@
       }
     },
     {
+      "class": "CcbHandlersApi",
+      "name": "register",
+      "style": "function",
+      "parameters": [
+        {
+          "name": "handler",
+          "optional": false,
+          "declaration": "string Must begin with the current Lua source id and a period."
+        },
+        {
+          "name": "callback",
+          "optional": false,
+          "declaration": "fun(context: CcbLuaHandlerContext)"
+        }
+      ],
+      "returns": [],
+      "overloads": [],
+      "errors": {
+        "mode": "lua-error",
+        "message_stability": "not-guaranteed",
+        "conditions": [
+          "capability, validation, lifecycle, or native operation failure"
+        ]
+      },
+      "api_version": 5,
+      "since": "untracked-before-or-at-v5",
+      "deprecated": false,
+      "deprecation_replacement": null,
+      "sources": [
+        {
+          "path": "src/catalua_ui.cpp",
+          "line": 3358,
+          "authority": "native registration"
+        },
+        {
+          "path": "data/lua/types/ccb_api_v5.d.lua",
+          "line": 3601,
+          "authority": "LuaLS declaration"
+        }
+      ],
+      "id": "game.handlers.register",
+      "namespace": "game.handlers",
+      "capabilities": [
+        "game.write"
+      ],
+      "examples": [],
+      "documentation": {
+        "id": "api.lua.v5.generated.function.game.handlers.register",
+        "status": "generated-contract-source"
+      }
+    },
+    {
       "class": "CcbHandlesApi",
       "name": "avatar",
       "style": "function",
@@ -35766,7 +36077,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3483,
+          "line": 3534,
           "authority": "native registration"
         },
         {
@@ -35811,7 +36122,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3491,
+          "line": 3542,
           "authority": "native registration"
         },
         {
@@ -35856,7 +36167,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3488,
+          "line": 3539,
           "authority": "native registration"
         },
         {
@@ -35907,7 +36218,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3480,
+          "line": 3531,
           "authority": "native registration"
         },
         {
@@ -35965,7 +36276,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3466,
+          "line": 3517,
           "authority": "native registration"
         },
         {
@@ -37451,7 +37762,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4534,
+          "line": 4556,
           "authority": "LuaLS declaration"
         }
       ],
@@ -37507,7 +37818,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4551,
+          "line": 4573,
           "authority": "LuaLS declaration"
         }
       ],
@@ -38178,7 +38489,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3536,
+          "line": 3587,
           "authority": "native registration"
         },
         {
@@ -38231,7 +38542,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3533,
+          "line": 3584,
           "authority": "native registration"
         },
         {
@@ -38286,7 +38597,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3521,
+          "line": 3572,
           "authority": "native registration"
         },
         {
@@ -39837,7 +40148,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4567,
+          "line": 4589,
           "authority": "LuaLS declaration"
         }
       ],
@@ -39882,7 +40193,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4524,
+          "line": 4546,
           "authority": "LuaLS declaration"
         }
       ],
@@ -40442,7 +40753,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4559,
+          "line": 4581,
           "authority": "LuaLS declaration"
         }
       ],
@@ -40488,7 +40799,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3350,
+          "line": 3401,
           "authority": "native registration"
         },
         {
@@ -40545,7 +40856,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3357,
+          "line": 3408,
           "authority": "native registration"
         },
         {
@@ -40592,7 +40903,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3345,
+          "line": 3396,
           "authority": "native registration"
         },
         {
@@ -40644,7 +40955,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3340,
+          "line": 3391,
           "authority": "native registration"
         },
         {
@@ -40703,7 +41014,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3319,
+          "line": 3370,
           "authority": "native registration"
         },
         {
@@ -40771,7 +41082,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4576,
+          "line": 4598,
           "authority": "LuaLS declaration"
         }
       ],
@@ -41667,7 +41978,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3954,
+          "line": 3975,
           "authority": "LuaLS declaration"
         }
       ],
@@ -41718,7 +42029,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3950,
+          "line": 3971,
           "authority": "LuaLS declaration"
         }
       ],
@@ -41769,7 +42080,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3962,
+          "line": 3983,
           "authority": "LuaLS declaration"
         }
       ],
@@ -41820,7 +42131,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3958,
+          "line": 3979,
           "authority": "LuaLS declaration"
         }
       ],
@@ -41876,7 +42187,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3977,
+          "line": 3998,
           "authority": "LuaLS declaration"
         }
       ],
@@ -41932,7 +42243,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3967,
+          "line": 3988,
           "authority": "LuaLS declaration"
         }
       ],
@@ -41988,7 +42299,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3972,
+          "line": 3993,
           "authority": "LuaLS declaration"
         }
       ],
@@ -42694,12 +43005,12 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3942,
+          "line": 3993,
           "authority": "native registration"
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4515,
+          "line": 4537,
           "authority": "LuaLS declaration"
         }
       ],
@@ -42750,7 +43061,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4518,
+          "line": 4540,
           "authority": "LuaLS declaration"
         }
       ],
@@ -42795,7 +43106,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4521,
+          "line": 4543,
           "authority": "LuaLS declaration"
         }
       ],
@@ -44185,12 +44496,12 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 4017,
+          "line": 4068,
           "authority": "native registration"
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4579,
+          "line": 4601,
           "authority": "LuaLS declaration"
         }
       ],
@@ -44375,7 +44686,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3408,
+          "line": 3459,
           "authority": "native registration"
         },
         {
@@ -44420,7 +44731,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3422,
+          "line": 3473,
           "authority": "native registration"
         },
         {
@@ -44465,7 +44776,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3417,
+          "line": 3468,
           "authority": "native registration"
         },
         {
@@ -44510,7 +44821,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3412,
+          "line": 3463,
           "authority": "native registration"
         },
         {
@@ -44561,7 +44872,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3404,
+          "line": 3455,
           "authority": "native registration"
         },
         {
@@ -44612,7 +44923,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3399,
+          "line": 3450,
           "authority": "native registration"
         },
         {
@@ -44663,7 +44974,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3394,
+          "line": 3445,
           "authority": "native registration"
         },
         {
@@ -45121,7 +45432,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4542,
+          "line": 4564,
           "authority": "LuaLS declaration"
         }
       ],
@@ -46486,12 +46797,12 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 4010,
+          "line": 4061,
           "authority": "native registration"
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4592,
+          "line": 4614,
           "authority": "LuaLS declaration"
         }
       ],
@@ -46538,12 +46849,12 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 4014,
+          "line": 4065,
           "authority": "native registration"
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4596,
+          "line": 4618,
           "authority": "LuaLS declaration"
         }
       ],
@@ -46594,7 +46905,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3715,
+          "line": 3736,
           "authority": "LuaLS declaration"
         }
       ],
@@ -46645,7 +46956,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3711,
+          "line": 3732,
           "authority": "LuaLS declaration"
         }
       ],
@@ -46701,7 +47012,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3741,
+          "line": 3762,
           "authority": "LuaLS declaration"
         }
       ],
@@ -46752,7 +47063,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3736,
+          "line": 3757,
           "authority": "LuaLS declaration"
         }
       ],
@@ -46803,7 +47114,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3749,
+          "line": 3770,
           "authority": "LuaLS declaration"
         }
       ],
@@ -46854,7 +47165,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3745,
+          "line": 3766,
           "authority": "LuaLS declaration"
         }
       ],
@@ -46910,7 +47221,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3732,
+          "line": 3753,
           "authority": "LuaLS declaration"
         }
       ],
@@ -46961,7 +47272,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3727,
+          "line": 3748,
           "authority": "LuaLS declaration"
         }
       ],
@@ -47012,7 +47323,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3723,
+          "line": 3744,
           "authority": "LuaLS declaration"
         }
       ],
@@ -47063,7 +47374,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3719,
+          "line": 3740,
           "authority": "LuaLS declaration"
         }
       ],
@@ -47975,7 +48286,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4527,
+          "line": 4549,
           "authority": "LuaLS declaration"
         }
       ],
@@ -48289,7 +48600,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3588,
+          "line": 3609,
           "authority": "LuaLS declaration"
         }
       ],
@@ -48345,7 +48656,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3599,
+          "line": 3620,
           "authority": "LuaLS declaration"
         }
       ],
@@ -48406,7 +48717,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3594,
+          "line": 3615,
           "authority": "LuaLS declaration"
         }
       ],
@@ -48457,7 +48768,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3846,
+          "line": 3867,
           "authority": "LuaLS declaration"
         }
       ],
@@ -48508,7 +48819,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3842,
+          "line": 3863,
           "authority": "LuaLS declaration"
         }
       ],
@@ -48559,7 +48870,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3859,
+          "line": 3880,
           "authority": "LuaLS declaration"
         }
       ],
@@ -48610,7 +48921,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3850,
+          "line": 3871,
           "authority": "LuaLS declaration"
         }
       ],
@@ -48666,7 +48977,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3855,
+          "line": 3876,
           "authority": "LuaLS declaration"
         }
       ],
@@ -48722,7 +49033,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3864,
+          "line": 3885,
           "authority": "LuaLS declaration"
         }
       ],
@@ -48778,7 +49089,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3869,
+          "line": 3890,
           "authority": "LuaLS declaration"
         }
       ],
@@ -48839,7 +49150,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3885,
+          "line": 3906,
           "authority": "LuaLS declaration"
         }
       ],
@@ -48895,7 +49206,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3879,
+          "line": 3900,
           "authority": "LuaLS declaration"
         }
       ],
@@ -48951,7 +49262,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 3874,
+          "line": 3895,
           "authority": "LuaLS declaration"
         }
       ],
@@ -49388,7 +49699,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4414,
+          "line": 4435,
           "authority": "LuaLS declaration"
         }
       ],
@@ -49433,7 +49744,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4428,
+          "line": 4449,
           "authority": "LuaLS declaration"
         }
       ],
@@ -49478,7 +49789,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4421,
+          "line": 4442,
           "authority": "LuaLS declaration"
         }
       ],
@@ -49523,7 +49834,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4397,
+          "line": 4418,
           "authority": "LuaLS declaration"
         }
       ],
@@ -49580,7 +49891,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4404,
+          "line": 4425,
           "authority": "LuaLS declaration"
         }
       ],
@@ -49625,7 +49936,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4400,
+          "line": 4421,
           "authority": "LuaLS declaration"
         }
       ],
@@ -49670,7 +49981,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4407,
+          "line": 4428,
           "authority": "LuaLS declaration"
         }
       ],
@@ -49715,7 +50026,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4431,
+          "line": 4452,
           "authority": "LuaLS declaration"
         }
       ],
@@ -49766,7 +50077,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4411,
+          "line": 4432,
           "authority": "LuaLS declaration"
         }
       ],
@@ -49817,7 +50128,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4418,
+          "line": 4439,
           "authority": "LuaLS declaration"
         }
       ],
@@ -49868,7 +50179,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4425,
+          "line": 4446,
           "authority": "LuaLS declaration"
         }
       ],
@@ -49919,7 +50230,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4394,
+          "line": 4415,
           "authority": "LuaLS declaration"
         }
       ],
@@ -49970,7 +50281,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4390,
+          "line": 4411,
           "authority": "LuaLS declaration"
         }
       ],
@@ -50015,7 +50326,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4530,
+          "line": 4552,
           "authority": "LuaLS declaration"
         }
       ],
@@ -50788,7 +51099,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4233,
+          "line": 4254,
           "authority": "LuaLS declaration"
         }
       ],
@@ -50844,7 +51155,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4242,
+          "line": 4263,
           "authority": "LuaLS declaration"
         }
       ],
@@ -50895,7 +51206,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4246,
+          "line": 4267,
           "authority": "LuaLS declaration"
         }
       ],
@@ -50946,7 +51257,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4237,
+          "line": 4258,
           "authority": "LuaLS declaration"
         }
       ],
@@ -50997,7 +51308,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4228,
+          "line": 4249,
           "authority": "LuaLS declaration"
         }
       ],
@@ -51048,7 +51359,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4271,
+          "line": 4292,
           "authority": "LuaLS declaration"
         }
       ],
@@ -51104,7 +51415,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4251,
+          "line": 4272,
           "authority": "LuaLS declaration"
         }
       ],
@@ -51160,7 +51471,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4256,
+          "line": 4277,
           "authority": "LuaLS declaration"
         }
       ],
@@ -51221,7 +51532,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4267,
+          "line": 4288,
           "authority": "LuaLS declaration"
         }
       ],
@@ -51277,7 +51588,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4261,
+          "line": 4282,
           "authority": "LuaLS declaration"
         }
       ],
@@ -51328,7 +51639,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4224,
+          "line": 4245,
           "authority": "LuaLS declaration"
         }
       ],
@@ -51379,7 +51690,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4220,
+          "line": 4241,
           "authority": "LuaLS declaration"
         }
       ],
@@ -51710,7 +52021,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3064,
+          "line": 3108,
           "authority": "native registration"
         },
         {
@@ -51755,7 +52066,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3073,
+          "line": 3117,
           "authority": "native registration"
         },
         {
@@ -52025,7 +52336,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3054,
+          "line": 3098,
           "authority": "native registration"
         }
       ],
@@ -52077,7 +52388,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3078,
+          "line": 3122,
           "authority": "native registration"
         },
         {
@@ -52134,7 +52445,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3088,
+          "line": 3132,
           "authority": "native registration"
         },
         {
@@ -52190,7 +52501,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3083,
+          "line": 3127,
           "authority": "native registration"
         },
         {
@@ -52235,7 +52546,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3091,
+          "line": 3135,
           "authority": "native registration"
         },
         {
@@ -52302,7 +52613,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3110,
+          "line": 3154,
           "authority": "native registration"
         },
         {
@@ -52366,7 +52677,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3102,
+          "line": 3146,
           "authority": "native registration"
         },
         {
@@ -52417,7 +52728,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3122,
+          "line": 3166,
           "authority": "native registration"
         },
         {
@@ -52467,7 +52778,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3097,
+          "line": 3141,
           "authority": "native registration"
         },
         {
@@ -52518,7 +52829,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3408,
+          "line": 3459,
           "authority": "native registration"
         },
         {
@@ -52563,7 +52874,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3422,
+          "line": 3473,
           "authority": "native registration"
         },
         {
@@ -52608,7 +52919,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3417,
+          "line": 3468,
           "authority": "native registration"
         },
         {
@@ -52653,7 +52964,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3412,
+          "line": 3463,
           "authority": "native registration"
         },
         {
@@ -52704,7 +53015,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3404,
+          "line": 3455,
           "authority": "native registration"
         },
         {
@@ -52755,7 +53066,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3399,
+          "line": 3450,
           "authority": "native registration"
         },
         {
@@ -52812,7 +53123,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3394,
+          "line": 3445,
           "authority": "native registration"
         },
         {
@@ -52874,7 +53185,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 4048,
+          "line": 4099,
           "authority": "native registration"
         },
         {
@@ -52937,7 +53248,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 4056,
+          "line": 4107,
           "authority": "native registration"
         },
         {
@@ -53004,7 +53315,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 4084,
+          "line": 4135,
           "authority": "native registration"
         },
         {
@@ -53067,7 +53378,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 4092,
+          "line": 4143,
           "authority": "native registration"
         },
         {
@@ -53134,7 +53445,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 4066,
+          "line": 4117,
           "authority": "native registration"
         },
         {
@@ -53186,7 +53497,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 4074,
+          "line": 4125,
           "authority": "native registration"
         },
         {
@@ -53396,7 +53707,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3205,
+          "line": 3249,
           "authority": "native registration"
         },
         {
@@ -54324,7 +54635,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3291,
+          "line": 3335,
           "authority": "native registration"
         },
         {
@@ -54366,7 +54677,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3292,
+          "line": 3336,
           "authority": "native registration"
         },
         {
@@ -54408,7 +54719,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3284,
+          "line": 3328,
           "authority": "native registration"
         },
         {
@@ -54446,7 +54757,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3307,
+          "line": 3351,
           "authority": "native registration"
         },
         {
@@ -54499,7 +54810,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3302,
+          "line": 3346,
           "authority": "native registration"
         },
         {
@@ -54543,7 +54854,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3309,
+          "line": 3353,
           "authority": "native registration"
         },
         {
@@ -54591,7 +54902,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3295,
+          "line": 3339,
           "authority": "native registration"
         },
         {
@@ -54639,7 +54950,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3293,
+          "line": 3337,
           "authority": "native registration"
         },
         {
@@ -54681,7 +54992,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3298,
+          "line": 3342,
           "authority": "native registration"
         },
         {
@@ -54723,7 +55034,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3297,
+          "line": 3341,
           "authority": "native registration"
         },
         {
@@ -54765,7 +55076,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3282,
+          "line": 3326,
           "authority": "native registration"
         },
         {
@@ -54807,7 +55118,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3287,
+          "line": 3331,
           "authority": "native registration"
         },
         {
@@ -54861,7 +55172,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3308,
+          "line": 3352,
           "authority": "native registration"
         },
         {
@@ -54903,7 +55214,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3283,
+          "line": 3327,
           "authority": "native registration"
         },
         {
@@ -54945,7 +55256,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3290,
+          "line": 3334,
           "authority": "native registration"
         },
         {
@@ -54987,7 +55298,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3280,
+          "line": 3324,
           "authority": "native registration"
         },
         {
@@ -55029,7 +55340,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3279,
+          "line": 3323,
           "authority": "native registration"
         },
         {
@@ -55082,7 +55393,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3300,
+          "line": 3344,
           "authority": "native registration"
         },
         {
@@ -55135,7 +55446,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3299,
+          "line": 3343,
           "authority": "native registration"
         },
         {
@@ -55177,7 +55488,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3288,
+          "line": 3332,
           "authority": "native registration"
         },
         {
@@ -55226,7 +55537,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3296,
+          "line": 3340,
           "authority": "native registration"
         },
         {
@@ -55284,7 +55595,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3305,
+          "line": 3349,
           "authority": "native registration"
         },
         {
@@ -55342,7 +55653,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3304,
+          "line": 3348,
           "authority": "native registration"
         },
         {
@@ -55400,7 +55711,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3306,
+          "line": 3350,
           "authority": "native registration"
         },
         {
@@ -55442,7 +55753,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3285,
+          "line": 3329,
           "authority": "native registration"
         },
         {
@@ -55484,7 +55795,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3289,
+          "line": 3333,
           "authority": "native registration"
         },
         {
@@ -55537,7 +55848,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3301,
+          "line": 3345,
           "authority": "native registration"
         },
         {
@@ -55590,7 +55901,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3303,
+          "line": 3347,
           "authority": "native registration"
         },
         {
@@ -55632,7 +55943,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3278,
+          "line": 3322,
           "authority": "native registration"
         },
         {
@@ -55674,7 +55985,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3286,
+          "line": 3330,
           "authority": "native registration"
         },
         {
@@ -55716,7 +56027,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3294,
+          "line": 3338,
           "authority": "native registration"
         },
         {
@@ -55779,7 +56090,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3184,
+          "line": 3228,
           "authority": "native registration"
         },
         {
@@ -55821,7 +56132,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3144,
+          "line": 3188,
           "authority": "native registration"
         },
         {
@@ -55865,7 +56176,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3152,
+          "line": 3196,
           "authority": "native registration"
         },
         {
@@ -55913,7 +56224,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3163,
+          "line": 3207,
           "authority": "native registration"
         },
         {
@@ -55966,7 +56277,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3164,
+          "line": 3208,
           "authority": "native registration"
         },
         {
@@ -56019,7 +56330,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3167,
+          "line": 3211,
           "authority": "native registration"
         },
         {
@@ -56077,7 +56388,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3168,
+          "line": 3212,
           "authority": "native registration"
         },
         {
@@ -56131,7 +56442,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3190,
+          "line": 3234,
           "authority": "native registration"
         },
         {
@@ -56175,7 +56486,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3153,
+          "line": 3197,
           "authority": "native registration"
         },
         {
@@ -56217,7 +56528,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3149,
+          "line": 3193,
           "authority": "native registration"
         },
         {
@@ -56281,7 +56592,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3193,
+          "line": 3237,
           "authority": "native registration"
         },
         {
@@ -56325,7 +56636,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3151,
+          "line": 3195,
           "authority": "native registration"
         },
         {
@@ -56378,7 +56689,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3179,
+          "line": 3223,
           "authority": "native registration"
         },
         {
@@ -56436,7 +56747,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3180,
+          "line": 3224,
           "authority": "native registration"
         },
         {
@@ -56489,7 +56800,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3177,
+          "line": 3221,
           "authority": "native registration"
         },
         {
@@ -56547,7 +56858,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3178,
+          "line": 3222,
           "authority": "native registration"
         },
         {
@@ -56600,7 +56911,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3181,
+          "line": 3225,
           "authority": "native registration"
         },
         {
@@ -56658,7 +56969,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3182,
+          "line": 3226,
           "authority": "native registration"
         },
         {
@@ -56700,7 +57011,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3147,
+          "line": 3191,
           "authority": "native registration"
         },
         {
@@ -56744,7 +57055,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3161,
+          "line": 3205,
           "authority": "native registration"
         },
         {
@@ -56807,7 +57118,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3199,
+          "line": 3243,
           "authority": "native registration"
         },
         {
@@ -56845,7 +57156,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3158,
+          "line": 3202,
           "authority": "native registration"
         },
         {
@@ -56887,7 +57198,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3145,
+          "line": 3189,
           "authority": "native registration"
         },
         {
@@ -56936,7 +57247,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3162,
+          "line": 3206,
           "authority": "native registration"
         },
         {
@@ -56994,7 +57305,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3183,
+          "line": 3227,
           "authority": "native registration"
         },
         {
@@ -57047,7 +57358,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3169,
+          "line": 3213,
           "authority": "native registration"
         },
         {
@@ -57105,7 +57416,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3170,
+          "line": 3214,
           "authority": "native registration"
         },
         {
@@ -57143,7 +57454,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3157,
+          "line": 3201,
           "authority": "native registration"
         },
         {
@@ -57197,7 +57508,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3191,
+          "line": 3235,
           "authority": "native registration"
         },
         {
@@ -57250,7 +57561,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3171,
+          "line": 3215,
           "authority": "native registration"
         },
         {
@@ -57308,7 +57619,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3172,
+          "line": 3216,
           "authority": "native registration"
         },
         {
@@ -57346,7 +57657,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3156,
+          "line": 3200,
           "authority": "native registration"
         },
         {
@@ -57390,7 +57701,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3160,
+          "line": 3204,
           "authority": "native registration"
         },
         {
@@ -57453,7 +57764,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3175,
+          "line": 3219,
           "authority": "native registration"
         },
         {
@@ -57521,7 +57832,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3176,
+          "line": 3220,
           "authority": "native registration"
         },
         {
@@ -57584,7 +57895,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3173,
+          "line": 3217,
           "authority": "native registration"
         },
         {
@@ -57652,7 +57963,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3174,
+          "line": 3218,
           "authority": "native registration"
         },
         {
@@ -57700,7 +58011,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3165,
+          "line": 3209,
           "authority": "native registration"
         },
         {
@@ -57753,7 +58064,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3166,
+          "line": 3210,
           "authority": "native registration"
         },
         {
@@ -57791,7 +58102,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3159,
+          "line": 3203,
           "authority": "native registration"
         },
         {
@@ -57839,7 +58150,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3146,
+          "line": 3190,
           "authority": "native registration"
         },
         {
@@ -57897,7 +58208,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3197,
+          "line": 3241,
           "authority": "native registration"
         },
         {
@@ -57951,7 +58262,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3192,
+          "line": 3236,
           "authority": "native registration"
         },
         {
@@ -57993,7 +58304,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3195,
+          "line": 3239,
           "authority": "native registration"
         },
         {
@@ -58031,7 +58342,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3194,
+          "line": 3238,
           "authority": "native registration"
         },
         {
@@ -58080,7 +58391,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3196,
+          "line": 3240,
           "authority": "native registration"
         },
         {
@@ -58124,7 +58435,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3150,
+          "line": 3194,
           "authority": "native registration"
         },
         {
@@ -58188,7 +58499,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3154,
+          "line": 3198,
           "authority": "native registration"
         },
         {
@@ -58237,7 +58548,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3155,
+          "line": 3199,
           "authority": "native registration"
         },
         {
@@ -58281,7 +58592,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3200,
+          "line": 3244,
           "authority": "native registration"
         },
         {
@@ -58344,7 +58655,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3198,
+          "line": 3242,
           "authority": "native registration"
         },
         {
@@ -58386,7 +58697,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3148,
+          "line": 3192,
           "authority": "native registration"
         },
         {
@@ -58440,7 +58751,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3201,
+          "line": 3245,
           "authority": "native registration"
         },
         {
@@ -58494,7 +58805,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3202,
+          "line": 3246,
           "authority": "native registration"
         },
         {
@@ -60183,7 +60494,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4168,
+          "line": 4189,
           "authority": "LuaLS declaration"
         }
       ],
@@ -60225,7 +60536,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4171,
+          "line": 4192,
           "authority": "LuaLS declaration"
         }
       ],
@@ -60774,7 +61085,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3131,
+          "line": 3175,
           "authority": "native registration"
         },
         {
@@ -60798,7 +61109,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3130,
+          "line": 3174,
           "authority": "native registration"
         },
         {
@@ -60822,7 +61133,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3134,
+          "line": 3178,
           "authority": "native registration"
         },
         {
@@ -60846,7 +61157,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3129,
+          "line": 3173,
           "authority": "native registration"
         },
         {
@@ -60870,7 +61181,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3137,
+          "line": 3181,
           "authority": "native registration"
         },
         {
@@ -60894,7 +61205,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3140,
+          "line": 3184,
           "authority": "native registration"
         },
         {
@@ -60918,7 +61229,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3132,
+          "line": 3176,
           "authority": "native registration"
         },
         {
@@ -60942,7 +61253,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3136,
+          "line": 3180,
           "authority": "native registration"
         },
         {
@@ -60966,7 +61277,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3138,
+          "line": 3182,
           "authority": "native registration"
         },
         {
@@ -60990,7 +61301,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3128,
+          "line": 3172,
           "authority": "native registration"
         },
         {
@@ -61014,7 +61325,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3135,
+          "line": 3179,
           "authority": "native registration"
         },
         {
@@ -61038,7 +61349,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3139,
+          "line": 3183,
           "authority": "native registration"
         },
         {
@@ -61062,7 +61373,7 @@
       "sources": [
         {
           "path": "src/catalua_ui.cpp",
-          "line": 3133,
+          "line": 3177,
           "authority": "native registration"
         },
         {
@@ -61331,7 +61642,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4163,
+          "line": 4184,
           "authority": "LuaLS declaration"
         }
       ],
@@ -61355,7 +61666,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4159,
+          "line": 4180,
           "authority": "LuaLS declaration"
         }
       ],
@@ -61379,7 +61690,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4161,
+          "line": 4182,
           "authority": "LuaLS declaration"
         }
       ],
@@ -61403,7 +61714,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4164,
+          "line": 4185,
           "authority": "LuaLS declaration"
         }
       ],
@@ -61427,7 +61738,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4162,
+          "line": 4183,
           "authority": "LuaLS declaration"
         }
       ],
@@ -61451,7 +61762,7 @@
         },
         {
           "path": "data/lua/types/ccb_api_v5.d.lua",
-          "line": 4160,
+          "line": 4181,
           "authority": "LuaLS declaration"
         }
       ],
