@@ -4994,9 +4994,9 @@ void append_native_menu_entries(
         if( !entry_ids.insert( *id ).second ) {
             continue;
         }
-        entries.push_back( {
-            std::move( *id ), std::move( *label ),
-            entry.get_or( "enabled", true )
+        const bool enabled = entry.get_or( "enabled", true );
+        entries.push_back( native_menu_entry{
+            std::move( *id ), std::move( *label ), enabled
         } );
     }
 }
