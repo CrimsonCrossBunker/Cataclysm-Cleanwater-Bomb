@@ -17,6 +17,7 @@ struct lua_call {
     std::string handler;
     script_value_map args;
 
+    void load( const JsonObject &jo );
     void load( const JsonObject &jo, std::string_view member_name );
 };
 
