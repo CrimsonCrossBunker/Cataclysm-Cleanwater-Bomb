@@ -21,6 +21,14 @@
     "extend": { "flags": [ "ANTI_EVIL_EYE_GEAR" ] }
   },
   {
+    "id": "small_relic",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "copy-from": "small_relic",
+    "name": { "str": "small relic" },
+    "extend": { "flags": [ "ANTI_EVIL_EYE_GEAR" ] }
+  },
+  {
     "type": "effect_on_condition",
     "id": "EOC_PERK_ABSIT_INVIDIA_HOLY_SYMBOL",
     "eoc_type": "EVENT",
