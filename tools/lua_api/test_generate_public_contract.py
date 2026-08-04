@@ -58,17 +58,17 @@ class PublicContractGeneratorTest(unittest.TestCase):
             section_counts(self.contract),
             {
                 "modules": 3,
-                "namespaces": 69,
-                "classes": 263,
-                "functions": 489,
-                "methods": 142,
+                "namespaces": 70,
+                "classes": 269,
+                "functions": 492,
+                "methods": 149,
                 "properties": 51,
                 "operators": 47,
                 "enums": 26,
                 "events": 113,
                 "hooks": 52,
                 "callbacks": 38,
-                "capabilities": 16,
+                "capabilities": 17,
                 "manifest_fields": 6,
             },
         )
@@ -78,8 +78,8 @@ class PublicContractGeneratorTest(unittest.TestCase):
         )
 
     def test_inventory_coverage_is_exactly_complete(self) -> None:
-        self.assertEqual(self.coverage["public_symbols"], 2832)
-        self.assertEqual(self.coverage["documented_symbols"], 2832)
+        self.assertEqual(self.coverage["public_symbols"], 2868)
+        self.assertEqual(self.coverage["documented_symbols"], 2868)
         self.assertEqual(
             self.coverage["undocumented_symbols"],
             {"count": 0, "ids": []},

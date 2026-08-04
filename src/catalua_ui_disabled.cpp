@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "catalua_ui_actions.h"
+#include "dialogue.h"
 
 namespace cata::lua_ui
 {
@@ -97,6 +98,33 @@ native_hook_result dispatch_native_dialogue_hook(
     std::string_view, std::optional<std::string_view> )
 {
     return {};
+}
+
+void clear_dialogue_response_callbacks()
+{
+}
+
+std::optional<std::string> dialogue_dynamic_line(
+    dialogue &, const talk_topic & )
+{
+    return std::nullopt;
+}
+
+bool gen_lua_dialogue_responses(
+    dialogue &, const talk_topic & )
+{
+    return false;
+}
+
+void extend_lua_dialogue_responses(
+    dialogue &, const talk_topic & )
+{
+}
+
+talk_topic apply_lua_dialogue_response(
+    dialogue &, std::uint64_t, const talk_topic &fallback )
+{
+    return fallback;
 }
 
 bool begin_native_npc_interaction(

@@ -29,6 +29,7 @@ TABLE_CLASSES = {
     "creatures": "CcbCreaturesApi",
     "definitions": "CcbDefinitionsApi",
     "diagnostics": "CcbDiagnosticsApi",
+    "dialogue": "CcbDialogueApi",
     "effects": "CcbEffectsApi",
     "enum_api": "CcbEnumsApi",
     "eocs": "CcbEocsApi",

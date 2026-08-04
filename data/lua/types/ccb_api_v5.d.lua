@@ -27,6 +27,7 @@
 ---| '"game.actions"'
 ---| '"game.actions.dangerous"'
 ---| '"game.callbacks"'
+---| '"game.dialogue"'
 ---| '"game.hooks"'
 ---| '"game.read"'
 ---| '"game.write"'
@@ -1426,6 +1427,47 @@ function CcbActionMenuApi.list() end
 ---@return CcbActionMenuLimits
 function CcbActionMenuApi.limits() end
 
+---@class CcbDialogueResponseDescriptor
+---@field text string
+---@field topic? string
+---@field on_select? fun(context: ScriptDialogueContext): string|table|nil
+
+---@alias CcbDialogueResponses CcbDialogueResponseDescriptor[]|fun(context: ScriptDialogueContext): CcbDialogueResponseDescriptor[]
+
+---@class CcbDialogueTopicDescriptor
+---@field id string
+---@field dynamic_line string|fun(context: ScriptDialogueContext): string
+---@field responses CcbDialogueResponses
+
+---@class CcbDialogueExtensionDescriptor
+---@field id string
+---@field insert_before_standard_exits? boolean
+---@field responses CcbDialogueResponses
+
+---@class CcbDialogueLimits
+---@field topics integer
+---@field topics_per_source integer
+---@field extensions integer
+---@field extensions_per_source integer
+---@field responses_per_topic integer
+---@field id_bytes integer
+---@field text_bytes integer
+---@field callback_instructions integer
+
+---@class CcbDialogueApi
+local CcbDialogueApi = {}
+
+---@param descriptor CcbDialogueTopicDescriptor
+---@return integer registration_id
+function CcbDialogueApi.register_topic(descriptor) end
+
+---@param descriptor CcbDialogueExtensionDescriptor
+---@return integer registration_id
+function CcbDialogueApi.extend_topic(descriptor) end
+
+---@return CcbDialogueLimits
+function CcbDialogueApi.limits() end
+
 ---@class CcbSidebarLine
 ---@field text string
 ---@field color? string
@@ -1745,6 +1787,37 @@ function ScriptMapgenContext:nest(id, x, y) end
 
 ---@param id string
 function ScriptMapgenContext:generate(id) end
+
+---Callback-scoped NPC dialogue facade.
+---@class ScriptDialogueContext
+local ScriptDialogueContext = {}
+
+---@return boolean
+function ScriptDialogueContext:valid() end
+
+---@return string
+function ScriptDialogueContext:topic() end
+
+---@param key string
+---@return nil|string|number
+function ScriptDialogueContext:get(key) end
+
+---@param key string
+---@param value nil|string|number|boolean
+function ScriptDialogueContext:set(key, value) end
+
+---@param key string
+function ScriptDialogueContext:remove(key) end
+
+---@param item_id string
+---@param count integer
+---@param prefix? string
+---@return boolean
+function ScriptDialogueContext:quote_trade_item(item_id, count, prefix) end
+
+---@param prefix? string
+---@return boolean
+function ScriptDialogueContext:buy_quoted_item(prefix) end
 
 ---@class CcbMapgenHookOptions: CcbHookOptions
 ---@field terrain_ids? string[]
@@ -4476,6 +4549,7 @@ function CcbWeatherApi.refresh() end
 ---@field actions CcbGameActionsApi
 ---@field action_menu CcbActionMenuApi
 ---@field addictions CcbAddictionsApi
+---@field dialogue CcbDialogueApi
 ---@field sidebar CcbSidebarApi
 ---@field types CcbTypesApi
 ---@field units CcbUnitsApi

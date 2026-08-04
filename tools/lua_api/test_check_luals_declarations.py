@@ -35,10 +35,10 @@ class LuaLsDeclarationTest(unittest.TestCase):
 
     def test_committed_declarations_cover_the_native_surface(self) -> None:
         result = check(DECLARATIONS)
-        self.assertEqual(result["tables"], 67)
-        self.assertEqual(result["methods"], 445)
-        self.assertEqual(result["game_tables"], 56)
-        self.assertEqual(result["usertypes"], 15)
+        self.assertEqual(result["tables"], 68)
+        self.assertEqual(result["methods"], 448)
+        self.assertEqual(result["game_tables"], 57)
+        self.assertEqual(result["usertypes"], 16)
         self.assertEqual(result["coordinate_factories"], 36)
 
     def test_unmapped_registered_table_is_rejected(self) -> None:

@@ -69,6 +69,7 @@ NAMESPACE_CAPABILITIES = {
     "game.actions": ["game.actions"],
     "game.callbacks": ["game.callbacks"],
     "game.definitions": ["registry.read"],
+    "game.dialogue": ["game.dialogue"],
     "game.handlers": ["game.write"],
     "game.hooks": ["game.hooks"],
     "game.mapgen": ["events", "game.hooks", "game.read"],
@@ -418,8 +419,8 @@ def parse_luals(path: Path = DECLARATIONS) -> dict[str, object]:
             ],
         }
 
-    if len(classes) != 263:
-        raise RuntimeError(f"expected 263 LuaLS classes, found {len(classes)}")
+    if len(classes) != 269:
+        raise RuntimeError(f"expected 269 LuaLS classes, found {len(classes)}")
     result = {"classes": classes, "functions": functions, "contents": contents}
     validate_confirmed_declaration_contracts(result)
     return result
@@ -943,9 +944,9 @@ def parse_usertypes(
             f"native/LuaLS usertype method parity failed; "
             f"declaration-only={extra}, native-only={missing}"
         )
-    if len(usertype_names) != 15:
+    if len(usertype_names) != 16:
         raise RuntimeError(
-            f"expected 15 native usertypes, found {len(usertype_names)}")
+            f"expected 16 native usertypes, found {len(usertype_names)}")
     return (
         sorted(methods, key=lambda entry: str(entry["id"])),
         sorted(properties, key=lambda entry: str(entry["id"])),

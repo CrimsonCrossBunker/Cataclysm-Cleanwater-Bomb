@@ -35,8 +35,8 @@ class PublicContractCheckTest(unittest.TestCase):
 
     def test_checked_contract_matches_all_authorities(self) -> None:
         summary = check(DEFAULT_OUTPUT, DEFAULT_COVERAGE)
-        self.assertEqual(summary["functions"], 488)
-        self.assertEqual(summary["methods"], 142)
+        self.assertEqual(summary["functions"], 492)
+        self.assertEqual(summary["methods"], 149)
         self.assertEqual(summary["events"], 113)
 
     def test_stale_inventory_is_rejected(self) -> None:

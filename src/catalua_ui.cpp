@@ -17,6 +17,7 @@
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <system_error>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
@@ -83,6 +84,7 @@
 #include "catalua_ui_world_services.h"
 #include "catalua_ui_zones.h"
 #include "debug.h"
+#include "dialogue.h"
 #include "enum_conversions.h"
 #include "event.h"
 #include "event_bus.h"
@@ -98,11 +100,15 @@
 #include "item_location.h"
 #include "json_loader.h"
 #include "messages.h"
+#include "math_parser_diag_value.h"
 #include "mapgendata.h"
 #include "mod_manager.h"
+#include "npc.h"
+#include "npctrade.h"
 #include "output.h"
 #include "panels.h"
 #include "path_info.h"
+#include "popup.h"
 #include "talker.h"
 #include "translations.h"
 #include "thread_pool.h"
@@ -150,6 +156,13 @@ constexpr std::size_t maximum_hook_result_bytes = 512;
 constexpr std::size_t maximum_hook_results_per_handler = 64;
 constexpr std::size_t maximum_hook_results_per_dispatch = 256;
 constexpr std::size_t maximum_hook_result_entry_bytes = 512;
+constexpr std::size_t maximum_dialogue_topics = 256;
+constexpr std::size_t maximum_dialogue_topics_per_source = 64;
+constexpr std::size_t maximum_dialogue_extensions = 256;
+constexpr std::size_t maximum_dialogue_extensions_per_source = 64;
+constexpr std::size_t maximum_dialogue_responses_per_topic = 256;
+constexpr std::size_t maximum_dialogue_id_bytes = 256;
+constexpr std::size_t maximum_dialogue_text_bytes = 4096;
 
 struct memory_tracker {
     std::size_t used = 0;
@@ -340,6 +353,33 @@ struct sidebar_widget_definition {
     std::size_t source_index = 0;
 };
 
+struct dialogue_topic_definition {
+    std::uint64_t registration_id = 0;
+    std::string id;
+    std::optional<std::string> dynamic_line_text;
+    std::optional<sol::protected_function> dynamic_line_callback;
+    sol::object responses;
+    bool enabled = true;
+    std::string error;
+    std::size_t source_index = 0;
+};
+
+struct dialogue_extension_definition {
+    std::uint64_t registration_id = 0;
+    std::string id;
+    bool insert_before_standard_exits = false;
+    sol::object responses;
+    bool enabled = true;
+    std::string error;
+    std::size_t source_index = 0;
+};
+
+struct dialogue_response_callback {
+    std::size_t source_index = 0;
+    std::string topic_id;
+    sol::protected_function callback;
+};
+
 struct script_source {
     script_manifest manifest;
     fs::path root;
@@ -393,6 +433,12 @@ class runtime_state : public event_subscriber
         std::uint64_t next_action_menu_registration_id = 1;
         std::vector<sidebar_widget_definition> sidebar_widgets;
         std::uint64_t next_sidebar_widget_registration_id = 1;
+        std::vector<dialogue_topic_definition> dialogue_topics;
+        std::uint64_t next_dialogue_topic_registration_id = 1;
+        std::vector<dialogue_extension_definition> dialogue_extensions;
+        std::uint64_t next_dialogue_extension_registration_id = 1;
+        std::unordered_map<std::uint64_t, dialogue_response_callback> dialogue_response_callbacks;
+        std::uint64_t next_dialogue_response_callback_id = 1;
         script_event_registry event_registry;
         std::unordered_map<std::uint64_t, sol::protected_function> event_callbacks;
         script_event_registry hook_registry;
@@ -1476,6 +1522,539 @@ sol::table sidebar_limits_to_lua(
                maximum_sidebar_widget_output_bytes,
                "callback_instructions",
                callback_instruction_limit );
+}
+
+bool valid_dialogue_id( const std::string &value )
+{
+    return !value.empty() && value.size() <= maximum_dialogue_id_bytes &&
+           value.find( '\0' ) == std::string::npos;
+}
+
+void require_dialogue_text( const std::string &value,
+                            const std::string_view field )
+{
+    if( value.empty() || value.size() > maximum_dialogue_text_bytes ||
+        value.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument(
+            "game.dialogue " + std::string( field ) +
+            " must contain 1 to 4096 non-NUL bytes" );
+    }
+}
+
+class script_dialogue_context
+{
+    public:
+        script_dialogue_context( runtime_state &state, dialogue &d,
+                                 std::string topic_id,
+                                 const bool allow_write )
+            : state_( std::make_shared<context_state>() ) {
+            state_->lua_state = state.lua.lua_state();
+            state_->d = &d;
+            state_->topic_id = std::move( topic_id );
+            state_->allow_write = allow_write;
+        }
+
+        bool valid() const noexcept {
+            return state_ != nullptr && state_->d != nullptr;
+        }
+
+        void invalidate() noexcept {
+            if( state_ != nullptr ) {
+                state_->d = nullptr;
+            }
+        }
+
+        std::string topic() const {
+            return require_state().topic_id;
+        }
+
+        sol::object get( const std::string &key ) const {
+            const dialogue &d = require_state().dialogue_ref();
+            const diag_value *value = d.maybe_get_value( key );
+            sol::state_view lua( require_state().lua_state );
+            if( value == nullptr || value->is_empty() ) {
+                return sol::make_object( lua, sol::lua_nil );
+            }
+            if( value->is_dbl() ) {
+                return sol::make_object( lua, value->dbl() );
+            }
+            if( value->is_str() ) {
+                return sol::make_object( lua, value->str() );
+            }
+            return sol::make_object( lua, value->to_string() );
+        }
+
+        void set( const std::string &key, const sol::object &value ) const {
+            dialogue &d = require_write_state().dialogue_ref();
+            if( value.get_type() == sol::type::nil ) {
+                d.remove_value( key );
+            } else if( value.get_type() == sol::type::number ) {
+                d.set_value( key, value.as<double>() );
+            } else if( value.get_type() == sol::type::string ) {
+                d.set_value( key, value.as<std::string>() );
+            } else if( value.get_type() == sol::type::boolean ) {
+                d.set_value( key, value.as<bool>() ? "true" : "false" );
+            } else {
+                throw std::invalid_argument(
+                    "dialogue context values must be nil, string, number, or boolean" );
+            }
+        }
+
+        void remove( const std::string &key ) const {
+            require_write_state().dialogue_ref().remove_value( key );
+        }
+
+        bool quote_trade_item( const std::string &item_name, const int count,
+                               const std::string &prefix ) const {
+            dialogue &d = require_write_state().dialogue_ref();
+            const auto set_quote = [&d, &prefix]( const std::string & item_id,
+                                                  const std::string & display_name,
+            const int item_count, const int cost ) {
+                d.set_value( prefix + "_item_id", item_id );
+                d.set_value( prefix + "_item_name", display_name );
+                d.set_value( prefix + "_count", item_count );
+                d.set_value( prefix + "_cost", cost );
+            };
+
+            const itype_id item_id( item_name );
+            const int stored_count = count > 0 ? count : 0;
+            Character *buyer = d.actor( false )->get_character();
+            Character *seller = d.actor( true )->get_character();
+            if( npc *seller_npc = d.actor( true )->get_npc() ) {
+                seller = &seller_npc->get_trade_delegate();
+            }
+
+            if( buyer == nullptr || seller == nullptr || count <= 0 || !item_id.is_valid() ) {
+                set_quote( item_name, item_name, stored_count, -1 );
+                return false;
+            }
+
+            item quote_item( item_id, calendar::turn );
+            if( quote_item.count_by_charges() ) {
+                quote_item.charges = count;
+            }
+            const int quoted_cost = npc_trading::trading_price_for_order(
+                                        *buyer, *seller, quote_item, count );
+            set_quote( item_id.str(), item::nname( item_id, count ), count,
+                       quoted_cost > 0 ? quoted_cost : -1 );
+            return quoted_cost > 0;
+        }
+
+        bool buy_quoted_item( const std::string &prefix ) const {
+            dialogue &d = require_write_state().dialogue_ref();
+            const std::string item_name =
+                get_context_string( d, prefix + "_item_id" );
+            const int count = get_context_int( d, prefix + "_count", 1 );
+            const int cost = get_context_int( d, prefix + "_cost", 0 );
+            const itype_id item_id( item_name );
+            if( count <= 0 || cost <= 0 || !item_id.is_valid() ) {
+                return false;
+            }
+            if( !d.actor( true )->buy_from( cost ) ) {
+                popup( _( "You can't afford it!" ) );
+                return false;
+            }
+
+            item new_item( item_id, calendar::turn );
+            if( new_item.count_by_charges() ) {
+                new_item.charges = count;
+                d.actor( false )->i_add_or_drop( new_item );
+            } else {
+                for( int index = 0; index < count; ++index ) {
+                    d.actor( false )->i_add_or_drop( new_item );
+                }
+            }
+            if( d.has_beta && !d.actor( true )->disp_name().empty() ) {
+                if( count == 1 ) {
+                    popup( _( "%1$s gives you a %2$s." ),
+                           d.actor( true )->disp_name(), new_item.tname() );
+                } else {
+                    popup( _( "%1$s gives you %2$d %3$s." ),
+                           d.actor( true )->disp_name(), count,
+                           new_item.tname() );
+                }
+            }
+            return true;
+        }
+
+    private:
+        struct context_state {
+            lua_State *lua_state = nullptr;
+            dialogue *d = nullptr;
+            std::string topic_id;
+            bool allow_write = false;
+
+            dialogue &dialogue_ref() const {
+                return *d;
+            }
+        };
+
+        std::shared_ptr<context_state> state_;
+
+        context_state &require_state() const {
+            if( !valid() ) {
+                throw std::runtime_error(
+                    "Lua dialogue context is no longer valid" );
+            }
+            return *state_;
+        }
+
+        context_state &require_write_state() const {
+            context_state &state = require_state();
+            if( !state.allow_write ) {
+                throw std::runtime_error(
+                    "Lua dialogue mutation requires capability 'game.write'" );
+            }
+            return state;
+        }
+
+        static std::string get_context_string( dialogue &d,
+                                               const std::string &key ) {
+            const diag_value *value = d.maybe_get_value( key );
+            if( value == nullptr || value->is_empty() ) {
+                return {};
+            }
+            if( value->is_str() ) {
+                return value->str();
+            }
+            return value->to_string();
+        }
+
+        static int get_context_int( dialogue &d, const std::string &key,
+                                    const int fallback ) {
+            const diag_value *value = d.maybe_get_value( key );
+            if( value == nullptr || value->is_empty() ) {
+                return fallback;
+            }
+            if( value->is_dbl() ) {
+                return static_cast<int>( value->dbl() );
+            }
+            if( value->is_str() ) {
+                int parsed = fallback;
+                const std::string &text = value->str();
+                const char *begin = text.data();
+                const char *end = begin + text.size();
+                const std::from_chars_result result =
+                    std::from_chars( begin, end, parsed );
+                if( result.ec == std::errc() && result.ptr == end ) {
+                    return parsed;
+                }
+            }
+            return fallback;
+        }
+};
+
+std::shared_ptr<script_dialogue_context> make_dialogue_context(
+    runtime_state &state, dialogue &d, const std::size_t source_index,
+    const std::string &topic_id )
+{
+    if( source_index >= state.sources.size() ) {
+        throw std::runtime_error(
+            "Lua dialogue handler has an invalid source index" );
+    }
+    return std::make_shared<script_dialogue_context>(
+               state, d, topic_id,
+               state.sources[source_index].manifest.has_capability( "game.write" ) );
+}
+
+sol::object evaluate_dialogue_response_source(
+    runtime_state &state, const sol::object &source,
+    const std::shared_ptr<script_dialogue_context> &context,
+    const std::string &label )
+{
+    if( source.get_type() == sol::type::table ) {
+        return source;
+    }
+    sol::protected_function callback = source.as<sol::protected_function>();
+    const auto started = std::chrono::steady_clock::now();
+    const sol::protected_function_result result = callback( context );
+    record_callback_timing( state, label, started );
+    if( !result.valid() ) {
+        const sol::error error = result;
+        throw std::runtime_error( error.what() );
+    }
+    if( result.get_type() != sol::type::table ) {
+        throw std::invalid_argument(
+            label + " must return an array table of response descriptors" );
+    }
+    return result.get<sol::object>();
+}
+
+talk_response lua_dialogue_response_from_table(
+    runtime_state &state, const std::size_t source_index,
+    const std::string &topic_id, const sol::table &descriptor )
+{
+    for( const auto &entry : descriptor ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            continue;
+        }
+        const std::string key = entry.first.as<std::string>();
+        if( key != "text" && key != "topic" && key != "on_select" ) {
+            throw std::invalid_argument(
+                "game.dialogue response received unknown field '" + key + "'" );
+        }
+    }
+
+    const sol::object raw_text = descriptor.raw_get<sol::object>( "text" );
+    if( !raw_text.valid() || raw_text.get_type() != sol::type::string ) {
+        throw std::invalid_argument(
+            "game.dialogue response requires string field 'text'" );
+    }
+    const std::string text = raw_text.as<std::string>();
+    require_dialogue_text( text, "response text" );
+
+    std::string next_topic = "TALK_NONE";
+    const sol::object raw_topic = descriptor.raw_get<sol::object>( "topic" );
+    if( raw_topic.valid() && raw_topic.get_type() != sol::type::nil ) {
+        if( raw_topic.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.dialogue response field 'topic' must be a string" );
+        }
+        next_topic = raw_topic.as<std::string>();
+        if( !valid_dialogue_id( next_topic ) ) {
+            throw std::invalid_argument(
+                "game.dialogue response topic has an invalid id" );
+        }
+    }
+
+    talk_response response;
+    response.truetext = no_translation( text );
+    response.truefalse_condition = []( const_dialogue const & ) {
+        return true;
+    };
+    response.success.next_topic = talk_topic( next_topic );
+
+    const sol::object raw_on_select =
+        descriptor.raw_get<sol::object>( "on_select" );
+    if( raw_on_select.valid() && raw_on_select.get_type() != sol::type::nil ) {
+        if( raw_on_select.get_type() != sol::type::function ) {
+            throw std::invalid_argument(
+                "game.dialogue response field 'on_select' must be a function" );
+        }
+        const std::uint64_t callback_id =
+            state.next_dialogue_response_callback_id++;
+        state.dialogue_response_callbacks.emplace(
+            callback_id,
+            dialogue_response_callback {
+                source_index, topic_id,
+                raw_on_select.as<sol::protected_function>()
+            } );
+        response.lua_response_id = callback_id;
+    }
+
+    return response;
+}
+
+std::vector<talk_response> lua_dialogue_responses_from_object(
+    runtime_state &state, const std::size_t source_index,
+    const std::string &topic_id, const sol::object &object )
+{
+    if( object.get_type() != sol::type::table ) {
+        throw std::invalid_argument(
+            "game.dialogue responses must be an array table" );
+    }
+    const sol::table table = object.as<sol::table>();
+    const std::size_t count = table.size();
+    if( count > maximum_dialogue_responses_per_topic ) {
+        throw std::runtime_error(
+            "game.dialogue topic response limit reached" );
+    }
+
+    std::vector<talk_response> result;
+    result.reserve( count );
+    for( std::size_t index = 1; index <= count; ++index ) {
+        const sol::object raw_response = table.raw_get<sol::object>( index );
+        if( !raw_response.valid() ||
+            raw_response.get_type() != sol::type::table ) {
+            throw std::invalid_argument(
+                "game.dialogue responses must contain descriptor tables" );
+        }
+        result.push_back(
+            lua_dialogue_response_from_table(
+                state, source_index, topic_id,
+                raw_response.as<sol::table>() ) );
+    }
+    return result;
+}
+
+void add_lua_dialogue_responses(
+    dialogue &d, const std::vector<talk_response> &responses,
+    const bool insert_before_standard_exits )
+{
+    for( const talk_response &response : responses ) {
+        d.add_gen_response(
+            response, false, true, true, insert_before_standard_exits );
+    }
+}
+
+void disable_dialogue_callback( bool &enabled, std::string &stored_error,
+                                const std::string &context,
+                                const std::string &error )
+{
+    enabled = false;
+    stored_error = error;
+    record_runtime_error( context, stored_error );
+}
+
+std::uint64_t register_dialogue_topic(
+    runtime_state &state, const sol::table &descriptor )
+{
+    require_api_version( state, 5, "game.dialogue.register_topic" );
+    require_capability( state, "game.dialogue" );
+    if( !state.current_source ) {
+        throw std::runtime_error(
+            "game.dialogue.register_topic is outside a Lua source context" );
+    }
+    for( const auto &entry : descriptor ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.dialogue.register_topic option keys must be strings" );
+        }
+        const std::string key = entry.first.as<std::string>();
+        if( key != "id" && key != "dynamic_line" && key != "responses" ) {
+            throw std::invalid_argument(
+                "game.dialogue.register_topic received unknown option '" +
+                key + "'" );
+        }
+    }
+
+    dialogue_topic_definition replacement;
+    replacement.id = descriptor.get_or( "id", std::string() );
+    replacement.source_index = *state.current_source;
+    if( !valid_dialogue_id( replacement.id ) ) {
+        throw std::invalid_argument(
+            "game.dialogue.register_topic id must contain 1 to 256 non-NUL bytes" );
+    }
+
+    const sol::object dynamic_line =
+        descriptor.raw_get<sol::object>( "dynamic_line" );
+    if( !dynamic_line.valid() ||
+        dynamic_line.get_type() == sol::type::nil ) {
+        throw std::invalid_argument(
+            "game.dialogue.register_topic requires dynamic_line" );
+    }
+    if( dynamic_line.get_type() == sol::type::string ) {
+        replacement.dynamic_line_text = dynamic_line.as<std::string>();
+        require_dialogue_text(
+            *replacement.dynamic_line_text, "dynamic_line" );
+    } else if( dynamic_line.get_type() == sol::type::function ) {
+        replacement.dynamic_line_callback =
+            dynamic_line.as<sol::protected_function>();
+    } else {
+        throw std::invalid_argument(
+            "game.dialogue.register_topic dynamic_line must be a string or function" );
+    }
+
+    replacement.responses =
+        descriptor.raw_get<sol::object>( "responses" );
+    if( !replacement.responses.valid() ||
+        ( replacement.responses.get_type() != sol::type::table &&
+          replacement.responses.get_type() != sol::type::function ) ) {
+        throw std::invalid_argument(
+            "game.dialogue.register_topic requires table or function responses" );
+    }
+
+    const auto existing = find_definition( state.dialogue_topics, replacement.id );
+    if( existing != state.dialogue_topics.end() ) {
+        replacement.registration_id = existing->registration_id;
+        *existing = std::move( replacement );
+        return existing->registration_id;
+    }
+
+    const std::size_t source_count = std::count_if(
+                                         state.dialogue_topics.begin(),
+                                         state.dialogue_topics.end(),
+    [&replacement]( const dialogue_topic_definition & entry ) {
+        return entry.source_index == replacement.source_index;
+    } );
+    if( state.dialogue_topics.size() >= maximum_dialogue_topics ) {
+        throw std::runtime_error(
+            "game.dialogue runtime topic limit reached" );
+    }
+    if( source_count >= maximum_dialogue_topics_per_source ) {
+        throw std::runtime_error(
+            "game.dialogue source topic limit reached" );
+    }
+    replacement.registration_id =
+        state.next_dialogue_topic_registration_id++;
+    const std::uint64_t result = replacement.registration_id;
+    state.dialogue_topics.emplace_back( std::move( replacement ) );
+    return result;
+}
+
+std::uint64_t extend_dialogue_topic(
+    runtime_state &state, const sol::table &descriptor )
+{
+    require_api_version( state, 5, "game.dialogue.extend_topic" );
+    require_capability( state, "game.dialogue" );
+    if( !state.current_source ) {
+        throw std::runtime_error(
+            "game.dialogue.extend_topic is outside a Lua source context" );
+    }
+    for( const auto &entry : descriptor ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.dialogue.extend_topic option keys must be strings" );
+        }
+        const std::string key = entry.first.as<std::string>();
+        if( key != "id" && key != "insert_before_standard_exits" &&
+            key != "responses" ) {
+            throw std::invalid_argument(
+                "game.dialogue.extend_topic received unknown option '" +
+                key + "'" );
+        }
+    }
+
+    dialogue_extension_definition replacement;
+    replacement.id = descriptor.get_or( "id", std::string() );
+    replacement.source_index = *state.current_source;
+    replacement.insert_before_standard_exits =
+        descriptor.get_or( "insert_before_standard_exits", false );
+    if( !valid_dialogue_id( replacement.id ) ) {
+        throw std::invalid_argument(
+            "game.dialogue.extend_topic id must contain 1 to 256 non-NUL bytes" );
+    }
+    replacement.responses =
+        descriptor.raw_get<sol::object>( "responses" );
+    if( !replacement.responses.valid() ||
+        ( replacement.responses.get_type() != sol::type::table &&
+          replacement.responses.get_type() != sol::type::function ) ) {
+        throw std::invalid_argument(
+            "game.dialogue.extend_topic requires table or function responses" );
+    }
+
+    const auto existing = std::find_if(
+                              state.dialogue_extensions.begin(),
+                              state.dialogue_extensions.end(),
+    [&replacement]( const dialogue_extension_definition & entry ) {
+        return entry.id == replacement.id &&
+               entry.source_index == replacement.source_index;
+    } );
+    if( existing != state.dialogue_extensions.end() ) {
+        replacement.registration_id = existing->registration_id;
+        *existing = std::move( replacement );
+        return existing->registration_id;
+    }
+
+    const std::size_t source_count = std::count_if(
+                                         state.dialogue_extensions.begin(),
+                                         state.dialogue_extensions.end(),
+    [&replacement]( const dialogue_extension_definition & entry ) {
+        return entry.source_index == replacement.source_index;
+    } );
+    if( state.dialogue_extensions.size() >= maximum_dialogue_extensions ) {
+        throw std::runtime_error(
+            "game.dialogue runtime extension limit reached" );
+    }
+    if( source_count >= maximum_dialogue_extensions_per_source ) {
+        throw std::runtime_error(
+            "game.dialogue source extension limit reached" );
+    }
+    replacement.registration_id =
+        state.next_dialogue_extension_registration_id++;
+    const std::uint64_t result = replacement.registration_id;
+    state.dialogue_extensions.emplace_back( std::move( replacement ) );
+    return result;
 }
 
 std::string local_custom_event_name( const runtime_state &state,
@@ -2702,6 +3281,9 @@ sol::table lua_runtime_status( sol::this_state lua, const runtime_state &runtime
         runtime.action_menu_entries.size();
     result["sidebar_widgets"] =
         runtime.sidebar_widgets.size();
+    result["dialogue_topics"] = runtime.dialogue_topics.size();
+    result["dialogue_extensions"] =
+        runtime.dialogue_extensions.size();
     result["event_handlers"] = runtime.event_registry.size();
     result["mapgen_handlers"] = runtime.mapgen_registry.size();
     result["sources"] = runtime.sources.size();
@@ -2743,6 +3325,8 @@ struct source_resource_counts {
     std::size_t pages = 0;
     std::size_t action_menu_entries = 0;
     std::size_t sidebar_widgets = 0;
+    std::size_t dialogue_topics = 0;
+    std::size_t dialogue_extensions = 0;
     std::size_t event_handlers = 0;
     std::size_t mapgen_handlers = 0;
     std::size_t scheduled_tasks = 0;
@@ -2769,6 +3353,18 @@ std::vector<source_resource_counts> count_source_resources(
          runtime.sidebar_widgets ) {
         if( entry.source_index < result.size() ) {
             ++result[entry.source_index].sidebar_widgets;
+        }
+    }
+    for( const dialogue_topic_definition &entry :
+         runtime.dialogue_topics ) {
+        if( entry.source_index < result.size() ) {
+            ++result[entry.source_index].dialogue_topics;
+        }
+    }
+    for( const dialogue_extension_definition &entry :
+         runtime.dialogue_extensions ) {
+        if( entry.source_index < result.size() ) {
+            ++result[entry.source_index].dialogue_extensions;
         }
     }
     for( const script_event_subscription &event :
@@ -2866,6 +3462,10 @@ sol::table lua_runtime_diagnostics(
         runtime.action_menu_entries.size();
     resources["sidebar_widgets"] =
         runtime.sidebar_widgets.size();
+    resources["dialogue_topics"] =
+        runtime.dialogue_topics.size();
+    resources["dialogue_extensions"] =
+        runtime.dialogue_extensions.size();
     resources["event_handlers"] = runtime.event_registry.size();
     resources["mapgen_handlers"] = runtime.mapgen_registry.size();
     resources["scheduled_tasks"] = runtime.scheduler.size();
@@ -2905,6 +3505,12 @@ sol::table lua_runtime_diagnostics(
         maximum_sidebar_widgets;
     limits["sidebar_widgets_per_source"] =
         maximum_sidebar_widgets_per_source;
+    limits["dialogue_topics"] = maximum_dialogue_topics;
+    limits["dialogue_topics_per_source"] =
+        maximum_dialogue_topics_per_source;
+    limits["dialogue_extensions"] = maximum_dialogue_extensions;
+    limits["dialogue_extensions_per_source"] =
+        maximum_dialogue_extensions_per_source;
     limits["sidebar_widget_lines"] =
         maximum_sidebar_widget_lines;
     limits["sidebar_widget_output_bytes"] =
@@ -2937,6 +3543,9 @@ sol::table lua_runtime_diagnostics(
             counts.action_menu_entries;
         source["sidebar_widgets"] =
             counts.sidebar_widgets;
+        source["dialogue_topics"] = counts.dialogue_topics;
+        source["dialogue_extensions"] =
+            counts.dialogue_extensions;
         source["event_handlers"] = counts.event_handlers;
         source["mapgen_handlers"] = counts.mapgen_handlers;
         source["scheduled_tasks"] = counts.scheduled_tasks;
@@ -3353,6 +3962,27 @@ void initialize_state( runtime_state &state )
         "nest", &script_mapgen_context::nest,
         "generate", &script_mapgen_context::generate );
 
+    state.lua.new_usertype<script_dialogue_context>(
+        "ScriptDialogueContext", sol::no_constructor,
+        "valid", &script_dialogue_context::valid,
+        "topic", &script_dialogue_context::topic,
+        "get", &script_dialogue_context::get,
+        "set", &script_dialogue_context::set,
+        "remove", &script_dialogue_context::remove,
+        "quote_trade_item",
+    []( const script_dialogue_context & context,
+    const std::string & item_id, const int count,
+    const sol::optional<std::string> &prefix ) {
+        return context.quote_trade_item(
+                   item_id, count, prefix.value_or( "quote" ) );
+    },
+    "buy_quoted_item",
+    []( const script_dialogue_context & context,
+    const sol::optional<std::string> &prefix ) {
+        return context.buy_quoted_item(
+                   prefix.value_or( "quote" ) );
+    } );
+
     sol::table game = state.lua.create_named_table( "game" );
     game["api_version"] = api_version;
     sol::table handlers = state.lua.create_table();
@@ -3441,6 +4071,39 @@ void initialize_state( runtime_state &state )
         return action_menu_limits_to_lua( state, lua );
     } );
     game["action_menu"] = std::move( action_menu );
+
+    sol::table dialogue = state.lua.create_table();
+    dialogue.set_function(
+        "register_topic",
+    [&state]( const sol::table & descriptor ) {
+        return register_dialogue_topic( state, descriptor );
+    } );
+    dialogue.set_function(
+        "extend_topic",
+    [&state]( const sol::table & descriptor ) {
+        return extend_dialogue_topic( state, descriptor );
+    } );
+    dialogue.set_function(
+        "limits",
+    [&state]( sol::this_state lua ) {
+        require_api_version( state, 5, "game.dialogue.limits" );
+        require_capability( state, "game.dialogue" );
+        sol::state_view lua_state( lua );
+        return lua_state.create_table_with(
+                   "topics", maximum_dialogue_topics,
+                   "topics_per_source", maximum_dialogue_topics_per_source,
+                   "extensions", maximum_dialogue_extensions,
+                   "extensions_per_source",
+                   maximum_dialogue_extensions_per_source,
+                   "responses_per_topic",
+                   maximum_dialogue_responses_per_topic,
+                   "id_bytes", maximum_dialogue_id_bytes,
+                   "text_bytes", maximum_dialogue_text_bytes,
+                   "callback_instructions",
+                   callback_instruction_limit );
+    } );
+    game["dialogue"] = std::move( dialogue );
+
     sol::table sidebar =
         state.lua.create_named_table( "sidebar" );
     sidebar.set_function(
@@ -6209,6 +6872,262 @@ native_hook_result dispatch_native_dialogue_hook(
         } );
     }
     return dispatch_native_hook_result( name, payload );
+}
+
+void clear_dialogue_response_callbacks()
+{
+    if( active_state ) {
+        active_state->dialogue_response_callbacks.clear();
+    }
+}
+
+std::optional<std::string> dialogue_dynamic_line(
+    dialogue &d, const talk_topic &topic )
+{
+    if( !active_state ) {
+        return std::nullopt;
+    }
+    runtime_state &state = *active_state;
+    const auto found = find_definition( state.dialogue_topics, topic.id );
+    if( found == state.dialogue_topics.end() || !found->enabled ) {
+        return std::nullopt;
+    }
+    if( found->source_index >= state.sources.size() ) {
+        found->enabled = false;
+        found->error = "Lua dialogue topic has an invalid source index";
+        record_runtime_error(
+            "Lua dialogue topic '" + found->id + "'", found->error );
+        return std::nullopt;
+    }
+    if( found->dynamic_line_text ) {
+        return *found->dynamic_line_text;
+    }
+    if( !found->dynamic_line_callback ) {
+        return std::nullopt;
+    }
+
+    const std::shared_ptr<script_dialogue_context> context =
+        make_dialogue_context(
+            state, d, found->source_index, topic.id );
+    on_out_of_scope invalidate_context( [context]() {
+        context->invalidate();
+    } );
+    try {
+        source_scope source( state, found->source_index );
+        instruction_guard guard(
+            state.lua.lua_state(), callback_instruction_limit );
+        const auto started = std::chrono::steady_clock::now();
+        const sol::protected_function_result result =
+            ( *found->dynamic_line_callback )( context );
+        context->invalidate();
+        record_callback_timing(
+            state, "dialogue dynamic_line '" + found->id + "'", started );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            disable_dialogue_callback(
+                found->enabled, found->error,
+                "Lua dialogue topic '" + found->id + "'", error.what() );
+            return std::nullopt;
+        }
+        if( result.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "Lua dialogue dynamic_line callback must return a string" );
+        }
+        std::string line = result.get<std::string>();
+        require_dialogue_text( line, "dynamic_line" );
+        return line;
+    } catch( const std::exception &exception ) {
+        disable_dialogue_callback(
+            found->enabled, found->error,
+            "Lua dialogue topic '" + found->id + "'", exception.what() );
+        return std::nullopt;
+    }
+}
+
+bool gen_lua_dialogue_responses(
+    dialogue &d, const talk_topic &topic )
+{
+    if( !active_state ) {
+        return false;
+    }
+    runtime_state &state = *active_state;
+    const auto found = find_definition( state.dialogue_topics, topic.id );
+    if( found == state.dialogue_topics.end() || !found->enabled ) {
+        return false;
+    }
+    if( found->source_index >= state.sources.size() ) {
+        found->enabled = false;
+        found->error = "Lua dialogue topic has an invalid source index";
+        record_runtime_error(
+            "Lua dialogue topic '" + found->id + "'", found->error );
+        return false;
+    }
+    const std::shared_ptr<script_dialogue_context> context =
+        make_dialogue_context(
+            state, d, found->source_index, topic.id );
+    on_out_of_scope invalidate_context( [context]() {
+        context->invalidate();
+    } );
+    try {
+        source_scope source( state, found->source_index );
+        instruction_guard guard(
+            state.lua.lua_state(), callback_instruction_limit );
+        const sol::object responses_object =
+            evaluate_dialogue_response_source(
+                state, found->responses, context,
+                "dialogue responses '" + found->id + "'" );
+        std::vector<talk_response> responses =
+            lua_dialogue_responses_from_object(
+                state, found->source_index, found->id,
+                responses_object );
+        context->invalidate();
+        add_lua_dialogue_responses( d, responses, false );
+        return true;
+    } catch( const std::exception &exception ) {
+        disable_dialogue_callback(
+            found->enabled, found->error,
+            "Lua dialogue topic '" + found->id + "'", exception.what() );
+        return false;
+    }
+}
+
+void extend_lua_dialogue_responses(
+    dialogue &d, const talk_topic &topic )
+{
+    if( !active_state ) {
+        return;
+    }
+    runtime_state &state = *active_state;
+    for( dialogue_extension_definition &extension :
+         state.dialogue_extensions ) {
+        if( extension.id != topic.id || !extension.enabled ) {
+            continue;
+        }
+        if( extension.source_index >= state.sources.size() ) {
+            extension.enabled = false;
+            extension.error =
+                "Lua dialogue extension has an invalid source index";
+            record_runtime_error(
+                "Lua dialogue extension '" + extension.id + "'",
+                extension.error );
+            continue;
+        }
+        const std::shared_ptr<script_dialogue_context> context =
+            make_dialogue_context(
+                state, d, extension.source_index, topic.id );
+        on_out_of_scope invalidate_context( [context]() {
+            context->invalidate();
+        } );
+        try {
+            source_scope source( state, extension.source_index );
+            instruction_guard guard(
+                state.lua.lua_state(), callback_instruction_limit );
+            const sol::object responses_object =
+                evaluate_dialogue_response_source(
+                    state, extension.responses, context,
+                    "dialogue extension '" + extension.id + "'" );
+            std::vector<talk_response> responses =
+                lua_dialogue_responses_from_object(
+                    state, extension.source_index, extension.id,
+                    responses_object );
+            context->invalidate();
+            add_lua_dialogue_responses(
+                d, responses,
+                extension.insert_before_standard_exits );
+        } catch( const std::exception &exception ) {
+            disable_dialogue_callback(
+                extension.enabled, extension.error,
+                "Lua dialogue extension '" + extension.id + "'",
+                exception.what() );
+        }
+    }
+}
+
+talk_topic apply_lua_dialogue_response(
+    dialogue &d, const std::uint64_t response_id,
+    const talk_topic &fallback )
+{
+    if( !active_state ) {
+        return fallback;
+    }
+    runtime_state &state = *active_state;
+    const auto found =
+        state.dialogue_response_callbacks.find( response_id );
+    if( found == state.dialogue_response_callbacks.end() ) {
+        return fallback;
+    }
+
+    dialogue_response_callback callback = found->second;
+    state.dialogue_response_callbacks.erase( found );
+    if( callback.source_index >= state.sources.size() ) {
+        record_runtime_error(
+            "Lua dialogue on_select '" + callback.topic_id + "'",
+            "Lua dialogue response has an invalid source index" );
+        return fallback;
+    }
+    const std::shared_ptr<script_dialogue_context> context =
+        make_dialogue_context(
+            state, d, callback.source_index, callback.topic_id );
+    on_out_of_scope invalidate_context( [context]() {
+        context->invalidate();
+    } );
+    try {
+        source_scope source( state, callback.source_index );
+        instruction_guard guard(
+            state.lua.lua_state(), callback_instruction_limit );
+        const auto started = std::chrono::steady_clock::now();
+        const sol::protected_function_result result =
+            callback.callback( context );
+        context->invalidate();
+        record_callback_timing(
+            state, "dialogue on_select '" + callback.topic_id + "'",
+            started );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            record_runtime_error(
+                "Lua dialogue on_select '" + callback.topic_id + "'",
+                error.what() );
+            return fallback;
+        }
+        if( result.return_count() == 0 ||
+            result.get_type() == sol::type::nil ) {
+            return fallback;
+        }
+        if( result.get_type() == sol::type::string ) {
+            const std::string next_topic = result.get<std::string>();
+            if( valid_dialogue_id( next_topic ) ) {
+                return talk_topic( next_topic );
+            }
+            throw std::invalid_argument(
+                "Lua dialogue on_select returned an invalid topic id" );
+        }
+        if( result.get_type() == sol::type::table ) {
+            const sol::table table = result.get<sol::table>();
+            const sol::object raw_topic =
+                table.raw_get<sol::object>( "topic" );
+            if( raw_topic.valid() &&
+                raw_topic.get_type() != sol::type::nil ) {
+                if( raw_topic.get_type() != sol::type::string ) {
+                    throw std::invalid_argument(
+                        "Lua dialogue on_select result topic must be a string" );
+                }
+                const std::string next_topic = raw_topic.as<std::string>();
+                if( valid_dialogue_id( next_topic ) ) {
+                    return talk_topic( next_topic );
+                }
+                throw std::invalid_argument(
+                    "Lua dialogue on_select returned an invalid topic id" );
+            }
+            return fallback;
+        }
+        throw std::invalid_argument(
+            "Lua dialogue on_select must return nil, a string, or a table" );
+    } catch( const std::exception &exception ) {
+        record_runtime_error(
+            "Lua dialogue on_select '" + callback.topic_id + "'",
+            exception.what() );
+        return fallback;
+    }
 }
 
 bool begin_native_npc_interaction(

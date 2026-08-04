@@ -47,6 +47,7 @@ const std::set<std::string> &supported_script_capabilities()
         "game.actions",
         "game.actions.dangerous",
         "game.callbacks",
+        "game.dialogue",
         "game.hooks",
         "game.read",
         "game.write",
@@ -75,6 +76,7 @@ int capability_minimum_api_version( const std::string_view capability )
     };
     static const std::set<std::string> version_five = {
         "game.callbacks",
+        "game.dialogue",
         "game.hooks",
         "game.write"
     };
@@ -185,6 +187,7 @@ script_manifest default_script_manifest( const std::string &id, bool allow_actio
     if( !allow_actions ) {
         result.capabilities.erase( "game.actions" );
         result.capabilities.erase( "game.callbacks" );
+        result.capabilities.erase( "game.dialogue" );
         result.capabilities.erase( "game.hooks" );
         result.capabilities.erase( "game.write" );
     }

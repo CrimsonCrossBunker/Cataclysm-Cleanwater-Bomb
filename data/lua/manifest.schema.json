@@ -39,6 +39,7 @@
           "game.actions",
           "game.actions.dangerous",
           "game.callbacks",
+          "game.dialogue",
           "game.hooks",
           "game.read",
           "game.write",
@@ -78,7 +79,7 @@
     },
     {
       "if": {
-        "properties": { "capabilities": { "contains": { "enum": [ "game.callbacks", "game.hooks", "game.write" ] } } },
+        "properties": { "capabilities": { "contains": { "enum": [ "game.callbacks", "game.dialogue", "game.hooks", "game.write" ] } } },
         "required": [ "capabilities" ]
       },
       "then": { "properties": { "api_version": { "minimum": 5 } } }

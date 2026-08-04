@@ -30,6 +30,7 @@
 #include "clzones.h"
 #include "creature_tracker.h"
 #include "damage.h"
+#include "dialogue.h"
 #include "effect.h"
 #include "event_bus.h"
 #include "event_subscriber.h"
@@ -970,7 +971,8 @@ TEST_CASE( "lua_script_manifests_validate_versions_capabilities_and_dependencies
     const script_manifest v5 = read_script_manifest( json_loader::from_string( R"json({
         "id": "v5", "version": "5", "api_version": 5,
         "capabilities": [
-            "events", "game.callbacks", "game.hooks", "game.read", "game.write"
+            "events", "game.callbacks", "game.dialogue", "game.hooks",
+            "game.read", "game.write"
         ],
         "dependencies": []
     })json" ) );
@@ -1015,6 +1017,7 @@ TEST_CASE( "lua_script_manifests_validate_versions_capabilities_and_dependencies
         "capabilities": [ "game.read", "game.write" ], "dependencies": []
     })json" ) ) );
     CHECK( capability_minimum_api_version( "scheduler" ) == 4 );
+    CHECK( capability_minimum_api_version( "game.dialogue" ) == 5 );
     CHECK( capability_minimum_api_version( "game.write" ) == 5 );
     CHECK( capability_minimum_api_version( "game.read" ) == minimum_api_version );
 }
@@ -12338,6 +12341,185 @@ assert(state.character.get(
     "native_interaction.elevator", 0) == 1)
 )lua" );
     REQUIRE( reload_scripts( error ) );
+}
+
+TEST_CASE( "lua_v5_dialogue_topics_extend_json_without_replacing_it",
+           "[lua][dialogue][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    JsonObject base_topic = json_loader::from_string( R"json({
+        "id": "TALK_LUA_DIALOGUE_BASE",
+        "type": "talk_topic",
+        "dynamic_line": "Base JSON line.",
+        "responses": [
+            { "text": "Original JSON response.", "topic": "TALK_NONE" },
+            { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+        ]
+    })json" );
+    load_talk_topic( base_topic, "lua dialogue test" );
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    standard_npc test_npc(
+        "Lua dialogue NPC",
+        player.pos_bub( here ) + tripoint_rel_ms::east * 2 );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.dialogue", "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.dialogue.extend_topic({
+    id = "TALK_LUA_DIALOGUE_BASE",
+    insert_before_standard_exits = true,
+    responses = function(ctx)
+        assert(ctx:valid())
+        assert(ctx:topic() == "TALK_LUA_DIALOGUE_BASE")
+        return {
+            {
+                text = "Lua extension response.",
+                topic = "TALK_LUA_DIALOGUE_TOPIC"
+            }
+        }
+    end
+})
+
+game.dialogue.register_topic({
+    id = "TALK_LUA_DIALOGUE_TOPIC",
+    dynamic_line = function(ctx)
+        ctx:set("lua_dialogue_seen", "yes")
+        return "Lua generated line " .. ctx:get("lua_dialogue_seen")
+    end,
+    responses = function(ctx)
+        assert(ctx:get("lua_dialogue_seen") == "yes")
+        assert(ctx:quote_trade_item("bottle_glass", 2, "lua_quote"))
+        assert(ctx:get("lua_quote_item_id") == "bottle_glass")
+        assert(ctx:get("lua_quote_count") == 2)
+        assert(tonumber(ctx:get("lua_quote_cost")) > 0)
+        return {
+            {
+                text = "Lua generated response.",
+                topic = "TALK_DONE",
+                on_select = function(ctx)
+                    ctx:set("manual_item_id", "bottle_glass")
+                    ctx:set("manual_count", 1)
+                    ctx:set("manual_cost", 0)
+                    assert(not ctx:buy_quoted_item("manual"))
+                    ctx:set("lua_dialogue_choice", "picked")
+                    return { topic = "TALK_LUA_DIALOGUE_AFTER_SELECT" }
+                end
+            }
+        }
+    end
+})
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+
+    dialogue base_dialogue( get_talker_for( player ), get_talker_for( test_npc ) );
+    const talk_topic base_topic_id( "TALK_LUA_DIALOGUE_BASE" );
+    CHECK( base_dialogue.dynamic_line( base_topic_id ) == "Base JSON line." );
+    base_dialogue.gen_responses( base_topic_id );
+    REQUIRE( base_dialogue.responses.size() == 3 );
+    CHECK( base_dialogue.responses[0].success.next_topic.id == "TALK_NONE" );
+    CHECK( base_dialogue.responses[1].success.next_topic.id == "TALK_LUA_DIALOGUE_TOPIC" );
+    CHECK( base_dialogue.responses[2].success.next_topic.id == "TALK_DONE" );
+
+    dialogue lua_dialogue( get_talker_for( player ), get_talker_for( test_npc ) );
+    const talk_topic lua_topic_id( "TALK_LUA_DIALOGUE_TOPIC" );
+    CHECK( lua_dialogue.dynamic_line( lua_topic_id ) == "Lua generated line yes" );
+    lua_dialogue.gen_responses( lua_topic_id );
+    REQUIRE( lua_dialogue.responses.size() == 1 );
+    talk_response &response = lua_dialogue.responses.front();
+    response.create_option_line( lua_dialogue, input_event() );
+    CHECK( response.text == "Lua generated response." );
+    REQUIRE( response.lua_response_id.has_value() );
+    talk_topic next_topic = response.success.apply( lua_dialogue );
+    next_topic = apply_lua_dialogue_response(
+                     lua_dialogue, *response.lua_response_id, next_topic );
+    CHECK( next_topic.id == "TALK_LUA_DIALOGUE_AFTER_SELECT" );
+    CHECK( lua_dialogue.get_value( "lua_dialogue_choice" ).str() == "picked" );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.dialogue" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.dialogue.register_topic({
+    id = "TALK_LUA_DIALOGUE_READONLY",
+    dynamic_line = "Read-only Lua dialogue.",
+    responses = {
+        {
+            text = "Try forbidden writes.",
+            topic = "TALK_DONE",
+            on_select = function(ctx)
+                assert(not pcall(function()
+                    ctx:set("lua_dialogue_forbidden_set", "bad")
+                end))
+                assert(not pcall(function()
+                    ctx:remove("lua_dialogue_existing")
+                end))
+                assert(not pcall(function()
+                    ctx:quote_trade_item("bottle_glass", 2, "lua_forbidden_quote")
+                end))
+                return "TALK_LUA_DIALOGUE_READONLY_DONE"
+            end
+        }
+    }
+})
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+
+    dialogue readonly_dialogue(
+        get_talker_for( player ), get_talker_for( test_npc ) );
+    readonly_dialogue.set_value( "lua_dialogue_existing", "keep" );
+    const talk_topic readonly_topic_id( "TALK_LUA_DIALOGUE_READONLY" );
+    CHECK( readonly_dialogue.dynamic_line( readonly_topic_id ) ==
+           "Read-only Lua dialogue." );
+    readonly_dialogue.gen_responses( readonly_topic_id );
+    REQUIRE( readonly_dialogue.responses.size() == 1 );
+    talk_response &readonly_response = readonly_dialogue.responses.front();
+    REQUIRE( readonly_response.lua_response_id.has_value() );
+    talk_topic readonly_next = readonly_response.success.apply( readonly_dialogue );
+    readonly_next = apply_lua_dialogue_response(
+                        readonly_dialogue, *readonly_response.lua_response_id,
+                        readonly_next );
+    CHECK( readonly_next.id == "TALK_LUA_DIALOGUE_READONLY_DONE" );
+    CHECK_FALSE( readonly_dialogue.maybe_get_value(
+                     "lua_dialogue_forbidden_set" ) );
+    CHECK( readonly_dialogue.get_value(
+               "lua_dialogue_existing" ).str() == "keep" );
+    CHECK_FALSE( readonly_dialogue.maybe_get_value(
+                     "lua_forbidden_quote_cost" ) );
+
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.dialogue.register_topic({
+    id = "TALK_LUA_DIALOGUE_FORBIDDEN",
+    dynamic_line = "Forbidden.",
+    responses = {}
+})
+)lua" );
+    CHECK_FALSE( reload_scripts( error ) );
+    CHECK( error.find( "game.dialogue" ) != std::string::npos );
 }
 
 TEST_CASE( "lua_v5_craft_and_explosion_hooks_run_at_native_boundaries",
