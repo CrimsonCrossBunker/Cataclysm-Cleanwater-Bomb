@@ -42,7 +42,7 @@ jobs:
         id: meta
         run: |
           time=$(TZ=Asia/Shanghai /bin/date "+%Y-%m-%d-%H%M")
-          title_time=$(TZ=Asia/Shanghai /bin/date "+%Y-%m-%d %H:%M")
+          title_time=$(TZ=Asia/Shanghai /bin/date "+%Y-%m-%d_%H:%M")
           echo "time=$time" >> $GITHUB_OUTPUT
           echo "tag_name=${time}" >> $GITHUB_OUTPUT
           echo "release_name=Experimental ${title_time}" >> $GITHUB_OUTPUT
