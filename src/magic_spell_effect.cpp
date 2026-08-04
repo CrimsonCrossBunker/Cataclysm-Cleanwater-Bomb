@@ -18,6 +18,8 @@
 #include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
+#include "catalua_lua_call.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "character_martial_arts.h"
 #include "color.h"
