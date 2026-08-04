@@ -14,6 +14,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_imgui.h"
+#include "catalua_lua_call.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
