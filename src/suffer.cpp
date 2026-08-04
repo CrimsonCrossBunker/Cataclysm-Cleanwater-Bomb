@@ -20,6 +20,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
+#include "catalua_lua_call.h"
 #include "character.h"
 #include "character_attire.h"
 #include "color.h"
@@ -324,6 +325,12 @@ void suffer::mutation_power( Character &you, const trait_id &mut_id )
             dialogue d( get_talker_for( you ), nullptr );
             d.set_value( "this", mut_id.str() );
             eoc->activate_activation_only( d, "a mutation process", "mutation being activated", "mutation" );
+        }
+        for( const cata::lua_ui::lua_call &call : mut_id->processed_luas ) {
+            cata::lua_ui::invoke_lua_call( call, "mutation_processed", {
+                { "character", static_cast<const Character *>( &you ) },
+                { "mutation", cata::lua_ui::native_callback_id{ "mutation", mut_id.str() } }
+            } );
         }
     }
 }
@@ -1764,7 +1771,9 @@ void Character::suffer()
                                              0 ) != 0 ) {
             suffer::water_damage( *this );
         }
-        if( has_active_mutation( mut_id ) || ( !mut_id->activated && !mut_id->processed_eocs.empty() ) ) {
+        if( has_active_mutation( mut_id ) || ( !mut_id->activated &&
+                                               ( !mut_id->processed_eocs.empty() ||
+                                                 !mut_id->processed_luas.empty() ) ) ) {
             suffer::mutation_power( *this, mut_id );
         }
     }
