@@ -13,6 +13,7 @@
 
 #include "bodypart.h"
 #include "calendar.h"
+#include "catalua_lua_call.h"
 #include "damage.h"
 #include "enums.h"
 #include "flat_set.h"
@@ -65,10 +66,13 @@ struct bionic_data {
     std::vector<material_id> fuel_opts;
     /** effect_on_conditions triggered when this bionic is activated */
     std::vector<effect_on_condition_id> activated_eocs;
+    std::vector<cata::lua_ui::lua_call> activated_luas;
     /** effect_on_conditions triggered while this bionic is active */
     std::vector<effect_on_condition_id> processed_eocs;
+    std::vector<cata::lua_ui::lua_call> processed_luas;
     /** effect_on_conditions triggered when this bionic is deactivated */
     std::vector<effect_on_condition_id> deactivated_eocs;
+    std::vector<cata::lua_ui::lua_call> deactivated_luas;
     /** bionic enchantments */
     std::vector<enchantment_id> enchantments;
     /** kown martial arts styles */
