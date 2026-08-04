@@ -931,6 +931,12 @@ void Character::activate_cached_mutation( const trait_id &mut )
         // if the activation EOCs are not just setup for processing then turn the mutation off
         tdata.powered = mut->activated_is_setup;
     }
+    for( const cata::lua_ui::lua_call &call : mut->activated_luas ) {
+        cata::lua_ui::invoke_lua_call( call, "mutation_activated", {
+            { "character", static_cast<const Character *>( this ) },
+            { "mutation", cata::lua_ui::native_callback_id{ "mutation", mut.str() } }
+        } );
+    }
 
     if( mdata.transform ) {
         const cata::value_ptr<mut_transform> trans = mdata.transform;
@@ -1074,6 +1080,12 @@ void Character::deactivate_mutation( const trait_id &mut )
         d.set_value( "this", mut.str() );
         eoc->activate_activation_only( d, "a mutation deactivation", "mutation being activated",
                                        "mutation" );
+    }
+    for( const cata::lua_ui::lua_call &call : mut->deactivated_luas ) {
+        cata::lua_ui::invoke_lua_call( call, "mutation_deactivated", {
+            { "character", static_cast<const Character *>( this ) },
+            { "mutation", cata::lua_ui::native_callback_id{ "mutation", mut.str() } }
+        } );
     }
 
     if( mdata.transform && !mdata.transform->msg_transform.empty() ) {
