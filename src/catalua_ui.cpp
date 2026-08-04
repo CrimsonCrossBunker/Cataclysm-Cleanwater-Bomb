@@ -387,6 +387,7 @@ class runtime_state : public event_subscriber
         std::unordered_map<std::string, std::pair<std::size_t, sol::protected_function>>
         lua_handlers;
         int lua_handler_call_depth = 0;
+        std::set<std::string> reported_missing_lua_handlers;
         std::vector<page_definition> pages;
         std::vector<action_menu_definition> action_menu_entries;
         std::uint64_t next_action_menu_registration_id = 1;
@@ -6297,10 +6298,13 @@ bool invoke_lua_handler(
     if( !active_state || is_pool_worker_thread() ) {
         return true;
     }
-    const auto found = active_state->lua_handlers.find( std::string( handler ) );
+    const std::string name( handler );
+    const auto found = active_state->lua_handlers.find( name );
     if( found == active_state->lua_handlers.end() ) {
-        record_runtime_error( "Lua handler '" + std::string( handler ) + "'",
-                              "handler is not registered" );
+        if( active_state->reported_missing_lua_handlers.insert( name ).second ) {
+            record_runtime_error( "Lua handler '" + name + "'",
+                                  "handler is not registered" );
+        }
         return false;
     }
     try {
