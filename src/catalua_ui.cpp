@@ -384,6 +384,10 @@ class runtime_state : public event_subscriber
         script_service_registry service_registry;
         std::unordered_map<std::string, sol::protected_function> service_methods;
         int service_call_depth = 0;
+        std::unordered_map<std::string, std::pair<std::size_t, sol::protected_function>>
+        lua_handlers;
+        int lua_handler_call_depth = 0;
+        std::set<std::string> reported_missing_lua_handlers;
         std::vector<page_definition> pages;
         std::vector<action_menu_definition> action_menu_entries;
         std::uint64_t next_action_menu_registration_id = 1;
@@ -2432,6 +2436,47 @@ class service_call_scope
         runtime_state &state_;
 };
 
+class lua_handler_call_scope
+{
+    public:
+        explicit lua_handler_call_scope( runtime_state &state ) : state_( state ) {
+            if( state_.lua_handler_call_depth >= 16 ) {
+                throw std::runtime_error( "Lua handler recursion limit reached" );
+            }
+            ++state_.lua_handler_call_depth;
+        }
+
+        lua_handler_call_scope( const lua_handler_call_scope & ) = delete;
+        lua_handler_call_scope &operator=( const lua_handler_call_scope & ) = delete;
+
+        ~lua_handler_call_scope() {
+            --state_.lua_handler_call_depth;
+        }
+
+    private:
+        runtime_state &state_;
+};
+
+void register_lua_handler( runtime_state &state, const std::string &handler,
+                           sol::protected_function callback )
+{
+    require_api_version( state, 5, "game.handlers.register" );
+    require_capability( state, "game.write" );
+    if( !state.current_source || !callback.valid() ) {
+        throw std::runtime_error( "game.handlers.register requires an active source and callback" );
+    }
+    if( !is_safe_module_name( handler ) ) {
+        throw std::invalid_argument( "game.handlers.register received an invalid handler name" );
+    }
+    const std::string &source_id = current_manifest( state ).id;
+    if( handler.rfind( source_id + ".", 0 ) != 0 ) {
+        throw std::invalid_argument(
+            "game.handlers.register handler names must start with the source id" );
+    }
+    state.lua_handlers.insert_or_assign(
+        handler, std::make_pair( *state.current_source, std::move( callback ) ) );
+}
+
 sol::table call_service( runtime_state &state, sol::this_state lua,
                          const std::string &provider_id,
                          const std::string &service_name,
@@ -3310,6 +3355,13 @@ void initialize_state( runtime_state &state )
 
     sol::table game = state.lua.create_named_table( "game" );
     game["api_version"] = api_version;
+    sol::table handlers = state.lua.create_table();
+    handlers.set_function(
+        "register",
+    [&state]( const std::string & handler, sol::protected_function callback ) {
+        register_lua_handler( state, handler, std::move( callback ) );
+    } );
+    game["handlers"] = std::move( handlers );
     const auto require_native_events = [&state]() {
         require_api_version( state, 5, "game.native_events" );
         require_capability( state, "events" );
@@ -4943,9 +4995,9 @@ void append_native_menu_entries(
         if( !entry_ids.insert( *id ).second ) {
             continue;
         }
-        entries.push_back( {
-            std::move( *id ), std::move( *label ),
-            entry.get_or( "enabled", true )
+        const bool enabled = entry.get_or( "enabled", true );
+        entries.push_back( native_menu_entry{
+            std::move( *id ), std::move( *label ), enabled
         } );
     }
 }
@@ -6235,6 +6287,47 @@ bool dispatch_native_consuming_callback(
             "Lua native consuming callback '" +
             std::string( kind ) + "." + std::string( method ) + "'",
             exception.what() );
+        return false;
+    }
+}
+
+bool invoke_lua_handler(
+    const std::string_view handler, const script_value_map &args,
+    const native_callback_arguments &context )
+{
+    if( !active_state || is_pool_worker_thread() ) {
+        return true;
+    }
+    const std::string name( handler );
+    const auto found = active_state->lua_handlers.find( name );
+    if( found == active_state->lua_handlers.end() ) {
+        if( active_state->reported_missing_lua_handlers.insert( name ).second ) {
+            record_runtime_error( "Lua handler '" + name + "'",
+                                  "handler is not registered" );
+        }
+        return false;
+    }
+    try {
+        const std::size_t source_index = found->second.first;
+        sol::protected_function callback = found->second.second;
+        source_scope source( *active_state, source_index );
+        lua_handler_call_scope call_scope( *active_state );
+        instruction_guard guard( active_state->lua.lua_state(), callback_instruction_limit );
+        sol::table payload = native_callback_payload( *active_state, context );
+        payload["handler"] = std::string( handler );
+        payload["args"] = script_value_map_to_lua( active_state->lua, args );
+        const auto started = std::chrono::steady_clock::now();
+        const sol::protected_function_result result = callback( std::move( payload ) );
+        record_callback_timing( *active_state,
+                                "handler '" + std::string( handler ) + "'", started );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            record_runtime_error( "Lua handler '" + std::string( handler ) + "'", error.what() );
+            return false;
+        }
+        return true;
+    } catch( const std::exception &exception ) {
+        record_runtime_error( "Lua handler '" + std::string( handler ) + "'", exception.what() );
         return false;
     }
 }

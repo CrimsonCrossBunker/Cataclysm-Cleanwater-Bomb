@@ -299,8 +299,11 @@ Specific mutations are extremely versatile. A mutation only needs to have a few 
   ],
   "activated_is_setup": true,                 // If this is true the below activated EOC runs then the mutation turns on for processing every turn. If this is false the below "activated_eocs" will run and then the mod will turn itself off.
   "activated_eocs": [ "eoc_id_1" ],           // List of effect_on_conditions that attempt to activate when this mutation is successfully activated.
+  "activated_luas": [ { "handler": "mymod.mutation_start" } ], // Lua calls run when this mutation activates.
   "processed_eocs": [ "eoc_id_1" ],           // List of effect_on_conditions that attempt to activate every time (defined above) units of time. Time of 0 means every turn it processes. Processed when the mutation is active for activatable mutations and always for non-activatable ones.
+  "processed_luas": [ { "handler": "mymod.mutation_tick" } ], // Lua calls run whenever this mutation processes, including passive mutations.
   "deactivated_eocs": [ "eoc_id_1" ],         // List of effect_on_conditions that attempt to activate when this mutation is successfully deactivated.
+  "deactivated_luas": [ { "handler": "mymod.mutation_stop" } ], // Lua calls run when this mutation deactivates.
   "enchantments": [ "ench_id_1" ],            // List of enchantments granted by this mutation.  Can be either IDs or an inline definition of the enchantment (see MAGIC.md)
   "flags": [ "WALK_UNDERWATER" ],               // List of flag_IDs and json_flag_IDs granted by the mutation.  Note: trait_IDs can be set and generate no errors, but they're not actually "active".
   "moncams": [ [ "mon_player_blob", 16 ] ],    // Monster cameras, ability to use friendly monster's from the list as additional source of vision. Max view distance is equal to monster's daytime vision. The number specifies the range at which it can "transmit" vision to the avatar.

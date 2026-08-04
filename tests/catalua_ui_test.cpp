@@ -1350,6 +1350,43 @@ assert(state.character.get(
     CHECK( error.empty() );
 }
 
+TEST_CASE( "lua_v5_registered_handlers_accept_native_context",
+           "[lua][handlers][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.write", "state.character" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+game.handlers.register("user.test_handler", function(context)
+    assert(context.kind == "test")
+    assert(context.args.count == 2)
+    assert(context.marker == "native")
+    state.character.set("lua.handler.called", true)
+end)
+)lua" );
+
+    std::string error;
+    REQUIRE( reload_scripts( error ) );
+    const script_value_map args = { { "count", std::int64_t( 2 ) } };
+    CHECK( invoke_lua_handler( "user.test_handler", args, {
+        { "kind", std::string( "test" ) },
+        { "marker", std::string( "native" ) }
+    } ) );
+
+    script.write( R"lua(
+assert(state.character.get("lua.handler.called", false) == true)
+)lua" );
+    REQUIRE( reload_scripts( error ) );
+    CHECK( error.empty() );
+}
+
 TEST_CASE( "lua_v5_eocs_and_dialogue_variables_bridge_authored_logic",
            "[lua][eoc][variables][integration]" )
 {

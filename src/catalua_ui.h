@@ -10,6 +10,8 @@
 #include <variant>
 #include <vector>
 
+#include "catalua_ui_state.h"
+
 class Character;
 class Creature;
 class const_talker;
@@ -187,6 +189,12 @@ std::vector<native_menu_entry> collect_native_callback_menu_entries(
 std::vector<native_menu_entry> collect_native_hook_menu_entries(
     std::string_view name,
     const native_callback_arguments &arguments = {} );
+
+// Invoke a Lua handler registered by an active script source.  Calls made
+// without an active Lua runtime or a matching handler fail open.
+bool invoke_lua_handler(
+    std::string_view handler, const script_value_map &args,
+    const native_callback_arguments &context = {} );
 
 // Lua module names are converted from dotted names to paths below data/lua or
 // config/lua.  Exposed for focused tests of the sandbox boundary.

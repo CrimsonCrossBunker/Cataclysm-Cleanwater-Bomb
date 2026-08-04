@@ -18,6 +18,8 @@
 #include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
+#include "catalua_lua_call.h"
+#include "catalua_ui.h"
 #include "character.h"
 #include "character_martial_arts.h"
 #include "color.h"
@@ -2116,6 +2118,20 @@ void spell_effect::effect_on_condition( const spell &sp, Creature &caster,
         effect_on_condition_id eoc = effect_on_condition_id( sp.effect_data() );
         eoc->activate_activation_only( d, "a spell", "spell being cast", "spell" );
     }
+}
+
+void spell_effect::lua( const spell &sp, Creature &caster, const tripoint_bub_ms &target )
+{
+    const std::optional<cata::lua_ui::lua_call> &call = sp.id()->lua_effect;
+    if( !call ) {
+        debugmsg( "spell %s uses the Lua effect without a Lua call", sp.id().str() );
+        return;
+    }
+    cata::lua_ui::invoke_lua_call( *call, "spell", {
+        { "caster", &caster },
+        { "spell", cata::lua_ui::native_callback_id{ "spell", sp.id().str() } },
+        { "target", cata::lua_ui::native_callback_point{ "bubble", target.x(), target.y(), target.z() } }
+    } );
 }
 
 void spell_effect::slime_split_on_death( const spell &sp, Creature &caster,

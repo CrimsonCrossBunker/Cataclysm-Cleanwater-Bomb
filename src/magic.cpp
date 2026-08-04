@@ -14,6 +14,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_imgui.h"
+#include "catalua_lua_call.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
@@ -337,6 +338,14 @@ void spell_type::load( const JsonObject &jo, std::string_view src )
     optional( jo, was_loaded, "sound_id", sound_id, sound_id_default );
     optional( jo, was_loaded, "sound_variant", sound_variant, sound_variant_default );
     mandatory( jo, was_loaded, "effect", effect_name );
+    if( effect_name == "lua" ) {
+        if( jo.has_member( "lua" ) || !was_loaded ) {
+            lua_effect.emplace();
+            lua_effect->load( jo, "lua" );
+        }
+    } else {
+        lua_effect.reset();
+    }
     const auto found_effect = spell_effect::effect_map.find( effect_name );
     if( found_effect == spell_effect::effect_map.cend() ) {
         effect = spell_effect::none;

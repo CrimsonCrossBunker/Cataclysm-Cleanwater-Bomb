@@ -3579,6 +3579,27 @@ function CcbEocsApi.queue(id, delay, options) end
 ---@return CcbEocLimits
 function CcbEocsApi.limits() end
 
+---@class CcbLuaHandlerContext
+---@field handler string
+---@field kind string
+---@field args CcbScalarMap
+---@field alpha? GameHandle
+---@field beta? GameHandle
+---@field character? GameHandle
+---@field caster? GameHandle
+---@field mutation? GameId
+---@field bionic? GameId
+---@field bionic_uid? integer
+---@field spell? GameId
+---@field target? table
+
+---@class CcbHandlersApi
+local CcbHandlersApi = {}
+
+---@param handler string Must begin with the current Lua source id and a period.
+---@param callback fun(context: CcbLuaHandlerContext)
+function CcbHandlersApi.register(handler, callback) end
+
 ---@class CcbVariablesApi
 local CcbVariablesApi = {}
 
@@ -4482,6 +4503,7 @@ function CcbWeatherApi.refresh() end
 ---@field requirements CcbRequirementsApi
 ---@field crafting CcbCraftingApi
 ---@field eocs CcbEocsApi
+---@field handlers CcbHandlersApi
 ---@field factions CcbFactionsApi
 ---@field world CcbWorldApi
 ---@field overmap CcbOvermapApi

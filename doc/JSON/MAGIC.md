@@ -203,6 +203,7 @@ Effect                 | Description
 `dash`                 | Dashes forward up to range and hits targets in a cone at the target.
 `directed_push`        | Pushes `valid_targets` in aoe away from the target location, with a distance of damage().  Negative values pull instead.
 `effect_on_condition`  | Runs the `effect_on_condition` from `effect_str` on all valid targets.  The EOC will be centered on the player, with the NPC as caster and a context val location variable `spell_location` for the target primarily useful if the target isn't a creature.
+`lua`                  | Calls the source-owned Lua handler in the mandatory `lua` object without creating or running an EOC.  The handler receives `kind`, `caster`, `spell`, `target`, and scalar `args`.
 `emit`                 | Causes an `emit` at the target.
 `explosion`            | Causes an explosion centered on the target.  Uses damage() for power and factor aoe()/10.
 `fertilize_plant`      | Works the same as fertilizer, making plants grow faster. The growth time reduction is equal to damage() (50 is a 50% of a season length in growth time reduction).
@@ -235,6 +236,15 @@ Effect                 | Description
 `upgrade`              | Immediately upgrades a target `MONSTER`.
 `vomit`                | Any creature within its aoe will instantly vomit, if it's able to do so.
 
+Lua spell effects use the same call object as EOC and lifecycle Lua calls:
+
+```jsonc
+{
+  "id": "mymod_lua_spell",
+  "effect": "lua",
+  "lua": { "handler": "mymod.spell_hit", "args": { "power": 3 } }
+}
+```
 
 ### Spell shape
 

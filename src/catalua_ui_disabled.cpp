@@ -151,6 +151,13 @@ std::vector<native_menu_entry> collect_native_hook_menu_entries(
     return {};
 }
 
+bool invoke_lua_handler(
+    std::string_view, const script_value_map &,
+    const native_callback_arguments & )
+{
+    return true;
+}
+
 void dispatch_mapgen_postprocess( mapgendata & )
 {
 }

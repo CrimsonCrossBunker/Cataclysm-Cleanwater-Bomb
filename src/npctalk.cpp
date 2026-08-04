@@ -33,6 +33,7 @@
 #include "cata_path.h"
 #include "cata_utility.h"
 #include "catacharset.h"
+#include "catalua_lua_call.h"
 #include "catalua_ui.h"
 #include "character.h"
 #include "character_id.h"
@@ -8603,6 +8604,23 @@ talk_effect_fun_t::func f_trigger_event( const JsonObject &jo, std::string_view 
     };
 }
 
+talk_effect_fun_t::func f_run_lua( const JsonObject &jo, std::string_view member,
+                                   std::string_view )
+{
+    cata::lua_ui::lua_call call;
+    call.load( jo, member );
+    return [call]( dialogue & d ) {
+        cata::lua_ui::native_callback_arguments context;
+        if( const_talker *alpha = d.const_actor( false ) ) {
+            context.push_back( { "alpha", alpha } );
+        }
+        if( const_talker *beta = d.const_actor( true ) ) {
+            context.push_back( { "beta", beta } );
+        }
+        cata::lua_ui::invoke_lua_call( call, "eoc", std::move( context ) );
+    };
+}
+
 } // namespace
 } // namespace talk_effect_fun
 
@@ -8837,6 +8855,7 @@ parsers = {
     { "transform_item", jarg::member, &talk_effect_fun::f_transform_item },
     { "signal_hordes", jarg::member, &talk_effect_fun::f_signal_hordes },
     { "set_browsed", jarg::member, &talk_effect_fun::f_set_browsed },
+    { "run_lua", jarg::object, &talk_effect_fun::f_run_lua },
     // since parser checks all effects in order, having "message" field in any another effect (like in f_roll_remainder)
     // would cause parser to think it's a "message" effect
     { "message", "message", jarg::member, &talk_effect_fun::f_message },
