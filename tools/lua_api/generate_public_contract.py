@@ -417,8 +417,8 @@ def parse_luals(path: Path = DECLARATIONS) -> dict[str, object]:
             ],
         }
 
-    if len(classes) != 261:
-        raise RuntimeError(f"expected 260 LuaLS classes, found {len(classes)}")
+    if len(classes) != 263:
+        raise RuntimeError(f"expected 263 LuaLS classes, found {len(classes)}")
     result = {"classes": classes, "functions": functions, "contents": contents}
     validate_confirmed_declaration_contracts(result)
     return result
