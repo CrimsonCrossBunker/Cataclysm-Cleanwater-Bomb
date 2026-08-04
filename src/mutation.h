@@ -14,6 +14,7 @@
 
 #include "bodypart.h"
 #include "calendar.h"
+#include "catalua_lua_call.h"
 #include "damage.h"
 #include "enums.h"
 #include "memory_fast.h"
@@ -288,12 +289,15 @@ struct mutation_branch {
         std::map<mtype_id, int> moncams;
         /** effect_on_conditions triggered when this mutation activates */
         std::vector<effect_on_condition_id> activated_eocs;
+        std::vector<cata::lua_ui::lua_call> activated_luas;
         // if the above activated eocs should be run without turning on the mutation
         bool activated_is_setup = false;
         /** effect_on_conditions triggered while this mutation is active */
         std::vector<effect_on_condition_id> processed_eocs;
+        std::vector<cata::lua_ui::lua_call> processed_luas;
         /** effect_on_conditions triggered when this mutation deactivates */
         std::vector<effect_on_condition_id> deactivated_eocs;
+        std::vector<cata::lua_ui::lua_call> deactivated_luas;
         /** mutation enchantments */
         std::vector<enchantment_id> enchantments;
 
