@@ -5949,3 +5949,26 @@ Combination of values work as `and`, no matter how they are arranged. This two n
 ```jsonc
 "search_data": [ { "category": "weapons", "wielded_only": true } ]
 ```
+
+### `run_lua`
+
+`run_lua` calls a Lua handler registered by an active Lua source with
+`game.handlers.register`.  The handler name must begin with that source's id
+and a period.  `args` is copied to `context.args` and accepts only boolean,
+number, and string values.  The handler receives `context.kind` equal to
+`"eoc"`, plus `context.alpha` and `context.beta` when those talkers exist.
+
+| Member | Optionality | Value | Info |
+| --- | --- | --- | --- |
+| `handler` | **mandatory** | string | Registered Lua handler name |
+| `args` | optional | object | Scalar static arguments |
+
+```jsonc
+{ "effect": { "run_lua": { "handler": "mymod.example", "args": { "count": 2 } } } }
+```
+
+```lua
+game.handlers.register("mymod.example", function(context)
+    local count = context.args.count
+end)
+```
