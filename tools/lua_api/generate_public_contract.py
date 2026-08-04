@@ -69,6 +69,7 @@ NAMESPACE_CAPABILITIES = {
     "game.actions": ["game.actions"],
     "game.callbacks": ["game.callbacks"],
     "game.definitions": ["registry.read"],
+    "game.handlers": ["game.write"],
     "game.hooks": ["game.hooks"],
     "game.mapgen": ["events", "game.hooks", "game.read"],
     "game.native_events": ["events", "game.read"],
