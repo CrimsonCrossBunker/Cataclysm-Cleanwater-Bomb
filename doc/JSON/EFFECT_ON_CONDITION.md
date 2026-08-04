@@ -5954,7 +5954,9 @@ Combination of values work as `and`, no matter how they are arranged. This two n
 
 `run_lua` calls a Lua handler registered by an active Lua source with
 `game.handlers.register`.  The handler name must begin with that source's id
-and a period.  `args` is copied to `context.args` and accepts only boolean,
+and a period.  `game.handlers.register` requires the API v5 `game.write`
+capability in the Lua source's `manifest.json`; mod scripts do not receive it
+by default.  `args` is copied to `context.args` and accepts only boolean,
 number, and string values.  The handler receives `context.kind` equal to
 `"eoc"`, plus `context.alpha` and `context.beta` when those talkers exist.
 
