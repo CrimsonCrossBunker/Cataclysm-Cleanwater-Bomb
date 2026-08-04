@@ -1784,6 +1784,11 @@ std::string dialogue::dynamic_line( const talk_topic &the_topic )
 
     // For compatibility
     const std::string &topic = the_topic.id;
+    if( std::optional<std::string> lua_line =
+            cata::lua_ui::dialogue_dynamic_line( *this, the_topic ) ) {
+        return *lua_line;
+    }
+
     const auto iter = json_talk_topics.find( topic );
     if( iter != json_talk_topics.end() ) {
         std::string line = iter->second.get_dynamic_line( *this );
@@ -2055,14 +2060,21 @@ void dialogue::gen_responses( const talk_topic &the_topic )
     responses.clear();
     response_condition_exists.clear();
     response_condition_eval.clear();
+    cata::lua_ui::clear_dialogue_response_callbacks();
+
+    if( cata::lua_ui::gen_lua_dialogue_responses( *this, the_topic ) ) {
+        return;
+    }
 
     const auto iter = json_talk_topics.find( the_topic.id );
     if( iter != json_talk_topics.end() ) {
         json_talk_topic &jtt = iter->second;
         if( jtt.gen_responses( *this ) ) {
+            cata::lua_ui::extend_lua_dialogue_responses( *this, the_topic );
             return;
         }
     }
+    cata::lua_ui::extend_lua_dialogue_responses( *this, the_topic );
 
     Character &player_character = get_player_character();
     if( the_topic.id == "TALK_MISSION_LIST" ) {
@@ -2737,15 +2749,34 @@ void parse_tags( std::string &phrase, const_talker const &u, const_talker const 
 }
 
 void dialogue::add_gen_response( const talk_response &resp, bool insert_front,
-                                 bool condition_exists, bool condition_result )
+                                 bool condition_exists, bool condition_result,
+                                 bool insert_before_standard_exits )
 {
     if( insert_front ) {
         responses.insert( responses.begin(), resp );
+        response_condition_exists.insert( response_condition_exists.begin(), condition_exists );
+        response_condition_eval.insert( response_condition_eval.begin(), condition_result );
+    } else if( insert_before_standard_exits ) {
+        std::size_t dec_count = 0;
+        if( !responses.empty() &&
+            responses.back().success.next_topic.id == "TALK_DONE" ) {
+            dec_count = 1;
+        }
+        if( responses.size() >= 2 &&
+            responses[ responses.size() - 2 ].success.next_topic.id == "TALK_NONE" ) {
+            dec_count = 2;
+        }
+        const std::size_t position = responses.size() - dec_count;
+        responses.insert( responses.begin() + position, resp );
+        response_condition_exists.insert(
+            response_condition_exists.begin() + position, condition_exists );
+        response_condition_eval.insert(
+            response_condition_eval.begin() + position, condition_result );
     } else {
         responses.push_back( resp );
+        response_condition_exists.emplace_back( condition_exists );
+        response_condition_eval.emplace_back( condition_result );
     }
-    response_condition_exists.emplace_back( condition_exists );
-    response_condition_eval.emplace_back( condition_result );
 }
 
 void dialogue::add_topic( const std::string &topic_id )
@@ -3199,6 +3230,10 @@ talk_topic dialogue::opt( dialogue_window &d_win, const talk_topic &topic )
     const bool success = chosen.trial.roll( *this );
     talk_effect_t const &effects = success ? chosen.success : chosen.failure;
     talk_topic ret_topic =  effects.apply( *this );
+    if( chosen.lua_response_id ) {
+        ret_topic = cata::lua_ui::apply_lua_dialogue_response(
+                        *this, *chosen.lua_response_id, ret_topic );
+    }
     talk_effect_t::update_missions( *this );
     return ret_topic;
 }

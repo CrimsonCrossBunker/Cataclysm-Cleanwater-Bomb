@@ -2,8 +2,10 @@
 #ifndef CATA_SRC_DIALOGUE_H
 #define CATA_SRC_DIALOGUE_H
 
+#include <cstdint>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <type_traits>
@@ -205,6 +207,7 @@ struct talk_response {
 
     talk_effect_t success;
     talk_effect_t failure;
+    std::optional<std::uint64_t> lua_response_id;
 
     talk_data create_option_line( dialogue &d, const input_event &hotkey,
                                   bool is_computer = false );
@@ -312,7 +315,7 @@ struct dialogue: public const_dialogue {
 
         // add an already-generated response to this dialogue's responses
         void add_gen_response( const talk_response &resp, bool insert_front, bool condition_exists = true,
-                               bool condition_result = true );
+                               bool condition_result = true, bool insert_before_standard_exits = false );
 
         void add_topic( const std::string &topic );
         void add_topic( const talk_topic &topic );

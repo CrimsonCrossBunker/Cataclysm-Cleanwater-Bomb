@@ -172,6 +172,7 @@ capabilities are:
 - `game.actions`
 - `game.actions.dangerous`
 - `game.callbacks`
+- `game.dialogue`
 - `game.hooks`
 - `game.read`
 - `game.write`
@@ -186,7 +187,7 @@ capabilities are:
 - `ui.pages`
 
 The dangerous-action, module-import, registry, scheduler, and service
-capabilities require API v4. `game.callbacks`, `game.hooks`, and `game.write`
+capabilities require API v4. `game.callbacks`, `game.dialogue`, `game.hooks`, and `game.write`
 require API v5. `game.actions.dangerous` requires `game.actions`;
 `game.write` requires `game.read`; `game.hooks` requires `events`; and
 `game.callbacks` requires `game.read`. Unknown capabilities, an incompatible

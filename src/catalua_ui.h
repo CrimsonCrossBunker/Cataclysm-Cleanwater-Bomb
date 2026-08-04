@@ -17,6 +17,8 @@ class Creature;
 class const_talker;
 class item;
 class mapgendata;
+struct dialogue;
+struct talk_topic;
 
 namespace cata::lua_ui
 {
@@ -163,6 +165,15 @@ native_hook_result dispatch_native_dialogue_hook(
     std::string_view name, const const_talker &alpha,
     const const_talker &beta, std::string_view topic,
     std::optional<std::string_view> option = std::nullopt );
+void clear_dialogue_response_callbacks();
+std::optional<std::string> dialogue_dynamic_line(
+    dialogue &d, const talk_topic &topic );
+bool gen_lua_dialogue_responses(
+    dialogue &d, const talk_topic &topic );
+void extend_lua_dialogue_responses(
+    dialogue &d, const talk_topic &topic );
+talk_topic apply_lua_dialogue_response(
+    dialogue &d, std::uint64_t response_id, const talk_topic &fallback );
 bool begin_native_npc_interaction(
     const Character &avatar, const Character &npc );
 bool allow_native_monster_interaction(
