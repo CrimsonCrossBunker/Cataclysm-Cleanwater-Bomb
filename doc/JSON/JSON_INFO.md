@@ -1354,8 +1354,11 @@ mod = min( max, ( limb_score / denominator ) - subtract );
 | `power_gen_emission`         | (_optional_) `emit_id` of the field emitted by this bionic when it produces energy. Emit_ids are defined in `emit.json`.
 | `stat_bonus`                 | (_optional_) List of passive stat bonus. Stat are designated as follow: "DEX", "INT", "STR", "PER".
 | `activated_eocs`             | (_optional_) List of effect_on_conditions that attempt to activate when this CBM is successfully activated.
+| `activated_luas`             | (_optional_) List of Lua call objects run when this CBM is successfully activated.  Each object has a source-owned `handler` and optional scalar `args`.
 | `processed_eocs`             | (_optional_) List of effect_on_conditions that attempt to activate each turn this CBM is active.
+| `processed_luas`             | (_optional_) List of Lua call objects run each turn this CBM is active.
 | `deactivated_eocs`           | (_optional_) List of effect_on_conditions that attempt to activate when this CBM is successfully deactivated.
+| `deactivated_luas`           | (_optional_) List of Lua call objects run when this CBM is successfully deactivated.
 | `enchantments`               | (_optional_) List of enchantments applied by this CBM (see MAGIC.md for instructions on enchantment. NB: enchantments are not necessarily magic.) Values can either be the enchantment's id or an inline definition of the enchantment.
 | `learned_spells`             | (_optional_) Map of {spell:level} you gain when installing this CBM, and lose when you uninstall this CBM. Spell classes are automatically gained.
 | `learned_proficiencies`      | (_optional_) Array of proficiency ids you gain when installing this CBM, and lose when uninstalling
