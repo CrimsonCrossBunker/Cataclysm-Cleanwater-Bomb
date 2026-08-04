@@ -29,7 +29,11 @@ std::size_t value_storage_size( const script_persistent_value &value )
 
 void lua_call::load( const JsonObject &jo, const std::string_view member_name )
 {
-    const JsonObject definition = jo.get_object( member_name );
+    load( jo.get_object( member_name ) );
+}
+
+void lua_call::load( const JsonObject &definition )
+{
     mandatory( definition, false, "handler", handler );
     if( handler.empty() || handler.size() > 128 ) {
         definition.throw_error_at( "handler", "Lua handler name must contain 1 to 128 bytes" );
