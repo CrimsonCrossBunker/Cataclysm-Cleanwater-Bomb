@@ -512,7 +512,7 @@ void stomach_contents::mod_vitamin( const vitamin_id &vit, int units )
 {
     const int64_t adjusted = static_cast<int64_t>( nutr.get_vitamin( vit ) ) + units;
     set_vitamin( vit, static_cast<int>( std::clamp<int64_t>( adjusted, 0,
-                 std::numeric_limits<int>::max() ) ) );
+                                        std::numeric_limits<int>::max() ) ) );
 }
 
 void stomach_contents::mod_nutr( int nutr )

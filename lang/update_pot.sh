@@ -71,6 +71,8 @@ if ! lang/extract_json_strings.py \
         -X data/mods/aftershock_exoplanet/npcs/cyborg_npcs/backgrounds/bg_traits_cyborg.json \
         -X data/mods/Magiclysm/Spells/debug.json \
         -X data/lua/manifest.schema.json \
+        -X data/lua/reference/ccb_public_api_v5.schema.json \
+        -X data/lua/reference/ccb_public_api_v5_coverage.schema.json \
         -n "$package $version" \
         -r lang/po/base.pot
 then

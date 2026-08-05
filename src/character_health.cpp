@@ -265,7 +265,7 @@ bool Character::can_recover_oxygen() const
     return get_limb_score( limb_score_breathing ) > 0.5f && !is_underwater() &&
            !( has_effect_with_flag( json_flag_GRAB ) && has_effect( effect_crowd_crushed ) ) &&
            !( has_bionic( bio_synlungs ) &&
-                   !has_active_bionic( bio_synlungs ) );
+              !has_active_bionic( bio_synlungs ) );
 }
 
 bool Character::is_warm() const

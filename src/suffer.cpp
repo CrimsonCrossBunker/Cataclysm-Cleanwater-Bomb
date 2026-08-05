@@ -1774,7 +1774,7 @@ void Character::suffer()
         }
         if( has_active_mutation( mut_id ) || ( !mut_id->activated &&
                                                ( !mut_id->processed_eocs.empty() ||
-                                                 !mut_id->processed_luas.empty() ) ) ) {
+                                                       !mut_id->processed_luas.empty() ) ) ) {
             suffer::mutation_power( *this, mut_id );
         }
     }

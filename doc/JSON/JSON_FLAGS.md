@@ -193,6 +193,8 @@ Some armor flags, such as `WATCH` and `ALARMCLOCK` are compatible with other ite
 - ```ALLOWS_NATURAL_ATTACKS``` Doesn't prevent any natural attacks or similar benefits from mutations, fingertip razors, etc., like most items covering the relevant body part would.
 - ```ALLOWS_TAIL``` You can wear this leg-covering item even if you have a tail
 - ```ALLOWS_TALONS``` People with talon mutations still can wear this armor, that cover feet.
+- ```ALLOWS_WING_ARMS``` People whose arms have turned into wings can still wear this armor.
+- ```ALLOWS_WINGS``` People with independent wings growing from their backs can still wear this armor.
 - ```AURA``` This item goes in the outer aura layer, intended for metaphysical effects.
 - ```BAROMETER``` This gear is equipped with an accurate barometer (which is used to measure atmospheric pressure).
 - ```BELTED``` Layer for backpacks and things worn over outerwear.
@@ -232,6 +234,7 @@ Some armor flags, such as `WATCH` and `ALARMCLOCK` are compatible with other ite
 - ```NORMAL``` Items worn like normal clothing.  This is assumed as default.
 - ```NO_TAKEOFF``` Item with that flag can't be taken off.
 - ```NO_WEAR_EFFECT``` This gear doesn't provide any effects when worn (most jewelry).
+- ```NO_WING_GLIDING``` This gear prevents using your wings to glide when worn
 - ```OUTER```  Outer garment layer.
 - ```OVERSIZE``` Can always be worn no matter what encumbrance/mutations/bionics/etc, but prevents any other clothing being worn over this.
 - ```PADDED``` This armor counts as comfortable even if none of the specific materials are soft.
@@ -454,7 +457,8 @@ Character flags can be `trait_id`, `json_flag_id` or `flag_id`.  Some of these a
 - ```ONE_STORY_FALL``` You can slow your fall, effectively reducing the height of it by 1 level.
 - ```PAIN_IMMUNE``` Character don't feel pain.
 - ```PARAIMMUNE``` You are immune to parasites.
-- ```PAUSE_INFECTIONS``` Infections cannot kill you while you have this flag
+- ```PAUSE_BODYPART_INFECTION``` Infections on the bodypart that has an effect with this flag cannot kill you
+- ```PAUSE_INFECTIONS``` Infections on any bodypart cannot kill you while you have this flag
 - ```PHASE_MOVEMENT``` DEBUG. Completely ignores all impassable tiles, gravity checks, etc. and forces movement anyway.
 - ```PLANTBLOOD``` Your body drip veggy blood if wounded.
 - ```PORTAL_PROOF``` You are immune to personal portal storm effects.

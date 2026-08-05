@@ -1727,7 +1727,11 @@ else
 	@echo Cannot run an astyle check, your system either does not have astyle, or it is too old.
 endif
 
-JSON_SOURCES := $(shell find data -name '* *' -prune -o -name "*.json" -print)
+# 生成文件（tools/lua_api 与 tools/json_api 输出）不参与格式检查
+JSON_SOURCES := $(shell find data -name '* *' -prune -o \
+	-path 'data/lua/reference/*' -prune -o \
+	-path 'data/reference/*' -prune -o \
+	-name "*.json" -print)
 JSON_CHECK_STAMPS = $(sort $(patsubst %,$(ODIR)/%,$(JSON_SOURCES:.json=.jstyle-check-stamp)))
 style-json : $(JSON_CHECK_STAMPS) $(JSON_FORMATTER_BIN)
 $(JSON_CHECK_STAMPS) : $(ODIR)/%.jstyle-check-stamp : %.json $(JSON_FORMATTER_BIN)
@@ -1737,11 +1741,17 @@ else
 	@echo Cannot run json formatter in cross compiles.
 endif
 
+# 生成文件（tools/lua_api 与 tools/json_api 输出）不参与格式检查
+JSON_STYLE_FIND := find data -name '* *' -prune -o \
+	-path 'data/lua/reference/*' -prune -o \
+	-path 'data/reference/*' -prune -o \
+	-name "*.json" -print0
+
 style-all-json: $(JSON_FORMATTER_BIN)
-	find data -name "*.json" -print0 | xargs -0 -L 1 $(JSON_FORMATTER_BIN)
+	$(JSON_STYLE_FIND) | xargs -0 -L 1 $(JSON_FORMATTER_BIN)
 
 style-all-json-parallel: $(JSON_FORMATTER_BIN)
-	find data -name "*.json" -print0 | xargs -0 -L 1 -P $$(nproc) $(JSON_FORMATTER_BIN)
+	$(JSON_STYLE_FIND) | xargs -0 -L 1 -P $$(nproc) $(JSON_FORMATTER_BIN)
 
 $(JSON_FORMATTER_BIN): $(JSON_FORMATTER_SOURCES)
 	$(LINK.cc) $(OUTPUT_OPTION) -MMD -MP $(TOOL_CXXFLAGS) -Itools/format -Isrc -isystem src/third-party $^

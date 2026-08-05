@@ -4226,7 +4226,7 @@ talk_effect_fun_t::func f_quote_npc_trade_item( const JsonObject &jo, std::strin
     return [item_name, count, prefix]( dialogue & d ) {
         const auto set_quote = [&d, &prefix]( const std::string & item_id,
                                               const std::string & display_name,
-                                              int item_count, int cost ) {
+        int item_count, int cost ) {
             d.set_value( prefix + "_item_id", item_id );
             d.set_value( prefix + "_item_name", display_name );
             d.set_value( prefix + "_count", item_count );

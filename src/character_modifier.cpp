@@ -215,7 +215,7 @@ float Character::manipulator_score( const std::map<bodypart_str_id, bodypart> &b
                 }
             }
             const float part_score = id.first.get_limb_score( *this, limb_score_manip, -1,
-                                    override_encumb, override_wounds );
+                                     override_encumb, override_wounds );
             total = std::min( total + part_score * id.second * local_mul,
                               id.first.get_limb_score_max( limb_score_manip ) * local_mul * id.second );
             if( part_score != 0.0f ) {
@@ -223,8 +223,8 @@ float Character::manipulator_score( const std::map<bodypart_str_id, bodypart> &b
                 // can push a body part's contribution past its natural limit; skipped for parts
                 // that do not provide the manip score at all
                 const float modified = part_score * ( 1.0f +
-                                       enchantment_cache->get_limb_score_bp_multiply(
-                                           id.first.get_id().id(), limb_score_manip ) ) +
+                                                      enchantment_cache->get_limb_score_bp_multiply(
+                                                              id.first.get_id().id(), limb_score_manip ) ) +
                                        enchantment_cache->get_limb_score_bp_add(
                                            id.first.get_id().id(), limb_score_manip );
                 enchant_delta += ( modified - part_score ) * id.second * local_mul;

@@ -466,7 +466,8 @@ class enchant_cache : public enchantment
 
         std::map<limb_score_id, double> limb_score_add; // NOLINT(cata-serialize)
         std::map<limb_score_id, double> limb_score_multiply; // NOLINT(cata-serialize)
-        std::map<std::pair<bodypart_str_id, limb_score_id>, double> limb_score_bp_add; // NOLINT(cata-serialize)
+        std::map<std::pair<bodypart_str_id, limb_score_id>, double>
+        limb_score_bp_add; // NOLINT(cata-serialize)
         // NOLINTNEXTLINE(cata-serialize)
         std::map<std::pair<bodypart_str_id, limb_score_id>, double> limb_score_bp_multiply;
 

@@ -572,7 +572,8 @@ void realDebugmsg( const char *filename, const char *line, const char *funcname,
     } else {
 
         if( !rep_folder.test( filename, line, funcname, contextual_text ) ) {
-            DebugLog( D_ERROR, D_MAIN ) << filename << ":" << line << " [" << funcname << "] " << contextual_text <<
+            DebugLog( D_ERROR, D_MAIN ) << filename << ":" << line << " [" << funcname << "] " <<
+                                        contextual_text <<
                                         std::flush;
             rep_folder.set( filename, line, funcname, contextual_text );
         } else {

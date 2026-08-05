@@ -27,3 +27,15 @@ per-file-ignores =
     tools/json_tools/util.py:F824
     tools/replay_ab.py:E501,F541
     tools/sort_sprites.py:E221,E225,E226,E231,E241,E401,E501,E701,E702,F401,F841
+    # Agent 文档工具：预存超长行，后续随工具现代化逐步清理
+    tools/agent/build_context_pack.py:E501
+    tools/agent/generate_migration_reports.py:E501
+    tools/agent/finalize_legacy_migration.py:E501
+    tools/agent/import_legacy_audits.py:E501
+    tools/agent/generate_markdown_inventory.py:E501
+    tools/agent/test_finalize_legacy_migration.py:E501
+    tools/agent/test_markdown_inventory.py:E501
+    tools/agent/test_context_pack.py:E501
+    tools/agent/test_import_legacy_audits.py:E501
+    tools/agent/test_project_metadata.py:E501
+    tools/agent/test_repository_governance.py:E501

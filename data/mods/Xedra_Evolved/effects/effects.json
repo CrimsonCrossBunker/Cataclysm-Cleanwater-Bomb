@@ -184,7 +184,7 @@
     "rating": "mixed",
     "max_duration": "30 m",
     "base_mods": { "per_mod": [ 6 ], "dex_mod": [ -2 ], "speed_mod": [ -5 ] },
-    "flags": [ "HUNGER_DISRUPTION" ],
+    "flags": [ "HUNGER_DISRUPTION", "TRUE_SEEING" ],
     "blood_analysis_description": "Cross-dimensional narcotic, unexpected physics encountered"
   },
   {
@@ -198,7 +198,7 @@
     "rating": "bad",
     "max_duration": "24 hours",
     "base_mods": { "per_mod": [ -1 ], "speed_mod": [ -5 ] },
-    "flags": [ "HUNGER_DISRUPTION" ],
+    "flags": [ "HUNGER_DISRUPTION", "TRUE_SEEING" ],
     "blood_analysis_description": "Anemia of the soul."
   },
   {
@@ -3233,6 +3233,14 @@
     "desc": [
       "Triggering your abilities that way has taken their toll on you.  You cannot save yourself from death that way another time yet."
     ]
+  },
+  {
+    "type": "effect_type",
+    "id": "effect_lilin_resist_infections",
+    "name": [ "Make Thy Plagues Wonderful" ],
+    "desc": [ "You are immune to minor diseases and any infections you have are recovering more easily." ],
+    "removes_effects": [ "common_cold", "pre_common_cold", "flu", "pre_flu" ],
+    "flags": [ "PAUSE_INFECTIONS", "INFECTION_RECOVERY" ]
   },
   {
     "type": "effect_type",

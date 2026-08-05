@@ -248,7 +248,7 @@ int npc_trading::trading_price_for_order( Character const &buyer, Character cons
     }
 
     trade_selector::entry_t entry{ item_location{ map_cursor{ tripoint_bub_ms::zero },
-                                                  &quote_item },
+                                   &quote_item },
                                    quote_item.count_by_charges() ? count : 1 };
     const int price = npc_trading::trading_price( buyer, seller, entry );
     if( quote_item.count_by_charges() ) {

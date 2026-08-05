@@ -125,11 +125,16 @@ def main():
 
     parser = IncludesParser()
     # Load includes files list.
-    if not parser.parse_includes_files_from("obj", "src", "."):
+    # Lua 构建（CATA_ENABLE_LUA_UI）时 OBJDIR 为 obj-lua，需同时兼容 obj 与 obj-lua。
+    if not parser.parse_includes_files_from("obj", "src", ".") and \
+            not parser.parse_includes_files_from("obj-lua", "src", "."):
         return 1
 
     # Also for tests
-    if not parser.parse_includes_files_from("tests/obj", "tests", "tests"):
+    if not parser.parse_includes_files_from(
+            "tests/obj", "tests", "tests") and \
+            not parser.parse_includes_files_from(
+                "tests/obj-lua", "tests", "tests"):
         return 1
 
     lintable_files = set()

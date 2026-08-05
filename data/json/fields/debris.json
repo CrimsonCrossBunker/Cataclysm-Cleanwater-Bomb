@@ -140,15 +140,7 @@
   {
     "type": "field_type",
     "id": "fd_fungal_splinters",
-    "intensity_levels": [
-      {
-        "name": "fungal debris",
-        "sym": "%",
-        "color": "light_gray",
-        "transparent": true,
-        "concentration": 1
-      }
-    ],
+    "intensity_levels": [ { "name": "fungal debris", "sym": "%", "color": "light_gray", "transparent": true, "concentration": 1 } ],
     "priority": 2,
     "dirty_transparency_cache": false,
     "display_items": true,

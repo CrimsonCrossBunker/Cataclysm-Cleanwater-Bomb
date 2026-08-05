@@ -256,6 +256,8 @@ static const material_id material_qt_steel( "qt_steel" );
 static const material_id material_qt_steel_chain( "qt_steel_chain" );
 static const material_id material_steel( "steel" );
 
+static const std::string gun_mechanical_simple( "gun_mechanical_simple" );
+
 static const proficiency_id proficiency_prof_bow_basic( "prof_bow_basic" );
 static const proficiency_id proficiency_prof_bow_expert( "prof_bow_expert" );
 static const proficiency_id proficiency_prof_bow_master( "prof_bow_master" );
@@ -273,10 +275,6 @@ static const trait_id trait_GUNSHY( "GUNSHY" );
 
 static const trap_str_id tr_practice_target( "tr_practice_target" );
 static const trap_str_id tr_target_spinner( "tr_target_spinner" );
-
-static const std::string gun_mechanical_simple( "gun_mechanical_simple" );
-
-static const std::set<material_id> ferric = { material_iron, material_steel, material_budget_steel, material_ch_steel, material_hc_steel, material_lc_steel, material_mc_steel, material_qt_steel, material_budget_steel_chain, material_ch_steel_chain, material_hc_steel_chain, material_lc_steel_chain, material_mc_steel_chain, material_qt_steel_chain, material_copper_nickel };
 
 // Maximum duration of aim-and-fire loop, in turns
 static constexpr int AIF_DURATION_LIMIT = 10;
@@ -1236,7 +1234,7 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
         { "item", static_cast<const item *>( &gun ) },
         {
             "target", cata::lua_ui::native_callback_point {
-                "bub_ms", target.x(), target.y(), target.z()
+                "bub_ms", tripoint_rel_ms( target.x(), target.y(), target.z() )
             }
         },
         { "shots", std::int64_t { shots } }
@@ -1466,7 +1464,7 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
             { "weapon", static_cast<const item *>( &gun ) },
             {
                 "target", cata::lua_ui::native_callback_point {
-                    "bub_ms", target.x(), target.y(), target.z()
+                    "bub_ms", tripoint_rel_ms( target.x(), target.y(), target.z() )
                 }
             },
             { "shots", std::int64_t { curshot } }
@@ -1548,7 +1546,7 @@ int throw_cost( const Character &c, const item &to_throw )
     const bool do_railgun = c.is_fcl_railgun_throw( to_throw );
     const float weight_mult = do_railgun ? 1.0f : c.throw_weight_multiplier();
     const int weight_adjust = static_cast<int>( to_throw.weight() * ( weight_mult - 1.0f ) /
-                             60_gram / to_throw.count() / 2 );
+                              60_gram / to_throw.count() / 2 );
     const int effective_base_cost = base_move_cost + weight_adjust;
     const float throw_skill = std::min( static_cast<float>( MAX_SKILL ),
                                         c.get_skill_level( skill_throw ) );
@@ -1568,7 +1566,7 @@ int throw_cost( const Character &c, const item &to_throw )
     }
     move_cost = c.enchantment_cache->modify_value( enchant_vals::mod::ATTACK_SPEED, move_cost );
     move_cost = static_cast<int>( std::round( move_cost *
-                                              ( do_railgun ? 1.0f : c.throw_speed_multiplier() ) ) );
+                                  ( do_railgun ? 1.0f : c.throw_speed_multiplier() ) ) );
 
     return std::max( 25, move_cost );
 }
@@ -1685,9 +1683,9 @@ int Character::throwing_dispersion( const item &to_throw, Creature *critter,
     }
 
     const float dispersion_multiplier = do_railgun ? railgun_throw_multiplier( *this, 0.5f,
-                                       &itype::throw_dispersion_multiplier,
-                                       &islot_gunmod::throw_dispersion_multiplier ) :
-                                       throw_dispersion_multiplier();
+                                        &itype::throw_dispersion_multiplier,
+                                        &islot_gunmod::throw_dispersion_multiplier ) :
+                                        throw_dispersion_multiplier();
     dispersion = static_cast<int>( std::round( dispersion * dispersion_multiplier ) );
 
     return std::max( 0, dispersion );
@@ -1723,8 +1721,8 @@ static double thrown_item_weight_damage( const Character &thrower, const item &t
     const bool do_railgun = thrower.is_fcl_railgun_throw( thrown );
     const float weight_dmg = thrown.weight() *
                              ( do_railgun ? railgun_throw_multiplier( thrower, 1.8f,
-                               &itype::throw_weight_multiplier,
-                               &islot_gunmod::throw_weight_multiplier ) :
+                                     &itype::throw_weight_multiplier,
+                                     &islot_gunmod::throw_weight_multiplier ) :
                                thrower.throw_weight_multiplier() ) /
                              100.0_gram;
     const float skill = throwing_skill_adjusted( thrower );
@@ -1812,10 +1810,10 @@ int Character::thrown_item_total_damage_raw( const item &thrown ) const
         total_damage += du.amount * du.damage_multiplier;
     }
     const float throw_damage_mult = is_fcl_railgun_throw( thrown ) ?
-                                   railgun_throw_multiplier( *this, 3.5f,
-                                           &itype::throw_damage_multiplier,
-                                           &islot_gunmod::throw_damage_multiplier ) :
-                                   throw_damage_multiplier();
+                                    railgun_throw_multiplier( *this, 3.5f,
+                                            &itype::throw_damage_multiplier,
+                                            &islot_gunmod::throw_damage_multiplier ) :
+                                    throw_damage_multiplier();
     return std::round( total_damage * throw_damage_mult );
 }
 
@@ -2013,12 +2011,12 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
         { "item", static_cast<const item *>( &to_throw ) },
         {
             "target", cata::lua_ui::native_callback_point {
-                "bub_ms", target.x(), target.y(), target.z()
+                "bub_ms", tripoint_rel_ms( target.x(), target.y(), target.z() )
             }
         },
         {
             "origin", cata::lua_ui::native_callback_point {
-                "bub_ms", throw_from.x(), throw_from.y(), throw_from.z()
+                "bub_ms", tripoint_rel_ms( throw_from.x(), throw_from.y(), throw_from.z() )
             }
         }
     } );
@@ -2457,7 +2455,7 @@ static int print_ranged_chance( const catacurses::window &w, int line_number,
         for( const aim_type_prediction &out : sorted ) {
             if( display_numbers ) {
                 t_aims[aim_iter] = string_format( "<color_dark_gray>%s:</color>",
-                                                   is_throw ? _( "Throw" ) : out.name );
+                                                  is_throw ? _( "Throw" ) : out.name );
                 t_confidence[( aim_iter * 5 ) + 4] = string_format( "<color_light_blue>%d</color>", out.moves );
             } else {
                 if( is_throw ) {
@@ -4143,8 +4141,7 @@ void target_ui::recalc_aim_turning_penalty()
         const double raw_predicted_recoil = curr_recoil + angle_penalty + displacement_penalty;
         const double reset_factor = 0.5 + 0.4 * angle_ratio;
         const double recoil_cap = curr_recoil + ( MAX_RECOIL - curr_recoil ) * reset_factor;
-        predicted_recoil = std::min( MAX_RECOIL,
-                                     std::min( raw_predicted_recoil, recoil_cap ) );
+        predicted_recoil = std::min( { MAX_RECOIL, raw_predicted_recoil, recoil_cap } );
     }
 }
 

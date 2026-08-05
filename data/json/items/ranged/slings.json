@@ -61,13 +61,7 @@
     "price": "1 USD 50 cent",
     "//": "The staff sling consists of a staff with a short sling at one end.",
     "material": [ "wood", "leather" ],
-    "flags": [
-      "BELTED",
-      "NONCONDUCTIVE",
-      "SHEATH_SPEAR",
-      "ALWAYS_TWOHAND",
-      "THROW_KEEP_WIELDED"
-    ],
+    "flags": [ "BELTED", "NONCONDUCTIVE", "SHEATH_SPEAR", "ALWAYS_TWOHAND", "THROW_KEEP_WIELDED" ],
     "weapon_category": [ "QUARTERSTAVES" ],
     "techniques": [ "WBLOCK_2", "RAPID", "SWEEP" ],
     "weight": "1333 g",

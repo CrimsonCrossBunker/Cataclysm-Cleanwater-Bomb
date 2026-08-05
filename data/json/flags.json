@@ -122,6 +122,14 @@
     "type": "json_flag"
   },
   {
+    "id": "ALLOWS_WING_ARMS",
+    "type": "json_flag"
+  },
+  {
+    "id": "ALLOWS_WINGS",
+    "type": "json_flag"
+  },
+  {
     "id": "ALLOWS_TALONS",
     "type": "json_flag"
   },
@@ -494,6 +502,11 @@
     "type": "json_flag",
     "info": "This item is wearable over some armors as an extra layer of plating.",
     "restriction": "Item must be some kind of strapped additional plating"
+  },
+  {
+    "id": "NO_WING_GLIDING",
+    "type": "json_flag",
+    "info": "This item <bad>prevents using wings to glide</bad>."
   },
   {
     "id": "COLD_IMMUNE",
@@ -2759,6 +2772,11 @@
     "info": "You are immune to gaseous toxins"
   },
   {
+    "id": "INFECTION_RECOVERY",
+    "type": "json_flag",
+    "info": "You have greater odds to recover from infections (equivalent to taking antibiotics)"
+  },
+  {
     "id": "TREE_COMMUNION_PLUS",
     "type": "json_flag",
     "info": "You gain greatly enhanced effects from the Mycorrhizal Communion mutation"
@@ -2809,6 +2827,11 @@
     "info": "Infections cannot progress to a fatal stage while you have this flag."
   },
   {
+    "id": "PAUSE_BODYPART_INFECTION",
+    "type": "json_flag",
+    "info": "Prevents infection on a bodypart with this flag from progressing to death, though does not relieve symptoms"
+  },
+  {
     "id": "ANIMALEMPATH2",
     "type": "json_flag",
     "info": "The character is intensely liked by natural animals."
@@ -2848,6 +2871,11 @@
     "id": "QUADRUPED_CROUCH",
     "type": "json_flag",
     "//": "This character goes down on all fours when they crouch, if their hands are free.  Used for paw mutations."
+  },
+  {
+    "id": "THRESH_ALLOWS_QUADRUPEDAL_MOVEMENT",
+    "type": "json_flag",
+    "//": "Wether your threshold mutation enables quadrupedal movement."
   },
   {
     "id": "QUADRUPED_RUN",
