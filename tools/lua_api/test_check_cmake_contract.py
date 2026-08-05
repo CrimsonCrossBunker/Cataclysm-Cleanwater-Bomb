@@ -57,7 +57,7 @@ class CMakeContractTests(unittest.TestCase):
             any("propagate libsol" in error for error in errors), errors)
 
     def test_duplicate_headless_check_mods_initialization_is_rejected(
-            self ) -> None:
+            self) -> None:
         main_source = self.main_source.replace(
             """    if( !cli.check_mods ) {
         get_options().init();
