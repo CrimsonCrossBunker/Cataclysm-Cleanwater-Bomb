@@ -3841,7 +3841,7 @@ int Character::throw_range( const item &it ) const
     if( do_railgun ) {
         const item_location wielded = get_wielded_item();
         const bool has_railgun_throw_multiplier = fcl_mod_is_active() &&
-                                                  flag_RAILGUN_THROW_MULTIPLIER.is_valid();
+                flag_RAILGUN_THROW_MULTIPLIER.is_valid();
         if( has_railgun_throw_multiplier && wielded &&
             wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
             range_multiplier *= wielded->type->throw_range_multiplier;
@@ -3873,7 +3873,7 @@ static float throw_bonus_with_mods( const item_location &wielded, float base,
                                     float islot_gunmod::*mult, float islot_gunmod::*add )
 {
     const bool has_railgun_throw_multiplier = fcl_mod_is_active() &&
-                                              flag_RAILGUN_THROW_MULTIPLIER.is_valid();
+            flag_RAILGUN_THROW_MULTIPLIER.is_valid();
     if( has_railgun_throw_multiplier && wielded &&
         wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
         base = 1.0f;
