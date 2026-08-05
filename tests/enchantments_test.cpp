@@ -46,8 +46,10 @@ static const itype_id itype_test_MELEE_TO_HIT_ench_item_1( "test_MELEE_TO_HIT_en
 static const itype_id itype_test_MELEE_TO_HIT_ench_item_2( "test_MELEE_TO_HIT_ench_item_2" );
 static const itype_id itype_test_MAX_HP_BP_ench_item( "test_MAX_HP_BP_ench_item" );
 static const itype_id itype_test_LIMB_SCORE_ench_item( "test_LIMB_SCORE_ench_item" );
-static const itype_id itype_test_LIMB_SCORE_ZERO_BP_ench_item( "test_LIMB_SCORE_ZERO_BP_ench_item" );
-static const itype_id itype_test_LIMB_SCORE_MANIP_BP_ench_item( "test_LIMB_SCORE_MANIP_BP_ench_item" );
+static const itype_id
+itype_test_LIMB_SCORE_ZERO_BP_ench_item( "test_LIMB_SCORE_ZERO_BP_ench_item" );
+static const itype_id
+itype_test_LIMB_SCORE_MANIP_BP_ench_item( "test_LIMB_SCORE_MANIP_BP_ench_item" );
 static const itype_id
 itype_test_PAIN_PENALTY_MOD_ench_item_1( "test_PAIN_PENALTY_MOD_ench_item_1" );
 static const itype_id itype_test_SPEED_ench_item( "test_SPEED_ench_item" );

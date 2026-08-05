@@ -308,7 +308,7 @@ class scoped_lua_user_script
 {
     public:
         scoped_lua_user_script() : path_( fs::u8path( PATH_INFO::config_dir() ) /
-                                          fs::u8path( "lua" ) / fs::u8path( "main.lua" ) ),
+                                              fs::u8path( "lua" ) / fs::u8path( "main.lua" ) ),
             manifest_path_( path_.parent_path() / fs::u8path( "manifest.json" ) ) {
             std::error_code error;
             fs::create_directories( path_.parent_path(), error );

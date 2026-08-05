@@ -1548,7 +1548,7 @@ int throw_cost( const Character &c, const item &to_throw )
     const bool do_railgun = c.is_fcl_railgun_throw( to_throw );
     const float weight_mult = do_railgun ? 1.0f : c.throw_weight_multiplier();
     const int weight_adjust = static_cast<int>( to_throw.weight() * ( weight_mult - 1.0f ) /
-                             60_gram / to_throw.count() / 2 );
+                              60_gram / to_throw.count() / 2 );
     const int effective_base_cost = base_move_cost + weight_adjust;
     const float throw_skill = std::min( static_cast<float>( MAX_SKILL ),
                                         c.get_skill_level( skill_throw ) );
@@ -1568,7 +1568,7 @@ int throw_cost( const Character &c, const item &to_throw )
     }
     move_cost = c.enchantment_cache->modify_value( enchant_vals::mod::ATTACK_SPEED, move_cost );
     move_cost = static_cast<int>( std::round( move_cost *
-                                              ( do_railgun ? 1.0f : c.throw_speed_multiplier() ) ) );
+                                  ( do_railgun ? 1.0f : c.throw_speed_multiplier() ) ) );
 
     return std::max( 25, move_cost );
 }
@@ -1685,9 +1685,9 @@ int Character::throwing_dispersion( const item &to_throw, Creature *critter,
     }
 
     const float dispersion_multiplier = do_railgun ? railgun_throw_multiplier( *this, 0.5f,
-                                       &itype::throw_dispersion_multiplier,
-                                       &islot_gunmod::throw_dispersion_multiplier ) :
-                                       throw_dispersion_multiplier();
+                                        &itype::throw_dispersion_multiplier,
+                                        &islot_gunmod::throw_dispersion_multiplier ) :
+                                        throw_dispersion_multiplier();
     dispersion = static_cast<int>( std::round( dispersion * dispersion_multiplier ) );
 
     return std::max( 0, dispersion );
@@ -1723,8 +1723,8 @@ static double thrown_item_weight_damage( const Character &thrower, const item &t
     const bool do_railgun = thrower.is_fcl_railgun_throw( thrown );
     const float weight_dmg = thrown.weight() *
                              ( do_railgun ? railgun_throw_multiplier( thrower, 1.8f,
-                               &itype::throw_weight_multiplier,
-                               &islot_gunmod::throw_weight_multiplier ) :
+                                     &itype::throw_weight_multiplier,
+                                     &islot_gunmod::throw_weight_multiplier ) :
                                thrower.throw_weight_multiplier() ) /
                              100.0_gram;
     const float skill = throwing_skill_adjusted( thrower );
@@ -1812,10 +1812,10 @@ int Character::thrown_item_total_damage_raw( const item &thrown ) const
         total_damage += du.amount * du.damage_multiplier;
     }
     const float throw_damage_mult = is_fcl_railgun_throw( thrown ) ?
-                                   railgun_throw_multiplier( *this, 3.5f,
-                                           &itype::throw_damage_multiplier,
-                                           &islot_gunmod::throw_damage_multiplier ) :
-                                   throw_damage_multiplier();
+                                    railgun_throw_multiplier( *this, 3.5f,
+                                            &itype::throw_damage_multiplier,
+                                            &islot_gunmod::throw_damage_multiplier ) :
+                                    throw_damage_multiplier();
     return std::round( total_damage * throw_damage_mult );
 }
 
@@ -2457,7 +2457,7 @@ static int print_ranged_chance( const catacurses::window &w, int line_number,
         for( const aim_type_prediction &out : sorted ) {
             if( display_numbers ) {
                 t_aims[aim_iter] = string_format( "<color_dark_gray>%s:</color>",
-                                                   is_throw ? _( "Throw" ) : out.name );
+                                                  is_throw ? _( "Throw" ) : out.name );
                 t_confidence[( aim_iter * 5 ) + 4] = string_format( "<color_light_blue>%d</color>", out.moves );
             } else {
                 if( is_throw ) {

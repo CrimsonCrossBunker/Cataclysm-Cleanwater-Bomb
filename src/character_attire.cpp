@@ -1921,7 +1921,7 @@ void outfit::absorb_damage( Character &guy, damage_unit &elem, bodypart_id bp,
                                          armor.covers( body_part_torso ) &&
                                          ( armor.covers( body_part_head ) || armor.covers( body_part_mouth ) );
             const sub_bodypart_id armor_sbp = use_torso_upper ?
-                                                sub_body_part_torso_upper.id() : sbp;
+                                              sub_body_part_torso_upper.id() : sbp;
             // if the armor location has ablative armor apply that first
             if( armor.is_ablative() ) {
                 guy.ablative_armor_absorb( elem, armor, armor_sbp, roll );

@@ -884,7 +884,7 @@ TEST_CASE( "spell_lua_effect_copy_from_inheritance", "[magic][spell][lua]" )
 {
     using namespace cata::lua_ui;
 
-    const auto load_spell = []( const std::string &json ) {
+    const auto load_spell = []( const std::string & json ) {
         spell_type spell;
         spell.load( json_loader::from_string( json ).get_object(), "dda" );
         return spell;

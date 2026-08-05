@@ -889,7 +889,7 @@ void install_need_api(
     needs.set_function(
         "set_gut_vitamin",
         [current_runtime_generation, current_world_generation, require_write](
-    sol::this_state lua_state, const game_handle & handle, const script_game_id & id,
+            sol::this_state lua_state, const game_handle & handle, const script_game_id & id,
     const int amount ) {
         require_write();
         return set_gut_vitamin(
@@ -900,7 +900,7 @@ void install_need_api(
     needs.set_function(
         "modify_gut_vitamin",
         [current_runtime_generation, current_world_generation, require_write](
-    sol::this_state lua_state, const game_handle & handle, const script_game_id & id,
+            sol::this_state lua_state, const game_handle & handle, const script_game_id & id,
     const int delta ) {
         require_write();
         return modify_gut_vitamin(

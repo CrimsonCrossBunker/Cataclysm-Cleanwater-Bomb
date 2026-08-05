@@ -425,7 +425,7 @@ class runtime_state : public event_subscriber
         std::unordered_map<std::string, sol::protected_function> service_methods;
         int service_call_depth = 0;
         std::unordered_map<std::string, std::pair<std::size_t, sol::protected_function>>
-        lua_handlers;
+                lua_handlers;
         int lua_handler_call_depth = 0;
         std::set<std::string> reported_missing_lua_handlers;
         std::vector<page_definition> pages;
@@ -1835,10 +1835,10 @@ talk_response lua_dialogue_response_from_table(
             state.next_dialogue_response_callback_id++;
         state.dialogue_response_callbacks.emplace(
             callback_id,
-            dialogue_response_callback {
-                source_index, topic_id,
-                raw_on_select.as<sol::protected_function>()
-            } );
+        dialogue_response_callback {
+            source_index, topic_id,
+            raw_on_select.as<sol::protected_function>()
+        } );
         response.lua_response_id = callback_id;
     }
 
@@ -3970,15 +3970,15 @@ void initialize_state( runtime_state &state )
         "set", &script_dialogue_context::set,
         "remove", &script_dialogue_context::remove,
         "quote_trade_item",
-    []( const script_dialogue_context & context,
-    const std::string & item_id, const int count,
+        []( const script_dialogue_context & context,
+            const std::string & item_id, const int count,
     const sol::optional<std::string> &prefix ) {
         return context.quote_trade_item(
                    item_id, count, prefix.value_or( "quote" ) );
     },
     "buy_quoted_item",
     []( const script_dialogue_context & context,
-    const sol::optional<std::string> &prefix ) {
+        const sol::optional<std::string> &prefix ) {
         return context.buy_quoted_item(
                    prefix.value_or( "quote" ) );
     } );

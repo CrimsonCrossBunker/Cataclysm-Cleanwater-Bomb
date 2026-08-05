@@ -78,7 +78,8 @@ std::string get_mod_error_source( std::string_view src )
         return result;
     }
 
-    const bool is_builtin = std::find( builtin_mod_ids.begin(), builtin_mod_ids.end(), mod.ident.str() ) !=
+    const bool is_builtin = std::find( builtin_mod_ids.begin(), builtin_mod_ids.end(),
+                                       mod.ident.str() ) !=
                             builtin_mod_ids.end();
     if( is_builtin ) {
         return result + "\n" + string_format( _( "Game version: %s" ), getVersionString() );
@@ -592,8 +593,8 @@ bool mod_manager::check_mods_list( WORLD *world ) const
 #else
         for( const mod_id &mod : incorrectly_installed_mods ) {
             DebugLog( D_WARNING, D_MAIN ) << "Third-party mod '" << mod.str()
-                                           << "' is installed in the built-in mod directory: "
-                                           << mod->path.generic_u8string();
+                                          << "' is installed in the built-in mod directory: "
+                                          << mod->path.generic_u8string();
         }
 #endif
     }
