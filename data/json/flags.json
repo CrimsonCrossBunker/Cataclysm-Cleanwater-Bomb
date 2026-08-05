@@ -2827,6 +2827,11 @@
     "info": "Infections cannot progress to a fatal stage while you have this flag."
   },
   {
+    "id": "PAUSE_BODYPART_INFECTION",
+    "type": "json_flag",
+    "info": "Prevents infection on a bodypart with this flag from progressing to death, though does not relieve symptoms"
+  },
+  {
     "id": "ANIMALEMPATH2",
     "type": "json_flag",
     "info": "The character is intensely liked by natural animals."
