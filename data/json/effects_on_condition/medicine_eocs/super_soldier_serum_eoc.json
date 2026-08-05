@@ -31,6 +31,7 @@
       "hunger_engorged",
       "hunger_full",
       "hunger_satisfied",
+      "hunger_blank",
       "hunger_hungry",
       "hunger_very_hungry",
       "hunger_near_starving",

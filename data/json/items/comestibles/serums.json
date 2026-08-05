@@ -4,8 +4,7 @@
     "type": "ITEM",
     "category": "drugs",
     "name": { "str_sp": "48x-\"Locutus\"" },
-    "description": "A little, sealed ampule with some white, semi-transparent liquid of unknown origin.  The label on it says \"48x-\"Locutus\"\", whatever that means.",
-    "display_type": "BY_VOLUME",
+    "description": "A little, sealed ampule with some white, semi-transparent liquid of unknown origin.  The label on it says \"48x-\"Locutus\"\", whatever that means.",    "display_type": "BY_VOLUME",
     "weight": "7 g",
     "volume": "10 ml",
     "material": [ "alien_liquid" ],
@@ -31,14 +30,12 @@
     "type": "ITEM",
     "category": "drugs",
     "name": { "str_sp": "29x-\"Noonien\"" },
-    "description": "A little, sealed ampule with some reddish, semi-transparent liquid of unknown origin.  The label on it says \"29x-\"Noonien\"\", whatever that means.",
-    "display_type": "BY_VOLUME",
+    "description": "A little, sealed ampule with some reddish, semi-transparent liquid of unknown origin.  The label on it says \"29x-\"Noonien\"\", whatever that means.",    "display_type": "BY_VOLUME",
     "weight": "7 g",
     "volume": "10 ml",
     "material": [ "alien_liquid" ],
     "symbol": "[",
-    "color": "red",
-    "use_action": [
+    "color": "red",    "use_action": [
       {
         "type": "effect_on_conditions",
         "consume": true,
