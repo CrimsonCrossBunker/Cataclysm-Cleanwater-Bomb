@@ -11,8 +11,8 @@ from pathlib import Path
 
 import jsonschema
 
-from build_context_pack import (ROOT, build_pack, load_yaml,
-                               pattern_exists, tracked_paths)
+from build_context_pack import (
+    ROOT, build_pack, load_yaml, pattern_exists, tracked_paths)
 
 
 DEFAULT_REPORT = ROOT / "ai/agent-benchmark-baseline.json"
