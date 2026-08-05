@@ -16,7 +16,16 @@
     "warmth": 20,
     "material_thickness": 0.3,
     "environmental_protection": 1,
-    "flags": [ "OVERSIZE", "BELTED", "ALLOWS_NATURAL_ATTACKS", "ALLOWS_GASTROPOD_FOOT", "ALLOWS_LEG_TENTACLES" ],
+    "flags": [
+      "OVERSIZE",
+      "BELTED",
+      "ALLOWS_NATURAL_ATTACKS",
+      "ALLOWS_GASTROPOD_FOOT",
+      "ALLOWS_LEG_TENTACLES",
+      "ALLOWS_WING_ARMS",
+      "ALLOWS_WINGS",
+      "NO_WING_GLIDING"
+    ],
     "use_action": [ "POST_UP" ],
     "armor": [
       {
@@ -33,6 +42,12 @@
           "foot_l",
           "foot_r",
           "tail",
+          "arm_wing_bat_l",
+          "arm_wing_bat_r",
+          "arm_wing_bird_l",
+          "arm_wing_bird_r",
+          "wing_l",
+          "wing_r",
           "gastropod_foot",
           "tentacle_lower_front_l",
           "tentacle_lower_middle_l",
@@ -57,7 +72,17 @@
     "material": [ "anomaly" ],
     "material_thickness": 2,
     "max_energy_shield_hp": 100,
-    "flags": [ "AURA", "ENERGY_SHIELD", "OVERSIZE", "TRADER_AVOID", "NO_TAKEOFF", "NONCONDUCTIVE", "ALLOWS_NATURAL_ATTACKS" ],
+    "flags": [
+      "AURA",
+      "ENERGY_SHIELD",
+      "OVERSIZE",
+      "TRADER_AVOID",
+      "NO_TAKEOFF",
+      "NONCONDUCTIVE",
+      "ALLOWS_NATURAL_ATTACKS",
+      "ALLOWS_WING_ARMS",
+      "ALLOWS_WINGS"
+    ],
     "max_worn": 1,
     "armor": [
       {
@@ -77,6 +102,12 @@
           "mouth",
           "eyes",
           "tail",
+          "arm_wing_bat_l",
+          "arm_wing_bat_r",
+          "arm_wing_bird_l",
+          "arm_wing_bird_r",
+          "wing_l",
+          "wing_r",
           "gastropod_foot",
           "beak",
           "muzzle",
@@ -112,6 +143,122 @@
         "encumbrance": 0,
         "coverage": 100,
         "covers": [ "leg_l", "leg_r", "torso", "arm_l", "arm_r", "hand_l", "hand_r", "head", "foot_l", "foot_r", "mouth", "eyes" ]
+      }
+    ]
+  },
+  {
+    "id": "pride_flag",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "pride flag" },
+    "description": "A large rainbow flag, The colors reflect the diversity of the LGBT community and the spectrum of human sexuality and gender.",
+    "copy-from": "american_flag",
+    "symbol": "]",
+    "looks_like": "sheet",
+    "color": "pink",
+    "variant_type": "generic",
+    "variants": [
+      { "id": "rainbow_pride_flag", "//": "inherit name and description from item", "weight": 10 },
+      {
+        "id": "progress_pride_flag",
+        "name": { "str": "progress pride flag" },
+        "description": "On the left side you can see a chevron that features black, brown, light blue, pink, and white stripes to bring those communities to the forefront; \"the arrow points to the right to show forward movement, while being along the left edge shows that progress still needs to be made\".",
+        "append": true,
+        "weight": 10
+      },
+      {
+        "id": "agender_pride_flag",
+        "name": { "str": "agender flag" },
+        "description": "A large green gray and black agender flag.  The black and white stripes represent complete absence of gender, gray represents being semi-genderless, and green represents non-binary gender.",
+        "weight": 2
+      },
+      {
+        "id": "bisexual_pride_flag",
+        "name": { "str": "bisexual flag" },
+        "description": "A large pink and blue bisexual flag.  The pink stripe represents homosexuality, while the blue stripe represents heterosexuality.  The purple stripe, the \"overlap\" of the blue and pink stripes, purple represents attraction regardless of sex or gender a.k.a bisexuality.",
+        "weight": 5
+      },
+      {
+        "id": "pansexual_pride_flag",
+        "name": { "str": "pansexual flag" },
+        "description": "A large pink, blue and yellow pansexual flag.  The pan-pride flag uses pink for people on the female-spectrum, blue for people on the male-spectrum, and yellow for non-binary or genderqueer people.",
+        "weight": 5
+      },
+      {
+        "id": "labrys_lesbian_pride_flag",
+        "name": { "str": "labrys lesbian flag" },
+        "description": "A large black and purple labrys lesbian flag.  On the flag you can see a labrys, a type of double-headed axe, superimposed on a downward-pointing black triangle, set against a violet background.",
+        "weight": 2
+      },
+      {
+        "id": "lesbian_pride_flag",
+        "name": { "str": "lesbian flag" },
+        "description": "A large pink, white and orange lesbian flag.  The dark orange representing \"gender non-conformity\", orange for \"independence\", light orange for \"community\", white for \"unique relationships to womanhood\", pink for \"serenity and peace\", dusty pink for \"love and sex\", and dark rose for \"femininity\".",
+        "weight": 5
+      },
+      {
+        "id": "asexual_pride_flag",
+        "name": { "str": "asexual flag" },
+        "description": "A large purple, white, gray and black asexual flag.  Black for asexuality (feeling no sexual attraction), gray for gray-asexuality and demisexuality (feeling sexual attraction only sometimes), white for non-asexual partners and allies, and purple for community.",
+        "weight": 2
+      },
+      {
+        "id": "aromantic_pride_flag",
+        "name": { "str": "aromantic flag" },
+        "description": "A large black, gray, white and green aromantic flag.  The green and light green stripes cover everyone under the aromantic spectrum, white represents nonromantic forms of love and attraction, and the gray and black represent all sexualities under the aromantic spectrum.",
+        "weight": 2
+      },
+      {
+        "id": "transgender_pride_flag",
+        "name": { "str": "transgender flag" },
+        "description": "A large white, pink, and blue transgender flag.  The stripes at the top and bottom are light blue, the traditional color for baby boys.  The stripes next to them are pink, the traditional color for baby girls.  The white stripe is for people that are nonbinary, feel that they don't have a gender.  The pattern is such that no matter which way you fly it, it is always correct, signifying finding correctness in one's life.",
+        "weight": 5
+      },
+      {
+        "id": "genderqueer_pride_flag",
+        "name": { "str": "genderqueer flag" },
+        "description": "A large green, white, and purple genderqueer flag.  Lavender, a mixture of blue and pink to represent androgynes and androgyny, white to represent agender identity, and green, the inverse of lavender, to represent all those who fall outside of the gender binary.",
+        "weight": 2
+      },
+      {
+        "id": "intersex_pride_flag",
+        "name": { "str": "intersex flag" },
+        "description": "A large yellow, and purple intersex flag.  It displays a purple circle on a yellow field.  Yellow and purple were chosen as colors as they were viewed as free from gender associations and were historically used to represent intersex people.  The circle is described as \"unbroken and unornamented, symbolizing wholeness and completeness, and our potentialities\".",
+        "weight": 2
+      },
+      {
+        "id": "genderfluid_pride_flag",
+        "name": { "str": "genderfluid flag" },
+        "description": "A large blue, black, purple, white and pink genderfluid flag.  The genderfluid flag has a pink stripe for femininity, a blue stripe for masculinity, a purple stripe for both masculinity and femininity, a black stripe for lack of gender, and a white stripe for all genders.",
+        "weight": 2
+      },
+      {
+        "id": "agender_pride_flag",
+        "name": { "str": "agender flag" },
+        "description": "A large green, white, gray and black agender flag.  The black and white stripes represent complete absence of gender, gray represents being semi-genderless, and green represents non-binary gender.  The symmetry of the pattern makes it so that it's correct no matter how it flies.",
+        "weight": 2
+      },
+      {
+        "id": "nonbinary_pride_flag",
+        "name": { "str": "non-binary flag" },
+        "description": "A large black, purple, white, and yellow non-binary flag.  Yellow for those whose gender exists outside of and without reference to the binary, white for those who have many or all genders, purple for those who feel their gender is between or a mix of female and male, and black for those who feel they are without gender.",
+        "weight": 5
+      },
+      {
+        "id": "polysexual_pride_flag",
+        "name": { "str": "polysexual flag" },
+        "description": "A large blue, green, and pink polysexual flag.  Pink for people on the female-spectrum, blue for people on the male-spectrum, and green for non-binary or genderqueer people.",
+        "weight": 2
+      },
+      {
+        "id": "leather_pride_flag",
+        "name": { "str": "leather flag" },
+        "description": "A horizontally striped black and blue leather flag with a white band in the middle and red heart in a corner.  The black represents leather; the blue represents devotion, loyalty, and community; the white represents purity and innocence; and the red heart represents love for the community."
+      },
+      {
+        "id": "bear_pride_flag",
+        "name": { "str": "bear flag" },
+        "description": "A large black and orange international bear brotherhood flag.  The flag displays seven horizontal stripes of colors ranging from black to brown representing the colors of different bear species, you can see a black bear paw in the upper right corner."
       }
     ]
   },
@@ -1601,7 +1748,8 @@
     "color": "blue",
     "warmth": 20,
     "material_thickness": 3.5,
-    "flags": [ "OUTER", "OVERSIZE", "UNBREAKABLE", "SOFT" ],
+    "//2": "Deliberately does not cover independent wings--it can just fit between them",
+    "flags": [ "OUTER", "OVERSIZE", "UNBREAKABLE", "SOFT", "ALLOWS_WING_ARMS", "ALLOWS_WINGS", "NO_WING_GLIDING" ],
     "sided": true,
     "armor": [
       { "encumbrance": 2, "coverage": 95, "covers": [ "torso" ] },
@@ -1620,10 +1768,32 @@
         "layers": [ "OUTER" ]
       },
       {
+        "covers": [ "arm_wing_bat_l", "arm_wing_bat_r", "arm_wing_bird_l", "arm_wing_bird_r" ],
+        "coverage": 100,
+        "encumbrance": 2,
+        "specifically_covers": [
+          "arm_wing_bird_shoulder_l",
+          "arm_wing_bird_shoulder_r",
+          "arm_wing_bird_upper_l",
+          "arm_wing_bird_upper_r",
+          "arm_wing_bat_shoulder_l",
+          "arm_wing_bat_shoulder_r",
+          "arm_wing_bat_upper_l",
+          "arm_wing_bat_upper_r"
+        ],
+        "layers": [ "OUTER" ]
+      },
+      {
         "encumbrance": 1,
         "coverage": 100,
         "covers": [ "arm_r" ],
         "specifically_covers": [ "arm_elbow_r", "arm_lower_r" ]
+      },
+      {
+        "covers": [ "arm_wing_bat_r", "arm_wing_bird_r" ],
+        "coverage": 100,
+        "encumbrance": 2,
+        "specifically_covers": [ "arm_wing_bird_elbow_r", "arm_wing_bird_lower_r", "arm_wing_bat_elbow_r", "arm_wing_bat_lower_r" ]
       }
     ]
   },
@@ -1670,7 +1840,21 @@
     "looks_like": "coat_rain",
     "color": "green",
     "armor": [
-      { "encumbrance": 4, "coverage": 65, "covers": [ "torso", "arm_l", "arm_r" ] },
+      {
+        "encumbrance": 4,
+        "coverage": 65,
+        "covers": [
+          "torso",
+          "arm_l",
+          "arm_r",
+          "arm_wing_bat_l",
+          "arm_wing_bat_r",
+          "arm_wing_bird_l",
+          "arm_wing_bird_r",
+          "wing_l",
+          "wing_r"
+        ]
+      },
       {
         "covers": [ "leg_l", "leg_r", "gastropod_foot", "tail" ],
         "coverage": 65,
@@ -1682,7 +1866,7 @@
     "warmth": 30,
     "material_thickness": 0.4,
     "environmental_protection": 3,
-    "flags": [ "OVERSIZE", "HOOD", "BELTED" ]
+    "flags": [ "OVERSIZE", "HOOD", "BELTED", "ALLOWS_WING_ARMS", "ALLOWS_WINGS", "NO_WING_GLIDING" ]
   },
   {
     "id": "cloak_denim",
@@ -1699,9 +1883,33 @@
     "looks_like": "coat_rain",
     "symbol": "[",
     "color": "light_blue",
-    "flags": [ "OVERSIZE", "HOOD", "BELTED", "STURDY", "ALLOWS_GASTROPOD_FOOT", "ALLOWS_LEG_TENTACLES" ],
+    "flags": [
+      "OVERSIZE",
+      "HOOD",
+      "BELTED",
+      "STURDY",
+      "ALLOWS_GASTROPOD_FOOT",
+      "ALLOWS_LEG_TENTACLES",
+      "ALLOWS_WING_ARMS",
+      "ALLOWS_WINGS",
+      "NO_WING_GLIDING"
+    ],
     "armor": [
-      { "encumbrance": 8, "coverage": 65, "covers": [ "torso", "arm_l", "arm_r" ] },
+      {
+        "encumbrance": 8,
+        "coverage": 65,
+        "covers": [
+          "torso",
+          "arm_l",
+          "arm_r",
+          "arm_wing_bat_l",
+          "arm_wing_bat_r",
+          "arm_wing_bird_l",
+          "arm_wing_bird_r",
+          "wing_l",
+          "wing_r"
+        ]
+      },
       {
         "covers": [ "leg_l", "leg_r", "gastropod_foot", "tail" ],
         "coverage": 65,
@@ -1751,9 +1959,32 @@
     "warmth": 10,
     "material_thickness": 0.2,
     "environmental_protection": 1,
-    "flags": [ "OVERSIZE", "HOOD", "BELTED", "ALLOWS_GASTROPOD_FOOT", "ALLOWS_LEG_TENTACLES", "COSPLAY_COSTUME" ],
+    "flags": [
+      "OVERSIZE",
+      "HOOD",
+      "BELTED",
+      "ALLOWS_GASTROPOD_FOOT",
+      "ALLOWS_LEG_TENTACLES",
+      "ALLOWS_WING_ARMS",
+      "ALLOWS_WINGS",
+      "NO_WING_GLIDING"
+    ],
     "armor": [
-      { "encumbrance": 2, "coverage": 65, "covers": [ "torso", "arm_l", "arm_r" ] },
+      {
+        "encumbrance": 2,
+        "coverage": 65,
+        "covers": [
+          "torso",
+          "arm_l",
+          "arm_r",
+          "arm_wing_bat_l",
+          "arm_wing_bat_r",
+          "arm_wing_bird_l",
+          "arm_wing_bird_r",
+          "wing_l",
+          "wing_r"
+        ]
+      },
       {
         "covers": [ "leg_l", "leg_r", "gastropod_foot", "tail" ],
         "coverage": 65,
@@ -1821,9 +2052,31 @@
     "color": "dark_gray",
     "warmth": 8,
     "material_thickness": 0.1,
-    "flags": [ "OVERSIZE", "BELTED", "ALLOWS_GASTROPOD_FOOT", "ALLOWS_LEG_TENTACLES" ],
+    "flags": [
+      "OVERSIZE",
+      "BELTED",
+      "ALLOWS_GASTROPOD_FOOT",
+      "ALLOWS_LEG_TENTACLES",
+      "ALLOWS_WING_ARMS",
+      "ALLOWS_WINGS",
+      "NO_WING_GLIDING"
+    ],
     "armor": [
-      { "encumbrance": 2, "coverage": 65, "covers": [ "torso", "arm_l", "arm_r" ] },
+      {
+        "encumbrance": 2,
+        "coverage": 65,
+        "covers": [
+          "torso",
+          "arm_l",
+          "arm_r",
+          "arm_wing_bat_l",
+          "arm_wing_bat_r",
+          "arm_wing_bird_l",
+          "arm_wing_bird_r",
+          "wing_l",
+          "wing_r"
+        ]
+      },
       {
         "covers": [ "leg_l", "leg_r", "gastropod_foot", "tail" ],
         "coverage": 65,
@@ -1871,9 +2124,33 @@
     "warmth": 60,
     "material_thickness": 0.6,
     "environmental_protection": 3,
-    "flags": [ "OVERSIZE", "HOOD", "BELTED", "RAINPROOF", "ALLOWS_GASTROPOD_FOOT", "ALLOWS_LEG_TENTACLES" ],
+    "flags": [
+      "OVERSIZE",
+      "HOOD",
+      "BELTED",
+      "RAINPROOF",
+      "ALLOWS_GASTROPOD_FOOT",
+      "ALLOWS_LEG_TENTACLES",
+      "ALLOWS_WING_ARMS",
+      "ALLOWS_WINGS",
+      "NO_WING_GLIDING"
+    ],
     "armor": [
-      { "encumbrance": 6, "coverage": 65, "covers": [ "torso", "arm_l", "arm_r" ] },
+      {
+        "encumbrance": 6,
+        "coverage": 65,
+        "covers": [
+          "torso",
+          "arm_l",
+          "arm_r",
+          "arm_wing_bat_l",
+          "arm_wing_bat_r",
+          "arm_wing_bird_l",
+          "arm_wing_bird_r",
+          "wing_l",
+          "wing_r"
+        ]
+      },
       {
         "covers": [ "leg_l", "leg_r", "gastropod_foot", "tail" ],
         "coverage": 65,
@@ -1921,9 +2198,33 @@
     "warmth": 40,
     "material_thickness": 1.5,
     "environmental_protection": 3,
-    "flags": [ "OVERSIZE", "HOOD", "BELTED", "RAINPROOF", "ALLOWS_GASTROPOD_FOOT", "ALLOWS_LEG_TENTACLES" ],
+    "flags": [
+      "OVERSIZE",
+      "HOOD",
+      "BELTED",
+      "RAINPROOF",
+      "ALLOWS_GASTROPOD_FOOT",
+      "ALLOWS_LEG_TENTACLES",
+      "ALLOWS_WING_ARMS",
+      "ALLOWS_WINGS",
+      "NO_WING_GLIDING"
+    ],
     "armor": [
-      { "encumbrance": 6, "coverage": 65, "covers": [ "torso", "arm_l", "arm_r" ] },
+      {
+        "encumbrance": 6,
+        "coverage": 65,
+        "covers": [
+          "torso",
+          "arm_l",
+          "arm_r",
+          "arm_wing_bat_l",
+          "arm_wing_bat_r",
+          "arm_wing_bird_l",
+          "arm_wing_bird_r",
+          "wing_l",
+          "wing_r"
+        ]
+      },
       {
         "covers": [ "leg_l", "leg_r", "gastropod_foot", "tail" ],
         "coverage": 65,
@@ -1971,9 +2272,32 @@
     "warmth": 50,
     "material_thickness": 0.5,
     "environmental_protection": 3,
-    "flags": [ "OVERSIZE", "HOOD", "BELTED", "ALLOWS_GASTROPOD_FOOT", "ALLOWS_LEG_TENTACLES" ],
+    "flags": [
+      "OVERSIZE",
+      "HOOD",
+      "BELTED",
+      "ALLOWS_GASTROPOD_FOOT",
+      "ALLOWS_LEG_TENTACLES",
+      "ALLOWS_WING_ARMS",
+      "ALLOWS_WINGS",
+      "NO_WING_GLIDING"
+    ],
     "armor": [
-      { "encumbrance": 5, "coverage": 65, "covers": [ "torso", "arm_l", "arm_r" ] },
+      {
+        "encumbrance": 5,
+        "coverage": 65,
+        "covers": [
+          "torso",
+          "arm_l",
+          "arm_r",
+          "arm_wing_bat_l",
+          "arm_wing_bat_r",
+          "arm_wing_bird_l",
+          "arm_wing_bird_r",
+          "wing_l",
+          "wing_r"
+        ]
+      },
       {
         "covers": [ "leg_l", "leg_r", "gastropod_foot", "tail" ],
         "coverage": 65,
@@ -2021,9 +2345,34 @@
     "warmth": 5,
     "material_thickness": 0.3,
     "environmental_protection": 5,
-    "flags": [ "OVERSIZE", "BELTED", "ALLOWS_GASTROPOD_FOOT", "ALLOWS_LEG_TENTACLES" ],
+    "flags": [
+      "OVERSIZE",
+      "BELTED",
+      "ALLOWS_GASTROPOD_FOOT",
+      "ALLOWS_LEG_TENTACLES",
+      "ALLOWS_WING_ARMS",
+      "ALLOWS_WINGS",
+      "NO_WING_GLIDING"
+    ],
     "armor": [
-      { "encumbrance": 3, "coverage": 65, "covers": [ "torso", "arm_l", "arm_r", "head", "hand_l", "hand_r" ] },
+      {
+        "encumbrance": 3,
+        "coverage": 65,
+        "covers": [
+          "torso",
+          "arm_l",
+          "arm_r",
+          "head",
+          "hand_l",
+          "hand_r",
+          "arm_wing_bat_l",
+          "arm_wing_bat_r",
+          "arm_wing_bird_l",
+          "arm_wing_bird_r",
+          "wing_l",
+          "wing_r"
+        ]
+      },
       {
         "covers": [ "leg_l", "leg_r", "gastropod_foot", "tail" ],
         "coverage": 65,
@@ -2078,9 +2427,13 @@
       "need_charges": 20,
       "need_charges_msg": "You don't have enough UPS charges."
     },
-    "flags": [ "USE_UPS", "OVERSIZE", "HOOD", "BELTED", "SOFT", "NO_REPAIR", "RAINPROOF" ],
+    "flags": [ "USE_UPS", "OVERSIZE", "HOOD", "BELTED", "SOFT", "NO_REPAIR", "RAINPROOF", "ALLOWS_WING_ARMS", "NO_WING_GLIDING" ],
     "armor": [
-      { "encumbrance": 50, "coverage": 65, "covers": [ "torso", "arm_l", "arm_r" ] },
+      {
+        "encumbrance": 50,
+        "coverage": 65,
+        "covers": [ "torso", "arm_l", "arm_r", "arm_wing_bat_l", "arm_wing_bat_r", "arm_wing_bird_l", "arm_wing_bird_r" ]
+      },
       {
         "covers": [ "leg_l", "leg_r" ],
         "coverage": 65,
@@ -2138,21 +2491,35 @@
     "warmth": 35,
     "material_thickness": 1,
     "environmental_protection": 1,
-    "flags": [ "BELTED", "OVERSIZE" ],
+    "flags": [ "BELTED", "OVERSIZE", "ALLOWS_WING_ARMS", "NO_WING_GLIDING" ],
     "armor": [
       { "encumbrance": 5, "coverage": 85, "covers": [ "torso" ] },
       {
-        "covers": [ "arm_l", "arm_r" ],
+        "covers": [ "arm_l", "arm_r", "arm_wing_bat_l", "arm_wing_bat_r", "arm_wing_bird_l", "arm_wing_bird_r" ],
         "coverage": 100,
         "encumbrance": 5,
-        "specifically_covers": [ "arm_shoulder_l", "arm_shoulder_r" ],
+        "specifically_covers": [
+          "arm_shoulder_l",
+          "arm_shoulder_r",
+          "arm_wing_bird_shoulder_l",
+          "arm_wing_bird_shoulder_r",
+          "arm_wing_bat_shoulder_l",
+          "arm_wing_bat_shoulder_r"
+        ],
         "layers": [ "BELTED" ]
       },
       {
-        "covers": [ "arm_l", "arm_r" ],
+        "covers": [ "arm_l", "arm_r", "arm_wing_bat_l", "arm_wing_bat_r", "arm_wing_bird_l", "arm_wing_bird_r" ],
         "coverage": 85,
         "encumbrance": 5,
-        "specifically_covers": [ "arm_upper_r", "arm_upper_l" ],
+        "specifically_covers": [
+          "arm_upper_r",
+          "arm_upper_l",
+          "arm_wing_bird_upper_l",
+          "arm_wing_bird_upper_r",
+          "arm_wing_bat_upper_l",
+          "arm_wing_bat_upper_r"
+        ],
         "layers": [ "BELTED" ]
       }
     ]
@@ -2171,7 +2538,7 @@
     "material": [ "vinyl" ],
     "weight": "30 g",
     "volume": "50 ml",
-    "flags": [ "RAINPROOF", "OVERSIZE", "HOOD", "BELTED" ],
+    "flags": [ "RAINPROOF", "OVERSIZE", "HOOD", "BELTED", "ALLOWS_WING_ARMS" ],
     "environmental_protection": 1,
     "material_thickness": 0.1,
     "armor": [ { "coverage": 90, "covers": [ "torso" ] } ]
@@ -2190,17 +2557,47 @@
     "material": [ "vinyl" ],
     "weight": "280 g",
     "volume": "250 ml",
-    "flags": [ "RAINPROOF", "HOOD", "OVERSIZE", "BELTED" ],
+    "flags": [ "RAINPROOF", "HOOD", "OVERSIZE", "BELTED", "ALLOWS_WING_ARMS", "NO_WING_GLIDING" ],
     "environmental_protection": 1,
     "material_thickness": 0.4,
     "armor": [
       { "covers": [ "torso" ], "specifically_covers": [ "torso_upper", "torso_lower" ], "coverage": 100 },
       {
-        "covers": [ "arm_l", "arm_r" ],
-        "specifically_covers": [ "arm_shoulder_l", "arm_shoulder_r", "arm_upper_r", "arm_upper_l", "arm_elbow_r", "arm_elbow_l" ],
+        "covers": [ "arm_l", "arm_r", "arm_wing_bat_l", "arm_wing_bat_r", "arm_wing_bird_l", "arm_wing_bird_r" ],
+        "specifically_covers": [
+          "arm_shoulder_l",
+          "arm_shoulder_r",
+          "arm_upper_r",
+          "arm_upper_l",
+          "arm_elbow_r",
+          "arm_elbow_l",
+          "arm_wing_bird_shoulder_l",
+          "arm_wing_bird_shoulder_r",
+          "arm_wing_bird_upper_l",
+          "arm_wing_bird_upper_r",
+          "arm_wing_bat_shoulder_l",
+          "arm_wing_bat_shoulder_r",
+          "arm_wing_bat_upper_l",
+          "arm_wing_bat_upper_r",
+          "arm_wing_bird_elbow_r",
+          "arm_wing_bird_elbow_l",
+          "arm_wing_bat_elbow_r",
+          "arm_wing_bat_elbow_l"
+        ],
         "coverage": 100
       },
-      { "covers": [ "arm_l", "arm_r" ], "specifically_covers": [ "arm_lower_l", "arm_lower_r" ], "coverage": 90 }
+      {
+        "covers": [ "arm_l", "arm_r", "arm_wing_bat_l", "arm_wing_bat_r", "arm_wing_bird_l", "arm_wing_bird_r" ],
+        "specifically_covers": [
+          "arm_lower_l",
+          "arm_lower_r",
+          "arm_wing_bird_lower_r",
+          "arm_wing_bird_lower_l",
+          "arm_wing_bat_lower_r",
+          "arm_wing_bat_lower_l"
+        ],
+        "coverage": 90
+      }
     ]
   },
   {
@@ -2218,7 +2615,16 @@
     "material": [ "nylon" ],
     "weight": "450 g",
     "volume": "2300 ml",
-    "flags": [ "RAINPROOF", "HOOD", "OVERSIZE", "OUTER", "ALLOWS_GASTROPOD_FOOT", "ALLOWS_LEG_TENTACLES" ],
+    "flags": [
+      "RAINPROOF",
+      "HOOD",
+      "OVERSIZE",
+      "OUTER",
+      "ALLOWS_GASTROPOD_FOOT",
+      "ALLOWS_LEG_TENTACLES",
+      "ALLOWS_WING_ARMS",
+      "NO_WING_GLIDING"
+    ],
     "environmental_protection": 2,
     "material_thickness": 0.2,
     "pocket_data": [
@@ -2237,11 +2643,41 @@
       { "encumbrance": 2, "covers": [ "torso" ], "specifically_covers": [ "torso_upper", "torso_lower" ], "coverage": 100 },
       {
         "encumbrance": 2,
-        "covers": [ "arm_l", "arm_r" ],
-        "specifically_covers": [ "arm_shoulder_l", "arm_shoulder_r", "arm_upper_r", "arm_upper_l", "arm_elbow_r", "arm_elbow_l" ],
+        "covers": [ "arm_l", "arm_r", "arm_wing_bat_l", "arm_wing_bat_r", "arm_wing_bird_l", "arm_wing_bird_r" ],
+        "specifically_covers": [
+          "arm_shoulder_l",
+          "arm_shoulder_r",
+          "arm_upper_r",
+          "arm_upper_l",
+          "arm_elbow_r",
+          "arm_elbow_l",
+          "arm_wing_bird_shoulder_l",
+          "arm_wing_bird_shoulder_r",
+          "arm_wing_bird_upper_l",
+          "arm_wing_bird_upper_r",
+          "arm_wing_bat_shoulder_l",
+          "arm_wing_bat_shoulder_r",
+          "arm_wing_bat_upper_l",
+          "arm_wing_bat_upper_r",
+          "arm_wing_bird_elbow_r",
+          "arm_wing_bird_elbow_l",
+          "arm_wing_bat_elbow_r",
+          "arm_wing_bat_elbow_l"
+        ],
         "coverage": 100
       },
-      { "covers": [ "arm_l", "arm_r" ], "specifically_covers": [ "arm_lower_l", "arm_lower_r" ], "coverage": 90 },
+      {
+        "covers": [ "arm_l", "arm_r", "arm_wing_bat_l", "arm_wing_bat_r", "arm_wing_bird_l", "arm_wing_bird_r" ],
+        "specifically_covers": [
+          "arm_lower_l",
+          "arm_lower_r",
+          "arm_wing_bird_lower_r",
+          "arm_wing_bird_lower_l",
+          "arm_wing_bat_lower_r",
+          "arm_wing_bat_lower_l"
+        ],
+        "coverage": 90
+      },
       {
         "coverage": 100,
         "covers": [ "leg_l", "leg_r", "gastropod_foot", "tail" ],
@@ -2299,7 +2735,17 @@
     "material": [ "nylon" ],
     "weight": "1100 g",
     "volume": "3800 ml",
-    "flags": [ "RAINPROOF", "HOOD", "OVERSIZE", "OUTER", "STURDY", "ALLOWS_GASTROPOD_FOOT", "ALLOWS_LEG_TENTACLES" ],
+    "flags": [
+      "RAINPROOF",
+      "HOOD",
+      "OVERSIZE",
+      "OUTER",
+      "STURDY",
+      "ALLOWS_GASTROPOD_FOOT",
+      "ALLOWS_LEG_TENTACLES",
+      "ALLOWS_WING_ARMS",
+      "NO_WING_GLIDING"
+    ],
     "environmental_protection": 4,
     "warmth": 5,
     "material_thickness": 0.4,
@@ -2319,11 +2765,41 @@
       { "encumbrance": 4, "covers": [ "torso" ], "specifically_covers": [ "torso_upper", "torso_lower" ], "coverage": 100 },
       {
         "encumbrance": 4,
-        "covers": [ "arm_l", "arm_r" ],
-        "specifically_covers": [ "arm_shoulder_l", "arm_shoulder_r", "arm_upper_r", "arm_upper_l", "arm_elbow_r", "arm_elbow_l" ],
+        "covers": [ "arm_l", "arm_r", "arm_wing_bat_l", "arm_wing_bat_r", "arm_wing_bird_l", "arm_wing_bird_r" ],
+        "specifically_covers": [
+          "arm_shoulder_l",
+          "arm_shoulder_r",
+          "arm_upper_r",
+          "arm_upper_l",
+          "arm_elbow_r",
+          "arm_elbow_l",
+          "arm_wing_bird_shoulder_l",
+          "arm_wing_bird_shoulder_r",
+          "arm_wing_bird_upper_l",
+          "arm_wing_bird_upper_r",
+          "arm_wing_bat_shoulder_l",
+          "arm_wing_bat_shoulder_r",
+          "arm_wing_bat_upper_l",
+          "arm_wing_bat_upper_r",
+          "arm_wing_bird_elbow_r",
+          "arm_wing_bird_elbow_l",
+          "arm_wing_bat_elbow_r",
+          "arm_wing_bat_elbow_l"
+        ],
         "coverage": 100
       },
-      { "covers": [ "arm_l", "arm_r" ], "specifically_covers": [ "arm_lower_l", "arm_lower_r" ], "coverage": 90 },
+      {
+        "covers": [ "arm_l", "arm_r", "arm_wing_bat_l", "arm_wing_bat_r", "arm_wing_bird_l", "arm_wing_bird_r" ],
+        "specifically_covers": [
+          "arm_lower_l",
+          "arm_lower_r",
+          "arm_wing_bird_lower_r",
+          "arm_wing_bird_lower_l",
+          "arm_wing_bat_lower_r",
+          "arm_wing_bat_lower_l"
+        ],
+        "coverage": 90
+      },
       {
         "coverage": 100,
         "covers": [ "leg_l", "leg_r", "gastropod_foot", "tail" ],
@@ -2381,18 +2857,48 @@
     "weight": "900 g",
     "volume": "4000 ml",
     "warmth": 50,
-    "flags": [ "OVERSIZE", "OUTER", "SOFT", "ALLOWS_GASTROPOD_FOOT", "ALLOWS_LEG_TENTACLES" ],
+    "flags": [ "OVERSIZE", "OUTER", "SOFT", "ALLOWS_GASTROPOD_FOOT", "ALLOWS_LEG_TENTACLES", "ALLOWS_WING_ARMS", "NO_WING_GLIDING" ],
     "environmental_protection": 4,
     "material_thickness": 0.4,
     "armor": [
       { "encumbrance": 15, "covers": [ "torso" ], "specifically_covers": [ "torso_upper", "torso_lower" ], "coverage": 100 },
       {
         "encumbrance": 15,
-        "covers": [ "arm_l", "arm_r" ],
-        "specifically_covers": [ "arm_shoulder_l", "arm_shoulder_r", "arm_upper_r", "arm_upper_l", "arm_elbow_r", "arm_elbow_l" ],
+        "covers": [ "arm_l", "arm_r", "arm_wing_bat_l", "arm_wing_bat_r", "arm_wing_bird_l", "arm_wing_bird_r" ],
+        "specifically_covers": [
+          "arm_shoulder_l",
+          "arm_shoulder_r",
+          "arm_upper_r",
+          "arm_upper_l",
+          "arm_elbow_r",
+          "arm_elbow_l",
+          "arm_wing_bird_shoulder_l",
+          "arm_wing_bird_shoulder_r",
+          "arm_wing_bird_upper_l",
+          "arm_wing_bird_upper_r",
+          "arm_wing_bat_shoulder_l",
+          "arm_wing_bat_shoulder_r",
+          "arm_wing_bat_upper_l",
+          "arm_wing_bat_upper_r",
+          "arm_wing_bird_elbow_r",
+          "arm_wing_bird_elbow_l",
+          "arm_wing_bat_elbow_r",
+          "arm_wing_bat_elbow_l"
+        ],
         "coverage": 100
       },
-      { "covers": [ "arm_l", "arm_r" ], "specifically_covers": [ "arm_lower_l", "arm_lower_r" ], "coverage": 90 },
+      {
+        "covers": [ "arm_l", "arm_r", "arm_wing_bat_l", "arm_wing_bat_r", "arm_wing_bird_l", "arm_wing_bird_r" ],
+        "specifically_covers": [
+          "arm_lower_l",
+          "arm_lower_r",
+          "arm_wing_bird_lower_r",
+          "arm_wing_bird_lower_l",
+          "arm_wing_bat_lower_r",
+          "arm_wing_bat_lower_l"
+        ],
+        "coverage": 90
+      },
       {
         "coverage": 100,
         "covers": [ "leg_l", "leg_r", "gastropod_foot", "tail" ],
@@ -2470,11 +2976,15 @@
         "coverage": 100
       },
       { "covers": [ "leg_l", "leg_r" ], "specifically_covers": [ "leg_lower_l", "leg_lower_r" ], "coverage": 10 },
-      { "covers": [ "arm_l", "arm_r" ], "coverage": 40, "encumbrance": 2 }
+      {
+        "covers": [ "arm_l", "arm_r", "arm_wing_bat_l", "arm_wing_bat_r", "arm_wing_bird_l", "arm_wing_bird_r" ],
+        "coverage": 40,
+        "encumbrance": 2
+      }
     ],
     "warmth": 15,
     "material_thickness": 2,
-    "flags": [ "OVERSIZE", "RAINPROOF", "BELTED" ]
+    "flags": [ "OVERSIZE", "RAINPROOF", "BELTED", "ALLOWS_WING_ARMS", "NO_WING_GLIDING" ]
   },
   {
     "id": "snuggie",
