@@ -1969,7 +1969,18 @@ static bool consume_med( item &target, Character &you )
     if( target.type->has_use() ) {
         amount_used = target.type->invoke( &you, target, you.pos_bub() ).value_or( 0 );
         if( amount_used <= 0 ) {
-            return false;
+            // cast_spell 类 use_action（如魔力药剂）通过注册施法活动来延迟物品消耗，
+            // 并返回 0 表示"未立即消耗"。若此处直接返回 false，对 MED 类物品
+            // （is_food() 为 false）eat() 也会失败，consume 返回 NONE，物品不会被移除；
+            // 施法完成时 Character::i_rem 只能移除角色身上的物品，物品位于地面、
+            // 车辆或其他容器时残留并报 "did not found item ... to remove it!"，
+            // 表现为药剂不消耗、可反复使用。施法活动确实已注册时视为"已使用"，
+            // 由 consume 流程从实际位置移除物品；施法完成时 item_location 已失效，
+            // 不会再重复移除。
+            static const activity_id ACT_SPELLCASTING( "ACT_SPELLCASTING" );
+            if( you.activity.id() != ACT_SPELLCASTING ) {
+                return false;
+            }
         }
     }
 
