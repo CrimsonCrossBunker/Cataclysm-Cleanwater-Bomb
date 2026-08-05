@@ -2085,12 +2085,12 @@ bool monster::move_to( const tripoint_bub_ms &p, bool force, bool step_on_critte
             { "monster", static_cast<const Creature *>( this ) },
             {
                 "from", cata::lua_ui::native_callback_point {
-                    "bub_ms", pos.x(), pos.y(), pos.z()
+                    "bub_ms", tripoint_rel_ms( pos.x(), pos.y(), pos.z() )
                 }
             },
             {
                 "to", cata::lua_ui::native_callback_point {
-                    "bub_ms", p.x(), p.y(), p.z()
+                    "bub_ms", tripoint_rel_ms( p.x(), p.y(), p.z() )
                 }
             },
             { "force", force }
