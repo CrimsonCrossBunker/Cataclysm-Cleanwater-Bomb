@@ -41,7 +41,8 @@ class CMakeContractTests(unittest.TestCase):
         errors = validate_cmake_contract(
             self.engine_source, lua_source, self.main_source
         )
-        self.assertTrue(any("LANGUAGE CXX" in error for error in errors), errors)
+        self.assertTrue(
+            any("LANGUAGE CXX" in error for error in errors), errors)
 
     def test_missing_libsol_propagation_is_rejected(self) -> None:
         engine_source = self.engine_source.replace(
@@ -52,9 +53,11 @@ class CMakeContractTests(unittest.TestCase):
         errors = validate_cmake_contract(
             engine_source, self.lua_source, self.main_source
         )
-        self.assertTrue(any("propagate libsol" in error for error in errors), errors)
+        self.assertTrue(
+            any("propagate libsol" in error for error in errors), errors)
 
-    def test_duplicate_headless_check_mods_initialization_is_rejected(self) -> None:
+    def test_duplicate_headless_check_mods_initialization_is_rejected(
+            self ) -> None:
         main_source = self.main_source.replace(
             """    if( !cli.check_mods ) {
         get_options().init();
@@ -70,7 +73,8 @@ class CMakeContractTests(unittest.TestCase):
         errors = validate_cmake_contract(
             self.engine_source, self.lua_source, main_source
         )
-        self.assertTrue(any("skip --check-mods" in error for error in errors), errors)
+        self.assertTrue(
+            any("skip --check-mods" in error for error in errors), errors)
 
 
 if __name__ == "__main__":

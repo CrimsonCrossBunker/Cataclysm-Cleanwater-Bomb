@@ -15,7 +15,8 @@ MAIN_PATH = ROOT / "src" / "main.cpp"
 def validate_cmake_contract(
     engine_source: str, lua_source: str, main_source: str
 ) -> list[str]:
-    """Return actionable errors for broken bundled-Lua build/runtime contracts."""
+    """Return actionable errors for broken bundled-Lua
+    build/runtime contracts."""
     errors: list[str] = []
     signature = "function(configure_lua_ui TARGET)"
     start = engine_source.find(signature)
@@ -24,14 +25,20 @@ def validate_cmake_contract(
     else:
         end = engine_source.find("endfunction()", start)
         if end == -1:
-            errors.append("src/CMakeLists.txt: configure_lua_ui is unterminated")
+            errors.append(
+                "src/CMakeLists.txt: configure_lua_ui is "
+                "unterminated"
+            )
         else:
             helper = engine_source[start:end]
             if "if (CATA_ENABLE_LUA_UI)" not in helper:
-                errors.append("src/CMakeLists.txt: Lua linking must remain optional")
+                errors.append(
+                    "src/CMakeLists.txt: Lua linking must remain optional"
+                )
             if "target_link_libraries(${TARGET} PUBLIC libsol)" not in helper:
                 errors.append(
-                    "src/CMakeLists.txt: configure_lua_ui must propagate libsol"
+                    "src/CMakeLists.txt: configure_lua_ui must propagate "
+                    "libsol"
                 )
 
     normalized_lua = " ".join(lua_source.split())
@@ -55,7 +62,8 @@ def validate_cmake_contract(
     )
     if headless_init not in normalized_main:
         errors.append(
-            "src/main.cpp: headless option initialization must skip --check-mods"
+            "src/main.cpp: headless option initialization must skip "
+            "--check-mods"
         )
     if check_mods_init not in normalized_main:
         errors.append(
