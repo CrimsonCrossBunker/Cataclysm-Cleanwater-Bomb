@@ -2351,7 +2351,8 @@
     "threshold_substitutes": [ "THRESH_CHIMERA" ],
     "points": 1,
     "purifiable": false,
-    "valid": false
+    "valid": false,
+    "flags": [ "THRESH_ALLOWS_QUADRUPEDAL_MOVEMENT" ]
   },
   {
     "type": "mutation",
@@ -2441,7 +2442,8 @@
     "threshold_substitutes": [ "THRESH_CHIMERA" ],
     "points": 1,
     "purifiable": false,
-    "valid": false
+    "valid": false,
+    "flags": [ "THRESH_ALLOWS_QUADRUPEDAL_MOVEMENT" ]
   },
   {
     "type": "mutation",
@@ -2485,7 +2487,8 @@
     "threshold": true,
     "points": 1,
     "purifiable": false,
-    "valid": false
+    "valid": false,
+    "flags": [ "THRESH_ALLOWS_QUADRUPEDAL_MOVEMENT" ]
   },
   {
     "type": "mutation",
@@ -2570,7 +2573,8 @@
     "threshold_substitutes": [ "THRESH_CHIMERA" ],
     "points": 1,
     "purifiable": false,
-    "valid": false
+    "valid": false,
+    "flags": [ "THRESH_ALLOWS_QUADRUPEDAL_MOVEMENT" ]
   },
   {
     "type": "mutation",
