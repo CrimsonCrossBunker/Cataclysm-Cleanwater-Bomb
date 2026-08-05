@@ -5231,7 +5231,7 @@ bool item::on_drop( const tripoint_bub_ms &pos, map &m )
         { "item", static_cast<const item *>( this ) },
         {
             "position", cata::lua_ui::native_callback_point {
-                "bub_ms", pos.x(), pos.y(), pos.z()
+                "bub_ms", tripoint_rel_ms( pos.x(), pos.y(), pos.z() )
             }
         }
     } ) ) {

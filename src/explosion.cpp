@@ -585,7 +585,7 @@ void _make_explosion( map *m, const Creature *source, const tripoint_bub_ms &p,
             {
                 "position",
                 cata::lua_ui::native_callback_point {
-                    "abs_ms", position.x(), position.y(), position.z()
+                    "abs_ms", tripoint_rel_ms( position.x(), position.y(), position.z() )
                 }
             },
             { "power", static_cast<double>( ex.power ) },

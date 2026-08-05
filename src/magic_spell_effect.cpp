@@ -2130,7 +2130,7 @@ void spell_effect::lua( const spell &sp, Creature &caster, const tripoint_bub_ms
     cata::lua_ui::invoke_lua_call( *call, "spell", {
         { "caster", &caster },
         { "spell", cata::lua_ui::native_callback_id{ "spell", sp.id().str() } },
-        { "target", cata::lua_ui::native_callback_point{ "bubble", target.x(), target.y(), target.z() } }
+        { "target", cata::lua_ui::native_callback_point{ "bubble", tripoint_rel_ms( target.x(), target.y(), target.z() ) } }
     } );
 }
 

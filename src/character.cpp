@@ -4655,7 +4655,7 @@ bool Character::invoke_item( item *used, const tripoint_bub_ms &pt,
         { "tick", false },
         {
             "position", cata::lua_ui::native_callback_point {
-                "bub_ms", pt.x(), pt.y(), pt.z()
+                "bub_ms", tripoint_rel_ms( pt.x(), pt.y(), pt.z() )
             }
         }
     };
@@ -4733,7 +4733,7 @@ bool Character::invoke_item( item *used, const std::string &method, const tripoi
         { "tick", false },
         {
             "position", cata::lua_ui::native_callback_point {
-                "bub_ms", pt.x(), pt.y(), pt.z()
+                "bub_ms", tripoint_rel_ms( pt.x(), pt.y(), pt.z() )
             }
         }
     };
