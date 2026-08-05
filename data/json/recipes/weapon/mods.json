@@ -1183,7 +1183,6 @@
     "qualities": [ { "id": "CUT", "level": 2 } ],
     "components": [ [ [ "splinter", 1 ] ], [ [ "cordage_short", 2, "LIST" ] ] ]
   },
-
   {
     "type": "recipe",
     "activity_level": "LIGHT_EXERCISE",
