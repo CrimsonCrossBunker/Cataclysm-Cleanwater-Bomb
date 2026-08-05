@@ -91,13 +91,13 @@
 #include <utility>
 #include <vector>
 
+static const efftype_id effect_cold( "cold" );
+static const efftype_id effect_downed( "downed" );
+
 namespace
 {
 
 namespace fs = std::filesystem;
-
-static const efftype_id effect_cold( "cold" );
-static const efftype_id effect_downed( "downed" );
 
 class mutation_event_subscriber final : public event_subscriber
 {
@@ -2241,15 +2241,15 @@ assert(updated.value.after.intensity == 2)
     std::string error;
     REQUIRE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.empty() );
-    REQUIRE( player.has_effect( cold, torso ) );
-    CHECK( player.get_effect( cold, torso ).get_intensity() == 2 );
+    REQUIRE( player.has_effect( effect_cold, torso ) );
+    CHECK( player.get_effect( effect_cold, torso ).get_intensity() == 2 );
     player.update_morale();
     const int lua_updated_morale = player.get_morale_level();
 
-    player.remove_effect( cold, torso );
+    player.remove_effect( effect_cold, torso );
     player.clear_morale();
     player.add_effect(
-        cold, 10_minutes, torso, false, 2, true );
+        effect_cold, 10_minutes, torso, false, 2, true );
     player.update_morale();
     CHECK( lua_updated_morale == player.get_morale_level() );
 }
@@ -12321,8 +12321,8 @@ end)
     CHECK_FALSE( allow_native_monster_interaction(
                      player, test_monster ) );
     CHECK_FALSE( allow_native_elevator_use(
-                     player, { "bub_ms", 30, 30, 0 },
-                     { "abs_omt", 1, 2, -1 } ) );
+                     player, { "bub_ms", tripoint_rel_ms( 30, 30, 0 ) },
+                     { "abs_omt", tripoint_rel_ms( 1, 2, -1 ) } ) );
 
     script.write( R"lua(
 assert(state.character.get(
@@ -12928,7 +12928,7 @@ end)
     const native_callback_arguments payload = {
         { "character", static_cast<const Character *>( &get_avatar() ) },
         { "item", static_cast<const item *>( &rock ) },
-        { "position", native_callback_point { "abs_ms", 11, 22, 1 } },
+        { "position", native_callback_point { "abs_ms", tripoint_rel_ms( 11, 22, 1 ) } },
         { "skill", native_callback_id { "skill", "fabrication" } },
         { "count", std::int64_t { 2 } },
         { "ratio", 0.5 },

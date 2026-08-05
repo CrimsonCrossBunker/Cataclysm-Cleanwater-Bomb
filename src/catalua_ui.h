@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "catalua_ui_state.h"
+#include "coordinates.h"
 
 class Character;
 class Creature;
@@ -98,9 +99,7 @@ enum class world_ready_kind : int {
 
 struct native_callback_point {
     std::string coordinate_space;
-    int x = 0;
-    int y = 0;
-    int z = 0;
+    tripoint_rel_ms pos;
 };
 
 struct native_callback_id {

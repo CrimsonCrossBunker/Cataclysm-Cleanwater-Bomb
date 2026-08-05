@@ -256,6 +256,8 @@ static const material_id material_qt_steel( "qt_steel" );
 static const material_id material_qt_steel_chain( "qt_steel_chain" );
 static const material_id material_steel( "steel" );
 
+static const std::string gun_mechanical_simple( "gun_mechanical_simple" );
+
 static const proficiency_id proficiency_prof_bow_basic( "prof_bow_basic" );
 static const proficiency_id proficiency_prof_bow_expert( "prof_bow_expert" );
 static const proficiency_id proficiency_prof_bow_master( "prof_bow_master" );
@@ -273,10 +275,6 @@ static const trait_id trait_GUNSHY( "GUNSHY" );
 
 static const trap_str_id tr_practice_target( "tr_practice_target" );
 static const trap_str_id tr_target_spinner( "tr_target_spinner" );
-
-static const std::string gun_mechanical_simple( "gun_mechanical_simple" );
-
-static const std::set<material_id> ferric = { material_iron, material_steel, material_budget_steel, material_ch_steel, material_hc_steel, material_lc_steel, material_mc_steel, material_qt_steel, material_budget_steel_chain, material_ch_steel_chain, material_hc_steel_chain, material_lc_steel_chain, material_mc_steel_chain, material_qt_steel_chain, material_copper_nickel };
 
 // Maximum duration of aim-and-fire loop, in turns
 static constexpr int AIF_DURATION_LIMIT = 10;
@@ -1236,7 +1234,7 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
         { "item", static_cast<const item *>( &gun ) },
         {
             "target", cata::lua_ui::native_callback_point {
-                "bub_ms", target.x(), target.y(), target.z()
+                "bub_ms", tripoint_rel_ms( target.x(), target.y(), target.z() )
             }
         },
         { "shots", std::int64_t { shots } }
@@ -1466,7 +1464,7 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
             { "weapon", static_cast<const item *>( &gun ) },
             {
                 "target", cata::lua_ui::native_callback_point {
-                    "bub_ms", target.x(), target.y(), target.z()
+                    "bub_ms", tripoint_rel_ms( target.x(), target.y(), target.z() )
                 }
             },
             { "shots", std::int64_t { curshot } }
@@ -2013,12 +2011,12 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
         { "item", static_cast<const item *>( &to_throw ) },
         {
             "target", cata::lua_ui::native_callback_point {
-                "bub_ms", target.x(), target.y(), target.z()
+                "bub_ms", tripoint_rel_ms( target.x(), target.y(), target.z() )
             }
         },
         {
             "origin", cata::lua_ui::native_callback_point {
-                "bub_ms", throw_from.x(), throw_from.y(), throw_from.z()
+                "bub_ms", tripoint_rel_ms( throw_from.x(), throw_from.y(), throw_from.z() )
             }
         }
     } );
@@ -4143,8 +4141,7 @@ void target_ui::recalc_aim_turning_penalty()
         const double raw_predicted_recoil = curr_recoil + angle_penalty + displacement_penalty;
         const double reset_factor = 0.5 + 0.4 * angle_ratio;
         const double recoil_cap = curr_recoil + ( MAX_RECOIL - curr_recoil ) * reset_factor;
-        predicted_recoil = std::min( MAX_RECOIL,
-                                     std::min( raw_predicted_recoil, recoil_cap ) );
+        predicted_recoil = std::min( { MAX_RECOIL, raw_predicted_recoil, recoil_cap } );
     }
 }
 

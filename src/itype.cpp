@@ -266,7 +266,7 @@ int itype::tick( Character *p, item &it, const tripoint_bub_ms &pos ) const
         { "item", static_cast<const item *>( &it ) },
         {
             "position", cata::lua_ui::native_callback_point {
-                "bub_ms", pos.x(), pos.y(), pos.z()
+                "bub_ms", tripoint_rel_ms( pos.x(), pos.y(), pos.z() )
             }
         }
     } );

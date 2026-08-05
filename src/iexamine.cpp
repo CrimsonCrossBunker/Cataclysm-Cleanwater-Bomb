@@ -1395,10 +1395,10 @@ void iexamine::elevator( Character &you, const tripoint_bub_ms &examp )
 
     tripoint_abs_omt const that_omt( this_omt.xy(), movez );
     const cata::lua_ui::native_callback_point elevator_position = {
-        "bub_ms", examp.x(), examp.y(), examp.z()
+        "bub_ms", tripoint_rel_ms( examp.x(), examp.y(), examp.z() )
     };
     const cata::lua_ui::native_callback_point elevator_destination = {
-        "abs_omt", that_omt.x(), that_omt.y(), that_omt.z()
+        "abs_omt", tripoint_rel_ms( that_omt.x(), that_omt.y(), that_omt.z() )
     };
     if( !cata::lua_ui::allow_native_elevator_use(
             you, elevator_position, elevator_destination ) ) {

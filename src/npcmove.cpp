@@ -3687,12 +3687,12 @@ void npc::move_to( const tripoint_bub_ms &pt, bool no_bashing, std::set<tripoint
             { "npc", static_cast<const Character *>( this ) },
             {
                 "from", cata::lua_ui::native_callback_point {
-                    "bub_ms", pos.x(), pos.y(), pos.z()
+                    "bub_ms", tripoint_rel_ms( pos.x(), pos.y(), pos.z() )
                 }
             },
             {
                 "to", cata::lua_ui::native_callback_point {
-                    "bub_ms", p.x(), p.y(), p.z()
+                    "bub_ms", tripoint_rel_ms( p.x(), p.y(), p.z() )
                 }
             },
             { "movement_mode", current_movement_mode().str() },

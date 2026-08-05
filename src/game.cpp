@@ -8182,12 +8182,12 @@ bool game::walk_move( const tripoint_bub_ms &dest_loc, const bool via_ramp,
             { "player", static_cast<const Character *>( &u ) },
             {
                 "from", cata::lua_ui::native_callback_point {
-                    "bub_ms", pos.x(), pos.y(), pos.z()
+                    "bub_ms", tripoint_rel_ms( pos.x(), pos.y(), pos.z() )
                 }
             },
             {
                 "to", cata::lua_ui::native_callback_point {
-                    "bub_ms", dest_loc.x(), dest_loc.y(), dest_loc.z()
+                    "bub_ms", tripoint_rel_ms( dest_loc.x(), dest_loc.y(), dest_loc.z() )
                 }
             },
             { "movement_mode", u.current_movement_mode().str() },

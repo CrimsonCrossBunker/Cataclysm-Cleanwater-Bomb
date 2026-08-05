@@ -5382,9 +5382,9 @@ sol::object native_callback_value_to_lua(
         {
             sol::table point = state.lua.create_table();
             point["coordinate_space"] = entry.coordinate_space;
-            point["x"] = entry.x;
-            point["y"] = entry.y;
-            point["z"] = entry.z;
+            point["x"] = entry.pos.x();
+            point["y"] = entry.pos.y();
+            point["z"] = entry.pos.z();
             return sol::make_object( lua, std::move( point ) );
         } else if constexpr( std::is_same_v<value_type, native_callback_id> )
         {
