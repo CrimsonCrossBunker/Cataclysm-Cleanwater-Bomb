@@ -131,8 +131,10 @@ def main():
         return 1
 
     # Also for tests
-    if not parser.parse_includes_files_from("tests/obj", "tests", "tests") and \
-            not parser.parse_includes_files_from("tests/obj-lua", "tests", "tests"):
+    if not parser.parse_includes_files_from(
+            "tests/obj", "tests", "tests" ) and \
+            not parser.parse_includes_files_from(
+                "tests/obj-lua", "tests", "tests" ):
         return 1
 
     lintable_files = set()

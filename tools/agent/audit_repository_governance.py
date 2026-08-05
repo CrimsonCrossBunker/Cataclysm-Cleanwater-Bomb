@@ -165,7 +165,10 @@ def validate_target(
         if not reviewer_blocker or reviewer_blocker.get("state") != "open":
             errors.append("missing open reviewer-quorum blocker")
     elif blocker(entry, "reviewer-quorum"):
-        errors.append("satisfied reviewer policy retains reviewer-quorum blocker")
+        errors.append(
+            "satisfied reviewer policy retains "
+            "reviewer-quorum blocker"
+        )
     if check_audit["default_branch_success_confirmed"] != (
         check_audit["status"] == "default_branch_stable"
     ):
@@ -398,7 +401,8 @@ def validate_ownership(target: dict) -> list[str]:
 
 
 def governance_policy_errors(governance: str, project_map: str) -> list[str]:
-    """Reject prose that would lock the sole Responsible human out of merges."""
+    """Reject prose that would lock the sole Responsible
+    human out of merges."""
     errors: list[str] = []
     normalized_governance = " ".join(governance.split())
     normalized_project_map = " ".join(project_map.split())
@@ -410,16 +414,25 @@ def governance_policy_errors(governance: str, project_map: str) -> list[str]:
     )
     for phrase in obsolete_phrases:
         if phrase in normalized_governance or phrase in normalized_project_map:
-            errors.append(f"obsolete two-reviewer governance policy remains: {phrase}")
+            errors.append(
+                f"obsolete two-reviewer governance policy "
+                f"remains: {phrase}"
+            )
     for phrase in (
         "One Responsible human is sufficient",
         "target approval count remains zero",
         "一名 Responsible human 即可",
     ):
         if phrase not in normalized_governance:
-            errors.append(f"GOVERNANCE.md is missing single-maintainer policy: {phrase}")
+            errors.append(
+                f"GOVERNANCE.md is missing single-maintainer "
+                f"policy: {phrase}"
+            )
     if "One Responsible human is sufficient" not in normalized_project_map:
-        errors.append("ai/project-map.yml is missing the single-maintainer boundary")
+        errors.append(
+            "ai/project-map.yml is missing the "
+            "single-maintainer boundary"
+        )
     return errors
 
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Run the deterministic context-router benchmark and emit auditable metrics."""
+"""Run the deterministic context-router benchmark
+and emit auditable metrics."""
 
 from __future__ import annotations
 
@@ -10,7 +11,8 @@ from pathlib import Path
 
 import jsonschema
 
-from build_context_pack import ROOT, build_pack, load_yaml, pattern_exists, tracked_paths
+from build_context_pack import (ROOT, build_pack, load_yaml,
+                               pattern_exists, tracked_paths)
 
 
 DEFAULT_REPORT = ROOT / "ai/agent-benchmark-baseline.json"
@@ -45,7 +47,8 @@ def benchmark() -> dict:
             1 for pattern in paths if not pattern_exists(pattern, known)
         )
         hallucinated_commands += sum(
-            1 for entry in pack["tests"] if entry["command"] not in known_commands
+            1 for entry in pack["tests"]
+            if entry["command"] not in known_commands
         )
         if case["id"] == "upstream-port" and not pack["upstream_differences"]:
             upstream_divergence_regressions += 1
@@ -76,7 +79,8 @@ def benchmark() -> dict:
         "case_count": len(cases),
         "metrics": {
             "correct_path_hit_rate": (
-                path_hit_count / expected_path_count if expected_path_count else 1.0
+                path_hit_count / expected_path_count
+                if expected_path_count else 1.0
             ),
             "hallucinated_paths": hallucinated_paths,
             "hallucinated_commands": hallucinated_commands,
@@ -89,7 +93,8 @@ def benchmark() -> dict:
 
 
 def serialized(report: dict) -> str:
-    return json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    return (json.dumps(report, ensure_ascii=False,
+                       indent=2, sort_keys=True) + "\n")
 
 
 def parse_args() -> argparse.Namespace:
@@ -104,8 +109,12 @@ def main() -> int:
     try:
         output = serialized(benchmark())
         if args.check:
-            if not args.output.is_file() or args.output.read_text(encoding="utf-8") != output:
-                print(f"stale benchmark report: {args.output.relative_to(ROOT)}", file=sys.stderr)
+            if not args.output.is_file() or args.output.read_text(
+                    encoding="utf-8") != output:
+                print(
+                    f"stale benchmark report: "
+                    f"{args.output.relative_to(ROOT)}",
+                    file=sys.stderr)
                 return 1
         else:
             args.output.parent.mkdir(parents=True, exist_ok=True)
