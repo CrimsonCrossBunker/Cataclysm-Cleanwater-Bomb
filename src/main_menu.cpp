@@ -772,6 +772,14 @@ void main_menu::print_menu( const catacurses::window &w_open, int iSel, const po
 {
     main_menu_button_map.clear();
 
+    // w_open is a centered window that may not cover the whole terminal, and
+    // the submenu window is destroyed right after display_sub_menu() returns.
+    // Clear the entire screen first so stale pixels from a previous submenu
+    // (e.g. the tall New Game list) cannot linger outside w_open when the
+    // selection switches to another menu.
+    catacurses::erase();
+    wnoutrefresh( catacurses::stdscr );
+
     // Clear Lines
     werase( w_open );
 
