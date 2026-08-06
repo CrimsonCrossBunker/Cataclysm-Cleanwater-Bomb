@@ -2591,13 +2591,25 @@ std::pair<tripoint_rel_ms, tripoint_rel_ms> game::mouse_edge_scrolling( input_co
     }
     const input_event event = ctxt.get_raw_input();
     if( event.type == input_event_t::mouse ) {
-        const point_rel_ms threshold( projected_window_width() / 100, projected_window_height() / 100 );
+        // event.mouse_pos is in display_buffer coordinates, whose size follows
+        // the actual window and can be smaller than the configured
+        // TERMINAL_X/Y (e.g. a window narrower than requested).  Comparing
+        // against the configured projected size would make the right/bottom
+        // edge unreachable, so measure against the real buffer.
+        int buffer_width = 0;
+        int buffer_height = 0;
+        get_display_buffer_dims( &buffer_width, &buffer_height );
+        if( buffer_width <= 0 || buffer_height <= 0 ) {
+            buffer_width = projected_window_width();
+            buffer_height = projected_window_height();
+        }
+        const point_rel_ms threshold( buffer_width / 100, buffer_height / 100 );
         if( event.mouse_pos.x <= threshold.x() ) {
             ret.first.x() -= speed;
             if( iso ) {
                 ret.first.y() -= speed;
             }
-        } else if( event.mouse_pos.x >= projected_window_width() - threshold.x() ) {
+        } else if( event.mouse_pos.x >= buffer_width - threshold.x() ) {
             ret.first.x() += speed;
             if( iso ) {
                 ret.first.y() += speed;
@@ -2608,7 +2620,7 @@ std::pair<tripoint_rel_ms, tripoint_rel_ms> game::mouse_edge_scrolling( input_co
             if( iso ) {
                 ret.first.x() += speed;
             }
-        } else if( event.mouse_pos.y >= projected_window_height() - threshold.y() ) {
+        } else if( event.mouse_pos.y >= buffer_height - threshold.y() ) {
             ret.first.y() += speed;
             if( iso ) {
                 ret.first.x() -= speed;
