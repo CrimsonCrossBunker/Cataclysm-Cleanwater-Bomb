@@ -205,6 +205,7 @@ const flag_id flag_MODULE_HOLDER( "MODULE_HOLDER" );
 const flag_id flag_MORPHIC( "MORPHIC" );
 const flag_id flag_MOUNTED_GUN( "MOUNTED_GUN" );
 const flag_id flag_MOUSE( "MOUSE" );
+const flag_id flag_MULTI_DRILL( "MULTI_DRILL" );
 const flag_id flag_MUNDANE( "MUNDANE" );
 const flag_id flag_MUSHY( "MUSHY" );
 const flag_id flag_MUTE( "MUTE" );

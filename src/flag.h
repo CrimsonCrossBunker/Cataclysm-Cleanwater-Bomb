@@ -252,6 +252,7 @@ extern const flag_id flag_MODULE_HOLDER;
 extern const flag_id flag_MORPHIC;
 extern const flag_id flag_MOUNTED_GUN;
 extern const flag_id flag_MOUSE;
+extern const flag_id flag_MULTI_DRILL;
 extern const flag_id flag_MUNDANE;
 extern const flag_id flag_MUSHY;
 extern const flag_id flag_MWS_PORTAL_STORM_DATA;
