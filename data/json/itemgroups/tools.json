@@ -67,7 +67,7 @@
       { "item": "cordless_impact_wrench", "prob": 20, "charges": [ 0, 500 ] },
       [ "metal_smoother", 90 ],
       { "item": "jackhammer", "prob": 40, "charges": [ 0, 1200 ] },
-      { "item": "corded_demolition_hammer", "prob": 20 },
+      { "item": "corded_demolition_hammer", "prob": 40 },
       { "group": "graphite_small_bottle_part", "prob": 10 },
       { "group": "tools_toolbox", "prob": 20 },
       { "group": "tools_workshop", "prob": 5 },
