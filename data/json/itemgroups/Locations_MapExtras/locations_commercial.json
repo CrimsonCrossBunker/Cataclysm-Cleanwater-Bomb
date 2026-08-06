@@ -450,6 +450,7 @@
       { "item": "carver_off", "prob": 7 },
       [ "jackhammer", 2 ],
       [ "elec_jackhammer", 1 ],
+      [ "corded_demolition_hammer", 1 ],
       [ "pickaxe", 1 ],
       [ "bracelet_friendship", 1 ],
       { "group": "civilian_usb_drives", "prob": 5 },
