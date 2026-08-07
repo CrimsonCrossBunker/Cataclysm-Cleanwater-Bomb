@@ -2169,6 +2169,24 @@
     ]
   },
   {
+    "id": "nested_steel_chunk",
+    "type": "nested_category",
+    "activity_level": "LIGHT_EXERCISE",
+    "category": "CC_OTHER",
+    "subcategory": "CSC_OTHER_MATERIALS",
+    "name": "chunks of steel",
+    "description": "Recipes related to forging steel into different quality chunks.",
+    "nested_category_data": [
+      "steel_chunk",
+      "mc_steel_chunk_primitive",
+      "ch_steel_chunk_primitive",
+      "qt_steel_chunk_primitive",
+      "steel_chunk_primitive_decarburizing",
+      "steel_chunk_primitive_scrap_refining",
+      "budget_steel_chunk"
+    ]
+  },
+  {
     "id": "nested_metal_bars",
     "type": "nested_category",
     "activity_level": "NO_EXERCISE",
