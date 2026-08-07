@@ -2590,12 +2590,19 @@ std::pair<tripoint_rel_ms, tripoint_rel_ms> game::mouse_edge_scrolling( input_co
         last_mouse_edge_scroll = now;
     }
     const input_event event = ctxt.get_raw_input();
-    if( event.type == input_event_t::mouse ) {
+    if( event.type == input_event_t::mouse || event.type == input_event_t::timeout ) {
         // event.mouse_pos is in display_buffer coordinates, whose size follows
         // the actual window and can be smaller than the configured
         // TERMINAL_X/Y (e.g. a window narrower than requested).  Comparing
         // against the configured projected size would make the right/bottom
         // edge unreachable, so measure against the real buffer.
+        //
+        // The input loop re-samples the cursor into mouse_pos every frame,
+        // including for timeout events, so evaluate the edge test on the
+        // sampled position for both event kinds.  This keeps edge scrolling
+        // working while an overlay panel (e.g. the ImGui overmap sidebar)
+        // captures mouse motion events: the game only sees timeouts then, and
+        // reusing the last motion vector would leave it stuck at zero.
         int buffer_width = 0;
         int buffer_height = 0;
         get_display_buffer_dims( &buffer_width, &buffer_height );
@@ -2627,8 +2634,6 @@ std::pair<tripoint_rel_ms, tripoint_rel_ms> game::mouse_edge_scrolling( input_co
             }
         }
         ret.second = ret.first;
-    } else if( event.type == input_event_t::timeout ) {
-        ret.first = ret.second;
     }
 #endif
     return ret;
