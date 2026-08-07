@@ -1077,6 +1077,26 @@
     "//": "Primitive cementation: pack low-carbon steel in charcoal in a sealed clay vessel and heat it over a fire to diffuse carbon into medium-carbon steel."
   },
   {
+    "type": "recipe",
+    "activity_level": "NO_EXERCISE",
+    "result": "ch_steel_chunk",
+    "category": "CC_OTHER",
+    "subcategory": "CSC_OTHER_MATERIALS",
+    "skill_used": "fabrication",
+    "difficulty": 3,
+    "time": "3 h",
+    "batch_time_factors": [ 90, 4 ],
+    "autolearn": true,
+    "using": [ [ "carbon", 2 ] ],
+    "tools": [
+      [ [ "fire", -1 ], [ "hotplate", 2 ] ],
+      [ [ "crucible_clay", -1 ] ],
+      [ [ "metalworking_tongs", -1 ], [ "metalworking_tongs_bronze", -1 ] ]
+    ],
+    "components": [ [ [ "lc_steel_chunk", 1 ] ] ],
+    "//": "Primitive case hardening: pack low-carbon steel in charcoal in a sealed clay vessel and heat it longer than plain carburizing so only the surface layer is enriched with carbon."
+  },
+  {
     "result": "tin",
     "charges": 100,
     "id_suffix": "from_bowl",
