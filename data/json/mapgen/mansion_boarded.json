@@ -32,7 +32,7 @@
         "###++##############++###"
       ],
       "palettes": [ "standard_domestic_palette", "standard_domestic_landscaping_palette" ],
-      "terrain": { "?": "t_water_pool_shallow_outdoors", "o": "t_window_enhanced", "$": "t_door_metal_locked" },
+      "terrain": { "?": "t_pool_water_shallow_outdoors", "o": "t_window_enhanced", "$": "t_door_metal_locked" },
       "items": {
         " ": { "item": "clutter_mansion", "chance": 1 },
         "K": { "item": "crate_cleaning", "chance": 100 },
@@ -634,7 +634,7 @@
       ],
       "terrain": {
         ",": { "param": "linoleum_color_bathroom", "fallback": "t_linoleum_gray" },
-        "~": "t_water_pool",
+        "~": "t_pool_water",
         "M": "t_floor",
         "T": "t_floor",
         " ": "t_floor",
