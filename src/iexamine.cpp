@@ -46,6 +46,7 @@
 #include "faction.h"
 #include "field_type.h"
 #include "flag.h"
+#include "finite_water.h"
 #include "flat_set.h" // IWYU pragma: keep
 #include "fungal_effects.h"
 #include "game.h"
@@ -5475,13 +5476,25 @@ void iexamine::water_source( Character &, const tripoint_bub_ms &examp )
 
 void iexamine::finite_water_source( Character &, const tripoint_bub_ms &examp )
 {
-    map_stack items = get_map().i_at( examp );
-    for( item &it : items ) {
-        if( it.made_of( phase_id::LIQUID ) ) {
-            item_location loc( map_cursor( examp ), &it );
-            liquid_handler::handle_liquid( loc );
-            break;
-        }
+    map &here = get_map();
+    finite_water::refresh_connected_water( here.get_abs( examp ) );
+    item endless = here.liquid_from( examp );
+    if( !endless.is_null() ) {
+        liquid_dest_opt liquid_target;
+        liquid_handler::handle_liquid( endless, liquid_target, nullptr, 0, &examp );
+        return;
+    }
+
+    item finite = finite_water::finite_liquid_from( here.get_abs( examp ) );
+    if( finite.is_null() ) {
+        return;
+    }
+    const int before = finite.charges;
+    liquid_dest_opt liquid_target;
+    liquid_handler::handle_liquid( finite, liquid_target, nullptr, 0, &examp );
+    const int transferred = before - finite.charges;
+    if( transferred > 0 ) {
+        finite_water::withdraw_finite_liquid( here.get_abs( examp ), transferred );
     }
 }
 
