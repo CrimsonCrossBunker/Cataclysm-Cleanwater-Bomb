@@ -198,7 +198,7 @@
         ",": { "param": "linoleum_color_bathroom", "fallback": "t_linoleum_gray" },
         "$": "t_manhole_cover",
         "{": "t_door_glass_c",
-        "~": "t_water_pool_shallow_outdoors",
+        "~": "t_pool_water_shallow_outdoors",
         "}": "t_ladder_up"
       },
       "furniture": { "!": "f_region_flower", "0": "f_stool", ")": "f_dumpster", "(": "f_recycle_bin" },
