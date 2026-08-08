@@ -31,6 +31,7 @@
 #include "event.h"
 #include "event_bus.h"
 #include "flag.h"
+#include "finite_water.h"
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "game_constants.h"
@@ -208,6 +209,7 @@ static void done_deconstruct( const tripoint_bub_ms &, Character & );
 static void done_digormine_stair( const tripoint_bub_ms &, bool, Character & );
 static void done_dig_grave( const tripoint_bub_ms &p, Character & );
 static void done_dig_grave_nospawn( const tripoint_bub_ms &p, Character & );
+static void done_channel_fill( const tripoint_bub_ms &, Character & );
 static void done_dig_stair( const tripoint_bub_ms &, Character & );
 static void done_mine_downstair( const tripoint_bub_ms &, Character & );
 static void done_mine_upstair( const tripoint_bub_ms &, Character & );
@@ -1559,21 +1561,29 @@ void build_construction_activity_actor::complete_construction( player_activity &
 bool construct::check_channel( const tripoint_bub_ms &p )
 {
     map &here = get_map();
-    const std::function<bool( const point & )> has_current = [&p, &here]( const point & offset ) {
-        return here.has_flag( ter_furn_flag::TFLAG_CURRENT, p + offset );
-    };
-    const std::function<bool( const tripoint_abs_omt & )> river_at = []( const tripoint_abs_omt & pt ) {
-        return is_river( overmap_buffer.ter( pt ) );
-    };
-    if( !std::any_of( four_adjacent_offsets.begin(), four_adjacent_offsets.end(), has_current ) ) {
-        return false;
+    const tripoint_abs_ms abs_p = here.get_abs( p );
+    // Treat this proposed tile as one more excavated section.  Existing dry
+    // channels remain open parts of the route and will fill automatically if
+    // this work connects them to a source.
+    const water_source_kind kind = finite_water::check_connection( abs_p, true );
+    switch( kind ) {
+        case water_source_kind::fresh_infinite:
+        case water_source_kind::salt_infinite:
+            return true;
+        case water_source_kind::fresh_finite:
+            // Digging an open channel does not create or require water.  The
+            // connected finite body will redistribute whatever it actually
+            // contains when construction finishes.
+            return true;
+        case water_source_kind::conflict:
+            add_msg( m_warning, _( "Fresh and salt water would mix here, so you can't dig a channel." ) );
+            return false;
+        case water_source_kind::none:
+            add_msg( m_info,
+                     _( "You need to dig next to a water source or a channel that is connected to one." ) );
+            return false;
     }
-    tripoint_abs_omt omt_pt = project_to<coords::omt>( here.get_abs( p ) );
-    tripoint_range<tripoint_abs_omt> nearby_omts = points_in_radius<tripoint_abs_omt>( omt_pt, 1 );
-    if( !std::any_of( nearby_omts.begin(), nearby_omts.end(), river_at ) ) {
-        return false;
-    }
-    return true;
+    return false;
 }
 
 bool construct::check_empty_lite( const tripoint_bub_ms &p )
@@ -2090,6 +2100,11 @@ void construct::done_dig_grave_nospawn( const tripoint_bub_ms &p, Character &who
     get_event_bus().send<event_type::exhumes_grave>( who.getID() );
 }
 
+void construct::done_channel_fill( const tripoint_bub_ms &p, Character & )
+{
+    finite_water::fill_channel_at( get_map().get_abs( p ) );
+}
+
 void construct::done_dig_stair( const tripoint_bub_ms &p, Character &who )
 {
     done_digormine_stair( p, true, who );
@@ -2424,6 +2439,7 @@ void construction::load( const JsonObject &jo, const std::string_view )
             { "done_deconstruct", construct::done_deconstruct },
             { "done_dig_grave", construct::done_dig_grave },
             { "done_dig_grave_nospawn", construct::done_dig_grave_nospawn },
+            { "done_channel_fill", construct::done_channel_fill },
             { "done_dig_stair", construct::done_dig_stair },
             { "done_mine_downstair", construct::done_mine_downstair },
             { "done_mine_upstair", construct::done_mine_upstair },

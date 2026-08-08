@@ -362,7 +362,8 @@
     "qualities": [ { "id": "DIG", "level": 1 } ],
     "pre_flags": [ "DIGGABLE", "FLAT" ],
     "pre_special": [ "check_empty", "check_channel" ],
-    "post_terrain": "t_water_moving_sh",
+    "post_terrain": "t_channel_dry",
+    "post_special": [ "done_channel_fill" ],
     "byproducts": [ { "group": "digging_soil_loam_50L", "count": 5 } ],
     "activity_level": "EXTRA_EXERCISE",
     "do_turn_special": "do_turn_shovel"
