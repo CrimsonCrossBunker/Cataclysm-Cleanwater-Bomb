@@ -2722,7 +2722,7 @@ void options_manager::add_options_interface()
             { 30, to_translation( "Normal" ) },
             { 10, to_translation( "Fast" ) },
         },
-        30, 30, COPT_CURSES_HIDE );
+        -1, -1, COPT_CURSES_HIDE );
         get_option( "EDGE_SCROLL" ).setPrerequisite( "ENABLE_MOUSE" );
     } );
 
