@@ -6313,7 +6313,6 @@ static bool is_allowed_water_source( const ter_t &t )
         itype_water, itype_water_clean
     };
     return !t.liquid_source_item_id.is_null() &&
-           t.liquid_source_count == std::make_pair( 0, 0 ) &&
            allowed.count( t.liquid_source_item_id ) > 0;
 }
 
@@ -6529,7 +6528,32 @@ bool npc::drink_from_water_source( const tripoint_bub_ms &water_pos )
     if( intake <= 0_ml ) {
         return false;
     }
-    stomach.ingest( { intake, 0_ml, {} } );
+    map &here = get_map();
+    const ter_t &t = here.ter( water_pos ).obj();
+    // Never drink salt water, sewage or any other non-drinkable liquid, even
+    // if the NPC was scripted to try this tile.
+    if( t.liquid_source_item_id != itype_water && t.liquid_source_item_id != itype_water_clean ) {
+        return false;
+    }
+    const item endless = here.liquid_from( water_pos );
+    if( !endless.is_null() ) {
+        stomach.ingest( { intake, 0_ml, {} } );
+    } else if( t.liquid_source_count != std::make_pair( 0, 0 ) ) {
+        const int wanted_charges = std::max( 1, ( to_milliliter( intake ) + 249 ) / 250 );
+        int remaining = wanted_charges;
+        here.use_charges( { water_pos }, t.liquid_source_item_id, remaining,
+        []( const item & ) {
+            return true;
+        } );
+        const int withdrawn = wanted_charges - remaining;
+        if( withdrawn <= 0 ) {
+            return false;
+        }
+        const units::volume actual = std::min( units::from_milliliter( withdrawn * 250 ), intake );
+        stomach.ingest( { actual, 0_ml, {} } );
+    } else {
+        return false;
+    }
     add_msg_debug( debugmode::DF_NPC_NEEDS,
                    "NPC %s: drank from terrain at %s", get_name(),
                    water_pos.to_string_writable() );
