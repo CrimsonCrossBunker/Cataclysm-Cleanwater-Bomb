@@ -35,10 +35,10 @@
       "[": "t_chainfence",
       "g": "t_sandbox",
       "e": "t_water_pump",
-      "~": "t_water_pool_shallow",
-      "i": "t_water_sh",
-      "W": "t_water_sh",
-      "w": "t_water_dp"
+      "~": "t_pool_water_shallow",
+      "i": "t_pond_water_sh",
+      "W": "t_pond_water_sh",
+      "w": "t_pond_water_dp"
     },
     "furniture": {
       "N": "f_bulletin",
@@ -120,8 +120,8 @@
       "T": { "param": "walkway", "fallback": "t_region_soil" },
       "s": "t_sand",
       "=": "t_dock",
-      "w": "t_water_dp",
-      "W": "t_water_sh"
+      "w": "t_pond_water_dp",
+      "W": "t_pond_water_sh"
     },
     "furniture": {
       "Y": {

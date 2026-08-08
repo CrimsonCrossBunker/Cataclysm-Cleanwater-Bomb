@@ -148,7 +148,7 @@
         "                        "
       ],
       "palettes": [ "park_scenic_palette" ],
-      "terrain": { "O": "t_water_pool_shallow" },
+      "terrain": { "O": "t_pool_water_shallow" },
       "furniture": { "O": "f_boulder_large" },
       "place_signs": [
         { "signage": "Scoop the Poop!", "x": 11, "y": 11 },
