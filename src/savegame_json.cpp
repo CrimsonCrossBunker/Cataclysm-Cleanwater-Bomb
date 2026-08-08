@@ -5387,6 +5387,17 @@ void submap::store( JsonOut &jsout ) const
     }
     jsout.end_array();
 
+    jsout.member( "finite_liquids" );
+    jsout.start_array();
+    for( const auto &entry : finite_liquids ) {
+        jsout.start_array();
+        jsout.write( entry.first.x() );
+        jsout.write( entry.first.y() );
+        jsout.write( entry.second );
+        jsout.end_array();
+    }
+    jsout.end_array();
+
     // Write out the radiation array in a simple RLE scheme.
     // written in intensity, count pairs
     jsout.member( "radiation" );
@@ -5684,6 +5695,18 @@ void submap::load( const JsonValue &jv, const std::string &member_name, int vers
             state.fertilized_at = time_point( entry.next_int() );
             terrain_growth[p] = state;
         }
+    } else if( member_name == "finite_liquids" ) {
+        JsonArray liquids_json = jv;
+        while( liquids_json.has_more() ) {
+            JsonArray entry = liquids_json.next_array();
+            const int x = entry.next_int();
+            const int y = entry.next_int();
+            const point_sm_ms p( x, y );
+            const int charges = entry.next_int();
+            if( charges > 0 ) {
+                finite_liquids[p] = charges;
+            }
+        }
     } else if( member_name == "furniture" ) {
         int_id<ter_t> iid_ter;
         int_id<furn_t> iid_furn;
@@ -5718,6 +5741,27 @@ void submap::load( const JsonValue &jv, const std::string &member_name, int vers
 
             if( !items_json.next_value().read( m->itm[p.x()][p.y()], false ) ) {
                 debugmsg( "Items array is corrupt in submap at: %s, skipping", p.to_string() );
+            }
+            const ter_t &terrain = m->ter[p.x()][p.y()].obj();
+            if( terrain.liquid_source_count != std::make_pair( 0, 0 ) &&
+                !terrain.dries_to.is_empty() && !terrain.dries_to.is_null() ) {
+                // Older finite-water saves stored the terrain's water as an
+                // ordinary ground item.  Absorb it into hidden map state while
+                // loading so it no longer draws an item sprite on the surface.
+                int legacy_charges = 0;
+                for( auto it = m->itm[p.x()][p.y()].begin(); it != m->itm[p.x()][p.y()].end(); ) {
+                    if( it->typeId() == terrain.liquid_source_item_id ) {
+                        legacy_charges += std::max( 0, it->charges );
+                        it = m->itm[p.x()][p.y()].erase( it );
+                    } else {
+                        ++it;
+                    }
+                }
+                if( !has_finite_liquid( p ) ) {
+                    const int stored = legacy_charges > 0 ? legacy_charges :
+                                       terrain.liquid_source_count.second;
+                    set_finite_liquid( p, std::min( stored, terrain.liquid_source_count.second ) );
+                }
             }
             // some portion could've been read even if error occurred
             for( item &it : m->itm[p.x()][p.y()] ) {
