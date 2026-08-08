@@ -1363,6 +1363,7 @@ void map_data_common_t::load( const JsonObject &jo, const std::string &src )
         JsonObject liquid_source = jo.get_object( "liquid_source" );
         mandatory( liquid_source, was_loaded, "id", liquid_source_item_id );
         optional( liquid_source, was_loaded, "min_temp", liquid_source_min_temp );
+        optional( liquid_source, was_loaded, "dries_to", dries_to );
         if( liquid_source.has_int( "count" ) ) {
             mandatory( liquid_source, was_loaded, "count", liquid_source_count.first );
             mandatory( liquid_source, was_loaded, "count", liquid_source_count.second );
@@ -1565,6 +1566,22 @@ void map_common_deconstruct_info::check( const std::string &id ) const
 {
     if( !item_group::group_is_defined( drop_group ) ) {
         debugmsg( "%s: deconstruct result item group %s does not exist", id, drop_group.c_str() );
+    }
+}
+
+void map_data_common_t::check() const
+{
+    if( dries_to.is_empty() || dries_to.is_null() ) {
+        return;
+    }
+    if( !is_terrain() ) {
+        debugmsg( "liquid_source dries_to is only valid for terrain" );
+    }
+    if( liquid_source_count == std::make_pair( 0, 0 ) ) {
+        debugmsg( "liquid_source dries_to is only valid for a finite source" );
+    }
+    if( !dries_to.is_valid() ) {
+        debugmsg( "liquid_source dries_to terrain %s does not exist", dries_to.c_str() );
     }
 }
 
