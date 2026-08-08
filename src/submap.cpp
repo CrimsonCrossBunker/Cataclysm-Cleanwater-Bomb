@@ -282,6 +282,12 @@ void submap::rotate( int turns )
         rot_growth.emplace( rotate_point( elem.first ), elem.second );
     }
     terrain_growth = rot_growth;
+
+    std::map<point_sm_ms, int> rot_liquids;
+    for( const auto &elem : finite_liquids ) {
+        rot_liquids.emplace( rotate_point( elem.first ), elem.second );
+    }
+    finite_liquids = rot_liquids;
 }
 
 void submap::mirror( bool horizontally )
@@ -315,6 +321,13 @@ void submap::mirror( bool horizontally )
                                    elem.second );
         }
         terrain_growth = mirror_growth;
+
+        std::map<point_sm_ms, int> mirror_liquids;
+        for( const auto &elem : finite_liquids ) {
+            mirror_liquids.emplace( point( -elem.first.x(), elem.first.y() ) + point( SEEX - 1, 0 ),
+                                    elem.second );
+        }
+        finite_liquids = mirror_liquids;
     } else {
         for( int k = 0, ke = SEEY / 2; k < ke; k++ ) {
             for( int i = 0; i < SEEX; i++ ) {
@@ -339,6 +352,13 @@ void submap::mirror( bool horizontally )
                                    elem.second );
         }
         terrain_growth = mirror_growth;
+
+        std::map<point_sm_ms, int> mirror_liquids;
+        for( const auto &elem : finite_liquids ) {
+            mirror_liquids.emplace( point( elem.first.x(), -elem.first.y() ) + point( 0, SEEY - 1 ),
+                                    elem.second );
+        }
+        finite_liquids = mirror_liquids;
     }
 }
 
@@ -348,6 +368,7 @@ void submap::revert_submap( submap &sr )
     if( sr.is_uniform() ) {
         m.reset();
         terrain_growth.clear();
+        finite_liquids.clear();
         set_all_ter( sr.get_ter( point_sm_ms::zero ), true );
         return;
     }
@@ -369,6 +390,7 @@ void submap::revert_submap( submap &sr )
         }
     }
     terrain_growth = sr.terrain_growth;
+    finite_liquids = sr.finite_liquids;
     // copy cosmetics to new submap
     // since their positions are stored in point_sm_ms, cosmetics do not require location updates.
     cosmetics = sr.cosmetics;
@@ -379,6 +401,7 @@ submap submap::get_revert_submap() const
     submap ret;
     ret.uniform_ter = uniform_ter;
     ret.terrain_growth = terrain_growth;
+    ret.finite_liquids = finite_liquids;
     if( !is_uniform() ) {
         ret.m = std::make_unique<maptile_soa>( *m );
         ret.cosmetics = cosmetics;
@@ -515,6 +538,12 @@ void submap::merge_submaps( submap *copy_from, bool copy_from_is_overlay )
     for( const auto &growth : copy_from->terrain_growth ) {
         if( copy_from_is_overlay || terrain_growth.find( growth.first ) == terrain_growth.end() ) {
             terrain_growth[growth.first] = growth.second;
+        }
+    }
+
+    for( const auto &liquid : copy_from->finite_liquids ) {
+        if( copy_from_is_overlay || finite_liquids.find( liquid.first ) == finite_liquids.end() ) {
+            finite_liquids[liquid.first] = liquid.second;
         }
     }
 
