@@ -38,6 +38,7 @@ namespace cata::lua_platform
 class content_transaction;
 class items_content_transaction;
 } // namespace cata::lua_platform
+enum scaling_stat : int;
 
 enum class recipe_filter_flags : int {
     none = 0,
@@ -59,6 +60,7 @@ template<>
 struct enum_traits<recipe_filter_flags> {
     static constexpr bool is_flag_enum = true;
 };
+
 
 struct recipe_proficiency {
     proficiency_id id;
@@ -324,6 +326,13 @@ class recipe
 
         std::set<flag_id> flags_to_delete; // Flags to delete from the resultant item.
 
+        // Returns true if the character satisfies all configured stat requirements.
+        bool character_meets_requirements( const Character &character ) const;
+        // Returns true if the recipe has any character stat requirements.
+        bool has_character_requirements() const;
+        // Returns the character stat requirements configured for this recipe.
+        const std::map<scaling_stat, int> &get_character_requirements() const;
+
         // Create a string list to describe the skill requirements for this recipe
         // Format: skill_name(level/amount), skill_name(level/amount)
         // Character object (if provided) used to color levels
@@ -499,6 +508,9 @@ class recipe
 
         /** Requires specified inline with the recipe (and replaced upon inheritance) */
         std::vector<std::pair<requirement_id, int>> reqs_internal;
+
+        /** Character stat requirements. */
+        std::map<scaling_stat, int> character_requirements_;
 
         /** Combined requirements cached when recipe finalized */
         requirement_data requirements_;
