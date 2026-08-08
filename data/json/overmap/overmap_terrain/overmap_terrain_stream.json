@@ -8,6 +8,6 @@
     "color": "light_blue",
     "travel_cost_type": "forest",
     "vision_levels": "blends_till_details",
-    "flags": [ "REQUIRES_PREDECESSOR" ]
+    "flags": [ "REQUIRES_PREDECESSOR", "STREAM" ]
   }
 ]

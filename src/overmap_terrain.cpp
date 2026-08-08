@@ -395,6 +395,7 @@ std::string enum_to_string<oter_flags>( oter_flags data )
         case oter_flags::lake_shore: return "LAKE_SHORE";
         case oter_flags::ocean: return "OCEAN";
         case oter_flags::ocean_shore: return "OCEAN_SHORE";
+        case oter_flags::stream: return "STREAM";
         case oter_flags::ravine: return "RAVINE";
         case oter_flags::ravine_edge: return "RAVINE_EDGE";
         case oter_flags::pp_generate_riot_damage: return "PP_GENERATE_RIOT_DAMAGE";
