@@ -50,7 +50,7 @@
           [ "t_region_tree_fruit", 2 ],
           [ "t_region_tree_nut", 2 ]
         ],
-        "0": "t_water_pool_shallow_outdoors",
+        "0": "t_pool_water_shallow_outdoors",
         "c": { "param": "linoleum_color", "fallback": "t_linoleum_white" },
         "i": { "param": "linoleum_color", "fallback": "t_linoleum_white" },
         "j": { "param": "linoleum_color", "fallback": "t_linoleum_white" },

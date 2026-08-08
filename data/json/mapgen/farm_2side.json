@@ -433,7 +433,7 @@
         "$": "t_region_groundcover",
         "]": "t_region_groundcover",
         "&": "t_water_pump",
-        "~": "t_water_pool_outdoors",
+        "~": "t_pool_water_outdoors",
         "_": { "param": "linoleum_color_bathroom", "fallback": "t_linoleum_gray" },
         ",": "t_region_soil",
         "Ŧ": "t_splitrail_fence"
