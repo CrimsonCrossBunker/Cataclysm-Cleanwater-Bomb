@@ -33,11 +33,11 @@
       ],
       "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
       "terrain": {
-        "?": [ [ "t_water_sh", 2 ], [ "t_region_groundcover", 20 ] ],
-        "]": [ [ "t_water_sh", 6 ], "t_region_soil", "t_region_groundcover" ],
-        "*": "t_water_sh",
-        "[": [ [ "t_water_dp", 2 ], [ "t_water_sh", 3 ] ],
-        "~": "t_water_dp"
+        "?": [ [ "t_pond_water_sh", 2 ], [ "t_region_groundcover", 20 ] ],
+        "]": [ [ "t_pond_water_sh", 6 ], "t_region_soil", "t_region_groundcover" ],
+        "*": "t_pond_water_sh",
+        "[": [ [ "t_pond_water_dp", 2 ], [ "t_pond_water_sh", 3 ] ],
+        "~": "t_pond_water_dp"
       },
       "nested": {
         "]": { "chunks": [ [ "pond_water_furniture", 8 ], [ "null", 92 ] ] },

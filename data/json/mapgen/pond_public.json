@@ -32,6 +32,7 @@
       ],
       "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
       "palettes": [ "park_nature_palette" ],
+      "terrain": { "W": "t_pond_water_sh", "w": "t_pond_water_dp" },
       "place_items": [ { "chance": 5, "item": "stoner", "x": 45, "y": 5 } ],
       "items": { "T": { "item": "barbecue", "chance": 5, "repeat": [ 1, 2 ] } },
       "place_monsters": [
