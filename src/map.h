@@ -2046,6 +2046,10 @@ class map
                                         const std::optional<tripoint_bub_ms> &override_p ) const;
 
     protected:
+        // Initialize a terrain's own finite liquid even when that terrain is
+        // swimmable.  Other terrain item-destruction rules still apply.
+        item &add_item_impl( const tripoint_bub_ms &p, item new_item, int copies,
+                             bool allow_liquid_on_swimmable );
         void generate_lightmap( int zlev );
         void build_seen_cache( const tripoint_bub_ms &origin, int target_z,
                                int extension_range = MAX_VIEW_DISTANCE,
