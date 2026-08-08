@@ -22,7 +22,7 @@
       "terrain": {
         " ": "t_null",
         "7": [ [ "t_null", 250 ], [ "t_region_tree_forest", 25 ], [ "t_region_shrub_forest", 25 ] ],
-        "~": "t_water_sh"
+        "~": "t_pond_water_sh"
       }
     }
   },
