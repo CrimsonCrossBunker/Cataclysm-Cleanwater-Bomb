@@ -109,7 +109,7 @@
       [ { "id": "DIG", "level": 2 } ]
     ],
     "tools": [
-      [ [ "pickaxe_list", 1, "LIST" ], [ "jackhammering_standard_2_5", 7, "LIST" ] ],
+      [ [ "pickaxe_list", 1, "LIST" ], [ "jackhammering_standard_2_5", 8, "LIST" ] ],
       [ [ "tool_rope_long", 1, "LIST" ] ]
     ],
     "components": [ [ [ "2x4", 18 ] ], [ [ "wood_beam", 2 ] ], [ [ "nails", 90, "LIST" ], [ "nuts_bolts", 90 ] ] ],
