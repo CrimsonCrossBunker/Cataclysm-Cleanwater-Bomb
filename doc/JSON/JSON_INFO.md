@@ -3780,9 +3780,16 @@ Example:
 "liquid_source": {
   "id": "water",      // id of a liquid given by ter/furn
   "min_temp": 7.8,    // the lowest possible temperature of liquid taken from here, in centigrade; Used only by "water_source" examine action. Liquid is either the ambient temperature or the `min_temp`, whichever is higher.
-  "count": [ 24, 48 ] // if source is finite, how much there should be of it. Omit if it need to have infinite amount of liquid. Accepts either single number, or array of two numbers. Used only by "finite_water_source" examine action
+  "count": [ 24, 48 ], // if source is finite, how much there should be of it. Omit if it need to have infinite amount of liquid. Accepts either single number, or array of two numbers. Used only by "finite_water_source" examine action
+  "dries_to": "t_dirt" // optional terrain this finite source becomes after its stored liquid is exhausted
 }
 ```
+
+`dries_to` is only valid together with a finite `count`, and must name an
+existing terrain.  It is useful for water surfaces that expose a dry bottom
+when emptied.  Sources with this field keep their amount as hidden terrain
+state instead of a ground item, so the liquid does not cover the terrain with
+an item sprite.  Freezing and thawing preserve that stored amount.
 
 #### `roof`
 
