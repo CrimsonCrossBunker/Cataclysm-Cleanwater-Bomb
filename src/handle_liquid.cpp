@@ -20,6 +20,7 @@
 #include "coordinates.h"
 #include "debug.h"
 #include "enums.h"
+#include "finite_water.h"
 #include "game_inventory.h"
 #include "iexamine.h"
 #include "item.h"
@@ -76,7 +77,13 @@ static void serialize_liquid_source( player_activity &act, const tripoint_bub_ms
         return &i == &liquid;
     } );
     if( iter == stack.end() ) {
-        act.values.push_back( static_cast<int>( liquid_source_type::INFINITE_MAP ) );
+        const item finite = finite_water::finite_liquid_from( here.get_abs( pos ) );
+        const liquid_source_type source_type = !finite.is_null() &&
+                                               finite.typeId() == liquid.typeId() &&
+                                               !liquid.has_infinite_charges() ?
+                                               liquid_source_type::FINITE_MAP :
+                                               liquid_source_type::INFINITE_MAP;
+        act.values.push_back( static_cast<int>( source_type ) );
         act.values.push_back( 0 ); // dummy
     } else {
         act.values.push_back( static_cast<int>( liquid_source_type::MAP_ITEM ) );
@@ -475,10 +482,16 @@ static bool handle_keg_or_ground_target( Character &player_character, item &liqu
     if( create_activity() ) {
         serialize_liquid_target( player_character.activity, target.pos );
     } else {
+        map &here = get_map();
         if( target.dest_opt == LD_KEG ) {
             iexamine::pour_into_keg( target.pos, liquid, silent );
+        } else if( finite_water::is_pond_or_pool_tile( here.get_abs( target.pos ) ) ) {
+            // Pouring into a finite pond or pool: the liquid is stored in the
+            // shared capacity of the whole connected pond/pool.  Whatever does
+            // not fit stays in the source instead of being swallowed.
+            finite_water::pour_into_finite_water( here.get_abs( target.pos ), liquid );
         } else {
-            get_map().add_item_or_charges( target.pos, liquid );
+            here.add_item_or_charges( target.pos, liquid );
             liquid.charges = 0;
         }
         player_character.mod_moves( -100 );
