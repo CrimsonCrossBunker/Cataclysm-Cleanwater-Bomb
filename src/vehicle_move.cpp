@@ -533,11 +533,12 @@ void vehicle::thrust( map &here, int thd, int z )
         return;
     }
     if( thrusting && accel == 0 ) {
-        if( z != 0 && is_aircraft( here ) ) {
-            // buoyant craft can still change altitude without engine power
+        if( z != 0 && is_airship( here ) ) {
+            // buoyant craft can still change altitude without engine power;
+            // rotorcraft must not bypass engine-on checks this way
             requested_z_change = z;
             return;
-        } else if( is_aircraft( here ) ) {
+        } else if( is_airship( here ) ) {
             return;
         }
         if( pl_ctrl ) {
@@ -605,7 +606,7 @@ void vehicle::thrust( map &here, int thd, int z )
         }
         thrusting = true;
     }
-    if( thrusting && z != 0 && is_aircraft( here ) ) {
+    if( thrusting && z != 0 && ( is_airship( here ) || engine_on ) ) {
         requested_z_change = z;
     }
 
