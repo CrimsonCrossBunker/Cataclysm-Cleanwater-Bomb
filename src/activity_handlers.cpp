@@ -21,6 +21,7 @@
 #include "debug.h"
 #include "enums.h"
 #include "flag.h"
+#include "finite_water.h"
 #include "game_constants.h"
 #include "game_inventory.h"
 #include "iexamine.h"
@@ -124,6 +125,13 @@ void activity_handlers::fill_liquid_do_turn( player_activity *act, Character *yo
                 deserialize_from_string( liquid, act_ref.str_values.at( 0 ) );
                 liquid.charges = item::INFINITE_CHARGES;
                 break;
+            case liquid_source_type::FINITE_MAP:
+                liquid = finite_water::finite_liquid_from( act_ref.coords.at( 0 ) );
+                if( liquid.is_null() ) {
+                    act_ref.set_to_null();
+                    return;
+                }
+                break;
             case liquid_source_type::MAP_ITEM:
                 if( static_cast<size_t>( act_ref.values.at( 1 ) ) >= source_stack.size() ) {
                     throw std::runtime_error( "could not find source item on ground for liquid transfer" );
@@ -188,6 +196,10 @@ void activity_handlers::fill_liquid_do_turn( player_activity *act, Character *yo
             case liquid_target_type::MAP:
                 if( iexamine::has_keg( here.get_bub( act_ref.coords.at( 1 ) ) ) ) {
                     iexamine::pour_into_keg( here.get_bub( act_ref.coords.at( 1 ) ), liquid, false );
+                } else if( finite_water::is_pond_or_pool_tile( act_ref.coords.at( 1 ) ) ) {
+                    // Pouring into a finite pond/pool: store in the shared
+                    // capacity of the connected pond; excess stays in source.
+                    finite_water::pour_into_finite_water( act_ref.coords.at( 1 ), liquid );
                 } else {
                     here.add_item_or_charges( here.get_bub( act_ref.coords.at( 1 ) ), liquid );
                     you->add_msg_if_player( _( "You pour %1$s onto the ground." ), liquid.tname() );
@@ -274,6 +286,13 @@ void activity_handlers::fill_liquid_do_turn( player_activity *act, Character *yo
                 break;
             case liquid_source_type::INFINITE_MAP:
                 // nothing, the liquid source is infinite
+                break;
+            case liquid_source_type::FINITE_MAP:
+                if( finite_water::withdraw_finite_liquid( act_ref.coords.at( 0 ),
+                        removed_charges ) != removed_charges ||
+                    finite_water::finite_liquid_from( act_ref.coords.at( 0 ) ).is_null() ) {
+                    act_ref.set_to_null();
+                }
                 break;
             case liquid_source_type::MONSTER:
                 // liquid source charges handled in monexamine::milk_source
