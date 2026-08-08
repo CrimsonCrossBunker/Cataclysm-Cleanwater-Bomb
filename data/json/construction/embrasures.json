@@ -24,7 +24,7 @@
     "category": "CONSTRUCT",
     "required_skills": [ [ "fabrication", 3 ] ],
     "time": "30 m",
-    "tools": [ [ [ "pickaxe_list", 1, "LIST" ], [ "jackhammer", 50 ], [ "elec_jackhammer", 660 ] ] ],
+    "tools": [ [ [ "pickaxe_list", 1, "LIST" ], [ "jackhammering_standard", 1, "LIST" ] ] ],
     "pre_terrain": "t_adobe_brick_wall",
     "post_terrain": "t_embrasure_adobe_brick"
   },
@@ -48,7 +48,7 @@
     "category": "CONSTRUCT",
     "required_skills": [ [ "fabrication", 3 ] ],
     "time": "30 m",
-    "tools": [ [ [ "pickaxe_list", 1, "LIST" ], [ "jackhammer", 50 ], [ "elec_jackhammer", 660 ] ] ],
+    "tools": [ [ [ "pickaxe_list", 1, "LIST" ], [ "jackhammering_standard", 1, "LIST" ] ] ],
     "pre_terrain": "t_brick_wall",
     "post_terrain": "t_embrasure_brick"
   },

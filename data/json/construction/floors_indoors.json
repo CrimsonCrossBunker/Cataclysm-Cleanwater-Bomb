@@ -548,7 +548,7 @@
     "category": "DIG",
     "required_skills": [ [ "fabrication", 0 ] ],
     "time": "30 m",
-    "tools": [ [ [ "jackhammer", 300 ], [ "elec_jackhammer", 3960 ] ] ],
+    "tools": [ [ [ "jackhammering_standard", 6, "LIST" ] ] ],
     "activity_level": "EXTRA_EXERCISE",
     "pre_terrain": "t_wall_resin_cage",
     "post_terrain": "t_floor_resin",

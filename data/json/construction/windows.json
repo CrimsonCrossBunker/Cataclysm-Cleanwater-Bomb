@@ -628,7 +628,7 @@
     "components": [ [ [ "2x4", 4 ] ], [ [ "nails", 16, "LIST" ] ] ],
     "pre_terrain": "t_rock_roof",
     "post_terrain": "t_skylight_frame",
-    "tools": [ [ [ "pickaxe_list", 1, "LIST" ], [ "jackhammer", 50 ], [ "elec_jackhammer", 660 ] ] ]
+    "tools": [ [ [ "pickaxe_list", 1, "LIST" ], [ "jackhammering_standard", 1, "LIST" ] ] ]
   },
   {
     "type": "construction",
