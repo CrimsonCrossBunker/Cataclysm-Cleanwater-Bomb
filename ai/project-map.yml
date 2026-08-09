@@ -24,6 +24,16 @@ entries:
     validation_ids: [lua-contract]
     boundaries:
       - Schema, LuaLS declarations, native registrations, generated inventories, and runtime validation tests are authoritative.
+      - Lua API v5 describes shipped behaviour and is separate from the planned Lua-first Platform v1.
+  - id: lua-first-platform
+    paths: [data/lua/LUA_FIRST_PLATFORM.md, ai/lua-first-roadmap.yml, ai/lua-first-roadmap.schema.json]
+    purpose: Accepted pure-Lua authoring architecture, replacement boundary, and checked implementation roadmap.
+    instructions: data/lua/AGENTS.md
+    validation_ids: [agent-context]
+    boundaries:
+      - The architecture contract defines target design; source and tests alone prove a capability is available.
+      - Public Platform APIs use native domain objects and services rather than exposing JSON loaders or EOC-key-shaped wrappers.
+      - Core serialization such as saves, settings, caches, and generated inventories may remain JSON internally.
   - id: bundled-mods
     paths: [data/mods/]
     purpose: Mods shipped and validated with CCB.

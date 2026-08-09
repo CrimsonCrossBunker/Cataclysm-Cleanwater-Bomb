@@ -10,6 +10,7 @@ from check_project_metadata import (
     validate_context,
     validate_documentation_registry,
     validate_inventory,
+    validate_lua_first_roadmap,
     validate_repository_settings,
 )
 
@@ -63,6 +64,29 @@ class ProjectMetadataTest(unittest.TestCase):
 
     def test_inventory_is_valid(self):
         validate_inventory()
+
+    def test_lua_first_roadmap_is_valid(self):
+        validate_lua_first_roadmap()
+
+    def test_lua_first_roadmap_rejects_dependency_cycles(self):
+        path = ROOT / "ai/lua-first-roadmap.yml"
+        roadmap = yaml.safe_load(path.read_text(encoding="utf-8"))
+        roadmap = copy.deepcopy(roadmap)
+        roadmap["milestones"][0]["depends_on"] = [
+            roadmap["milestones"][-1]["id"]
+        ]
+
+        with self.assertRaisesRegex(ValueError, "cycle"):
+            validate_lua_first_roadmap(roadmap)
+
+    def test_available_lua_first_capability_cannot_require_public_legacy(self):
+        path = ROOT / "ai/lua-first-roadmap.yml"
+        roadmap = yaml.safe_load(path.read_text(encoding="utf-8"))
+        roadmap = copy.deepcopy(roadmap)
+        roadmap["capabilities"][0]["status"] = "available"
+
+        with self.assertRaisesRegex(ValueError, "public legacy"):
+            validate_lua_first_roadmap(roadmap)
 
     def test_documentation_registry_is_valid(self):
         validate_documentation_registry()

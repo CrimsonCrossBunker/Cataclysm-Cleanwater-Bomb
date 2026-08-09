@@ -10,8 +10,9 @@ rules and does not replace this file.
 ## Sources of truth / 权威来源
 
 - Runtime behaviour: C++/Java/Lua source and tests in this repository.
-- JSON/Lua/API contracts: schemas, LuaLS declarations, registrations, and
-  checked-in generated inventories.
+- JSON/Lua/API contracts: schemas, LuaLS declarations, registrations,
+  checked-in generated inventories, and the accepted Lua-first architecture
+  contract plus its checked roadmap.
 - Build and validation: GitHub Actions, CMake, Makefile, Gradle, and repository
   validation scripts.
 - Contribution and governance: this file, `CONTRIBUTING.md`, and
@@ -21,7 +22,8 @@ rules and does not replace this file.
   contract merely to match prose.
 
 - 运行时行为以本仓库源码和测试为准。
-- JSON、Lua 与 API 契约以 Schema、LuaLS 声明、注册信息及生成清单为准。
+- JSON、Lua 与 API 契约以 Schema、LuaLS 声明、注册信息、生成清单，以及已接受的
+  Lua-first 架构合同与受检路线图为准。
 - 构建和验证以 CI、CMake、Makefile、Gradle 与仓库验证脚本为准。
 - 贡献和治理以本文件、`CONTRIBUTING.md`、`GOVERNANCE.md` 为准。
 - CCB-Docs 负责解释和导航；与源码契约冲突时应标记文档过期并修正文档。
@@ -40,7 +42,10 @@ rules and does not replace this file.
 | `doc/` | Legacy developer documentation awaiting classified migration | this file |
 
 The machine-readable map is `ai/project-map.yml`; validation routing is in
-`ai/test-matrix.yml`.
+`ai/test-matrix.yml`.  The long-term pure-Lua authoring direction is defined
+by `data/lua/LUA_FIRST_PLATFORM.md`, with implementation status in
+`ai/lua-first-roadmap.yml`; it is independent of the currently shipped Lua
+API v5 contract.
 
 ## Modification boundaries / 修改边界
 

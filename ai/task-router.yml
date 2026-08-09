@@ -57,6 +57,18 @@ entries:
       - Keep manifest, LuaLS, native registration, inventory, examples, and runtime validation in parity.
     upstream_differences:
       - CCB Lua v5 is a CCB contract and is not inferred from CBN or CDDA APIs.
+  - id: lua-first-platform
+    keywords: [Lua-first, Platform v1, pure Lua, main.lua, mod.lua, zero-config, JSON replacement, EOC replacement, 纯 Lua, 零配置, 替代 JSON, 替代 EOC]
+    paths: [data/lua/LUA_FIRST_PLATFORM.md, ai/lua-first-roadmap.yml, ai/lua-first-roadmap.schema.json, data/lua/, tools/lua_api/, src/]
+    project_ids: [lua-first-platform, lua-api, engine, developer-tools]
+    documentation_ids: [architecture.lua-first-platform, architecture.lua-first-roadmap, architecture.lua-first-glossary]
+    source_symbols: []
+    validation_ids: [agent-context, lua-contract]
+    compatibility:
+      - Treat roadmap status as planning data; only matching runtime source and tests establish implemented behaviour.
+      - Preserve stable content ids, saves, and hybrid Mod compatibility during incremental migration.
+    upstream_differences:
+      - Platform v1 is a CCB-native architecture and must not be inferred from Lua v5, CBN, CDDA, JSON keys, or EOC keys.
   - id: upstream-port
     keywords: [upstream, port, cherry-pick, CDDA, CBN, 上游, 移植]
     paths: [CONTRIBUTING.md, SYNC_EXCLUDED_PRS.md, src/, data/]

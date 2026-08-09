@@ -25,6 +25,8 @@ CONTEXT_FILES = (
     ROOT / "ai/generated-files.yml",
     ROOT / "ai/docs-impact.yml",
 )
+LUA_FIRST_ROADMAP = ROOT / "ai/lua-first-roadmap.yml"
+LUA_FIRST_ROADMAP_SCHEMA = ROOT / "ai/lua-first-roadmap.schema.json"
 
 
 def load_yaml(path: Path) -> dict:
@@ -63,6 +65,106 @@ def unique_ids(data: dict, label: str) -> set[str]:
     if len(ids) != len(set(ids)):
         raise ValueError(f"duplicate id in {label}")
     return set(ids)
+
+
+def validate_lua_first_roadmap(roadmap: dict | None = None) -> None:
+    """Validate the Lua-first plan without treating planned APIs as shipped."""
+    if roadmap is None:
+        roadmap = load_yaml(LUA_FIRST_ROADMAP)
+    schema = json.loads(LUA_FIRST_ROADMAP_SCHEMA.read_text(encoding="utf-8"))
+    jsonschema.Draft202012Validator(schema).validate(roadmap)
+
+    authority = ROOT / roadmap["authority_path"]
+    if not authority.is_file():
+        raise ValueError(
+            f"missing Lua-first authority: {roadmap['authority_path']}"
+        )
+
+    inventory_ids = [entry["id"] for entry in roadmap["legacy_inventories"]]
+    if len(inventory_ids) != len(set(inventory_ids)):
+        raise ValueError("duplicate legacy inventory id in Lua-first roadmap")
+    for inventory in roadmap["legacy_inventories"]:
+        inventory_path = ROOT / inventory["path"]
+        data = json.loads(inventory_path.read_text(encoding="utf-8"))
+        entries = data.get("entries")
+        if not isinstance(entries, list):
+            raise ValueError(
+                f"Lua-first inventory has no entries: {inventory['path']}"
+            )
+        if inventory["entry_count"] != len(entries):
+            raise ValueError(
+                f"Lua-first inventory count is stale for {inventory['id']}"
+            )
+        selector = inventory["selector"]
+        if any(selector not in entry for entry in entries):
+            raise ValueError(
+                f"Lua-first inventory selector {selector} is missing in "
+                f"{inventory['id']}"
+            )
+
+    milestones = roadmap["milestones"]
+    milestone_ids = [milestone["id"] for milestone in milestones]
+    if len(milestone_ids) != len(set(milestone_ids)):
+        raise ValueError("duplicate milestone id in Lua-first roadmap")
+    known_milestones = set(milestone_ids)
+    dependencies = {
+        milestone["id"]: set(milestone["depends_on"])
+        for milestone in milestones
+    }
+    for milestone in milestones:
+        unknown = sorted(
+            dependencies[milestone["id"]] - known_milestones
+        )
+        if unknown:
+            raise ValueError(
+                f"unknown Lua-first milestone dependencies in "
+                f"{milestone['id']}: {unknown}"
+            )
+        if milestone["status"] == "complete" and not milestone["evidence"]:
+            raise ValueError(
+                f"complete Lua-first milestone needs evidence: "
+                f"{milestone['id']}"
+            )
+        missing_evidence = sorted(
+            path
+            for path in milestone["evidence"]
+            if not (ROOT / path).exists()
+        )
+        if missing_evidence:
+            raise ValueError(
+                f"missing Lua-first milestone evidence in {milestone['id']}: "
+                f"{missing_evidence}"
+            )
+
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(milestone_id: str) -> None:
+        if milestone_id in visiting:
+            raise ValueError("cycle in Lua-first milestone dependencies")
+        if milestone_id in visited:
+            return
+        visiting.add(milestone_id)
+        for dependency in dependencies[milestone_id]:
+            visit(dependency)
+        visiting.remove(milestone_id)
+        visited.add(milestone_id)
+
+    for milestone_id in milestone_ids:
+        visit(milestone_id)
+
+    capability_ids = [item["id"] for item in roadmap["capabilities"]]
+    if len(capability_ids) != len(set(capability_ids)):
+        raise ValueError("duplicate capability id in Lua-first roadmap")
+    for capability in roadmap["capabilities"]:
+        if (
+            capability["status"] == "available"
+            and capability["legacy_dependency"] == "public_legacy"
+        ):
+            raise ValueError(
+                f"available Lua-first capability exposes public legacy "
+                f"dependency: {capability['id']}"
+            )
 
 
 def validate_context() -> None:
@@ -408,6 +510,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.parse_args()
     validate_context()
+    validate_lua_first_roadmap()
     validate_inventory()
     validate_documentation_registry()
     validate_repository_settings()
