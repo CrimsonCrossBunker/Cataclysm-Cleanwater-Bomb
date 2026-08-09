@@ -690,7 +690,7 @@ static void draw_city_labels( const catacurses::window &w, const tripoint_abs_om
             continue;   // right under the cursor.
         }
 
-        if( !overmap_buffer.seen_more_than( tripoint_abs_omt( city_pos, center.z() ),
+        if( !overmap_buffer.seen_more_than( tripoint_abs_omt( city_pos, 0 ),
                                             om_vision_level::outlines ) ) {
             continue;   // haven't seen it.
         }
@@ -730,7 +730,7 @@ static void draw_camp_labels( const catacurses::window &w, const tripoint_abs_om
             continue;   // right under the cursor.
         }
 
-        if( !overmap_buffer.seen_more_than( tripoint_abs_omt( camp_pos, center.z() ),
+        if( !overmap_buffer.seen_more_than( tripoint_abs_omt( camp_pos, 0 ),
                                             om_vision_level::outlines ) ) {
             continue;   // haven't seen it.
         }
@@ -1187,7 +1187,7 @@ static void draw_ascii( const catacurses::window &w, overmap_draw_data_t &data )
         }
     }
 
-    if( cursor_pos.z() == 0 && uistate.overmap_show_city_labels ) {
+    if( uistate.overmap_show_city_labels ) {
         draw_city_labels( w, cursor_pos );
         draw_camp_labels( w, cursor_pos );
     }

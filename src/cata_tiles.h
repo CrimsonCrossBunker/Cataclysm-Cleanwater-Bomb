@@ -1204,6 +1204,10 @@ class cata_tiles
         // part sprite gets recolored with the part's paint color; nullopt
         // otherwise. Consumed when building tile_render_params.
         std::optional<RGBColor> pending_part_tint_ = std::nullopt;
+        // Shape-exact gray overlay applied to the next drawn sprite (overmap ground
+        // shown through open air); set by draw_om around the draw call so multitile
+        // and fallback sprites inherit it, then cleared.
+        std::optional<SDL_Color> pending_gray_overlay_ = std::nullopt;
 
         // Per-draw caches rebuilt once per draw() from g->all_creatures(). Let the
         // critter layers skip the per-tile creature_at hash lookup for the ~all
