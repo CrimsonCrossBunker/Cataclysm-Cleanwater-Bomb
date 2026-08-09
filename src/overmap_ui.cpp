@@ -1187,7 +1187,7 @@ static void draw_ascii( const catacurses::window &w, overmap_draw_data_t &data )
         }
     }
 
-    if( uistate.overmap_show_city_labels ) {
+    if( cursor_pos.z() >= 0 && uistate.overmap_show_city_labels ) {
         draw_city_labels( w, cursor_pos );
         draw_camp_labels( w, cursor_pos );
     }
