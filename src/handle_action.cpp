@@ -3472,6 +3472,18 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                     break;
                 }
 
+                // While piloting an aircraft, "descend" means fly down rather
+                // than climb a vehicle ladder mounted on the same tile.  Mirror
+                // the ACTION_MOVE_UP ordering: aircraft control wins over the
+                // ladder, and ladder climbing remains available on foot.
+                if( has_vehicle_control( player_character ) ) {
+                    const optional_vpart_position vp = here.veh_at( player_character.pos_bub() );
+                    if( vp && vp->vehicle().is_aircraft( here ) ) {
+                        pldrive( tripoint_rel_ms::below );
+                        break;
+                    }
+                }
+
                 const tripoint_bub_ms pos = player_character.pos_bub();
                 const bool has_vehicle_ladder = here.has_vehicle_ladder_at( pos );
                 if( const std::optional<tripoint_bub_ms> ladder_dest =
@@ -3487,14 +3499,6 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                     }
                     vertical_move( ladder_dest->z() - pos.z(), true );
                     break;
-                }
-
-                if( has_vehicle_control( player_character ) ) {
-                    const optional_vpart_position vp = here.veh_at( player_character.pos_bub() );
-                    if( vp && vp->vehicle().is_aircraft( here ) ) {
-                        pldrive( tripoint_rel_ms::below );
-                        break;
-                    }
                 }
 
                 if( has_vehicle_ladder ) {

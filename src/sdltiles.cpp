@@ -3561,15 +3561,24 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
             const tripoint_abs_omt omp = origin + point( col, row );
 
             const om_vision_level vision = overmap_buffer.seen( omp );
-            const bool los = overmap_buffer.seen_more_than( omp, om_vision_level::details ) &&
-                             ( you.overmap_los( omp, sight_points ) || uistate.overmap_debug_mongroup ||
-                               you.has_trait( trait_DEBUG_CLAIRVOYANCE ) );
+            // Hordes and mongroups live on the ground level, so marker
+            // visibility is evaluated at z=0 to keep them on higher z-levels.
+            const tripoint_abs_omt ground_omp( omp.xy(), 0 );
+            const bool los =
+                overmap_buffer.seen_more_than( ground_omp, om_vision_level::details ) &&
+                ( you.overmap_los( ground_omp, sight_points ) ||
+                  uistate.overmap_debug_mongroup ||
+                  you.has_trait( trait_DEBUG_CLAIRVOYANCE ) );
             // the full string from the ter_id including _north etc.
             std::string id;
             TILE_CATEGORY category = TILE_CATEGORY::OVERMAP_TERRAIN;
             int rotation = 0;
             int subtile = -1;
             map_extra_id mx;
+            // Set when an empty tile (see_cost: all_clear) draws the first seen
+            // non-open-air OMT below it; holds the z distance from the observed
+            // layer so the sprite can be grayed by depth.
+            int ground_z_offset = 0;
 
             if( viewing_weather ) {
                 const tripoint_abs_omt omp_sky( omp.xy(), OVERMAP_HEIGHT );
@@ -3589,13 +3598,52 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
                 if( !is_omt ) {
                     category = TILE_CATEGORY::OVERMAP_VISION_LEVEL;
                 }
+
+                // P2 plan B: show the first seen non-open-air OMT below empty tiles
+                // (see_cost: all_clear), grayed by depth below the observed layer.
+                // Trade-off: only applies to already-seen tiles; unseen tiles below
+                // are not drilled through to avoid showing never-seen terrain.
+                if( overmap_buffer.ter( omp )->can_see_down_through() ) {
+                    for( int z = omp.z() - 1; z >= -OVERMAP_DEPTH; --z ) {
+                        const tripoint_abs_omt lower( omp.xy(), z );
+                        if( overmap_buffer.seen( lower ) == om_vision_level::unseen ) {
+                            break;
+                        }
+                        if( !overmap_buffer.ter( lower )->can_see_down_through() ) {
+                            const std::pair<std::string, bool> lower_info =
+                                get_omt_id_rotation_and_subtile( lower, rotation, subtile );
+                            id = lower_info.first;
+                            is_omt = lower_info.second;
+                            if( !is_omt ) {
+                                category = TILE_CATEGORY::OVERMAP_VISION_LEVEL;
+                            } else {
+                                category = TILE_CATEGORY::OVERMAP_TERRAIN;
+                            }
+                            ground_z_offset = omp.z() - z;
+                            break;
+                        }
+                    }
+                }
             }
 
+            // Drilled-through tiles keep the original sprite colors and get a
+            // shape-exact overlay blended over the sprite's own silhouette.
+            // Following the CBN overmap-transparency scheme, the overlay alpha
+            // grows linearly with depth and caps at 192 (min(192, 20*(n+1))),
+            // so the original colors are never fully covered: depth 1 = 40,
+            // each further layer +20, capped at 192 toward white (255,255,255).
+            const bool drilled = ground_z_offset > 0;
             const lit_level ll = overmap_buffer.is_explored( omp ) ? lit_level::LOW : lit_level::LIT;
+            if( drilled ) {
+                const Uint8 blend_alpha = static_cast<Uint8>( std::min(
+                                             192, 20 * ( ground_z_offset + 1 ) ) );
+                pending_gray_overlay_ = SDL_Color{ 255, 255, 255, blend_alpha };
+            }
             // light level is now used for choosing between grayscale filter and normal lit tiles.
             draw_from_id_string( id, category,
                                  category == TILE_CATEGORY::OVERMAP_TERRAIN ? "overmap_terrain" : "",
                                  omp, subtile, rotation, ll, false, height_3d );
+            pending_gray_overlay_ = std::nullopt;
             if( !mx.is_empty() && mx->visibility != map_extra_visibility::none ) {
                 draw_from_id_string( mx.str(), TILE_CATEGORY::MAP_EXTRA, "map_extra", omp,
                                      0, 0, ll, false );
@@ -3611,13 +3659,13 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
             if( vision != om_vision_level::unseen ) {
                 if( draw_overlays && uistate.overmap_debug_mongroup ) {
                     std::vector<std::unordered_map<tripoint_abs_ms, horde_entity>*> hordes = overmap_buffer.hordes_at(
-                                omp );
+                                ground_omp );
                     if( !hordes.empty() ) {
                         draw_from_id_string( "mon_zombie", omp, 0, 0, lit_level::LIT, false );
                     }
                 }
                 if( showhordes && los ) {
-                    const int horde_size = overmap_buffer.get_horde_size( omp,
+                    const int horde_size = overmap_buffer.get_horde_size( ground_omp,
                                            horde_map_flavors::active | horde_map_flavors::idle );
                     if( horde_size >= HORDE_VISIBILITY_SIZE ) {
                         // Scale down the range of horde population, which can be 1-576 to a range of 1-10
@@ -3831,8 +3879,11 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
         for( const city_reference &city : overmap_buffer.get_cities_near(
                  project_to<coords::sm>( center_pos ), radius ) ) {
             const tripoint_abs_omt city_center = project_to<coords::omt>( city.abs_sm_pos );
+            // Labels are ground-level data; test screen containment in xy by
+            // projecting the label position onto the viewed z-level.
+            const tripoint_abs_omt city_on_view( city_center.xy(), overmap_area.p_min.z() );
             if( overmap_buffer.seen_more_than( city_center, om_vision_level::outlines ) &&
-                overmap_area.contains( city_center ) ) {
+                overmap_area.contains( city_on_view ) ) {
                 label_bg( city.abs_sm_pos, city.city->name );
             }
         }
@@ -3840,8 +3891,10 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
         for( const camp_reference &camp : overmap_buffer.get_camps_near(
                  project_to<coords::sm>( center_pos ), radius ) ) {
             const tripoint_abs_omt camp_center = project_to<coords::omt>( camp.abs_sm_pos );
+            // Same xy-only containment as cities (labels are ground-level).
+            const tripoint_abs_omt camp_on_view( camp_center.xy(), overmap_area.p_min.z() );
             if( overmap_buffer.seen_more_than( camp_center, om_vision_level::outlines ) &&
-                overmap_area.contains( camp_center ) ) {
+                overmap_area.contains( camp_on_view ) ) {
                 label_bg( camp.abs_sm_pos, camp.camp->camp_name() );
             }
         }
