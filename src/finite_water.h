@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "coords_fwd.h"
 
 class item;
@@ -24,9 +26,19 @@ water_source_kind check_connection( const tripoint_abs_ms &p, bool connect_targe
 
 // Return a temporary liquid item representing the shared amount in the
 // connected finite body.  The liquid remains in the map until explicitly
-// withdrawn, so canceling a transfer does not consume it.
-item finite_liquid_from( const tripoint_abs_ms &p );
-int withdraw_finite_liquid( const tripoint_abs_ms &p, int amount );
+// withdrawn, so canceling a transfer does not consume it.  A caller that will
+// immediately withdraw may retain body_tiles to avoid tracing the same body
+// twice.
+item finite_liquid_from( const tripoint_abs_ms &p,
+                         std::vector<tripoint_abs_ms> *body_tiles = nullptr );
+
+// Remove up to amount from the connected body.  source_has_liquid reports
+// whether p can still be used after the water level is redistributed.  A
+// body_tiles snapshot returned by finite_liquid_from may be reused only for
+// the immediately following withdrawal.
+int withdraw_finite_liquid( const tripoint_abs_ms &p, int amount,
+                            bool *source_has_liquid = nullptr,
+                            const std::vector<tripoint_abs_ms> *body_tiles = nullptr );
 
 // Stable key for de-duplicating one connected finite body when several of its
 // tiles are scanned for crafting sources.

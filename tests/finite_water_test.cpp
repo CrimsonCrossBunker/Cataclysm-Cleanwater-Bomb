@@ -17,6 +17,7 @@
 #include "map.h"
 #include "mapbuffer.h"
 #include "map_helpers.h"
+#include "map_helpers_tests.h"
 #include "map_scale_constants.h"
 #include "npc.h"
 #include "omdata.h"
@@ -273,6 +274,27 @@ TEST_CASE( "finite_sewage_uses_one_connected_water_level", "[finite_water]" )
     CHECK( here.ter( first ) == ter_sewage_bottom_dry );
 }
 
+TEST_CASE( "reading_finite_water_does_not_rewrite_the_body", "[finite_water]" )
+{
+    map &here = get_map();
+    const tripoint_bub_ms first = here.get_bub( setup_finite_water_test() );
+    const tripoint_bub_ms second = first + tripoint::east;
+    here.ter_set( first, ter_pond_water_sh );
+    here.ter_set( second, ter_pond_water_sh );
+
+    point_sm_ms local;
+    tripoint_bub_ms mutable_first = first;
+    submap *const sm = map_meddler::unsafe_get_submap_at( mutable_first, local );
+    REQUIRE( sm != nullptr );
+    sm->player_adjusted_map = false;
+
+    std::vector<tripoint_abs_ms> body_tiles;
+    const item source = finite_water::finite_liquid_from( here.get_abs( first ), &body_tiles );
+    CHECK( source.charges == 800 );
+    CHECK( body_tiles.size() == 2 );
+    CHECK_FALSE( sm->player_adjusted_map );
+}
+
 TEST_CASE( "finite_water_depletion_and_restoration", "[finite_water]" )
 {
     map &here = get_map();
@@ -280,15 +302,20 @@ TEST_CASE( "finite_water_depletion_and_restoration", "[finite_water]" )
     here.ter_set( shallow, ter_pond_water_sh );
 
     set_finite_charges( shallow, 3 );
-    int wanted = 2;
+    bool source_has_liquid = false;
+    CHECK( finite_water::withdraw_finite_liquid( here.get_abs( shallow ), 1,
+            &source_has_liquid ) == 1 );
+    CHECK( source_has_liquid );
+
+    int wanted = 1;
     here.use_charges( { shallow }, itype_water, wanted, any_item );
     CHECK( wanted == 0 );
     CHECK( here.ter( shallow ) == ter_pond_water_sh );
     CHECK( finite_charges( shallow ) == 1 );
 
-    wanted = 1;
-    here.use_charges( { shallow }, itype_water, wanted, any_item );
-    CHECK( wanted == 0 );
+    CHECK( finite_water::withdraw_finite_liquid( here.get_abs( shallow ), 1,
+            &source_has_liquid ) == 1 );
+    CHECK_FALSE( source_has_liquid );
     CHECK( here.ter( shallow ) == ter_pond_bottom_dry_sh );
     CHECK( finite_charges( shallow ) == 0 );
 

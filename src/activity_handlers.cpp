@@ -10,6 +10,7 @@
 #include <type_traits>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include "calendar.h"
 #include "cata_utility.h"
@@ -108,6 +109,7 @@ void activity_handlers::fill_liquid_do_turn( player_activity *act, Character *yo
         map_stack::iterator on_ground;
         monster *source_mon = nullptr;
         item liquid;
+        std::vector<tripoint_abs_ms> finite_body_tiles;
         const liquid_source_type source_type = static_cast<liquid_source_type>( act_ref.values.at( 0 ) );
         int part_num = -1;
         int veh_charges = 0;
@@ -126,7 +128,8 @@ void activity_handlers::fill_liquid_do_turn( player_activity *act, Character *yo
                 liquid.charges = item::INFINITE_CHARGES;
                 break;
             case liquid_source_type::FINITE_MAP:
-                liquid = finite_water::finite_liquid_from( act_ref.coords.at( 0 ) );
+                liquid = finite_water::finite_liquid_from( act_ref.coords.at( 0 ),
+                    &finite_body_tiles );
                 if( liquid.is_null() ) {
                     act_ref.set_to_null();
                     return;
@@ -287,13 +290,15 @@ void activity_handlers::fill_liquid_do_turn( player_activity *act, Character *yo
             case liquid_source_type::INFINITE_MAP:
                 // nothing, the liquid source is infinite
                 break;
-            case liquid_source_type::FINITE_MAP:
+            case liquid_source_type::FINITE_MAP: {
+                bool source_has_liquid;
                 if( finite_water::withdraw_finite_liquid( act_ref.coords.at( 0 ),
-                        removed_charges ) != removed_charges ||
-                    finite_water::finite_liquid_from( act_ref.coords.at( 0 ) ).is_null() ) {
+                        removed_charges, &source_has_liquid,
+                        &finite_body_tiles ) != removed_charges || !source_has_liquid ) {
                     act_ref.set_to_null();
                 }
                 break;
+            }
             case liquid_source_type::MONSTER:
                 // liquid source charges handled in monexamine::milk_source
                 if( liquid.charges == 0 ) {

@@ -965,8 +965,12 @@ water_source_kind check_connection( const tripoint_abs_ms &p, bool connect_targe
     return finish_connection( state );
 }
 
-item finite_liquid_from( const tripoint_abs_ms &p )
+item finite_liquid_from( const tripoint_abs_ms &p,
+                         std::vector<tripoint_abs_ms> *body_tiles )
 {
+    if( body_tiles != nullptr ) {
+        body_tiles->clear();
+    }
     map &here = get_map();
     const tile_water_kind kind = classify_uncached( here, p );
     const itype_id liquid_id = finite_liquid_id_at( here, p, kind );
@@ -974,8 +978,10 @@ item finite_liquid_from( const tripoint_abs_ms &p )
         return item();
     }
 
-    const std::vector<tripoint_abs_ms> tiles = collect_finite_tiles( p, false, liquid_id );
-    const int total = normalize_body( here, tiles, liquid_id, &p );
+    std::vector<tripoint_abs_ms> local_tiles;
+    std::vector<tripoint_abs_ms> &tiles = body_tiles != nullptr ? *body_tiles : local_tiles;
+    tiles = collect_finite_tiles( p, false, liquid_id );
+    const int total = body_total( here, tiles );
     if( total <= 0 ) {
         return item();
     }
@@ -1004,8 +1010,13 @@ tripoint_abs_ms finite_liquid_body_anchor( const tripoint_abs_ms &p )
     return tiles.empty() ? p : tiles.front();
 }
 
-int withdraw_finite_liquid( const tripoint_abs_ms &p, int amount )
+int withdraw_finite_liquid( const tripoint_abs_ms &p, int amount,
+                            bool *source_has_liquid,
+                            const std::vector<tripoint_abs_ms> *body_tiles )
 {
+    if( source_has_liquid != nullptr ) {
+        *source_has_liquid = false;
+    }
     if( amount <= 0 ) {
         return 0;
     }
@@ -1016,14 +1027,22 @@ int withdraw_finite_liquid( const tripoint_abs_ms &p, int amount )
         return 0;
     }
 
-    const std::vector<tripoint_abs_ms> tiles = collect_finite_tiles( p, false, liquid_id );
-    const int total = normalize_body( here, tiles, liquid_id, &p );
+    std::vector<tripoint_abs_ms> local_tiles;
+    if( body_tiles == nullptr ) {
+        local_tiles = collect_finite_tiles( p, false, liquid_id );
+        body_tiles = &local_tiles;
+    }
+    const std::vector<tripoint_abs_ms> &tiles = *body_tiles;
+    const int total = body_total( here, tiles );
     if( tile_water_charges( here, p ) <= 0 ) {
         return 0;
     }
     const int withdrawn = std::min( amount, total );
     if( withdrawn > 0 && !rebalance_body( here, tiles, total - withdrawn, liquid_id, &p ) ) {
         return 0;
+    }
+    if( source_has_liquid != nullptr ) {
+        *source_has_liquid = tile_water_charges( here, p ) > 0;
     }
     return withdrawn;
 }
