@@ -196,9 +196,9 @@ void activity_handlers::fill_liquid_do_turn( player_activity *act, Character *yo
             case liquid_target_type::MAP:
                 if( iexamine::has_keg( here.get_bub( act_ref.coords.at( 1 ) ) ) ) {
                     iexamine::pour_into_keg( here.get_bub( act_ref.coords.at( 1 ) ), liquid, false );
-                } else if( finite_water::is_pond_or_pool_tile( act_ref.coords.at( 1 ) ) ) {
-                    // Pouring into a finite pond/pool: store in the shared
-                    // capacity of the connected pond; excess stays in source.
+                } else if( finite_water::can_pour_into( act_ref.coords.at( 1 ) ) ) {
+                    // Store liquid in the shared capacity of a finite water
+                    // body or channel; excess stays in the source.
                     finite_water::pour_into_finite_water( act_ref.coords.at( 1 ), liquid );
                 } else {
                     here.add_item_or_charges( here.get_bub( act_ref.coords.at( 1 ) ), liquid );

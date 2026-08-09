@@ -7,6 +7,7 @@
 #include <iterator>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 
 #include "avatar.h"
@@ -15,6 +16,7 @@
 #include "coordinates.h"
 #include "debug.h"
 #include "enums.h"
+#include "finite_water.h"
 #include "flag.h"
 #include "iexamine.h"
 #include "inventory_ui.h" // auto inventory blocking
@@ -609,6 +611,7 @@ void inventory::form_from_map( map &m, std::vector<tripoint_bub_ms> pts, const C
 {
     items.clear();
     provisioned_pseudo_tools.clear();
+    std::set<tripoint_abs_ms> finite_liquid_bodies;
 
     for( const tripoint_bub_ms &p : pts ) {
         const ter_id &t = m.ter( p );
@@ -689,6 +692,14 @@ void inventory::form_from_map( map &m, std::vector<tripoint_bub_ms> pts, const C
         }
         // Handle any water from map sources.
         item water = m.liquid_from( p );
+        if( water.is_null() ) {
+            item finite = finite_water::finite_liquid_from( m.get_abs( p ) );
+            if( !finite.is_null() &&
+                finite_liquid_bodies.insert( finite_water::finite_liquid_body_anchor(
+                                                m.get_abs( p ) ) ).second ) {
+                water = std::move( finite );
+            }
+        }
         if( !water.is_null() ) {
             add_item( water );
         }

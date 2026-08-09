@@ -52,6 +52,7 @@
 #include "faction.h"
 #include "field.h"
 #include "field_type.h"
+#include "finite_water.h"
 #include "flag.h"
 #include "flat_set.h"  // IWYU pragma: keep // iwyu is being silly here
 #include "game.h"
@@ -6538,21 +6539,26 @@ bool npc::drink_from_water_source( const tripoint_bub_ms &water_pos )
     const item endless = here.liquid_from( water_pos );
     if( !endless.is_null() ) {
         stomach.ingest( { intake, 0_ml, {} } );
-    } else if( t.liquid_source_count != std::make_pair( 0, 0 ) ) {
+    } else {
         const int wanted_charges = std::max( 1, ( to_milliliter( intake ) + 249 ) / 250 );
-        int remaining = wanted_charges;
-        here.use_charges( { water_pos }, t.liquid_source_item_id, remaining,
-        []( const item & ) {
-            return true;
-        } );
-        const int withdrawn = wanted_charges - remaining;
+        int withdrawn = 0;
+        const item shared = finite_water::finite_liquid_from( here.get_abs( water_pos ) );
+        if( !shared.is_null() ) {
+            withdrawn = finite_water::withdraw_finite_liquid( here.get_abs( water_pos ),
+                wanted_charges );
+        } else if( t.liquid_source_count != std::make_pair( 0, 0 ) ) {
+            int remaining = wanted_charges;
+            here.use_charges( { water_pos }, t.liquid_source_item_id, remaining,
+            []( const item & ) {
+                return true;
+            } );
+            withdrawn = wanted_charges - remaining;
+        }
         if( withdrawn <= 0 ) {
             return false;
         }
         const units::volume actual = std::min( units::from_milliliter( withdrawn * 250 ), intake );
         stomach.ingest( { actual, 0_ml, {} } );
-    } else {
-        return false;
     }
     add_msg_debug( debugmode::DF_NPC_NEEDS,
                    "NPC %s: drank from terrain at %s", get_name(),

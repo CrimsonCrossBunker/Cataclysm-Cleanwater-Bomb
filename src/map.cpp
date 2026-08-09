@@ -3207,9 +3207,6 @@ bool map::ter_set( const tripoint_bub_ms &p, const ter_id &new_terrain, bool avo
         // Nothing changed
         return false;
     }
-    const bool restoring_original = current_submap->has_original_ter( l ) &&
-                                    current_submap->get_original_ter( l ) == new_terrain;
-
     if( !mapgen_in_progress ) {
         // TODO: Consider evaluating whether this is a "meaningful" adjustment instead of just any edit.
         current_submap->player_adjusted_map = true;
@@ -3268,6 +3265,17 @@ bool map::ter_set( const tripoint_bub_ms &p, const ter_id &new_terrain, bool avo
     const bool hidden_finite_source = !new_t.liquid_source_item_id.is_null() &&
                                       new_t.liquid_source_count != std::make_pair( 0, 0 ) &&
                                       !new_t.dries_to.is_empty() && !new_t.dries_to.is_null();
+    const bool old_hidden_finite_source = !old_t.liquid_source_item_id.is_null() &&
+                                          old_t.liquid_source_count != std::make_pair( 0, 0 ) &&
+                                          !old_t.dries_to.is_empty() && !old_t.dries_to.is_null();
+    const bool phase_transition = std::find( old_t.phase_targets.begin(), old_t.phase_targets.end(),
+        new_terrain.id() ) != old_t.phase_targets.end();
+    if( old_hidden_finite_source && !hidden_finite_source && !phase_transition ) {
+        // Covering or replacing a finite water surface must not leave hidden
+        // water that can reappear later.  Freezing is the exception: ice
+        // keeps the stored amount for the eventual thaw.
+        current_submap->set_finite_liquid( l, 0 );
+    }
     if( hidden_finite_source ) {
         // Finite water surfaces keep their amount as hidden map state.  A
         // normal ground item would be drawn over the terrain and could be
@@ -3282,7 +3290,7 @@ bool map::ter_set( const tripoint_bub_ms &p, const ter_id &new_terrain, bool avo
                 ++it;
             }
         }
-        if( !restoring_original || !current_submap->has_finite_liquid( l ) ) {
+        if( !current_submap->has_finite_liquid( l ) ) {
             const int initial = legacy_charges > 0 ?
                                 std::min( legacy_charges, new_t.liquid_source_count.second ) :
                                 rng( new_t.liquid_source_count.first, new_t.liquid_source_count.second );
@@ -6911,12 +6919,14 @@ item &map::add_item_impl( const tripoint_bub_ms &p, item new_item, int copies,
 item map::liquid_from( const tripoint_bub_ms &p ) const
 {
     weather_manager &weather = get_weather();
+    const tripoint_abs_ms abs_p = get_abs( p );
+    const bool managed_source = finite_water::manages_liquid_source( abs_p );
     ter_t source_terrain = ter( p ).obj();
 
     bool infinite = !source_terrain.liquid_source_item_id.is_null() &&
                     source_terrain.liquid_source_count == std::make_pair( 0, 0 );
-    if( !infinite && !source_terrain.liquid_source_item_id.is_null() ) {
-        const water_source_kind connection = finite_water::check_connection( get_abs( p ), false );
+    if( managed_source ) {
+        const water_source_kind connection = finite_water::check_connection( abs_p, false );
         infinite = ( connection == water_source_kind::fresh_infinite &&
                      ( source_terrain.liquid_source_item_id == itype_id( "water" ) ||
                        source_terrain.liquid_source_item_id == itype_id( "water_clean" ) ) ) ||

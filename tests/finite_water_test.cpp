@@ -10,6 +10,7 @@
 #include "construction.h"
 #include "finite_water.h"
 #include "game_constants.h"
+#include "inventory.h"
 #include "item.h"
 #include "json.h"
 #include "json_loader.h"
@@ -28,12 +29,17 @@
 #include "type_id.h"
 
 static const construction_str_id construction_constr_water_channel( "constr_water_channel" );
+static const construction_str_id
+construction_constr_small_water_basin( "constr_small_water_basin" );
+static const construction_str_id
+construction_constr_fill_water_channel( "constr_fill_water_channel" );
 
 static const itype_id itype_water( "water" );
 static const itype_id itype_water_clean( "water_clean" );
 static const itype_id itype_salt_water( "salt_water" );
 static const itype_id itype_water_murky( "water_murky" );
 static const itype_id itype_water_sewage( "water_sewage" );
+static const itype_id itype_mutagen_interstice( "mutagen_interstice" );
 
 static const oter_str_id oter_river( "river_center" );
 static const oter_str_id oter_ocean( "ocean_surface" );
@@ -45,13 +51,33 @@ static const ter_str_id ter_grass( "t_grass" );
 static const ter_str_id ter_water_sh( "t_water_sh" );
 static const ter_str_id ter_swater_sh( "t_swater_sh" );
 static const ter_str_id ter_water_moving_sh( "t_water_moving_sh" );
+static const ter_str_id ter_water_moving_dp( "t_water_moving_dp" );
 static const ter_str_id ter_water_pool( "t_water_pool" );
+static const ter_str_id ter_water_murky( "t_water_murky" );
+static const ter_str_id ter_water_sh_murky_underground( "t_water_sh_murky_underground" );
+static const ter_str_id ter_sewage( "t_sewage" );
+static const ter_str_id ter_water_hot( "t_water_hot" );
+static const ter_str_id ter_water_sh_flood( "t_water_sh_flood" );
+static const ter_str_id ter_nl_water_pool( "t_nl_water_pool" );
+static const ter_str_id ter_nl_water_pool_low( "t_nl_water_pool_low" );
+static const ter_str_id ter_interstice_mutagen_sh( "t_interstice_mutagen_sh" );
+static const ter_str_id ter_interstice_mutagen_pool( "t_interstice_mutagen_pool" );
 static const ter_str_id ter_puddle( "t_puddle" );
 static const ter_str_id ter_ice_sh_thick( "t_ice_sh_thick" );
 static const ter_str_id ter_pond_water_sh( "t_pond_water_sh" );
 static const ter_str_id ter_pond_water_dp( "t_pond_water_dp" );
+static const ter_str_id ter_pond_water_dp_low( "t_pond_water_dp_low" );
 static const ter_str_id ter_pond_bottom_dry_sh( "t_pond_bottom_dry_sh" );
 static const ter_str_id ter_pond_bottom_dry_dp( "t_pond_bottom_dry_dp" );
+static const ter_str_id ter_salt_pond_water_sh( "t_salt_pond_water_sh" );
+static const ter_str_id ter_murky_bottom_dry( "t_murky_bottom_dry" );
+static const ter_str_id ter_murky_bottom_dry_underground( "t_murky_bottom_dry_underground" );
+static const ter_str_id ter_sewage_bottom_dry( "t_sewage_bottom_dry" );
+static const ter_str_id ter_hot_spring_bottom_dry( "t_hot_spring_bottom_dry" );
+static const ter_str_id ter_flood_bottom_dry( "t_flood_bottom_dry" );
+static const ter_str_id ter_nl_pool_bottom_dry( "t_nl_pool_bottom_dry" );
+static const ter_str_id ter_interstice_bottom_dry_sh( "t_interstice_bottom_dry_sh" );
+static const ter_str_id ter_interstice_pool_bottom_dry( "t_interstice_pool_bottom_dry" );
 static const ter_str_id ter_pool_water( "t_pool_water" );
 static const ter_str_id ter_pool_water_shallow( "t_pool_water_shallow" );
 static const ter_str_id ter_pool_bottom_dry( "t_pool_bottom_dry" );
@@ -59,6 +85,8 @@ static const ter_str_id ter_pool_bottom_dry_shallow( "t_pool_bottom_dry_shallow"
 static const ter_str_id ter_channel_dry( "t_channel_dry" );
 static const ter_str_id ter_channel_water_fresh( "t_channel_water_fresh" );
 static const ter_str_id ter_channel_water_salt( "t_channel_water_salt" );
+static const ter_str_id ter_channel_flowing_fresh( "t_channel_flowing_fresh" );
+static const ter_str_id ter_channel_flowing_salt( "t_channel_flowing_salt" );
 
 namespace
 {
@@ -167,6 +195,84 @@ TEST_CASE( "finite_water_terrain_contract", "[finite_water]" )
     CHECK( ground_charges( puddle, itype_water_murky ) <= 240 );
 }
 
+TEST_CASE( "finite_water_other_closed_liquids_are_finite", "[finite_water]" )
+{
+    map &here = get_map();
+    const tripoint_bub_ms center = here.get_bub( setup_finite_water_test() );
+    const std::vector<std::tuple<ter_str_id, ter_str_id, itype_id, int>> cases = {
+        { ter_water_murky, ter_murky_bottom_dry, itype_water_murky, 400 },
+        { ter_water_sh_murky_underground, ter_murky_bottom_dry_underground,
+          itype_water_murky, 400 },
+        { ter_sewage, ter_sewage_bottom_dry, itype_water_sewage, 400 },
+        { ter_water_hot, ter_hot_spring_bottom_dry, itype_water_murky, 400 },
+        { ter_water_sh_flood, ter_flood_bottom_dry, itype_water, 400 },
+        { ter_nl_water_pool, ter_nl_pool_bottom_dry, itype_salt_water, 1600 },
+        { ter_interstice_mutagen_sh, ter_interstice_bottom_dry_sh,
+          itype_mutagen_interstice, 400 },
+        { ter_interstice_mutagen_pool, ter_interstice_pool_bottom_dry,
+          itype_mutagen_interstice, 400 }
+    };
+
+    int index = 0;
+    for( const auto &[wet, dry, liquid_type, capacity] : cases ) {
+        CAPTURE( wet.str(), liquid_type.str() );
+        const tripoint_bub_ms p = center + tripoint::east * ( index++ * 2 );
+        here.ter_set( p, wet );
+
+        CHECK( here.liquid_from( p ).is_null() );
+        CHECK( finite_charges( p, liquid_type ) == capacity );
+        CHECK( ground_charges( p, liquid_type ) == 0 );
+
+        REQUIRE( finite_water::withdraw_finite_liquid( here.get_abs( p ), capacity - 1 ) ==
+                 capacity - 1 );
+        const ter_str_id low_water = wet == ter_nl_water_pool ? ter_nl_water_pool_low : wet;
+        CHECK( here.ter( p ) == low_water );
+        CHECK( finite_charges( p, liquid_type ) == 1 );
+        REQUIRE( finite_water::withdraw_finite_liquid( here.get_abs( p ), 1 ) == 1 );
+        CHECK( here.ter( p ) == dry );
+
+        item refill( liquid_type, calendar::turn_zero );
+        refill.charges = 7;
+        CHECK( finite_water::pour_into_finite_water( here.get_abs( p ), refill ) == 7 );
+        CHECK( refill.charges == 0 );
+        CHECK( here.ter( p ) == low_water );
+        CHECK( finite_charges( p, liquid_type ) == 7 );
+    }
+
+    const tripoint_bub_ms hot = center + tripoint::south * 3;
+    here.ter_set( hot, ter_water_hot );
+    const item hot_water = finite_water::finite_liquid_from( here.get_abs( hot ) );
+    CHECK( hot_water.typeId() == itype_water_murky );
+    CHECK( units::to_celsius( hot_water.temperature ) >= 70.0 );
+}
+
+TEST_CASE( "finite_sewage_uses_one_connected_water_level", "[finite_water]" )
+{
+    map &here = get_map();
+    const tripoint_bub_ms first = here.get_bub( setup_finite_water_test() );
+    const tripoint_bub_ms second = first + tripoint::east;
+    here.ter_set( first, ter_sewage );
+    here.ter_set( second, ter_sewage );
+
+    CHECK( finite_charges( first, itype_water_sewage ) == 800 );
+    inventory crafting_sources;
+    crafting_sources.form_from_map( here, { first, second }, nullptr, false );
+    CHECK( crafting_sources.charges_of( itype_water_sewage ) == 800 );
+    REQUIRE( finite_water::withdraw_finite_liquid( here.get_abs( first ), 1 ) == 1 );
+    CHECK( here.ter( first ) == ter_sewage );
+    CHECK( here.ter( second ) == ter_sewage );
+    CHECK( finite_charges( second, itype_water_sewage ) == 799 );
+
+    REQUIRE( finite_water::withdraw_finite_liquid( here.get_abs( second ), 799 ) == 799 );
+    CHECK( here.ter( first ) == ter_sewage_bottom_dry );
+    CHECK( here.ter( second ) == ter_sewage_bottom_dry );
+
+    item wrong_liquid = water_item( 5 );
+    CHECK( finite_water::pour_into_finite_water( here.get_abs( first ), wrong_liquid ) == 0 );
+    CHECK( wrong_liquid.charges == 5 );
+    CHECK( here.ter( first ) == ter_sewage_bottom_dry );
+}
+
 TEST_CASE( "finite_water_depletion_and_restoration", "[finite_water]" )
 {
     map &here = get_map();
@@ -197,7 +303,9 @@ TEST_CASE( "finite_water_depletion_and_restoration", "[finite_water]" )
     REQUIRE( here.ter( deep ) == ter_pond_bottom_dry_dp );
     item deep_refill = water_item( 100 );
     CHECK( finite_water::pour_into_finite_water( here.get_abs( deep ), deep_refill ) == 100 );
-    CHECK( here.ter( deep ) == ter_pond_water_dp );
+    CHECK( here.ter( deep ) == ter_pond_water_dp_low );
+    CHECK( here.has_flag( ter_furn_flag::TFLAG_SHALLOW_WATER, deep ) );
+    CHECK_FALSE( here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, deep ) );
     CHECK( finite_charges( deep ) == 100 );
 
     item deep_top_up = water_item( 2000 );
@@ -339,21 +447,21 @@ TEST_CASE( "finite_water_natural_source_classification", "[finite_water]" )
     CHECK( finite_water::check_connection( here.get_abs( ocean + tripoint::west ), true ) ==
            water_source_kind::salt_infinite );
 
-    const tripoint_bub_ms decorative = center + tripoint::north * omt_width +
+    const tripoint_bub_ms legacy_channel = center + tripoint::north * omt_width +
                                        tripoint::west * omt_width;
-    set_omt_ter( here.get_abs( decorative ), oter_field );
-    here.ter_set( decorative, ter_water_moving_sh );
-    CHECK( finite_water::check_connection( here.get_abs( decorative + tripoint::east ), true ) ==
-           water_source_kind::none );
+    set_omt_ter( here.get_abs( legacy_channel ), oter_field );
+    here.ter_set( legacy_channel, ter_water_moving_sh );
+    CHECK( finite_water::check_connection( here.get_abs( legacy_channel + tripoint::east ), true ) ==
+           water_source_kind::fresh_finite );
 
-    // The overmap label alone is insufficient: sewage or mod liquids inside a
-    // river tile do not become legal fresh-water sources.
-    const tripoint_bub_ms wrong_liquid = center + tripoint::south * omt_width +
+    // A legacy swimming-pool tile remains finite even when its overmap tile
+    // happens to be labeled as a river; the label cannot make it infinite.
+    const tripoint_bub_ms legacy_pool = center + tripoint::south * omt_width +
                                          tripoint::east * omt_width;
-    set_omt_ter( here.get_abs( wrong_liquid ), oter_river );
-    here.ter_set( wrong_liquid, ter_water_pool );
-    CHECK( finite_water::check_connection( here.get_abs( wrong_liquid + tripoint::north ), true ) ==
-           water_source_kind::none );
+    set_omt_ter( here.get_abs( legacy_pool ), oter_river );
+    here.ter_set( legacy_pool, ter_water_pool );
+    CHECK( finite_water::check_connection( here.get_abs( legacy_pool + tripoint::north ), true ) ==
+           water_source_kind::fresh_finite );
 }
 
 TEST_CASE( "finite_water_salt_source_refills_dry_channels", "[finite_water]" )
@@ -371,7 +479,7 @@ TEST_CASE( "finite_water_salt_source_refills_dry_channels", "[finite_water]" )
 
     finite_water::fill_channel_at( here.get_abs( channels.front() ) );
     for( const tripoint_bub_ms &channel : channels ) {
-        CHECK( here.ter( channel ) == ter_channel_water_salt );
+        CHECK( here.ter( channel ) == ter_channel_flowing_salt );
         CHECK( ground_charges( channel, itype_salt_water ) == 0 );
         const item from_sea = here.liquid_from( channel );
         CHECK( from_sea.typeId() == itype_salt_water );
@@ -388,7 +496,8 @@ TEST_CASE( "finite_water_connected_channel_is_really_infinite", "[finite_water]"
     const tripoint_bub_ms channel = river + tripoint::east;
     here.ter_set( channel, ter_channel_dry );
     finite_water::fill_channel_at( here.get_abs( channel ) );
-    REQUIRE( here.ter( channel ) == ter_channel_water_fresh );
+    REQUIRE( here.ter( channel ) == ter_channel_flowing_fresh );
+    CHECK( here.has_flag( ter_furn_flag::TFLAG_CURRENT, channel ) );
 
     for( int draw = 0; draw < 3; ++draw ) {
         item source = here.liquid_from( channel );
@@ -402,6 +511,9 @@ TEST_CASE( "finite_water_connected_channel_is_really_infinite", "[finite_water]"
 
     here.ter_set( river, ter_grass );
     CHECK( here.liquid_from( channel ).is_null() );
+    finite_water::refresh_connected_water( here.get_abs( channel ) );
+    CHECK( here.ter( channel ) == ter_channel_water_fresh );
+    CHECK_FALSE( here.has_flag( ter_furn_flag::TFLAG_CURRENT, channel ) );
     int finite_draw = 400;
     here.use_charges( { channel }, itype_water, finite_draw, any_item );
     CHECK( finite_draw == 0 );
@@ -436,9 +548,9 @@ TEST_CASE( "finite_water_dry_channels_refill_when_a_source_is_reconnected", "[fi
            water_source_kind::fresh_infinite );
 
     finite_water::fill_channel_at( here.get_abs( connector ) );
-    CHECK( here.ter( connector ) == ter_channel_water_fresh );
+    CHECK( here.ter( connector ) == ter_channel_flowing_fresh );
     for( const tripoint_bub_ms &channel : dry_channels ) {
-        CHECK( here.ter( channel ) == ter_channel_water_fresh );
+        CHECK( here.ter( channel ) == ter_channel_flowing_fresh );
         CHECK( ground_charges( channel, itype_water ) == 0 );
         CHECK( here.liquid_from( channel ).charges == item::INFINITE_CHARGES );
     }
@@ -575,9 +687,31 @@ TEST_CASE( "finite_water_pouring_is_one_to_one", "[finite_water]" )
 
     const tripoint_bub_ms channel = pond + tripoint::south;
     here.ter_set( channel, ter_channel_dry );
-    item rejected = water_item( 10 );
-    CHECK( finite_water::pour_into_finite_water( here.get_abs( channel ), rejected ) == 0 );
-    CHECK( rejected.charges == 10 );
+    set_finite_charges( pond, 390 );
+    item accepted = water_item( 10 );
+    CHECK( finite_water::pour_into_finite_water( here.get_abs( channel ), accepted ) == 10 );
+    CHECK( accepted.charges == 0 );
+    CHECK( finite_charges( channel ) == 400 );
+
+    const tripoint_bub_ms isolated_fresh = pond + tripoint::south * 3;
+    here.ter_set( isolated_fresh, ter_channel_dry );
+    item fresh_fill = water_item( 5 );
+    CHECK( finite_water::pour_into_finite_water( here.get_abs( isolated_fresh ), fresh_fill ) == 5 );
+    CHECK( here.ter( isolated_fresh ) == ter_channel_water_fresh );
+    item wrong_salt( itype_salt_water, calendar::turn_zero );
+    wrong_salt.charges = 5;
+    CHECK( finite_water::pour_into_finite_water( here.get_abs( isolated_fresh ), wrong_salt ) == 0 );
+    CHECK( wrong_salt.charges == 5 );
+
+    const tripoint_bub_ms isolated_salt = pond + tripoint::north * 3;
+    here.ter_set( isolated_salt, ter_channel_dry );
+    item salt_fill( itype_salt_water, calendar::turn_zero );
+    salt_fill.charges = 5;
+    CHECK( finite_water::pour_into_finite_water( here.get_abs( isolated_salt ), salt_fill ) == 5 );
+    CHECK( here.ter( isolated_salt ) == ter_channel_water_salt );
+    item wrong_fresh = water_item( 5 );
+    CHECK( finite_water::pour_into_finite_water( here.get_abs( isolated_salt ), wrong_fresh ) == 0 );
+    CHECK( wrong_fresh.charges == 5 );
 }
 
 TEST_CASE( "finite_water_connection_survives_map_shift", "[finite_water]" )
@@ -683,6 +817,118 @@ TEST_CASE( "finite_water_npc_drinking", "[finite_water]" )
     CHECK( finite_charges( salt, itype_salt_water ) == 400 );
 }
 
+TEST_CASE( "finite_water_legacy_closed_water_migrates_on_first_use", "[finite_water][load]" )
+{
+    map &here = get_map();
+    const tripoint_bub_ms pond = here.get_bub( setup_finite_water_test() );
+    set_omt_ter( here.get_abs( pond ), oter_field );
+    here.ter_set( pond, ter_water_sh );
+
+    // Ordinary water in a field was an infinite source in old saves.  Its
+    // first use now turns it into a finite pond without a visible ground item.
+    CHECK( here.liquid_from( pond ).is_null() );
+    CHECK( here.ter( pond ) == ter_pond_water_sh );
+    CHECK( finite_charges( pond ) == 400 );
+    CHECK( ground_charges( pond, itype_water ) == 0 );
+
+    int wanted = 25;
+    here.use_charges( { pond }, itype_water, wanted, any_item );
+    CHECK( wanted == 0 );
+    CHECK( finite_charges( pond ) == 375 );
+
+    const tripoint_bub_ms pool = pond + tripoint::east * 2;
+    here.ter_set( pool, ter_water_pool );
+    CHECK( here.liquid_from( pool ).is_null() );
+    CHECK( here.ter( pool ) == ter_pool_water );
+    CHECK( finite_charges( pool ) == 1600 );
+
+    const tripoint_bub_ms old_channel = pond + tripoint::west * 2;
+    here.ter_set( old_channel, ter_water_moving_sh );
+    CHECK( here.liquid_from( old_channel ).is_null() );
+    CHECK( here.ter( old_channel ) == ter_channel_water_fresh );
+    CHECK( finite_charges( old_channel ) == 400 );
+
+    const tripoint_bub_ms closed_deep_current = pond + tripoint::west * 4;
+    here.ter_set( closed_deep_current, ter_water_moving_dp );
+    CHECK( here.liquid_from( closed_deep_current ).is_null() );
+    CHECK( here.ter( closed_deep_current ) == ter_pond_water_dp );
+    CHECK( finite_charges( closed_deep_current ) == 1600 );
+
+    const tripoint_bub_ms salt_basin = pond + tripoint::south * 3;
+    here.ter_set( salt_basin, ter_swater_sh );
+    CHECK( here.liquid_from( salt_basin ).is_null() );
+    CHECK( here.ter( salt_basin ) == ter_salt_pond_water_sh );
+    CHECK( finite_charges( salt_basin, itype_salt_water ) == 400 );
+}
+
+TEST_CASE( "finite_water_deep_tile_becomes_shallow_before_drying", "[finite_water]" )
+{
+    map &here = get_map();
+    const tripoint_bub_ms deep = here.get_bub( setup_finite_water_test() );
+    here.ter_set( deep, ter_pond_water_dp );
+
+    set_finite_charges( deep, 400 );
+    CHECK( here.ter( deep ) == ter_pond_water_dp_low );
+    CHECK( here.has_flag( ter_furn_flag::TFLAG_SHALLOW_WATER, deep ) );
+    CHECK_FALSE( here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, deep ) );
+
+    item refill = water_item( 1 );
+    CHECK( finite_water::pour_into_finite_water( here.get_abs( deep ), refill ) == 1 );
+    CHECK( here.ter( deep ) == ter_pond_water_dp );
+    CHECK( here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, deep ) );
+}
+
+TEST_CASE( "finite_water_tiny_remainder_does_not_jump_to_new_channel", "[finite_water]" )
+{
+    map &here = get_map();
+    const tripoint_bub_ms original = here.get_bub( setup_finite_water_test() );
+    here.ter_set( original, ter_channel_water_fresh );
+    REQUIRE( finite_water::withdraw_finite_liquid( here.get_abs( original ), 399 ) == 399 );
+    REQUIRE( finite_charges( original ) == 1 );
+
+    const tripoint_bub_ms east = original + tripoint::east;
+    here.ter_set( east, ter_channel_dry );
+    finite_water::refresh_connected_water( here.get_abs( east ) );
+    CHECK( here.ter( original ) == ter_channel_water_fresh );
+    CHECK( here.ter( east ) == ter_channel_dry );
+
+    const tripoint_bub_ms west = original + tripoint::west;
+    here.ter_set( west, ter_channel_dry );
+    finite_water::refresh_connected_water( here.get_abs( west ) );
+    CHECK( here.ter( original ) == ter_channel_water_fresh );
+    CHECK( here.ter( east ) == ter_channel_dry );
+    CHECK( here.ter( west ) == ter_channel_dry );
+    CHECK( finite_charges( original ) == 1 );
+}
+
+TEST_CASE( "finite_water_disconnected_salt_channel_can_be_extended", "[finite_water]" )
+{
+    map &here = get_map();
+    const tripoint_bub_ms salt = here.get_bub( setup_finite_water_test() );
+    const tripoint_bub_ms extension = salt + tripoint::east;
+    here.ter_set( salt, ter_channel_water_salt );
+
+    CHECK( finite_water::check_connection( here.get_abs( extension ), true ) ==
+           water_source_kind::salt_finite );
+    here.ter_set( extension, ter_channel_dry );
+    finite_water::fill_channel_at( here.get_abs( extension ) );
+    CHECK( here.ter( extension ) == ter_channel_water_salt );
+    CHECK_FALSE( here.has_flag( ter_furn_flag::TFLAG_CURRENT, extension ) );
+    CHECK( finite_charges( extension, itype_salt_water ) == 400 );
+}
+
+TEST_CASE( "finite_water_replacing_surface_clears_hidden_amount", "[finite_water]" )
+{
+    map &here = get_map();
+    const tripoint_bub_ms pond = here.get_bub( setup_finite_water_test() );
+    here.ter_set( pond, ter_pond_water_sh );
+    set_finite_charges( pond, 123 );
+
+    here.ter_set( pond, ter_grass );
+    here.ter_set( pond, ter_pond_water_sh );
+    CHECK( finite_charges( pond ) == 400 );
+}
+
 TEST_CASE( "finite_water_construction_data", "[finite_water][construction]" )
 {
     const construction &dig = construction_constr_water_channel.obj();
@@ -690,4 +936,12 @@ TEST_CASE( "finite_water_construction_data", "[finite_water][construction]" )
     CHECK( dig.byproduct_item_group.has_value() );
     CHECK( dig.pre_flags.count( "DIGGABLE" ) > 0 );
     CHECK( dig.pre_flags.count( "FLAT" ) > 0 );
+
+    const construction &basin = construction_constr_small_water_basin.obj();
+    CHECK( basin.post_terrain == "t_pond_bottom_dry_sh" );
+    CHECK( basin.time == to_moves<int>( 30_minutes ) );
+
+    const construction &close = construction_constr_fill_water_channel.obj();
+    CHECK( close.post_terrain == "t_dirt" );
+    CHECK( close.time == to_moves<int>( 10_minutes ) );
 }

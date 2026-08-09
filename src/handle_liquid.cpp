@@ -485,10 +485,10 @@ static bool handle_keg_or_ground_target( Character &player_character, item &liqu
         map &here = get_map();
         if( target.dest_opt == LD_KEG ) {
             iexamine::pour_into_keg( target.pos, liquid, silent );
-        } else if( finite_water::is_pond_or_pool_tile( here.get_abs( target.pos ) ) ) {
-            // Pouring into a finite pond or pool: the liquid is stored in the
-            // shared capacity of the whole connected pond/pool.  Whatever does
-            // not fit stays in the source instead of being swallowed.
+        } else if( finite_water::can_pour_into( here.get_abs( target.pos ) ) ) {
+            // Store liquid in the shared capacity of the connected finite
+            // water body or channel.  Whatever does not fit stays in the
+            // source instead of being swallowed.
             finite_water::pour_into_finite_water( here.get_abs( target.pos ), liquid );
         } else {
             here.add_item_or_charges( target.pos, liquid );

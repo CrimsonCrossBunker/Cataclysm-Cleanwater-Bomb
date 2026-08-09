@@ -210,6 +210,7 @@ static void done_digormine_stair( const tripoint_bub_ms &, bool, Character & );
 static void done_dig_grave( const tripoint_bub_ms &p, Character & );
 static void done_dig_grave_nospawn( const tripoint_bub_ms &p, Character & );
 static void done_channel_fill( const tripoint_bub_ms &, Character & );
+static void done_channel_close( const tripoint_bub_ms &, Character & );
 static void done_dig_stair( const tripoint_bub_ms &, Character & );
 static void done_mine_downstair( const tripoint_bub_ms &, Character & );
 static void done_mine_upstair( const tripoint_bub_ms &, Character & );
@@ -1571,6 +1572,7 @@ bool construct::check_channel( const tripoint_bub_ms &p )
         case water_source_kind::salt_infinite:
             return true;
         case water_source_kind::fresh_finite:
+        case water_source_kind::salt_finite:
             // Digging an open channel does not create or require water.  The
             // connected finite body will redistribute whatever it actually
             // contains when construction finishes.
@@ -2105,6 +2107,11 @@ void construct::done_channel_fill( const tripoint_bub_ms &p, Character & )
     finite_water::fill_channel_at( get_map().get_abs( p ) );
 }
 
+void construct::done_channel_close( const tripoint_bub_ms &p, Character & )
+{
+    finite_water::refresh_adjacent_waterways( get_map().get_abs( p ) );
+}
+
 void construct::done_dig_stair( const tripoint_bub_ms &p, Character &who )
 {
     done_digormine_stair( p, true, who );
@@ -2440,6 +2447,7 @@ void construction::load( const JsonObject &jo, const std::string_view )
             { "done_dig_grave", construct::done_dig_grave },
             { "done_dig_grave_nospawn", construct::done_dig_grave_nospawn },
             { "done_channel_fill", construct::done_channel_fill },
+            { "done_channel_close", construct::done_channel_close },
             { "done_dig_stair", construct::done_dig_stair },
             { "done_mine_downstair", construct::done_mine_downstair },
             { "done_mine_upstair", construct::done_mine_upstair },

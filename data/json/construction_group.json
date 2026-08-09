@@ -1016,6 +1016,16 @@
   },
   {
     "type": "construction_group",
+    "id": "dig_a_small_water_basin",
+    "name": "Dig a Small Water Basin"
+  },
+  {
+    "type": "construction_group",
+    "id": "fill_a_water_channel",
+    "name": "Fill a Water Channel"
+  },
+  {
+    "type": "construction_group",
     "id": "dig_downstair",
     "name": "Dig Downstairs"
   },

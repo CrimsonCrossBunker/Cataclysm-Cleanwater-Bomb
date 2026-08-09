@@ -83,11 +83,11 @@
     "color": "light_blue",
     "looks_like": "t_water_sh",
     "move_cost": 5,
-    "flags": [ "TRANSPARENT", "LIQUID", "NO_SCENT", "SWIMMABLE", "FISHABLE", "SHALLOW_WATER" ],
+    "flags": [ "TRANSPARENT", "LIQUID", "LIQUIDCONT", "NO_SCENT", "SWIMMABLE", "FISHABLE", "SHALLOW_WATER" ],
     "connect_groups": "WATER",
     "connects_to": "WATER",
-    "liquid_source": { "id": "water_murky", "min_temp": 2.2 },
-    "examine_action": "water_source",
+    "liquid_source": { "id": "water_murky", "count": [ 400, 400 ], "min_temp": 2.2, "dries_to": "t_murky_bottom_dry" },
+    "examine_action": "finite_water_source",
     "phase_targets": [ "t_ice_sh_thick", "t_ice_sh_thin", "t_pseudo_phase" ],
     "phase_temps": [ -15, -10 ],
     "phase_method": "water_freeze"
@@ -103,11 +103,11 @@
     "looks_like": "t_water_sh",
     "move_cost": 5,
     "roof": "t_rock_roof",
-    "flags": [ "TRANSPARENT", "LIQUID", "NO_SCENT", "SWIMMABLE", "FISHABLE", "INDOORS", "SHALLOW_WATER" ],
+    "flags": [ "TRANSPARENT", "LIQUID", "LIQUIDCONT", "NO_SCENT", "SWIMMABLE", "FISHABLE", "INDOORS", "SHALLOW_WATER" ],
     "connect_groups": [ "INDOORFLOOR", "WATER" ],
     "connects_to": "WATER",
-    "liquid_source": { "id": "water_murky", "min_temp": 2.2 },
-    "examine_action": "water_source",
+    "liquid_source": { "id": "water_murky", "count": [ 400, 400 ], "min_temp": 2.2, "dries_to": "t_murky_bottom_dry_underground" },
+    "examine_action": "finite_water_source",
     "phase_targets": [ "t_ice_sh_thick", "t_ice_sh_thin", "t_pseudo_phase" ],
     "phase_temps": [ -15, -10 ],
     "phase_method": "water_freeze"
@@ -360,9 +360,9 @@
     "looks_like": "t_water_murky",
     "color": "light_green",
     "move_cost": 6,
-    "liquid_source": { "id": "water_sewage", "min_temp": 2.2 },
-    "flags": [ "TRANSPARENT", "SWIMMABLE", "SHALLOW_WATER" ],
-    "examine_action": "water_source",
+    "liquid_source": { "id": "water_sewage", "count": [ 400, 400 ], "min_temp": 2.2, "dries_to": "t_sewage_bottom_dry" },
+    "flags": [ "TRANSPARENT", "LIQUIDCONT", "SWIMMABLE", "SHALLOW_WATER" ],
+    "examine_action": "finite_water_source",
     "phase_targets": [ "t_ice_sh_thick", "t_ice_sh_thin", "t_pseudo_phase" ],
     "phase_temps": [ -15, -10 ],
     "phase_method": "water_freeze"
@@ -539,11 +539,11 @@
     "color": "light_blue",
     "move_cost": 5,
     "heat_radiation": 1,
-    "flags": [ "TRANSPARENT", "LIQUID", "NO_SCENT", "SWIMMABLE", "SHALLOW_WATER" ],
+    "flags": [ "TRANSPARENT", "LIQUID", "LIQUIDCONT", "NO_SCENT", "SWIMMABLE", "SHALLOW_WATER" ],
     "connect_groups": "WATER",
     "connects_to": "WATER",
-    "liquid_source": { "id": "water_murky", "min_temp": 70 },
-    "examine_action": "water_source"
+    "liquid_source": { "id": "water_murky", "count": [ 400, 400 ], "min_temp": 70, "dries_to": "t_hot_spring_bottom_dry" },
+    "examine_action": "finite_water_source"
   },
   {
     "type": "terrain",
@@ -589,11 +589,11 @@
     "color": "light_blue",
     "move_cost": 5,
     "roof": "t_rock_roof",
-    "flags": [ "TRANSPARENT", "LIQUID", "NO_SCENT", "SWIMMABLE", "INDOORS", "SHALLOW_WATER" ],
+    "flags": [ "TRANSPARENT", "LIQUID", "LIQUIDCONT", "NO_SCENT", "SWIMMABLE", "INDOORS", "SHALLOW_WATER" ],
     "connect_groups": [ "INDOORFLOOR", "WATER" ],
     "connects_to": "WATER",
-    "liquid_source": { "id": "water", "min_temp": 2.2 },
-    "examine_action": "water_source",
+    "liquid_source": { "id": "water", "count": [ 400, 400 ], "min_temp": 2.2, "dries_to": "t_flood_bottom_dry" },
+    "examine_action": "finite_water_source",
     "phase_targets": [ "t_ice_sh_thick", "t_ice_sh_thin", "t_pseudo_phase" ],
     "phase_temps": [ -10, -5 ],
     "phase_method": "water_freeze"
@@ -657,11 +657,11 @@
     "looks_like": "t_water_sh",
     "color": "light_blue",
     "move_cost": 5,
-    "flags": [ "TRANSPARENT", "LIQUID", "NO_SCENT", "SWIMMABLE", "FISHABLE", "INDOORS", "SHALLOW_WATER" ],
+    "flags": [ "TRANSPARENT", "LIQUID", "LIQUIDCONT", "NO_SCENT", "SWIMMABLE", "FISHABLE", "INDOORS", "SHALLOW_WATER" ],
     "connect_groups": [ "INDOORFLOOR", "WATER" ],
     "connects_to": "WATER",
-    "liquid_source": { "id": "mutagen_interstice", "min_temp": 2.2 },
-    "examine_action": "water_source"
+    "liquid_source": { "id": "mutagen_interstice", "count": [ 400, 400 ], "min_temp": 2.2, "dries_to": "t_interstice_bottom_dry_sh" },
+    "examine_action": "finite_water_source"
   },
   {
     "type": "terrain",
@@ -672,10 +672,10 @@
     "looks_like": "t_water_sh",
     "color": "light_blue",
     "move_cost": 5,
-    "flags": [ "TRANSPARENT", "LIQUID", "NO_SCENT", "SWIMMABLE", "FISHABLE", "INDOORS", "SHALLOW_WATER" ],
+    "flags": [ "TRANSPARENT", "LIQUID", "LIQUIDCONT", "NO_SCENT", "SWIMMABLE", "FISHABLE", "INDOORS", "SHALLOW_WATER" ],
     "connect_groups": [ "INDOORFLOOR", "WATER" ],
     "connects_to": "WATER",
-    "liquid_source": { "id": "mutagen_interstice", "min_temp": 2.2 },
-    "examine_action": "water_source"
+    "liquid_source": { "id": "mutagen_interstice", "count": [ 400, 400 ], "min_temp": 2.2, "dries_to": "t_interstice_pool_bottom_dry" },
+    "examine_action": "finite_water_source"
   }
 ]

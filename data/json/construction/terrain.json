@@ -367,5 +367,43 @@
     "byproducts": [ { "group": "digging_soil_loam_50L", "count": 5 } ],
     "activity_level": "EXTRA_EXERCISE",
     "do_turn_special": "do_turn_shovel"
+  },
+  {
+    "type": "construction",
+    "id": "constr_small_water_basin",
+    "skill": "survival",
+    "group": "dig_a_small_water_basin",
+    "category": "CONSTRUCT",
+    "difficulty": 1,
+    "time": "30m",
+    "qualities": [ { "id": "DIG", "level": 1 } ],
+    "pre_flags": [ "DIGGABLE", "FLAT" ],
+    "pre_special": "check_empty",
+    "post_terrain": "t_pond_bottom_dry_sh",
+    "byproducts": [ { "group": "digging_soil_loam_50L", "count": 5 } ],
+    "activity_level": "EXTRA_EXERCISE",
+    "do_turn_special": "do_turn_shovel"
+  },
+  {
+    "type": "construction",
+    "id": "constr_fill_water_channel",
+    "group": "fill_a_water_channel",
+    "category": "CONSTRUCT",
+    "required_skills": [ [ "survival", 0 ] ],
+    "time": "10m",
+    "qualities": [ [ { "id": "DIG", "level": 1 } ] ],
+    "components": [ [ [ "material_soil", 50 ] ] ],
+    "dark_craftable": true,
+    "pre_terrain": [
+      "t_channel_dry",
+      "t_channel_water_fresh",
+      "t_channel_water_salt",
+      "t_channel_flowing_fresh",
+      "t_channel_flowing_salt"
+    ],
+    "post_terrain": "t_dirt",
+    "post_special": "done_channel_close",
+    "do_turn_special": "do_turn_shovel",
+    "activity_level": "EXTRA_EXERCISE"
   }
 ]
