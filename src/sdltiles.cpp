@@ -4256,11 +4256,13 @@ void cata_cursesport::curses_drawwindow( const catacurses::window &w )
         // Special font for the terrain window
         update = draw_window( overmap_font, w, force_full );
     } else if( g && w == g->w_pixel_minimap && pixel_minimap_option ) {
-#if defined(__ANDROID__)
-        // Android's HUD publishes an explicit screen-space rectangle and draws
-        // its minimap during refresh_display().  The curses window remains the
-        // 1x1 placeholder created by game::init_ui(); rendering it here leaves a
-        // tiny duplicate minimap at the upper-left corner of the game surface.
+#if defined(__ANDROID__) && defined(CCB_ANDROID_NEW_UI) && CCB_ANDROID_NEW_UI
+        // Only the new Android UI publishes an explicit screen-space rectangle
+        // and draws its minimap during refresh_display().  The curses window
+        // remains the 1x1 placeholder created by game::init_ui(); rendering it
+        // here would leave a tiny duplicate minimap at the upper-left corner
+        // of the game surface.  Legacy Android UI builds still use the curses
+        // path below, exactly like the desktop version.
 #else
         // ensure the space the minimap covers is "dirtied".
         // this is necessary when it's the only part of the sidebar being drawn
