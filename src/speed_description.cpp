@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "catalua_platform_content.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 
@@ -9,6 +10,11 @@ namespace
 {
 generic_factory<speed_description> speed_description_factory( "speed_description" );
 } // namespace
+
+generic_factory<speed_description> &cata::lua_platform::detail::speed_description_registry()
+{
+    return speed_description_factory;
+}
 
 template<>
 const speed_description &speed_description_id::obj() const
