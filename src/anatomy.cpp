@@ -35,6 +35,11 @@ generic_factory<anatomy> anatomy_factory( "anatomy" );
 
 } // namespace
 
+generic_factory<anatomy> &cata::lua_platform::detail::anatomy_registry()
+{
+    return anatomy_factory;
+}
+
 template<>
 bool anatomy_id::is_valid() const
 {
@@ -363,3 +368,4 @@ bodypart_id anatomy::select_body_part_projectile_attack( const double range_min,
     // And now, select the right body part
     return graph.select( range_min, range_max, value );
 }
+#include "catalua_platform_content.h"
