@@ -1,6 +1,7 @@
 #include "vitamin.h"
 
 #include "calendar.h"
+#include "catalua_platform_content.h"
 #include "debug.h"
 #include "enum_conversions.h"
 #include "flexbuffer_json.h"
@@ -15,6 +16,11 @@ namespace
 generic_factory<vitamin> vitamin_factory( "vitamin" );
 
 } // namespace
+
+generic_factory<vitamin> &cata::lua_platform::detail::vitamin_registry()
+{
+    return vitamin_factory;
+}
 
 /** @relates string_id */
 template<>
