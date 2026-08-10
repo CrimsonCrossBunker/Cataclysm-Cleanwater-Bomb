@@ -18,6 +18,11 @@ class JsonObject;
 template<typename T>
 class generic_factory;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+}
+
 enum class steed_type : int {
     NONE,
     ANIMAL,
@@ -37,6 +42,7 @@ class move_mode
 
         friend class generic_factory<move_mode>;
         friend struct mod_tracker;
+        friend class cata::lua_platform::content_transaction;
 
         bool was_loaded = false;
         move_mode_id id;
