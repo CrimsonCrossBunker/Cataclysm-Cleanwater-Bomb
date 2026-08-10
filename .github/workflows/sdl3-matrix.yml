@@ -66,7 +66,7 @@ jobs:
 
     - name: setup SDL3 (for shadercross link)
       id: sdl
-      uses: libsdl-org/setup-sdl@a966470e7d9b6a5c93eec3f08d5dac370325c860 # main
+      uses: libsdl-org/setup-sdl@afd98199e97f9c2aa739474be7e0886d149a5e47 # main
       with:
         version: 3.4.10
         cmake-generator: Ninja
