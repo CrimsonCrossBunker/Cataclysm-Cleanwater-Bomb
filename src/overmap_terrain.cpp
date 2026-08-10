@@ -10,6 +10,7 @@
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "catacharset.h"
+#include "catalua_platform_content.h"
 #include "coordinates.h"
 #include "debug.h"
 #include "generic_factory.h"
@@ -86,6 +87,17 @@ generic_factory<oter_type_t> terrain_types( "overmap terrain type" );
 generic_factory<oter_t> terrains( "overmap terrain" );
 
 } // namespace
+
+generic_factory<overmap_land_use_code> &
+cata::lua_platform::detail::overmap_land_use_code_registry()
+{
+    return land_use_codes;
+}
+
+generic_factory<oter_vision> &cata::lua_platform::detail::overmap_vision_registry()
+{
+    return oter_vision_factory;
+}
 
 template<>
 const overmap_land_use_code &overmap_land_use_code_id::obj() const
