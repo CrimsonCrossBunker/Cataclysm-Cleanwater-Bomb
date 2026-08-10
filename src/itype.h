@@ -50,6 +50,11 @@ class Trait_group;
 class map;
 template <typename E> struct enum_traits;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+} // namespace cata::lua_platform
+
 class gun_modifier_data
 {
     private:
@@ -1414,6 +1419,7 @@ struct item_melee_damage {
 struct itype {
         friend class Item_factory;
         friend struct mod_tracker;
+        friend class cata::lua_platform::content_transaction;
 
         using FlagsSetType = cata::flat_set<flag_id>;
 
