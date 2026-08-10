@@ -16,6 +16,11 @@
 namespace behavior
 {
 
+const Creature *monster_oracle_t::get_subject() const
+{
+    return subject;
+}
+
 status_t monster_oracle_t::not_hallucination( std::string_view ) const
 {
     return subject->is_hallucination() ? status_t::failure : status_t::running;
