@@ -286,7 +286,12 @@ def split_top_level(contents: str) -> list[str]:
 
 
 def cpp_sources() -> list[Path]:
-    return sorted((REPOSITORY_ROOT / "src").glob("catalua*.cpp"))
+    # This generator is the API v5 denominator; Platform v1 is separate.
+    return sorted(
+        path
+        for path in (REPOSITORY_ROOT / "src").glob("catalua*.cpp")
+        if not path.name.startswith("catalua_platform")
+    )
 
 
 def parse_luals(path: Path = DECLARATIONS) -> dict[str, object]:
