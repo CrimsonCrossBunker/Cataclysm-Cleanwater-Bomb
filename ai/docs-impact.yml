@@ -97,6 +97,21 @@ entries:
       - data/lua/LUA_FIRST_PLATFORM.md
       - ai/lua-first-roadmap.yml
       - ai/lua-first-roadmap.schema.json
+      - ai/lua-first-replacement-ledger.yml
+      - ai/lua-first-replacement-ledger.schema.json
+      - data/lua/types/ccb_platform_v1.d.lua
+      - data/lua/templates/**
+      - data/mods/Lua_First_Example/**
+      - tools/create_lua_mod.py
+      - tools/migrate_lua_first.py
+      - src/catalua_platform*.cpp
+      - src/catalua_platform*.h
+      - src/mod_manager.cpp
+      - src/mod_manager.h
+      - src/mod_manager_ui.cpp
+      - src/game_io.cpp
+      - src/game.cpp
+      - src/do_turn.cpp
     documentation_ids:
       - architecture.lua-first-platform
       - architecture.lua-first-roadmap
