@@ -16,6 +16,11 @@
 class JsonObject;
 template <typename T> class generic_factory;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+} // namespace cata::lua_platform
+
 // Bit positions for the flags that drive item::stacks_with.
 // Reload-safe: positions are compile-time constants, not int_ids.
 enum class hot_flag_bit : uint64_t {
@@ -457,6 +462,7 @@ class json_flag
 {
         friend class DynamicDataLoader;
         friend class generic_factory<json_flag>;
+        friend class cata::lua_platform::content_transaction;
 
     public:
         // used by generic_factory
