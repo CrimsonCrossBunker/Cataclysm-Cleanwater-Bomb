@@ -49,6 +49,11 @@ struct mutable_overmap_placement_rule_remainder;
 template <typename E> struct enum_traits;
 template <typename T> class generic_factory;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+}
+
 using join_map = std::unordered_map<cube_direction, mutable_overmap_terrain_join>;
 using overmap_land_use_code_id = string_id<overmap_land_use_code>;
 class overmap;
@@ -399,6 +404,7 @@ class oter_vision
     private:
         friend class generic_factory<oter_vision>;
         friend struct mod_tracker;
+        friend class cata::lua_platform::content_transaction;
         oter_vision_id id;
         std::vector<std::pair<oter_vision_id, mod_id>> src;
         bool was_loaded = false;
