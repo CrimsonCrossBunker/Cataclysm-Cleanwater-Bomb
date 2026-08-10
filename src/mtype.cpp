@@ -563,7 +563,12 @@ void mtype::set_strategy()
 
 void mtype::add_goal( const std::string &goal_id )
 {
-    goals.add_child( &string_id<behavior::node_t>( goal_id ).obj() );
+    goals.add_child_id( goal_id );
+}
+
+void mtype::rebuild_goals()
+{
+    goals.rebuild_children();
 }
 
 const behavior::node_t *mtype::get_goals() const
