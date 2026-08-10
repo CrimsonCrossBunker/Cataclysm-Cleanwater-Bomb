@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_UI_H
 #define CATA_SRC_UI_H
 
+#include <algorithm>
 #include <functional>
 #include <initializer_list>
 #include <map>
@@ -45,6 +46,16 @@ class string_input_popup_imgui;
 class uilist_impl;
 
 catacurses::window new_centered_win( int nlines, int ncols );
+
+// Fit a menu into the content region that remains after any preceding controls were drawn.
+// Horizontal side columns consume part of that region; vertical controls have already been
+// accounted for by ImGui in available_size.y.
+inline ImVec2 uilist_menu_size_for_available_region( const ImVec2 &available_size,
+        const float extra_space_left, const float extra_space_right )
+{
+    return ImVec2( std::max( 1.0F, available_size.x - extra_space_left - extra_space_right ),
+                   std::max( 1.0F, available_size.y ) );
+}
 
 /**
  * mvwzstr: line of text with horizontal offset and color
@@ -497,7 +508,7 @@ class uilist // NOLINT(cata-xy)
         bool hilight_disabled = false;
         // if true, calculates size to include all categories
         bool size_to_all_categories = false;
-        // if true, forces `calculated_menu_size` to equal `desired_bounds`
+        // if true, fills the actual content region inside `desired_bounds`
         bool force_desired_bounds = false;
 
     private:
