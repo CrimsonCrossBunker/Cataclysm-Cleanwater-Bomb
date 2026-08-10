@@ -27,6 +27,11 @@ struct itype;
 template <typename T> class generic_factory;
 enum class bp_type;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+} // namespace cata::lua_platform
+
 const matec_id tec_none( "tec_none" );
 
 class weapon_category
@@ -57,6 +62,7 @@ class weapon_category
     private:
         friend class generic_factory<weapon_category>;
         friend struct mod_tracker;
+        friend class cata::lua_platform::content_transaction;
 
         weapon_category_id id;
         std::vector<std::pair<weapon_category_id, mod_id>> src;
@@ -76,10 +82,13 @@ struct attack_vector {
 
     // Explicit bodypart definitions
     std::vector<bodypart_str_id> limbs;
+    // Authored values used to rebuild substitution expansions idempotently.
+    std::vector<bodypart_str_id> authored_limbs;
     // If true no limb substitution step happens
     bool strict_limb_definition = false;
     // The actual contact area for unarmed damage calcs
     std::vector<sub_bodypart_str_id> contact_area;
+    std::vector<sub_bodypart_str_id> authored_contact_area;
     // If we have any bodypart count restrictions
     std::vector<std::pair<bp_type, int>> limb_req;
     // Do we care about armor damage bonuses
