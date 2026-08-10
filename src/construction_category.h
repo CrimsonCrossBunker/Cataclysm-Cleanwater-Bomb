@@ -13,6 +13,11 @@
 
 class JsonObject;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+} // namespace cata::lua_platform
+
 struct construction_category {
         void load( const JsonObject &jo, std::string_view src );
 
@@ -26,6 +31,7 @@ struct construction_category {
         static size_t count();
 
     private:
+        friend class cata::lua_platform::content_transaction;
         translation _name;
 };
 
