@@ -11,6 +11,7 @@ from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DECLARATIONS = Path("data/lua/types/ccb_api_v5.d.lua")
+PLATFORM_DECLARATIONS = Path("data/lua/types/ccb_platform_v1.d.lua")
 
 TABLE_CLASSES = {
     "achievements": "CcbAchievementsApi",
@@ -123,6 +124,10 @@ NEW_USERTYPE = re.compile(
     r"new_usertype\s*<[^>]+>\s*\(\s*\"([^\"]+)\"",
     re.DOTALL,
 )
+QUOTED_MEMBER = re.compile(r'"([A-Za-z_][A-Za-z0-9_]*)"\s*,')
+PLATFORM_PROPERTY = re.compile(
+    r'"([A-Za-z_][A-Za-z0-9_]*)"\s*,\s*sol::property\s*\('
+)
 COORDINATE_KIND = re.compile(
     r'\{\s*"([a-z]+_[a-z]+)"\s*,\s*coords::origin::'
 )
@@ -153,7 +158,19 @@ LUA_RESERVED_WORDS = {
 
 
 def catalua_sources() -> list[Path]:
-    return sorted((REPOSITORY_ROOT / "src").glob("catalua*.cpp"))
+    # Platform v1 has an independent declaration and version contract.
+    return sorted(
+        path
+        for path in (REPOSITORY_ROOT / "src").glob("catalua*.cpp")
+        if not path.name.startswith("catalua_platform")
+    )
+
+
+def platform_sources() -> list[Path]:
+    return [
+        REPOSITORY_ROOT / "src/catalua_platform.cpp",
+        REPOSITORY_ROOT / "src/catalua_platform_runtime.cpp",
+    ]
 
 
 def source_methods() -> dict[str, set[str]]:
@@ -170,6 +187,135 @@ def source_usertypes() -> set[str]:
     for path in catalua_sources():
         contents = path.read_text(encoding="utf-8", errors="replace")
         result.update(NEW_USERTYPE.findall(contents))
+    return result
+
+
+def platform_source_usertypes() -> set[str]:
+    result: set[str] = set()
+    for path in platform_sources():
+        contents = path.read_text(encoding="utf-8", errors="replace")
+        result.update(NEW_USERTYPE.findall(contents))
+    return result
+
+
+def platform_usertype_members() -> dict[str, set[str]]:
+    result: dict[str, set[str]] = defaultdict(set)
+    for path in platform_sources():
+        contents = path.read_text(encoding="utf-8", errors="replace")
+        for match in NEW_USERTYPE.finditer(contents):
+            usertype = match.group(1)
+            opening = contents.find("(", match.start())
+            depth = 0
+            quoted = False
+            escaped = False
+            closing = opening
+            for closing in range(opening, len(contents)):
+                character = contents[closing]
+                if quoted:
+                    if escaped:
+                        escaped = False
+                    elif character == "\\":
+                        escaped = True
+                    elif character == '"':
+                        quoted = False
+                    continue
+                if character == '"':
+                    quoted = True
+                elif character == "(":
+                    depth += 1
+                elif character == ")":
+                    depth -= 1
+                    if depth == 0:
+                        break
+            block = contents[match.end():closing]
+            result[usertype].update(QUOTED_MEMBER.findall(block))
+    return result
+
+
+def platform_source_properties() -> set[str]:
+    result: set[str] = set()
+    # ModDefinition remains the only property-bearing bootstrap usertype in
+    # catalua_platform.cpp. Runtime usertypes are checked by their declared
+    # classes and registered method tables below.
+    path = REPOSITORY_ROOT / "src/catalua_platform.cpp"
+    contents = path.read_text(encoding="utf-8", errors="replace")
+    result.update(PLATFORM_PROPERTY.findall(contents))
+    return result
+
+
+PLATFORM_TABLE_CLASSES = {
+    "content": "CcbPlatformContent",
+    "runtime_api": "CcbPlatformRuntime",
+    "scope": "CcbPlatformStateScope",
+    "tasks": "CcbPlatformTasks",
+    "presentation": "CcbPlatformPresentation",
+    "services": "CcbPlatformServices",
+}
+
+PLATFORM_SERVICE_FIELDS = {
+    "achievements",
+    "addictions",
+    "bionics",
+    "camps",
+    "characters",
+    "constants",
+    "coords",
+    "crafting",
+    "creatures",
+    "effects",
+    "enums",
+    "factions",
+    "followers",
+    "handles",
+    "hordes",
+    "inventory",
+    "items",
+    "martial_arts",
+    "messages",
+    "missions",
+    "mutations",
+    "needs",
+    "npcs",
+    "overmap",
+    "proficiencies",
+    "random",
+    "recipes",
+    "relocation",
+    "requirements",
+    "serde",
+    "skills",
+    "sound",
+    "spawns",
+    "spells",
+    "statistics",
+    "targeting",
+    "time",
+    "types",
+    "units",
+    "variables",
+    "vehicles",
+    "vitamins",
+    "weather",
+    "world",
+    "zones",
+}
+
+
+def platform_source_methods() -> dict[str, set[str]]:
+    result: dict[str, set[str]] = defaultdict(set)
+    for path in platform_sources():
+        contents = path.read_text(encoding="utf-8", errors="replace")
+        for table, method in SET_FUNCTION.findall(contents):
+            if table in PLATFORM_TABLE_CLASSES:
+                result[table].add(method)
+    # Platform installs this native snapshot layer directly into
+    # `ccb.services`.  The implementation is shared with v5, while the table
+    # membership is an independent Platform contract checked here.
+    shared_services = REPOSITORY_ROOT / "src/catalua_ui_game.cpp"
+    contents = shared_services.read_text(encoding="utf-8", errors="replace")
+    for table, method in SET_FUNCTION.findall(contents):
+        if table == "game":
+            result["services"].add(method)
     return result
 
 
@@ -224,6 +370,14 @@ def class_fields(contents: str, class_name: str) -> dict[str, str]:
         result[field_name] = field_type
         cursor += 1
     return result
+
+
+def class_methods(contents: str, class_name: str) -> list[str]:
+    return [
+        method
+        for declared_class, method in DECLARED_METHOD.findall(contents)
+        if declared_class == class_name
+    ]
 
 
 def validate_table_mappings(
@@ -368,7 +522,6 @@ def check(path: Path) -> dict[str, int]:
         raise RuntimeError(
             f"LuaLS declarations omit usertypes: {missing_types}"
         )
-
     coordinate_fields = set(
         re.findall(
             r"^---@field\s+((?:point|tripoint)_[a-z]+_[a-z]+)\s+fun",
@@ -403,6 +556,83 @@ def check(path: Path) -> dict[str, int]:
     }
 
 
+def check_platform(path: Path = PLATFORM_DECLARATIONS) -> dict[str, int]:
+    contents = path.read_text(encoding="utf-8")
+    if "Lua-first Platform v1" not in contents:
+        raise RuntimeError("LuaLS declaration header is not Platform v1")
+    validate_annotation_contracts(contents)
+    classes = set(DECLARED_CLASS.findall(contents))
+    usertypes = platform_source_usertypes()
+    missing_types = sorted(usertypes - classes)
+    if missing_types:
+        raise RuntimeError(
+            f"Platform LuaLS declarations omit usertypes: {missing_types}"
+        )
+    native_members = platform_usertype_members()
+    for usertype, members in native_members.items():
+        declared = set(class_fields(contents, usertype)) | set(
+            class_methods(contents, usertype)
+        )
+        if members != declared:
+            raise RuntimeError(
+                f"Platform LuaLS members differ from native {usertype}: "
+                f"declared={sorted(declared)}, native={sorted(members)}"
+            )
+    properties = platform_source_properties()
+    declared_properties = set(class_fields(contents, "ModDefinition"))
+    if properties != declared_properties:
+        raise RuntimeError(
+            "Platform LuaLS ModDefinition fields differ from native "
+            f"properties: declared={sorted(declared_properties)}, "
+            f"native={sorted(properties)}"
+        )
+    module_fields = class_fields(contents, "CcbPlatformV1")
+    expected_module_fields = {
+        "platform_version": "1",
+        "content": "CcbPlatformContent",
+        "runtime": "CcbPlatformRuntime",
+        "state": "CcbPlatformState",
+        "tasks": "CcbPlatformTasks",
+        "presentation": "CcbPlatformPresentation",
+        "services": "CcbPlatformServices",
+    }
+    for field, expected_type in expected_module_fields.items():
+        if module_fields.get(field) != expected_type:
+            raise RuntimeError(
+                f"Platform LuaLS module field {field} is "
+                f"{module_fields.get(field) or 'missing'}, expected {expected_type}"
+            )
+    constructor = module_fields.get("ModDefinition", "")
+    if not constructor.startswith("fun("):
+        raise RuntimeError("Platform LuaLS ModDefinition constructor is missing")
+    declared_service_fields = set(class_fields(contents, "CcbPlatformServices"))
+    if declared_service_fields != PLATFORM_SERVICE_FIELDS:
+        raise RuntimeError(
+            "Platform LuaLS service fields differ from the explicitly installed "
+            f"domain set: declared={sorted(declared_service_fields)}, "
+            f"expected={sorted(PLATFORM_SERVICE_FIELDS)}"
+        )
+    methods = platform_source_methods()
+    if set(methods) != set(PLATFORM_TABLE_CLASSES):
+        raise RuntimeError(
+            "Platform native method tables differ from checker mappings: "
+            f"native={sorted(methods)}, mapped={sorted(PLATFORM_TABLE_CLASSES)}"
+        )
+    for table, native_methods in methods.items():
+        declared = set(class_methods(contents, PLATFORM_TABLE_CLASSES[table]))
+        if native_methods != declared:
+            raise RuntimeError(
+                f"Platform LuaLS methods differ for {PLATFORM_TABLE_CLASSES[table]}: "
+                f"declared={sorted(declared)}, native={sorted(native_methods)}"
+            )
+    return {
+        "usertypes": len(usertypes),
+        "properties": len(properties),
+        "methods": sum(len(value) for value in methods.values()),
+        "usertype_members": sum(len(value) for value in native_members.values()),
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -410,12 +640,16 @@ def main() -> None:
     )
     args = parser.parse_args()
     result = check(args.declarations)
+    platform_result = check_platform()
     print(
         "LuaLS declarations cover "
         f"{result['methods']} methods across {result['tables']} tables, "
         f"{result['game_tables']} game API domains, "
         f"{result['usertypes']} usertypes, and "
-        f"{result['coordinate_factories']} coordinate factories."
+        f"{result['coordinate_factories']} coordinate factories; "
+        "Platform v1 covers "
+        f"{platform_result['usertypes']} usertypes and "
+        f"{platform_result['properties']} properties."
     )
 
 
