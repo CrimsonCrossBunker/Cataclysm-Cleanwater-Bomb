@@ -77,6 +77,9 @@ class node_t
                             new_predicate, const std::string &argument = "", const bool &invert_result = false );
         void set_goal( const std::string &new_goal );
         void add_child( const node_t *new_child );
+        void add_child_id( const std::string &new_child );
+        const std::vector<std::string> &child_ids() const;
+        void rebuild_children();
         using score_type = std::function<float( const oracle_t *, std::string_view )>;
         void set_score_function( const score_type &func, const std::string &argument = "" );
 
@@ -88,6 +91,7 @@ class node_t
         bool was_loaded = false;
     private:
         std::vector<const node_t *> children;
+        std::vector<std::string> authored_children;
         const strategy_t *strategy = nullptr;
         using predicate_type = std::function<status_t( const oracle_t *, const std::string & )>;
         std::vector<std::tuple<predicate_type, std::string, bool>> conditions;
