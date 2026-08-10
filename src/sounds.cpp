@@ -2034,6 +2034,29 @@ bool sfx::has_exact_variant_sound( std::string_view id, std::string_view variant
 
 #else // if defined(SDL_SOUND)
 
+namespace
+{
+std::unordered_map<std::string, sfx::playlist_definition> disabled_playlists;
+}
+
+std::optional<sfx::playlist_definition> sfx::playlist_registry_get(
+    const std::string_view id )
+{
+    const auto found = disabled_playlists.find( std::string( id ) );
+    return found == disabled_playlists.end() ? std::nullopt :
+           std::optional<playlist_definition>( found->second );
+}
+
+void sfx::playlist_registry_set( const playlist_definition &value )
+{
+    disabled_playlists[value.id] = value;
+}
+
+void sfx::playlist_registry_erase( const std::string_view id )
+{
+    disabled_playlists.erase( std::string( id ) );
+}
+
 /** Dummy implementations for builds without sound */
 /*@{*/
 void sfx::load_sound_effects( const JsonObject & ) { }
