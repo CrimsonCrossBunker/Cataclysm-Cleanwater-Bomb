@@ -1119,9 +1119,7 @@ bool spell::can_cast( const Character &guy ) const
         return false;
     }
 
-    if( !type->spell_components.is_empty() &&
-        !type->spell_components->can_make_with_inventory( guy.crafting_inventory( guy.pos_bub(), 0, false ),
-                return_true<item> ) ) {
+    if( !has_required_components( guy ) ) {
         return false;
     }
 
@@ -1246,6 +1244,13 @@ const requirement_data &spell::components() const
 bool spell::has_components() const
 {
     return !type->spell_components.is_empty();
+}
+
+bool spell::has_required_components( const Character &guy ) const
+{
+    return !has_components() ||
+           type->spell_components->can_make_with_inventory(
+               guy.crafting_inventory( guy.pos_bub(), 0, false ), return_true<item> );
 }
 
 std::string spell::name() const

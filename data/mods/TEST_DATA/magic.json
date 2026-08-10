@@ -1,5 +1,10 @@
 [
   {
+    "id": "test_components",
+    "type": "requirement",
+    "components": [ [ [ "test_rag", 1 ] ] ]
+  },
+  {
     "id": "test_eoc_spell",
     "type": "SPELL",
     "name": "Mana Bolt",

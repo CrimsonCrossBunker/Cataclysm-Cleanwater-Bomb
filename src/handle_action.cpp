@@ -2228,6 +2228,22 @@ bool Character::cast_spell( spell &sp, bool fake_spell,
         return false;
     }
 
+    // The spell menu disables powers that cannot currently be cast, but other
+    // entry points (notably recasting the last spell) bypass that menu.
+    if( sp.has_components() ) {
+        invalidate_crafting_inventory();
+    }
+    if( !sp.can_cast( *this ) ) {
+        if( !sp.has_required_components( *this ) ) {
+            add_msg( game_message_params{ m_bad, gmf_bypass_cooldown },
+                     _( "You don't have the components to cast %s." ), sp.name() );
+        } else {
+            add_msg( game_message_params{ m_bad, gmf_bypass_cooldown },
+                     _( "You cannot cast %s right now." ), sp.name() );
+        }
+        return false;
+    }
+
     std::optional<int> fake_spell_level;
     if( fake_spell ) {
         fake_spell_level = sp.get_level();
