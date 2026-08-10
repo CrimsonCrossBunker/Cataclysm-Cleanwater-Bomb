@@ -8,6 +8,7 @@
 
 #include "bodypart.h"
 #include "cata_assert.h"
+#include "catalua_platform_content.h"
 #include "character.h"
 #include "color.h"
 #include "debug.h"
@@ -59,6 +60,23 @@ namespace
 {
 std::map<efftype_id, effect_type> effect_types;
 } // namespace
+
+const effect_type *cata::lua_platform::detail::effect_type_registry_find(
+    const std::string &id )
+{
+    const auto found = effect_types.find( efftype_id( id ) );
+    return found == effect_types.end() ? nullptr : &found->second;
+}
+
+void cata::lua_platform::detail::effect_type_registry_set( const effect_type &value )
+{
+    effect_types[value.id] = value;
+}
+
+void cata::lua_platform::detail::effect_type_registry_erase( const std::string &id )
+{
+    effect_types.erase( efftype_id( id ) );
+}
 
 void vitamin_rate_effect::load( const JsonObject &jo )
 {
