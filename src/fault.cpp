@@ -3,6 +3,7 @@
 #include <utility>
 #include <vector>
 
+#include "catalua_platform_content.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
@@ -24,6 +25,11 @@ std::multimap<fault_fix_id, std::pair<std::string, int>> reqs_temp_storage;
 std::map<std::string, std::vector<fault_id>> faults_by_type;
 
 } // namespace
+
+generic_factory<fault_group> &cata::lua_platform::detail::fault_group_registry()
+{
+    return fault_group_factory;
+}
 
 std::vector<fault_id> faults::all_of_type( const std::string &type )
 {
@@ -73,6 +79,7 @@ void faults::reset()
 {
     fault_factory.reset();
     fault_fixes_factory.reset();
+    fault_group_factory.reset();
     faults_by_type.clear();
 }
 
@@ -80,6 +87,7 @@ void faults::finalize()
 {
     fault_factory.finalize();
     fault_fixes_factory.finalize();
+    fault_group_factory.finalize();
 
     for( const fault &f : fault_factory.get_all() ) {
         if( !f.type().empty() ) {
