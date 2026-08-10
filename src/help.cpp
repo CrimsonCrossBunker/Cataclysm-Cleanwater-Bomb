@@ -238,6 +238,14 @@ void help::reset_instance()
     current_order_start = 0;
     current_src = "";
     help_texts.clear();
+    platform_help_topic_orders.clear();
+}
+
+std::optional<int> help::platform_topic_order( const std::string &id ) const
+{
+    const auto found = platform_help_topic_orders.find( id );
+    return found == platform_help_topic_orders.end() ? std::nullopt :
+           std::optional<int>( found->second );
 }
 
 void help::load_object( const JsonObject &jo, const std::string &src )
