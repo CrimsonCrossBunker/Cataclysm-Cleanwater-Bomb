@@ -21,6 +21,11 @@ class JsonOut;
 class item;
 class recipe;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+} // namespace cata::lua_platform
+
 struct time_info_t {
     // Absolute floor on the time taken to attack.
     int min_time = 50;
@@ -33,6 +38,7 @@ struct time_info_t {
 class Skill
 {
         friend class string_id<Skill>;
+        friend class cata::lua_platform::content_transaction;
         skill_id _ident;
 
         translation _name;
@@ -298,6 +304,7 @@ class SkillLevelMap : public std::map<skill_id, SkillLevel>
 class SkillDisplayType
 {
         friend class string_id<SkillDisplayType>;
+        friend class cata::lua_platform::content_transaction;
         skill_displayType_id _ident;
         translation _display_string;
     public:
