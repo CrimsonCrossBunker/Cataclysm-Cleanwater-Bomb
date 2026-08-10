@@ -600,6 +600,7 @@ class spell
         // the requirement data for spell components. includes tools, items, and qualities.
         const requirement_data &components() const;
         bool has_components() const;
+        bool has_required_components( const Character &guy ) const;
         // can the Character cast this spell?
         bool can_cast( const Character &guy ) const;
         bool can_cast( const Character &guy, std::map<magic_type_id, bool> &success_tracker );

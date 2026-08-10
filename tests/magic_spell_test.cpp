@@ -1,13 +1,17 @@
 #include <memory>
+#include <optional>
 #include <string>
 
+#include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "cata_catch.h"
 #include "coordinates.h"
 #include "creature.h"
 #include "creature_tracker.h"
+#include "debug.h"
 #include "dialogue_helpers.h"
 #include "game.h"
+#include "item.h"
 #include "json_loader.h"
 #include "magic.h"
 #include "magic_type.h"
@@ -22,8 +26,10 @@
 #include "type_id.h"
 
 static const spell_id spell_test_spell_box( "test_spell_box" );
+static const spell_id spell_test_spell_json( "test_spell_json" );
 static const spell_id spell_test_spell_tp_ghost( "test_spell_tp_ghost" );
 static const spell_id spell_test_spell_tp_mummy( "test_spell_tp_mummy" );
+static const itype_id itype_test_rag( "test_rag" );
 
 // Magic Spell tests
 // -----------------
@@ -114,6 +120,42 @@ TEST_CASE( "spell_level", "[magic][spell][level]" )
             }
         }
     }
+}
+
+TEST_CASE( "spell_cast_checks_components_at_start_and_finish", "[magic][spell][components]" )
+{
+    avatar &caster = get_avatar();
+    clear_character( caster );
+    clear_map_without_vision();
+    caster.magic->set_mana( caster.magic->max_mana( caster ) );
+    caster.magic->learn_spell( spell_test_spell_json, caster, true );
+
+    spell &component_spell = caster.magic->get_spell( spell_test_spell_json );
+    REQUIRE( component_spell.has_components() );
+    REQUIRE_FALSE( component_spell.has_required_components( caster ) );
+
+    CHECK_FALSE( caster.cast_spell( component_spell, false, std::nullopt ) );
+    CHECK( caster.activity.is_null() );
+
+    caster.i_add( item( itype_test_rag ) );
+    REQUIRE( component_spell.has_required_components( caster ) );
+    CHECK( caster.cast_spell( component_spell, false, std::nullopt ) );
+    CHECK_FALSE( caster.activity.is_null() );
+    caster.cancel_activity();
+
+    caster.remove_items_with( []( const item & it ) {
+        return it.typeId() == itype_test_rag;
+    } );
+    caster.remove_weapon();
+    REQUIRE_FALSE( caster.has_amount( itype_test_rag, 1 ) );
+    caster.assign_activity( spellcasting_activity_actor(
+                                time_duration::from_moves<int>( 1 ), component_spell.id(), caster.pos_abs(),
+                                std::nullopt, true, true ) );
+    const std::string debug_message = capture_debugmsg_during( [&caster]() {
+        process_activity( caster );
+    } );
+    CHECK( debug_message.empty() );
+    CHECK( caster.activity.is_null() );
 }
 
 static int char_to_invlet( char c )
@@ -944,4 +986,3 @@ TEST_CASE( "spell_lua_effect_copy_from_inheritance", "[magic][spell][lua]" )
     CHECK( reclassified.effect_name == "attack" );
     CHECK( !reclassified.lua_effect.has_value() );
 }
-
