@@ -22,6 +22,11 @@ class JsonObject;
 class item;
 template <typename T> class generic_factory;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+}
+
 namespace faults
 {
 void load_fault( const JsonObject &jo, const std::string &src );
@@ -142,6 +147,7 @@ class fault_group
         void load( const JsonObject &jo, std::string_view );
         bool was_loaded = false;
         friend class generic_factory<fault_group>;
+        friend class cata::lua_platform::content_transaction;
         weighted_int_list<fault_id> fault_weighted_list;
 };
 
