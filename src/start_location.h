@@ -21,6 +21,12 @@ class avatar;
 class tinymap;
 enum class ot_match_type : int;
 struct city;
+template<typename T> class generic_factory;
+
+namespace cata::lua_platform
+{
+class content_transaction;
+}
 
 struct start_location_placement_constraints {
     numeric_interval<int> city_size;
@@ -110,6 +116,7 @@ class start_location
         /** @returns whether the start location at specified tripoint can belong to the specified city. */
         bool can_belong_to_city( const tripoint_om_omt &p, const city &cit ) const;
     private:
+        friend class cata::lua_platform::content_transaction;
         translation _name;
         std::vector<omt_types_parameters> _locations;
         std::set<std::string> _flags;
