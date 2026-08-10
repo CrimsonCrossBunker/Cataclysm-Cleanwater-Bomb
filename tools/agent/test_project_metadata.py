@@ -13,6 +13,7 @@ from check_project_metadata import (
     validate_lua_first_roadmap,
     validate_repository_settings,
 )
+from check_lua_first_replacement_ledger import check as check_lua_first_replacement_ledger
 
 
 class ProjectMetadataTest(unittest.TestCase):
@@ -67,6 +68,10 @@ class ProjectMetadataTest(unittest.TestCase):
 
     def test_lua_first_roadmap_is_valid(self):
         validate_lua_first_roadmap()
+
+    def test_lua_first_replacement_ledger_is_exact(self):
+        result = check_lua_first_replacement_ledger()
+        self.assertEqual(result["total"], 775)
 
     def test_lua_first_roadmap_rejects_dependency_cycles(self):
         path = ROOT / "ai/lua-first-roadmap.yml"
