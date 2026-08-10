@@ -9,6 +9,8 @@
 #include <utility>
 
 #include "calendar.h"
+#include "catalua_platform_content.h"
+#include "catalua_platform_runtime.h"
 #include "character.h"
 #include "creature.h"
 #include "debug.h"
@@ -37,6 +39,11 @@ namespace
 generic_factory<add_type> add_type_factory( "addiction" );
 
 } // namespace
+
+generic_factory<add_type> &cata::lua_platform::detail::addiction_type_registry()
+{
+    return add_type_factory;
+}
 
 /** @relates string_id */
 template<>
@@ -347,6 +354,11 @@ static const std::map<std::string, std::function<bool( Character &, addiction & 
 
 bool addiction::run_effect( Character &u )
 {
+    if( const std::optional<bool> lua_result =
+            cata::lua_platform::invoke_addiction_type_handler(
+                type.str(), u, intensity, to_turns<std::int64_t>( sated ) ) ) {
+        return *lua_result;
+    }
     bool ret = false;
     if( !type->get_effect().is_null() ) {
         dialogue d( get_talker_for( u ), nullptr );
@@ -375,6 +387,9 @@ void add_type::load( const JsonObject &jo, std::string_view )
 void add_type::check_add_types()
 {
     for( const add_type &add : add_type::get_all() ) {
+        if( add._lua_policy ) {
+            continue;
+        }
         if( add._effect.is_null() == add._builtin.empty() ) {
             debugmsg( "addiction_type \"%s\" defines %s effect_on_condition %s builtin.  Addictions must define either field, but not both.",
                       add.id.c_str(), add._builtin.empty() ? "neither" : "both", add._builtin.empty() ? "or" : "and" );
