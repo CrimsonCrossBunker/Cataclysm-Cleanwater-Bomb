@@ -12,13 +12,13 @@
 namespace
 {
 using ammo_map_t = std::unordered_map<ammotype, ammunition_type>;
+} //namespace
 
-ammo_map_t &all_ammunition_types()
+ammunition_type::registry_type &ammunition_type::registry()
 {
-    static ammo_map_t the_map;
+    static registry_type the_map;
     return the_map;
 }
-} //namespace
 
 ammunition_type::ammunition_type() : name_( no_translation( "null" ) )
 {
@@ -26,7 +26,7 @@ ammunition_type::ammunition_type() : name_( no_translation( "null" ) )
 
 void ammunition_type::load_ammunition_type( const JsonObject &jsobj )
 {
-    ammunition_type &res = all_ammunition_types()[ ammotype( jsobj.get_string( "id" ) ) ];
+    ammunition_type &res = registry()[ ammotype( jsobj.get_string( "id" ) ) ];
     jsobj.read( "name", res.name_ );
     jsobj.read( "default", res.default_ammotype_, true );
 }
@@ -35,14 +35,14 @@ void ammunition_type::load_ammunition_type( const JsonObject &jsobj )
 template<>
 bool string_id<ammunition_type>::is_valid() const
 {
-    return all_ammunition_types().count( *this ) > 0;
+    return ammunition_type::registry().count( *this ) > 0;
 }
 
 /** @relates string_id */
 template<>
 const ammunition_type &string_id<ammunition_type>::obj() const
 {
-    const ammo_map_t &the_map = all_ammunition_types();
+    const ammo_map_t &the_map = ammunition_type::registry();
 
     const auto it = the_map.find( *this );
     if( it != the_map.end() ) {
@@ -56,12 +56,12 @@ const ammunition_type &string_id<ammunition_type>::obj() const
 
 void ammunition_type::reset()
 {
-    all_ammunition_types().clear();
+    registry().clear();
 }
 
 void ammunition_type::check_consistency()
 {
-    for( const auto &ammo : all_ammunition_types() ) {
+    for( const auto &ammo : registry() ) {
         const auto &id = ammo.first;
         const itype_id &at = ammo.second.default_ammotype_;
 
