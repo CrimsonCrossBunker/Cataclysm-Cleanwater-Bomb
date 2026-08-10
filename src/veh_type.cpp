@@ -14,6 +14,7 @@
 #include "ammo.h"
 #include "cata_assert.h"
 #include "catacharset.h"
+#include "catalua_platform_content.h"
 #include "character.h"
 #include "clzones.h"
 #include "color.h"
@@ -1725,6 +1726,45 @@ static std::vector<vpart_category> vpart_categories_all;
 const std::vector<vpart_category> &vpart_category::all()
 {
     return vpart_categories_all;
+}
+
+const vpart_category *cata::lua_platform::detail::vehicle_part_category_registry_find(
+    const std::string &id )
+{
+    const auto found = std::find_if( vpart_categories_all.begin(), vpart_categories_all.end(),
+    [&id]( const vpart_category & value ) {
+        return value.get_id() == id;
+    } );
+    return found == vpart_categories_all.end() ? nullptr : &*found;
+}
+
+void cata::lua_platform::detail::vehicle_part_category_registry_set(
+    const vpart_category &value )
+{
+    const auto found = std::find_if( vpart_categories_all.begin(), vpart_categories_all.end(),
+    [&value]( const vpart_category & existing ) {
+        return existing.get_id() == value.get_id();
+    } );
+    if( found == vpart_categories_all.end() ) {
+        vpart_categories_all.push_back( value );
+    } else {
+        *found = value;
+    }
+}
+
+void cata::lua_platform::detail::vehicle_part_category_registry_erase(
+    const std::string &id )
+{
+    vpart_categories_all.erase(
+        std::remove_if( vpart_categories_all.begin(), vpart_categories_all.end(),
+    [&id]( const vpart_category & value ) {
+        return value.get_id() == id;
+    } ), vpart_categories_all.end() );
+}
+
+void cata::lua_platform::detail::vehicle_part_category_registry_finalize()
+{
+    vpart_category::finalize_all();
 }
 
 void vpart_category::load_all( const JsonObject &jo )
