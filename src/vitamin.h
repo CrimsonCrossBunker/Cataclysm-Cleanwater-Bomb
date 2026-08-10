@@ -18,6 +18,11 @@ class JsonObject;
 template <typename T> struct enum_traits;
 template <typename T> class generic_factory;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+} // namespace cata::lua_platform
+
 enum class vitamin_type : int {
     VITAMIN,
     TOXIN,
@@ -34,6 +39,7 @@ struct enum_traits<vitamin_type> {
 class vitamin
 {
         friend class generic_factory<vitamin>;
+        friend class cata::lua_platform::content_transaction;
 
     public:
         vitamin_id id;
