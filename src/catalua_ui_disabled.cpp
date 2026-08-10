@@ -65,6 +65,16 @@ bool has_native_hook( std::string_view )
     return false;
 }
 
+bool native_hook_supports_result_field( std::string_view, std::string_view )
+{
+    return false;
+}
+
+bool native_hook_contract_exists( std::string_view )
+{
+    return false;
+}
+
 std::vector<std::string> collect_native_mapgen_factory_usages(
     const std::vector<std::string> & )
 {
