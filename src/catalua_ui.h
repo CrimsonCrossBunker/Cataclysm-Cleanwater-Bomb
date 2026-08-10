@@ -149,6 +149,12 @@ native_hook_result dispatch_native_hook_result(
 bool dispatch_native_hook(
     std::string_view name, const native_callback_arguments &arguments = {} );
 bool has_native_hook( std::string_view name );
+bool native_hook_contract_exists( std::string_view name );
+// Shared hook-contract query used by Lua-first Platform dispatch.  This does
+// not expose a legacy handler: it reports which aggregate result fields the
+// native hook site understands (for example `allow`, `result`, or `entries`).
+bool native_hook_supports_result_field( std::string_view name,
+        std::string_view field );
 std::vector<std::string> collect_native_mapgen_factory_usages(
     const std::vector<std::string> &candidates );
 void dispatch_native_monster_spawn(
