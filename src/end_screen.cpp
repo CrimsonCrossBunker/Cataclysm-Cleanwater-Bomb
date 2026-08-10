@@ -5,6 +5,8 @@
 #include "avatar.h"
 #include "ascii_art.h"
 #include "cata_imgui.h"
+#include "catalua_platform_content.h"
+#include "catalua_platform_runtime.h"
 #include "condition.h"
 #include "dialogue.h"
 #include "end_screen.h"
@@ -24,6 +26,11 @@ namespace
 {
 generic_factory<end_screen> end_screen_factory( "end_screen" );
 } // namespace
+
+generic_factory<end_screen> &cata::lua_platform::detail::end_screen_registry()
+{
+    return end_screen_factory;
+}
 
 template<>
 const end_screen &string_id<end_screen>::obj()const
@@ -95,7 +102,11 @@ void end_screen_ui_impl::draw_controls()
     } );
 
     for( const end_screen &e_screen : sorted_screens ) {
-        if( e_screen.condition( d ) ) {
+        const std::optional<bool> platform_condition =
+            cata::lua_platform::invoke_end_screen_handler( e_screen.id.str(), u );
+        const bool matches = platform_condition ? *platform_condition :
+                             e_screen.condition( d );
+        if( matches ) {
             art = e_screen.picture_id;
             if( !e_screen.added_info.empty() ) {
                 added_info = e_screen.added_info;
