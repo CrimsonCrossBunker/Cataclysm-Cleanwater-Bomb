@@ -19,6 +19,11 @@ class monfaction;
 template <typename E> struct enum_traits;
 template <typename T> class generic_factory;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+} // namespace cata::lua_platform
+
 enum mf_attitude {
     MFA_BY_MOOD = 0,    // Hostile if angry
     MFA_NEUTRAL,        // Neutral even when angry
@@ -92,6 +97,9 @@ class monfaction
         // populates attitude_vec using `attitude_rec` function
         void populate_attitude_vec() const;
 
+        /** Rebuild explicit relations before deriving inherited caches. */
+        void rebuild_attitude_map();
+
         /** Load from JSON */
         void load( const JsonObject &jo, std::string_view src );
 
@@ -99,6 +107,7 @@ class monfaction
 
         friend void monfactions::finalize();
         friend class generic_factory<monfaction>;
+        friend class cata::lua_platform::content_transaction;
 };
 
 #endif // CATA_SRC_MONFACTION_H
