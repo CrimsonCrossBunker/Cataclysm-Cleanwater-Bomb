@@ -9,6 +9,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_variant.h"
+#include "catalua_platform_content.h"
 #include "character.h"
 #include "city.h"
 #include "clzones.h"
@@ -59,6 +60,11 @@ namespace
 {
 generic_factory<start_location> all_start_locations( "start locations" );
 } // namespace
+
+generic_factory<start_location> &cata::lua_platform::detail::start_location_registry()
+{
+    return all_start_locations;
+}
 
 /** @relates string_id */
 template<>
