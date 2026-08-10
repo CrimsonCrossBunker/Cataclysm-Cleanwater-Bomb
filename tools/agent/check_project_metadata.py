@@ -15,6 +15,7 @@ import jsonschema
 import yaml
 
 from audit_repository_governance import validate_repository, validate_target
+from check_lua_first_replacement_ledger import check as check_lua_first_replacement_ledger
 from generate_markdown_inventory import contributor_rejection_reason
 
 
@@ -171,6 +172,7 @@ def validate_context() -> None:
     schema_path = ROOT / "ai/context.schema.json"
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     documents = {path.name: load_yaml(path) for path in CONTEXT_FILES}
+    check_lua_first_replacement_ledger()
     known = tracked_paths()
     for path in CONTEXT_FILES:
         jsonschema.Draft202012Validator(schema).validate(documents[path.name])
