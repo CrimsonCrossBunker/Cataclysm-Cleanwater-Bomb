@@ -37,6 +37,7 @@
 #include "cached_options.h"
 #include "cata_allocator.h"
 #include "cata_path.h"
+#include "catalua_platform.h"
 #include "catalua_ui.h"
 #if defined(__ANDROID__)
     #include "android_hud.h"
@@ -1245,6 +1246,7 @@ int main( int argc, const char *argv[] )
         if constexpr( cata::lua_ui::is_enabled() ) {
             cata::lua_ui::shutdown();
         }
+        cata::lua_platform::shutdown();
         // do_turn returned true: the game ended (e.g. the recording's own
         // save/quit ran). Under replay there is no interactive user to drive the
         // main menu, so exit instead of looping back into opening_screen() and
