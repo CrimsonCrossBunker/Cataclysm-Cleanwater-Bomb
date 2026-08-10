@@ -1,5 +1,6 @@
 #include "profession_group.h"
 
+#include "catalua_platform_content.h"
 #include "debug.h"
 #include "generic_factory.h"
 
@@ -9,6 +10,11 @@ namespace
 {
 generic_factory<profession_group> profession_group_factory( "profession_group" );
 } // namespace
+
+generic_factory<profession_group> &cata::lua_platform::detail::profession_group_registry()
+{
+    return profession_group_factory;
+}
 
 template<>
 const profession_group &string_id<profession_group>::obj() const
