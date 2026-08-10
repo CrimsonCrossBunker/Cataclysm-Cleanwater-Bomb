@@ -16,6 +16,7 @@
 
 #include "cata_assert.h"
 #include "cata_utility.h"
+#include "catalua_platform_content.h"
 #include "character.h"
 #include "color.h"
 #include "coordinates.h"
@@ -64,6 +65,11 @@ static const trait_id trait_DEBUG_HS( "DEBUG_HS" );
 
 static std::map<requirement_id, requirement_data> requirements_all;
 
+std::map<requirement_id, requirement_data> &requirement_data::registry()
+{
+    return requirements_all;
+}
+
 static bool a_satisfies_b( const quality_requirement &a, const quality_requirement &b );
 static bool a_satisfies_b( const std::vector<quality_requirement> &a,
                            const std::vector<quality_requirement> &b );
@@ -102,6 +108,11 @@ namespace
 {
 generic_factory<quality> quality_factory( "tool quality" );
 } // namespace
+
+generic_factory<quality> &cata::lua_platform::detail::tool_quality_registry()
+{
+    return quality_factory;
+}
 
 void quality::reset()
 {
