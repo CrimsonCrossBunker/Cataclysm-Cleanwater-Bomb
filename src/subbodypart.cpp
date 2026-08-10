@@ -18,6 +18,22 @@ std::unordered_map<sub_bodypart_str_id, std::vector<sub_bodypart_str_id>>
 
 } // namespace
 
+generic_factory<sub_body_part_type> &cata::lua_platform::detail::sub_body_part_registry()
+{
+    return sub_body_part_factory;
+}
+
+void cata::lua_platform::detail::refresh_sub_body_part_similarity_cache()
+{
+    combined_similar_sub_bodyparts.clear();
+    for( const sub_body_part_type &part : sub_body_part_factory.get_all() ) {
+        if( part.similar_bodypart.has_value() ) {
+            combined_similar_sub_bodyparts[*part.similar_bodypart].emplace_back( part.id );
+            combined_similar_sub_bodyparts[part.id].emplace_back( *part.similar_bodypart );
+        }
+    }
+}
+
 /**@relates string_id*/
 template<>
 bool string_id<sub_body_part_type>::is_valid() const
@@ -123,3 +139,4 @@ std::vector<sub_bodypart_str_id> sub_body_part_type::get_all_combined_similar_su
 
     return std::vector<sub_bodypart_str_id>();
 }
+#include "catalua_platform_content.h"
