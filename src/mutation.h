@@ -37,6 +37,11 @@ struct const_dialogue;
 struct dream;
 template <typename E> struct enum_traits;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+} // namespace cata::lua_platform
+
 extern std::vector<dream> dreams;
 extern std::map<mutation_category_id, std::vector<trait_id> > mutations_category;
 
@@ -556,6 +561,8 @@ struct mutation_category_trait {
         static void check_consistency();
 
         static void load( const JsonObject &jsobj );
+
+        friend class cata::lua_platform::content_transaction;
 };
 
 void load_mutation_type( const JsonObject &jsobj );
