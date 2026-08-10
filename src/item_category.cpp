@@ -1,5 +1,6 @@
 #include "item_category.h"
 
+#include "catalua_platform_content.h"
 #include "generic_factory.h"
 #include "item.h"
 
@@ -7,6 +8,11 @@ namespace
 {
 generic_factory<item_category> item_category_factory( "item_category" );
 } // namespace
+
+generic_factory<item_category> &cata::lua_platform::detail::item_category_registry()
+{
+    return item_category_factory;
+}
 
 template<>
 const item_category &string_id<item_category>::obj() const
