@@ -10,6 +10,7 @@
 
 #include "body_part_set.h"
 #include "calendar.h"
+#include "catalua_platform_content.h"
 #include "creature.h"
 #include "debug.h"
 #include "enum_conversions.h"
@@ -108,6 +109,27 @@ generic_factory<limb_score> limb_score_factory( "limb score" );
 std::unordered_map<bodypart_str_id, std::vector<bodypart_str_id>> combined_similar_bodyparts;
 
 } // namespace
+
+generic_factory<limb_score> &cata::lua_platform::detail::limb_score_registry()
+{
+    return limb_score_factory;
+}
+
+generic_factory<body_part_type> &cata::lua_platform::detail::body_part_registry()
+{
+    return body_part_factory;
+}
+
+void cata::lua_platform::detail::refresh_body_part_similarity_cache()
+{
+    combined_similar_bodyparts.clear();
+    for( const body_part_type &part : body_part_factory.get_all() ) {
+        if( part.similar_bodypart.has_value() ) {
+            combined_similar_bodyparts[*part.similar_bodypart].emplace_back( part.id );
+            combined_similar_bodyparts[part.id].emplace_back( *part.similar_bodypart );
+        }
+    }
+}
 
 static body_part legacy_id_to_enum( const std::string &legacy_id )
 {
