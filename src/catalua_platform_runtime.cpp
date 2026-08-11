@@ -5488,8 +5488,9 @@ sol::table persistent_table( sol::state &lua, const persistent_state &values )
 {
     sol::table result = lua.create_table();
     for( const auto &[key, value] : values ) {
-        std::visit( [&result, &key]( const auto & entry ) {
-            result[key] = entry;
+        const std::string persistent_key = key;
+        std::visit( [&result, &persistent_key]( const auto & entry ) {
+            result[persistent_key] = entry;
         }, value );
     }
     return result;
