@@ -14,6 +14,7 @@
 #include "catacharset.h"
 #include "character.h"
 #include "character_attire.h"
+#include "contents_change_handler.h"
 #include "cuboid_rectangle.h"
 #include "debug.h"
 #include "enum_conversions.h"
@@ -3999,7 +4000,14 @@ bool inventory_pick_selector::wield_highlighted()
     }
     // Wield immediately (like the game's w key) so the item state changes
     // while the menu stays open; an activity would only run after closing it.
-    if( u.wield( it ) ) {
+    // The contents change handler matches the item action menu path: sealed
+    // pockets holding the item are unsealed and spill/on-contents handling
+    // runs after the item is taken.
+    contents_change_handler handler;
+    handler.unseal_pocket_containing( it );
+    const bool wielded = u.wield( it );
+    handler.handle_by( u );
+    if( wielded ) {
         refresh_after_use( it );
         return true;
     }
@@ -4030,7 +4038,14 @@ bool inventory_pick_selector::wear_highlighted()
         return false;
     }
     // Wear immediately (like the game's W key), keeping the menu open.
-    if( u.wear( it ) ) {
+    // The contents change handler matches the item action menu path: sealed
+    // pockets holding the item are unsealed and spill/on-contents handling
+    // runs after the item is taken.
+    contents_change_handler handler;
+    handler.unseal_pocket_containing( it );
+    const auto wear_result = u.wear( it );
+    handler.handle_by( u );
+    if( wear_result ) {
         refresh_after_use( it );
         return true;
     }
@@ -4089,11 +4104,6 @@ std::vector<reload_target> get_possible_reload_targets( const item_location &tar
 {
     std::vector<reload_target> opts;
 
-    // MSVC 14.33 workaround: hoist the filter lambda out of the outer lambda,
-    // which triggers C2280 in older MSVC versions.
-    static const auto pocket_filter = []( const item_pocket & ) {
-        return true;
-    };
     auto append_owner = [&opts]( const item_location & owner ) {
         // pocket_index is the position in contents (stable across empty
         // wells), not the position in magazines_current().

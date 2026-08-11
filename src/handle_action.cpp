@@ -3431,7 +3431,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                         if( guy->get_speed() >= player_speed ) {
                             continue;
                         }
-                        const int lag = square_dist( guy->pos_bub(), player_character.pos_bub() );
+                        const int lag = rl_dist( guy->pos_bub(), player_character.pos_bub() );
                         if( lag > worst_lag ) {
                             worst_lag = lag;
                             slowest_follower = guy;
