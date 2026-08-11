@@ -19,6 +19,24 @@
 // activity_type functions
 static std::map< activity_id, activity_type > activity_type_all;
 
+std::optional<activity_type> cata::lua_platform::detail::activity_type_registry_get(
+    const activity_id &id )
+{
+    const auto found = activity_type_all.find( id );
+    return found == activity_type_all.end() ? std::nullopt :
+           std::optional<activity_type>( found->second );
+}
+
+void cata::lua_platform::detail::activity_type_registry_set( const activity_type &value )
+{
+    activity_type_all[value.id()] = value;
+}
+
+void cata::lua_platform::detail::activity_type_registry_erase( const activity_id &id )
+{
+    activity_type_all.erase( id );
+}
+
 /** @relates string_id */
 template<>
 const activity_type &string_id<activity_type>::obj() const

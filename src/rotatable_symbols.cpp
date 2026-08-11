@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "catacharset.h"
+#include "catalua_platform_content.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "string_formatter.h"
@@ -31,6 +32,64 @@ struct rotatable_symbol {
 std::vector<rotatable_symbol> symbols;
 
 } // anonymous namespace
+
+std::vector<cata::lua_platform::detail::rotatable_symbol_native_entry>
+cata::lua_platform::detail::rotatable_symbol_registry_snapshot()
+{
+    std::vector<rotatable_symbol_native_entry> result;
+    result.reserve( symbols.size() );
+    for( const rotatable_symbol &entry : symbols ) {
+        result.push_back( { entry.symbol, entry.rotated_symbol } );
+    }
+    return result;
+}
+
+std::vector<std::uint32_t> cata::lua_platform::detail::rotatable_symbol_registry_group(
+    const std::uint32_t symbol )
+{
+    const auto found = std::lower_bound( symbols.begin(), symbols.end(), symbol );
+    if( found == symbols.end() || found->symbol != symbol ) {
+        return {};
+    }
+    std::vector<std::uint32_t> result = { found->symbol };
+    result.insert( result.end(), found->rotated_symbol.begin(), found->rotated_symbol.end() );
+    std::sort( result.begin(), result.end() );
+    result.erase( std::unique( result.begin(), result.end() ), result.end() );
+    return result;
+}
+
+void cata::lua_platform::detail::rotatable_symbol_registry_set(
+    const std::vector<std::uint32_t> &tuple )
+{
+    rotatable_symbol temporary;
+    for( auto iter = tuple.cbegin(); iter != tuple.cend(); ++iter ) {
+        const auto found = std::lower_bound( symbols.begin(), symbols.end(), *iter );
+        rotatable_symbol &entry = found != symbols.end() && found->symbol == *iter ?
+                                  *found : temporary;
+        entry.symbol = *iter;
+        auto rotation = iter;
+        for( std::uint32_t &value : entry.rotated_symbol ) {
+            if( ++rotation == tuple.cend() ) {
+                rotation = tuple.cbegin();
+            }
+            value = *rotation;
+        }
+        if( found == symbols.end() || found->symbol != *iter ) {
+            symbols.insert( found, entry );
+        }
+    }
+}
+
+void cata::lua_platform::detail::rotatable_symbol_registry_restore(
+    const std::vector<rotatable_symbol_native_entry> &snapshot )
+{
+    symbols.clear();
+    symbols.reserve( snapshot.size() );
+    for( const rotatable_symbol_native_entry &entry : snapshot ) {
+        symbols.push_back( { entry.symbol, entry.rotations } );
+    }
+    std::sort( symbols.begin(), symbols.end() );
+}
 
 namespace rotatable_symbols
 {

@@ -16,6 +16,11 @@
 class JsonObject;
 class item;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+} // namespace cata::lua_platform
+
 // this is a helper struct with rules for picking a zone
 struct zone_priority_data {
     bool was_loaded = false;
@@ -35,6 +40,7 @@ struct zone_priority_data {
  */
 class item_category
 {
+        friend class cata::lua_platform::content_transaction;
     private:
         /** Name of category for displaying to the user */
         translation name_header_; // in inventory UI headers etc
@@ -110,4 +116,3 @@ struct item_category_spawn_rates {
 };
 
 #endif // CATA_SRC_ITEM_CATEGORY_H
-

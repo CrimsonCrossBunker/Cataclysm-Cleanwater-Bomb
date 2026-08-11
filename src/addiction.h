@@ -13,6 +13,12 @@
 class Character;
 class JsonObject;
 class JsonOut;
+template<typename T> class generic_factory;
+
+namespace cata::lua_platform
+{
+class content_transaction;
+}
 
 struct add_type {
     private:
@@ -22,6 +28,7 @@ struct add_type {
         morale_type _craving_morale;
         effect_on_condition_id _effect;
         std::string _builtin;
+        bool _lua_policy = false;
     public:
         addiction_id id;
         bool was_loaded = false;
@@ -54,6 +61,8 @@ struct add_type {
         const std::string &get_builtin() const {
             return _builtin;
         }
+    private:
+        friend class cata::lua_platform::content_transaction;
 };
 
 class addiction

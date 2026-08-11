@@ -11,6 +11,7 @@
 
 #include "cata_assert.h"
 #include "cata_variant.h"
+#include "catalua_platform_content.h"
 #include "debug.h"
 #include "enum_conversions.h"
 #include "enums.h"
@@ -58,6 +59,11 @@ generic_factory<event_statistic> event_statistic_factory( "event_statistic" );
 generic_factory<score> score_factory( "score" );
 
 } // namespace
+
+generic_factory<score> &cata::lua_platform::detail::score_registry()
+{
+    return score_factory;
+}
 
 template<>
 const event_transformation &string_id<event_transformation>::obj() const
