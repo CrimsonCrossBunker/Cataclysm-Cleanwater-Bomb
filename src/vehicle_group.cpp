@@ -6,6 +6,7 @@
 #include <string>
 #include <utility>
 
+#include "catalua_platform_content.h"
 #include "coordinates.h"
 #include "debug.h"
 #include "enums.h"
@@ -22,6 +23,24 @@ static const vgroup_id VehicleGroup_parkinglot( "parkinglot" );
 std::unordered_map<vgroup_id, VehicleGroup> vgroups;
 static std::unordered_map<vplacement_id, VehiclePlacement> vplacements;
 static std::unordered_map<vspawn_id, VehicleSpawn> vspawns;
+
+const VehicleGroup *cata::lua_platform::detail::vehicle_group_registry_find(
+    const std::string &id )
+{
+    const auto found = vgroups.find( vgroup_id( id ) );
+    return found == vgroups.end() ? nullptr : &found->second;
+}
+
+void cata::lua_platform::detail::vehicle_group_registry_set(
+    const std::string &id, const VehicleGroup &value )
+{
+    vgroups[vgroup_id( id )] = value;
+}
+
+void cata::lua_platform::detail::vehicle_group_registry_erase( const std::string &id )
+{
+    vgroups.erase( vgroup_id( id ) );
+}
 
 /** @relates string_id */
 template<>

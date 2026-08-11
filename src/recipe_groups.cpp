@@ -1,5 +1,7 @@
 #include "recipe_groups.h"
 
+#include <algorithm>
+#include <cctype>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -48,6 +50,97 @@ struct recipe_group_data {
 generic_factory<recipe_group_data> recipe_groups_data( "recipe group type" );
 
 } // namespace
+
+bool cata::lua_platform::detail::recipe_group_exists( const std::string_view id )
+{
+    return recipe_groups_data.is_valid( group_id( std::string( id ) ) );
+}
+
+std::optional<cata::lua_platform::detail::recipe_group_native_definition>
+cata::lua_platform::detail::recipe_group_get( const std::string_view id )
+{
+    const group_id key{ std::string( id ) };
+    if( !recipe_groups_data.is_valid( key ) ) {
+        return std::nullopt;
+    }
+    const recipe_group_data &source = recipe_groups_data.obj( key );
+    recipe_group_native_definition result;
+    result.id = source.id.str();
+    result.building_type = source.building_type;
+    for( const auto &[source_id, source_mod] : source.src ) {
+        result.sources.emplace_back( source_id.str(), source_mod );
+    }
+    for( const auto &[recipe_key, description] : source.recipes ) {
+        recipe_group_recipe_definition recipe_entry;
+        recipe_entry.id = recipe_key.str();
+        recipe_entry.description = description;
+        const auto terrain_entries = source.om_terrains.find( recipe_key );
+        if( terrain_entries != source.om_terrains.end() ) {
+            for( const omt_types_parameters &terrain : terrain_entries->second ) {
+                recipe_group_terrain_definition terrain_entry;
+                terrain_entry.overmap_terrain = terrain.omt;
+                terrain_entry.match_type = io::enum_to_string( terrain.omt_type );
+                for( const auto &[parameter, values] : terrain.parameters ) {
+                    terrain_entry.parameters[parameter].insert( values.begin(), values.end() );
+                }
+                recipe_entry.overmap_terrains.push_back( std::move( terrain_entry ) );
+            }
+        }
+        result.recipes.push_back( std::move( recipe_entry ) );
+    }
+    return result;
+}
+
+void cata::lua_platform::detail::recipe_group_set(
+    const recipe_group_native_definition &definition )
+{
+    const auto match_type = []( std::string value ) {
+        std::transform( value.begin(), value.end(), value.begin(), []( const unsigned char byte ) {
+            return static_cast<char>( std::toupper( byte ) );
+        } );
+        if( value == "EXACT" ) {
+            return ot_match_type::exact;
+        }
+        if( value == "SUBTYPE" ) {
+            return ot_match_type::subtype;
+        }
+        if( value == "PREFIX" ) {
+            return ot_match_type::prefix;
+        }
+        if( value == "CONTAINS" ) {
+            return ot_match_type::contains;
+        }
+        return ot_match_type::type;
+    };
+
+    recipe_group_data native;
+    native.id = group_id( definition.id );
+    native.building_type = definition.building_type;
+    native.was_loaded = true;
+    for( const auto &[source_id, source_mod] : definition.sources ) {
+        native.src.emplace_back( group_id( source_id ), source_mod );
+    }
+    for( const recipe_group_recipe_definition &recipe_entry : definition.recipes ) {
+        const recipe_id recipe_key( recipe_entry.id );
+        native.recipes[recipe_key] = recipe_entry.description;
+        for( const recipe_group_terrain_definition &terrain_entry :
+             recipe_entry.overmap_terrains ) {
+            omt_types_parameters terrain;
+            terrain.omt = terrain_entry.overmap_terrain;
+            terrain.omt_type = match_type( terrain_entry.match_type );
+            for( const auto &[parameter, values] : terrain_entry.parameters ) {
+                terrain.parameters[parameter].insert( values.begin(), values.end() );
+            }
+            native.om_terrains[recipe_key].push_back( std::move( terrain ) );
+        }
+    }
+    recipe_groups_data.insert( native );
+}
+
+void cata::lua_platform::detail::recipe_group_erase( const std::string_view id )
+{
+    recipe_groups_data.erase( group_id( std::string( id ) ) );
+}
 
 void recipe_group_data::load( const JsonObject &jo, std::string_view )
 {

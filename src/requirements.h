@@ -29,6 +29,11 @@ class nc_color;
 class read_only_visitable;
 template <typename E> struct enum_traits;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+} // namespace cata::lua_platform
+
 enum class available_status : int {
     a_true = +1, // yes, it's available
     a_false = -1, // no, it's not available
@@ -212,6 +217,7 @@ struct requirement_data {
         // @see vpart_info::check
         // TODO: remove once all parts specify installation requirements directly
         friend class vpart_info;
+        friend class cata::lua_platform::content_transaction;
 
         using alter_tool_comp_vector = std::vector<std::vector<tool_comp> >;
         using alter_quali_req_vector = std::vector<std::vector<quality_requirement> >;
@@ -401,6 +407,8 @@ struct requirement_data {
         uint64_t make_hash() const;
 
     private:
+        static std::map<requirement_id, requirement_data> &registry();
+
         requirement_id id_ = requirement_id::NULL_ID(); // NOLINT(cata-serialize)
         translation name_; // NOLINT(cata-serialize)
 

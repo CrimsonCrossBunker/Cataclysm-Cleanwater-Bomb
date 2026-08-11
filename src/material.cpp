@@ -7,6 +7,7 @@
 #include <unordered_map>
 
 #include "debug.h"
+#include "catalua_platform_content.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "item.h"
@@ -19,6 +20,11 @@ namespace
 generic_factory<material_type> material_data( "material" );
 
 } // namespace
+
+generic_factory<material_type> &cata::lua_platform::detail::material_registry()
+{
+    return material_data;
+}
 
 /** @relates string_id */
 template<>
