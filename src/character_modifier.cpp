@@ -4,9 +4,12 @@
 #include <cmath>
 #include <functional>
 #include <limits>
+#include <optional>
 
 #include "bodypart.h"
 #include "character.h"
+#include "catalua_platform_content.h"
+#include "catalua_platform_runtime.h"
 #include "debug.h"
 #include "effect.h"
 #include "enum_conversions.h"
@@ -37,6 +40,11 @@ namespace
 generic_factory<character_modifier> character_modifier_factory( "character modifier" );
 
 } // namespace
+
+generic_factory<character_modifier> &cata::lua_platform::detail::character_modifier_registry()
+{
+    return character_modifier_factory;
+}
 
 /** @relates string_id */
 template<>
@@ -370,6 +378,11 @@ static float call_builtin( const std::string &builtin, const Character &c, const
 // for straight limb_score: nominator == 0, subtractor == 0, max_val == 0, min_val == 0
 float character_modifier::modifier( const Character &c, const skill_id &skill ) const
 {
+    if( const std::optional<double> lua_result =
+            cata::lua_platform::invoke_character_modifier_handler(
+                id.str(), c, skill.str() ) ) {
+        return static_cast<float>( *lua_result );
+    }
     // use builtin to calculate modifier
     if( !builtin.empty() ) {
         return call_builtin( builtin, c, skill );

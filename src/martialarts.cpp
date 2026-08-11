@@ -12,6 +12,7 @@
 
 #include "bodypart.h"
 #include "cata_imgui.h"
+#include "catalua_platform_content.h"
 #include "cata_utility.h"
 #include "character.h"
 #include "character_attire.h"
@@ -74,6 +75,11 @@ generic_factory<ma_buff> ma_buffs( "martial art buff" );
 generic_factory<attack_vector> attack_vector_factory( "attack vector" );
 } // namespace
 
+generic_factory<attack_vector> &cata::lua_platform::detail::attack_vector_registry()
+{
+    return attack_vector_factory;
+}
+
 /** @relates string_id */
 template<>
 const attack_vector &string_id<attack_vector>::obj() const
@@ -110,6 +116,8 @@ void attack_vector::load( const JsonObject &jo, std::string_view )
     optional( jo, was_loaded, "bp_hp_limit", bp_hp_limit, 10 );
     optional( jo, was_loaded, "required_limb_flags", required_limb_flags );
     optional( jo, was_loaded, "forbidden_limb_flags", forbidden_limb_flags );
+    authored_limbs = limbs;
+    authored_contact_area = contact_area;
 }
 
 template<>
@@ -647,6 +655,35 @@ class ma_buff_effect_type : public effect_type
 };
 } // namespace
 
+void cata::lua_platform::detail::refresh_attack_vector_registry()
+{
+    attack_vector_factory.finalize();
+    for( attack_vector &vector : attack_vector_factory.get_all_mod() ) {
+        vector.limbs = vector.authored_limbs;
+        vector.contact_area = vector.authored_contact_area;
+        if( vector.strict_limb_definition ) {
+            continue;
+        }
+        std::vector<bodypart_str_id> similar_bp;
+        for( const bodypart_str_id &bp : vector.authored_limbs ) {
+            for( const bodypart_str_id &similar : bp->get_all_combined_similar_bodyparts() ) {
+                similar_bp.emplace_back( similar );
+            }
+        }
+        vector.limbs.insert( vector.limbs.end(), similar_bp.begin(), similar_bp.end() );
+
+        std::vector<sub_bodypart_str_id> similar_sbp;
+        for( const sub_bodypart_str_id &sbp : vector.authored_contact_area ) {
+            for( const sub_bodypart_str_id &similar :
+                 sbp->get_all_combined_similar_sub_bodyparts() ) {
+                similar_sbp.emplace_back( similar );
+            }
+        }
+        vector.contact_area.insert( vector.contact_area.end(), similar_sbp.begin(),
+                                    similar_sbp.end() );
+    }
+}
+
 void finalize_martial_arts()
 {
     // This adds an effect type for each ma_buff, so we can later refer to it and don't need a
@@ -657,34 +694,8 @@ void finalize_martial_arts()
         // bother us because ma_buff_effect_type does not have any members that can be sliced.
         effect_type::register_ma_buff_effect( new_eff );
     }
-    attack_vector_factory.finalize();
+    cata::lua_platform::detail::refresh_attack_vector_registry();
     ma_buffs.finalize();
-    for( const attack_vector &vector : attack_vector_factory.get_all() ) {
-        // Check if this vector allows substitutions in the first place
-        if( vector.strict_limb_definition ) {
-            continue;
-        }
-        // Add similar parts
-        // The vector needs both a limb and a contact area, so we can substitute safely
-        std::vector<bodypart_str_id> similar_bp;
-        for( const bodypart_str_id &bp : vector.limbs ) {
-            for( const bodypart_str_id &similar : bp->get_all_combined_similar_bodyparts() ) {
-                similar_bp.emplace_back( similar );
-            }
-        }
-        const_cast<attack_vector &>( vector ).limbs.insert( vector.limbs.end(), similar_bp.begin(),
-                similar_bp.end() );
-
-        std::vector<sub_bodypart_str_id> similar_sbp;
-        for( const sub_bodypart_str_id &sbp : vector.contact_area ) {
-            for( const sub_bodypart_str_id &similar : sbp->get_all_combined_similar_sub_bodyparts() ) {
-                similar_sbp.emplace_back( similar );
-            }
-        }
-
-        const_cast<attack_vector &>( vector ).contact_area.insert( vector.contact_area.end(),
-                similar_sbp.begin(), similar_sbp.end() );
-    }
 }
 
 std::string martialart_difficulty( const matype_id &mstyle )

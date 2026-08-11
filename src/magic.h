@@ -687,6 +687,7 @@ class spell
         double get_failure_exp_percent( Creature &caster ) const;
         void consume_spell_cost( Character &caster, bool cast_success = true ) const;
         std::vector<effect_on_condition_id> get_failure_eoc_ids() const;
+        void invoke_magic_type_failure( Character &caster ) const;
 
         // tries to create a field at the location specified
         void create_field( const tripoint_bub_ms &at, Creature &caster ) const;

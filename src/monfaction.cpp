@@ -7,10 +7,16 @@
 
 #include "debug.h"
 #include "debug_menu.h"
+#include "catalua_platform_content.h"
 #include "generic_factory.h"
 
 // for legacy reasons "monfaction::id" is called "name" in json
 static generic_factory<monfaction> faction_factory( "MONSTER_FACTION", "name" );
+
+generic_factory<monfaction> &cata::lua_platform::detail::monster_faction_registry()
+{
+    return faction_factory;
+}
 
 /** @relates int_id */
 template<>
@@ -149,12 +155,32 @@ void monfaction::populate_attitude_vec() const
 
 void monfaction::finalize()
 {
+    rebuild_attitude_map();
     // `detect_base_faction_cycle` detects a cycle that is formed by valid `base_faction` relations.
     // it will produce a warning if cycle is detected
     if( detect_base_faction_cycle() ) {
         // break the cycle
         base_faction = mfaction_str_id::NULL_ID();
     }
+}
+
+void monfaction::rebuild_attitude_map()
+{
+    attitude_map.clear();
+    for( const mfaction_str_id &mfac : _att_by_mood ) {
+        attitude_map[mfac] = MFA_BY_MOOD;
+    }
+    for( const mfaction_str_id &mfac : _att_neutral ) {
+        attitude_map[mfac] = MFA_NEUTRAL;
+    }
+    for( const mfaction_str_id &mfac : _att_friendly ) {
+        attitude_map[mfac] = MFA_FRIENDLY;
+    }
+    for( const mfaction_str_id &mfac : _att_hate ) {
+        attitude_map[mfac] = MFA_HATE;
+    }
+    attitude_map.emplace( id, MFA_FRIENDLY );
+    attitude_vec.clear();
 }
 
 void monfactions::finalize()
@@ -190,22 +216,7 @@ void monfaction::load( const JsonObject &jo, std::string_view )
     optional( jo, was_loaded, "friendly", _att_friendly, string_id_reader<monfaction>() );
     optional( jo, was_loaded, "hate", _att_hate, string_id_reader<monfaction>() );
 
-    attitude_map.clear();
-    for( const mfaction_str_id &mfac : _att_by_mood ) {
-        attitude_map[mfac] = MFA_BY_MOOD;
-    }
-    for( const mfaction_str_id &mfac : _att_neutral ) {
-        attitude_map[mfac] = MFA_NEUTRAL;
-    }
-    for( const mfaction_str_id &mfac : _att_friendly ) {
-        attitude_map[mfac] = MFA_FRIENDLY;
-    }
-    for( const mfaction_str_id &mfac : _att_hate ) {
-        attitude_map[mfac] = MFA_HATE;
-    }
-
-    // by default faction is friendly to itself (don't overwrite if explicitly specified)
-    attitude_map.emplace( id, MFA_FRIENDLY );
+    rebuild_attitude_map();
 }
 
 const std::vector<monfaction> &monfactions::get_all()

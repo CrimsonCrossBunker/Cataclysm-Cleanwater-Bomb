@@ -7,6 +7,8 @@
 #include <string_view>
 #include <unordered_map>
 
+class Creature;
+
 namespace behavior
 {
 enum class status_t : char;
@@ -20,6 +22,9 @@ enum class status_t : char;
  */
 class oracle_t
 {
+    public:
+        virtual ~oracle_t() = default;
+        virtual const Creature *get_subject() const = 0;
 };
 
 status_t return_running( const oracle_t *, std::string_view );

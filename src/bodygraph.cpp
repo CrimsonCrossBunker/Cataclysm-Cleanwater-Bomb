@@ -46,6 +46,11 @@ generic_factory<bodygraph> bodygraph_factory( "bodygraph" );
 
 } // namespace
 
+generic_factory<bodygraph> &cata::lua_platform::detail::bodygraph_registry()
+{
+    return bodygraph_factory;
+}
+
 /** @relates string_id */
 template<>
 const bodygraph &string_id<bodygraph>::obj() const
@@ -728,3 +733,4 @@ std::vector<std::string> get_bodygraph_lines( const Character &u,
     }
     return ret;
 }
+#include "catalua_platform_content.h"

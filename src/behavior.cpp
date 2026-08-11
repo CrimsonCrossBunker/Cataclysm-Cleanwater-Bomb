@@ -1,15 +1,16 @@
 #include "behavior.h"
 
-#include <list>
 #include <unordered_map>
 #include <utility>
 
 #include "behavior_oracle.h"
 #include "behavior_strategy.h"
 #include "cata_assert.h"
+#include "catalua_platform_content.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "monstergenerator.h"
 
 using namespace behavior;
 
@@ -30,6 +31,22 @@ void node_t::set_goal( const std::string &new_goal )
 void node_t::add_child( const node_t *new_child )
 {
     children.push_back( new_child );
+}
+void node_t::add_child_id( const std::string &new_child )
+{
+    authored_children.push_back( new_child );
+}
+const std::vector<std::string> &node_t::child_ids() const
+{
+    return authored_children;
+}
+void node_t::rebuild_children()
+{
+    children.clear();
+    children.reserve( authored_children.size() );
+    for( const std::string &child : authored_children ) {
+        children.push_back( &string_id<node_t>( child ).obj() );
+    }
 }
 void node_t::set_score_function( const score_type &func, const std::string &argument )
 {
@@ -126,15 +143,13 @@ void tree::add( const node_t *new_node )
 
 namespace
 {
-// This struct only exists to hold node data until finalization.
-struct node_data {
-    string_id<node_t> id;
-    std::vector<std::string> children;
-};
-
 generic_factory<behavior::node_t> behavior_factory( "behavior" );
-std::list<node_data> temp_node_data;
 } // namespace
+
+generic_factory<behavior::node_t> &cata::lua_platform::detail::behavior_registry()
+{
+    return behavior_factory;
+}
 
 /** @relates string_id */
 template<>
@@ -156,13 +171,9 @@ void behavior::load_behavior( const JsonObject &jo, const std::string &src )
 
 void node_t::load( const JsonObject &jo, std::string_view )
 {
-    // We don't initialize the node unless it has no children (opportunistic optimization).
-    // Instead we initialize a parallel struct that holds the labels until finalization.
     if( jo.has_array( "children" ) ) {
-        temp_node_data.emplace_back();
-        node_data &new_data = temp_node_data.back();
-        new_data.id = id;
-        optional( jo, was_loaded, "children", new_data.children );
+        authored_children.clear();
+        optional( jo, was_loaded, "children", authored_children );
     }
     if( jo.has_string( "strategy" ) ) {
         std::unordered_map<std::string, const strategy_t *>::iterator new_strategy =
@@ -223,20 +234,16 @@ void node_t::check() const
 
 void behavior::reset()
 {
-    temp_node_data.clear();
     behavior_factory.reset();
 }
 
 void behavior::finalize()
 {
     behavior_factory.finalize();
-    for( const node_data &new_node : temp_node_data ) {
-        for( const std::string &child : new_node.children ) {
-            const_cast<node_t &>( new_node.id.obj() ).
-            add_child( &string_id<node_t>( child ).obj() );
-        }
+    for( const node_t &node : behavior_factory.get_all() ) {
+        const_cast<node_t &>( node ).rebuild_children();
     }
-    temp_node_data.clear();
+    MonsterGenerator::generator().refresh_behavior_goals();
 }
 
 void behavior::check_consistency()

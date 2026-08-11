@@ -69,6 +69,11 @@ static bool npc_within_camp( const npc &n )
 namespace behavior
 {
 
+const Creature *character_oracle_t::get_subject() const
+{
+    return subject;
+}
+
 // To avoid a local minima when the character has access to warmth in a shelter but gets cold
 // when they go outside, this method needs to only alert when travel time to known shelter
 // approaches time to freeze.

@@ -15,6 +15,7 @@
 #include "calendar.h"
 #include "cata_imgui.h"
 #include "catalua_lua_call.h"
+#include "catalua_platform_runtime.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
@@ -1314,8 +1315,13 @@ float spell::spell_fail( const Character &guy ) const
                                          static_cast<float>( 45 ) );
         }
     }
-    bool has_type_fail_chance = type->magic_type.has_value() &&
-                                type->magic_type.value()->failure_chance_formula_id.has_value();
+    const std::optional<double> platform_fail_chance = type->magic_type ?
+            cata::lua_platform::invoke_magic_type_number_handler(
+                type->magic_type->str(), "failure_chance", id().str(), &guy ) :
+            std::nullopt;
+    bool has_type_fail_chance = platform_fail_chance.has_value() ||
+                                ( type->magic_type.has_value() &&
+                                  type->magic_type.value()->failure_chance_formula_id.has_value() );
     // add an if statement in here because sufficiently large numbers will definitely overflow because of exponents
     if( !has_type_fail_chance ) {
         if( ( effective_skill > 30.0f && !is_psi ) || ( psi_effective_skill > 40.0f && is_psi ) ) {
@@ -1326,7 +1332,9 @@ float spell::spell_fail( const Character &guy ) const
     }
 
     float fail_chance = 0;
-    if( has_type_fail_chance ) {
+    if( platform_fail_chance ) {
+        fail_chance = static_cast<float>( *platform_fail_chance );
+    } else if( has_type_fail_chance ) {
         const_dialogue d( get_const_talker_for( guy ), nullptr );
         d.set_value( "spell_id", id().str() );
         fail_chance = type->magic_type.value()->failure_chance_formula_id.value()->eval( d );
@@ -1793,6 +1801,11 @@ std::optional<jmath_func_id> spell_type::overall_exp_for_level_formula_id() cons
 double spell::get_failure_cost_percent( Creature &caster ) const
 {
     if( type->magic_type.has_value() ) {
+        if( const std::optional<double> value =
+                cata::lua_platform::invoke_magic_type_number_handler(
+                    type->magic_type->str(), "failure_cost", id().str(), &caster ) ) {
+            return *value;
+        }
         const_dialogue d( get_const_talker_for( caster ), nullptr );
         return type->magic_type.value()->failure_cost_percent.evaluate( d );
     } else {
@@ -1803,6 +1816,11 @@ double spell::get_failure_cost_percent( Creature &caster ) const
 double spell::get_failure_exp_percent( Creature &caster ) const
 {
     if( type->magic_type.has_value() ) {
+        if( const std::optional<double> value =
+                cata::lua_platform::invoke_magic_type_number_handler(
+                    type->magic_type->str(), "failure_experience", id().str(), &caster ) ) {
+            return *value;
+        }
         const_dialogue d( get_const_talker_for( caster ), nullptr );
         return type->magic_type.value()->failure_exp_percent.evaluate( d );
     } else {
@@ -1870,6 +1888,14 @@ std::vector<effect_on_condition_id> spell::get_failure_eoc_ids() const
     }
 }
 
+void spell::invoke_magic_type_failure( Character &caster ) const
+{
+    if( type->magic_type ) {
+        cata::lua_platform::invoke_magic_type_failure_handler(
+            type->magic_type->str(), id().str(), caster );
+    }
+}
+
 int spell::get_level() const
 {
     return type->get_level( experience );
@@ -1877,6 +1903,14 @@ int spell::get_level() const
 
 int spell_type::get_level( int experience ) const
 {
+    if( magic_type ) {
+        if( const std::optional<double> value =
+                cata::lua_platform::invoke_magic_type_number_handler(
+                    magic_type->str(), "level_for_experience", id.str(), nullptr,
+                    static_cast<double>( experience ) ) ) {
+            return std::max( static_cast<int>( std::floor( *value ) ), 0 );
+        }
+    }
     std::optional<jmath_func_id> level_formula = overall_get_level_formula_id();
 
     // you aren't at the next level unless you have the requisite xp, so floor
@@ -1967,6 +2001,14 @@ int spell_type::exp_for_level( int level ) const
     if( level == 0 ) {
         return 0;
     }
+    if( magic_type ) {
+        if( const std::optional<double> value =
+                cata::lua_platform::invoke_magic_type_number_handler(
+                    magic_type->str(), "experience_for_level", id.str(), nullptr,
+                    static_cast<double>( level ) ) ) {
+            return static_cast<int>( std::ceil( *value ) );
+        }
+    }
     std::optional<jmath_func_id> func_id = overall_exp_for_level_formula_id();
     if( func_id.has_value() ) {
         std::vector<double> params = { static_cast<double>( level ) };
@@ -2003,6 +2045,13 @@ float spell::exp_modifier( const Character &guy ) const
 
 int spell::casting_exp( const Character &guy ) const
 {
+    if( type->magic_type ) {
+        if( const std::optional<double> value =
+                cata::lua_platform::invoke_magic_type_number_handler(
+                    type->magic_type->str(), "casting_experience", id().str(), &guy ) ) {
+            return static_cast<int>( std::round( *value ) );
+        }
+    }
     if( type->magic_type.has_value() && type->magic_type.value()->casting_xp_formula_id.has_value() ) {
         const_dialogue d( get_const_talker_for( guy ), nullptr );
         d.set_value( "spell_id", id().str() );

@@ -18,6 +18,7 @@ class monster_oracle_t : public oracle_t
         explicit monster_oracle_t( const monster *subject ) {
             this->subject = subject;
         }
+        const Creature *get_subject() const override;
         /**
          * Predicates used by AI to determine goals.
          */

@@ -53,6 +53,15 @@ struct species_type {
     static void finalize_all();
 };
 
+namespace cata::lua_platform::detail
+{
+generic_factory<species_type> &species_registry();
+generic_factory<mtype> &monster_type_registry();
+const mtype_special_attack *monster_attack_registry_find( const std::string &id );
+void monster_attack_registry_set( const mtype_special_attack &value );
+void monster_attack_registry_erase( const std::string &id );
+} // namespace cata::lua_platform::detail
+
 class MonsterGenerator
 {
     public:
@@ -73,6 +82,15 @@ class MonsterGenerator
 
         // combines mtype and species information, sets bitflags
         void finalize_mtypes();
+
+        /** Finalize one freshly constructed Lua-first mtype exactly once. */
+        void finalize_lua_first_mtype( mtype &mon );
+
+        /** Rebuild the derived hallucination candidate list after a transaction. */
+        void refresh_hallucination_monsters();
+
+        /** Re-resolve behavior ids after the behavior factory changes storage. */
+        void refresh_behavior_goals();
 
         mtype generate_fake_pseudo_dormant_monster( const mtype &mon );
 
@@ -110,6 +128,16 @@ class MonsterGenerator
         friend class string_id<mtype>;
         friend class string_id<species_type>;
         friend class string_id<mattack_actor>;
+        friend generic_factory<species_type> &
+        cata::lua_platform::detail::species_registry();
+        friend generic_factory<mtype> &
+        cata::lua_platform::detail::monster_type_registry();
+        friend const mtype_special_attack *
+        cata::lua_platform::detail::monster_attack_registry_find( const std::string &id );
+        friend void cata::lua_platform::detail::monster_attack_registry_set(
+            const mtype_special_attack &value );
+        friend void cata::lua_platform::detail::monster_attack_registry_erase(
+            const std::string &id );
 
         pimpl<generic_factory<mtype>> mon_templates;
         pimpl<generic_factory<species_type>> mon_species;
