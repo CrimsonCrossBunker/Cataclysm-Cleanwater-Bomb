@@ -1,0 +1,185 @@
+schema_version: 1
+kind: lua_first_roadmap
+direction_status: accepted
+platform_version: 1
+authority_path: data/lua/LUA_FIRST_PLATFORM.md
+current_contract: Lua API v5
+target: Pure-Lua authoring for CCB core content and Mods without public JSON or EOC dependencies.
+legacy_inventories:
+  - id: json-object-types
+    path: data/reference/json/ccb_json_object_types.json
+    selector: type
+    entry_count: 190
+  - id: eoc-conditions
+    path: data/reference/json/ccb_eoc_conditions.json
+    selector: key
+    entry_count: 275
+  - id: eoc-effects
+    path: data/reference/json/ccb_eoc_effects.json
+    selector: key
+    entry_count: 310
+status_definitions:
+  milestone: [planned, in_progress, complete, blocked]
+  capability: [absent, legacy_only, partial, available]
+  legacy_dependency: [none, private_adapter, public_legacy]
+milestones:
+  - id: documentation-foundation
+    title: Authoritative design, Agent routing, and checked roadmap
+    status: complete
+    depends_on: []
+    exit_criteria:
+      - The source repository has an authoritative Lua-first architecture document.
+      - The roadmap is schema-checked and routed to contributors and agents.
+      - CCB-Docs has paired Chinese and English explanatory pages.
+    evidence:
+      - data/lua/LUA_FIRST_PLATFORM.md
+      - ai/lua-first-roadmap.yml
+      - data/lua/AGENTS.md
+  - id: zero-config-discovery
+    title: Root main.lua discovery and optional native mod.lua metadata
+    status: planned
+    depends_on: [documentation-foundation]
+    exit_criteria:
+      - A directory containing only main.lua is discoverable as a Mod.
+      - No lua subdirectory, manifest.json, or modinfo.json is required.
+      - Optional mod.lua resolves dependencies before content loading.
+    evidence: []
+  - id: native-content-transaction
+    title: Pre-finalize native content objects and transactional commit
+    status: planned
+    depends_on: [zero-config-discovery]
+    exit_criteria:
+      - Platform content runs before global data finalization.
+      - Exported native references reject stale owners and generations.
+      - Private legacy adapters are inventoried and not publicly callable.
+    evidence: []
+  - id: item-recipe-use-slice
+    title: Zero-JSON/EOC item, recipe, and Lua use behaviour
+    status: planned
+    depends_on: [native-content-transaction]
+    exit_criteria:
+      - The example Mod loads with no JSON or EOC files.
+      - The item and recipe preserve stable ids through save/load.
+      - A named Lua handler produces an observable in-game result.
+    evidence: []
+  - id: behaviour-services
+    title: Events, hooks, callbacks, persistent tasks, state, and shared domain services
+    status: planned
+    depends_on: [item-recipe-use-slice]
+    exit_criteria:
+      - EOC handler logic is mapped to shared services rather than key-shaped bindings.
+      - Named tasks resume from serializable data after save/load.
+      - Workflows can be authored as Lua libraries over the primitive APIs.
+    evidence: []
+  - id: static-domain-coverage
+    title: Complete author-facing static content coverage
+    status: planned
+    depends_on: [behaviour-services]
+    exit_criteria:
+      - Every checked JSON/EOC entry has a reviewed replacement disposition.
+      - Every supported domain has native registration, tests, declarations, and documentation.
+      - No available Platform capability publicly requires a legacy parser.
+    evidence: []
+  - id: core-and-bundled-migration
+    title: Migrate core and bundled content and freeze covered legacy authoring
+    status: planned
+    depends_on: [static-domain-coverage]
+    exit_criteria:
+      - Targeted core and bundled content is Lua-authored with stable ids.
+      - Migration tools emit native-object Lua skeletons and explicit TODOs.
+      - New JSON/EOC features are frozen only in domains with complete replacements.
+    evidence: []
+  - id: legacy-removal-window
+    title: Complete deprecation window and allow legacy author-interface removal
+    status: planned
+    depends_on: [core-and-bundled-migration]
+    exit_criteria:
+      - At least two stable releases and at least twelve months have elapsed.
+      - Save migrations and copied-world tests cover retained stable ids.
+      - The compatibility layer can be removed without bundled-content dependencies.
+    evidence: []
+capabilities:
+  - id: mod-discovery
+    phase: discovery
+    status: absent
+    legacy_dependency: public_legacy
+    target_surface: Root main.lua with optional native mod.lua metadata
+    evidence: [src/mod_manager.cpp]
+    next_actions:
+      - Add Platform discovery beside legacy modinfo.json scanning.
+      - Define deterministic defaults and hybrid metadata conflict errors.
+  - id: trusted-standard-library
+    phase: bootstrap
+    status: legacy_only
+    legacy_dependency: none
+    target_surface: Complete Lua 5.4 standard libraries and native package loading
+    evidence: [src/catalua_ui.cpp, src/lua/lua.h]
+    next_actions:
+      - Introduce a separately versioned Platform state without v5 capability filtering.
+      - Add user-visible trust warnings for installed and enabled Platform Mods.
+  - id: static-native-content
+    phase: content
+    status: absent
+    legacy_dependency: public_legacy
+    target_surface: ccb.content with exported native definition objects
+    evidence: [src/init.cpp, src/game_io.cpp]
+    next_actions:
+      - Add a pre-finalize Platform execution phase and staging registry.
+      - Define add, replace, edit, commit, and static fingerprint semantics.
+  - id: native-object-surface
+    phase: bindings
+    status: partial
+    legacy_dependency: none
+    target_surface: All bindable public members of explicitly exported native types
+    evidence: [src/catalua_bindings_values.cpp, data/lua/types/ccb_api_v5.d.lua]
+    next_actions:
+      - Add an export-root inventory and report every unbindable public member.
+      - Add owner and generation checks to borrowed native references.
+  - id: runtime-events-hooks-callbacks
+    phase: runtime
+    status: partial
+    legacy_dependency: none
+    target_surface: Typed events, synchronous hooks, and definition callbacks
+    evidence: [src/catalua_ui.cpp, data/lua/reference/ccb_public_api_v5.json]
+    next_actions:
+      - Define Platform-native callback arguments instead of snapshots and talker aliases.
+      - Preserve stable handler ids across runtime reloads.
+  - id: persistent-tasks-and-state
+    phase: runtime
+    status: partial
+    legacy_dependency: none
+    target_surface: Named tasks and serializable character/world state
+    evidence: [src/catalua_ui.cpp, src/catalua_ui_state.cpp]
+    next_actions:
+      - Persist mod id, handler id, due time, owner, payload, and payload version.
+      - Specify missing-handler, overdue-task, and migration outcomes.
+  - id: shared-domain-services
+    phase: runtime
+    status: absent
+    legacy_dependency: public_legacy
+    target_surface: Game-domain services shared by Platform and legacy adapters
+    evidence: [src/condition.cpp, src/npctalk.cpp, src/effect_on_condition.cpp]
+    next_actions:
+      - Classify existing handlers by underlying query or mutation service.
+      - Extract the item, recipe, morale, mission, character, and map vertical slice first.
+  - id: developer-templates
+    phase: tooling
+    status: absent
+    legacy_dependency: none
+    target_surface: Minimal and complete templates plus create_lua_mod.py
+    evidence: [tools/lua_api/README.md]
+    next_actions:
+      - Ship executable templates with the item-recipe-use vertical slice.
+      - Generate no JSON and never overwrite an existing non-empty target.
+  - id: replacement-audit
+    phase: migration
+    status: absent
+    legacy_dependency: private_adapter
+    target_surface: Exact JSON/EOC-to-domain replacement ledger
+    evidence:
+      - data/reference/json/ccb_json_object_types.json
+      - data/reference/json/ccb_eoc_conditions.json
+      - data/reference/json/ccb_eoc_effects.json
+    next_actions:
+      - Create a checked selector ledger covering every inventory entry exactly once.
+      - Record target domain, shared service, status, and source-backed evidence.

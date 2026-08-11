@@ -39,6 +39,8 @@ AGENT_METADATA = {
     "ai/documentation-registry.yml",
     "ai/docs-impact.yml",
     "ai/generated-files.yml",
+    "ai/lua-first-roadmap.schema.json",
+    "ai/lua-first-roadmap.yml",
     "ai/project-map.yml",
     "ai/repository-settings.target.schema.json",
     "ai/repository-settings.target.yml",
@@ -52,6 +54,17 @@ API_CONTRACTS = {
     "data/lua/reference/ccb_public_api_v5_coverage.schema.json",
     "data/lua/types/ccb_api_v5.d.lua",
     "tools/json_api/contract-inventory.schema.json",
+}
+ARCHITECTURE_CONTRACTS = {
+    "data/lua/LUA_FIRST_PLATFORM.md",
+}
+CCB_DOCS_IDS = {
+    "data/lua/LUA_FIRST_PLATFORM.md": [
+        "architecture.lua-first-platform",
+        "architecture.lua-first-glossary",
+    ],
+    "ai/lua-first-roadmap.yml": ["architecture.lua-first-roadmap"],
+    "ai/lua-first-roadmap.schema.json": ["architecture.lua-first-roadmap"],
 }
 
 
@@ -159,6 +172,11 @@ def classify(path: str, legacy: dict[str, dict]) -> dict:
         status = "active"
         authority = "governance_contract"
         source_of_truth = True
+    elif path in ARCHITECTURE_CONTRACTS:
+        category = "authoritative_document"
+        status = "active"
+        authority = "architecture_contract"
+        source_of_truth = True
     elif path in API_CONTRACTS:
         category = "api_contract"
         status = "active"
@@ -211,6 +229,7 @@ def classify(path: str, legacy: dict[str, dict]) -> dict:
             historical.get("merge_target") or historical["stable_document_id"]
         )
         ccb_docs_ids.append(target_id)
+    ccb_docs_ids.extend(CCB_DOCS_IDS.get(path, []))
     return {
         "id": registry_id(path),
         "path": path,

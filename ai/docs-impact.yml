@@ -91,6 +91,21 @@ entries:
     risk_group: lua-api
     risk_level: high
 
+  - id: lua-first-platform
+    enforcement: advisory
+    patterns:
+      - data/lua/LUA_FIRST_PLATFORM.md
+      - ai/lua-first-roadmap.yml
+      - ai/lua-first-roadmap.schema.json
+    documentation_ids:
+      - architecture.lua-first-platform
+      - architecture.lua-first-roadmap
+      - architecture.lua-first-glossary
+    generated_reference_impact: false
+    required_check_ids: [agent-context]
+    risk_group: lua-platform
+    risk_level: high
+
   - id: json-public-contract
     enforcement: required
     patterns:

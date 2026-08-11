@@ -65,6 +65,7 @@
           "authority": {
             "enum": [
               "governance_contract",
+              "architecture_contract",
               "api_contract",
               "build_contract",
               "generated_contract",
