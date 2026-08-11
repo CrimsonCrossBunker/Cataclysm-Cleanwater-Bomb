@@ -8150,7 +8150,7 @@ TEST_CASE( "lua_native_tokens_bind_owner_identity_and_keep_expired_equality_stab
         game,
     [&active_runtime]() {
         return active_runtime;
-    }, [world_generation]() {
+    }, []() {
         return world_generation;
     }, []() {}, []() {} );
     lua["origin_token"] = token;
