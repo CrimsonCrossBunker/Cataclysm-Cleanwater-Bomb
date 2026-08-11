@@ -35,6 +35,7 @@
 #include "catalua_bindings.h"
 #include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
+#include "catalua_platform_runtime.h"
 #include "catalua_ui_actions.h"
 #include "catalua_ui_actions_internal.h"
 #include "catalua_ui_addictions.h"
@@ -6724,19 +6725,30 @@ native_hook_result dispatch_native_hook_result(
     const std::string_view name,
     const native_callback_arguments &arguments )
 {
-    if( !active_state || is_pool_worker_thread() ) {
+    if( is_pool_worker_thread() ) {
         return {};
     }
+    native_hook_result aggregate;
+    if( active_state ) {
+        try {
+            aggregate = dispatch_script_hook(
+            *active_state, name, [&]( const std::size_t ) {
+                return native_callback_payload( *active_state, arguments );
+            } );
+        } catch( const std::exception &exception ) {
+            record_runtime_error(
+                "Lua native hook '" + std::string( name ) + "'",
+                exception.what() );
+        }
+    }
     try {
-        return dispatch_script_hook(
-        *active_state, name, [&]( const std::size_t ) {
-            return native_callback_payload( *active_state, arguments );
-        } );
+        return cata::lua_platform::dispatch_runtime_hook(
+                   name, arguments, aggregate );
     } catch( const std::exception &exception ) {
         record_runtime_error(
-            "Lua native hook '" + std::string( name ) + "'",
+            "Lua-first Platform native hook '" + std::string( name ) + "'",
             exception.what() );
-        return {};
+        return aggregate;
     }
 }
 
@@ -6749,9 +6761,22 @@ bool dispatch_native_hook(
 
 bool has_native_hook( const std::string_view name )
 {
-    return active_state && !is_pool_worker_thread() &&
-           active_state->hook_registry.has_matching(
-               "hook:" + std::string( name ) );
+    return !is_pool_worker_thread() &&
+           ( ( active_state && active_state->hook_registry.has_matching(
+                   "hook:" + std::string( name ) ) ) ||
+             cata::lua_platform::has_runtime_hook( name ) );
+}
+
+bool native_hook_supports_result_field( const std::string_view name,
+                                        const std::string_view field )
+{
+    const script_hook_spec *spec = find_script_hook_spec( name );
+    return spec != nullptr && script_hook_supports_result( *spec, field );
+}
+
+bool native_hook_contract_exists( const std::string_view name )
+{
+    return find_script_hook_spec( name ) != nullptr;
 }
 
 std::vector<std::string> collect_native_mapgen_factory_usages(

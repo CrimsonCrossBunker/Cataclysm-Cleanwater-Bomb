@@ -737,6 +737,22 @@ void install_eoc_api(
     } );
     game["eocs"] = std::move( eocs );
 
+    install_variable_api( game, std::move( current_runtime_generation ),
+                          std::move( current_world_generation ),
+                          std::move( require_read ), std::move( require_write ),
+                          std::move( has_active_callback ) );
+}
+
+void install_variable_api(
+    sol::table &game,
+    std::function<std::size_t()> current_runtime_generation,
+    std::function<std::size_t()> current_world_generation,
+    std::function<void()> require_read,
+    std::function<void()> require_write,
+    std::function<bool()> has_active_callback )
+{
+    sol::state_view lua( game.lua_state() );
+
     sol::table variables = lua.create_table();
     variables.set_function(
         "get",
