@@ -120,6 +120,15 @@ DECLARED_CLASS = re.compile(
     r"^---@class\s+([A-Za-z_][A-Za-z0-9_]*)",
     re.MULTILINE,
 )
+DECLARED_ALIAS = re.compile(
+    r"^---@alias\s+([A-Za-z_][A-Za-z0-9_]*)",
+    re.MULTILINE,
+)
+DECLARED_GENERIC = re.compile(
+    r"^---@generic\s+([A-Za-z_][A-Za-z0-9_]*)",
+    re.MULTILINE,
+)
+CUSTOM_TYPE_REFERENCE = re.compile(r"\b[A-Z][A-Za-z0-9_]*\b")
 NEW_USERTYPE = re.compile(
     r"new_usertype\s*<[^>]+>\s*\(\s*\"([^\"]+)\"",
     re.DOTALL,
@@ -155,6 +164,15 @@ LUA_RESERVED_WORDS = {
     "until",
     "while",
 }
+PLATFORM_PRIVATE_USERTYPE_ALIASES = {
+    "_ModDefinitionNative": "ModDefinition",
+}
+
+
+def platform_public_usertype_name(name: str) -> str | None:
+    if name in PLATFORM_PRIVATE_USERTYPE_ALIASES:
+        return PLATFORM_PRIVATE_USERTYPE_ALIASES[name]
+    return None if name.startswith("_") else name
 
 
 def catalua_sources() -> list[Path]:
@@ -194,7 +212,9 @@ def platform_source_usertypes() -> set[str]:
     result: set[str] = set()
     for path in platform_sources():
         contents = path.read_text(encoding="utf-8", errors="replace")
-        result.update(NEW_USERTYPE.findall(contents))
+        for native_name in NEW_USERTYPE.findall(contents):
+            if public_name := platform_public_usertype_name(native_name):
+                result.add(public_name)
     return result
 
 
@@ -203,7 +223,9 @@ def platform_usertype_members() -> dict[str, set[str]]:
     for path in platform_sources():
         contents = path.read_text(encoding="utf-8", errors="replace")
         for match in NEW_USERTYPE.finditer(contents):
-            usertype = match.group(1)
+            usertype = platform_public_usertype_name(match.group(1))
+            if usertype is None:
+                continue
             opening = contents.find("(", match.start())
             depth = 0
             quoted = False
@@ -244,16 +266,34 @@ def platform_source_properties() -> set[str]:
 
 
 PLATFORM_TABLE_CLASSES = {
+    "achievements": "CcbPlatformAchievementsApi",
+    "activities": "CcbPlatformActivitiesApi",
+    "bionics": "CcbPlatformBionicsApi",
     "content": "CcbPlatformContent",
+    "environment": "CcbPlatformEnvironmentQueries",
+    "inventory": "CcbPlatformInventoryApi",
+    "martial_arts": "CcbPlatformMartialArtsApi",
+    "morale": "CcbPlatformMoraleApi",
+    "mods": "CcbPlatformModQueries",
+    "random": "CcbPlatformRandomApi",
+    "recipes": "CcbPlatformRecipesApi",
     "runtime_api": "CcbPlatformRuntime",
     "scope": "CcbPlatformStateScope",
+    "strings": "CcbPlatformStringPredicates",
     "tasks": "CcbPlatformTasks",
     "presentation": "CcbPlatformPresentation",
     "services": "CcbPlatformServices",
+    "wounds": "CcbPlatformWoundsApi",
+}
+
+PLATFORM_INTENTIONALLY_UNDECLARED_TABLES = {
+    "ccb",
+    "lua",
 }
 
 PLATFORM_SERVICE_FIELDS = {
     "achievements",
+    "activities",
     "addictions",
     "bionics",
     "camps",
@@ -266,6 +306,7 @@ PLATFORM_SERVICE_FIELDS = {
     "enums",
     "factions",
     "followers",
+    "gameplay",
     "handles",
     "hordes",
     "inventory",
@@ -273,6 +314,7 @@ PLATFORM_SERVICE_FIELDS = {
     "martial_arts",
     "messages",
     "missions",
+    "morale",
     "mutations",
     "needs",
     "npcs",
@@ -296,6 +338,7 @@ PLATFORM_SERVICE_FIELDS = {
     "vehicles",
     "vitamins",
     "weather",
+    "wounds",
     "world",
     "zones",
 }
@@ -306,8 +349,24 @@ def platform_source_methods() -> dict[str, set[str]]:
     for path in platform_sources():
         contents = path.read_text(encoding="utf-8", errors="replace")
         for table, method in SET_FUNCTION.findall(contents):
-            if table in PLATFORM_TABLE_CLASSES:
-                result[table].add(method)
+            result[table].add(method)
+    unknown = sorted(
+        set(result) - set(PLATFORM_TABLE_CLASSES) -
+        PLATFORM_INTENTIONALLY_UNDECLARED_TABLES
+    )
+    if unknown:
+        raise RuntimeError(
+            "Platform LuaLS checker omits registered API table mappings: "
+            f"{unknown}"
+        )
+    result = defaultdict(
+        set,
+        {
+            table: methods
+            for table, methods in result.items()
+            if table in PLATFORM_TABLE_CLASSES
+        },
+    )
     # Platform installs this native snapshot layer directly into
     # `ccb.services`.  The implementation is shared with v5, while the table
     # membership is an independent Platform contract checked here.
@@ -378,6 +437,156 @@ def class_methods(contents: str, class_name: str) -> list[str]:
         for declared_class, method in DECLARED_METHOD.findall(contents)
         if declared_class == class_name
     ]
+
+
+def declared_type_names(contents: str) -> set[str]:
+    return (
+        set(DECLARED_CLASS.findall(contents)) |
+        set(DECLARED_ALIAS.findall(contents)) |
+        set(DECLARED_GENERIC.findall(contents))
+    )
+
+
+def leading_type_expression(value: str) -> str:
+    """Return the leading LuaLS type, without its prose description."""
+    value = value.strip()
+    depths = {"(": 0, "<": 0, "[": 0, "{": 0}
+    closers = {")": "(", ">": "<", "]": "[", "}": "{"}
+    quote: str | None = None
+    escaped = False
+    for index, character in enumerate(value):
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == quote:
+                quote = None
+            continue
+        if character in {"'", '"'}:
+            quote = character
+            continue
+        if character in depths:
+            depths[character] += 1
+            continue
+        if character in closers:
+            opener = closers[character]
+            depths[opener] = max(0, depths[opener] - 1)
+            continue
+        if not character.isspace() or any(depths.values()):
+            continue
+        previous = value[:index].rstrip()[-1:]
+        following = value[index:].lstrip()[:1]
+        if previous in {":", "|", "&", ","}:
+            continue
+        if following in {"|", "&", "<", "["}:
+            continue
+        return value[:index]
+    return value
+
+
+def split_return_declarations(value: str) -> list[str]:
+    """Split a LuaLS return list without splitting generic arguments."""
+    result: list[str] = []
+    start = 0
+    depths = {"(": 0, "<": 0, "[": 0, "{": 0}
+    closers = {")": "(", ">": "<", "]": "[", "}": "{"}
+    quote: str | None = None
+    escaped = False
+    for index, character in enumerate(value):
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == quote:
+                quote = None
+            continue
+        if character in {"'", '"'}:
+            quote = character
+            continue
+        if character in depths:
+            depths[character] += 1
+            continue
+        if character in closers:
+            opener = closers[character]
+            depths[opener] = max(0, depths[opener] - 1)
+            continue
+        if character == "," and not any(depths.values()):
+            result.append(value[start:index].strip())
+            start = index + 1
+    result.append(value[start:].strip())
+    return [entry for entry in result if entry]
+
+
+def referenced_type_names(contents: str) -> dict[str, set[int]]:
+    """Return custom LuaLS type references and their source lines."""
+    result: dict[str, set[int]] = defaultdict(set)
+    patterns = {
+        "field": re.compile(
+            r"^---@field\s+[A-Za-z_][A-Za-z0-9_]*\??\s+(.+)$"
+        ),
+        "param": re.compile(
+            r"^---@param\s+[A-Za-z_][A-Za-z0-9_]*\??\s+(.+)$"
+        ),
+        "return": re.compile(r"^---@return\s+(.+)$"),
+        "type": re.compile(r"^---@type\s+(.+)$"),
+        "overload": re.compile(r"^---@overload\s+(.+)$"),
+        "alias": re.compile(
+            r"^---@alias\s+[A-Za-z_][A-Za-z0-9_]*(?:\s+(.+))?$"
+        ),
+        "class": re.compile(
+            r"^---@class\s+[A-Za-z_][A-Za-z0-9_]*\s*:\s*(.+)$"
+        ),
+        "generic": re.compile(
+            r"^---@generic\s+[A-Za-z_][A-Za-z0-9_]*\s*:\s*(.+)$"
+        ),
+    }
+    for line_number, line in enumerate(contents.splitlines(), start=1):
+        for kind, pattern in patterns.items():
+            match = pattern.match(line)
+            if match is None or match.group(1) is None:
+                continue
+            raw = match.group(1)
+            if kind == "return":
+                expressions = [
+                    leading_type_expression(entry)
+                    for entry in split_return_declarations(raw)
+                ]
+            elif kind in {"field", "param", "type"}:
+                expressions = [leading_type_expression(raw)]
+            else:
+                expressions = [raw]
+            for expression in expressions:
+                without_literals = re.sub(
+                    r"'(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\"",
+                    "",
+                    expression,
+                )
+                for name in CUSTOM_TYPE_REFERENCE.findall(without_literals):
+                    result[name].add(line_number)
+            break
+    return result
+
+
+def validate_type_references(
+    contents: str,
+    additional_types: set[str] | None = None,
+) -> None:
+    """Reject LuaLS annotations that refer to undeclared custom types."""
+    known = declared_type_names(contents)
+    if additional_types is not None:
+        known.update(additional_types)
+    references = referenced_type_names(contents)
+    missing = sorted(set(references) - known)
+    if missing:
+        details = ", ".join(
+            f"{name} (lines {sorted(references[name])})"
+            for name in missing
+        )
+        raise RuntimeError(
+            f"LuaLS declarations reference undefined types: {details}"
+        )
 
 
 def validate_table_mappings(
@@ -522,6 +731,7 @@ def check(path: Path) -> dict[str, int]:
         raise RuntimeError(
             f"LuaLS declarations omit usertypes: {missing_types}"
         )
+    validate_type_references(contents)
     coordinate_fields = set(
         re.findall(
             r"^---@field\s+((?:point|tripoint)_[a-z]+_[a-z]+)\s+fun",
@@ -600,15 +810,20 @@ def check_platform(path: Path = PLATFORM_DECLARATIONS) -> dict[str, int]:
         if module_fields.get(field) != expected_type:
             raise RuntimeError(
                 f"Platform LuaLS module field {field} is "
-                f"{module_fields.get(field) or 'missing'}, expected {expected_type}"
+                f"{module_fields.get(field) or 'missing'}, expected "
+                f"{expected_type}"
             )
     constructor = module_fields.get("ModDefinition", "")
     if not constructor.startswith("fun("):
-        raise RuntimeError("Platform LuaLS ModDefinition constructor is missing")
-    declared_service_fields = set(class_fields(contents, "CcbPlatformServices"))
+        raise RuntimeError(
+            "Platform LuaLS ModDefinition constructor is missing"
+        )
+    declared_service_fields = set(
+        class_fields(contents, "CcbPlatformServices")
+    )
     if declared_service_fields != PLATFORM_SERVICE_FIELDS:
         raise RuntimeError(
-            "Platform LuaLS service fields differ from the explicitly installed "
+            "Platform LuaLS service fields differ from the installed "
             f"domain set: declared={sorted(declared_service_fields)}, "
             f"expected={sorted(PLATFORM_SERVICE_FIELDS)}"
         )
@@ -616,20 +831,33 @@ def check_platform(path: Path = PLATFORM_DECLARATIONS) -> dict[str, int]:
     if set(methods) != set(PLATFORM_TABLE_CLASSES):
         raise RuntimeError(
             "Platform native method tables differ from checker mappings: "
-            f"native={sorted(methods)}, mapped={sorted(PLATFORM_TABLE_CLASSES)}"
+            f"native={sorted(methods)}, "
+            f"mapped={sorted(PLATFORM_TABLE_CLASSES)}"
         )
     for table, native_methods in methods.items():
-        declared = set(class_methods(contents, PLATFORM_TABLE_CLASSES[table]))
+        declared = set(
+            class_methods(contents, PLATFORM_TABLE_CLASSES[table])
+        )
         if native_methods != declared:
             raise RuntimeError(
-                f"Platform LuaLS methods differ for {PLATFORM_TABLE_CLASSES[table]}: "
+                "Platform LuaLS methods differ for "
+                f"{PLATFORM_TABLE_CLASSES[table]}: "
                 f"declared={sorted(declared)}, native={sorted(native_methods)}"
             )
+    shared_contents = (
+        REPOSITORY_ROOT / DEFAULT_DECLARATIONS
+    ).read_text(encoding="utf-8")
+    validate_type_references(
+        contents,
+        declared_type_names(shared_contents),
+    )
     return {
         "usertypes": len(usertypes),
         "properties": len(properties),
         "methods": sum(len(value) for value in methods.values()),
-        "usertype_members": sum(len(value) for value in native_members.values()),
+        "usertype_members": sum(
+            len(value) for value in native_members.values()
+        ),
     }
 
 

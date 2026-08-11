@@ -131,6 +131,24 @@ void cata::lua_platform::detail::refresh_body_part_similarity_cache()
     }
 }
 
+void cata::lua_platform::detail::refresh_body_part_wound_cache()
+{
+    for( body_part_type &part : body_part_factory.get_all_mod() ) {
+        part.potential_wounds.clear();
+    }
+
+    for( body_part_type &part : body_part_factory.get_all_mod() ) {
+        for( const wound_type &wound_def : wound_type::get_all() ) {
+            if( wound_def.allowed_on_bodypart( part.id ) ) {
+                const bp_wounds candidate = {
+                    wound_def.id, wound_def.damage_types, wound_def.damage_required
+                };
+                part.potential_wounds.add( candidate, wound_def.weight );
+            }
+        }
+    }
+}
+
 static body_part legacy_id_to_enum( const std::string &legacy_id )
 {
     static const std::unordered_map<std::string, body_part> body_parts = {
@@ -554,6 +572,7 @@ void body_part_type::reset()
 void body_part_type::finalize_all()
 {
     body_part_factory.finalize();
+    cata::lua_platform::detail::refresh_body_part_similarity_cache();
 }
 
 void body_part_type::finalize()
@@ -562,6 +581,7 @@ void body_part_type::finalize()
         unarmed_bonus = true;
     }
 
+    potential_wounds.clear();
     for( const wound_type &wd : wound_type::get_all() ) {
         if( wd.allowed_on_bodypart( id ) ) {
             const bp_wounds bpw = { wd.id, wd.damage_types, wd.damage_required };
@@ -1165,6 +1185,7 @@ void bodypart::add_or_worsen_wound( const wound &wd )
 
                 remove_wound( *old_wound );
                 add_wound( new_wound );
+                return;
             }
         }
 

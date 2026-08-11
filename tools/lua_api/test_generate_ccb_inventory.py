@@ -14,6 +14,7 @@ try:
         parse_event_types,
         parse_id_kinds,
         parse_json_types,
+        parse_usertype_registrations,
         serialize_inventory,
     )
 except ImportError:
@@ -24,6 +25,7 @@ except ImportError:
         parse_event_types,
         parse_id_kinds,
         parse_json_types,
+        parse_usertype_registrations,
         serialize_inventory,
     )
 
@@ -84,8 +86,38 @@ class CcbInventoryGeneratorTest(unittest.TestCase):
             [{"type": "first_event"}, {"type": "second_event"}],
         )
 
+    def test_usertype_parser_handles_nested_cpp_and_top_level_keys(
+        self,
+    ) -> None:
+        registrations = parse_usertype_registrations(
+            r'''
+            // lua.new_usertype<ignored>("Ignored", sol::no_constructor);
+            lua.new_usertype<std::pair<int, std::vector<long>>>(
+                "FutureRoot", sol::no_constructor,
+                "value", []( const auto &self ) {
+                    return std::string( "not,a,member" ) + self.value;
+                },
+                sol::meta_function::to_string, &future_root::to_string );
+            ''',
+            "fixture.cpp",
+        )
+        self.assertEqual(len(registrations), 1)
+        self.assertEqual(
+            registrations[0]["cpp_type"],
+            "std::pair<int, std::vector<long>>",
+        )
+        self.assertEqual(registrations[0]["lua_name"], "FutureRoot")
+        self.assertEqual(
+            [entry["id"] for entry in registrations[0]["members"]],
+            ["value", "__tostring"],
+        )
+        self.assertEqual(
+            registrations[0]["members"][0]["cpp_members"], ["value"]
+        )
+
     def test_repository_inventory_has_expected_native_baselines(self) -> None:
         inventory = build_inventory()
+        self.assertEqual(inventory["schema_version"], 2)
         self.assertEqual(len(inventory["id_kinds"]), 132)
         self.assertEqual(len(inventory["json_types"]), 190)
         self.assertEqual(len(inventory["event_types"]), 113)
@@ -97,6 +129,116 @@ class CcbInventoryGeneratorTest(unittest.TestCase):
             sorted(domain for domain, _ in NATIVE_DOMAINS),
             [domain for domain, _ in NATIVE_DOMAINS],
         )
+        surfaces = {
+            entry["id"]: set(entry["roots"])
+            for entry in inventory["export_surfaces"]
+        }
+        self.assertEqual(len(inventory["export_roots"]), 101)
+        self.assertEqual(len(surfaces["api_v5"]), 16)
+        self.assertEqual(len(surfaces["platform_v1"]), 97)
+        self.assertEqual(
+            len(surfaces["api_v5"] & surfaces["platform_v1"]), 12
+        )
+
+    def test_repository_inventory_records_alias_and_dispositions(self) -> None:
+        inventory = build_inventory()
+        roots = {
+            entry["lua_name"]: entry
+            for entry in inventory["export_roots"]
+        }
+        self.assertEqual(
+            roots["ModDefinition"]["registration_name"],
+            "_ModDefinitionNative",
+        )
+        unit_members = {
+            entry["id"]: entry
+            for entry in roots["UnitValue"]["member_disposition"]["members"]
+        }
+        self.assertEqual(
+            unit_members["native.canonical_wide"]["disposition"],
+            "unbound",
+        )
+        point_members = {
+            entry["id"]: entry
+            for entry in roots["PointCoord"]["member_disposition"]["members"]
+        }
+        self.assertEqual(
+            point_members["native.line_to"]["lua_access"],
+            ["game.coords.line", "ccb.services.coords.line"],
+        )
+        handle_members = {
+            entry["id"]: entry
+            for entry in roots["GameHandle"]["member_disposition"]["members"]
+        }
+        self.assertEqual(
+            handle_members["native.resolve_item"]["reason_code"],
+            "native-pointer-escape",
+        )
+        self.assertEqual(
+            handle_members["native.runtime_owner"]["disposition"],
+            "unbound",
+        )
+        self.assertIn(
+            "runtime-owner-identity",
+            roots["GameHandle"]["lifetime"]["guards"],
+        )
+        zone_members = {
+            entry["id"]: entry
+            for entry in roots["ZoneToken"]["member_disposition"]["members"]
+        }
+        self.assertNotIn("native.ordinal", zone_members)
+        self.assertNotIn("native.runtime_generation", zone_members)
+        self.assertEqual(
+            zone_members["native.runtime"]["disposition"],
+            "unbound",
+        )
+        self.assertEqual(
+            zone_members["native.lifetime_identity"]["disposition"],
+            "unbound",
+        )
+        item_use_members = {
+            entry["id"]: entry
+            for entry in roots["ItemUseContext"]["member_disposition"][
+                "members"
+            ]
+        }
+        self.assertIn("native.handle_runtime", item_use_members)
+        for identity in (
+            "native.copy_constructor",
+            "native.copy_assignment",
+            "native.move_constructor",
+            "native.move_assignment",
+        ):
+            self.assertEqual(
+                item_use_members[identity]["disposition"], "unbound"
+            )
+        self.assertIn(
+            "scope-lease",
+            roots["ItemUseContext"]["lifetime"]["guards"],
+        )
+        self.assertIn(
+            "noncopyable-nonmovable",
+            roots["ItemUseContext"]["lifetime"]["guards"],
+        )
+        for token_name in (
+            "MissionToken",
+            "HordeEntityToken",
+            "LegacyHordeToken",
+        ):
+            token_members = {
+                entry["id"]: entry
+                for entry in roots[token_name]["member_disposition"][
+                    "members"
+                ]
+            }
+            self.assertEqual(
+                token_members["native.runtime_context"]["disposition"],
+                "unbound",
+            )
+            self.assertEqual(
+                token_members["native.belongs_to"]["lua_access"],
+                [f"{token_name}.is_valid"],
+            )
 
     def test_repository_inventory_uses_generator_format(self) -> None:
         serialized = serialize_inventory(build_inventory())

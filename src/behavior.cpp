@@ -40,14 +40,6 @@ const std::vector<std::string> &node_t::child_ids() const
 {
     return authored_children;
 }
-void node_t::rebuild_children()
-{
-    children.clear();
-    children.reserve( authored_children.size() );
-    for( const std::string &child : authored_children ) {
-        children.push_back( &string_id<node_t>( child ).obj() );
-    }
-}
 void node_t::set_score_function( const score_type &func, const std::string &argument )
 {
     score_function_.emplace( func, argument );
@@ -162,6 +154,15 @@ template<>
 const node_t &string_id<node_t>::obj() const
 {
     return behavior_factory.obj( *this );
+}
+
+void node_t::rebuild_children()
+{
+    children.clear();
+    children.reserve( authored_children.size() );
+    for( const std::string &child : authored_children ) {
+        children.push_back( &string_id<node_t>( child ).obj() );
+    }
 }
 
 void behavior::load_behavior( const JsonObject &jo, const std::string &src )

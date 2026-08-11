@@ -343,7 +343,7 @@ std::unique_ptr<talker> resolve_talker_option(
     const sol::optional<sol::table> &options,
     const std::string &field,
     const bool default_avatar,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     std::optional<game_handle_error> &error )
 {
@@ -398,7 +398,7 @@ struct prepared_eoc_dialogue {
 
 prepared_eoc_dialogue prepare_eoc_dialogue(
     const sol::optional<sol::table> &options,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     validate_eoc_options( options );
@@ -438,7 +438,7 @@ prepared_eoc_dialogue prepare_eoc_dialogue(
 sol::table test_eoc(
     sol::this_state lua, const script_game_id &id,
     const sol::optional<sol::table> &options,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_eoc_id( id, "game.eocs.test" );
@@ -463,7 +463,7 @@ sol::table test_eoc(
 sol::table activate_eoc(
     sol::this_state lua, const script_game_id &id,
     const sol::optional<sol::table> &options,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_eoc_id( id, "game.eocs.activate" );
@@ -489,7 +489,7 @@ sol::table queue_eoc(
     sol::this_state lua, const script_game_id &id,
     const script_time_duration &delay,
     const sol::optional<sol::table> &options,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_eoc_id( id, "game.eocs.queue" );
@@ -533,7 +533,7 @@ struct resolved_variable_talker {
 
 resolved_variable_talker resolve_variable_talker(
     const game_handle &handle,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     resolved_variable_talker result;
@@ -569,7 +569,7 @@ resolved_variable_talker resolve_variable_talker(
 sol::table get_variable(
     sol::this_state lua, const game_handle &handle,
     const std::string &key,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     validate_context_key( key );
@@ -597,7 +597,7 @@ sol::table get_variable(
 sol::table set_variable(
     sol::this_state lua, const game_handle &handle,
     const std::string &key, const sol::object &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     validate_context_key( key );
@@ -631,7 +631,7 @@ sol::table set_variable(
 sol::table remove_variable(
     sol::this_state lua, const game_handle &handle,
     const std::string &key,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     validate_context_key( key );
@@ -661,7 +661,7 @@ sol::table remove_variable(
 
 void install_eoc_api(
     sol::table &game,
-    std::function<std::size_t()> current_runtime_generation,
+    std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write,
@@ -745,7 +745,7 @@ void install_eoc_api(
 
 void install_variable_api(
     sol::table &game,
-    std::function<std::size_t()> current_runtime_generation,
+    std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write,

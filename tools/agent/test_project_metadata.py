@@ -89,6 +89,7 @@ class ProjectMetadataTest(unittest.TestCase):
         roadmap = yaml.safe_load(path.read_text(encoding="utf-8"))
         roadmap = copy.deepcopy(roadmap)
         roadmap["capabilities"][0]["status"] = "available"
+        roadmap["capabilities"][0]["legacy_dependency"] = "public_legacy"
 
         with self.assertRaisesRegex(ValueError, "public legacy"):
             validate_lua_first_roadmap(roadmap)

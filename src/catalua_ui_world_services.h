@@ -10,12 +10,14 @@
 namespace cata::lua_ui
 {
 
+class game_handle_runtime;
+
 // Install generation-bound spawning, follower, and avatar relocation
 // services.  Mutations require game.write and an active callback.  Relocation
 // additionally requires game.actions.dangerous.
 void install_game_world_service_api(
     sol::table &game,
-    std::function<std::size_t()> current_runtime_generation,
+    std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write,

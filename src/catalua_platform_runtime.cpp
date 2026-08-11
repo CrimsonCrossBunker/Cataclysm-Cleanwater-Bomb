@@ -3,6 +3,7 @@
 #if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cmath>
 #include <cstdint>
@@ -19,11 +20,13 @@
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <variant>
 
 #include "calendar.h"
 #include "addiction.h"
+#include "achievement.h"
 #include "activity_actor.h"
 #include "activity_handlers.h"
 #include "activity_type.h"
@@ -31,11 +34,13 @@
 #include "ammo_effect.h"
 #include "anatomy.h"
 #include "ascii_art.h"
+#include "avatar.h"
 #include "behavior.h"
 #include "behavior_oracle.h"
 #include "behavior_strategy.h"
 #include "bodypart.h"
 #include "bodygraph.h"
+#include "bionics.h"
 #include "butchery_requirements.h"
 #include "cata_path.h"
 #include "catacharset.h"
@@ -78,6 +83,7 @@
 #include "catalua_ui_world_services.h"
 #include "catalua_ui_zones.h"
 #include "character.h"
+#include "character_martial_arts.h"
 #include "character_modifier.h"
 #include "climbing.h"
 #include "clothing_mod.h"
@@ -105,17 +111,20 @@
 #include "flag.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
-#include "item.h"
-#include "item_group.h"
+#include "game.h"
 #include "harvest.h"
 #include "help.h"
 #include "hsv_color.h"
+#include "init.h"
+#include "item.h"
+#include "item_group.h"
 #include "item_category.h"
 #include "item_factory.h"
 #include "item_location.h"
 #include "itype.h"
 #include "iuse.h"
 #include "json.h"
+#include "json_loader.h"
 #include "map.h"
 #include "map_accessories.h"
 #include "mapdata.h"
@@ -135,6 +144,7 @@
 #include "move_mode.h"
 #include "mtype.h"
 #include "mutation.h"
+#include "npc.h"
 #include "omdata.h"
 #include "overmap_location.h"
 #include "output.h"
@@ -172,6 +182,7 @@
 #include "weather_gen.h"
 #include "weather_type.h"
 #include "weakpoint.h"
+#include "wound.h"
 #include "worldfactory.h"
 
 namespace cata::lua_platform
@@ -269,8 +280,8 @@ struct recipe_definition_data {
     std::string result;
     std::string name;
     std::string description;
-    std::string category = "CC_MISC";
-    std::string subcategory = "CSC_MISC";
+    std::string category = "CC_OTHER";
+    std::string subcategory = "CSC_OTHER_OTHER";
     double activity_level = NO_EXERCISE;
     std::set<std::string> nested_recipes;
     std::string skill;
@@ -595,6 +606,65 @@ struct body_part_definition_data {
     std::set<std::string> flags;
     std::map<std::string, body_part_limb_score_definition_data> limb_scores;
     std::vector<body_part_quality_definition_data> qualities;
+    bool registered = false;
+};
+
+struct wound_limb_score_definition_data {
+    std::string id;
+    double penalty = 0.0;
+};
+
+struct wound_progression_definition_data {
+    std::string id;
+    std::int64_t chance = 0;
+};
+
+struct wound_type_definition_data {
+    std::string id;
+    std::string name;
+    std::string plural_name;
+    std::string description;
+    std::int64_t pain_min = 0;
+    std::int64_t pain_max = 0;
+    std::int64_t healing_min_turns = 1;
+    std::int64_t healing_max_turns = 1;
+    std::int64_t damage_min = 0;
+    std::int64_t damage_max = 0;
+    std::int64_t weight = 1;
+    std::int64_t per_part_limit = 0;
+    std::string required_body_part_flag;
+    std::string forbidden_body_part_flag;
+    std::vector<std::string> damage_types;
+    std::vector<wound_limb_score_definition_data> limb_scores;
+    std::vector<wound_progression_definition_data> progressions;
+    std::vector<std::string> required_body_part_types;
+    std::vector<std::string> forbidden_body_part_types;
+    bool registered = false;
+};
+
+struct wound_fix_proficiency_definition_data {
+    std::string id;
+    double multiplier = 1.0;
+    bool mandatory = false;
+};
+
+struct wound_fix_requirement_definition_data {
+    std::string id;
+    std::int64_t count = 1;
+};
+
+struct wound_fix_definition_data {
+    std::string id;
+    std::string name;
+    std::string description;
+    std::string success_message;
+    std::int64_t duration_turns = 0;
+    std::int64_t health_delta = 0;
+    std::map<std::string, std::int64_t> skills;
+    std::vector<wound_fix_proficiency_definition_data> proficiencies;
+    std::set<std::string> wounds_removed;
+    std::set<std::string> wounds_added;
+    std::vector<wound_fix_requirement_definition_data> requirements;
     bool registered = false;
 };
 
@@ -1854,7 +1924,7 @@ struct requirement_definition_handle {
     }
 
     requirement_definition_handle &quality( const std::string &id,
-            std::int64_t level, std::int64_t count ) {
+                                            std::int64_t level, std::int64_t count ) {
         require_building_handle( token, *definition, "requirement" );
         if( id.empty() || level <= 0 || count <= 0 ||
             level > std::numeric_limits<int>::max() ||
@@ -2358,7 +2428,7 @@ struct recipe_group_definition_handle {
     std::shared_ptr<owner_token> token;
 
     recipe_group_definition_handle &recipe( const std::string &id,
-                                             const std::string &description ) {
+                                            const std::string &description ) {
         require_building_handle( token, *definition, "recipe group" );
         if( id.empty() || description.empty() ) {
             throw std::runtime_error( "recipe-group entry needs an id and description" );
@@ -2488,57 +2558,57 @@ struct harvest_drop_type_definition_handle {
 };
 
 struct harvest_definition_handle {
-    std::shared_ptr<harvest_definition_data> definition;
-    std::shared_ptr<owner_token> token;
+        std::shared_ptr<harvest_definition_data> definition;
+        std::shared_ptr<owner_token> token;
 
-    harvest_definition_handle &drop( const sol::table &options ) {
-        require_building_handle( token, *definition, "harvest" );
-        harvest_entry_definition_data entry;
-        entry.output = options.get_or( "output", std::string() );
-        entry.category = options.get_or( "category", std::string() );
-        entry.base_minimum = options.get_or( "base_minimum", 1.0 );
-        entry.base_maximum = options.get_or( "base_maximum", entry.base_minimum );
-        entry.skill_minimum = options.get_or( "skill_minimum", 0.0 );
-        entry.skill_maximum = options.get_or( "skill_maximum", entry.skill_minimum );
-        entry.maximum = options.get_or<std::int64_t>( "maximum", 1000 );
-        entry.mass_ratio = options.get_or( "mass_ratio", 0.0 );
-        if( entry.output.empty() || std::any_of(
-                definition->entries.begin(), definition->entries.end(),
-        [&entry]( const harvest_entry_definition_data & existing ) {
-        return existing.output == entry.output;
+        harvest_definition_handle &drop( const sol::table &options ) {
+            require_building_handle( token, *definition, "harvest" );
+            harvest_entry_definition_data entry;
+            entry.output = options.get_or( "output", std::string() );
+            entry.category = options.get_or( "category", std::string() );
+            entry.base_minimum = options.get_or( "base_minimum", 1.0 );
+            entry.base_maximum = options.get_or( "base_maximum", entry.base_minimum );
+            entry.skill_minimum = options.get_or( "skill_minimum", 0.0 );
+            entry.skill_maximum = options.get_or( "skill_maximum", entry.skill_minimum );
+            entry.maximum = options.get_or<std::int64_t>( "maximum", 1000 );
+            entry.mass_ratio = options.get_or( "mass_ratio", 0.0 );
+            if( entry.output.empty() || std::any_of(
+                    definition->entries.begin(), definition->entries.end(),
+            [&entry]( const harvest_entry_definition_data & existing ) {
+            return existing.output == entry.output;
         } ) ) {
-            throw std::runtime_error( "harvest drop needs a unique non-empty output id" );
+                throw std::runtime_error( "harvest drop needs a unique non-empty output id" );
+            }
+            definition->entries.push_back( std::move( entry ) );
+            return *this;
         }
-        definition->entries.push_back( std::move( entry ) );
-        return *this;
-    }
 
-    harvest_definition_handle &item_flag( const std::string &output,
-                                           const std::string &flag ) {
-        require_building_handle( token, *definition, "harvest" );
-        harvest_entry_definition_data &entry = require_drop( output );
-        if( flag.empty() ) {
-            throw std::runtime_error( "harvest item flag cannot be empty" );
+        harvest_definition_handle &item_flag( const std::string &output,
+                                              const std::string &flag ) {
+            require_building_handle( token, *definition, "harvest" );
+            harvest_entry_definition_data &entry = require_drop( output );
+            if( flag.empty() ) {
+                throw std::runtime_error( "harvest item flag cannot be empty" );
+            }
+            entry.flags.insert( flag );
+            return *this;
         }
-        entry.flags.insert( flag );
-        return *this;
-    }
 
-    harvest_definition_handle &item_fault( const std::string &output,
-                                            const std::string &fault ) {
-        require_building_handle( token, *definition, "harvest" );
-        harvest_entry_definition_data &entry = require_drop( output );
-        if( fault.empty() ) {
-            throw std::runtime_error( "harvest item fault cannot be empty" );
+        harvest_definition_handle &item_fault( const std::string &output,
+                                               const std::string &fault ) {
+            require_building_handle( token, *definition, "harvest" );
+            harvest_entry_definition_data &entry = require_drop( output );
+            if( fault.empty() ) {
+                throw std::runtime_error( "harvest item fault cannot be empty" );
+            }
+            entry.faults.insert( fault );
+            return *this;
         }
-        entry.faults.insert( fault );
-        return *this;
-    }
 
-    std::string id() const {
-        require_readable_handle( token, *definition, "harvest" );
-        return definition->id;
-    }
+        std::string id() const {
+            require_readable_handle( token, *definition, "harvest" );
+            return definition->id;
+        }
 
     private:
         harvest_entry_definition_data &require_drop( const std::string &output ) {
@@ -2556,48 +2626,48 @@ struct harvest_definition_handle {
 };
 
 struct behavior_definition_handle {
-    std::shared_ptr<behavior_definition_data> definition;
-    std::shared_ptr<owner_token> token;
+        std::shared_ptr<behavior_definition_data> definition;
+        std::shared_ptr<owner_token> token;
 
-    behavior_definition_handle &child( const std::string &id ) {
-        require_building_handle( token, *definition, "behavior" );
-        if( id.empty() || std::find( definition->children.begin(),
-                                     definition->children.end(), id ) !=
-            definition->children.end() ) {
-            throw std::runtime_error( "behavior child needs a unique non-empty id" );
+        behavior_definition_handle &child( const std::string &id ) {
+            require_building_handle( token, *definition, "behavior" );
+            if( id.empty() || std::find( definition->children.begin(),
+                                         definition->children.end(), id ) !=
+                definition->children.end() ) {
+                throw std::runtime_error( "behavior child needs a unique non-empty id" );
+            }
+            definition->children.push_back( id );
+            return *this;
         }
-        definition->children.push_back( id );
-        return *this;
-    }
 
-    behavior_definition_handle &when( const std::string &handler,
-                                      const sol::optional<std::string> &argument,
-                                      const sol::optional<bool> &inverted ) {
-        return add_condition( handler, argument.value_or( std::string() ), false,
-                              inverted.value_or( false ) );
-    }
+        behavior_definition_handle &when( const std::string &handler,
+                                          const sol::optional<std::string> &argument,
+                                          const sol::optional<bool> &inverted ) {
+            return add_condition( handler, argument.value_or( std::string() ), false,
+                                  inverted.value_or( false ) );
+        }
 
-    behavior_definition_handle &when_native(
-        const std::string &predicate, const sol::optional<std::string> &argument,
-        const sol::optional<bool> &inverted ) {
-        return add_condition( predicate, argument.value_or( std::string() ), true,
-                              inverted.value_or( false ) );
-    }
+        behavior_definition_handle &when_native(
+            const std::string &predicate, const sol::optional<std::string> &argument,
+            const sol::optional<bool> &inverted ) {
+            return add_condition( predicate, argument.value_or( std::string() ), true,
+                                  inverted.value_or( false ) );
+        }
 
-    behavior_definition_handle &score( const std::string &handler,
-                                       const sol::optional<std::string> &argument ) {
-        return set_score( handler, argument.value_or( std::string() ), false );
-    }
+        behavior_definition_handle &score( const std::string &handler,
+                                           const sol::optional<std::string> &argument ) {
+            return set_score( handler, argument.value_or( std::string() ), false );
+        }
 
-    behavior_definition_handle &score_native(
-        const std::string &predicate, const sol::optional<std::string> &argument ) {
-        return set_score( predicate, argument.value_or( std::string() ), true );
-    }
+        behavior_definition_handle &score_native(
+            const std::string &predicate, const sol::optional<std::string> &argument ) {
+            return set_score( predicate, argument.value_or( std::string() ), true );
+        }
 
-    std::string id() const {
-        require_readable_handle( token, *definition, "behavior" );
-        return definition->id;
-    }
+        std::string id() const {
+            require_readable_handle( token, *definition, "behavior" );
+            return definition->id;
+        }
 
     private:
         behavior_definition_handle &add_condition( const std::string &policy,
@@ -2611,8 +2681,8 @@ struct behavior_definition_handle {
         }
 
         behavior_definition_handle &set_score( const std::string &policy,
-                                                const std::string &argument,
-                                                const bool native ) {
+                                               const std::string &argument,
+                                               const bool native ) {
             require_building_handle( token, *definition, "behavior" );
             if( policy.empty() ) {
                 throw std::runtime_error( "behavior score policy cannot be empty" );
@@ -2623,56 +2693,56 @@ struct behavior_definition_handle {
 };
 
 struct effect_type_definition_handle {
-    std::shared_ptr<effect_type_definition_data> definition;
-    std::shared_ptr<owner_token> token;
+        std::shared_ptr<effect_type_definition_data> definition;
+        std::shared_ptr<owner_token> token;
 
-    effect_type_definition_handle &name( const std::string &text ) {
-        return append_text( definition->names, text, "effect name" );
-    }
+        effect_type_definition_handle &name( const std::string &text ) {
+            return append_text( definition->names, text, "effect name" );
+        }
 
-    effect_type_definition_handle &description( const std::string &text ) {
-        return append_text( definition->descriptions, text, "effect description" );
-    }
+        effect_type_definition_handle &description( const std::string &text ) {
+            return append_text( definition->descriptions, text, "effect description" );
+        }
 
-    effect_type_definition_handle &reduced_description( const std::string &text ) {
-        return append_text( definition->reduced_descriptions, text,
-                            "reduced effect description" );
-    }
+        effect_type_definition_handle &reduced_description( const std::string &text ) {
+            return append_text( definition->reduced_descriptions, text,
+                                "reduced effect description" );
+        }
 
-    effect_type_definition_handle &flag( const std::string &id ) {
-        return insert_id( definition->flags, id, "effect flag" );
-    }
+        effect_type_definition_handle &flag( const std::string &id ) {
+            return insert_id( definition->flags, id, "effect flag" );
+        }
 
-    effect_type_definition_handle &immune_character_flag( const std::string &id ) {
-        return insert_id( definition->immune_character_flags, id,
-                          "effect immunity character flag" );
-    }
+        effect_type_definition_handle &immune_character_flag( const std::string &id ) {
+            return insert_id( definition->immune_character_flags, id,
+                              "effect immunity character flag" );
+        }
 
-    effect_type_definition_handle &immune_bodypart_flag( const std::string &id ) {
-        return insert_id( definition->immune_bodypart_flags, id,
-                          "effect immunity body-part flag" );
-    }
+        effect_type_definition_handle &immune_bodypart_flag( const std::string &id ) {
+            return insert_id( definition->immune_bodypart_flags, id,
+                              "effect immunity body-part flag" );
+        }
 
-    effect_type_definition_handle &resist_trait( const std::string &id ) {
-        return insert_id( definition->resist_traits, id, "effect resistance trait" );
-    }
+        effect_type_definition_handle &resist_trait( const std::string &id ) {
+            return insert_id( definition->resist_traits, id, "effect resistance trait" );
+        }
 
-    effect_type_definition_handle &resist_effect( const std::string &id ) {
-        return insert_id( definition->resist_effects, id, "resistance effect" );
-    }
+        effect_type_definition_handle &resist_effect( const std::string &id ) {
+            return insert_id( definition->resist_effects, id, "resistance effect" );
+        }
 
-    effect_type_definition_handle &removes_effect( const std::string &id ) {
-        return insert_id( definition->removes_effects, id, "removed effect" );
-    }
+        effect_type_definition_handle &removes_effect( const std::string &id ) {
+            return insert_id( definition->removes_effects, id, "removed effect" );
+        }
 
-    effect_type_definition_handle &blocks_effect( const std::string &id ) {
-        return insert_id( definition->blocks_effects, id, "blocked effect" );
-    }
+        effect_type_definition_handle &blocks_effect( const std::string &id ) {
+            return insert_id( definition->blocks_effects, id, "blocked effect" );
+        }
 
-    std::string id() const {
-        require_readable_handle( token, *definition, "effect type" );
-        return definition->id;
-    }
+        std::string id() const {
+            require_readable_handle( token, *definition, "effect type" );
+            return definition->id;
+        }
 
     private:
         effect_type_definition_handle &append_text( std::vector<std::string> &target,
@@ -2716,90 +2786,92 @@ struct monster_attack_definition_handle {
 };
 
 struct weakpoint_set_definition_handle {
-    std::shared_ptr<weakpoint_set_definition_data> definition;
-    std::shared_ptr<owner_token> token;
+        using damage_value_map = std::map<std::string, double>;
 
-    weakpoint_set_definition_handle &weakpoint( const sol::table &options ) {
-        require_building_handle( token, *definition, "weakpoint set" );
-        weakpoint_definition_data value;
-        value.id = options.get_or( "id", std::string() );
-        value.name = options.get_or( "name", std::string() );
-        value.coverage = options.get_or( "coverage", 100.0 );
-        value.good = options.get_or( "good", true );
-        value.head = options.get_or( "head", false );
-        if( value.id.empty() || std::any_of(
-                definition->weakpoints.begin(), definition->weakpoints.end(),
-        [&value]( const weakpoint_definition_data & existing ) {
+        std::shared_ptr<weakpoint_set_definition_data> definition;
+        std::shared_ptr<owner_token> token;
+
+        weakpoint_set_definition_handle &weakpoint( const sol::table &options ) {
+            require_building_handle( token, *definition, "weakpoint set" );
+            weakpoint_definition_data value;
+            value.id = options.get_or( "id", std::string() );
+            value.name = options.get_or( "name", std::string() );
+            value.coverage = options.get_or( "coverage", 100.0 );
+            value.good = options.get_or( "good", true );
+            value.head = options.get_or( "head", false );
+            if( value.id.empty() || std::any_of(
+                    definition->weakpoints.begin(), definition->weakpoints.end(),
+            [&value]( const weakpoint_definition_data & existing ) {
             return existing.id == value.id;
         } ) ) {
-            throw std::runtime_error( "weakpoint needs a unique non-empty id" );
+                throw std::runtime_error( "weakpoint needs a unique non-empty id" );
+            }
+            definition->weakpoints.push_back( std::move( value ) );
+            return *this;
         }
-        definition->weakpoints.push_back( std::move( value ) );
-        return *this;
-    }
 
-    weakpoint_set_definition_handle &armor_multiplier(
-        const std::string &weakpoint_id, const std::string &damage_type,
-        const double value ) {
-        return set_damage_value( weakpoint_id, damage_type, value,
-        []( weakpoint_definition_data & point ) -> std::map<std::string, double> & {
-            return point.armor_multipliers;
-        }, "armor multiplier" );
-    }
+        weakpoint_set_definition_handle &armor_multiplier(
+            const std::string &weakpoint_id, const std::string &damage_type,
+            const double value ) {
+            return set_damage_value( weakpoint_id, damage_type, value,
+            []( weakpoint_definition_data & point ) -> damage_value_map & {
+                return point.armor_multipliers;
+            }, "armor multiplier" );
+        }
 
-    weakpoint_set_definition_handle &armor_penalty(
-        const std::string &weakpoint_id, const std::string &damage_type,
-        const double value ) {
-        return set_damage_value( weakpoint_id, damage_type, value,
-        []( weakpoint_definition_data & point ) -> std::map<std::string, double> & {
-            return point.armor_penalties;
-        }, "armor penalty" );
-    }
+        weakpoint_set_definition_handle &armor_penalty(
+            const std::string &weakpoint_id, const std::string &damage_type,
+            const double value ) {
+            return set_damage_value( weakpoint_id, damage_type, value,
+            []( weakpoint_definition_data & point ) -> damage_value_map & {
+                return point.armor_penalties;
+            }, "armor penalty" );
+        }
 
-    weakpoint_set_definition_handle &damage_multiplier(
-        const std::string &weakpoint_id, const std::string &damage_type,
-        const double value ) {
-        return set_damage_value( weakpoint_id, damage_type, value,
-        []( weakpoint_definition_data & point ) -> std::map<std::string, double> & {
-            return point.damage_multipliers;
-        }, "damage multiplier" );
-    }
+        weakpoint_set_definition_handle &damage_multiplier(
+            const std::string &weakpoint_id, const std::string &damage_type,
+            const double value ) {
+            return set_damage_value( weakpoint_id, damage_type, value,
+            []( weakpoint_definition_data & point ) -> damage_value_map & {
+                return point.damage_multipliers;
+            }, "damage multiplier" );
+        }
 
-    weakpoint_set_definition_handle &critical_multiplier(
-        const std::string &weakpoint_id, const std::string &damage_type,
-        const double value ) {
-        return set_damage_value( weakpoint_id, damage_type, value,
-        []( weakpoint_definition_data & point ) -> std::map<std::string, double> & {
-            return point.critical_multipliers;
-        }, "critical multiplier" );
-    }
+        weakpoint_set_definition_handle &critical_multiplier(
+            const std::string &weakpoint_id, const std::string &damage_type,
+            const double value ) {
+            return set_damage_value( weakpoint_id, damage_type, value,
+            []( weakpoint_definition_data & point ) -> damage_value_map & {
+                return point.critical_multipliers;
+            }, "critical multiplier" );
+        }
 
-    weakpoint_set_definition_handle &effect( const std::string &weakpoint_id,
-            const sol::table &options ) {
-        require_building_handle( token, *definition, "weakpoint set" );
-        weakpoint_effect_definition_data value;
-        value.effect = options.get_or( "effect", std::string() );
-        value.chance = options.get_or( "chance", 100.0 );
-        value.permanent = options.get_or( "permanent", false );
-        value.duration_min_turns = options.get_or<std::int64_t>(
-                                       "duration_min_turns", 0 );
-        value.duration_max_turns = options.get_or<std::int64_t>(
-                                       "duration_max_turns", value.duration_min_turns );
-        value.intensity_min = options.get_or<std::int64_t>( "intensity_min", 1 );
-        value.intensity_max = options.get_or<std::int64_t>(
-                                  "intensity_max", value.intensity_min );
-        value.damage_required_min = options.get_or( "damage_required_min", 0.0 );
-        value.damage_required_max = options.get_or(
-                                        "damage_required_max", 100.0 );
-        value.message = options.get_or( "message", std::string() );
-        require_weakpoint( weakpoint_id ).effects.push_back( std::move( value ) );
-        return *this;
-    }
+        weakpoint_set_definition_handle &effect( const std::string &weakpoint_id,
+                const sol::table &options ) {
+            require_building_handle( token, *definition, "weakpoint set" );
+            weakpoint_effect_definition_data value;
+            value.effect = options.get_or( "effect", std::string() );
+            value.chance = options.get_or( "chance", 100.0 );
+            value.permanent = options.get_or( "permanent", false );
+            value.duration_min_turns = options.get_or<std::int64_t>(
+                                           "duration_min_turns", 0 );
+            value.duration_max_turns = options.get_or<std::int64_t>(
+                                           "duration_max_turns", value.duration_min_turns );
+            value.intensity_min = options.get_or<std::int64_t>( "intensity_min", 1 );
+            value.intensity_max = options.get_or<std::int64_t>(
+                                      "intensity_max", value.intensity_min );
+            value.damage_required_min = options.get_or( "damage_required_min", 0.0 );
+            value.damage_required_max = options.get_or(
+                                            "damage_required_max", 100.0 );
+            value.message = options.get_or( "message", std::string() );
+            require_weakpoint( weakpoint_id ).effects.push_back( std::move( value ) );
+            return *this;
+        }
 
-    std::string id() const {
-        require_readable_handle( token, *definition, "weakpoint set" );
-        return definition->id;
-    }
+        std::string id() const {
+            require_readable_handle( token, *definition, "weakpoint set" );
+            return definition->id;
+        }
 
     private:
         weakpoint_definition_data &require_weakpoint( const std::string &id ) {
@@ -2859,75 +2931,75 @@ struct sub_body_part_definition_handle {
 };
 
 struct body_part_definition_handle {
-    std::shared_ptr<body_part_definition_data> definition;
-    std::shared_ptr<owner_token> token;
+        std::shared_ptr<body_part_definition_data> definition;
+        std::shared_ptr<owner_token> token;
 
-    body_part_definition_handle &sub_part( const std::string &id ) {
-        require_building_handle( token, *definition, "body part" );
-        if( id.empty() ) {
-            throw std::runtime_error( "body-part sub location cannot be empty" );
+        body_part_definition_handle &sub_part( const std::string &id ) {
+            require_building_handle( token, *definition, "body part" );
+            if( id.empty() ) {
+                throw std::runtime_error( "body-part sub location cannot be empty" );
+            }
+            definition->sub_parts.push_back( id );
+            return *this;
         }
-        definition->sub_parts.push_back( id );
-        return *this;
-    }
 
-    body_part_definition_handle &limb_type( const std::string &kind,
-                                            const sol::optional<double> &weight ) {
-        require_building_handle( token, *definition, "body part" );
-        const double value = weight.value_or( 1.0 );
-        if( kind.empty() || !std::isfinite( value ) || value <= 0.0 ) {
-            throw std::runtime_error( "body-part limb type is invalid" );
+        body_part_definition_handle &limb_type( const std::string &kind,
+                                                const sol::optional<double> &weight ) {
+            require_building_handle( token, *definition, "body part" );
+            const double value = weight.value_or( 1.0 );
+            if( kind.empty() || !std::isfinite( value ) || value <= 0.0 ) {
+                throw std::runtime_error( "body-part limb type is invalid" );
+            }
+            definition->limb_types[kind] = value;
+            return *this;
         }
-        definition->limb_types[kind] = value;
-        return *this;
-    }
 
-    body_part_definition_handle &armor( const std::string &damage_type,
-                                        const double amount ) {
-        return set_damage( definition->armor, damage_type, amount, "armor" );
-    }
-
-    body_part_definition_handle &unarmed_damage( const std::string &damage_type,
-            const double amount ) {
-        return set_damage( definition->unarmed_damage, damage_type, amount,
-                           "unarmed damage" );
-    }
-
-    body_part_definition_handle &flag( const std::string &id ) {
-        require_building_handle( token, *definition, "body part" );
-        if( id.empty() ) {
-            throw std::runtime_error( "body-part flag cannot be empty" );
+        body_part_definition_handle &armor( const std::string &damage_type,
+                                            const double amount ) {
+            return set_damage( definition->armor, damage_type, amount, "armor" );
         }
-        definition->flags.insert( id );
-        return *this;
-    }
 
-    body_part_definition_handle &limb_score( const std::string &id,
-            const double score, const sol::optional<double> &maximum ) {
-        require_building_handle( token, *definition, "body part" );
-        const double maximum_value = maximum.value_or( score );
-        if( id.empty() || !std::isfinite( score ) || !std::isfinite( maximum_value ) ||
-            score < 0.0 || maximum_value < score ) {
-            throw std::runtime_error( "body-part limb score is invalid" );
+        body_part_definition_handle &unarmed_damage( const std::string &damage_type,
+                const double amount ) {
+            return set_damage( definition->unarmed_damage, damage_type, amount,
+                               "unarmed damage" );
         }
-        definition->limb_scores[id] = { score, maximum_value };
-        return *this;
-    }
 
-    body_part_definition_handle &quality( const std::string &id,
-                                          const std::int64_t level,
-                                          const sol::optional<double> &disable_fraction ) {
-        require_building_handle( token, *definition, "body part" );
-        definition->qualities.push_back( {
-            id, level, disable_fraction.value_or( 0.0 )
-        } );
-        return *this;
-    }
+        body_part_definition_handle &flag( const std::string &id ) {
+            require_building_handle( token, *definition, "body part" );
+            if( id.empty() ) {
+                throw std::runtime_error( "body-part flag cannot be empty" );
+            }
+            definition->flags.insert( id );
+            return *this;
+        }
 
-    std::string id() const {
-        require_readable_handle( token, *definition, "body part" );
-        return definition->id;
-    }
+        body_part_definition_handle &limb_score( const std::string &id,
+                const double score, const sol::optional<double> &maximum ) {
+            require_building_handle( token, *definition, "body part" );
+            const double maximum_value = maximum.value_or( score );
+            if( id.empty() || !std::isfinite( score ) || !std::isfinite( maximum_value ) ||
+                score < 0.0 || maximum_value < score ) {
+                throw std::runtime_error( "body-part limb score is invalid" );
+            }
+            definition->limb_scores[id] = { score, maximum_value };
+            return *this;
+        }
+
+        body_part_definition_handle &quality( const std::string &id,
+                                              const std::int64_t level,
+                                              const sol::optional<double> &disable_fraction ) {
+            require_building_handle( token, *definition, "body part" );
+            definition->qualities.push_back( {
+                id, level, disable_fraction.value_or( 0.0 )
+            } );
+            return *this;
+        }
+
+        std::string id() const {
+            require_readable_handle( token, *definition, "body part" );
+            return definition->id;
+        }
 
     private:
         body_part_definition_handle &set_damage( std::map<std::string, double> &target,
@@ -2938,6 +3010,190 @@ struct body_part_definition_handle {
                 throw std::runtime_error( "body-part " + std::string( label ) + " is invalid" );
             }
             target[damage_type] = amount;
+            return *this;
+        }
+};
+
+struct wound_type_definition_handle {
+        std::shared_ptr<wound_type_definition_data> definition;
+        std::shared_ptr<owner_token> token;
+
+        wound_type_definition_handle &damage_type( const std::string &id ) {
+            require_building_handle( token, *definition, "wound" );
+            require_reference( id, "damage type" );
+            if( std::find( definition->damage_types.begin(), definition->damage_types.end(), id ) !=
+                definition->damage_types.end() ) {
+                throw std::runtime_error( "wound damage type must be unique" );
+            }
+            definition->damage_types.push_back( id );
+            return *this;
+        }
+
+        wound_type_definition_handle &limb_score( const std::string &id,
+                const double penalty ) {
+            require_building_handle( token, *definition, "wound" );
+            require_reference( id, "limb score" );
+            if( !std::isfinite( penalty ) || penalty < 0.0 || penalty > 1.0 ||
+                std::any_of( definition->limb_scores.begin(), definition->limb_scores.end(),
+            [&id]( const wound_limb_score_definition_data & value ) {
+            return value.id == id;
+        } ) ) {
+                throw std::runtime_error(
+                    "wound limb score requires a unique id and finite 0..1 penalty" );
+            }
+            definition->limb_scores.push_back( { id, penalty } );
+            return *this;
+        }
+
+        wound_type_definition_handle &progression( const std::string &id,
+                const std::int64_t chance ) {
+            require_building_handle( token, *definition, "wound" );
+            require_reference( id, "progression wound" );
+            if( id == definition->id || chance < 0 || chance > 100 ||
+                std::any_of( definition->progressions.begin(), definition->progressions.end(),
+            [&id]( const wound_progression_definition_data & value ) {
+            return value.id == id;
+        } ) ) {
+                throw std::runtime_error(
+                    "wound progression requires a unique non-self id and integer 0..100 chance" );
+            }
+            definition->progressions.push_back( { id, chance } );
+            return *this;
+        }
+
+        wound_type_definition_handle &require_body_part_type( const std::string &kind ) {
+            return body_part_type( kind, true );
+        }
+
+        wound_type_definition_handle &forbid_body_part_type( const std::string &kind ) {
+            return body_part_type( kind, false );
+        }
+
+        std::string id() const {
+            require_readable_handle( token, *definition, "wound" );
+            return definition->id;
+        }
+
+    private:
+        static void require_reference( const std::string &id, const char *kind ) {
+            if( id.empty() || id.size() > 256 || id.find( '\0' ) != std::string::npos ) {
+                throw std::runtime_error( std::string( "wound " ) + kind +
+                                          " id is invalid" );
+            }
+        }
+
+        wound_type_definition_handle &body_part_type( const std::string &kind,
+                const bool required ) {
+            require_building_handle( token, *definition, "wound" );
+            if( kind.empty() || kind.size() > 64 ||
+                kind.find( '\0' ) != std::string::npos ||
+                !io::string_to_enum_optional<bp_type>( kind ) ) {
+                throw std::runtime_error( "wound body-part type is invalid" );
+            }
+            std::vector<std::string> &target = required ?
+                                               definition->required_body_part_types :
+                                               definition->forbidden_body_part_types;
+            const std::vector<std::string> &opposite = required ?
+                    definition->forbidden_body_part_types :
+                    definition->required_body_part_types;
+            if( std::find( target.begin(), target.end(), kind ) != target.end() ) {
+                throw std::runtime_error( "wound body-part type must be unique" );
+            }
+            if( std::find( opposite.begin(), opposite.end(), kind ) != opposite.end() ) {
+                throw std::runtime_error(
+                    "wound cannot both require and forbid one body-part type" );
+            }
+            target.push_back( kind );
+            return *this;
+        }
+};
+
+struct wound_fix_definition_handle {
+        std::shared_ptr<wound_fix_definition_data> definition;
+        std::shared_ptr<owner_token> token;
+
+        wound_fix_definition_handle &skill( const std::string &id,
+                                            const std::int64_t level ) {
+            require_building_handle( token, *definition, "wound fix" );
+            require_reference( id, "skill" );
+            if( level < 0 || level > MAX_SKILL ||
+                !definition->skills.emplace( id, level ).second ) {
+                throw std::runtime_error(
+                    "wound-fix skill requires a unique id and level within the native range" );
+            }
+            return *this;
+        }
+
+        wound_fix_definition_handle &proficiency( const std::string &id,
+                const double multiplier, const bool mandatory ) {
+            require_building_handle( token, *definition, "wound fix" );
+            require_reference( id, "proficiency" );
+            if( !std::isfinite( multiplier ) || multiplier <= 0.0 ||
+                multiplier > std::numeric_limits<float>::max() ||
+                static_cast<float>( multiplier ) <= 0.0f ||
+                std::any_of( definition->proficiencies.begin(), definition->proficiencies.end(),
+            [&id]( const wound_fix_proficiency_definition_data & value ) {
+            return value.id == id;
+        } ) ) {
+                throw std::runtime_error(
+                    "wound-fix proficiency requires a unique id and positive finite multiplier" );
+            }
+            definition->proficiencies.push_back( { id, multiplier, mandatory } );
+            return *this;
+        }
+
+        wound_fix_definition_handle &removes( const std::string &id ) {
+            return wound_reference( id, true );
+        }
+
+        wound_fix_definition_handle &adds( const std::string &id ) {
+            return wound_reference( id, false );
+        }
+
+        wound_fix_definition_handle &requires( const std::string &id,
+                                               const std::int64_t count ) {
+            require_building_handle( token, *definition, "wound fix" );
+            require_reference( id, "requirement" );
+            if( count <= 0 || count > std::numeric_limits<int>::max() ||
+                std::any_of( definition->requirements.begin(), definition->requirements.end(),
+            [&id]( const wound_fix_requirement_definition_data & value ) {
+            return value.id == id;
+        } ) ) {
+                throw std::runtime_error(
+                    "wound-fix requirement requires a unique id and positive native count" );
+            }
+            definition->requirements.push_back( { id, count } );
+            return *this;
+        }
+
+        std::string id() const {
+            require_readable_handle( token, *definition, "wound fix" );
+            return definition->id;
+        }
+
+    private:
+        static void require_reference( const std::string &id, const char *kind ) {
+            if( id.empty() || id.size() > 256 || id.find( '\0' ) != std::string::npos ) {
+                throw std::runtime_error( std::string( "wound-fix " ) + kind +
+                                          " id is invalid" );
+            }
+        }
+
+        wound_fix_definition_handle &wound_reference( const std::string &id,
+                const bool removed ) {
+            require_building_handle( token, *definition, "wound fix" );
+            require_reference( id, "wound" );
+            std::set<std::string> &target = removed ? definition->wounds_removed :
+                                            definition->wounds_added;
+            const std::set<std::string> &opposite = removed ? definition->wounds_added :
+                                                    definition->wounds_removed;
+            if( opposite.count( id ) != 0 ) {
+                throw std::runtime_error(
+                    "wound fix cannot both remove and add one wound type" );
+            }
+            if( !target.insert( id ).second ) {
+                throw std::runtime_error( "wound-fix wound reference must be unique" );
+            }
             return *this;
         }
 };
@@ -3020,10 +3276,10 @@ struct body_graph_definition_handle {
                                    options.get<sol::optional<sol::table>>( "sub_body_parts" ),
                                    "body graph sub body parts" );
         if( symbol.empty() || std::any_of( definition->parts.begin(),
-                                          definition->parts.end(),
+                                           definition->parts.end(),
         [&symbol]( const body_graph_part_definition_data & existing ) {
-            return existing.symbol == symbol;
-        } ) ) {
+        return existing.symbol == symbol;
+    } ) ) {
             throw std::runtime_error( "body-graph part needs a unique symbol" );
         }
         definition->parts.push_back( std::move( value ) );
@@ -3037,149 +3293,154 @@ struct body_graph_definition_handle {
 };
 
 struct monster_definition_handle {
-    std::shared_ptr<monster_definition_data> definition;
-    std::shared_ptr<owner_token> token;
+        std::shared_ptr<monster_definition_data> definition;
+        std::shared_ptr<owner_token> token;
 
-    monster_definition_handle &material( const std::string &id,
-                                         const sol::optional<std::int64_t> &portions ) {
-        require_building_handle( token, *definition, "monster" );
-        const std::int64_t value = portions.value_or( 1 );
-        if( id.empty() || value <= 0 ) {
-            throw std::runtime_error( "monster material needs an id and positive portions" );
+        monster_definition_handle &material( const std::string &id,
+                                             const sol::optional<std::int64_t> &portions ) {
+            require_building_handle( token, *definition, "monster" );
+            const std::int64_t value = portions.value_or( 1 );
+            if( id.empty() || value <= 0 ) {
+                throw std::runtime_error( "monster material needs an id and positive portions" );
+            }
+            definition->materials[id] = value;
+            return *this;
         }
-        definition->materials[id] = value;
-        return *this;
-    }
 
-    monster_definition_handle &species( const std::string &id ) {
-        return insert_id( definition->species, id, "species" );
-    }
-
-    monster_definition_handle &category( const std::string &id ) {
-        return insert_id( definition->categories, id, "category" );
-    }
-
-    monster_definition_handle &flag( const std::string &id ) {
-        return insert_id( definition->flags, id, "flag" );
-    }
-
-    monster_definition_handle &armor( const std::string &damage_type,
-                                      const double amount ) {
-        require_building_handle( token, *definition, "monster" );
-        if( damage_type.empty() || !std::isfinite( amount ) || amount < 0.0 ) {
-            throw std::runtime_error( "monster armor is invalid" );
+        monster_definition_handle &species( const std::string &id ) {
+            return insert_id( definition->species, id, "species" );
         }
-        definition->armor[damage_type] = amount;
-        return *this;
-    }
 
-    monster_definition_handle &melee_damage(
-        const std::string &damage_type, const double amount,
-        const sol::optional<double> &armor_penetration ) {
-        require_building_handle( token, *definition, "monster" );
-        const double penetration = armor_penetration.value_or( 0.0 );
-        if( damage_type.empty() || !std::isfinite( amount ) || amount < 0.0 ||
-            !std::isfinite( penetration ) || penetration < 0.0 ) {
-            throw std::runtime_error( "monster melee damage is invalid" );
+        monster_definition_handle &category( const std::string &id ) {
+            return insert_id( definition->categories, id, "category" );
         }
-        definition->melee_damage[damage_type] = { amount, penetration };
-        return *this;
-    }
 
-    monster_definition_handle &attack( const std::string &id,
-                                       const sol::optional<double> &cooldown ) {
-        require_building_handle( token, *definition, "monster" );
-        if( id.empty() || std::any_of( definition->attacks.begin(),
-                                      definition->attacks.end(),
-        [&id]( const monster_attack_reference_definition_data & value ) {
+        monster_definition_handle &flag( const std::string &id ) {
+            return insert_id( definition->flags, id, "flag" );
+        }
+
+        monster_definition_handle &armor( const std::string &damage_type,
+                                          const double amount ) {
+            require_building_handle( token, *definition, "monster" );
+            if( damage_type.empty() || !std::isfinite( amount ) || amount < 0.0 ) {
+                throw std::runtime_error( "monster armor is invalid" );
+            }
+            definition->armor[damage_type] = amount;
+            return *this;
+        }
+
+        monster_definition_handle &melee_damage(
+            const std::string &damage_type, const double amount,
+            const sol::optional<double> &armor_penetration ) {
+            require_building_handle( token, *definition, "monster" );
+            const double penetration = armor_penetration.value_or( 0.0 );
+            if( damage_type.empty() || !std::isfinite( amount ) || amount < 0.0 ||
+                !std::isfinite( penetration ) || penetration < 0.0 ) {
+                throw std::runtime_error( "monster melee damage is invalid" );
+            }
+            definition->melee_damage[damage_type] = { amount, penetration };
+            return *this;
+        }
+
+        monster_definition_handle &attack( const std::string &id,
+                                           const sol::optional<double> &cooldown ) {
+            require_building_handle( token, *definition, "monster" );
+            if( id.empty() || std::any_of( definition->attacks.begin(),
+                                           definition->attacks.end(),
+            [&id]( const monster_attack_reference_definition_data & value ) {
             return value.id == id;
         } ) ) {
-            throw std::runtime_error( "monster attack reference needs a unique id" );
+                throw std::runtime_error( "monster attack reference needs a unique id" );
+            }
+            monster_attack_reference_definition_data attack;
+            attack.id = id;
+            if( cooldown ) {
+                attack.cooldown = *cooldown;
+            }
+            definition->attacks.push_back( std::move( attack ) );
+            return *this;
         }
-        definition->attacks.push_back( { id, cooldown } );
-        return *this;
-    }
 
-    monster_definition_handle &weakpoint_set( const std::string &id ) {
-        require_building_handle( token, *definition, "monster" );
-        if( id.empty() || std::find( definition->weakpoint_sets.begin(),
-                                     definition->weakpoint_sets.end(), id ) !=
-            definition->weakpoint_sets.end() ) {
-            throw std::runtime_error( "monster weakpoint set needs a unique id" );
+        monster_definition_handle &weakpoint_set( const std::string &id ) {
+            require_building_handle( token, *definition, "monster" );
+            if( id.empty() || std::find( definition->weakpoint_sets.begin(),
+                                         definition->weakpoint_sets.end(), id ) !=
+                definition->weakpoint_sets.end() ) {
+                throw std::runtime_error( "monster weakpoint set needs a unique id" );
+            }
+            definition->weakpoint_sets.push_back( id );
+            return *this;
         }
-        definition->weakpoint_sets.push_back( id );
-        return *this;
-    }
 
-    monster_definition_handle &emission( const std::string &id,
-                                         const std::int64_t interval_turns ) {
-        require_building_handle( token, *definition, "monster" );
-        if( id.empty() || interval_turns <= 0 ) {
-            throw std::runtime_error( "monster emission needs an id and positive interval" );
+        monster_definition_handle &emission( const std::string &id,
+                                             const std::int64_t interval_turns ) {
+            require_building_handle( token, *definition, "monster" );
+            if( id.empty() || interval_turns <= 0 ) {
+                throw std::runtime_error( "monster emission needs an id and positive interval" );
+            }
+            definition->emissions[id] = interval_turns;
+            return *this;
         }
-        definition->emissions[id] = interval_turns;
-        return *this;
-    }
 
-    monster_definition_handle &starting_ammo( const std::string &id,
-            const std::int64_t amount ) {
-        require_building_handle( token, *definition, "monster" );
-        if( id.empty() || amount <= 0 ) {
-            throw std::runtime_error( "monster starting ammo needs an id and positive amount" );
+        monster_definition_handle &starting_ammo( const std::string &id,
+                const std::int64_t amount ) {
+            require_building_handle( token, *definition, "monster" );
+            if( id.empty() || amount <= 0 ) {
+                throw std::runtime_error( "monster starting ammo needs an id and positive amount" );
+            }
+            definition->starting_ammo[id] = amount;
+            return *this;
         }
-        definition->starting_ammo[id] = amount;
-        return *this;
-    }
 
-    monster_definition_handle &track_scent( const std::string &id ) {
-        return insert_id( definition->tracked_scents, id, "tracked scent" );
-    }
-
-    monster_definition_handle &ignore_scent( const std::string &id ) {
-        return insert_id( definition->ignored_scents, id, "ignored scent" );
-    }
-
-    monster_definition_handle &regeneration_modifier( const std::string &effect,
-            const std::int64_t amount ) {
-        require_building_handle( token, *definition, "monster" );
-        if( effect.empty() || amount < std::numeric_limits<int>::min() ||
-            amount > std::numeric_limits<int>::max() ) {
-            throw std::runtime_error( "monster regeneration modifier is invalid" );
+        monster_definition_handle &track_scent( const std::string &id ) {
+            return insert_id( definition->tracked_scents, id, "tracked scent" );
         }
-        definition->regeneration_modifiers[effect] = amount;
-        return *this;
-    }
 
-    monster_definition_handle &goal( const std::string &id ) {
-        require_building_handle( token, *definition, "monster" );
-        if( id.empty() || std::find( definition->goals.begin(), definition->goals.end(), id ) !=
-            definition->goals.end() ) {
-            throw std::runtime_error( "monster behavior goal needs a unique id" );
+        monster_definition_handle &ignore_scent( const std::string &id ) {
+            return insert_id( definition->ignored_scents, id, "ignored scent" );
         }
-        definition->goals.push_back( id );
-        return *this;
-    }
 
-    monster_definition_handle &anger_trigger( const std::string &id ) {
-        return insert_id( definition->anger_triggers, id, "anger trigger" );
-    }
+        monster_definition_handle &regeneration_modifier( const std::string &effect,
+                const std::int64_t amount ) {
+            require_building_handle( token, *definition, "monster" );
+            if( effect.empty() || amount < std::numeric_limits<int>::min() ||
+                amount > std::numeric_limits<int>::max() ) {
+                throw std::runtime_error( "monster regeneration modifier is invalid" );
+            }
+            definition->regeneration_modifiers[effect] = amount;
+            return *this;
+        }
 
-    monster_definition_handle &fear_trigger( const std::string &id ) {
-        return insert_id( definition->fear_triggers, id, "fear trigger" );
-    }
+        monster_definition_handle &goal( const std::string &id ) {
+            require_building_handle( token, *definition, "monster" );
+            if( id.empty() || std::find( definition->goals.begin(), definition->goals.end(), id ) !=
+                definition->goals.end() ) {
+                throw std::runtime_error( "monster behavior goal needs a unique id" );
+            }
+            definition->goals.push_back( id );
+            return *this;
+        }
 
-    monster_definition_handle &placate_trigger( const std::string &id ) {
-        return insert_id( definition->placate_triggers, id, "placate trigger" );
-    }
+        monster_definition_handle &anger_trigger( const std::string &id ) {
+            return insert_id( definition->anger_triggers, id, "anger trigger" );
+        }
 
-    std::string id() const {
-        require_readable_handle( token, *definition, "monster" );
-        return definition->id;
-    }
+        monster_definition_handle &fear_trigger( const std::string &id ) {
+            return insert_id( definition->fear_triggers, id, "fear trigger" );
+        }
+
+        monster_definition_handle &placate_trigger( const std::string &id ) {
+            return insert_id( definition->placate_triggers, id, "placate trigger" );
+        }
+
+        std::string id() const {
+            require_readable_handle( token, *definition, "monster" );
+            return definition->id;
+        }
 
     private:
         monster_definition_handle &insert_id( std::set<std::string> &target,
-                const std::string &id, const std::string_view label ) {
+                                              const std::string &id, const std::string_view label ) {
             require_building_handle( token, *definition, "monster" );
             if( id.empty() ) {
                 throw std::runtime_error( "monster " + std::string( label ) +
@@ -3191,25 +3452,25 @@ struct monster_definition_handle {
 };
 
 struct item_group_definition_handle {
-    std::shared_ptr<item_group_definition_data> definition;
-    std::shared_ptr<owner_token> token;
+        std::shared_ptr<item_group_definition_data> definition;
+        std::shared_ptr<owner_token> token;
 
-    item_group_definition_handle &item( const std::string &id,
-                                        const sol::optional<std::int64_t> &probability,
-                                        const sol::optional<std::string> &variant ) {
-        return add_entry( id, false, probability.value_or( 100 ),
-                          variant.value_or( std::string() ) );
-    }
+        item_group_definition_handle &item( const std::string &id,
+                                            const sol::optional<std::int64_t> &probability,
+                                            const sol::optional<std::string> &variant ) {
+            return add_entry( id, false, probability.value_or( 100 ),
+                              variant.value_or( std::string() ) );
+        }
 
-    item_group_definition_handle &group( const std::string &id,
-                                         const sol::optional<std::int64_t> &probability ) {
-        return add_entry( id, true, probability.value_or( 100 ), std::string() );
-    }
+        item_group_definition_handle &group( const std::string &id,
+                                             const sol::optional<std::int64_t> &probability ) {
+            return add_entry( id, true, probability.value_or( 100 ), std::string() );
+        }
 
-    std::string id() const {
-        require_readable_handle( token, *definition, "item group" );
-        return definition->id;
-    }
+        std::string id() const {
+            require_readable_handle( token, *definition, "item group" );
+            return definition->id;
+        }
 
     private:
         item_group_definition_handle &add_entry( const std::string &id, const bool group,
@@ -3224,69 +3485,69 @@ struct item_group_definition_handle {
 };
 
 struct field_type_definition_handle {
-    std::shared_ptr<field_type_definition_data> definition;
-    std::shared_ptr<owner_token> token;
+        std::shared_ptr<field_type_definition_data> definition;
+        std::shared_ptr<owner_token> token;
 
-    field_type_definition_handle &intensity( const sol::table &options ) {
-        require_building_handle( token, *definition, "field type" );
-        field_intensity_definition_data value;
-        value.name = options.get_or( "name", std::string() );
-        value.symbol = options.get_or( "symbol", std::string( "%" ) );
-        value.color = options.get_or( "color", std::string( "white" ) );
-        value.dangerous = options.get_or( "dangerous", false );
-        value.transparent = options.get_or( "transparent", true );
-        value.move_cost = options.get_or<std::int64_t>( "move_cost", 0 );
-        value.upgrade_chance = options.get_or<std::int64_t>( "upgrade_chance", 0 );
-        value.upgrade_duration_turns = options.get_or<std::int64_t>(
-                                           "upgrade_duration_turns", 0 );
-        value.light_emitted = options.get_or( "light_emitted", 0.0 );
-        value.local_light_override = options.get_or( "local_light_override", -1.0 );
-        value.translucency = options.get_or( "translucency", 0.0 );
-        value.concentration = options.get_or<std::int64_t>( "concentration", 1 );
-        value.convection_temperature_modifier = options.get_or<std::int64_t>(
+        field_type_definition_handle &intensity( const sol::table &options ) {
+            require_building_handle( token, *definition, "field type" );
+            field_intensity_definition_data value;
+            value.name = options.get_or( "name", std::string() );
+            value.symbol = options.get_or( "symbol", std::string( "%" ) );
+            value.color = options.get_or( "color", std::string( "white" ) );
+            value.dangerous = options.get_or( "dangerous", false );
+            value.transparent = options.get_or( "transparent", true );
+            value.move_cost = options.get_or<std::int64_t>( "move_cost", 0 );
+            value.upgrade_chance = options.get_or<std::int64_t>( "upgrade_chance", 0 );
+            value.upgrade_duration_turns = options.get_or<std::int64_t>(
+                                               "upgrade_duration_turns", 0 );
+            value.light_emitted = options.get_or( "light_emitted", 0.0 );
+            value.local_light_override = options.get_or( "local_light_override", -1.0 );
+            value.translucency = options.get_or( "translucency", 0.0 );
+            value.concentration = options.get_or<std::int64_t>( "concentration", 1 );
+            value.convection_temperature_modifier = options.get_or<std::int64_t>(
                     "convection_temperature_modifier", 0 );
-        value.scent_neutralization = options.get_or<std::int64_t>(
-                                         "scent_neutralization", 0 );
-        definition->intensity_levels.push_back( std::move( value ) );
-        return *this;
-    }
-
-    field_type_definition_handle &effect( const std::int64_t intensity_index,
-                                          const sol::table &options ) {
-        require_building_handle( token, *definition, "field type" );
-        if( intensity_index <= 0 ||
-            static_cast<std::size_t>( intensity_index ) >
-            definition->intensity_levels.size() ) {
-            throw std::runtime_error( "field effect needs an existing one-based intensity" );
+            value.scent_neutralization = options.get_or<std::int64_t>(
+                                             "scent_neutralization", 0 );
+            definition->intensity_levels.push_back( std::move( value ) );
+            return *this;
         }
-        field_effect_definition_data value;
-        value.effect = options.get_or( "effect", std::string() );
-        value.duration_min_turns = options.get_or<std::int64_t>(
-                                       "duration_min_turns", 0 );
-        value.duration_max_turns = options.get_or<std::int64_t>(
-                                       "duration_max_turns", value.duration_min_turns );
-        value.intensity = options.get_or<std::int64_t>( "intensity", 1 );
-        value.body_part = options.get_or( "body_part", std::string() );
-        value.environmental = options.get_or( "environmental", true );
-        value.message = options.get_or( "message", std::string() );
-        value.npc_message = options.get_or( "npc_message", std::string() );
-        definition->intensity_levels[static_cast<std::size_t>( intensity_index - 1 )].
-        effects.push_back( std::move( value ) );
-        return *this;
-    }
 
-    field_type_definition_handle &immune_monster( const std::string &id ) {
-        return insert_monster( definition->immune_monsters, id, "immune monster" );
-    }
+        field_type_definition_handle &effect( const std::int64_t intensity_index,
+                                              const sol::table &options ) {
+            require_building_handle( token, *definition, "field type" );
+            if( intensity_index <= 0 ||
+                static_cast<std::size_t>( intensity_index ) >
+                definition->intensity_levels.size() ) {
+                throw std::runtime_error( "field effect needs an existing one-based intensity" );
+            }
+            field_effect_definition_data value;
+            value.effect = options.get_or( "effect", std::string() );
+            value.duration_min_turns = options.get_or<std::int64_t>(
+                                           "duration_min_turns", 0 );
+            value.duration_max_turns = options.get_or<std::int64_t>(
+                                           "duration_max_turns", value.duration_min_turns );
+            value.intensity = options.get_or<std::int64_t>( "intensity", 1 );
+            value.body_part = options.get_or( "body_part", std::string() );
+            value.environmental = options.get_or( "environmental", true );
+            value.message = options.get_or( "message", std::string() );
+            value.npc_message = options.get_or( "npc_message", std::string() );
+            definition->intensity_levels[static_cast<std::size_t>( intensity_index - 1 )].
+            effects.push_back( std::move( value ) );
+            return *this;
+        }
 
-    field_type_definition_handle &block_monster( const std::string &id ) {
-        return insert_monster( definition->blocked_monsters, id, "blocked monster" );
-    }
+        field_type_definition_handle &immune_monster( const std::string &id ) {
+            return insert_monster( definition->immune_monsters, id, "immune monster" );
+        }
 
-    std::string id() const {
-        require_readable_handle( token, *definition, "field type" );
-        return definition->id;
-    }
+        field_type_definition_handle &block_monster( const std::string &id ) {
+            return insert_monster( definition->blocked_monsters, id, "blocked monster" );
+        }
+
+        std::string id() const {
+            require_readable_handle( token, *definition, "field type" );
+            return definition->id;
+        }
 
     private:
         field_type_definition_handle &insert_monster( std::set<std::string> &target,
@@ -3841,7 +4102,8 @@ struct explosion_light_definition_handle {
         value.color = { {
                 component( red, "red" ), component( green, "green" ),
                 component( blue, "blue" )
-            } };
+            }
+        };
         value.alpha = component( alpha, "alpha" );
         definition->stops.push_back( value );
         return *this;
@@ -3855,9 +4117,9 @@ struct explosion_light_definition_handle {
         definition->fade = options.get_or( "fade", definition->fade );
         definition->blend = options.get_or( "blend", definition->blend );
         definition->spread_jitter = options.get_or(
-                                         "spread_jitter", definition->spread_jitter );
+                                        "spread_jitter", definition->spread_jitter );
         definition->color_jitter = options.get_or(
-                                        "color_jitter", definition->color_jitter );
+                                       "color_jitter", definition->color_jitter );
         definition->flicker = options.get_or( "flicker", definition->flicker );
         definition->easing = options.get_or( "easing", definition->easing );
         return *this;
@@ -4151,9 +4413,9 @@ struct climbing_aid_definition_handle {
         require_building_handle( token, *definition, "climbing aid" );
         definition->max_height = options.get_or<std::int64_t>( "max_height", 1 );
         definition->easy_climb_back_up = options.get_or<std::int64_t>(
-                                               "easy_climb_back_up", 0 );
+                                             "easy_climb_back_up", 0 );
         definition->allow_remaining_height = options.get_or(
-                                                 "allow_remaining_height", true );
+                "allow_remaining_height", true );
         definition->menu_text = options.get_or( "menu_text", std::string() );
         definition->unavailable_text = options.get_or(
                                            "unavailable_text", std::string() );
@@ -4655,7 +4917,8 @@ using damage_type_registration = catalog_registration<damage_type_definition_dat
 using ammunition_type_registration = catalog_registration<ammunition_type_definition_data>;
 using item_category_registration = catalog_registration<item_category_definition_data>;
 using crafting_category_registration = catalog_registration<crafting_category_definition_data>;
-using proficiency_category_registration = catalog_registration<proficiency_category_definition_data>;
+using proficiency_category_registration =
+    catalog_registration<proficiency_category_definition_data>;
 using proficiency_registration = catalog_registration<proficiency_definition_data>;
 using weapon_category_registration = catalog_registration<weapon_category_definition_data>;
 using requirement_registration = catalog_registration<requirement_definition_data>;
@@ -4672,6 +4935,8 @@ using field_type_registration = catalog_registration<field_type_definition_data>
 using item_group_registration = catalog_registration<item_group_definition_data>;
 using sub_body_part_registration = catalog_registration<sub_body_part_definition_data>;
 using body_part_registration = catalog_registration<body_part_definition_data>;
+using wound_type_registration = catalog_registration<wound_type_definition_data>;
+using wound_fix_registration = catalog_registration<wound_fix_definition_data>;
 using anatomy_registration = catalog_registration<anatomy_definition_data>;
 using body_graph_registration = catalog_registration<body_graph_definition_data>;
 using monster_registration = catalog_registration<monster_definition_data>;
@@ -4932,7 +5197,8 @@ std::optional<weather_sound_category> platform_weather_sound_category( std::stri
         { "cloudy", weather_sound_category::cloudy },
     };
     const auto found = values.find( value );
-    return found == values.end() ? std::nullopt : std::optional<weather_sound_category>( found->second );
+    return found == values.end() ? std::nullopt : std::optional<weather_sound_category>
+           ( found->second );
 }
 
 std::uint64_t fnv1a( std::string_view value, std::uint64_t state = 1469598103934665603ULL )
@@ -5067,10 +5333,16 @@ std::vector<presentation_choice> presentation_choices_from_lua(
 }
 
 struct use_context_data {
+    use_context_data() = default;
+    use_context_data( const use_context_data & ) = delete;
+    use_context_data &operator=( const use_context_data & ) = delete;
+    use_context_data( use_context_data && ) = delete;
+    use_context_data &operator=( use_context_data && ) = delete;
+
     Character *character = nullptr;
     item *used_item = nullptr;
     tripoint_bub_ms position;
-    std::size_t runtime_generation = 0;
+    cata::lua_ui::game_handle_runtime handle_runtime;
     std::size_t world_generation = 0;
     bool active = true;
 
@@ -5114,14 +5386,14 @@ struct use_context_data {
         return cata::lua_ui::game_handle::from_creature( *character, {
             "platform_item_use_character", character->getID().get_value(),
             absolute.x(), absolute.y(), absolute.z(), {}
-        }, runtime_generation, world_generation );
+        }, handle_runtime, world_generation );
     }
 
     cata::lua_ui::game_handle item_handle() const {
         require_active();
         return cata::lua_ui::game_handle::from_item( *used_item, {
             "platform_item_use_item", used_item->uid().get_value(), 0, 0, 0, {}
-        }, runtime_generation, world_generation );
+        }, handle_runtime, world_generation );
     }
 
     cata::lua_ui::script_tripoint_coord use_position() const {
@@ -5130,6 +5402,24 @@ struct use_context_data {
                    coords::origin::reality_bubble, coords::scale::map_square,
                    position.raw() );
     }
+};
+
+class use_context_lease
+{
+    public:
+        explicit use_context_lease( use_context_data &context ) : context_( context ) {}
+
+        use_context_lease( const use_context_lease & ) = delete;
+        use_context_lease &operator=( const use_context_lease & ) = delete;
+
+        ~use_context_lease() noexcept {
+            context_.active = false;
+            context_.character = nullptr;
+            context_.used_item = nullptr;
+        }
+
+    private:
+        use_context_data &context_;
 };
 
 std::int64_t nonnegative_turn_difference( const std::int64_t later,
@@ -5189,7 +5479,7 @@ sol::object get_persistent_value( const persistent_state &store,
         }
         return fallback.value_or( sol::make_object( lua, sol::lua_nil ) );
     }
-    return std::visit( [lua]( const auto &entry ) {
+    return std::visit( [lua]( const auto & entry ) {
         return sol::make_object( lua, entry );
     }, found->second );
 }
@@ -5198,7 +5488,7 @@ sol::table persistent_table( sol::state &lua, const persistent_state &values )
 {
     sol::table result = lua.create_table();
     for( const auto &[key, value] : values ) {
-        std::visit( [&result, &key]( const auto &entry ) {
+        std::visit( [&result, &key]( const auto & entry ) {
             result[key] = entry;
         }, value );
     }
@@ -5241,7 +5531,7 @@ void write_typed_values( JsonOut &json, const persistent_state &values )
     for( const std::string &key : keys ) {
         json.member( key );
         json.start_object();
-        std::visit( [&json]( const auto &value ) {
+        std::visit( [&json]( const auto & value ) {
             using value_type = std::decay_t<decltype( value )>;
             if constexpr( std::is_same_v<value_type, bool> ) {
                 json.member( "type", "boolean" );
@@ -5300,6 +5590,8 @@ class runtime : public std::enable_shared_from_this<runtime>
 
         std::string mod_id;
         std::size_t generation = 0;
+        cata::lua_ui::game_handle_runtime_owner_ptr game_handle_owner =
+            cata::lua_ui::make_game_handle_runtime_owner();
         sol::state *lua = nullptr;
         content_transaction content;
         std::unordered_map<std::string, handler_definition> handlers;
@@ -5315,13 +5607,17 @@ class runtime : public std::enable_shared_from_this<runtime>
         std::mt19937_64 random_engine;
         int callback_depth = 0;
         bool world_is_ready = false;
+
+        cata::lua_ui::game_handle_runtime handle_runtime() const {
+            return cata::lua_ui::game_handle_runtime( game_handle_owner, generation );
+        }
 };
 
 struct content_transaction::impl {
     impl( std::string owner_id, std::size_t owner_generation ) :
         owner( std::move( owner_id ) ), generation( owner_generation ),
         token( std::make_shared<owner_token>( owner_token{ owner, generation,
-                handle_lifecycle::building } ) ) {}
+                                              handle_lifecycle::building } ) ) {}
 
     std::string owner;
     std::size_t generation = 0;
@@ -5352,7 +5648,9 @@ struct content_transaction::impl {
     std::vector<field_type_registration> field_types;
     std::vector<item_group_registration> item_groups;
     std::vector<sub_body_part_registration> sub_body_parts;
+    std::vector<wound_type_registration> wound_types;
     std::vector<body_part_registration> body_parts;
+    std::vector<wound_fix_registration> wound_fixes;
     std::vector<anatomy_registration> anatomies;
     std::vector<body_graph_registration> body_graphs;
     std::vector<monster_registration> monsters;
@@ -5408,7 +5706,7 @@ struct content_transaction::impl {
     std::vector<recipe_registration> recipes;
     std::vector<std::pair<quality_id, std::optional<quality>>> tool_quality_undo;
     std::vector<std::pair<skill_displayType_id, std::optional<SkillDisplayType>>>
-            skill_display_undo;
+    skill_display_undo;
     std::vector<std::pair<skill_id, std::optional<Skill>>> skill_undo;
     std::vector<std::pair<vitamin_id, std::optional<vitamin>>> vitamin_undo;
     std::vector<std::pair<flag_id, std::optional<json_flag>>> json_flag_undo;
@@ -5418,32 +5716,34 @@ struct content_transaction::impl {
     std::vector<std::tuple<item_category_id, std::optional<item_category>, float>>
             item_category_undo;
     std::vector<std::pair<crafting_category_id, std::optional<crafting_category>>>
-            crafting_category_undo;
+    crafting_category_undo;
     std::vector<std::pair<proficiency_category_id, std::optional<proficiency_category>>>
-            proficiency_category_undo;
+    proficiency_category_undo;
     std::vector<std::pair<proficiency_id, std::optional<proficiency>>> proficiency_undo;
     std::vector<std::pair<weapon_category_id, std::optional<weapon_category>>>
-            weapon_category_undo;
+    weapon_category_undo;
     std::vector<std::pair<requirement_id, std::optional<requirement_data>>> requirement_undo;
     std::vector<std::pair<std::string,
         std::optional<detail::recipe_group_native_definition>>> recipe_group_undo;
     std::vector<std::pair<scenttype_id, std::optional<scent_type>>> scent_type_undo;
     std::vector<std::pair<speed_description_id, std::optional<speed_description>>>
-            speed_description_undo;
+    speed_description_undo;
     std::vector<std::pair<harvest_drop_type_id, std::optional<harvest_drop_type>>>
-            harvest_drop_type_undo;
+    harvest_drop_type_undo;
     std::vector<std::pair<harvest_id, std::optional<harvest_list>>> harvest_undo;
     std::vector<std::pair<string_id<behavior::node_t>,
         std::optional<behavior::node_t>>> behavior_undo;
     std::vector<std::pair<std::string, std::optional<effect_type>>> effect_type_undo;
     std::vector<std::pair<std::string, std::optional<mtype_special_attack>>>
-            monster_attack_undo;
+    monster_attack_undo;
     std::vector<std::pair<weakpoints_id, std::optional<weakpoints>>> weakpoint_set_undo;
     std::vector<std::pair<field_type_str_id, std::optional<field_type>>> field_type_undo;
     std::vector<std::pair<item_group_id, std::unique_ptr<Item_spawn_data>>> item_group_undo;
     std::vector<std::pair<sub_bodypart_str_id, std::optional<sub_body_part_type>>>
-            sub_body_part_undo;
+    sub_body_part_undo;
+    std::vector<std::pair<wound_type_id, std::optional<wound_type>>> wound_type_undo;
     std::vector<std::pair<bodypart_str_id, std::optional<body_part_type>>> body_part_undo;
+    std::vector<std::pair<wound_fix_id, std::optional<wound_fix>>> wound_fix_undo;
     std::vector<std::pair<anatomy_id, std::optional<anatomy>>> anatomy_undo;
     std::vector<std::pair<bodygraph_id, std::optional<bodygraph>>> body_graph_undo;
     std::vector<std::pair<mtype_id, std::optional<mtype>>> monster_undo;
@@ -5453,11 +5753,11 @@ struct content_transaction::impl {
     std::vector<std::pair<species_id, std::optional<species_type>>> species_undo;
     std::vector<std::pair<std::string, std::optional<emit>>> emission_undo;
     std::vector<std::pair<mfaction_str_id, std::optional<monfaction>>>
-            monster_faction_undo;
+    monster_faction_undo;
     std::vector<std::pair<std::string, bool>> mutation_type_undo;
     std::vector<std::pair<std::string, std::optional<connect_group>>> connect_group_undo;
     std::vector<std::pair<std::string, std::optional<mutation_category_trait>>>
-            mutation_category_undo;
+    mutation_category_undo;
     std::vector<std::pair<construction_category_id,
         std::optional<construction_category>>> construction_category_undo;
     std::vector<std::pair<construction_group_str_id,
@@ -5503,13 +5803,13 @@ struct content_transaction::impl {
     std::vector<std::pair<std::string, std::optional<int>>> overlay_order_undo;
     std::vector<std::pair<zone_type_id, std::optional<zone_type>>> zone_type_undo;
     std::vector<std::pair<std::string, std::optional<std::vector<SpeechBubble>>>>
-            speech_pool_undo;
+    speech_pool_undo;
     std::vector<std::pair<end_screen_id, std::optional<end_screen>>> end_screen_undo;
     std::vector<std::pair<activity_id, std::optional<activity_type>>> activity_type_undo;
     std::optional<help> help_undo;
     std::optional<snippet_library> snippet_library_undo;
     std::vector<std::pair<std::string, std::optional<sfx::playlist_definition>>>
-            playlist_undo;
+    playlist_undo;
     std::vector<std::pair<attack_vector_id, std::optional<attack_vector>>>
     attack_vector_undo;
     std::vector<std::pair<magic_type_id, std::optional<magic_type>>> magic_type_undo;
@@ -5524,6 +5824,7 @@ namespace
 
 std::vector<std::shared_ptr<runtime>> active_runtimes;
 std::size_t active_world_generation = 0;
+int platform_event_dispatch_depth = 0;
 std::map<std::string, persistent_scope_record> orphan_character_records;
 std::map<std::string, persistent_scope_record> orphan_world_records;
 
@@ -5559,6 +5860,21 @@ class callback_scope
         runtime &owner_;
 };
 
+class platform_event_dispatch_scope
+{
+    public:
+        platform_event_dispatch_scope() {
+            ++platform_event_dispatch_depth;
+        }
+
+        platform_event_dispatch_scope( const platform_event_dispatch_scope & ) = delete;
+        platform_event_dispatch_scope &operator=( const platform_event_dispatch_scope & ) = delete;
+
+        ~platform_event_dispatch_scope() {
+            --platform_event_dispatch_depth;
+        }
+};
+
 void require_live_runtime( const std::weak_ptr<runtime> &weak,
                            const std::string_view api_name )
 {
@@ -5585,11 +5901,71 @@ void report_callback_error( const runtime &owner, std::string_view handler,
     ::add_msg( m_bad, message );
 }
 
-sol::table event_to_lua( runtime &owner, const cata::event &event )
+cata::lua_ui::game_handle platform_creature_handle( const runtime &owner,
+        const Creature &creature );
+
+Character *platform_event_character( const character_id &id )
+{
+    avatar &player = get_avatar();
+    if( player.getID() == id ) {
+        return &player;
+    }
+    return g == nullptr ? nullptr : g->find_npc( id );
+}
+
+bool platform_event_contract_exists( const std::string_view name )
+{
+    for( int raw = 0; raw < static_cast<int>( event_type::num_event_types ); ++raw ) {
+        if( io::enum_to_string( static_cast<event_type>( raw ) ) == name ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::map<std::string, Character *> platform_event_characters( const cata::event &event )
+{
+    std::map<std::string, Character *> result;
+    for( const auto &[name, value] : event.data() ) {
+        if( value.type() != cata_variant_type::character_id ) {
+            continue;
+        }
+        const character_id id = value.get<cata_variant_type::character_id>();
+        if( Character *character = platform_event_character( id ) ) {
+            result.emplace( name, character );
+        }
+    }
+    return result;
+}
+
+const item *platform_event_item( const cata::event &event, const talker *item_actor )
+{
+    if( item_actor == nullptr ) {
+        return nullptr;
+    }
+    // These native producers explicitly attach their semantic item_location as
+    // the second talker.  Do not treat that position as a generic actor fallback.
+    switch( event.type() ) {
+        case event_type::character_wields_item:
+        case event_type::character_wears_item:
+        case event_type::character_takeoff_item:
+        case event_type::character_armor_destroyed:
+            break;
+        default:
+            return nullptr;
+    }
+    const item_location *location = item_actor->get_const_item();
+    return location == nullptr ? nullptr : location->get_item();
+}
+
+sol::table event_to_lua( runtime &owner, const cata::event &event,
+                         const std::map<std::string, Character *> &characters,
+                         const item *event_item )
 {
     sol::table result = owner.lua->create_table();
     sol::table data = owner.lua->create_table();
     sol::table data_types = owner.lua->create_table();
+    sol::table actors = owner.lua->create_table();
     result["type"] = io::enum_to_string( event.type() );
     result["turn"] = to_turn<std::int64_t>( event.time() );
     for( const auto &[name, value] : event.data() ) {
@@ -5600,9 +5976,16 @@ sol::table event_to_lua( runtime &owner, const cata::event &event )
             case cata_variant_type::int_:
                 data[name] = value.get<cata_variant_type::int_>();
                 break;
-            case cata_variant_type::character_id:
-                data[name] = value.get<cata_variant_type::character_id>().get_value();
-                break;
+            case cata_variant_type::character_id: {
+                const character_id id =
+                    value.get<cata_variant_type::character_id>();
+                data[name] = id.get_value();
+                const auto character = characters.find( name );
+                if( character != characters.end() ) {
+                    actors[name] = platform_creature_handle( owner, *character->second );
+                }
+            }
+            break;
             case cata_variant_type::chrono_seconds:
                 data[name] = value.get<cata_variant_type::chrono_seconds>().count();
                 break;
@@ -5612,9 +5995,39 @@ sol::table event_to_lua( runtime &owner, const cata::event &event )
         }
         data_types[name] = io::enum_to_string( value.type() );
     }
+    if( event_item != nullptr ) {
+        actors["item"] = cata::lua_ui::game_handle::from_item(
+        const_cast<item &>( *event_item ), {
+            "platform_event_item", event_item->uid().get_value(), 0, 0, 0, {}
+        }, owner.handle_runtime(), active_world_generation );
+    }
     result["data"] = std::move( data );
     result["data_types"] = std::move( data_types );
+    result["actors"] = std::move( actors );
     return result;
+}
+
+void dispatch_event_handler( runtime &owner, const std::string &name,
+                             const std::string &handler_id, const sol::object &payload )
+{
+    if( owner.callback_depth >= 16 ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first event recursion limit reached for '"
+                                    << owner.mod_id << ':' << name << "'";
+        return;
+    }
+    const auto handler = owner.handlers.find( handler_id );
+    if( handler == owner.handlers.end() ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first event '" << name
+                                    << "' references missing handler '"
+                                    << owner.mod_id << ":" << handler_id << "'";
+        return;
+    }
+    sol::protected_function callback = handler->second.callback;
+    callback_scope scope( owner );
+    const sol::protected_function_result result = callback( payload );
+    if( !result.valid() ) {
+        report_callback_error( owner, handler_id, result );
+    }
 }
 
 void dispatch_event( runtime &owner, const std::string &name, sol::object payload )
@@ -5623,21 +6036,14 @@ void dispatch_event( runtime &owner, const std::string &name, sol::object payloa
     if( subscription == owner.subscriptions.end() ) {
         return;
     }
+    if( owner.callback_depth >= 16 ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first event recursion limit reached for '"
+                                    << owner.mod_id << ':' << name << "'";
+        return;
+    }
     const std::vector<std::string> handler_ids = subscription->second;
     for( const std::string &handler_id : handler_ids ) {
-        const auto handler = owner.handlers.find( handler_id );
-        if( handler == owner.handlers.end() ) {
-            DebugLog( D_ERROR, D_MAIN ) << "Lua-first event '" << name
-                                        << "' references missing handler '"
-                                        << owner.mod_id << ":" << handler_id << "'";
-            continue;
-        }
-        sol::protected_function callback = handler->second.callback;
-        callback_scope scope( owner );
-        const sol::protected_function_result result = callback( payload );
-        if( !result.valid() ) {
-            report_callback_error( owner, handler_id, result );
-        }
+        dispatch_event_handler( owner, name, handler_id, payload );
     }
 }
 
@@ -5725,7 +6131,7 @@ cata::lua_ui::game_handle platform_creature_handle( const runtime &owner,
         locator.stable_id = character->getID().get_value();
     }
     return cata::lua_ui::game_handle::from_creature(
-               mutable_creature, std::move( locator ), owner.generation,
+               mutable_creature, std::move( locator ), owner.handle_runtime(),
                active_world_generation );
 }
 
@@ -5738,18 +6144,18 @@ sol::object platform_talker_to_lua( runtime &owner, const const_talker &talker )
     if( const item_location *location = talker.get_const_item() ) {
         if( const item *value = location->get_item() ) {
             return sol::make_object( lua, cata::lua_ui::game_handle::from_item(
-                                         const_cast<item &>( *value ), {
+            const_cast<item &>( *value ), {
                 "platform_callback_talker_item", value->uid().get_value(), 0, 0, 0, {}
-            }, owner.generation, active_world_generation ) );
+            }, owner.handle_runtime(), active_world_generation ) );
         }
     }
     if( const vehicle *value = talker.get_const_vehicle() ) {
         const tripoint_abs_ms position = value->pos_abs();
         return sol::make_object( lua, cata::lua_ui::game_handle::from_vehicle(
-                                     const_cast<vehicle &>( *value ), {
-                "platform_callback_talker_vehicle", 0,
-                position.x(), position.y(), position.z(), {}
-            }, owner.generation, active_world_generation ) );
+        const_cast<vehicle &>( *value ), {
+            "platform_callback_talker_vehicle", 0,
+            position.x(), position.y(), position.z(), {}
+        }, owner.handle_runtime(), active_world_generation ) );
     }
 
     sol::table snapshot = owner.lua->create_table();
@@ -5777,24 +6183,27 @@ sol::object platform_callback_value_to_lua(
     runtime &owner, const cata::lua_ui::native_callback_value &value )
 {
     sol::state_view lua( *owner.lua );
-    return std::visit( [&owner, lua]( const auto &entry ) -> sol::object {
+    return std::visit( [&owner, lua]( const auto & entry ) -> sol::object {
         using value_type = std::decay_t<decltype( entry )>;
         if constexpr( std::is_same_v<value_type, const Character *> ||
-                      std::is_same_v<value_type, const Creature *> ) {
+                      std::is_same_v<value_type, const Creature *> )
+        {
             if( entry == nullptr ) {
                 return sol::make_object( lua, sol::lua_nil );
             }
             return sol::make_object( lua, platform_creature_handle( owner, *entry ) );
-        } else if constexpr( std::is_same_v<value_type, const item *> ) {
+        } else if constexpr( std::is_same_v<value_type, const item *> )
+        {
             if( entry == nullptr ) {
                 return sol::make_object( lua, sol::lua_nil );
             }
             return sol::make_object( lua, cata::lua_ui::game_handle::from_item(
-                                         const_cast<item &>( *entry ), {
+            const_cast<item &>( *entry ), {
                 "platform_callback_item", entry->uid().get_value(), 0, 0, 0, {}
-            }, owner.generation, active_world_generation ) );
+            }, owner.handle_runtime(), active_world_generation ) );
         } else if constexpr( std::is_same_v<value_type,
-                             cata::lua_ui::native_callback_point> ) {
+                             cata::lua_ui::native_callback_point> )
+        {
             sol::table point = owner.lua->create_table();
             point["coordinate_space"] = entry.coordinate_space;
             point["x"] = entry.pos.x();
@@ -5802,24 +6211,29 @@ sol::object platform_callback_value_to_lua(
             point["z"] = entry.pos.z();
             return sol::make_object( lua, std::move( point ) );
         } else if constexpr( std::is_same_v<value_type,
-                             cata::lua_ui::native_callback_id> ) {
+                             cata::lua_ui::native_callback_id> )
+        {
             return sol::make_object( lua,
                                      cata::lua_ui::script_game_id( entry.kind, entry.value ) );
-        } else if constexpr( std::is_same_v<value_type, std::vector<std::string>> ) {
+        } else if constexpr( std::is_same_v<value_type, std::vector<std::string>> )
+        {
             sol::table strings = owner.lua->create_table();
             for( std::size_t index = 0; index < entry.size(); ++index ) {
                 strings[index + 1] = entry[index];
             }
             return sol::make_object( lua, std::move( strings ) );
-        } else if constexpr( std::is_same_v<value_type, const const_talker *> ) {
+        } else if constexpr( std::is_same_v<value_type, const const_talker *> )
+        {
             return entry == nullptr ? sol::make_object( lua, sol::lua_nil ) :
                    platform_talker_to_lua( owner, *entry );
         } else if constexpr( std::is_same_v<value_type,
-                             cata::lua_ui::native_callback_mission> ) {
+                             cata::lua_ui::native_callback_mission> )
+        {
             return sol::make_object( lua, cata::lua_ui::mission_token(
-                                         entry.uid, owner.generation,
+                                         entry.uid, owner.handle_runtime(),
                                          active_world_generation ) );
-        } else {
+        } else
+        {
             return sol::make_object( lua, entry );
         }
     }, value );
@@ -5839,6 +6253,36 @@ sol::table platform_callback_payload(
             throw std::invalid_argument( "Platform native hook payload has an invalid field name" );
         }
         result[argument.name] = platform_callback_value_to_lua( owner, argument.value );
+    }
+    return result;
+}
+
+cata::lua_ui::native_callback_arguments platform_callback_arguments(
+    const std::string_view hook_name,
+    const cata::lua_ui::native_callback_arguments &arguments )
+{
+    cata::lua_ui::native_callback_arguments result = arguments;
+    const auto rename = [&result]( const std::string_view from,
+    const std::string_view to ) {
+        for( cata::lua_ui::native_callback_argument &argument : result ) {
+            if( argument.name == from ) {
+                argument.name = to;
+            }
+        }
+    };
+    if( hook_name == "on_dialogue_start" ) {
+        rename( "alpha", "avatar" );
+        rename( "beta", "interlocutor" );
+        rename( "topic", "initial_topic" );
+    } else if( hook_name == "on_dialogue_option" ) {
+        rename( "alpha", "avatar" );
+        rename( "beta", "interlocutor" );
+        rename( "topic", "current_topic" );
+        rename( "option", "selected_topic" );
+    } else if( hook_name == "on_dialogue_end" ) {
+        rename( "alpha", "avatar" );
+        rename( "beta", "interlocutor" );
+        rename( "topic", "last_topic" );
     }
     return result;
 }
@@ -6000,20 +6444,82 @@ void apply_platform_hook_table( const std::string_view name, const sol::table &t
     stop = stop || platform_hook_bool( table, "stop" ).value_or( false );
 }
 
+void dispatch_platform_event( const cata::event &event, const item *event_item )
+{
+    if( g == nullptr || event.type() == event_type::num_event_types ) {
+        return;
+    }
+    const std::string event_name = "game:" + io::enum_to_string( event.type() );
+    const bool has_subscriber = std::any_of(
+                                    active_runtimes.begin(), active_runtimes.end(),
+    [&event_name]( const std::shared_ptr<runtime> &owner ) {
+        return owner && owner->world_is_ready &&
+               owner->subscriptions.find( event_name ) != owner->subscriptions.end();
+    } );
+    if( !has_subscriber ) {
+        return;
+    }
+    if( platform_event_dispatch_depth >= 16 ) {
+        DebugLog( D_WARNING, D_MAIN ) << "Lua-first global event recursion limit reached for '"
+                                      << event_name << "'";
+        return;
+    }
+    platform_event_dispatch_scope event_scope;
+    const std::map<std::string, Character *> characters =
+        platform_event_characters( event );
+    struct pending_callback {
+        std::shared_ptr<runtime> owner;
+        std::string handler_id;
+        sol::object payload;
+    };
+    std::vector<pending_callback> pending;
+    for( const std::shared_ptr<runtime> &owner : active_runtimes ) {
+        if( !owner || !owner->world_is_ready ) {
+            continue;
+        }
+        const auto subscription = owner->subscriptions.find( event_name );
+        if( subscription == owner->subscriptions.end() ) {
+            continue;
+        }
+        if( owner->callback_depth >= 16 ) {
+            DebugLog( D_ERROR, D_MAIN ) << "Lua-first event recursion limit reached for '"
+                                        << owner->mod_id << ':' << event_name << "'";
+            continue;
+        }
+        const std::vector<std::string> handler_ids = subscription->second;
+        for( const std::string &handler_id : handler_ids ) {
+            try {
+                pending.push_back( {
+                    owner,
+                    handler_id,
+                    sol::make_object(
+                        *owner->lua, event_to_lua( *owner, event, characters,
+                                                   event_item ) )
+                } );
+            } catch( const std::exception &exception ) {
+                DebugLog( D_ERROR, D_MAIN ) << "Lua-first event payload for '"
+                                            << owner->mod_id << ':' << event_name << ':'
+                                            << handler_id << "' failed: " << exception.what();
+            }
+        }
+    }
+    for( const pending_callback &callback : pending ) {
+        dispatch_event_handler( *callback.owner, event_name, callback.handler_id,
+                                callback.payload );
+    }
+}
+
 class platform_event_bridge : public event_subscriber
 {
     public:
-        using event_subscriber::notify;
-
         void notify( const cata::event &event ) override {
-            const std::string event_name = "game:" + io::enum_to_string( event.type() );
-            for( const std::shared_ptr<runtime> &owner : active_runtimes ) {
-                if( owner && owner->world_is_ready ) {
-                    dispatch_event( *owner, event_name,
-                                    sol::make_object( *owner->lua,
-                                            event_to_lua( *owner, event ) ) );
-                }
-            }
+            dispatch_platform_event( event, nullptr );
+        }
+
+        void notify( const cata::event &event, std::unique_ptr<talker>,
+                     std::unique_ptr<talker> item_actor ) override {
+            dispatch_platform_event(
+                event, platform_event_item( event, item_actor.get() ) );
         }
 };
 
@@ -6211,7 +6717,7 @@ void write_scope( const cata_path &path, const std::string &scope )
     if( serialized.size() > maximum_platform_state_file_bytes ) {
         throw std::runtime_error( "Platform state file exceeds 16 MiB" );
     }
-    write_to_file( path, [&serialized]( std::ostream &output ) {
+    write_to_file( path, [&serialized]( std::ostream & output ) {
         output << serialized;
     } );
 }
@@ -6408,6 +6914,14 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         "id", sol::property( &sub_body_part_definition_handle::id ),
         "location_under", &sub_body_part_definition_handle::location_under,
         "unarmed_damage", &sub_body_part_definition_handle::unarmed_damage );
+    ccb.new_usertype<wound_type_definition_handle>(
+        "WoundDefinition", sol::no_constructor,
+        "id", sol::property( &wound_type_definition_handle::id ),
+        "damage_type", &wound_type_definition_handle::damage_type,
+        "limb_score", &wound_type_definition_handle::limb_score,
+        "progression", &wound_type_definition_handle::progression,
+        "require_body_part_type", &wound_type_definition_handle::require_body_part_type,
+        "forbid_body_part_type", &wound_type_definition_handle::forbid_body_part_type );
     ccb.new_usertype<body_part_definition_handle>(
         "BodyPartDefinition", sol::no_constructor,
         "id", sol::property( &body_part_definition_handle::id ),
@@ -6418,6 +6932,14 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         "flag", &body_part_definition_handle::flag,
         "limb_score", &body_part_definition_handle::limb_score,
         "quality", &body_part_definition_handle::quality );
+    ccb.new_usertype<wound_fix_definition_handle>(
+        "WoundFixDefinition", sol::no_constructor,
+        "id", sol::property( &wound_fix_definition_handle::id ),
+        "skill", &wound_fix_definition_handle::skill,
+        "proficiency", &wound_fix_definition_handle::proficiency,
+        "removes", &wound_fix_definition_handle::removes,
+        "adds", &wound_fix_definition_handle::adds,
+        "requires", &wound_fix_definition_handle::requires );
     ccb.new_usertype<anatomy_definition_handle>(
         "AnatomyDefinition", sol::no_constructor,
         "id", sol::property( &anatomy_definition_handle::id ),
@@ -6671,7 +7193,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
 
     impl *const transaction = pimpl_.get();
     sol::table content = lua.create_table();
-    content.set_function( "ToolQuality", [transaction]( const sol::table &options ) {
+    content.set_function( "ToolQuality", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6680,7 +7202,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->name = options.get_or( "name", definition->id );
         return tool_quality_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "SkillDisplay", [transaction]( const sol::table &options ) {
+    content.set_function( "SkillDisplay", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6689,7 +7211,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->label = options.get_or( "label", definition->id );
         return skill_display_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "Skill", [transaction]( const sol::table &options ) {
+    content.set_function( "Skill", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6704,7 +7226,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->consumes_focus = options.get_or( "consumes_focus", true );
         return skill_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "Vitamin", [transaction]( const sol::table &options ) {
+    content.set_function( "Vitamin", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6719,7 +7241,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->rate_turns = options.get_or<std::int64_t>( "rate_turns", 1 );
         return vitamin_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "JsonFlag", [transaction]( const sol::table &options ) {
+    content.set_function( "JsonFlag", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6736,7 +7258,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->craft_inherit = options.get_or( "craft_inherit", false );
         return json_flag_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "DamageType", [transaction]( const sol::table &options ) {
+    content.set_function( "DamageType", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6752,11 +7274,11 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->edged = options.get_or( "edged", false );
         definition->environmental = options.get_or( "environmental", false );
         definition->material_required = options.get_or( "material_required", false );
-        definition->bash_conversion_factor = options.get_or<double>(
-                    "bash_conversion_factor", definition->physical ? 0.5 : 0.1 );
+        definition->bash_conversion_factor = options.get_or(
+                "bash_conversion_factor", definition->physical ? 0.5 : 0.1 );
         return damage_type_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "Material", [transaction]( const sol::table &options ) {
+    content.set_function( "Material", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6770,12 +7292,12 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->chip_resistance = options.get_or<std::int64_t>( "chip_resistance", 0 );
         definition->breathability = options.get_or<std::int64_t>( "breathability", 0 );
         definition->repair_difficulty = options.get_or<std::int64_t>( "repair_difficulty", 10 );
-        definition->density = options.get_or<double>( "density", 1.0 );
-        definition->sheet_thickness = options.get_or<double>( "sheet_thickness", 0.0 );
-        definition->specific_heat_liquid = options.get_or<double>( "specific_heat_liquid", 4.186 );
-        definition->specific_heat_solid = options.get_or<double>( "specific_heat_solid", 2.108 );
-        definition->latent_heat = options.get_or<double>( "latent_heat", 334.0 );
-        definition->freezing_point = options.get_or<double>( "freezing_point", 0.0 );
+        definition->density = options.get_or( "density", 1.0 );
+        definition->sheet_thickness = options.get_or( "sheet_thickness", 0.0 );
+        definition->specific_heat_liquid = options.get_or( "specific_heat_liquid", 4.186 );
+        definition->specific_heat_solid = options.get_or( "specific_heat_solid", 2.108 );
+        definition->latent_heat = options.get_or( "latent_heat", 334.0 );
+        definition->freezing_point = options.get_or( "freezing_point", 0.0 );
         definition->rotting = options.get_or( "rotting", false );
         definition->soft = options.get_or( "soft", false );
         definition->uncomfortable = options.get_or( "uncomfortable", false );
@@ -6786,7 +7308,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         }
         return material_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "AmmunitionType", [transaction]( const sol::table &options ) {
+    content.set_function( "AmmunitionType", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6796,7 +7318,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->default_item = options.get_or( "default_item", std::string() );
         return ammunition_type_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "ItemCategory", [transaction]( const sol::table &options ) {
+    content.set_function( "ItemCategory", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6805,11 +7327,11 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->header = options.get_or( "header", definition->id );
         definition->noun = options.get_or( "noun", definition->header );
         definition->sort_rank = options.get_or<std::int64_t>( "sort_rank", 0 );
-        definition->spawn_rate = options.get_or<double>( "spawn_rate", 1.0 );
+        definition->spawn_rate = options.get_or( "spawn_rate", 1.0 );
         definition->zone = options.get_or( "zone", std::string() );
         return item_category_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "RecipeCategory", [transaction]( const sol::table &options ) {
+    content.set_function( "RecipeCategory", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6821,7 +7343,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->wildcard = options.get_or( "wildcard", false );
         return crafting_category_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "ProficiencyCategory", [transaction]( const sol::table &options ) {
+    content.set_function( "ProficiencyCategory", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6831,7 +7353,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->description = options.get_or( "description", std::string() );
         return proficiency_category_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "Proficiency", [transaction]( const sol::table &options ) {
+    content.set_function( "Proficiency", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6841,17 +7363,17 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->description = options.get_or( "description", std::string() );
         definition->category = options.get_or( "category", std::string() );
         definition->time_to_learn_turns = options.get_or<std::int64_t>(
-                                                "time_to_learn_turns", 35996400 );
-        definition->time_multiplier = options.get_or<double>( "time_multiplier", 2.0 );
-        definition->skill_penalty = options.get_or<double>( "skill_penalty", 1.0 );
-        definition->weakpoint_bonus = options.get_or<double>( "weakpoint_bonus", 0.0 );
-        definition->weakpoint_penalty = options.get_or<double>( "weakpoint_penalty", 0.0 );
+                                              "time_to_learn_turns", 35996400 );
+        definition->time_multiplier = options.get_or( "time_multiplier", 2.0 );
+        definition->skill_penalty = options.get_or( "skill_penalty", 1.0 );
+        definition->weakpoint_bonus = options.get_or( "weakpoint_bonus", 0.0 );
+        definition->weakpoint_penalty = options.get_or( "weakpoint_penalty", 0.0 );
         definition->can_learn = options.get_or( "can_learn", false );
         definition->ignore_focus = options.get_or( "ignore_focus", false );
         definition->teachable = options.get_or( "teachable", true );
         return proficiency_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "WeaponCategory", [transaction]( const sol::table &options ) {
+    content.set_function( "WeaponCategory", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6860,7 +7382,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->name = options.get_or( "name", definition->id );
         return weapon_category_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "Item", [transaction]( const sol::table &options ) {
+    content.set_function( "Item", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6871,15 +7393,16 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->symbol = options.get_or( "symbol", std::string( "?" ) );
         return item_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "Recipe", [transaction]( const sol::table &options ) {
+    content.set_function( "Recipe", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
         auto definition = std::make_shared<recipe_definition_data>();
         definition->id = options.get_or( "id", std::string() );
         definition->result = options.get_or( "result", std::string() );
-        definition->category = options.get_or( "category", std::string( "CC_MISC" ) );
-        definition->subcategory = options.get_or( "subcategory", std::string( "CSC_MISC" ) );
+        definition->category = options.get_or( "category", std::string( "CC_OTHER" ) );
+        definition->subcategory = options.get_or(
+                                      "subcategory", std::string( "CSC_OTHER_OTHER" ) );
         definition->skill = options.get_or( "skill", std::string() );
         definition->difficulty = options.get_or<std::int64_t>( "difficulty", 0 );
         definition->time_moves = options.get_or<std::int64_t>( "duration_moves", 100 );
@@ -6887,7 +7410,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->reversible = options.get_or( "reversible", false );
         return recipe_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "NestedRecipeCategory", [transaction]( const sol::table &options ) {
+    content.set_function( "NestedRecipeCategory", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6903,7 +7426,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "Requirement", [transaction]( const sol::table &options ) {
+    content.set_function( "Requirement", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6912,7 +7435,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->name = options.get_or( "name", std::string() );
         return requirement_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "RecipeGroup", [transaction]( const sol::table &options ) {
+    content.set_function( "RecipeGroup", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6921,7 +7444,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->building_type = options.get_or( "building_type", std::string( "NONE" ) );
         return recipe_group_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "ScentType", [transaction]( const sol::table &options ) {
+    content.set_function( "ScentType", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6929,7 +7452,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->id = options.get_or( "id", std::string() );
         return scent_type_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "SpeedDescription", [transaction]( const sol::table &options ) {
+    content.set_function( "SpeedDescription", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6937,7 +7460,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->id = options.get_or( "id", std::string() );
         return speed_description_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "HarvestDropType", [transaction]( const sol::table &options ) {
+    content.set_function( "HarvestDropType", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6957,7 +7480,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "Harvest", [transaction]( const sol::table &options ) {
+    content.set_function( "Harvest", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6970,7 +7493,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
                                                 "butchery_requirements", std::string( "default" ) );
         return harvest_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "Behavior", [transaction]( const sol::table &options ) {
+    content.set_function( "Behavior", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6980,7 +7503,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->goal = options.get_or( "goal", std::string() );
         return behavior_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "MonsterAttack", [transaction]( const sol::table &options ) {
+    content.set_function( "MonsterAttack", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -6992,7 +7515,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "EffectType", [transaction]( const sol::table &options ) {
+    content.set_function( "EffectType", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7003,7 +7526,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             definition->names.push_back( name );
         }
         if( const std::string description = options.get_or(
-                    "description", std::string() ); !description.empty() ) {
+                                                "description", std::string() ); !description.empty() ) {
             definition->descriptions.push_back( description );
         }
         definition->remove_message = options.get_or( "remove_message", std::string() );
@@ -7016,9 +7539,9 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->maximum_intensity = options.get_or<std::int64_t>(
                                             "maximum_intensity", 1 );
         definition->maximum_duration_turns = options.get_or<std::int64_t>(
-                    "maximum_duration_turns", 31536000 );
+                "maximum_duration_turns", 31536000 );
         definition->intensity_duration_turns = options.get_or<std::int64_t>(
-                    "intensity_duration_turns", 0 );
+                "intensity_duration_turns", 0 );
         definition->duration_add_percent = options.get_or<std::int64_t>(
                                                "duration_add_percent", 100 );
         definition->intensity_add_value = options.get_or<std::int64_t>(
@@ -7028,7 +7551,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->intensity_decay_tick = options.get_or<std::int64_t>(
                                                "intensity_decay_tick", 0 );
         definition->intensity_decay_removes = options.get_or(
-                    "intensity_decay_removes", false );
+                "intensity_decay_removes", false );
         definition->main_parts_only = options.get_or( "main_parts_only", false );
         definition->show_in_info = options.get_or( "show_in_info", false );
         definition->show_intensity = options.get_or( "show_intensity", true );
@@ -7037,7 +7560,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "WeakpointSet", [transaction]( const sol::table &options ) {
+    content.set_function( "WeakpointSet", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7047,7 +7570,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "FieldType", [transaction]( const sol::table &options ) {
+    content.set_function( "FieldType", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7056,7 +7579,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->underwater_age_speedup_turns = options.get_or<std::int64_t>(
                     "underwater_age_speedup_turns", 0 );
         definition->outdoor_age_speedup_turns = options.get_or<std::int64_t>(
-                                                   "outdoor_age_speedup_turns", 0 );
+                "outdoor_age_speedup_turns", 0 );
         definition->decay_amount_factor = options.get_or<std::int64_t>(
                                               "decay_amount_factor", 0 );
         definition->percent_spread = options.get_or<std::int64_t>( "percent_spread", 0 );
@@ -7087,7 +7610,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "ItemGroup", [transaction]( const sol::table &options ) {
+    content.set_function( "ItemGroup", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7100,7 +7623,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "SubBodyPart", [transaction]( const sol::table &options ) {
+    content.set_function( "SubBodyPart", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7120,7 +7643,45 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "BodyPart", [transaction]( const sol::table &options ) {
+    content.set_function( "Wound", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<wound_type_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->name = options.get_or( "name", definition->id );
+        definition->plural_name = options.get_or( "plural_name", definition->name );
+        definition->description = options.get_or( "description", std::string() );
+        definition->pain_min = options.get_or<std::int64_t>( "pain_min", 0 );
+        definition->pain_max = options.get_or<std::int64_t>( "pain_max", 0 );
+        definition->healing_min_turns = options.get_or<std::int64_t>(
+                                            "healing_min_turns", 1 );
+        definition->healing_max_turns = options.get_or<std::int64_t>(
+                                            "healing_max_turns", 1 );
+        definition->damage_min = options.get_or<std::int64_t>( "damage_min", 0 );
+        definition->damage_max = options.get_or<std::int64_t>( "damage_max", 0 );
+        definition->weight = options.get_or<std::int64_t>( "weight", 1 );
+        definition->per_part_limit = options.get_or<std::int64_t>( "per_part_limit", 0 );
+        definition->required_body_part_flag = options.get_or(
+                "required_body_part_flag", std::string() );
+        definition->forbidden_body_part_flag = options.get_or(
+                "forbidden_body_part_flag", std::string() );
+        return wound_type_definition_handle{ std::move( definition ), transaction->token };
+    } );
+    content.set_function( "WoundFix", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<wound_fix_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->name = options.get_or( "name", definition->id );
+        definition->description = options.get_or( "description", std::string() );
+        definition->success_message = options.get_or( "success_message", std::string() );
+        definition->duration_turns = options.get_or<std::int64_t>( "duration_turns", 0 );
+        definition->health_delta = options.get_or<std::int64_t>( "health_delta", 0 );
+        return wound_fix_definition_handle{ std::move( definition ), transaction->token };
+    } );
+    content.set_function( "BodyPart", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7153,7 +7714,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "Anatomy", [transaction]( const sol::table &options ) {
+    content.set_function( "Anatomy", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7161,7 +7722,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->id = options.get_or( "id", std::string() );
         return anatomy_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "BodyGraph", [transaction]( const sol::table &options ) {
+    content.set_function( "BodyGraph", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7177,7 +7738,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "Monster", [transaction]( const sol::table &options ) {
+    content.set_function( "Monster", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7223,17 +7784,17 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->regenerates = options.get_or<std::int64_t>( "regenerates", 0 );
         definition->bleed_rate = options.get_or<std::int64_t>( "bleed_rate", 100 );
         definition->status_chance_multiplier = options.get_or(
-                    "status_chance_multiplier", 1.0 );
+                "status_chance_multiplier", 1.0 );
         definition->luminance = options.get_or( "luminance", 0.0 );
         definition->regenerates_in_dark = options.get_or(
                                               "regenerates_in_dark", false );
         definition->regenerates_morale = options.get_or(
                                              "regenerates_morale", false );
         definition->aggressive_to_characters = options.get_or(
-                    "aggressive_to_characters", true );
+                "aggressive_to_characters", true );
         return monster_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "MoraleType", [transaction]( const sol::table &options ) {
+    content.set_function( "MoraleType", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7243,7 +7804,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->permanent = options.get_or( "permanent", false );
         return morale_type_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "DiseaseType", [transaction]( const sol::table &options ) {
+    content.set_function( "DiseaseType", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7251,9 +7812,9 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->id = options.get_or( "id", std::string() );
         definition->symptoms = options.get_or( "symptoms", std::string() );
         definition->minimum_duration_turns = options.get_or<std::int64_t>(
-                                                 "minimum_duration_turns", 1 );
+                "minimum_duration_turns", 1 );
         definition->maximum_duration_turns = options.get_or<std::int64_t>(
-                                                 "maximum_duration_turns", 1 );
+                "maximum_duration_turns", 1 );
         definition->minimum_intensity = options.get_or<std::int64_t>(
                                             "minimum_intensity", 1 );
         definition->maximum_intensity = options.get_or<std::int64_t>(
@@ -7264,7 +7825,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         }
         return disease_type_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "MonsterFlag", [transaction]( const sol::table &options ) {
+    content.set_function( "MonsterFlag", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7272,7 +7833,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->id = options.get_or( "id", std::string() );
         return monster_flag_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "Species", [transaction]( const sol::table &options ) {
+    content.set_function( "Species", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7283,7 +7844,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->bleeds = options.get_or( "bleeds", std::string( "fd_null" ) );
         return species_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "Emission", [transaction]( const sol::table &options ) {
+    content.set_function( "Emission", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7295,7 +7856,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->chance = options.get_or<std::int64_t>( "chance", 100 );
         return emission_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "MonsterFaction", [transaction]( const sol::table &options ) {
+    content.set_function( "MonsterFaction", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7304,7 +7865,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->base = options.get_or( "base", std::string() );
         return monster_faction_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "MutationType", [transaction]( const sol::table &options ) {
+    content.set_function( "MutationType", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7312,7 +7873,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->id = options.get_or( "id", std::string() );
         return mutation_type_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "ConnectGroup", [transaction]( const sol::table &options ) {
+    content.set_function( "ConnectGroup", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7320,7 +7881,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->id = options.get_or( "id", std::string() );
         return connect_group_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "MutationCategory", [transaction]( const sol::table &options ) {
+    content.set_function( "MutationCategory", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7345,7 +7906,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "ConstructionCategory", [transaction]( const sol::table &options ) {
+    content.set_function( "ConstructionCategory", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7356,7 +7917,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "ConstructionGroup", [transaction]( const sol::table &options ) {
+    content.set_function( "ConstructionGroup", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7367,7 +7928,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "VehiclePartLocation", [transaction]( const sol::table &options ) {
+    content.set_function( "VehiclePartLocation", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7381,7 +7942,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "MoodFace", [transaction]( const sol::table &options ) {
+    content.set_function( "MoodFace", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7389,7 +7950,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->id = options.get_or( "id", std::string() );
         return mood_face_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "DamageInfoOrder", [transaction]( const sol::table &options ) {
+    content.set_function( "DamageInfoOrder", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7401,7 +7962,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "VehiclePartCategory", [transaction]( const sol::table &options ) {
+    content.set_function( "VehiclePartCategory", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7414,7 +7975,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "NamedColor", [transaction]( const sol::table &options ) {
+    content.set_function( "NamedColor", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7427,7 +7988,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->alpha = options.get_or<std::int64_t>( "alpha", 255 );
         return named_color_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "RotatableSymbol", [transaction]( const sol::table &options ) {
+    content.set_function( "RotatableSymbol", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7459,7 +8020,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "AsciiArt", [transaction]( const sol::table &options ) {
+    content.set_function( "AsciiArt", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7467,7 +8028,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->id = options.get_or( "id", std::string() );
         return ascii_art_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "LimbScore", [transaction]( const sol::table &options ) {
+    content.set_function( "LimbScore", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7479,7 +8040,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
                 "affected_by_encumbrance", true );
         return limb_score_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "HitRange", [transaction]( const sol::table &options ) {
+    content.set_function( "HitRange", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7498,7 +8059,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         }
         return hit_range_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "BashDamageProfile", [transaction]( const sol::table &options ) {
+    content.set_function( "BashDamageProfile", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7508,7 +8069,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "ClothingMod", [transaction]( const sol::table &options ) {
+    content.set_function( "ClothingMod", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7523,7 +8084,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "OvermapLandUseCode", [transaction]( const sol::table &options ) {
+    content.set_function( "OvermapLandUseCode", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7543,7 +8104,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "OvermapVision", [transaction]( const sol::table &options ) {
+    content.set_function( "OvermapVision", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7553,7 +8114,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "OvermapLocation", [transaction]( const sol::table &options ) {
+    content.set_function( "OvermapLocation", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7563,7 +8124,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "ProfessionGroup", [transaction]( const sol::table &options ) {
+    content.set_function( "ProfessionGroup", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7573,7 +8134,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "MapExtraCollection", [transaction]( const sol::table &options ) {
+    content.set_function( "MapExtraCollection", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7584,7 +8145,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "VehicleGroup", [transaction]( const sol::table &options ) {
+    content.set_function( "VehicleGroup", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7594,7 +8155,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "FaultGroup", [transaction]( const sol::table &options ) {
+    content.set_function( "FaultGroup", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7604,7 +8165,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "ExplosionLight", [transaction]( const sol::table &options ) {
+    content.set_function( "ExplosionLight", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7614,7 +8175,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "AmmoEffect", [transaction]( const sol::table &options ) {
+    content.set_function( "AmmoEffect", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7625,7 +8186,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "AddictionType", [transaction]( const sol::table &options ) {
+    content.set_function( "AddictionType", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7639,7 +8200,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "CharacterModifier", [transaction]( const sol::table &options ) {
+    content.set_function( "CharacterModifier", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7651,7 +8212,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "StartLocation", [transaction]( const sol::table &options ) {
+    content.set_function( "StartLocation", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7662,7 +8223,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "ClimbingAid", [transaction]( const sol::table &options ) {
+    content.set_function( "ClimbingAid", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7674,7 +8235,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "WeatherType", [transaction]( const sol::table &options ) {
+    content.set_function( "WeatherType", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7702,7 +8263,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "Score", [transaction]( const sol::table &options ) {
+    content.set_function( "Score", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7722,7 +8283,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::make_shared<overlay_order_definition_data>(), transaction->token
         };
     } );
-    content.set_function( "ZoneType", [transaction]( const sol::table &options ) {
+    content.set_function( "ZoneType", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7737,7 +8298,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "SpeechPool", [transaction]( const sol::table &options ) {
+    content.set_function( "SpeechPool", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7747,7 +8308,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "EndScreen", [transaction]( const sol::table &options ) {
+    content.set_function( "EndScreen", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7761,7 +8322,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "ActivityType", [transaction]( const sol::table &options ) {
+    content.set_function( "ActivityType", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7783,7 +8344,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "HelpTopic", [transaction]( const sol::table &options ) {
+    content.set_function( "HelpTopic", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7798,7 +8359,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "SnippetCategory", [transaction]( const sol::table &options ) {
+    content.set_function( "SnippetCategory", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7808,7 +8369,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "Playlist", [transaction]( const sol::table &options ) {
+    content.set_function( "Playlist", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7819,7 +8380,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "AttackVector", [transaction]( const sol::table &options ) {
+    content.set_function( "AttackVector", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7836,7 +8397,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "MagicType", [transaction]( const sol::table &options ) {
+    content.set_function( "MagicType", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7853,15 +8414,15 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
                 options.get<sol::optional<std::int64_t>>( "max_book_level" ) ) {
             definition->max_book_level = *maximum;
         }
-        definition->failure_cost_fraction = options.get_or<double>(
-                    "failure_cost_fraction", 0.0 );
-        definition->failure_experience_fraction = options.get_or<double>(
+        definition->failure_cost_fraction = options.get_or(
+                                                "failure_cost_fraction", 0.0 );
+        definition->failure_experience_fraction = options.get_or(
                     "failure_experience_fraction", 0.2 );
         return magic_type_definition_handle{
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "MovementMode", [transaction]( const sol::table &options ) {
+    content.set_function( "MovementMode", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -7871,18 +8432,18 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->kind = options.get_or( "kind", std::string( "walking" ) );
         definition->panel_color = options.get_or( "panel_color", std::string( "white" ) );
         definition->symbol_color = options.get_or( "symbol_color", std::string( "white" ) );
-        definition->exertion = options.get_or<double>( "exertion", 1.0 );
-        definition->riding_exertion = options.get_or<double>( "riding_exertion", 0.0 );
-        definition->stamina_multiplier = options.get_or<double>(
-                    "stamina_multiplier", 1.0 );
-        definition->sound_multiplier = options.get_or<double>(
-                                          "sound_multiplier", 1.0 );
-        definition->speed_multiplier = options.get_or<double>(
-                                          "speed_multiplier", 1.0 );
+        definition->exertion = options.get_or( "exertion", 1.0 );
+        definition->riding_exertion = options.get_or( "riding_exertion", 0.0 );
+        definition->stamina_multiplier = options.get_or(
+                                             "stamina_multiplier", 1.0 );
+        definition->sound_multiplier = options.get_or(
+                                           "sound_multiplier", 1.0 );
+        definition->speed_multiplier = options.get_or(
+                                           "speed_multiplier", 1.0 );
         definition->mech_power_kilojoules = options.get_or<std::int64_t>(
-                    "mech_power_kilojoules", 2 );
+                                                "mech_power_kilojoules", 2 );
         definition->swim_speed_modifier = options.get_or<std::int64_t>(
-                    "swim_speed_modifier", 0 );
+                                              "swim_speed_modifier", 0 );
         definition->stop_hauling = options.get_or( "stop_hauling", false );
         const auto read_symbol = [&options]( const char *name ) {
             const std::string symbol = options.get_or( name, std::string() );
@@ -7900,7 +8461,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         };
     } );
 
-    auto register_catalog = [transaction]( auto handle, auto &registrations,
+    auto register_catalog = [transaction]( auto handle, auto & registrations,
     const definition_operation operation, const char *kind ) {
         if( handle.token != transaction->token ) {
             throw std::runtime_error( std::string( "cannot register a " ) + kind +
@@ -7925,7 +8486,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         registrations.push_back( { operation, handle.definition } );
     };
 
-    auto register_definition = [transaction, register_catalog]( const sol::object &value,
+    auto register_definition = [transaction, register_catalog]( const sol::object & value,
     definition_operation operation ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
@@ -8088,9 +8649,19 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
                               transaction->sub_body_parts, operation, "sub body part" );
             return;
         }
+        if( value.is<wound_type_definition_handle>() ) {
+            register_catalog( value.as<wound_type_definition_handle>(),
+                              transaction->wound_types, operation, "wound" );
+            return;
+        }
         if( value.is<body_part_definition_handle>() ) {
             register_catalog( value.as<body_part_definition_handle>(),
                               transaction->body_parts, operation, "body part" );
+            return;
+        }
+        if( value.is<wound_fix_definition_handle>() ) {
+            register_catalog( value.as<wound_fix_definition_handle>(),
+                              transaction->wound_fixes, operation, "wound fix" );
             return;
         }
         if( value.is<anatomy_definition_handle>() ) {
@@ -8407,16 +8978,16 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         throw std::runtime_error(
             "content registration requires a native Platform definition" );
     };
-    content.set_function( "add", [register_definition]( const sol::object &value ) {
+    content.set_function( "add", [register_definition]( const sol::object & value ) {
         register_definition( value, definition_operation::add );
     } );
-    content.set_function( "replace", [register_definition]( const sol::object &value ) {
+    content.set_function( "replace", [register_definition]( const sol::object & value ) {
         register_definition( value, definition_operation::replace );
     } );
-    content.set_function( "edit", [register_definition]( const sol::object &value ) {
+    content.set_function( "edit", [register_definition]( const sol::object & value ) {
         register_definition( value, definition_operation::edit );
     } );
-    auto edit_catalog = [transaction]( const std::string &id, auto &registrations,
+    auto edit_catalog = [transaction]( const std::string & id, auto & registrations,
     const char *kind ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
@@ -8430,435 +9001,447 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             throw std::runtime_error( std::string( "edit_" ) + kind +
                                       " requires a definition staged earlier by this Mod" );
         }
-        auto definition = std::make_shared<std::decay_t<decltype( *found->definition )>>(
+        auto definition = std::make_shared < std::decay_t < decltype( *found->definition ) >> (
                               *found->definition );
         definition->registered = false;
         return definition;
     };
-    content.set_function( "edit_tool_quality", [transaction, edit_catalog]( const std::string &id ) {
+    content.set_function( "edit_tool_quality", [transaction, edit_catalog]( const std::string & id ) {
         return tool_quality_definition_handle{
             edit_catalog( id, transaction->tool_qualities, "tool_quality" ), transaction->token
         };
     } );
-    content.set_function( "edit_skill_display", [transaction, edit_catalog]( const std::string &id ) {
+    content.set_function( "edit_skill_display", [transaction, edit_catalog]( const std::string & id ) {
         return skill_display_definition_handle{
             edit_catalog( id, transaction->skill_displays, "skill_display" ), transaction->token
         };
     } );
-    content.set_function( "edit_skill", [transaction, edit_catalog]( const std::string &id ) {
+    content.set_function( "edit_skill", [transaction, edit_catalog]( const std::string & id ) {
         return skill_definition_handle{
             edit_catalog( id, transaction->skills, "skill" ), transaction->token
         };
     } );
-    content.set_function( "edit_vitamin", [transaction, edit_catalog]( const std::string &id ) {
+    content.set_function( "edit_vitamin", [transaction, edit_catalog]( const std::string & id ) {
         return vitamin_definition_handle{
             edit_catalog( id, transaction->vitamins, "vitamin" ), transaction->token
         };
     } );
-    content.set_function( "edit_json_flag", [transaction, edit_catalog]( const std::string &id ) {
+    content.set_function( "edit_json_flag", [transaction, edit_catalog]( const std::string & id ) {
         return json_flag_definition_handle{
             edit_catalog( id, transaction->json_flags, "json_flag" ), transaction->token
         };
     } );
-    content.set_function( "edit_damage_type", [transaction, edit_catalog]( const std::string &id ) {
+    content.set_function( "edit_damage_type", [transaction, edit_catalog]( const std::string & id ) {
         return damage_type_definition_handle{
             edit_catalog( id, transaction->damage_types, "damage_type" ), transaction->token
         };
     } );
-    content.set_function( "edit_material", [transaction, edit_catalog]( const std::string &id ) {
+    content.set_function( "edit_material", [transaction, edit_catalog]( const std::string & id ) {
         return material_definition_handle{
             edit_catalog( id, transaction->materials, "material" ), transaction->token
         };
     } );
     content.set_function( "edit_ammunition_type", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return ammunition_type_definition_handle{
             edit_catalog( id, transaction->ammunition_types, "ammunition_type" ),
             transaction->token
         };
     } );
     content.set_function( "edit_item_category", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return item_category_definition_handle{
             edit_catalog( id, transaction->item_categories, "item_category" ), transaction->token
         };
     } );
     content.set_function( "edit_recipe_category", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return crafting_category_definition_handle{
             edit_catalog( id, transaction->crafting_categories, "recipe_category" ),
             transaction->token
         };
     } );
     content.set_function( "edit_proficiency_category", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return proficiency_category_definition_handle{
             edit_catalog( id, transaction->proficiency_categories, "proficiency_category" ),
             transaction->token
         };
     } );
     content.set_function( "edit_proficiency", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return proficiency_definition_handle{
             edit_catalog( id, transaction->proficiencies, "proficiency" ), transaction->token
         };
     } );
     content.set_function( "edit_weapon_category", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return weapon_category_definition_handle{
             edit_catalog( id, transaction->weapon_categories, "weapon_category" ),
             transaction->token
         };
     } );
     content.set_function( "edit_requirement", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return requirement_definition_handle{
             edit_catalog( id, transaction->requirements, "requirement" ), transaction->token
         };
     } );
     content.set_function( "edit_recipe_group", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return recipe_group_definition_handle{
             edit_catalog( id, transaction->recipe_groups, "recipe_group" ), transaction->token
         };
     } );
     content.set_function( "edit_scent_type", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return scent_type_definition_handle{
             edit_catalog( id, transaction->scent_types, "scent_type" ), transaction->token
         };
     } );
     content.set_function( "edit_speed_description", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return speed_description_definition_handle{
             edit_catalog( id, transaction->speed_descriptions, "speed_description" ),
             transaction->token
         };
     } );
     content.set_function( "edit_harvest_drop_type", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return harvest_drop_type_definition_handle{
             edit_catalog( id, transaction->harvest_drop_types, "harvest_drop_type" ),
             transaction->token
         };
     } );
     content.set_function( "edit_harvest", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return harvest_definition_handle{
             edit_catalog( id, transaction->harvests, "harvest" ), transaction->token
         };
     } );
     content.set_function( "edit_behavior", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return behavior_definition_handle{
             edit_catalog( id, transaction->behaviors, "behavior" ), transaction->token
         };
     } );
     content.set_function( "edit_monster_attack", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return monster_attack_definition_handle{
             edit_catalog( id, transaction->monster_attacks, "monster_attack" ),
             transaction->token
         };
     } );
     content.set_function( "edit_effect_type", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return effect_type_definition_handle{
             edit_catalog( id, transaction->effect_types, "effect_type" ),
             transaction->token
         };
     } );
     content.set_function( "edit_weakpoint_set", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return weakpoint_set_definition_handle{
             edit_catalog( id, transaction->weakpoint_sets, "weakpoint_set" ),
             transaction->token
         };
     } );
     content.set_function( "edit_field_type", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return field_type_definition_handle{
             edit_catalog( id, transaction->field_types, "field_type" ),
             transaction->token
         };
     } );
     content.set_function( "edit_item_group", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return item_group_definition_handle{
             edit_catalog( id, transaction->item_groups, "item_group" ),
             transaction->token
         };
     } );
     content.set_function( "edit_sub_body_part", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return sub_body_part_definition_handle{
             edit_catalog( id, transaction->sub_body_parts, "sub_body_part" ),
             transaction->token
         };
     } );
+    content.set_function( "edit_wound", [transaction, edit_catalog](
+    const std::string & id ) {
+        return wound_type_definition_handle{
+            edit_catalog( id, transaction->wound_types, "wound" ), transaction->token
+        };
+    } );
     content.set_function( "edit_body_part", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return body_part_definition_handle{
             edit_catalog( id, transaction->body_parts, "body_part" ),
             transaction->token
         };
     } );
+    content.set_function( "edit_wound_fix", [transaction, edit_catalog](
+    const std::string & id ) {
+        return wound_fix_definition_handle{
+            edit_catalog( id, transaction->wound_fixes, "wound_fix" ), transaction->token
+        };
+    } );
     content.set_function( "edit_anatomy", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return anatomy_definition_handle{
             edit_catalog( id, transaction->anatomies, "anatomy" ), transaction->token
         };
     } );
     content.set_function( "edit_body_graph", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return body_graph_definition_handle{
             edit_catalog( id, transaction->body_graphs, "body_graph" ),
             transaction->token
         };
     } );
     content.set_function( "edit_monster", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return monster_definition_handle{
             edit_catalog( id, transaction->monsters, "monster" ), transaction->token
         };
     } );
     content.set_function( "edit_morale_type", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return morale_type_definition_handle{
             edit_catalog( id, transaction->morale_types, "morale_type" ), transaction->token
         };
     } );
     content.set_function( "edit_disease_type", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return disease_type_definition_handle{
             edit_catalog( id, transaction->disease_types, "disease_type" ), transaction->token
         };
     } );
     content.set_function( "edit_monster_flag", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return monster_flag_definition_handle{
             edit_catalog( id, transaction->monster_flags, "monster_flag" ), transaction->token
         };
     } );
     content.set_function( "edit_species", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return species_definition_handle{
             edit_catalog( id, transaction->species, "species" ), transaction->token
         };
     } );
     content.set_function( "edit_emission", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return emission_definition_handle{
             edit_catalog( id, transaction->emissions, "emission" ), transaction->token
         };
     } );
     content.set_function( "edit_monster_faction", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return monster_faction_definition_handle{
             edit_catalog( id, transaction->monster_factions, "monster_faction" ),
             transaction->token
         };
     } );
     content.set_function( "edit_mutation_type", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return mutation_type_definition_handle{
             edit_catalog( id, transaction->mutation_types, "mutation_type" ), transaction->token
         };
     } );
     content.set_function( "edit_connect_group", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return connect_group_definition_handle{
             edit_catalog( id, transaction->connect_groups, "connect_group" ),
             transaction->token
         };
     } );
     content.set_function( "edit_mutation_category", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return mutation_category_definition_handle{
             edit_catalog( id, transaction->mutation_categories, "mutation_category" ),
             transaction->token
         };
     } );
     content.set_function( "edit_construction_category", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return construction_category_definition_handle{
             edit_catalog( id, transaction->construction_categories, "construction_category" ),
             transaction->token
         };
     } );
     content.set_function( "edit_construction_group", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return construction_group_definition_handle{
             edit_catalog( id, transaction->construction_groups, "construction_group" ),
             transaction->token
         };
     } );
     content.set_function( "edit_vehicle_part_location", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return vehicle_part_location_definition_handle{
             edit_catalog( id, transaction->vehicle_part_locations, "vehicle_part_location" ),
             transaction->token
         };
     } );
     content.set_function( "edit_mood_face", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return mood_face_definition_handle{
             edit_catalog( id, transaction->mood_faces, "mood_face" ), transaction->token
         };
     } );
     content.set_function( "edit_damage_info_order", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return damage_info_order_definition_handle{
             edit_catalog( id, transaction->damage_info_orders, "damage_info_order" ),
             transaction->token
         };
     } );
     content.set_function( "edit_vehicle_part_category", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return vehicle_part_category_definition_handle{
             edit_catalog( id, transaction->vehicle_part_categories,
                           "vehicle_part_category" ), transaction->token
         };
     } );
     content.set_function( "edit_named_color", [transaction, edit_catalog](
-    const std::string &name ) {
+    const std::string & name ) {
         return named_color_definition_handle{
             edit_catalog( name, transaction->named_colors, "named_color" ),
             transaction->token
         };
     } );
     content.set_function( "edit_rotatable_symbol", [transaction, edit_catalog](
-    const std::string &key ) {
+    const std::string & key ) {
         return rotatable_symbol_definition_handle{
             edit_catalog( key, transaction->rotatable_symbols, "rotatable_symbol" ),
             transaction->token
         };
     } );
     content.set_function( "edit_ascii_art", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return ascii_art_definition_handle{
             edit_catalog( id, transaction->ascii_arts, "ascii_art" ), transaction->token
         };
     } );
     content.set_function( "edit_limb_score", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return limb_score_definition_handle{
             edit_catalog( id, transaction->limb_scores, "limb_score" ), transaction->token
         };
     } );
     content.set_function( "edit_bash_damage_profile", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return bash_damage_profile_definition_handle{
             edit_catalog( id, transaction->bash_damage_profiles, "bash_damage_profile" ),
             transaction->token
         };
     } );
     content.set_function( "edit_clothing_mod", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return clothing_mod_definition_handle{
             edit_catalog( id, transaction->clothing_mods, "clothing_mod" ), transaction->token
         };
     } );
     content.set_function( "edit_overmap_land_use_code", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return overmap_land_use_code_definition_handle{
             edit_catalog( id, transaction->overmap_land_use_codes,
                           "overmap_land_use_code" ), transaction->token
         };
     } );
     content.set_function( "edit_overmap_vision", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return overmap_vision_definition_handle{
             edit_catalog( id, transaction->overmap_visions, "overmap_vision" ),
             transaction->token
         };
     } );
     content.set_function( "edit_overmap_location", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return overmap_location_definition_handle{
             edit_catalog( id, transaction->overmap_locations, "overmap_location" ),
             transaction->token
         };
     } );
     content.set_function( "edit_profession_group", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return profession_group_definition_handle{
             edit_catalog( id, transaction->profession_groups, "profession_group" ),
             transaction->token
         };
     } );
     content.set_function( "edit_map_extra_collection", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return map_extra_collection_definition_handle{
             edit_catalog( id, transaction->map_extra_collections, "map_extra_collection" ),
             transaction->token
         };
     } );
     content.set_function( "edit_vehicle_group", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return vehicle_group_definition_handle{
             edit_catalog( id, transaction->vehicle_groups, "vehicle_group" ),
             transaction->token
         };
     } );
     content.set_function( "edit_fault_group", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return fault_group_definition_handle{
             edit_catalog( id, transaction->fault_groups, "fault_group" ),
             transaction->token
         };
     } );
     content.set_function( "edit_explosion_light", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return explosion_light_definition_handle{
             edit_catalog( id, transaction->explosion_lights, "explosion_light" ),
             transaction->token
         };
     } );
     content.set_function( "edit_ammo_effect", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return ammo_effect_definition_handle{
             edit_catalog( id, transaction->ammo_effects, "ammo_effect" ),
             transaction->token
         };
     } );
     content.set_function( "edit_addiction_type", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return addiction_type_definition_handle{
             edit_catalog( id, transaction->addiction_types, "addiction_type" ),
             transaction->token
         };
     } );
     content.set_function( "edit_character_modifier", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return character_modifier_definition_handle{
             edit_catalog( id, transaction->character_modifiers, "character_modifier" ),
             transaction->token
         };
     } );
     content.set_function( "edit_start_location", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return start_location_definition_handle{
             edit_catalog( id, transaction->start_locations, "start_location" ),
             transaction->token
         };
     } );
     content.set_function( "edit_climbing_aid", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return climbing_aid_definition_handle{
             edit_catalog( id, transaction->climbing_aids, "climbing_aid" ),
             transaction->token
         };
     } );
     content.set_function( "edit_weather_type", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return weather_type_definition_handle{
             edit_catalog( id, transaction->weather_types, "weather_type" ),
             transaction->token
         };
     } );
     content.set_function( "edit_score", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return score_definition_handle{
             edit_catalog( id, transaction->scores, "score" ), transaction->token
         };
@@ -8870,70 +9453,70 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         };
     } );
     content.set_function( "edit_zone_type", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return zone_type_definition_handle{
             edit_catalog( id, transaction->zone_types, "zone_type" ), transaction->token
         };
     } );
     content.set_function( "edit_speech_pool", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return speech_pool_definition_handle{
             edit_catalog( id, transaction->speech_pools, "speech_pool" ), transaction->token
         };
     } );
     content.set_function( "edit_end_screen", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return end_screen_definition_handle{
             edit_catalog( id, transaction->end_screens, "end_screen" ), transaction->token
         };
     } );
     content.set_function( "edit_activity_type", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return activity_type_definition_handle{
             edit_catalog( id, transaction->activity_types, "activity_type" ), transaction->token
         };
     } );
     content.set_function( "edit_help_topic", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return help_topic_definition_handle{
             edit_catalog( id, transaction->help_topics, "help_topic" ), transaction->token
         };
     } );
     content.set_function( "edit_snippet_category", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return snippet_category_definition_handle{
             edit_catalog( id, transaction->snippet_categories, "snippet_category" ),
             transaction->token
         };
     } );
     content.set_function( "edit_playlist", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return playlist_definition_handle{
             edit_catalog( id, transaction->playlists, "playlist" ), transaction->token
         };
     } );
     content.set_function( "edit_attack_vector", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return attack_vector_definition_handle{
             edit_catalog( id, transaction->attack_vectors, "attack_vector" ),
             transaction->token
         };
     } );
     content.set_function( "edit_magic_type", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return magic_type_definition_handle{
             edit_catalog( id, transaction->magic_types, "magic_type" ),
             transaction->token
         };
     } );
     content.set_function( "edit_movement_mode", [transaction, edit_catalog](
-    const std::string &id ) {
+    const std::string & id ) {
         return movement_mode_definition_handle{
             edit_catalog( id, transaction->movement_modes, "movement_mode" ),
             transaction->token
         };
     } );
-    content.set_function( "edit_item", [transaction]( const std::string &id ) {
+    content.set_function( "edit_item", [transaction]( const std::string & id ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -8950,7 +9533,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->registered = false;
         return item_definition_handle{ std::move( definition ), transaction->token };
     } );
-    content.set_function( "edit_recipe", [transaction]( const std::string &id ) {
+    content.set_function( "edit_recipe", [transaction]( const std::string & id ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -8972,7 +9555,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         return recipe_definition_handle{ std::move( definition ), transaction->token };
     } );
     content.set_function( "edit_nested_recipe_category", [transaction](
-    const std::string &id ) {
+    const std::string & id ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -9001,13 +9584,13 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                     std::string &error ) const
 {
     try {
-        const auto require_valid_id = []( const std::string &id, const char *kind ) {
+        const auto require_valid_id = []( const std::string & id, const char *kind ) {
             if( id.empty() || id.find( '#' ) != std::string::npos || id.size() > 256 ) {
                 throw std::runtime_error( std::string( "invalid " ) + kind + " id '" + id + "'" );
             }
         };
         const auto validate_operation = [check_engine_state]( const definition_operation operation,
-        const bool exists, const std::string &id, const char *kind ) {
+        const bool exists, const std::string & id, const char *kind ) {
             if( !check_engine_state ) {
                 return;
             }
@@ -9221,6 +9804,10 @@ bool content_transaction::validate( const runtime &owner_runtime,
         std::set<std::string> declared_recipe_ids;
         for( const recipe_registration &entry : pimpl_->recipes ) {
             declared_recipe_ids.insert( entry.definition->id );
+        }
+        std::set<std::string> declared_morale_type_ids;
+        for( const morale_type_registration &entry : pimpl_->morale_types ) {
+            declared_morale_type_ids.insert( entry.definition->id );
         }
 
         std::set<std::string> clothing_mod_ids;
@@ -9487,7 +10074,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "ammo effect '" + definition.id +
                                           "' has a duplicate id or invalid trigger chance" );
             }
-            const auto validate_field = [&]( const ammo_field_definition_data &field,
+            const auto validate_field = [&]( const ammo_field_definition_data & field,
             const bool trail ) {
                 if( field.field.empty() || !native_int( field.intensity_min ) ||
                     field.intensity_max < field.intensity_min ||
@@ -9508,7 +10095,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 validate_field( field, true );
             }
             const auto validate_character_effect = [&](
-            const ammo_character_effect_definition_data &effect, const bool area ) {
+            const ammo_character_effect_definition_data & effect, const bool area ) {
                 if( effect.effect.empty() || effect.duration_turns <= 0 ||
                     effect.duration_turns > std::numeric_limits<int>::max() ||
                     effect.intensity_min <= 0 ||
@@ -9543,8 +10130,10 @@ bool content_transaction::validate( const runtime &owner_runtime,
                   definition.fragment_mass <= 0.0 ||
                   !percent( definition.fragment_recovery ) ||
                   ( check_engine_state && !definition.explosion_light.empty() &&
+                    explosion_light_ids.count( definition.explosion_light ) == 0 &&
                     !explosion_light_str_id( definition.explosion_light ).is_valid() ) ||
                   ( check_engine_state && definition.fragment_drop != "null" &&
+                    declared_item_ids.count( definition.fragment_drop ) == 0 &&
                     !itype_id( definition.fragment_drop ).is_valid() ) ) ) {
                 throw std::runtime_error( "ammo effect '" + definition.id +
                                           "' has invalid explosion or shrapnel values" );
@@ -9580,6 +10169,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 definition.name.empty() || definition.type_name.empty() ||
                 definition.description.empty() || definition.tick_handler.empty() ||
                 ( check_engine_state && !definition.craving_morale.empty() &&
+                  declared_morale_type_ids.count( definition.craving_morale ) == 0 &&
                   !morale_type( definition.craving_morale ).is_valid() ) ) {
                 throw std::runtime_error( "addiction type '" + definition.id +
                                           "' needs unique text, an optional valid craving morale, and a tick policy" );
@@ -9720,7 +10310,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 return std::isfinite( value ) &&
                        std::abs( value ) <= std::numeric_limits<float>::max();
             };
-            const auto single_codepoint = []( const std::string &symbol ) {
+            const auto single_codepoint = []( const std::string & symbol ) {
                 if( symbol.empty() ) {
                     return false;
                 }
@@ -9969,7 +10559,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
             }
             if( std::any_of( definition.paragraphs.begin(), definition.paragraphs.end(),
             []( const std::string & paragraph ) {
-                return paragraph.empty();
+            return paragraph.empty();
             } ) ) {
                 throw std::runtime_error( "help topic '" + definition.id +
                                           "' has an empty paragraph" );
@@ -10063,7 +10653,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
             for( const auto &[file, volume] : definition.tracks ) {
                 const std::filesystem::path path( file );
                 const bool traverses_parent = std::any_of(
-                                                  path.begin(), path.end(), []( const auto & part ) {
+                path.begin(), path.end(), []( const auto & part ) {
                     return part == "..";
                 } );
                 if( file.empty() || file.size() > 4096 ||
@@ -10187,7 +10777,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
                     { "failure-cost", &definition.failure_cost_handler },
                     { "failure-experience", &definition.failure_experience_handler },
                     { "failure", &definition.failure_handler },
-                } };
+                }
+            };
             for( const auto &[label, handler_id] : handlers ) {
                 if( !handler_id->empty() && owner_runtime.handlers.count( *handler_id ) == 0 ) {
                     throw std::runtime_error( "magic type '" + definition.id +
@@ -10342,7 +10933,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
         for( const monster_faction_registration &entry : pimpl_->monster_factions ) {
             const monster_faction_definition_data &definition = *entry.definition;
             if( check_engine_state ) {
-                const auto known_faction = [&monster_faction_ids]( const std::string &id ) {
+                const auto known_faction = [&monster_faction_ids]( const std::string & id ) {
                     return mfaction_str_id( id ).is_valid() || monster_faction_ids.count( id );
                 };
                 if( !known_faction( definition.base ) ) {
@@ -10580,7 +11171,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
         for( const rotatable_symbol_registration &entry : pimpl_->rotatable_symbols ) {
             const rotatable_symbol_definition_data &definition = *entry.definition;
             std::set<std::uint32_t> candidate( definition.symbols.begin(),
-                                              definition.symbols.end() );
+                                               definition.symbols.end() );
             if( definition.key.empty() ||
                 ( definition.symbols.size() != 2 && definition.symbols.size() != 4 ) ||
                 candidate.size() != definition.symbols.size() ) {
@@ -10644,6 +11235,120 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                 definition.id, "limb score" );
         }
 
+        std::set<std::string> wound_type_ids;
+        for( const wound_type_registration &entry : pimpl_->wound_types ) {
+            const wound_type_definition_data &definition = *entry.definition;
+            require_valid_id( definition.id, "wound" );
+            if( definition.id.find( '\0' ) != std::string::npos ||
+                !wound_type_ids.insert( definition.id ).second ) {
+                throw std::runtime_error( "wound '" + definition.id +
+                                          "' is registered more than once per transaction" );
+            }
+            validate_operation( entry.operation, wound_type_id( definition.id ).is_valid(),
+                                definition.id, "wound" );
+        }
+        const auto valid_wound_text = []( const std::string & value,
+        const std::size_t maximum ) {
+            return !value.empty() && value.size() <= maximum &&
+                   value.find( '\0' ) == std::string::npos;
+        };
+        for( const wound_type_registration &entry : pimpl_->wound_types ) {
+            const wound_type_definition_data &definition = *entry.definition;
+            if( !valid_wound_text( definition.name, 1024 ) ||
+                !valid_wound_text( definition.plural_name, 1024 ) ||
+                !valid_wound_text( definition.description, 32768 ) ||
+                definition.pain_min < 0 || definition.pain_max < definition.pain_min ||
+                definition.pain_max > std::numeric_limits<int>::max() ||
+                definition.healing_min_turns <= 0 ||
+                definition.healing_max_turns < definition.healing_min_turns ||
+                definition.healing_max_turns > std::numeric_limits<int>::max() ||
+                definition.damage_min < 0 || definition.damage_max < definition.damage_min ||
+                definition.damage_max > std::numeric_limits<int>::max() ||
+                definition.weight <= 0 || definition.weight > std::numeric_limits<int>::max() ||
+                definition.per_part_limit < 0 ||
+                definition.per_part_limit > std::numeric_limits<int>::max() ||
+                definition.damage_types.empty() ) {
+                throw std::runtime_error( "wound '" + definition.id +
+                                          "' has invalid text, bounds, weight, limit, or no damage type" );
+            }
+            if( definition.required_body_part_flag.size() > 256 ||
+                definition.required_body_part_flag.find( '\0' ) != std::string::npos ||
+                definition.forbidden_body_part_flag.size() > 256 ||
+                definition.forbidden_body_part_flag.find( '\0' ) != std::string::npos ||
+                ( !definition.required_body_part_flag.empty() &&
+                  definition.required_body_part_flag == definition.forbidden_body_part_flag ) ) {
+                throw std::runtime_error( "wound '" + definition.id +
+                                          "' has invalid or contradictory body-part flags" );
+            }
+            const auto known_character_flag = [&json_flag_ids]( const std::string & id ) {
+                return id.empty() || json_flag_ids.count( id ) != 0 ||
+                       json_character_flag( id ).is_valid();
+            };
+            if( !known_character_flag( definition.required_body_part_flag ) ||
+                !known_character_flag( definition.forbidden_body_part_flag ) ) {
+                throw std::runtime_error( "wound '" + definition.id +
+                                          "' references an unknown body-part flag" );
+            }
+            std::set<std::string> damage_types;
+            for( const std::string &damage_id : definition.damage_types ) {
+                if( damage_id.empty() || damage_id.size() > 256 ||
+                    damage_id.find( '\0' ) != std::string::npos ||
+                    !damage_types.insert( damage_id ).second ||
+                    ( damage_type_ids.count( damage_id ) == 0 &&
+                      !damage_type_id( damage_id ).is_valid() ) ) {
+                    throw std::runtime_error( "wound '" + definition.id +
+                                              "' has invalid or duplicate damage type '" +
+                                              damage_id + "'" );
+                }
+            }
+            std::set<std::string> scores;
+            for( const wound_limb_score_definition_data &score : definition.limb_scores ) {
+                if( score.id.empty() || score.id.size() > 256 ||
+                    score.id.find( '\0' ) != std::string::npos ||
+                    !scores.insert( score.id ).second || !std::isfinite( score.penalty ) ||
+                    score.penalty < 0.0 || score.penalty > 1.0 ||
+                    ( limb_score_ids.count( score.id ) == 0 &&
+                      !limb_score_id( score.id ).is_valid() ) ) {
+                    throw std::runtime_error( "wound '" + definition.id +
+                                              "' has invalid limb score '" + score.id + "'" );
+                }
+            }
+            std::set<std::string> progressions;
+            for( const wound_progression_definition_data &progression :
+                 definition.progressions ) {
+                if( progression.id.empty() || progression.id.size() > 256 ||
+                    progression.id.find( '\0' ) != std::string::npos ||
+                    progression.id == definition.id ||
+                    !progressions.insert( progression.id ).second ||
+                    progression.chance < 0 || progression.chance > 100 ||
+                    ( wound_type_ids.count( progression.id ) == 0 &&
+                      !wound_type_id( progression.id ).is_valid() ) ) {
+                    throw std::runtime_error( "wound '" + definition.id +
+                                              "' has invalid progression '" +
+                                              progression.id + "'" );
+                }
+            }
+            std::set<std::string> required_types;
+            std::set<std::string> forbidden_types;
+            for( const std::string &kind : definition.required_body_part_types ) {
+                if( kind.empty() || kind.size() > 64 || kind.find( '\0' ) != std::string::npos ||
+                    !io::string_to_enum_optional<bp_type>( kind ) ||
+                    !required_types.insert( kind ).second ) {
+                    throw std::runtime_error( "wound '" + definition.id +
+                                              "' has invalid required body-part type '" + kind + "'" );
+                }
+            }
+            for( const std::string &kind : definition.forbidden_body_part_types ) {
+                if( kind.empty() || kind.size() > 64 || kind.find( '\0' ) != std::string::npos ||
+                    !io::string_to_enum_optional<bp_type>( kind ) ||
+                    !forbidden_types.insert( kind ).second || required_types.count( kind ) != 0 ) {
+                    throw std::runtime_error( "wound '" + definition.id +
+                                              "' has invalid or contradictory forbidden body-part type '" +
+                                              kind + "'" );
+                }
+            }
+        }
+
         if( pimpl_->hit_ranges.size() > 1 ) {
             throw std::runtime_error( "hit range is a singleton and may be registered once" );
         }
@@ -10652,7 +11357,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
             if( definition.id != "global" || definition.even_good.empty() ) {
                 throw std::runtime_error( "hit range requires the global singleton and values" );
             }
-            if( entry.operation != definition_operation::replace ) {
+            if( check_engine_state && entry.operation != definition_operation::replace ) {
                 throw std::runtime_error( "hit range is a global singleton and must use replace" );
             }
             for( const std::int64_t value : definition.even_good ) {
@@ -10762,7 +11467,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
         std::set<std::string> visiting_item_groups;
         std::set<std::string> visited_item_groups;
         std::function<void( const std::string & )> visit_item_group;
-        visit_item_group = [&]( const std::string &id ) {
+        visit_item_group = [&]( const std::string & id ) {
             if( visited_item_groups.count( id ) != 0 ) {
                 return;
             }
@@ -10790,7 +11495,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                           "' is registered more than once per transaction" );
             }
             const std::vector<std::string> skills = definition.skills.empty() ?
-                    std::vector<std::string>{ "survival" } : definition.skills;
+                                                    std::vector<std::string> { "survival" } :
+                                                    definition.skills;
             for( const std::string &skill : skills ) {
                 if( skill_ids.count( skill ) == 0 && !skill_id( skill ).is_valid() ) {
                     throw std::runtime_error( "harvest drop type '" + definition.id +
@@ -10974,7 +11680,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
         std::set<std::string> visiting_behaviors;
         std::set<std::string> visited_behaviors;
         std::function<void( const std::string & )> visit_behavior;
-        visit_behavior = [&]( const std::string &id ) {
+        visit_behavior = [&]( const std::string & id ) {
             if( visited_behaviors.count( id ) != 0 ) {
                 return;
             }
@@ -11048,11 +11754,11 @@ bool content_transaction::validate( const runtime &owner_runtime,
         }
 
         const std::set<std::string> body_sides = { "left", "right", "both" };
-        const auto known_body_part = [&]( const std::string &id ) {
+        const auto known_body_part = [&]( const std::string & id ) {
             return body_part_ids.count( id ) != 0 || !check_engine_state ||
                    bodypart_str_id( id ).is_valid();
         };
-        const auto known_sub_body_part = [&]( const std::string &id ) {
+        const auto known_sub_body_part = [&]( const std::string & id ) {
             return sub_body_part_ids.count( id ) != 0 || !check_engine_state ||
                    sub_bodypart_str_id( id ).is_valid();
         };
@@ -11112,22 +11818,22 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 definition.plural_heading, definition.encumbrance_text,
                 definition.hp_bar_text, definition.id
             };
-            if( std::any_of( labels.begin(), labels.end(), []( const std::string &value ) {
+            if( std::any_of( labels.begin(), labels.end(), []( const std::string & value ) {
             return value.empty() || value.size() > 1024 ||
-                   value.find( '\0' ) != std::string::npos;
+                       value.find( '\0' ) != std::string::npos;
             } ) || definition.main_part.empty() ||
-                !known_body_part( definition.main_part ) ||
-                definition.connected_to.empty() ||
-                !known_body_part( definition.connected_to ) ||
-                definition.opposite.empty() || !known_body_part( definition.opposite ) ||
-                body_sides.count( definition.side ) == 0 ||
-                !finite_native_float( definition.hit_size ) || definition.hit_size <= 0.0 ||
-                !finite_native_float( definition.hit_difficulty ) ||
-                definition.hit_difficulty < 0.0 || definition.base_health <= 0 ||
-                definition.base_health > std::numeric_limits<int>::max() ||
-                definition.drench_capacity < 0 ||
-                definition.drench_capacity > std::numeric_limits<int>::max() ||
-                definition.limb_types.empty() ) {
+            !known_body_part( definition.main_part ) ||
+            definition.connected_to.empty() ||
+            !known_body_part( definition.connected_to ) ||
+            definition.opposite.empty() || !known_body_part( definition.opposite ) ||
+            body_sides.count( definition.side ) == 0 ||
+            !finite_native_float( definition.hit_size ) || definition.hit_size <= 0.0 ||
+            !finite_native_float( definition.hit_difficulty ) ||
+            definition.hit_difficulty < 0.0 || definition.base_health <= 0 ||
+            definition.base_health > std::numeric_limits<int>::max() ||
+            definition.drench_capacity < 0 ||
+            definition.drench_capacity > std::numeric_limits<int>::max() ||
+            definition.limb_types.empty() ) {
                 throw std::runtime_error( "body part '" + definition.id +
                                           "' has invalid text, links, geometry, or health" );
             }
@@ -11308,7 +12014,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
         std::set<std::string> visiting_body_graphs;
         std::set<std::string> visited_body_graphs;
         std::function<void( const std::string & )> visit_body_graph;
-        visit_body_graph = [&]( const std::string &id ) {
+        visit_body_graph = [&]( const std::string & id ) {
             if( visited_body_graphs.count( id ) != 0 ) {
                 return;
             }
@@ -11344,7 +12050,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
             require_valid_id( definition.id, "effect type" );
             const auto bounded_texts = []( const std::vector<std::string> &values ) {
                 return !values.empty() && std::all_of(
-                           values.begin(), values.end(), []( const std::string & value ) {
+                values.begin(), values.end(), []( const std::string & value ) {
                     return !value.empty() && value.size() <= 4096 &&
                            value.find( '\0' ) == std::string::npos;
                 } );
@@ -11541,8 +12247,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                               "' contains an invalid weakpoint" );
                 }
                 const auto validate_damage_map = [&](
-                    const std::map<std::string, double> &values,
-                    const bool non_negative, const std::string_view label ) {
+                                                     const std::map<std::string, double> &values,
+                const bool non_negative, const std::string_view label ) {
                     for( const auto &[damage_id, value] : values ) {
                         if( ( damage_type_ids.count( damage_id ) == 0 &&
                               !damage_type_id( damage_id ).is_valid() ) ||
@@ -11785,6 +12491,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
         }
 
         std::set<std::string> requirement_ids;
+        std::map<std::string, const requirement_definition_data *> staged_requirements;
         for( const requirement_registration &entry : pimpl_->requirements ) {
             const requirement_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "requirement" );
@@ -11794,6 +12501,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "requirement '" + definition.id +
                                           "' must contain native requirements and be registered once per transaction" );
             }
+            staged_requirements.emplace( definition.id, &definition );
             const auto validate_item_groups = [&declared_item_ids, &definition](
             const std::vector<std::vector<component_requirement>> &groups, const char *kind ) {
                 for( const std::vector<component_requirement> &group : groups ) {
@@ -11832,6 +12540,263 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                 requirement_data::registry().count(
                                     requirement_id( definition.id ) ) != 0,
                                 definition.id, "requirement" );
+        }
+
+        std::set<std::string> wound_fix_ids;
+        for( const wound_fix_registration &entry : pimpl_->wound_fixes ) {
+            const wound_fix_definition_data &definition = *entry.definition;
+            require_valid_id( definition.id, "wound fix" );
+            if( definition.id.find( '\0' ) != std::string::npos ||
+                !wound_fix_ids.insert( definition.id ).second ) {
+                throw std::runtime_error( "wound fix '" + definition.id +
+                                          "' is registered more than once per transaction" );
+            }
+            validate_operation( entry.operation, wound_fix_id( definition.id ).is_valid(),
+                                definition.id, "wound fix" );
+        }
+        for( const wound_fix_registration &entry : pimpl_->wound_fixes ) {
+            const wound_fix_definition_data &definition = *entry.definition;
+            if( !valid_wound_text( definition.name, 1024 ) ||
+                !valid_wound_text( definition.description, 32768 ) ||
+                definition.success_message.size() > 32768 ||
+                definition.success_message.find( '\0' ) != std::string::npos ||
+                definition.duration_turns < 0 ||
+                definition.duration_turns > std::numeric_limits<int>::max() / 100 ||
+                definition.health_delta < std::numeric_limits<int>::min() ||
+                definition.health_delta > std::numeric_limits<int>::max() ||
+                definition.wounds_removed.empty() ) {
+                throw std::runtime_error( "wound fix '" + definition.id +
+                                          "' has invalid text, duration, health delta, or removes no wounds" );
+            }
+            for( const auto &[skill, level] : definition.skills ) {
+                if( skill.empty() || skill.size() > 256 ||
+                    skill.find( '\0' ) != std::string::npos || level < 0 || level > MAX_SKILL ||
+                    ( skill_ids.count( skill ) == 0 && !skill_id( skill ).is_valid() ) ) {
+                    throw std::runtime_error( "wound fix '" + definition.id +
+                                              "' has invalid skill '" + skill + "'" );
+                }
+            }
+            std::set<std::string> proficiencies;
+            for( const wound_fix_proficiency_definition_data &proficiency :
+                 definition.proficiencies ) {
+                if( proficiency.id.empty() || proficiency.id.size() > 256 ||
+                    proficiency.id.find( '\0' ) != std::string::npos ||
+                    !proficiencies.insert( proficiency.id ).second ||
+                    !std::isfinite( proficiency.multiplier ) ||
+                    proficiency.multiplier <= 0.0 ||
+                    proficiency.multiplier > std::numeric_limits<float>::max() ||
+                    static_cast<float>( proficiency.multiplier ) <= 0.0f ||
+                    ( proficiency_ids.count( proficiency.id ) == 0 &&
+                      !proficiency_id( proficiency.id ).is_valid() ) ) {
+                    throw std::runtime_error( "wound fix '" + definition.id +
+                                              "' has invalid proficiency '" +
+                                              proficiency.id + "'" );
+                }
+            }
+            const auto known_wound = [&wound_type_ids]( const std::string & id ) {
+                return wound_type_ids.count( id ) != 0 || wound_type_id( id ).is_valid();
+            };
+            for( const std::string &wound_id : definition.wounds_removed ) {
+                if( wound_id.empty() || wound_id.size() > 256 ||
+                    wound_id.find( '\0' ) != std::string::npos || !known_wound( wound_id ) ||
+                    definition.wounds_added.count( wound_id ) != 0 ) {
+                    throw std::runtime_error( "wound fix '" + definition.id +
+                                              "' has invalid or contradictory removed wound '" +
+                                              wound_id + "'" );
+                }
+            }
+            for( const std::string &wound_id : definition.wounds_added ) {
+                if( wound_id.empty() || wound_id.size() > 256 ||
+                    wound_id.find( '\0' ) != std::string::npos || !known_wound( wound_id ) ||
+                    definition.wounds_removed.count( wound_id ) != 0 ) {
+                    throw std::runtime_error( "wound fix '" + definition.id +
+                                              "' has invalid or contradictory added wound '" +
+                                              wound_id + "'" );
+                }
+            }
+            struct scaled_requirement_component {
+                std::string type;
+                bool is_requirement = false;
+                std::int64_t count = 0;
+            };
+            using scaled_requirement_groups =
+                std::vector<std::vector<scaled_requirement_component>>;
+            scaled_requirement_groups scaled_component_groups;
+            scaled_requirement_groups scaled_tool_groups;
+            std::set<std::string> requirements;
+            for( const wound_fix_requirement_definition_data &requirement :
+                 definition.requirements ) {
+                if( requirement.id.empty() || requirement.id.size() > 256 ||
+                    requirement.id.find( '\0' ) != std::string::npos ||
+                    !requirements.insert( requirement.id ).second || requirement.count <= 0 ||
+                    requirement.count > std::numeric_limits<int>::max() ||
+                    ( requirement_ids.count( requirement.id ) == 0 &&
+                      requirement_data::registry().count( requirement_id( requirement.id ) ) == 0 ) ) {
+                    throw std::runtime_error( "wound fix '" + definition.id +
+                                              "' has invalid requirement '" +
+                                              requirement.id + "'" );
+                }
+                const auto scaled_counts_fit = [&requirement]( const auto & groups ) {
+                    constexpr std::int64_t native_min =
+                        std::numeric_limits<int>::min();
+                    constexpr std::int64_t native_max =
+                        std::numeric_limits<int>::max();
+                    for( const auto &group : groups ) {
+                        for( const auto &component : group ) {
+                            const std::int64_t count = component.count;
+                            if( ( count < 0 &&
+                                  count < native_min / requirement.count ) ||
+                                ( count > 0 &&
+                                  count > native_max / requirement.count ) ) {
+                                return false;
+                            }
+                        }
+                    }
+                    return true;
+                };
+                const auto append_scaled_groups = [&requirement](
+                                                      const auto & groups, scaled_requirement_groups & target,
+                const auto & type_of, const auto & is_requirement ) {
+                    for( const auto &group : groups ) {
+                        std::vector<scaled_requirement_component> scaled_group;
+                        scaled_group.reserve( group.size() );
+                        for( const auto &component : group ) {
+                            const std::int64_t scaled_count =
+                                static_cast<std::int64_t>( component.count ) *
+                                requirement.count;
+                            scaled_group.push_back( {
+                                type_of( component ), is_requirement( component ),
+                                std::max<std::int64_t>( scaled_count, -1 )
+                            } );
+                        }
+                        target.push_back( std::move( scaled_group ) );
+                    }
+                };
+                bool counts_fit = false;
+                const auto staged = staged_requirements.find( requirement.id );
+                if( staged != staged_requirements.end() ) {
+                    counts_fit = scaled_counts_fit( staged->second->components ) &&
+                                 scaled_counts_fit( staged->second->tools );
+                    if( counts_fit ) {
+                        append_scaled_groups(
+                            staged->second->components, scaled_component_groups,
+                        []( const component_requirement & component ) {
+                            return component.id;
+                        }, []( const component_requirement & ) {
+                            return false;
+                        } );
+                        append_scaled_groups(
+                            staged->second->tools, scaled_tool_groups,
+                        []( const component_requirement & component ) {
+                            return component.id;
+                        }, []( const component_requirement & ) {
+                            return false;
+                        } );
+                    }
+                } else {
+                    const auto existing = requirement_data::registry().find(
+                                              requirement_id( requirement.id ) );
+                    counts_fit = existing != requirement_data::registry().end() &&
+                                 scaled_counts_fit( existing->second.get_components() ) &&
+                                 scaled_counts_fit( existing->second.get_tools() );
+                    if( counts_fit ) {
+                        append_scaled_groups(
+                            existing->second.get_components(), scaled_component_groups,
+                        []( const item_comp & component ) {
+                            return component.type.str();
+                        }, []( const item_comp & component ) {
+                            return component.requirement;
+                        } );
+                        append_scaled_groups(
+                            existing->second.get_tools(), scaled_tool_groups,
+                        []( const tool_comp & component ) {
+                            return component.type.str();
+                        }, []( const tool_comp & component ) {
+                            return component.requirement;
+                        } );
+                    }
+                }
+                if( !counts_fit ) {
+                    throw std::runtime_error( "wound fix '" + definition.id +
+                                              "' requirement '" + requirement.id +
+                                              "' exceeds the native component/tool count range when scaled" );
+                }
+            }
+            const auto consolidated_counts_fit = []( scaled_requirement_groups old_groups,
+            const bool tools ) {
+                const auto type_less = []( const scaled_requirement_component & lhs,
+                const scaled_requirement_component & rhs ) {
+                    return std::tie( lhs.type, lhs.is_requirement ) <
+                           std::tie( rhs.type, rhs.is_requirement );
+                };
+                for( std::vector<scaled_requirement_component> &group : old_groups ) {
+                    std::sort( group.begin(), group.end(), type_less );
+                }
+                std::sort( old_groups.begin(), old_groups.end(),
+                           [&type_less]( const std::vector<scaled_requirement_component> &lhs,
+                const std::vector<scaled_requirement_component> &rhs ) {
+                    return std::lexicographical_compare(
+                               lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), type_less );
+                } );
+
+                std::vector<std::vector<scaled_requirement_component>> consolidated;
+                for( std::vector<scaled_requirement_component> &old_group : old_groups ) {
+                    bool match = false;
+                    for( std::vector<scaled_requirement_component> &new_group : consolidated ) {
+                        if( std::includes( new_group.begin(), new_group.end(),
+                                           old_group.begin(), old_group.end(), type_less ) ) {
+                            match = true;
+                            std::swap( old_group, new_group );
+                        } else if( std::includes( old_group.begin(), old_group.end(),
+                                                  new_group.begin(), new_group.end(), type_less ) ) {
+                            match = true;
+                        }
+                        if( !match ) {
+                            continue;
+                        }
+                        auto old_component = old_group.begin();
+                        for( auto new_component = new_group.begin();
+                             new_component != new_group.end(); ++old_component ) {
+                            if( !type_less( *old_component, *new_component ) ) {
+                                if( tools ) {
+                                    if( new_component->count < 0 && old_component->count < 0 ) {
+                                        new_component->count = std::min(
+                                                                   new_component->count,
+                                                                   old_component->count );
+                                    } else if( new_component->count > 0 &&
+                                               old_component->count > 0 ) {
+                                        const std::int64_t sum = new_component->count +
+                                                                 old_component->count;
+                                        if( sum > std::numeric_limits<int>::max() ) {
+                                            return false;
+                                        }
+                                        new_component->count = sum;
+                                    }
+                                } else {
+                                    const std::int64_t sum = new_component->count +
+                                                             old_component->count;
+                                    if( sum < std::numeric_limits<int>::min() ||
+                                        sum > std::numeric_limits<int>::max() ) {
+                                        return false;
+                                    }
+                                    new_component->count = sum;
+                                }
+                                ++new_component;
+                            }
+                        }
+                        break;
+                    }
+                    if( !match ) {
+                        consolidated.push_back( std::move( old_group ) );
+                    }
+                }
+                return true;
+            };
+            if( !consolidated_counts_fit( std::move( scaled_component_groups ), false ) ||
+                !consolidated_counts_fit( std::move( scaled_tool_groups ), true ) ) {
+                throw std::runtime_error( "wound fix '" + definition.id +
+                                          "' combined requirements exceed the native count range during consolidation" );
+            }
         }
 
         std::set<std::string> recipe_group_ids;
@@ -11931,7 +12896,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                               "' references unknown vitamin '" + vitamin_key + "'" );
                 }
             }
-            const auto item_exists = [&declared_item_ids]( const std::string &id ) {
+            const auto item_exists = [&declared_item_ids]( const std::string & id ) {
                 return id.empty() || declared_item_ids.count( id ) != 0 ||
                        item::type_is_defined( itype_id( id ) );
             };
@@ -11961,7 +12926,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "item '" + definition.id + "' requires a name and symbol" );
             }
             if( !item_ids.insert( definition.id ).second ) {
-                throw std::runtime_error( "item '" + definition.id + "' is registered more than once in one transaction" );
+                throw std::runtime_error( "item '" + definition.id +
+                                          "' is registered more than once in one transaction" );
             }
             std::int64_t material_portions = 0;
             std::map<std::string, std::int64_t> portions_by_material;
@@ -11994,7 +12960,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
             }
             const bool exists = item_controller->has_template( itype_id( definition.id ) );
             if( check_engine_state && entry.operation == definition_operation::add && exists ) {
-                throw std::runtime_error( "add would overwrite existing item '" + definition.id + "'; use replace explicitly" );
+                throw std::runtime_error( "add would overwrite existing item '" + definition.id +
+                                          "'; use replace explicitly" );
             }
             if( check_engine_state && entry.operation == definition_operation::replace && !exists ) {
                 throw std::runtime_error( operation_name( entry.operation ) +
@@ -12599,7 +13566,7 @@ bool content_transaction::apply( std::string &error )
             }
             for( const auto &[product, efficiency] : source.burn_products ) {
                 native._burn_products.emplace_back( itype_id( product ),
-                                                     static_cast<float>( efficiency ) );
+                                                    static_cast<float>( efficiency ) );
             }
             if( source.has_fuel ) {
                 native.fuel.energy = units::from_kilojoule<std::int64_t>(
@@ -12632,7 +13599,7 @@ bool content_transaction::apply( std::string &error )
             detail::proficiency_category_registry().insert( native );
         }
 
-        const auto proficiency_attribute = []( const std::string &attribute ) {
+        const auto proficiency_attribute = []( const std::string & attribute ) {
             if( attribute == "strength" ) {
                 return proficiency_bonus_type::strength;
             }
@@ -12954,7 +13921,7 @@ bool content_transaction::apply( std::string &error )
                 native.values_.push_back( std::move( value ) );
             }
             std::sort( native.values_.begin(), native.values_.end(),
-            []( const mood_face_value &left, const mood_face_value &right ) {
+            []( const mood_face_value & left, const mood_face_value & right ) {
                 return left.value() > right.value();
             } );
             detail::mood_face_registry().insert( native );
@@ -13232,7 +14199,8 @@ bool content_transaction::apply( std::string &error )
                 value.chance = static_cast<int>( effect.chance );
                 value.radius = static_cast<int>( effect.radius );
                 value.hits_amount = { static_cast<int>( effect.hits_min ),
-                                      static_cast<int>( effect.hits_max ) };
+                                      static_cast<int>( effect.hits_max )
+                                    };
                 value.all_bp = effect.all_body_parts;
                 native.aoe_effects.push_back( std::move( value ) );
             }
@@ -13420,7 +14388,7 @@ bool content_transaction::apply( std::string &error )
             if( source.has_animation ) {
                 native.weather_animation.factor = static_cast<float>( source.animation_factor );
                 native.weather_animation.color = color_from_string(
-                        source.animation_color, report_color_error::no );
+                                                     source.animation_color, report_color_error::no );
                 native.weather_animation.symbol = UTF8_getch( source.animation_symbol );
             }
             for( const std::string &weather : source.required_weathers ) {
@@ -13612,8 +14580,8 @@ bool content_transaction::apply( std::string &error )
                 order = registry.help_texts.crbegin()->first + 1;
             }
             registry.help_texts[order] = std::make_pair(
-                                            no_translation( source.title ),
-                                            std::move( paragraphs ) );
+                                             no_translation( source.title ),
+                                             std::move( paragraphs ) );
             registry.platform_help_topic_orders[source.id] = order;
         }
 
@@ -13653,7 +14621,7 @@ bool content_transaction::apply( std::string &error )
                     category.ids.push_back( snippet_library::weighted_id{ accumulated, id } );
                     SNIPPET.snippets_by_id[id] = no_translation( snippet.text );
                     SNIPPET.name_by_id[id] = snippet.name.empty() ? translation() :
-                                                  no_translation( snippet.name );
+                                             no_translation( snippet.name );
                     // Lua-authored snippets deliberately do not populate EOC_by_id.
                     SNIPPET.EOC_by_id.erase( id );
                 }
@@ -13863,7 +14831,8 @@ bool content_transaction::apply( std::string &error )
             native.msg_dissect_success = source.dissect_success;
             native.msg_dissect_fail = source.dissect_failure;
             const std::vector<std::string> skills = source.skills.empty() ?
-                    std::vector<std::string>{ "survival" } : source.skills;
+                                                    std::vector<std::string> { "survival" } :
+                                                    source.skills;
             for( const std::string &skill : skills ) {
                 native.harvest_skills.emplace_back( skill );
             }
@@ -13939,11 +14908,11 @@ bool content_transaction::apply( std::string &error )
                     const std::string behavior_id = source.id;
                     const std::string handler_id = condition.policy;
                     native.add_predicate(
-                    [owner, behavior_id, handler_id]( const behavior::oracle_t *oracle,
-                            const std::string &argument ) {
+                        [owner, behavior_id, handler_id]( const behavior::oracle_t *oracle,
+                    const std::string & argument ) {
                         const Creature *subject = oracle == nullptr ? nullptr : oracle->get_subject();
                         const std::optional<bool> result = invoke_behavior_condition_handler(
-                                owner, behavior_id, handler_id, subject, argument );
+                                                               owner, behavior_id, handler_id, subject, argument );
                         return result.value_or( false ) ? behavior::status_t::running :
                                behavior::status_t::failure;
                     }, condition.argument, condition.inverted );
@@ -13959,8 +14928,8 @@ bool content_transaction::apply( std::string &error )
                     const std::string behavior_id = source.id;
                     const std::string handler_id = score.policy;
                     native.set_score_function(
-                    [owner, behavior_id, handler_id]( const behavior::oracle_t *oracle,
-                            const std::string_view argument ) {
+                        [owner, behavior_id, handler_id]( const behavior::oracle_t *oracle,
+                    const std::string_view argument ) {
                         const Creature *subject = oracle == nullptr ? nullptr : oracle->get_subject();
                         return static_cast<float>( invoke_behavior_score_handler(
                                                        owner, behavior_id, handler_id, subject,
@@ -14021,10 +14990,10 @@ bool content_transaction::apply( std::string &error )
                 native.flags.emplace( id );
             }
             for( const std::string &id : source.immune_character_flags ) {
-                native.immune_flags.emplace( id );
+                native.immune_flags.insert( json_character_flag( id ) );
             }
             for( const std::string &id : source.immune_bodypart_flags ) {
-                native.immune_bp_flags.emplace( id );
+                native.immune_bp_flags.insert( json_character_flag( id ) );
             }
             for( const std::string &id : source.resist_traits ) {
                 native.resist_traits.emplace_back( id );
@@ -14079,6 +15048,60 @@ bool content_transaction::apply( std::string &error )
         }
         if( !pimpl_->sub_body_parts.empty() ) {
             detail::refresh_sub_body_part_similarity_cache();
+        }
+
+        for( const wound_type_registration &entry : pimpl_->wound_types ) {
+            const wound_type_id id( entry.definition->id );
+            pimpl_->wound_type_undo.emplace_back(
+                id, id.is_valid() ? std::optional<wound_type>( id.obj() ) : std::nullopt );
+            const wound_type_definition_data &source = *entry.definition;
+            wound_type native;
+            native.id = id;
+            native.was_loaded = true;
+            native.name_ = pl_translation( source.name, source.plural_name );
+            native.description_ = no_translation( source.description );
+            native.pain_ = {
+                static_cast<int>( source.pain_min ), static_cast<int>( source.pain_max )
+            };
+            native.healing_time_ = {
+                time_duration::from_turns( static_cast<int>( source.healing_min_turns ) ),
+                time_duration::from_turns( static_cast<int>( source.healing_max_turns ) )
+            };
+            native.damage_required = {
+                static_cast<int>( source.damage_min ), static_cast<int>( source.damage_max )
+            };
+            native.weight = static_cast<int>( source.weight );
+            native.limit = static_cast<unsigned int>( source.per_part_limit );
+            if( !source.required_body_part_flag.empty() ) {
+                native.whitelist_bp_with_flag =
+                    json_character_flag( source.required_body_part_flag );
+            }
+            if( !source.forbidden_body_part_flag.empty() ) {
+                native.blacklist_bp_with_flag =
+                    json_character_flag( source.forbidden_body_part_flag );
+            }
+            for( const std::string &damage_id : source.damage_types ) {
+                native.damage_types.emplace_back( damage_id );
+            }
+            for( const wound_limb_score_definition_data &score : source.limb_scores ) {
+                native.limb_scores.push_back( {
+                    limb_score_id( score.id ), static_cast<float>( score.penalty )
+                } );
+            }
+            for( const wound_progression_definition_data &progression : source.progressions ) {
+                native.wound_progression.push_back( {
+                    wound_type_id( progression.id ), static_cast<int>( progression.chance )
+                } );
+            }
+            for( const std::string &kind : source.required_body_part_types ) {
+                native.whitelist_body_part_types.push_back(
+                    io::string_to_enum<bp_type>( kind ) );
+            }
+            for( const std::string &kind : source.forbidden_body_part_types ) {
+                native.blacklist_body_part_types.push_back(
+                    io::string_to_enum<bp_type>( kind ) );
+            }
+            detail::wound_type_registry().insert( native ).finalize();
         }
 
         static const std::map<std::string, bp_type> platform_body_part_types = {
@@ -14139,7 +15162,7 @@ bool content_transaction::apply( std::string &error )
                     damage_type_id( damage_id ), static_cast<float>( amount ) );
             }
             for( const std::string &flag : source.flags ) {
-                native.flags.emplace( flag );
+                native.flags.insert( json_character_flag( flag ) );
             }
             for( const auto &[score_id, score] : source.limb_scores ) {
                 native.limb_scores[limb_score_id( score_id )] = {
@@ -14246,7 +15269,7 @@ bool content_transaction::apply( std::string &error )
                 level.translucency = static_cast<float>( source_level.translucency );
                 level.concentration = static_cast<int>( source_level.concentration );
                 level.convection_temperature_mod = static_cast<int>(
-                        source_level.convection_temperature_modifier );
+                                                       source_level.convection_temperature_modifier );
                 level.scent_neutralization = static_cast<int>(
                                                  source_level.scent_neutralization );
                 for( const field_effect_definition_data &source_effect :
@@ -14319,7 +15342,7 @@ bool content_transaction::apply( std::string &error )
             for( const std::string &monster_id : source.blocked_monsters ) {
                 native.block_mtypes.emplace( monster_id );
             }
-            get_all_field_types().insert( native ).finalize();
+            get_all_field_types().insert( native );
         }
 
         for( const monster_attack_registration &entry : pimpl_->monster_attacks ) {
@@ -14474,6 +15497,43 @@ bool content_transaction::apply( std::string &error )
             native.id_ = id;
             native.name_ = no_translation( source.name );
             requirement_data::registry()[id] = std::move( native );
+        }
+
+        for( const wound_fix_registration &entry : pimpl_->wound_fixes ) {
+            const wound_fix_id id( entry.definition->id );
+            pimpl_->wound_fix_undo.emplace_back(
+                id, id.is_valid() ? std::optional<wound_fix>( id.obj() ) : std::nullopt );
+            const wound_fix_definition_data &source = *entry.definition;
+            wound_fix native;
+            native.id = id;
+            native.was_loaded = true;
+            native.name = no_translation( source.name );
+            native.description = no_translation( source.description );
+            native.success_msg = no_translation( source.success_message );
+            native.time = time_duration::from_turns( static_cast<int>( source.duration_turns ) );
+            native.mod_hp = static_cast<int>( source.health_delta );
+            for( const auto &[skill, level] : source.skills ) {
+                native.skills.emplace( skill_id( skill ), static_cast<int>( level ) );
+            }
+            for( const wound_fix_proficiency_definition_data &proficiency :
+                 source.proficiencies ) {
+                native.proficiencies.push_back( {
+                    proficiency_id( proficiency.id ),
+                    static_cast<float>( proficiency.multiplier ), proficiency.mandatory
+                } );
+            }
+            for( const std::string &wound_id : source.wounds_removed ) {
+                native.wounds_removed.emplace( wound_id );
+            }
+            for( const std::string &wound_id : source.wounds_added ) {
+                native.wounds_added.emplace( wound_id );
+            }
+            for( const wound_fix_requirement_definition_data &requirement :
+                 source.requirements ) {
+                native.requirement_refs.emplace_back(
+                    requirement_id( requirement.id ), static_cast<int>( requirement.count ) );
+            }
+            detail::wound_fix_registry().insert( native ).finalize();
         }
 
         for( const recipe_group_registration &entry : pimpl_->recipe_groups ) {
@@ -14791,12 +15851,44 @@ bool content_transaction::apply( std::string &error )
                 native.placate.set( monster_triggers.at( trigger ) );
             }
             mtype &inserted = detail::monster_type_registry().insert( native );
-            MonsterGenerator::generator().finalize_lua_first_mtype( inserted );
+            MonsterGenerator::generator().finalize_lua_first_mtype_if_ready(
+                inserted, DynamicDataLoader::get_instance().is_data_finalized() );
         }
         if( !pimpl_->monsters.empty() ) {
             MonsterGenerator::generator().refresh_hallucination_monsters();
         }
+        for( const field_type_registration &entry : pimpl_->field_types ) {
+            field_type &native = const_cast<field_type &>(
+                                     field_type_str_id( entry.definition->id ).obj() );
+            native.finalize();
+        }
 
+        if( !pimpl_->requirements.empty() || !pimpl_->wound_fixes.empty() ) {
+            detail::wound_fix_registry().finalize();
+        }
+        for( const wound_fix_registration &entry : pimpl_->wound_fixes ) {
+            const wound_fix &native = wound_fix_id( entry.definition->id ).obj();
+            if( native.requirement_refs.size() != entry.definition->requirements.size() ) {
+                throw std::runtime_error(
+                    "wound fix '" + entry.definition->id +
+                    "' changed its requirement references while being applied" );
+            }
+            for( std::size_t index = 0; index < native.requirement_refs.size(); ++index ) {
+                if( native.requirement_refs[index].first !=
+                    requirement_id( entry.definition->requirements[index].id ) ||
+                    native.requirement_refs[index].second !=
+                    entry.definition->requirements[index].count ) {
+                    throw std::runtime_error(
+                        "wound fix '" + entry.definition->id +
+                        "' changed a requirement reference while being applied" );
+                }
+            }
+        }
+        if( !pimpl_->wound_types.empty() || !pimpl_->wound_fixes.empty() ||
+            !pimpl_->body_parts.empty() ) {
+            detail::refresh_wound_fix_links();
+            detail::refresh_body_part_wound_cache();
+        }
         pimpl_->applied = true;
         error.clear();
         return true;
@@ -15315,6 +16407,13 @@ bool content_transaction::validate_finalized( std::string &error ) const
             return false;
         }
     }
+    for( const wound_type_registration &entry : pimpl_->wound_types ) {
+        if( !wound_type_id( entry.definition->id ).is_valid() ) {
+            error = "Lua-first wound '" + entry.definition->id +
+                    "' did not survive global finalization";
+            return false;
+        }
+    }
     for( const body_part_registration &entry : pimpl_->body_parts ) {
         if( !bodypart_str_id( entry.definition->id ).is_valid() ) {
             error = "Lua-first body part '" + entry.definition->id +
@@ -15392,6 +16491,55 @@ bool content_transaction::validate_finalized( std::string &error ) const
             return false;
         }
     }
+    for( const wound_fix_registration &entry : pimpl_->wound_fixes ) {
+        const wound_fix_id id( entry.definition->id );
+        if( !id.is_valid() ) {
+            error = "Lua-first wound fix '" + entry.definition->id +
+                    "' did not survive global finalization";
+            return false;
+        }
+    }
+    for( const wound_type &wound_definition : detail::wound_type_registry().get_all() ) {
+        for( const wound_fix_id &fix_id : wound_definition.fixes ) {
+            if( !fix_id.is_valid() ||
+                fix_id->wounds_removed.count( wound_definition.id ) == 0 ) {
+                error = "wound '" + wound_definition.id.str() +
+                        "' retained an invalid wound-fix reverse link";
+                return false;
+            }
+        }
+    }
+    for( const wound_fix &fix : detail::wound_fix_registry().get_all() ) {
+        for( const wound_type_id &wound_id : fix.wounds_removed ) {
+            if( !wound_id.is_valid() || wound_id->fixes.count( fix.id ) == 0 ) {
+                error = "wound fix '" + fix.id.str() +
+                        "' is missing a wound reverse link";
+                return false;
+            }
+        }
+    }
+    for( const body_part_type &part : detail::body_part_registry().get_all() ) {
+        std::set<wound_type_id> cached_ids;
+        for( const auto &[candidate, weight] : part.potential_wounds ) {
+            if( !candidate.id.is_valid() || !cached_ids.insert( candidate.id ).second ||
+                !candidate.id->allowed_on_bodypart( part.id ) ||
+                candidate.damage_type != candidate.id->damage_types ||
+                candidate.damage_required != candidate.id->damage_required ||
+                weight != candidate.id->weight ) {
+                error = "body part '" + part.id.str() +
+                        "' retained an invalid or duplicate wound-cache entry";
+                return false;
+            }
+        }
+        for( const wound_type &wound_definition : detail::wound_type_registry().get_all() ) {
+            if( wound_definition.allowed_on_bodypart( part.id ) !=
+                ( cached_ids.count( wound_definition.id ) != 0 ) ) {
+                error = "body part '" + part.id.str() +
+                        "' has an incomplete wound cache";
+                return false;
+            }
+        }
+    }
     for( const recipe_group_registration &entry : pimpl_->recipe_groups ) {
         if( !detail::recipe_group_exists( entry.definition->id ) ) {
             error = "Lua-first recipe group '" + entry.definition->id +
@@ -15426,6 +16574,11 @@ bool content_transaction::validate_finalized( std::string &error ) const
 
 void content_transaction::rollback()
 {
+    const bool rebuild_wound_fixes = !pimpl_->requirement_undo.empty() ||
+                                     !pimpl_->wound_fix_undo.empty();
+    const bool refresh_wound_derived = !pimpl_->wound_type_undo.empty() ||
+                                       !pimpl_->wound_fix_undo.empty() ||
+                                       !pimpl_->body_part_undo.empty();
     for( auto it = pimpl_->monster_undo.rbegin();
          it != pimpl_->monster_undo.rend(); ++it ) {
         if( it->second ) {
@@ -15485,6 +16638,16 @@ void content_transaction::rollback()
         }
     }
     pimpl_->recipe_group_undo.clear();
+
+    for( auto it = pimpl_->wound_fix_undo.rbegin();
+         it != pimpl_->wound_fix_undo.rend(); ++it ) {
+        if( it->second ) {
+            detail::wound_fix_registry().restore( *it->second );
+        } else {
+            detail::wound_fix_registry().erase( it->first );
+        }
+    }
+    pimpl_->wound_fix_undo.clear();
 
     for( auto it = pimpl_->requirement_undo.rbegin();
          it != pimpl_->requirement_undo.rend(); ++it ) {
@@ -15577,6 +16740,16 @@ void content_transaction::rollback()
         detail::refresh_body_part_similarity_cache();
     }
     pimpl_->body_part_undo.clear();
+
+    for( auto it = pimpl_->wound_type_undo.rbegin();
+         it != pimpl_->wound_type_undo.rend(); ++it ) {
+        if( it->second ) {
+            detail::wound_type_registry().restore( *it->second );
+        } else {
+            detail::wound_type_registry().erase( it->first );
+        }
+    }
+    pimpl_->wound_type_undo.clear();
 
     for( auto it = pimpl_->sub_body_part_undo.rbegin();
          it != pimpl_->sub_body_part_undo.rend(); ++it ) {
@@ -16293,6 +17466,13 @@ void content_transaction::rollback()
         }
     }
     pimpl_->json_flag_undo.clear();
+    if( rebuild_wound_fixes ) {
+        detail::wound_fix_registry().finalize();
+    }
+    if( refresh_wound_derived ) {
+        detail::refresh_wound_fix_links();
+        detail::refresh_body_part_wound_cache();
+    }
     pimpl_->applied = false;
 }
 
@@ -16318,6 +17498,7 @@ void content_transaction::commit()
     pimpl_->proficiency_undo.clear();
     pimpl_->weapon_category_undo.clear();
     pimpl_->requirement_undo.clear();
+    pimpl_->wound_fix_undo.clear();
     pimpl_->recipe_group_undo.clear();
     pimpl_->scent_type_undo.clear();
     pimpl_->speed_description_undo.clear();
@@ -16327,6 +17508,7 @@ void content_transaction::commit()
     pimpl_->behavior_undo.clear();
     pimpl_->effect_type_undo.clear();
     pimpl_->sub_body_part_undo.clear();
+    pimpl_->wound_type_undo.clear();
     pimpl_->body_part_undo.clear();
     pimpl_->anatomy_undo.clear();
     pimpl_->body_graph_undo.clear();
@@ -16984,7 +18166,7 @@ std::string content_transaction::fingerprint() const
             hash_part( state, "trail" );
             hash_field( field );
         }
-        const auto hash_character_effect = [&] (
+        const auto hash_character_effect = [&](
         const ammo_character_effect_definition_data & effect ) {
             hash_part( state, effect.effect );
             hash_part( state, std::to_string( effect.duration_turns ) );
@@ -17505,6 +18687,47 @@ std::string content_transaction::fingerprint() const
             hash_part( state, std::to_string( amount ) );
         }
     }
+    for( const wound_type_registration &entry : pimpl_->wound_types ) {
+        hash_part( state, "wound" );
+        hash_part( state, operation_name( entry.operation ) );
+        const wound_type_definition_data &value = *entry.definition;
+        hash_part( state, value.id );
+        hash_part( state, value.name );
+        hash_part( state, value.plural_name );
+        hash_part( state, value.description );
+        hash_part( state, std::to_string( value.pain_min ) );
+        hash_part( state, std::to_string( value.pain_max ) );
+        hash_part( state, std::to_string( value.healing_min_turns ) );
+        hash_part( state, std::to_string( value.healing_max_turns ) );
+        hash_part( state, std::to_string( value.damage_min ) );
+        hash_part( state, std::to_string( value.damage_max ) );
+        hash_part( state, std::to_string( value.weight ) );
+        hash_part( state, std::to_string( value.per_part_limit ) );
+        hash_part( state, value.required_body_part_flag );
+        hash_part( state, value.forbidden_body_part_flag );
+        for( const std::string &damage_type : value.damage_types ) {
+            hash_part( state, "damage_type" );
+            hash_part( state, damage_type );
+        }
+        for( const wound_limb_score_definition_data &score : value.limb_scores ) {
+            hash_part( state, "limb_score" );
+            hash_part( state, score.id );
+            hash_part( state, std::to_string( score.penalty ) );
+        }
+        for( const wound_progression_definition_data &progression : value.progressions ) {
+            hash_part( state, "progression" );
+            hash_part( state, progression.id );
+            hash_part( state, std::to_string( progression.chance ) );
+        }
+        for( const std::string &kind : value.required_body_part_types ) {
+            hash_part( state, "require_body_part_type" );
+            hash_part( state, kind );
+        }
+        for( const std::string &kind : value.forbidden_body_part_types ) {
+            hash_part( state, "forbid_body_part_type" );
+            hash_part( state, kind );
+        }
+    }
     for( const body_part_registration &entry : pimpl_->body_parts ) {
         hash_part( state, "body_part" );
         hash_part( state, operation_name( entry.operation ) );
@@ -17861,6 +19084,41 @@ std::string content_transaction::fingerprint() const
             }
         }
     }
+    for( const wound_fix_registration &entry : pimpl_->wound_fixes ) {
+        hash_part( state, "wound_fix" );
+        hash_part( state, operation_name( entry.operation ) );
+        const wound_fix_definition_data &value = *entry.definition;
+        hash_part( state, value.id );
+        hash_part( state, value.name );
+        hash_part( state, value.description );
+        hash_part( state, value.success_message );
+        hash_part( state, std::to_string( value.duration_turns ) );
+        hash_part( state, std::to_string( value.health_delta ) );
+        for( const auto &[skill, level] : value.skills ) {
+            hash_part( state, "skill" );
+            hash_part( state, skill );
+            hash_part( state, std::to_string( level ) );
+        }
+        for( const wound_fix_proficiency_definition_data &proficiency : value.proficiencies ) {
+            hash_part( state, "proficiency" );
+            hash_part( state, proficiency.id );
+            hash_part( state, std::to_string( proficiency.multiplier ) );
+            hash_part( state, proficiency.mandatory ? "mandatory" : "optional" );
+        }
+        for( const std::string &wound_id : value.wounds_removed ) {
+            hash_part( state, "removes" );
+            hash_part( state, wound_id );
+        }
+        for( const std::string &wound_id : value.wounds_added ) {
+            hash_part( state, "adds" );
+            hash_part( state, wound_id );
+        }
+        for( const wound_fix_requirement_definition_data &requirement : value.requirements ) {
+            hash_part( state, "requires" );
+            hash_part( state, requirement.id );
+            hash_part( state, std::to_string( requirement.count ) );
+        }
+    }
     for( const recipe_group_registration &entry : pimpl_->recipe_groups ) {
         hash_part( state, "recipe_group" );
         hash_part( state, operation_name( entry.operation ) );
@@ -18164,8 +19422,8 @@ bool content_transaction::find_emission_handler(
 }
 
 std::shared_ptr<runtime> make_runtime( const std::string &mod_id,
-                                      std::size_t generation,
-                                      sol::state &lua )
+                                       std::size_t generation,
+                                       sol::state &lua )
 {
     return std::make_shared<runtime>( mod_id, generation, lua );
 }
@@ -18188,8 +19446,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
 
     const std::weak_ptr<runtime> weak = value;
     sol::table runtime_api = lua.create_table();
-    runtime_api.set_function( "handler", [weak]( const std::string &id,
-    const sol::object &callback, const sol::optional<std::int64_t> &payload_version ) {
+    runtime_api.set_function( "handler", [weak]( const std::string & id,
+    const sol::object & callback, const sol::optional<std::int64_t> &payload_version ) {
         const std::shared_ptr<runtime> owner = weak.lock();
         if( !owner ) {
             throw std::runtime_error( "stale Platform runtime" );
@@ -18206,13 +19464,13 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         }
         const int version = static_cast<int>( requested_version );
         if( !owner->handlers.emplace( id, handler_definition{
-            version, callback.as<sol::protected_function>()
+        version, callback.as<sol::protected_function>()
         } ).second ) {
             throw std::runtime_error( "duplicate handler id '" + id + "'" );
         }
     } );
-    runtime_api.set_function( "on", [weak]( const std::string &event_name,
-    const std::string &handler_id ) {
+    runtime_api.set_function( "on", [weak]( const std::string & event_name,
+    const std::string & handler_id ) {
         const std::shared_ptr<runtime> owner = weak.lock();
         if( !owner ) {
             throw std::runtime_error( "stale Platform runtime" );
@@ -18225,6 +19483,10 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         if( !lifecycle && ( event_name.size() <= 5 || event_name.compare( 0, 5, "game:" ) != 0 ) ) {
             throw std::runtime_error( "event must be a lifecycle name or game:<event>" );
         }
+        if( !lifecycle && !platform_event_contract_exists(
+                std::string_view( event_name ).substr( 5 ) ) ) {
+            throw std::runtime_error( "unknown native event '" + event_name + "'" );
+        }
         std::vector<std::string> &subscriptions = owner->subscriptions[event_name];
         if( std::find( subscriptions.begin(), subscriptions.end(), handler_id ) !=
             subscriptions.end() ) {
@@ -18234,8 +19496,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         subscriptions.push_back( handler_id );
     } );
     runtime_api.set_function( "migrate_task_payload", [weak](
-    const std::string &handler_id, const std::int64_t from_version,
-    const std::int64_t to_version, const sol::object &callback ) {
+                                  const std::string & handler_id, const std::int64_t from_version,
+    const std::int64_t to_version, const sol::object & callback ) {
         const std::shared_ptr<runtime> owner = weak.lock();
         if( !owner ) {
             throw std::runtime_error( "stale Platform runtime" );
@@ -18264,8 +19526,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                 "' from version " + std::to_string( from_version ) );
         }
     } );
-    runtime_api.set_function( "hook", [weak]( const std::string &hook_name,
-    const std::string &handler_id ) {
+    runtime_api.set_function( "hook", [weak]( const std::string & hook_name,
+    const std::string & handler_id ) {
         const std::shared_ptr<runtime> owner = weak.lock();
         if( !owner ) {
             throw std::runtime_error( "stale Platform runtime" );
@@ -18286,18 +19548,18 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     ccb["runtime"] = std::move( runtime_api );
 
     auto install_state_scope = [&lua, weak]( persistent_state runtime::*member,
-    const std::string &name ) {
+    const std::string & name ) {
         sol::table scope = lua.create_table();
         scope.set_function( "get", [weak, member, name]( sol::this_state state,
-        const std::string &key, const sol::optional<sol::object> &fallback ) {
+        const std::string & key, const sol::optional<sol::object> &fallback ) {
             const std::shared_ptr<runtime> owner = weak.lock();
             if( !owner || !owner->world_is_ready ) {
                 throw std::runtime_error( "state." + name + " is only available after world_ready" );
             }
             return get_persistent_value( owner.get()->*member, state, key, fallback );
         } );
-        scope.set_function( "set", [weak, member, name]( const std::string &key,
-        const sol::object &entry ) {
+        scope.set_function( "set", [weak, member, name]( const std::string & key,
+        const sol::object & entry ) {
             const std::shared_ptr<runtime> owner = weak.lock();
             if( !owner || !owner->world_is_ready ) {
                 throw std::runtime_error( "state." + name + " is only available after world_ready" );
@@ -18314,8 +19576,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
 
     sol::table tasks = lua.create_table();
     tasks.set_function( "after", [weak]( std::int64_t turns,
-    const std::string &handler_id, const sol::optional<sol::table> &payload,
-    const sol::optional<std::int64_t> &payload_version,
+                                         const std::string & handler_id, const sol::optional<sol::table> &payload,
+                                         const sol::optional<std::int64_t> &payload_version,
     const sol::optional<std::string> &scope ) {
         const std::shared_ptr<runtime> owner = weak.lock();
         if( !owner || !owner->world_is_ready ) {
@@ -18389,18 +19651,18 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         }
     };
     sol::table presentation = lua.create_table();
-    presentation.set_function( "notice", [require_presentation]( const std::string &message ) {
+    presentation.set_function( "notice", [require_presentation]( const std::string & message ) {
         require_presentation();
         require_presentation_text( message, "notice" );
         ::popup( message );
     } );
-    presentation.set_function( "confirm", [require_presentation]( const std::string &question ) {
+    presentation.set_function( "confirm", [require_presentation]( const std::string & question ) {
         require_presentation();
         require_presentation_text( question, "confirmation question" );
         return query_yn( question );
     } );
     presentation.set_function( "choose", [require_presentation](
-    sol::this_state state, const std::string &prompt, const sol::table &entries ) {
+    sol::this_state state, const std::string & prompt, const sol::table & entries ) {
         require_presentation();
         require_presentation_text( prompt, "choice prompt" );
         const std::vector<presentation_choice> choices =
@@ -18424,7 +19686,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         return sol::make_object( lua_state, choices[menu.ret].id );
     } );
     presentation.set_function( "input_text", [require_presentation](
-    sol::this_state state, const std::string &prompt,
+                                   sol::this_state state, const std::string & prompt,
     const sol::optional<sol::table> &options ) {
         require_presentation();
         require_presentation_text( prompt, "input prompt", 4096 );
@@ -18459,7 +19721,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     ccb["presentation"] = std::move( presentation );
 
     sol::table services = lua.create_table();
-    services.set_function( "message", [weak]( const std::string &message ) {
+    services.set_function( "message", [weak]( const std::string & message ) {
         const std::shared_ptr<runtime> owner = weak.lock();
         if( !owner || !owner->world_is_ready ) {
             throw std::runtime_error( "game services are only available after world_ready" );
@@ -18480,7 +19742,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     // legacy EOC bridge, JSON registry, and v5 capability tables.
     const auto runtime_generation = [weak]() {
         const std::shared_ptr<runtime> owner = weak.lock();
-        return owner ? owner->generation : std::numeric_limits<std::size_t>::max();
+        return owner ? owner->handle_runtime() :
+               cata::lua_ui::game_handle_runtime();
     };
     const auto world_generation = []() {
         return active_world_generation;
@@ -18528,6 +19791,272 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                       require_read, require_write );
     cata::lua_ui::install_bionic_api( services, runtime_generation, world_generation,
                                       require_read, require_write );
+    sol::table bionics = services["bionics"];
+    bionics.set_function( "summary", [require_read, runtime_generation, world_generation](
+    sol::this_state state, const cata::lua_ui::game_handle & handle ) {
+        require_read();
+        sol::state_view lua_state( state );
+        const cata::lua_ui::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_ui::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "wrong_target", "services.bionics.summary requires a character handle"
+            } );
+        }
+        const auto energy_value = []( const units::energy & value ) {
+            return cata::lua_ui::script_unit_value::from_canonical_integer(
+                       "energy", "millijoule", value.value() );
+        };
+        sol::table value = lua_state.create_table();
+        value["installed_count"] = character->num_bionics();
+        value["power"] = energy_value( character->get_power_level() );
+        value["maximum_power"] = energy_value( character->get_max_power_level() );
+        value["has_capacity"] = character->has_max_power();
+        return cata::lua_ui::make_game_value_result(
+                   lua_state, sol::make_object( lua_state, std::move( value ) ) );
+    } );
+    bionics.set_function( "grant", [require_write, runtime_generation, world_generation](
+                              sol::this_state state, const cata::lua_ui::game_handle & handle,
+    const cata::lua_ui::script_game_id & id ) {
+        require_write();
+        if( id.kind() != "bionic" || !id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.bionics.grant requires a valid GameId<bionic>" );
+        }
+        sol::state_view lua_state( state );
+        const cata::lua_ui::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_ui::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "wrong_target", "services.bionics.grant requires a character handle"
+            } );
+        }
+        const int before = character->num_bionics();
+        const bionic_uid uid = character->add_bionic( bionic_id( id.value() ) );
+        sol::table value = lua_state.create_table();
+        value["changed"] = character->num_bionics() != before;
+        value["uid"] = static_cast<std::uint64_t>( uid );
+        value["count"] = character->num_bionics();
+        return cata::lua_ui::make_game_value_result(
+                   lua_state, sol::make_object( lua_state, std::move( value ) ) );
+    } );
+    bionics.set_function( "remove_type", [require_write, runtime_generation, world_generation](
+                              sol::this_state state, const cata::lua_ui::game_handle & handle,
+    const cata::lua_ui::script_game_id & id ) {
+        require_write();
+        if( id.kind() != "bionic" || !id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.bionics.remove_type requires a valid GameId<bionic>" );
+        }
+        sol::state_view lua_state( state );
+        const cata::lua_ui::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_ui::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "wrong_target", "services.bionics.remove_type requires a character handle"
+            } );
+        }
+        bool changed = false;
+        if( const std::optional<bionic *> installed =
+                character->find_bionic_by_type( bionic_id( id.value() ) ) ) {
+            character->remove_bionic( **installed );
+            changed = true;
+        }
+        sol::table value = lua_state.create_table();
+        value["changed"] = changed;
+        value["count"] = character->num_bionics();
+        return cata::lua_ui::make_game_value_result(
+                   lua_state, sol::make_object( lua_state, std::move( value ) ) );
+    } );
+    services["bionics"] = std::move( bionics );
+    const auto make_wound_snapshot = []( sol::state_view lua_state,
+    const bodypart & part ) {
+        sol::table snapshot = lua_state.create_table();
+        const std::vector<wound> &native_wounds = part.get_wounds();
+        for( std::size_t index = 0; index < native_wounds.size(); ++index ) {
+            const wound &entry = native_wounds[index];
+            double healing_fraction = static_cast<double>( entry.healing_percentage() );
+            if( !std::isfinite( healing_fraction ) ) {
+                healing_fraction = 0.0;
+            }
+            healing_fraction = std::clamp( healing_fraction, 0.0, 1.0 );
+            sol::table value = lua_state.create_table();
+            value["id"] = cata::lua_ui::script_game_id( "wound", entry.type.str() );
+            value["base_pain"] = entry.get_base_pain();
+            value["current_pain"] = entry.get_pain();
+            value["healing_time"] =
+                cata::lua_ui::script_time_duration::from_native( entry.get_healing_time() );
+            value["healing_progress"] =
+                cata::lua_ui::script_time_duration::from_native( entry.get_healing_progress() );
+            value["healing_fraction"] = healing_fraction;
+            snapshot[index + 1] = std::move( value );
+        }
+        return snapshot;
+    };
+    const auto same_wounds = []( const std::vector<wound> &lhs,
+    const std::vector<wound> &rhs ) {
+        if( lhs.size() != rhs.size() ) {
+            return false;
+        }
+        for( std::size_t index = 0; index < lhs.size(); ++index ) {
+            if( lhs[index].type != rhs[index].type ||
+                lhs[index].get_base_pain() != rhs[index].get_base_pain() ||
+                lhs[index].get_pain() != rhs[index].get_pain() ||
+                lhs[index].get_healing_time() != rhs[index].get_healing_time() ||
+                lhs[index].get_healing_progress() != rhs[index].get_healing_progress() ) {
+                return false;
+            }
+        }
+        return true;
+    };
+    sol::table wounds = lua.create_table();
+    wounds.set_function( "snapshot", [require_read, runtime_generation, world_generation,
+                                                    make_wound_snapshot]( sol::this_state state,
+                                              const cata::lua_ui::game_handle & handle,
+    const cata::lua_ui::script_game_id & body_part_id ) {
+        require_read();
+        if( body_part_id.kind() != "body_part" || !body_part_id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.wounds.snapshot requires a valid GameId<body_part>" );
+        }
+        sol::state_view lua_state( state );
+        const cata::lua_ui::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_ui::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "wrong_target", "services.wounds.snapshot requires a character handle"
+            } );
+        }
+        const bodypart_id native_part_id = bodypart_str_id( body_part_id.value() ).id();
+        if( !character->has_part( native_part_id, body_part_filter::strict ) ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "missing_part", "services.wounds.snapshot requires an exact character body part"
+            } );
+        }
+        const bodypart *part = character->get_part( native_part_id );
+        return cata::lua_ui::make_game_value_result(
+                   lua_state, sol::make_object( lua_state,
+                                                make_wound_snapshot( lua_state, *part ) ) );
+    } );
+    wounds.set_function( "add", [require_write, runtime_generation, world_generation,
+                                                make_wound_snapshot, same_wounds]( sol::this_state state,
+                                         const cata::lua_ui::game_handle & handle,
+                                         const cata::lua_ui::script_game_id & body_part_id,
+    const cata::lua_ui::script_game_id & wound_id ) {
+        require_write();
+        if( body_part_id.kind() != "body_part" || !body_part_id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.wounds.add requires a valid GameId<body_part>" );
+        }
+        if( wound_id.kind() != "wound" || !wound_id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.wounds.add requires a valid GameId<wound>" );
+        }
+        sol::state_view lua_state( state );
+        const cata::lua_ui::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_ui::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "wrong_target", "services.wounds.add requires a character handle"
+            } );
+        }
+        const bodypart_id native_part_id = bodypart_str_id( body_part_id.value() ).id();
+        if( !character->has_part( native_part_id, body_part_filter::strict ) ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "missing_part", "services.wounds.add requires an exact character body part"
+            } );
+        }
+        bodypart *part = character->get_part( native_part_id );
+        const std::vector<wound> before_native = part->get_wounds();
+        sol::table before = make_wound_snapshot( lua_state, *part );
+        const wound_type_id native_wound_id( wound_id.value() );
+        const int limit = native_wound_id->get_limit();
+        const std::size_t existing_count = std::count_if(
+                                               before_native.begin(), before_native.end(),
+        [&native_wound_id]( const wound & existing ) {
+            return existing.type == native_wound_id;
+        } );
+        if( limit == 0 || existing_count < static_cast<std::size_t>( limit ) ) {
+            character->apply_wound( native_part_id, native_wound_id );
+        }
+        sol::table after = make_wound_snapshot( lua_state, *part );
+        sol::table value = lua_state.create_table();
+        value["changed"] = !same_wounds( before_native, part->get_wounds() );
+        value["before"] = std::move( before );
+        value["after"] = std::move( after );
+        return cata::lua_ui::make_game_value_result(
+                   lua_state, sol::make_object( lua_state, std::move( value ) ) );
+    } );
+    wounds.set_function( "remove", [require_write, runtime_generation, world_generation,
+                                                   make_wound_snapshot]( sol::this_state state,
+                                            const cata::lua_ui::game_handle & handle,
+                                            const cata::lua_ui::script_game_id & body_part_id,
+    const cata::lua_ui::script_game_id & wound_id ) {
+        require_write();
+        if( body_part_id.kind() != "body_part" || !body_part_id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.wounds.remove requires a valid GameId<body_part>" );
+        }
+        if( wound_id.kind() != "wound" || !wound_id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.wounds.remove requires a valid GameId<wound>" );
+        }
+        sol::state_view lua_state( state );
+        const cata::lua_ui::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_ui::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "wrong_target", "services.wounds.remove requires a character handle"
+            } );
+        }
+        const bodypart_id native_part_id = bodypart_str_id( body_part_id.value() ).id();
+        if( !character->has_part( native_part_id, body_part_filter::strict ) ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "missing_part", "services.wounds.remove requires an exact character body part"
+            } );
+        }
+        bodypart *part = character->get_part( native_part_id );
+        sol::table before = make_wound_snapshot( lua_state, *part );
+        const std::size_t count_before = part->get_wounds().size();
+        part->remove_all_wounds_of_type( wound_type_id( wound_id.value() ) );
+        sol::table after = make_wound_snapshot( lua_state, *part );
+        sol::table value = lua_state.create_table();
+        const bool changed = part->get_wounds().size() != count_before;
+        if( changed ) {
+            character->on_stat_change(
+                "perceived_pain", character->get_perceived_pain() );
+        }
+        value["changed"] = changed;
+        value["before"] = std::move( before );
+        value["after"] = std::move( after );
+        return cata::lua_ui::make_game_value_result(
+                   lua_state, sol::make_object( lua_state, std::move( value ) ) );
+    } );
+    services["wounds"] = std::move( wounds );
     cata::lua_ui::install_mutation_api( services, runtime_generation, world_generation,
                                         require_read, require_write );
     cata::lua_ui::install_skill_api( services, runtime_generation, world_generation,
@@ -18540,8 +20069,342 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                          require_read, require_write );
     cata::lua_ui::install_need_api( services, runtime_generation, world_generation,
                                     require_read, require_write );
+    const auto make_activity_snapshot = []( sol::state_view lua_state,
+    const player_activity & current ) {
+        sol::table snapshot = lua_state.create_table();
+        const bool active = static_cast<bool>( current );
+        snapshot["active"] = active;
+        if( active ) {
+            snapshot["id"] = cata::lua_ui::script_game_id(
+                                 "activity", current.id().str() );
+        } else {
+            snapshot["id"] = sol::nil;
+        }
+        snapshot["verb"] = active ? current.get_verb().translated() : std::string();
+        snapshot["moves_total"] = current.moves_total;
+        snapshot["moves_left"] = current.moves_left;
+        snapshot["interruptible"] = current.is_interruptible();
+        snapshot["interruptible_with_keyboard"] = current.is_interruptible_with_kb();
+        snapshot["auto_resume"] = current.auto_resume;
+        snapshot["rooted"] = active && current.rooted();
+        snapshot["resumable"] = active && current.can_resume();
+        if( active && current.moves_total > 0 && current.moves_left >= 0 ) {
+            snapshot["progress"] = std::clamp(
+                                       static_cast<double>( current.moves_total - current.moves_left ) /
+                                       current.moves_total, 0.0, 1.0 );
+        } else {
+            snapshot["progress"] = 0.0;
+        }
+        return snapshot;
+    };
+    sol::table activities = lua.create_table();
+    activities.set_function( "snapshot", [require_read, runtime_generation, world_generation,
+                                                        make_activity_snapshot]( sol::this_state state,
+    const cata::lua_ui::game_handle & handle ) {
+        require_read();
+        sol::state_view lua_state( state );
+        const cata::lua_ui::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_ui::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "wrong_target", "services.activities.snapshot requires a character handle"
+            } );
+        }
+        return cata::lua_ui::make_game_value_result(
+                   lua_state, sol::make_object( lua_state,
+                                                make_activity_snapshot( lua_state, character->activity ) ) );
+    } );
+    activities.set_function( "assign_timed",
+                             [require_write, runtime_generation, world_generation, make_activity_snapshot](
+                                 sol::this_state state, const cata::lua_ui::game_handle & handle,
+                                 const cata::lua_ui::script_game_id & id,
+    const cata::lua_ui::script_time_duration & duration ) {
+        require_write();
+        if( id.kind() != "activity" || !id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.activities.assign_timed requires a valid GameId<activity>" );
+        }
+        const std::int64_t turns = duration.turns();
+        constexpr std::int64_t maximum_turns =
+            std::numeric_limits<int>::max() / 100;
+        if( turns <= 0 || turns > maximum_turns ) {
+            throw std::invalid_argument(
+                "services.activities.assign_timed duration must resolve to 1.." +
+                std::to_string( maximum_turns ) + " turns" );
+        }
+        sol::state_view lua_state( state );
+        const cata::lua_ui::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_ui::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "wrong_target", "services.activities.assign_timed requires a character handle"
+            } );
+        }
+        const activity_id native_id( id.value() );
+        if( activity_actors::deserialize_functions.count( native_id ) != 0 ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "specialized_activity",
+                "services.activities.assign_timed cannot construct an activity that requires a native actor"
+            } );
+        }
+        const activity_type &activity_definition = native_id.obj();
+        if( activity_handlers::do_turn_functions.count( native_id ) != 0 ||
+            activity_handlers::finish_functions.count( native_id ) != 0 ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "specialized_activity",
+                "services.activities.assign_timed cannot construct an activity with native turn or completion handlers"
+            } );
+        }
+        if( !activity_definition.do_turn_EOC.is_null() ||
+            !activity_definition.completion_EOC.is_null() ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "legacy_activity_policy",
+                "services.activities.assign_timed never enters an EOC-backed activity policy"
+            } );
+        }
+        if( activity_definition.based_on() != based_on_type::TIME ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "not_timed_activity",
+                "services.activities.assign_timed requires a time-based activity"
+            } );
+        }
+        if( activity_definition.multi_activity() ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "specialized_activity",
+                "services.activities.assign_timed cannot construct a multi-activity workflow"
+            } );
+        }
+        if( activity_definition.valid_auto_needs() ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "specialized_activity",
+                "services.activities.assign_timed cannot construct an automatic-needs activity"
+            } );
+        }
+        const int moves = static_cast<int>( turns * 100 );
+        character->assign_activity( native_id, moves );
+        if( !character->activity || character->activity.id() != native_id ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "assignment_rejected", "native character rules rejected the requested activity"
+            } );
+        }
+        sol::table value = lua_state.create_table();
+        value["changed"] = true;
+        value["activity"] = make_activity_snapshot( lua_state, character->activity );
+        return cata::lua_ui::make_game_value_result(
+                   lua_state, sol::make_object( lua_state, std::move( value ) ) );
+    } );
+    activities.set_function( "cancel", [require_write, runtime_generation, world_generation,
+                                                       make_activity_snapshot]( sol::this_state state,
+    const cata::lua_ui::game_handle & handle ) {
+        require_write();
+        sol::state_view lua_state( state );
+        const cata::lua_ui::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_ui::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "wrong_target", "services.activities.cancel requires a character handle"
+            } );
+        }
+        const bool changed = static_cast<bool>( character->activity );
+        if( changed ) {
+            character->cancel_activity();
+        }
+        sol::table value = lua_state.create_table();
+        value["changed"] = changed;
+        value["activity"] = make_activity_snapshot( lua_state, character->activity );
+        return cata::lua_ui::make_game_value_result(
+                   lua_state, sol::make_object( lua_state, std::move( value ) ) );
+    } );
+    services["activities"] = std::move( activities );
+    sol::table morale = lua.create_table();
+    morale.set_function( "add", [require_write, runtime_generation, world_generation](
+                             sol::this_state state, const cata::lua_ui::game_handle & handle,
+                             const cata::lua_ui::script_game_id & id, const std::int64_t bonus,
+    const std::int64_t max_bonus, const sol::optional<sol::table> &options ) {
+        require_write();
+        if( id.kind() != "morale" || !id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.morale.add requires a valid GameId<morale>" );
+        }
+        if( bonus < std::numeric_limits<int>::min() ||
+            bonus > std::numeric_limits<int>::max() ||
+            max_bonus < std::numeric_limits<int>::min() ||
+            max_bonus > std::numeric_limits<int>::max() ) {
+            throw std::invalid_argument(
+                "services.morale.add bonus values exceed native integer bounds" );
+        }
+        time_duration duration = 1_hours;
+        time_duration decay_start = 30_minutes;
+        bool capped = false;
+        if( options ) {
+            for( const auto &entry : *options ) {
+                const sol::object key_object = entry.first;
+                if( key_object.get_type() != sol::type::string ) {
+                    throw std::invalid_argument(
+                        "services.morale.add option keys must be strings" );
+                }
+                const std::string key = key_object.as<std::string>();
+                const sol::object value = entry.second;
+                if( key == "duration" || key == "decay_start" ) {
+                    if( !value.is<cata::lua_ui::script_time_duration>() ) {
+                        throw std::invalid_argument(
+                            "services.morale.add time options must be TimeDuration values" );
+                    }
+                    const time_duration native =
+                        value.as<cata::lua_ui::script_time_duration>().to_native();
+                    if( native < 0_turns ) {
+                        throw std::invalid_argument(
+                            "services.morale.add time options cannot be negative" );
+                    }
+                    if( key == "duration" ) {
+                        duration = native;
+                    } else {
+                        decay_start = native;
+                    }
+                } else if( key == "capped" ) {
+                    if( !value.is<bool>() ) {
+                        throw std::invalid_argument(
+                            "services.morale.add capped must be a boolean" );
+                    }
+                    capped = value.as<bool>();
+                } else {
+                    throw std::invalid_argument(
+                        "services.morale.add received unknown option '" + key + "'" );
+                }
+            }
+        }
+        sol::state_view lua_state( state );
+        const cata::lua_ui::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_ui::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "wrong_target", "services.morale.add requires a character handle"
+            } );
+        }
+        const morale_type native_id( id.value() );
+        const int before = character->has_morale( native_id );
+        character->add_morale( native_id, static_cast<int>( bonus ),
+                               static_cast<int>( max_bonus ), duration, decay_start, capped );
+        const int after = character->has_morale( native_id );
+        sol::table result = lua_state.create_table();
+        result["changed"] = after != before;
+        result["before"] = before;
+        result["after"] = after;
+        return cata::lua_ui::make_game_value_result(
+                   lua_state, sol::make_object( lua_state, std::move( result ) ) );
+    } );
+    morale.set_function( "remove", [require_write, runtime_generation, world_generation](
+                             sol::this_state state, const cata::lua_ui::game_handle & handle,
+    const cata::lua_ui::script_game_id & id ) {
+        require_write();
+        if( id.kind() != "morale" || !id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.morale.remove requires a valid GameId<morale>" );
+        }
+        sol::state_view lua_state( state );
+        const cata::lua_ui::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_ui::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "wrong_target", "services.morale.remove requires a character handle"
+            } );
+        }
+        const morale_type native_id( id.value() );
+        const int before = character->has_morale( native_id );
+        character->rem_morale( native_id );
+        const int after = character->has_morale( native_id );
+        sol::table result = lua_state.create_table();
+        result["changed"] = after != before;
+        result["before"] = before;
+        result["after"] = after;
+        return cata::lua_ui::make_game_value_result(
+                   lua_state, sol::make_object( lua_state, std::move( result ) ) );
+    } );
+    services["morale"] = std::move( morale );
     cata::lua_ui::install_martial_art_api( services, runtime_generation, world_generation,
                                            require_read, require_write );
+    sol::table martial_arts = services["martial_arts"];
+    martial_arts.set_function( "learn", [require_write, runtime_generation, world_generation](
+                                   sol::this_state state, const cata::lua_ui::game_handle & handle,
+    const cata::lua_ui::script_game_id & id ) {
+        require_write();
+        if( id.kind() != "martial_art" || !id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.martial_arts.learn requires a valid GameId<martial_art>" );
+        }
+        sol::state_view lua_state( state );
+        const cata::lua_ui::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_ui::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "wrong_target", "services.martial_arts.learn requires a character handle"
+            } );
+        }
+        const matype_id native_id( id.value() );
+        const bool before = character->has_martialart( native_id );
+        character->martial_arts_data->add_martialart( native_id );
+        const bool known = character->has_martialart( native_id );
+        sol::table value = lua_state.create_table();
+        value["changed"] = known != before;
+        value["known"] = known;
+        return cata::lua_ui::make_game_value_result(
+                   lua_state, sol::make_object( lua_state, std::move( value ) ) );
+    } );
+    martial_arts.set_function( "forget", [require_write, runtime_generation, world_generation](
+                                   sol::this_state state, const cata::lua_ui::game_handle & handle,
+    const cata::lua_ui::script_game_id & id ) {
+        require_write();
+        if( id.kind() != "martial_art" || !id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.martial_arts.forget requires a valid GameId<martial_art>" );
+        }
+        sol::state_view lua_state( state );
+        const cata::lua_ui::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_ui::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "wrong_target", "services.martial_arts.forget requires a character handle"
+            } );
+        }
+        const matype_id native_id( id.value() );
+        const bool before = character->has_martialart( native_id );
+        character->martial_arts_data->clear_style( native_id );
+        const bool known = character->has_martialart( native_id );
+        sol::table value = lua_state.create_table();
+        value["changed"] = known != before;
+        value["known"] = known;
+        return cata::lua_ui::make_game_value_result(
+                   lua_state, sol::make_object( lua_state, std::move( value ) ) );
+    } );
+    services["martial_arts"] = std::move( martial_arts );
     cata::lua_ui::install_vehicle_api( services, runtime_generation, world_generation,
                                        require_read, require_write );
     cata::lua_ui::install_npc_api( services, runtime_generation, world_generation,
@@ -18556,20 +20419,450 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                      require_read, require_write );
     cata::lua_ui::install_item_api( services, runtime_generation, world_generation,
                                     require_read, require_write );
+    sol::table inventory = services["inventory"];
+    inventory.set_function( "wielded", [require_read, runtime_generation,
+                                                      world_generation]( sol::this_state state,
+    const cata::lua_ui::game_handle & handle ) {
+        require_read();
+        sol::state_view lua_state( state );
+        const cata::lua_ui::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_ui::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "wrong_target", "services.inventory.wielded requires a character handle"
+            } );
+        }
+        item_location wielded = character->get_wielded_item();
+        if( !wielded ) {
+            return cata::lua_ui::make_game_value_result(
+                       lua_state, sol::make_object( lua_state, sol::lua_nil ) );
+        }
+        const tripoint_abs_ms position = character->pos_abs();
+        cata::lua_ui::game_handle_locator locator;
+        locator.scope = "character_wielded";
+        locator.stable_id = wielded->uid().get_value();
+        locator.x = position.x();
+        locator.y = position.y();
+        locator.z = position.z();
+        return cata::lua_ui::make_game_value_result(
+                   lua_state, sol::make_object(
+                       lua_state, cata::lua_ui::game_handle::from_item(
+                           *wielded, std::move( locator ), runtime_generation(),
+                           world_generation() ) ) );
+    } );
+    services["inventory"] = std::move( inventory );
     cata::lua_ui::install_zone_api( lua, services, runtime_generation, world_generation,
                                     require_read, require_write );
     cata::lua_ui::install_achievement_api( services, require_read, require_write );
+    sol::table achievements = services["achievements"];
+    achievements.set_function( "complete", [require_write](
+    sol::this_state state, const cata::lua_ui::script_game_id & id ) {
+        require_write();
+        if( id.kind() != "achievement" || !id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.achievements.complete requires a valid GameId<achievement>" );
+        }
+        const achievement_id native_id( id.value() );
+        achievements_tracker &tracker = get_achievements();
+        const std::vector<const achievement *> valid = tracker.valid_achievements();
+        const auto found = std::find_if( valid.begin(), valid.end(), [&native_id](
+        const achievement * entry ) {
+            return entry != nullptr && entry->id == native_id;
+        } );
+        bool changed = false;
+        if( found != valid.end() &&
+            tracker.is_completed( native_id ) == achievement_completion::pending ) {
+            tracker.report_achievement( *found, achievement_completion::completed );
+            changed = true;
+        }
+        sol::state_view lua_state( state );
+        return cata::lua_ui::make_game_value_result(
+                   lua_state, sol::make_object( lua_state, changed ) );
+    } );
+    services["achievements"] = std::move( achievements );
     cata::lua_ui::install_statistics_api( services, require_read );
     cata::lua_ui::install_faction_api( services, require_read, require_write );
     cata::lua_ui::install_camp_api( services, require_read, require_write );
     cata::lua_ui::install_weather_api( services, require_read, require_write );
     cata::lua_ui::install_crafting_api( services, require_read, require_write,
                                         has_callback, source_id );
+    sol::table recipes = services["recipes"];
+    recipes.set_function( "knows", [require_read, runtime_generation, world_generation](
+                              sol::this_state state, const cata::lua_ui::game_handle & handle,
+    const cata::lua_ui::script_game_id & id ) {
+        require_read();
+        if( id.kind() != "recipe" || !id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.recipes.knows requires a valid GameId<recipe>" );
+        }
+        sol::state_view lua_state( state );
+        const cata::lua_ui::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_ui::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "wrong_target", "services.recipes.knows requires a character handle"
+            } );
+        }
+        const bool known = character->knows_recipe( &recipe_id( id.value() ).obj() );
+        return cata::lua_ui::make_game_value_result(
+                   lua_state, sol::make_object( lua_state, known ) );
+    } );
+    recipes.set_function( "learn", [require_write, runtime_generation, world_generation](
+                              sol::this_state state, const cata::lua_ui::game_handle & handle,
+    const cata::lua_ui::script_game_id & id ) {
+        require_write();
+        if( id.kind() != "recipe" || !id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.recipes.learn requires a valid GameId<recipe>" );
+        }
+        sol::state_view lua_state( state );
+        const cata::lua_ui::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_ui::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "wrong_target", "services.recipes.learn requires a character handle"
+            } );
+        }
+        const recipe *target = &recipe_id( id.value() ).obj();
+        const bool before = character->knows_recipe( target );
+        character->learn_recipe( target );
+        const bool known = character->knows_recipe( target );
+        sol::table value = lua_state.create_table();
+        value["changed"] = known != before;
+        value["known"] = known;
+        return cata::lua_ui::make_game_value_result(
+                   lua_state, sol::make_object( lua_state, std::move( value ) ) );
+    } );
+    recipes.set_function( "forget", [require_write, runtime_generation, world_generation](
+                              sol::this_state state, const cata::lua_ui::game_handle & handle,
+    const cata::lua_ui::script_game_id & id ) {
+        require_write();
+        if( id.kind() != "recipe" || !id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.recipes.forget requires a valid GameId<recipe>" );
+        }
+        sol::state_view lua_state( state );
+        const cata::lua_ui::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_ui::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "wrong_target", "services.recipes.forget requires a character handle"
+            } );
+        }
+        const recipe *target = &recipe_id( id.value() ).obj();
+        const bool before = character->knows_recipe( target );
+        character->forget_recipe( target );
+        const bool known = character->knows_recipe( target );
+        sol::table value = lua_state.create_table();
+        value["changed"] = known != before;
+        value["known"] = known;
+        return cata::lua_ui::make_game_value_result(
+                   lua_state, sol::make_object( lua_state, std::move( value ) ) );
+    } );
+    recipes.set_function( "forget_category", [require_write, runtime_generation,
+                                         world_generation]( sol::this_state state,
+                                  const cata::lua_ui::game_handle & handle,
+                                  const cata::lua_ui::script_game_id & category,
+    const sol::optional<std::string> &subcategory ) {
+        require_write();
+        if( category.kind() != "crafting_category" || !category.is_valid() ) {
+            throw std::invalid_argument(
+                "services.recipes.forget_category requires a valid "
+                "GameId<crafting_category>" );
+        }
+        const std::string native_subcategory = subcategory.value_or( std::string() );
+        if( native_subcategory.size() > 256 ||
+            native_subcategory.find( '\0' ) != std::string::npos ) {
+            throw std::invalid_argument(
+                "services.recipes.forget_category subcategory exceeds its native limit" );
+        }
+        sol::state_view lua_state( state );
+        const cata::lua_ui::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_ui::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_ui::make_game_error_result( lua_state, {
+                "wrong_target",
+                "services.recipes.forget_category requires a character handle"
+            } );
+        }
+        const recipe_subset &known_recipes = character->get_learned_recipes();
+        const std::size_t known_before = known_recipes.size();
+        const std::vector<const recipe *> recipes_to_forget =
+            recipes_from_cat( known_recipes, crafting_category_id( category.value() ),
+                              native_subcategory ).first;
+        for( const recipe *entry : recipes_to_forget ) {
+            character->forget_recipe( entry );
+        }
+        const std::size_t known_after = character->get_learned_recipes().size();
+        const std::size_t forgotten_count = known_before > known_after ?
+                                            known_before - known_after : 0;
+        sol::table value = lua_state.create_table();
+        value["changed"] = forgotten_count > 0;
+        value["forgotten_count"] = forgotten_count;
+        value["known_before"] = known_before;
+        value["known_after"] = known_after;
+        value["category"] = cata::lua_ui::script_game_id(
+                                "crafting_category", category.value() );
+        if( subcategory ) {
+            value["subcategory"] = *subcategory;
+        } else {
+            value["subcategory"] = sol::nil;
+        }
+        return cata::lua_ui::make_game_value_result(
+                   lua_state, sol::make_object( lua_state, std::move( value ) ) );
+    } );
+    services["recipes"] = std::move( recipes );
     cata::lua_ui::install_overmap_api( services, require_read, require_write,
                                        random_index );
     cata::lua_ui::install_game_snapshot_api( services, require_read );
     cata::lua_ui::install_game_info_api( services, require_read, require_write,
                                          has_callback );
+
+    // Platform owns an isolated gameplay random stream.  The shared v5
+    // implementation above intentionally uses the engine stream, so replace
+    // only the Platform table with callbacks backed by runtime::random_engine.
+    // This keeps ordinary Lua composition deterministic across runtime-only
+    // hot reloads without changing the v5 contract.
+    sol::table random = services["random"];
+    const auto require_random_runtime = [weak]() {
+        const std::shared_ptr<runtime> owner = weak.lock();
+        if( !owner || !owner->world_is_ready || owner->callback_depth <= 0 ) {
+            throw std::runtime_error(
+                "Platform gameplay randomness is only available inside a runtime callback" );
+        }
+        return owner;
+    };
+    const auto random_integer = [require_random_runtime]( const std::int64_t minimum,
+    const std::int64_t maximum ) {
+        if( minimum < -1000000000LL || maximum > 1000000000LL || minimum > maximum ) {
+            throw std::invalid_argument(
+                "services.random.int requires an ordered range within -1000000000..1000000000" );
+        }
+        const std::shared_ptr<runtime> owner = require_random_runtime();
+        std::uniform_int_distribution<std::int64_t> distribution( minimum, maximum );
+        return distribution( owner->random_engine );
+    };
+    random.set_function( "int", random_integer );
+    random.set_function( "chance", [require_random_runtime]( const std::int64_t numerator,
+    const std::int64_t denominator ) {
+        const std::shared_ptr<runtime> owner = require_random_runtime();
+        if( denominator <= 0 || denominator > 1000000000LL || numerator < 0 ||
+            numerator > denominator ) {
+            throw std::invalid_argument(
+                "services.random.chance requires 0 <= numerator <= denominator <= 1000000000" );
+        }
+        if( numerator == 0 ) {
+            return false;
+        }
+        if( numerator == denominator ) {
+            return true;
+        }
+        std::uniform_int_distribution<std::int64_t> distribution( 1, denominator );
+        return distribution( owner->random_engine ) <= numerator;
+    } );
+    random.set_function( "one_in", [require_random_runtime]( const double raw_denominator ) {
+        const std::shared_ptr<runtime> owner = require_random_runtime();
+        if( !std::isfinite( raw_denominator ) || raw_denominator < -1000000000.0 ||
+            raw_denominator > 1000000000.0 ) {
+            throw std::invalid_argument(
+                "services.random.one_in requires a finite denominator within native bounds" );
+        }
+        const std::int64_t denominator = static_cast<std::int64_t>( raw_denominator );
+        if( denominator <= 1 ) {
+            return true;
+        }
+        std::uniform_int_distribution<std::int64_t> distribution( 0, denominator - 1 );
+        return distribution( owner->random_engine ) == 0;
+    } );
+    random.set_function( "probability", [require_random_runtime]( const double numerator,
+    const double denominator ) {
+        const std::shared_ptr<runtime> owner = require_random_runtime();
+        if( !std::isfinite( numerator ) || !std::isfinite( denominator ) ||
+            denominator <= 0.0 || numerator < 0.0 || numerator > denominator ) {
+            throw std::invalid_argument(
+                "services.random.probability requires finite 0 <= numerator <= denominator" );
+        }
+        if( numerator == 0.0 ) {
+            return false;
+        }
+        if( numerator == denominator ) {
+            return true;
+        }
+        std::uniform_real_distribution<double> distribution( 0.0, 1.0 );
+        return distribution( owner->random_engine ) <= numerator / denominator;
+    } );
+    random.set_function( "sample_integers", [require_random_runtime](
+                             sol::this_state state, const std::int64_t minimum, const std::int64_t maximum,
+    const std::int64_t requested_count, const sol::optional<bool> &with_replacement ) {
+        if( minimum < -1000000000LL || maximum > 1000000000LL || minimum > maximum ||
+            requested_count < 0 || requested_count > 1024 ) {
+            throw std::invalid_argument(
+                "services.random.sample_integers requires an ordered bounded range and 0..1024 samples" );
+        }
+        const bool replace = with_replacement.value_or( false );
+        const std::uint64_t population = static_cast<std::uint64_t>( maximum - minimum ) + 1;
+        if( !replace && static_cast<std::uint64_t>( requested_count ) > population ) {
+            throw std::invalid_argument(
+                "services.random.sample_integers cannot exceed the range without replacement" );
+        }
+        const std::shared_ptr<runtime> owner = require_random_runtime();
+        std::uniform_int_distribution<std::int64_t> distribution( minimum, maximum );
+        sol::state_view lua_state( state );
+        sol::table result = lua_state.create_table( requested_count, 0 );
+        std::unordered_set<std::int64_t> selected;
+        for( std::int64_t index = 1; index <= requested_count; ++index ) {
+            std::int64_t value = distribution( owner->random_engine );
+            if( !replace ) {
+                while( !selected.insert( value ).second ) {
+                    value = distribution( owner->random_engine );
+                }
+            }
+            result[index] = value;
+        }
+        return result;
+    } );
+    random.set_function( "contested", [random_integer]( const double check,
+    const double difficulty, const sol::optional<std::int64_t> &optional_die_size ) {
+        const std::int64_t die_size = optional_die_size.value_or( 10 );
+        if( !std::isfinite( check ) || !std::isfinite( difficulty ) ||
+            die_size <= 0 || die_size > 1000000000LL ) {
+            throw std::invalid_argument(
+                "services.random.contested requires finite values and a die size within 1..1000000000" );
+        }
+        return static_cast<double>( random_integer( 1, die_size ) ) + check > difficulty;
+    } );
+    services["random"] = std::move( random );
+
+    sol::table gameplay = lua.create_table();
+    sol::table strings = lua.create_table();
+    strings.set_function( "any_equal", []( const sol::table & values ) {
+        const std::size_t count = require_dense_array(
+                                      values, "services.gameplay.strings.any_equal values", 2, 1024 );
+        std::unordered_set<std::string> seen;
+        for( std::size_t index = 1; index <= count; ++index ) {
+            const sol::object value = values[index];
+            if( !value.is<std::string>() ) {
+                throw std::invalid_argument(
+                    "services.gameplay.strings.any_equal accepts only strings" );
+            }
+            if( !seen.insert( value.as<std::string>() ).second ) {
+                return true;
+            }
+        }
+        return false;
+    } );
+    strings.set_function( "all_equal", []( const sol::table & values ) {
+        const std::size_t count = require_dense_array(
+                                      values, "services.gameplay.strings.all_equal values", 1, 1024 );
+        const sol::object first = values[1];
+        if( !first.is<std::string>() ) {
+            throw std::invalid_argument(
+                "services.gameplay.strings.all_equal accepts only strings" );
+        }
+        const std::string expected = first.as<std::string>();
+        for( std::size_t index = 2; index <= count; ++index ) {
+            const sol::object value = values[index];
+            if( !value.is<std::string>() ) {
+                throw std::invalid_argument(
+                    "services.gameplay.strings.all_equal accepts only strings" );
+            }
+            if( value.as<std::string>() != expected ) {
+                return false;
+            }
+        }
+        return true;
+    } );
+    gameplay["strings"] = std::move( strings );
+
+    sol::table mods = lua.create_table();
+    mods.set_function( "is_loaded", [require_read]( const std::string & id ) {
+        require_read();
+        if( id.empty() || id.size() > 256 || id.find( '\0' ) != std::string::npos ) {
+            throw std::invalid_argument(
+                "services.gameplay.mods.is_loaded requires a bounded non-empty Mod id" );
+        }
+        if( find_active_runtime( id ) ) {
+            return true;
+        }
+        if( !world_generator || world_generator->active_world == nullptr ) {
+            return false;
+        }
+        const mod_id requested( id );
+        const std::vector<mod_id> &order = world_generator->active_world->active_mod_order;
+        return std::find( order.begin(), order.end(), requested ) != order.end();
+    } );
+    gameplay["mods"] = std::move( mods );
+
+    sol::table environment = lua.create_table();
+    environment.set_function( "dimension", [require_read]() {
+        require_read();
+        if( g == nullptr ) {
+            throw std::runtime_error(
+                "services.gameplay.environment.dimension requires an active game" );
+        }
+        return g->get_dimension_prefix().str();
+    } );
+    const auto require_environment_position = []( const cata::lua_ui::script_tripoint_coord &
+    position, const std::string & api_name ) {
+        if( position.native_origin() != coords::origin::abs ||
+            position.native_scale() != coords::scale::map_square ) {
+            throw std::invalid_argument(
+                api_name + " requires an absolute map-square Tripoint" );
+        }
+        map &here = get_map();
+        const tripoint_abs_ms absolute( position.to_native() );
+        if( !here.inbounds( absolute ) ) {
+            throw std::invalid_argument( api_name + " position is outside the active map" );
+        }
+        return here.get_bub( absolute );
+    };
+    environment.set_function( "is_outside", [require_read, require_environment_position](
+    const cata::lua_ui::script_tripoint_coord & position ) {
+        require_read();
+        map &here = get_map();
+        return here.is_outside( require_environment_position(
+                                    position, "services.gameplay.environment.is_outside" ) );
+    } );
+    environment.set_function( "line_of_sight", [require_read, require_environment_position](
+                                  const cata::lua_ui::script_tripoint_coord & from,
+                                  const cata::lua_ui::script_tripoint_coord & to, const std::int64_t range,
+    const sol::optional<bool> &with_fields ) {
+        require_read();
+        if( range < 0 || range > 100000 ) {
+            throw std::invalid_argument(
+                "services.gameplay.environment.line_of_sight range must be within 0..100000" );
+        }
+        map &here = get_map();
+        const tripoint_bub_ms first = require_environment_position(
+                                          from, "services.gameplay.environment.line_of_sight" );
+        const tripoint_bub_ms second = require_environment_position(
+                                           to, "services.gameplay.environment.line_of_sight" );
+        return here.sees( first, second, static_cast<int>( range ),
+                          with_fields.value_or( true ) );
+    } );
+    gameplay["environment"] = std::move( environment );
+    services["gameplay"] = std::move( gameplay );
+
     cata::lua_ui::install_game_interaction_api( services, require_write, has_callback );
     cata::lua_ui::install_game_world_service_api(
         services, runtime_generation, world_generation, require_read, require_write,
@@ -18783,6 +21076,8 @@ cata::lua_ui::native_hook_result dispatch_runtime_hook(
     const cata::lua_ui::native_hook_result &initial )
 {
     cata::lua_ui::native_hook_result aggregate = initial;
+    const cata::lua_ui::native_callback_arguments platform_arguments =
+        platform_callback_arguments( name, arguments );
     if( cata::lua_ui::native_hook_supports_result_field( name, "allow" ) &&
         !aggregate.allowed ) {
         return aggregate;
@@ -18807,7 +21102,7 @@ cata::lua_ui::native_hook_result dispatch_runtime_hook(
                                             << owner->mod_id << ':' << name << "'";
                 continue;
             }
-            sol::table payload = platform_callback_payload( *owner, arguments );
+            sol::table payload = platform_callback_payload( *owner, platform_arguments );
             payload["hook"] = std::string( name );
             payload["cancellable"] =
                 cata::lua_ui::native_hook_supports_result_field( name, "allow" );
@@ -18922,12 +21217,12 @@ std::optional<int> invoke_use_handler( std::string_view mod_id,
     context->character = character;
     context->used_item = &used_item;
     context->position = position;
-    context->runtime_generation = owner->generation;
+    context->handle_runtime = owner->handle_runtime();
     context->world_generation = active_world_generation;
+    use_context_lease context_lease( *context );
     sol::protected_function callback = handler->second.callback;
     callback_scope scope( *owner );
     const sol::protected_function_result result = callback( context );
-    context->active = false;
     if( !result.valid() ) {
         report_callback_error( *owner, handler_id, result );
         return std::nullopt;
@@ -19459,7 +21754,7 @@ bool invoke_activity_type_handler(
 
         try {
             const sol::table returned = result.get<sol::table>();
-            const auto integer_field = [&returned]( const std::string &field,
+            const auto integer_field = [&returned]( const std::string & field,
             const int fallback ) {
                 const sol::optional<sol::object> candidate =
                     returned.get<sol::optional<sol::object>>( field );
@@ -19890,9 +22185,9 @@ void runtime_process_tasks()
             const auto handler = owner->handlers.find( task.handler_id );
             if( handler == owner->handlers.end() ) {
                 if( owner->reported_task_migration_failures.insert( task.id ).second ) {
-                    DebugLog( D_ERROR, D_MAIN ) << "Keeping Lua-first task " << task.id
-                                                << " for missing handler '" << owner->mod_id
-                                                << ':' << task.handler_id << "'";
+                    DebugLog( D_WARNING, D_MAIN ) << "Keeping Lua-first task " << task.id
+                                                  << " for missing handler '" << owner->mod_id
+                                                  << ':' << task.handler_id << "'";
                 }
                 continue;
             }
@@ -19903,10 +22198,10 @@ void runtime_process_tasks()
             std::string migration_error;
             if( !migrate_task_payload( *owner, task, migration_error ) ) {
                 if( owner->reported_task_migration_failures.insert( task.id ).second ) {
-                    DebugLog( D_ERROR, D_MAIN ) << "Keeping Lua-first task " << task.id
-                                                << " with unmigrated payload for '"
-                                                << owner->mod_id << ':' << task.handler_id
-                                                << "': " << migration_error;
+                    DebugLog( D_WARNING, D_MAIN ) << "Keeping Lua-first task " << task.id
+                                                  << " with unmigrated payload for '"
+                                                  << owner->mod_id << ':' << task.handler_id
+                                                  << "': " << migration_error;
                 }
             } else {
                 owner->reported_task_migration_failures.erase( task.id );
@@ -19926,8 +22221,8 @@ void runtime_process_tasks()
         for( const persistent_task &task : due ) {
             owner->reported_task_migration_failures.erase( task.id );
         }
-        std::sort( due.begin(), due.end(), []( const persistent_task &lhs,
-        const persistent_task &rhs ) {
+        std::sort( due.begin(), due.end(), []( const persistent_task & lhs,
+        const persistent_task & rhs ) {
             return std::tie( lhs.due_turn, lhs.id ) < std::tie( rhs.due_turn, rhs.id );
         } );
         for( const persistent_task &task : due ) {
@@ -20002,8 +22297,14 @@ void content_transaction::rollback() {}
 void content_transaction::commit() {}
 void content_transaction::seal() {}
 void content_transaction::discard() {}
-std::string content_transaction::fingerprint() const { return {}; }
-bool content_transaction::was_applied() const { return false; }
+std::string content_transaction::fingerprint() const
+{
+    return {};
+}
+bool content_transaction::was_applied() const
+{
+    return false;
+}
 bool content_transaction::find_damage_handler( std::string_view, std::string_view,
         std::string &handler_id ) const
 {

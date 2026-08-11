@@ -10,6 +10,8 @@
 #include <string_view>
 #include <vector>
 
+#include "coords_fwd.h"
+
 class Character;
 class Creature;
 class item;
@@ -17,12 +19,11 @@ class map;
 class player_activity;
 class recipe;
 struct itype;
-struct tripoint_bub_ms;
 struct w_point;
 
 #if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
-#include "catalua_sol.h"
-#include "catalua_ui.h"
+    #include "catalua_sol.h"
+    #include "catalua_ui.h"
 #endif
 
 namespace cata::lua_platform
@@ -117,8 +118,8 @@ class content_transaction
 #if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
 
 std::shared_ptr<runtime> make_runtime( const std::string &mod_id,
-                                      std::size_t generation,
-                                      sol::state &lua );
+                                       std::size_t generation,
+                                       sol::state &lua );
 void install_runtime_api( const std::shared_ptr<runtime> &value,
                           sol::state &lua, sol::table &ccb );
 

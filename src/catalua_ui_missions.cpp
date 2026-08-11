@@ -54,13 +54,13 @@ void require_mission_id(
 
 std::optional<game_handle_error> mission_token_error(
     const mission_token &token,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    if( token.runtime_generation() != runtime_generation ) {
+    if( !token.belongs_to( runtime_generation ) ) {
         return game_handle_error{
             "stale_runtime",
-            "MissionToken belongs to an inactive Lua runtime generation"
+            "MissionToken belongs to an inactive or different Lua runtime"
         };
     }
     if( token.world_generation() != world_generation ) {
@@ -80,7 +80,7 @@ std::optional<game_handle_error> mission_token_error(
 
 mission *resolve_mission(
     const mission_token &token,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     std::optional<game_handle_error> &error )
 {
@@ -493,7 +493,7 @@ std::string mission_status_name( const mission &entry )
 
 sol::table snapshot_instance(
     sol::state_view lua, const mission &entry,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const avatar &player = get_avatar();
@@ -653,7 +653,7 @@ instance_options read_instance_options(
 sol::table list_instances(
     sol::this_state lua,
     const sol::optional<sol::table> &requested_options,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const instance_options options =
@@ -714,7 +714,7 @@ sol::table list_instances(
 
 sol::table get_instance(
     sol::this_state lua, const mission_token &token,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -736,7 +736,7 @@ sol::table get_instance(
 
 sol::table current_instance(
     sol::this_state lua,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -830,7 +830,7 @@ character_id requested_npc_id(
 sol::table reserve_instance(
     sol::this_state lua, const script_game_id &requested_id,
     const sol::optional<int> &npc_id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_mission_id(
@@ -860,7 +860,7 @@ sol::table reserve_random_instance(
     sol::this_state lua, const script_enum_value &origin,
     const script_tripoint_coord &position,
     const sol::optional<int> &npc_id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const mission_origin native_origin =
@@ -891,7 +891,7 @@ sol::table reserve_random_instance(
 
 sol::table assign_instance(
     sol::this_state lua, const mission_token &token,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -934,7 +934,7 @@ bool assigned_to_avatar( const mission &entry )
 
 sol::table select_instance(
     sol::this_state lua, const mission_token &token,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -966,7 +966,7 @@ sol::table select_instance(
 sol::table is_complete_instance(
     sol::this_state lua, const mission_token &token,
     const sol::optional<int> &npc_id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -987,7 +987,7 @@ sol::table is_complete_instance(
 sol::table step_instance(
     sol::this_state lua, const mission_token &token,
     const int step,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     if( step < 0 || step > maximum_mission_step ) {
@@ -1029,7 +1029,7 @@ sol::table step_instance(
 
 sol::table fail_instance(
     sol::this_state lua, const mission_token &token,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -1067,7 +1067,7 @@ sol::table fail_instance(
 sol::table complete_instance(
     sol::this_state lua, const mission_token &token,
     const sol::optional<bool> &force,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -1116,7 +1116,7 @@ sol::table complete_instance(
 
 sol::table cancel_reserved_instance(
     sol::this_state lua, const mission_token &token,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -1150,7 +1150,7 @@ sol::table cancel_reserved_instance(
 
 sol::table abandon_instance(
     sol::this_state lua, const mission_token &token,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -1186,10 +1186,10 @@ sol::table abandon_instance(
 } // namespace
 
 mission_token::mission_token(
-    const int uid, const std::size_t runtime_generation,
+    const int uid, const game_handle_runtime &runtime,
     const std::size_t world_generation )
     : uid_( uid ),
-      runtime_generation_( runtime_generation ),
+      runtime_( runtime ),
       world_generation_( world_generation )
 {
 }
@@ -1201,12 +1201,18 @@ int mission_token::uid() const noexcept
 
 std::size_t mission_token::runtime_generation() const noexcept
 {
-    return runtime_generation_;
+    return runtime_.generation();
 }
 
 std::size_t mission_token::world_generation() const noexcept
 {
     return world_generation_;
+}
+
+bool mission_token::belongs_to(
+    const game_handle_runtime &runtime ) const noexcept
+{
+    return runtime_.is_active_match( runtime );
 }
 
 std::string mission_token::to_string() const
@@ -1216,7 +1222,7 @@ std::string mission_token::to_string() const
 
 void install_mission_api(
     sol::table &game,
-    std::function<std::size_t()> current_runtime_generation,
+    std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write )

@@ -236,7 +236,7 @@ sol::table get_definition(
 }
 
 vehicle *resolve_vehicle(
-    const game_handle &handle, const std::size_t runtime_generation,
+    const game_handle &handle, const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     std::optional<game_handle_error> &error )
 {
@@ -407,7 +407,7 @@ sol::table snapshot_live_vehicle(
 
 sol::table get_live_vehicle(
     sol::this_state lua, const game_handle &handle,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -545,7 +545,7 @@ sol::table snapshot_live_part(
 sol::table list_live_parts(
     sol::this_state lua, const game_handle &handle,
     const sol::optional<sol::table> &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const part_options options =
@@ -604,7 +604,7 @@ sol::table list_live_parts(
 
 sol::table list_vehicle_fuels(
     sol::this_state lua, const game_handle &handle,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -685,7 +685,7 @@ void validate_vehicle_name( const std::string &name )
 sol::table rename_vehicle(
     sol::this_state lua, const game_handle &handle,
     const std::string &requested_name,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     validate_vehicle_name( requested_name );
@@ -710,7 +710,7 @@ sol::table rename_vehicle(
 sol::table set_cruise_velocity(
     sol::this_state lua, const game_handle &handle,
     const int requested_velocity,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     if( requested_velocity < -maximum_requested_velocity ||
@@ -801,7 +801,7 @@ stop_options read_stop_options(
 sol::table stop_vehicle(
     sol::this_state lua, const game_handle &handle,
     const sol::optional<sol::table> &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const stop_options options =
@@ -844,7 +844,7 @@ sol::table stop_vehicle(
 sol::table set_vehicle_tracking(
     sol::this_state lua, const game_handle &handle,
     const bool enabled,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -871,7 +871,7 @@ sol::table set_vehicle_tracking(
 sol::table set_vehicle_part_enabled(
     sol::this_state lua, const game_handle &handle,
     const int part_index, const bool enabled,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -952,7 +952,7 @@ sol::table set_vehicle_part_enabled(
 
 void install_vehicle_api(
     sol::table &game,
-    std::function<std::size_t()> current_runtime_generation,
+    std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write )

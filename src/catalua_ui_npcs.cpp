@@ -267,7 +267,7 @@ sol::table get_class(
 }
 
 game_handle make_npc_handle(
-    npc &entry, const std::size_t runtime_generation,
+    npc &entry, const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const tripoint_abs_ms position =
@@ -281,7 +281,7 @@ game_handle make_npc_handle(
 }
 
 npc *resolve_npc(
-    const game_handle &handle, const std::size_t runtime_generation,
+    const game_handle &handle, const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     std::optional<game_handle_error> &error )
 {
@@ -317,7 +317,7 @@ sol::table snapshot_opinion(
 
 sol::table snapshot_npc(
     sol::state_view lua, npc &entry,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const tripoint_abs_ms position =
@@ -470,7 +470,7 @@ std::vector<npc *> matching_npcs(
 sol::table list_npcs(
     sol::this_state lua,
     const sol::optional<sol::table> &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const state_options options =
@@ -512,7 +512,7 @@ sol::table list_npcs(
 
 sol::table get_npc(
     sol::this_state lua, const game_handle &handle,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -553,7 +553,7 @@ void validate_npc_name( const std::string &name )
 sol::table rename_npc(
     sol::this_state lua, const game_handle &handle,
     const std::string &requested_name,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     validate_npc_name( requested_name );
@@ -608,7 +608,7 @@ std::optional<npc_attitude> parse_attitude(
 sol::table set_npc_attitude(
     sol::this_state lua, const game_handle &handle,
     const std::string &requested_attitude,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const std::optional<npc_attitude> attitude =
@@ -721,7 +721,7 @@ int adjusted_opinion_value(
 sol::table modify_npc_opinion(
     sol::this_state lua, const game_handle &handle,
     const sol::table &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const opinion_deltas deltas =
@@ -791,7 +791,7 @@ sol::table modify_npc_opinion(
 
 void install_npc_api(
     sol::table &game,
-    std::function<std::size_t()> current_runtime_generation,
+    std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write )

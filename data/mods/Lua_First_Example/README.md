@@ -11,3 +11,7 @@ content domain has already been replaced.  Its item callback can use the
 generation-safe character/item handles and tagged map position exposed by
 `ItemUseContext`; durable data belongs in `ccb.state` or named task payloads,
 not in live handles.
+
+Its `world_ready` handler also exercises the per-Mod random stream, stable
+dimension query, and reusable string predicates.  These are ordinary
+Lua-composition examples rather than EOC-shaped compatibility calls.

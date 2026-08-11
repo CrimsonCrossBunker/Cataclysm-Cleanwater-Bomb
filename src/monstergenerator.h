@@ -12,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include "catalua_platform_content.h"
 #include "enum_bitset.h"
 #include "mattack_common.h"
 #include "mtype.h"
@@ -53,15 +54,6 @@ struct species_type {
     static void finalize_all();
 };
 
-namespace cata::lua_platform::detail
-{
-generic_factory<species_type> &species_registry();
-generic_factory<mtype> &monster_type_registry();
-const mtype_special_attack *monster_attack_registry_find( const std::string &id );
-void monster_attack_registry_set( const mtype_special_attack &value );
-void monster_attack_registry_erase( const std::string &id );
-} // namespace cata::lua_platform::detail
-
 class MonsterGenerator
 {
     public:
@@ -83,8 +75,12 @@ class MonsterGenerator
         // combines mtype and species information, sets bitflags
         void finalize_mtypes();
 
-        /** Finalize one freshly constructed Lua-first mtype exactly once. */
-        void finalize_lua_first_mtype( mtype &mon );
+        /**
+         * Finalize one freshly constructed Lua-first mtype when the global
+         * data set was already finalized.  During initial data loading the
+         * normal global monster finalizer owns this work instead.
+         */
+        void finalize_lua_first_mtype_if_ready( mtype &mon, bool data_is_finalized );
 
         /** Rebuild the derived hallucination candidate list after a transaction. */
         void refresh_hallucination_monsters();

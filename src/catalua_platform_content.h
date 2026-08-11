@@ -70,6 +70,8 @@ class VehicleGroup;
 struct species_type;
 struct sub_body_part_type;
 struct weakpoints;
+class wound_fix;
+class wound_type;
 
 namespace behavior
 {
@@ -121,8 +123,12 @@ generic_factory<behavior::node_t> &behavior_registry();
 generic_factory<weakpoints> &weakpoint_set_registry();
 generic_factory<body_part_type> &body_part_registry();
 void refresh_body_part_similarity_cache();
+void refresh_body_part_wound_cache();
 generic_factory<sub_body_part_type> &sub_body_part_registry();
 void refresh_sub_body_part_similarity_cache();
+generic_factory<wound_type> &wound_type_registry();
+generic_factory<wound_fix> &wound_fix_registry();
+void refresh_wound_fix_links();
 generic_factory<anatomy> &anatomy_registry();
 generic_factory<bodygraph> &bodygraph_registry();
 generic_factory<morale_type_data> &morale_type_registry();

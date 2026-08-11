@@ -34,7 +34,7 @@ entries:
       - The architecture contract defines target design; source and tests alone prove a capability is available.
       - Public Platform APIs use native domain objects and services rather than exposing JSON loaders or EOC-key-shaped wrappers.
       - Core serialization such as saves, settings, caches, and generated inventories may remain JSON internally.
-      - The exact replacement ledger distinguishes implemented, primitive-available, planned, private-adapter, and reviewed-not-applicable selectors.
+      - The exact replacement ledger distinguishes implemented, bounded-implemented, primitive-available, planned, private-adapter, and reviewed-not-applicable selectors.
       - Migration output is a reviewable Lua skeleton plus explicit TODO report, never a hidden JSON/EOC compatibility call.
   - id: bundled-mods
     paths: [data/mods/]

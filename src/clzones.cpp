@@ -1869,6 +1869,7 @@ void zone_data::serialize( JsonOut &json ) const
 
 void zone_data::deserialize( const JsonObject &data )
 {
+    lifetime_identity = std::make_shared<unsigned char>( 0 );
     data.allow_omitted_members();
     data.read( "name", name );
     // handle legacy zone types

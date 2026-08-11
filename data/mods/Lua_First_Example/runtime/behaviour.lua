@@ -10,8 +10,12 @@ function behaviour.use_charm(context)
 end
 
 function behaviour.world_ready(event)
+    local dimension = ccb.services.gameplay.environment.dimension()
+    assert(ccb.services.gameplay.strings.all_equal({ dimension, dimension }))
+    assert(ccb.services.random.int(1, 1) == 1)
     if event.new_game then
-        ccb.services.message("Lua-first bundled example is active.")
+        ccb.services.message(
+            "Lua-first bundled example is active in dimension '" .. dimension .. "'.")
     end
 end
 

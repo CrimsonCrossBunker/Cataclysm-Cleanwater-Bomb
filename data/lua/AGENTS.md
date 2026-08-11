@@ -31,6 +31,9 @@ This subtree contains two distinct contracts:
 - `primitive_available_unverified` means only that composable native domain
   building blocks exist; it is not selector-level parity and must not be
   described as a completed migration.
+- `bounded_implemented_unverified` means one or more explicitly named legacy
+  shapes have source, declarations, tests, migration output, and documentation;
+  it never claims that every legal shape of that selector has parity.
 - `tools/migrate_lua_first.py` may emit native Lua skeletons and explicit TODO
   reports.  It must never generate a JSON loader, EOC runner, or raw legacy
   object as a hidden compatibility path.

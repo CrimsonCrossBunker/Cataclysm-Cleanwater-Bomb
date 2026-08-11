@@ -17,9 +17,9 @@ MOD_ID_TOKEN = "__CCB_LUA_FIRST_MOD_ID__"
 def normalized_mod_id(target: Path) -> str:
     candidate = target.name
     if (
-        not candidate
-        or "#" in candidate
-        or any(character.isspace() for character in candidate)
+        not candidate or
+        "#" in candidate or
+        any(character.isspace() for character in candidate)
     ):
         raise ValueError(
             "target directory name becomes the Mod id and must be non-empty "
@@ -91,12 +91,14 @@ def create_mod(target: Path, template: str) -> None:
         if target.exists() or target.is_symlink():
             if target.is_symlink() or not had_empty_target:
                 raise FileExistsError(
-                    f"target appeared while the scaffold was being prepared: {target}"
+                    "target appeared while the scaffold was being prepared: "
+                    f"{target}"
                 )
             current_stat = target.stat()
             if (current_stat.st_dev, current_stat.st_ino) != target_identity:
                 raise FileExistsError(
-                    f"target changed while the scaffold was being prepared: {target}"
+                    "target changed while the scaffold was being prepared: "
+                    f"{target}"
                 )
             # The target was proven empty above.  If an author or another
             # process adds a file meanwhile, rmdir fails and preserves it.
@@ -109,10 +111,10 @@ def create_mod(target: Path, template: str) -> None:
             # final same-filesystem installation itself fails.  Never replace
             # a path concurrently recreated by somebody else.
             if (
-                had_empty_target
-                and removed_empty_target
-                and not target.exists()
-                and not target.is_symlink()
+                had_empty_target and
+                removed_empty_target and
+                not target.exists() and
+                not target.is_symlink()
             ):
                 target.mkdir()
             raise

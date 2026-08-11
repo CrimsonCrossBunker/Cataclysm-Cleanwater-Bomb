@@ -185,6 +185,13 @@ The target lifecycle is:
 7. Commit the prepared Platform states only after finalization succeeds.
 8. Make registered runtime handlers active after `world_ready`.
 
+During initial loading, staged Monster definitions remain unfinalized until
+the global pass in step 6, so world scaling and Monster adjustment are applied
+exactly once.  Local Monster finalization is reserved for test or hot
+environments where the dynamic data is already finalized.  Body-part and
+sub-body-part similarity caches are rebuilt after global finalization, making
+repeated finalization idempotent instead of appending duplicate relationships.
+
 A full world replacement dispatches `shutdown` and retires the previous
 Platform states before the engine unloads their finalized native registries.
 An in-place save reload that deliberately keeps the same data registries may
@@ -215,6 +222,10 @@ fingerprint leaves the active states untouched.
 目标生命周期依次为：发现入口、解析依赖、开始数据事务、按需加载旧 JSON、执行 Lua
 并暂存原生定义、统一 finalize、成功后提交 Platform state，最后在 `world_ready` 后
 激活运行时 handler。
+初始加载时，暂存的 Monster 定义会一直保留未 finalize 状态，直到统一 finalize 阶段，
+因此世界缩放和 Monster adjustment 只会由全局流程应用一次。只有动态数据已经
+finalized 的测试或热环境才会执行局部 Monster finalize；body part 和 sub-body part 的
+相似关系缓存则会在全局 finalize 后重建，使重复 finalize 保持幂等而不会追加重复关系。
 完整切换世界时，会在引擎卸载旧原生注册表之前先派发 `shutdown` 并销毁旧 Platform
 state；明确复用同一批数据注册表的存档内快速重载则可以保留 state，并再次派发
 `world_ready`。
@@ -247,11 +258,19 @@ consistency finalization cannot silently leave a partially active Platform
 candidate.  Trusted filesystem, process, and native-module side effects remain
 outside that transaction.
 
-This code is deliberately still marked **implemented but unverified**.  No
-compile, test, formatter, declaration check, or ledger check has run since the
-owner requested implementation through phase 5 before validation.  The exact
+Validation has now started, but it does not make the whole Platform complete.
+On 2026-08-11 the Linux Lua-enabled C++ test program compiled and linked, the
+focused Wound/WoundFix and wound-service gates passed, and the complete
+`[lua][platform]` suite passed 45 test cases with 934 assertions after adding
+the bionic-summary and learned-recipe workflow.  The broader `[lua]` filter
+then passed 190 matching test cases with 2706 assertions, including the
+owner-identity, pre-finalize Monster, and body-cache regression coverage.  LuaLS,
+public-contract, coverage, Agent-metadata, and replacement-ledger checks also
+passed.  Interactive desktop/Android presentation checks and field-by-field
+parity for the remaining domains are still open, so only explicitly named
+validated slices may be treated as having crossed their local gate.  The exact
 replacement ledger contains 775 dispositions; its generated summary is the
-authoritative count.  The implemented-but-unverified static slice now covers
+authoritative count.  The remaining implemented-but-unverified static slice covers
 Mod metadata, tool qualities, skill display categories, skills, vitamins,
 JSON flags, damage types, materials, proficiency categories, proficiencies,
 weapon categories, item categories, recipe categories, ammunition types,
@@ -534,9 +553,15 @@ not construct the legacy `nested_category_data` list shape.
 `replace` 同一候选中先加载的定义。commit 还必须通过 finalize 后的保留检查，避免被全局一致性检查剔除的
 配方造成部分候选悄悄生效。文件、进程和原生模块的外部副作用仍无法回滚。
 
-这些代码目前仍统一标为**已实现但未验证**：按负责人要求，阶段 5 收口前没有运行
-编译、测试、格式、声明或账本检查。775 项的分类数字以生成账本 summary 为准，不在本文
-手工复制。当前静态切片包括 Mod 元数据、工具质量、技能显示分类、技能、维生素、JSON
+验证已经开始，但这不表示整个平台已经完成。2026-08-11 的 Linux 本地验证成功编译并链接
+Lua-enabled C++ 测试程序，Wound/WoundFix 与伤口 service 的聚焦门禁全部通过；加入
+仿生摘要与已学配方工作流后，完整 `[lua][platform]` 套件以 45 个用例、934 个断言通过；
+随后更广的 `[lua]` 过滤集也以 190 个匹配用例、2706 个断言通过，其中包含 owner identity、
+Monster pre-finalize 与身体缓存回归覆盖。LuaLS、公开契约、覆盖率、Agent
+元数据与替换账本检查同样通过。桌面/Android 交互式 presentation 与其余领域逐字段等价性
+仍未完成，因此只有本文明确点名的已验证切片可以视为通过本地门禁。775 项的分类数字以
+生成账本 summary 为准，不在本文手工复制。其余已实现但未验证的静态切片包括 Mod 元数据、
+工具质量、技能显示分类、技能、维生素、JSON
 flag、伤害类型、材质、熟练度分类、熟练度、武器分类、物品分类、配方分类、弹药
 类型、可复用制作需求、配方组、气味类型、速度描述、采收掉落类型、采收表、行为树、
 怪物攻击、效果类型、弱点集、场类型、物品组、子身体部位、身体部位、解剖、身体图、
@@ -623,11 +648,20 @@ operator.  Private and protected members retain normal C++ access rules.
 Exported types are explicit; JSON loaders, EOC parsers, and other legacy
 infrastructure are not export roots.
 
-Native references carry an owner and generation check.  Access after object
-destruction, world replacement, content commit, or runtime replacement raises
-a Lua error instead of dereferencing a stale pointer.  Native modules loaded
-by a trusted Mod can bypass this boundary and are outside the compatibility
-guarantee.
+Native references carry an owner identity and generation check.  Every
+Platform Mod runtime receives a distinct opaque owner, including runtimes
+created in the same reload generation.  Handles and live-object tokens retain
+that owner weakly and must match the exact current owner before native
+resolution.  Token equality compares the complete owner-plus-generation
+identity without keeping the owner alive, so copied tokens remain equal after
+shutdown while tokens from different same-generation runtimes never compare
+equal.  Inactive state is explicit rather than encoded as a reserved
+generation number, so every `size_t` generation value, including its maximum,
+remains unambiguous.  Access after object destruction, world replacement,
+content commit, runtime replacement, or crossing into another Mod runtime
+raises a Lua error instead of dereferencing a stale pointer.  Native modules
+loaded by a trusted Mod can bypass this boundary and are outside the
+compatibility guarantee.
 
 Static definitions are real native staging objects.  The target content API
 provides explicit `add`, `replace`, and transactional `edit` operations.
@@ -636,9 +670,15 @@ Lua functions, loops, modules, constructors, and cloning replace JSON
 `copy-from` and inheritance syntax.
 
 Platform 导出的 C++ 类型公开全部可绑定的 public 字段、方法与运算符；private 和
-protected 仍遵守 C++ 规则。原生引用带 owner/代次检查，owner 消失、世界切换、内容
-提交或 runtime 替换后访问会抛 Lua 错误。静态定义使用真实的原生 staging 对象，
-通过显式 `add`、`replace`、事务性 `edit` 提交；普通 Lua 组合取代 JSON `copy-from`。
+protected 仍遵守 C++ 规则。每个 Mod runtime 都有独立且不向 Lua 暴露的 owner 身份，
+即使它们处于同一重载代次也不能交换 handle 或原生活对象 token；二者都只弱引用 owner，
+并在解析前同时核对精确 owner、runtime 代次与世界代次。token 相等比较使用完整的
+owner 控制块身份与代次，但不会延长 owner 生命周期，所以同源副本在 runtime 关闭后仍
+稳定相等，而不同的同代 runtime token 永不相等。失效状态不再占用某个代次数值，因此
+包括 `size_t` 最大值在内的全部代次都不会与哨兵碰撞。owner 消失、跨 Mod runtime、
+世界切换、内容提交或 runtime 替换后访问会抛 Lua 错误。静态定义使用真实的原生
+staging 对象，通过显式 `add`、`replace`、事务性 `edit` 提交；普通 Lua 组合取代 JSON
+`copy-from`。
 
 ### Implemented native vertical slice / 已编码的原生纵向切片
 
@@ -661,7 +701,7 @@ content layers: `ToolQuality`, `SkillDisplay`, `Skill`, `Vitamin`, `JsonFlag`,
 `WeaponCategory`, `ItemCategory`, `RecipeCategory`, `AmmunitionType`,
 `ScentType`, `SpeedDescription`, `HarvestDropType`, `Harvest`, `Behavior`,
 `MonsterAttack`, `EffectType`, `WeakpointSet`, `FieldType`, `ItemGroup`,
-`SubBodyPart`, `BodyPart`, `Anatomy`, `BodyGraph`, `Monster`, `MoraleType`,
+`SubBodyPart`, `BodyPart`, `Wound`, `WoundFix`, `Anatomy`, `BodyGraph`, `Monster`, `MoraleType`,
 `DiseaseType`, `MonsterFlag`, `MutationType`, `Species`, `Emission`, `MonsterFaction`,
 `ConnectGroup`, `MutationCategory`, `ConstructionCategory`, `ConstructionGroup`, `VehiclePartLocation`,
 `VehiclePartCategory`, `MoodFace`,
@@ -679,6 +719,34 @@ Every registrar participates in explicit add/replace/edit semantics,
 post-finalize retention checks, the static hot-reload fingerprint, and reverse
 rollback.  The native transaction uses concrete-id factory erase and snapshot
 restore operations; it never calls a JSON loader.
+
+`Wound` and `WoundFix` are native staging definitions, not JSON-shaped tables
+passed to a compatibility loader.  A wound constructor owns `id`, native
+player-visible `name`/`plural_name`/`description` text, pain and healing-turn
+ranges, damage range, selection `weight`, per-part limit, and optional
+required/forbidden body-part flags.  Its `damage_type`, `limb_score`, `progression`,
+`require_body_part_type`, and `forbid_body_part_type` methods build typed,
+deduplicated links.  Damage ranges, selection weight, and the body-part
+flag/type constraints govern natural damage-selection candidates; they do not
+restrict an explicit direct add through the wound service.  A wound fix owns
+`id`, native player-visible name, description and success-message text,
+duration in turns, and health delta; `skill`, `proficiency`,
+`removes`, `adds`, and `requires` compose its native treatment graph.
+These player-visible fields currently use `no_translation`; structured
+localization data and author-facing localization constructors are not yet
+implemented.
+Proficiency time multipliers must remain positive when represented by the
+native float type.  A requirement multiplier is accepted only when every
+referenced component and tool count remains within the signed native integer
+range after multiplication and when mergeable alternative groups still fit
+that range after native consolidation; quality requirements are linked without
+scaling.  Negative tool counts follow the native post-multiplication `-1`
+clamp.
+References within the same candidate are finalized together.  `add` requires a new id,
+`replace` requires an existing id, and `edit_wound`/`edit_wound_fix` clone an
+earlier same-Mod candidate for transactional `edit`.  Validation failure or a
+later candidate failure restores registries, wound-to-fix links, body-part
+caches, and derived requirements without a JSON loader or EOC callback.
 
 Damage-type behaviour uses `DamageTypeDefinition:on_hit` and `on_damage` with
 named Platform handlers instead of `onhit_eocs` or `ondamage_eocs`.  Payloads
@@ -723,17 +791,22 @@ ccb.content.add(recipe)
 ```
 
 An item-use handler receives a native `ItemUseContext`.  Its `character` and
-`item` properties are generation-checked `GameHandle` values, and `position`
+`item` properties are runtime-owner- and generation-checked `GameHandle`
+values, and `position`
 is an immutable `TripointCoord` tagged as reality-bubble map-square (`bub` /
-`ms`).  The context itself expires as soon as the callback returns; copied
-handles remain usable only while their runtime generation, world generation,
-and native object are all still valid.  `player_name`, `item_id`, `charges`,
-and `message` are convenience members, not substitutes for the typed handles.
+`ms`).  A native RAII callback lease clears both borrowed pointers and expires
+the context on every exit path, including callback errors and C++ unwinding;
+copied handles remain usable only while their exact runtime owner, runtime
+generation, world generation, and native object are all still valid.
+`player_name`, `item_id`, `charges`, and `message` are convenience members, not
+substitutes for the typed handles.
 
-物品 handler 收到原生 `ItemUseContext`。其中 `character` 与 `item` 是带运行时/世界
-代次检查的 `GameHandle`，`position` 是标记为现实气泡地图格（`bub` / `ms`）的不可变
-`TripointCoord`。回调返回后 context 本身立即失效；复制出的 handle 也只有在运行时
-代次、世界代次与原生对象都仍有效时才能继续使用。
+物品 handler 收到原生 `ItemUseContext`。其中 `character` 与 `item` 是带精确 runtime
+owner、运行时代次与世界代次检查的 `GameHandle`，`position` 是标记为现实气泡地图格
+（`bub` / `ms`）的不可变 `TripointCoord`。回调返回后 context 本身立即失效；复制出的
+handle 也只有在原 owner、运行时代次、世界代次与原生对象都仍有效时才能继续使用。原生
+RAII 回调租约会在正常返回、Lua 报错与 C++ 栈展开的所有路径上清空借用指针并使 context
+失效。
 
 The full declarations are in `data/lua/types/ccb_platform_v1.d.lua`.  The
 complete executable template is under `data/lua/templates/complete/`, and
@@ -753,7 +826,7 @@ updated in place.
 JSON flag、伤害类型、材质、熟练度分类、熟练度、武器分类、物品分类、配方分类和
 弹药类型、气味类型、速度描述、采收掉落类型、采收表、行为树、怪物攻击、效果类型、
 弱点集、场类型、物品组、子身体部位、身体部位、解剖、身体图、怪物、士气类型、
-疾病类型、怪物 flag、怪物物种、字段排放、怪物阵营、突变类型、突变分类、地形/家具连接组、
+伤口、伤口修复、疾病类型、怪物 flag、怪物物种、字段排放、怪物阵营、突变类型、突变分类、地形/家具连接组、
 建造分类、建造组、载具部件位置、载具部件分类、心情表情表、伤害信息显示顺序、
 命名颜色、可旋转符号组，以及可由配方按 id 和倍数组合的
 `Requirement` 需求图，以及供营地/建筑流程
@@ -762,6 +835,24 @@ JSON flag、伤害类型、材质、熟练度分类、熟练度、武器分类�
 材质、伤害类型与维生素可被后续对象引用；所有目录都进入 add/replace/edit、finalize 后
 保留检查、热重载指纹和逆序回滚。伤害类型的命中/受伤行为绑定命名 Lua handler，不暴露
 `onhit_eocs`、`ondamage_eocs` 或 EOC runner。
+
+`Wound` 与 `WoundFix` 也是原生暂存定义，不是送进兼容 loader 的 JSON 形状 table。
+伤口构造器直接拥有 `id`、原生玩家可见的单复数名称和描述文本、疼痛/愈合回合范围、伤害范围、
+抽取权重、每身体部位上限，以及可选的身体部位必需/禁止 flag；`damage_type`、
+`limb_score`、`progression`、`require_body_part_type` 与
+`forbid_body_part_type` 负责建立类型化且去重的关系。伤害范围、抽取权重与身体部位
+flag/type 约束用于自然伤害流程的候选筛选，不限制通过伤口 service 显式指定部位的直接
+添加。伤口修复直接拥有原生玩家可见的名称、描述、成功文本、耗时回合和生命值变化，
+并用 `skill`、`proficiency`、`removes`、`adds`、
+`requires` 组合原生治疗图。这些玩家可见字段目前通过 `no_translation` 构造；结构化
+本地化数据与面向作者的本地化构造器尚未实现。熟练度耗时倍数转换成原生 `float` 后仍须
+为正；需求倍数只在
+所引用的每个组件和工具数量相乘后仍落在原生有符号整数区间，并且可合并备选组经原生
+consolidate 后仍不越界时才会被接受；负工具数量在安全乘法后按原生规则夹到 `-1`，质量
+需求不随该倍数缩放。同一候选中的引用一起 finalize；`add` 只新增、`replace` 只
+替换已存在 id，`edit_wound`/`edit_wound_fix` 克隆本 Mod 更早暂存的候选后再事务性
+`edit`。任一校验或后续候选失败都会恢复目录、伤口到修复的链接、身体部位缓存与派生需求，
+全程不调用 JSON loader 或 EOC callback。
 
 ## Behaviour instead of EOC / 用 Lua 行为取代 EOC
 
@@ -801,6 +892,31 @@ EOC table, authored JSON registry, or capability surface.  Reads require
 实现，不会调用另一个 v5 Lua state；Platform 明确不安装 v5 的 EOC table、作者 JSON
 registry 或 capability 表。读取要求世界已就绪，修改还要求当前处于 Platform 回调。
 
+Coordinates embedded in definition-policy and event callback payloads are
+detached plain Lua tables, not borrowed native coordinate objects and not
+`TripointCoord` userdata.  Their mandatory `coordinate_space` tag makes the
+native frame explicit: `bub_ms` means reality-bubble map squares, while
+`abs_ms` means absolute map squares.  Authors must branch or convert at an
+explicit service boundary instead of treating the two spaces as interchangeable.
+
+定义策略与事件回调 payload 中携带的坐标是脱离原生对象的普通 Lua table，不是借用的
+原生坐标对象，也不冒充 `TripointCoord` userdata。必需的 `coordinate_space` 标签明确区分
+原生坐标系：`bub_ms` 表示现实气泡地图格，`abs_ms` 表示绝对地图格；两者不能隐式混用，
+需要由作者在明确的 service 边界判断或转换。
+
+`ZoneToken` also carries an unexposed runtime-owner context and native lifetime
+identity in addition to its readable snapshot.  A token cannot cross into a
+different Mod runtime even when both runtimes use the same numeric generation.
+Deleting a zone and creating a field-for-field identical replacement does not
+revive the old token; only a fresh token from the replacement can resolve it.
+The identity anchor follows ordinary native copies and moves, so container
+reallocation alone does not invalidate a live zone.
+
+`ZoneToken` 除可读快照外还携带不向 Lua 暴露的 runtime owner 上下文与原生生命周期
+身份；即使数值代次相同，token 也不能跨到另一个 Mod runtime。删除区域后，即使逐字段
+创建完全相同的新区域，旧 token 也不会复活；只有新区域返回的新 token 才能解析它。
+身份锚点会跟随原生对象的正常复制与移动，因此仅容器扩容不会误使仍存活的区域失效。
+
 `ccb.runtime.hook(native_name, handler_id)` attaches a named handler to the
 checked synchronous native-hook catalog.  Callback payload creatures, items,
 vehicles, missions, and talkers cross the boundary only as generation-bound
@@ -812,11 +928,28 @@ result lists and menu-entry lists are bounded dense one-based arrays; invalid
 shared mutation or returned data discards only that handler's candidate result
 and preserves the aggregate produced by earlier handlers.
 
+Dialogue hooks use Platform-native semantic fields rather than EOC positional
+talkers.  `on_dialogue_start` receives `avatar`, `interlocutor`, and
+`initial_topic`; `on_dialogue_option` receives `avatar`, `interlocutor`,
+`current_topic`, and `selected_topic`; `on_dialogue_end` receives `avatar`,
+`interlocutor`, and `last_topic`.  Platform never publishes `alpha`/`beta`
+aliases.  The existing Lua API v5 dispatcher keeps its own compatibility
+payload unchanged and runs before Platform, so its candidate result is visible
+through `payload.results` without becoming Platform's authoring vocabulary.
+
 `ccb.runtime.hook` 将命名 handler 接到受检的同步 Hook 目录；payload 中的活对象只以
 代次绑定 handle 或快照跨界。只有 Hook 契约声明过的否决、文本、替换值或菜单结果才会
 生效，Platform handler 按 Mod 依赖顺序与原生 dispatcher 合成。字符串结果与菜单项必须
 是有界、从 1 开始且无空洞的数组；无效的共享修改或返回值只丢弃当前 handler 的候选
 结果，不会抹掉此前 handler 的聚合结果。
+
+对话 Hook 使用 Platform 自己的语义字段，不沿用 EOC 的位置式 talker：
+`on_dialogue_start` 得到 `avatar`、`interlocutor`、`initial_topic`；
+`on_dialogue_option` 得到 `avatar`、`interlocutor`、`current_topic`、`selected_topic`；
+`on_dialogue_end` 得到 `avatar`、`interlocutor`、`last_topic`。Platform 不发布
+`alpha`/`beta` 别名。现有 Lua API v5 dispatcher 为兼容仍保留自己的旧 payload，并先于
+Platform 运行；它产生的候选结果只通过 `payload.results` 进入 Platform，不会成为新的
+作者词汇。
 
 Player-facing interaction is a separate top-level domain rather than an EOC
 effect spelling.  Inside an active callback, `ccb.presentation.notice`,
@@ -1042,14 +1175,15 @@ monster:anger_trigger("HURT")
 ccb.content.add(monster)
 ```
 
-This creature graph is currently `implemented_unverified`: native code,
+This creature graph remains `bounded_implemented_unverified`: native code,
 LuaLS declarations, rollback/retention paths, migration extraction, and tests
-exist, but the requested validation gate has not run.  It must not yet be
-described as verified or production-complete.
+exist, and its written local C++ gate passed on 2026-08-11.  That local result
+validates only the documented bounded slice; it is not production-complete or
+full field-level JSON parity.
 
-这张怪物内容图当前状态是 `implemented_unverified`：原生代码、LuaLS 声明、回滚/保留
-路径、迁移提取器与测试已经存在，但按约定尚未运行验证门，因此不能称为已验证或生产级
-完成。
+这张怪物内容图当前状态是 `bounded_implemented_unverified`：原生代码、LuaLS 声明、回滚/保留
+路径、迁移提取器与测试已经存在，且其书面本地 C++ 门禁已于 2026-08-11 通过。该结果只验证
+本文明确描述的有界切片，不能称为生产级完成，也不能声称已覆盖对应 JSON 类型的全部字段。
 
 ## Persistent execution / 持久执行
 
@@ -1079,6 +1213,24 @@ registering the same event/handler pair twice is an error.  Item use actors
 and persistent tasks resolve the same registry; neither stores a Lua closure
 in game data or a save.
 
+Every `game:<event>` payload contains the native event type, turn, typed data,
+and data-type names.  Its `actors` table maps semantic native `character_id`
+field names such as `character`, `attacker`, `killer`, or `victim` to live,
+generation-checked Character handles.  The bridge neither guesses one primary
+actor nor falls back to the avatar, and it never publishes EOC alpha/beta
+aliases.  `character_wields_item`, `character_wears_item`,
+`character_takeoff_item`, and `character_armor_destroyed` additionally expose
+`actors.item` only when the native producer actually supplied its
+`item_location` talker.  A plain `event_bus.send`, another event with an item in
+the same positional slot, or a missing item talker never falls back to a guessed
+wielded item.  Events whose native schema names no supported live entity simply
+have an empty `actors` table; future vehicle or other entity references must use
+equally semantic native fields instead of positional talker compatibility.
+All subscribed Mod/handler payloads are built before the first callback and
+each handler receives its own table graph, so mutation or failure cannot
+contaminate the next handler.  Per-Mod callback depth remains isolated while a
+global event-bridge depth cap bounds the native stack across all Mods.
+
 `ccb.state.character` and `ccb.state.world` store only boolean, integer,
 finite-number, string, or nil values.  The engine writes internal sidecars;
 Mod authors neither create nor parse their JSON representation.  A task made
@@ -1104,6 +1256,19 @@ handler 会记录有界诊断并保留任务。版本不一致时只执行显式
 修复。多段迁移只操作副本，全部步骤成功后才替换持久任务，因此后段失败不会留下半迁移
 payload。新任务必须使用 handler 当前版本，到期任务在加载后的首个回合边界执行一次。
 同一个事件可以按注册顺序绑定多个命名 handler，但同一事件与 handler 组合不能重复。
+每个 `game:<event>` payload 都包含原生事件类型、回合、类型化 data 与 data type 名称。
+其中 `actors` 表会把 `character`、`attacker`、`killer`、`victim` 等具有语义的原生
+`character_id` 字段名映射成带 generation 检查的 Character handle。桥接层不会猜测
+“主角色”，不会回退到 avatar，也绝不发布 EOC 的 alpha/beta 别名。
+`character_wields_item`、`character_wears_item`、`character_takeoff_item` 与
+`character_armor_destroyed` 只有在原生发送方确实附带对应 `item_location` talker 时才会
+额外提供 `actors.item`。普通 `event_bus.send`、其他事件碰巧把物品放在同一位置，或缺少
+物品 talker 时，都不会回退去猜当前持握物。原生 schema 没有命名受支持活对象的事件只
+得到空 `actors` 表；未来的载具或其他实体引用也必须使用同样有语义的原生字段，而不是
+位置式 talker 兼容。
+所有订阅 Mod/handler 的 payload 都会在第一个回调执行前完成构造，而且每个 handler
+得到独立表图，因此修改或异常不会污染后续 handler。每 Mod 的 callback depth 仍相互
+隔离，同时由事件桥全局 depth 上限约束跨 Mod 的原生调用栈。
 
 Sidecar records belonging to a currently disabled or missing Mod are retained
 unchanged in the typed engine representation when other active Platform Mods
@@ -1114,6 +1279,341 @@ scope as a bounded unit and fall back to empty active state with a diagnostic.
 暂时禁用或缺失 Mod 的 sidecar 记录会以引擎内部类型化表示保留；其他 Platform Mod
 保存时不会把它顺带删除。重新启用后会恢复原记录。格式损坏时仍以整个 scope 为有界
 失败单元，清空活动状态并给出诊断。
+
+Platform gameplay randomness is isolated per Mod in `ccb.services.random`.
+`int`, `chance`, `one_in`, `probability`, `sample_integers`, and `contested`
+all consume that stream only inside a runtime callback.  A runtime-only hot
+reload moves the engine state into the replacement runtime, so reloading code
+does not silently restart a Mod's random sequence.  `sample_integers` returns
+a dense Lua array instead of writing legacy variables.  String predicates are
+ordinary composition through `ccb.services.gameplay.strings.any_equal` and
+`all_equal`; active Mod visibility is queried through
+`ccb.services.gameplay.mods.is_loaded`.  These primitives replace behaviour,
+not old EOC-shaped keys.  The current dimension is exposed as the stable id
+returned by `ccb.services.gameplay.environment.dimension()` and compared with
+ordinary Lua operators.  `environment.is_outside` and `line_of_sight` consume
+typed absolute map-square coordinates, so callers can compose them with
+creature handles and coordinate utilities without recreating EOC variables.
+Native gameplay awards use `ccb.services.achievements.complete(GameId)`; it
+completes any tracked pending achievement and reports whether state changed,
+instead of exposing an EOC activation entry point.
+Avatar and NPC gameplay changes use
+`ccb.services.bionics.grant(GameHandle, GameId)` and `remove_type`; these
+Platform operations call native character rules directly and are not capped
+by the v5 inspection-list limit or forced through UID enumeration.  The
+Platform-only `summary(GameHandle)` query returns installed count, current and
+maximum typed energy, and the independent capacity fact, so Lua can express
+"any installed bionic or power capacity" without an EOC-shaped predicate.
+Recipe knowledge uses `ccb.services.recipes.knows(GameHandle, GameId)`,
+`learn`, and `forget`.  They operate on learned knowledge rather than temporary
+book or helper availability; `learn` preserves the native `never_learn`
+policy.  `forget_category(GameHandle, GameId, subcategory?)` is a separate
+typed batch operation.  It applies the native category/subcategory selection
+rules, returns before/after counts, and does not disguise a category as a
+recipe id.
+Martial-art knowledge uses `ccb.services.martial_arts.learn(GameHandle, GameId)`
+and `forget`.  Platform learning intentionally changes the native style
+collection without displaying UI text, so Mods can compose presentation
+separately; both methods report whether known state changed.
+Physical weapon state uses the Platform-only
+`ccb.services.inventory.wielded(GameHandle)` singular query.  It returns a live
+item handle or nil in constant work and deliberately does not bake in legacy
+weapon-predicate names.  A selected martial art may set
+`martial_arts.current(character).force_unarmed` while an item remains physically
+wielded, so Lua composes those facts explicitly.  `services.items.has_flag`
+reads the item's effective flags, including type inheritance, while
+`services.items.set_flag(item, flag, enabled)` changes only the instance-owned
+flag set.  Its `value.changed` compares `own_before` with `own_after`; therefore
+an inherited effective flag may remain true before and after a real instance
+change, or remain true while an idempotent unset correctly reports false.
+
+```lua
+local wielded = service_value(services.inventory.wielded(character))
+local style = service_value(services.martial_arts.current(character))
+local physically_armed = wielded ~= nil
+local attacks_unarmed = not physically_armed or style.force_unarmed
+local can_release = physically_armed and not service_value(
+    services.items.has_flag(wielded, services.types.id("json_flag", "NO_UNWIELD")))
+```
+
+Typed morale instances use
+`ccb.services.morale.add(GameHandle, GameId, bonus, max_bonus, options)` and
+`remove`.  `add` delegates to native morale stacking and accepts optional typed
+`duration`, `decay_start`, and `capped` values; `remove` clears every
+item-specific instance of the requested morale type, matching the native
+character operation.  Both methods return the matching net bonus before and
+after the mutation.  This is a Lua domain service rather than an EOC-shaped
+wrapper: callers supply an explicit Character handle and compose timing or
+presentation in Lua.
+Current activity state uses `ccb.services.activities.snapshot(GameHandle)`.
+The returned value is a detached snapshot with a typed activity id, native
+move budget, interruption/resumption flags, and bounded progress; it works for
+avatar and NPC Character handles without exposing a borrowed `player_activity`.
+`assign_timed` converts a positive typed `TimeDuration` to a checked native
+move budget and delegates to `Character::assign_activity`, preserving native
+resume, backlog, and NPC bookkeeping.  It accepts only plain time-based
+activities.  Specialized native actors or handlers, EOC policies,
+multi-activity workflows, automatic-needs activities, and speed/neither move
+budgets are rejected; they need explicit Lua-native domain constructors rather
+than empty target/value arrays or a hidden return to EOC.  `cancel` delegates
+to `Character::cancel_activity` only when an activity is active, preserving
+actor cleanup, resumable-backlog handling, hauling cleanup, events, and
+activity sound shutdown without mutating backlog on a no-op.  All three
+operations return the standard structured service result.
+Wound state uses `ccb.services.wounds.snapshot(character, body_part)` with a
+typed `GameId<body_part>`.  It returns a detached array in native per-part
+order; every entry contains a typed wound id, base/current pain, typed healing
+time and progress, and healing fraction.  The body part must exist exactly in
+the Character's current anatomy; the service never chooses a nearest or
+fallback part.  After the Platform exact-part and per-part-limit policies
+admit the operation, `add(character, body_part, wound)` delegates to
+`Character::apply_wound`, preserving native add-or-worsen rules and immediate
+perceived-pain derived-state synchronization.  `remove` removes every instance
+of that wound type from that exact part and performs the same synchronization
+after a change.  Explicit direct add intentionally bypasses the Wound's natural
+damage-selection body-part eligibility: the caller's exact part is
+authoritative.  The Platform service enforces the Wound's per-part limit, so
+an add at the limit is a successful no-op with `changed = false`.  Writes are callback-only; snapshot remains a
+world-ready read.  Successful mutations return `changed` plus complete
+`before`/`after` snapshots, and removing an absent type reports
+`changed = false`.  Wrong GameId kinds or unknown ids raise `invalid_argument`
+before mutation; stale/destroyed handles, non-Character targets, and missing
+parts return the standard structured service errors.  This
+API models the wound domain and never exposes `u_add_wound`, alpha/beta, an
+EOC runner, or a JSON object channel.
+The 2026-08-11 local gate proves these service semantics directly.  Its
+deterministic callback adds wounds A(4 pain), B(7), then A(4), observes native
+snapshot order A/B/A, and observes pain, perceived pain, and Character morale
+move through 4, 11, 15, 7, and 0 as add/remove operations run.  It also proves
+that snapshot remains an available empty read outside a callback while direct
+`add` and `remove` both fail with the callback-only diagnostic.  The focused
+service tag and the complete Platform suite both passed after compiling the
+native implementation and its test.
+This Lua-native policy is intentionally not a drop-in execution backend for
+the legacy wound selectors.  Legacy `f_add_wound` and `f_remove_wound` resolve
+the requested body part through `Creature::get_part(bodypart_id)`, whose
+default filter may choose `next_best`; the Platform service requires the exact
+current-anatomy part.  The legacy add path also calls add-or-worsen without the
+per-part-limit check that the Platform service enforces.  Therefore
+`u_add_wound`, `npc_add_wound`, `u_remove_wound`, and `npc_remove_wound` all
+remain planned migration work, even for literal ids and a proven Character
+actor.  The extractor emits a TODO instead of silently changing gameplay.
+Authors rewriting one of these selectors must choose the new exact-part and
+limit-aware policy explicitly; Platform will not add a legacy-shaped
+compatibility switch or entry point.
+Creature effects reuse the typed `ccb.services.effects` domain.  The bounded
+migration slice accepts a literal effect id with either a positive literal
+duration of at most 365 days or `PERMANENT`, and accepts single literal removal
+without a body-part selector.  It deliberately leaves dynamic ids and
+durations, ranges, intensity/force/body-part extensions, arrays, `RANDOM`, and
+`ALL` as partial work; those shapes require explicit value, actor, and anatomy
+semantics rather than a legacy-key wrapper.  The legacy single variable-object
+remove shape also remains partial because the old implementation silently
+performs no removal.
+Legacy `u_*` names identify the EOC alpha talker, not the avatar type.  The
+extractor therefore binds a private local actor to the avatar only for the
+bounded `game_start` event shape, where that identity is proven.  The extractor
+checks the reviewed canonical native sender set and fails closed if it changes;
+the event name alone is never treated as sufficient proof.  The separately
+audited `character_wields_item`, `character_wears_item`,
+`character_takeoff_item`, and `character_armor_destroyed` slice binds the
+legacy `u` Character to `context.actors.character`.  In those same four events
+only, literal legacy `npc_set_flag`/`npc_unset_flag` effects may target
+`context.actors.item`; generated Lua guards nil because a plain native send has
+no item talker.  This does not generalize `npc` into an item or Character in any
+other context, and `u_set_flag` remains partial because `u` is the Character
+talker there.  Other event and dialogue shapes remain partial until the
+extractor maps their semantic Platform actor fields and proves each kind;
+silently replacing an unproven actor with `services.characters.avatar()` would
+change gameplay.  Dialogue hooks now expose `avatar`/`interlocutor`, but that
+does not by itself prove which legacy talker a selector uses.  This
+migration-only decision never adds alpha/beta to Platform.
+Domain audits intentionally override name-based ledger guesses.  Native
+Wound/WoundFix staging and the exact-body-part wound service passed their local
+compiled validation gates: the content tag passed 5 cases and 321 assertions,
+including add/replace/edit, rollback, requirement finalization, reverse-link
+refresh, body-part cache refresh, and stale handles; the service evidence is
+described above.  The static extractor now converts bounded concrete `wound`
+and `wound_fix` definitions into those native builders, including finite
+pain/healing/damage ranges, typed links, body-part filters, skills,
+proficiencies, removed/added wounds, and referenced requirements.  Inheritance,
+implicit indefinite healing, rich translation metadata, and inline requirement
+objects remain explicit TODOs rather than hidden legacy loading.  The two JSON
+selectors are therefore `bounded_implemented_unverified`.
+The local creator/migrator run now passes 55 cases (46 extractor plus 9
+scaffolder).  Wound/WoundFix extraction fails closed at Platform UTF-8 byte
+limits: overlong ids or text and contradictory body-part flags become explicit
+TODOs or rejected definitions, and proficiency multipliers are rejected when
+their native `float` conversion is no longer positive.
+
+This does not change the four legacy `u_*`/`npc_*` wound mutation selectors:
+they remain planned because their next-best body-part resolution and add-limit
+behaviour do not match the deliberately strict, limit-aware service.  Service
+availability and static-definition extraction are not effect-selector parity
+and do not authorize automatic conversion.
+Rain wetness, direct damage, specialized activity-actor construction,
+navigation, and general teleportation remain planned native domains because
+current Character/item primitives do not carry their complete side effects.
+Character activity snapshot, plain time-based
+assignment, and cancellation are implemented, and their written local C++
+policy coverage passed; legacy selector promotion still requires exact shape
+conversion.  In the proven `game_start` actor shape, a
+literal `u_has_item` now composes `inventory.resources` through a local Lua
+helper and preserves the native charges-or-amount test, while a literal
+`u_has_move_mode` compares the typed Character snapshot.  The bounded proven
+Character slice converts string `u_has_weapon`/`u_can_drop_weapon` and a literal
+`u_has_wielded_with_flag`: generated helpers compose the singular physical
+wielded handle, `force_unarmed`, effective item flags, and `NO_UNWIELD` exactly
+instead of publishing EOC-shaped APIs.  The four-event item-talker slice also
+converts bounded literal `npc_set_flag`/`npc_unset_flag` behind the semantic
+item guard.  Those five selectors are therefore
+`bounded_implemented_unverified`, not full parity; NPC weapon predicates,
+`u_set_flag`/`u_unset_flag`, dynamic flags, other actor sources, mission
+reservation, and bounded move cost remain primitive-only or planned.  The
+ledger target describes domain ownership; it is never evidence that an
+unlisted selector shape is interchangeable.
+Typed character predicates reuse the same result-bearing services: single or
+any-of mutation presence through `mutations.has`, martial-art knowledge through
+`martial_arts.get`, selected-style state through the same snapshot, proficiency
+knowledge through `proficiencies.get`, a specific installed bionic through
+`bionics.has`, installed-count/capacity facts through `bionics.summary`, and
+learned recipe knowledge through `recipes.knows`.
+They remain normal Lua expressions; the migration output uses one local helper
+to propagate a `CcbResult` error before reading its value.
+
+Platform 的玩法随机流按 Mod 隔离在 `ccb.services.random` 中；`int`、`chance`、
+`one_in`、`probability`、`sample_integers` 和 `contested` 只允许在运行时回调中消耗
+该随机流。仅重载运行时代码时会把随机引擎状态移动到新 runtime，不会偷偷重启随机
+序列。整数采样直接返回稠密 Lua 数组，不再写旧变量。字符串集合判断使用
+`ccb.services.gameplay.strings.any_equal/all_equal` 普通组合，Mod 可见性使用
+`ccb.services.gameplay.mods.is_loaded`；这些是适合 Lua 的行为原语，不是旧 EOC key 的
+同名包装。当前维度由 `ccb.services.gameplay.environment.dimension()` 返回稳定 ID，
+直接使用普通 Lua 运算符比较。`environment.is_outside` 与 `line_of_sight` 接受类型化
+绝对地图格坐标，因此事件、任务和物品行为可以把生物 handle 与坐标工具直接组合，
+无需重建 EOC 变量模型。
+玩法成就使用 `ccb.services.achievements.complete(GameId)` 授予；它完成任意当前受跟踪且
+pending 的成就并报告状态是否变化，不公开 EOC 激活入口。
+玩家与 NPC 的玩法变更使用 `ccb.services.bionics.grant(GameHandle, GameId)` 和
+`remove_type`；这些 Platform 操作直接调用角色原生规则，不受 v5 检查清单数量上限约束，
+也不强制作者先枚举 UID。Platform 专属的 `summary(GameHandle)` 会同时返回安装数量、当前与
+最大类型化能量以及独立的容量事实，使 Lua 能表达“存在任一仿生装置或电力容量”，而无需
+增加 EOC 形状谓词。
+角色配方知识使用 `ccb.services.recipes.knows(GameHandle, GameId)`、`learn` 与 `forget`；
+它们只处理已学知识，不把书本或助手临时提供的配方算进去，`learn` 保留原生
+`never_learn` 策略。`forget_category(GameHandle, GameId, subcategory?)` 是单独的类型化
+批量操作：它遵循原生分类/子分类选择规则并返回变更前后数量，不会把分类伪装成配方 ID。
+武术流派知识使用 `ccb.services.martial_arts.learn(GameHandle, GameId)` 与 `forget`。
+Platform 学习只改变原生流派集合，不自行显示 UI 文本，使 Mod 可以独立组合呈现；两者都会
+报告已知状态是否发生变化。
+物理持握状态通过 Platform 专属的
+`ccb.services.inventory.wielded(GameHandle)` 单项查询读取；它以常量规模返回活物品 handle
+或 nil，不把旧武器谓词名称固化进新 API。选中的武术流派可能令
+`martial_arts.current(character).force_unarmed` 为真，但物品仍然在物理上被持握，因此 Lua
+应显式组合这两个事实。`services.items.has_flag` 读取包含类型继承在内的有效 flag；
+`services.items.set_flag(item, flag, enabled)` 只改变实例自有 flag 集合，其
+`value.changed` 比较 `own_before` 与 `own_after`。所以继承 flag 的有效状态可以在一次真实
+实例变更前后都保持 true；幂等 unset 也会正确报告 false。
+类型化士气实例使用
+`ccb.services.morale.add(GameHandle, GameId, bonus, max_bonus, options)` 与
+`remove`。`add` 直接复用原生士气叠加规则，并可接收类型化的 `duration`、
+`decay_start` 与 `capped` 选项；`remove` 按原生角色操作移除该士气类型的全部
+物品特定实例。两者都返回变更前后的匹配净加成。这是面向 Lua 组合的领域 service，
+不是 EOC 字段形状包装：调用者必须显式提供 Character handle，计时与呈现也由 Lua
+自行组合。
+当前 activity 状态使用 `ccb.services.activities.snapshot(GameHandle)` 读取。返回值是脱离
+原生对象的有界快照，包含类型化 activity ID、原生 moves 预算、打断/恢复标志与进度；
+avatar 和 NPC 的 Character handle 都可使用，不会把借用的 `player_activity` 暴露给 Lua。
+`assign_timed` 把正数类型化 `TimeDuration` 转换为经过边界检查的原生 moves，并直接调用
+`Character::assign_activity`，从而保留恢复、backlog 和 NPC 记账。它只接受普通的 time-based
+activity；专用原生 actor/handler、EOC policy、multi-activity、自动需求 activity，以及
+speed/neither moves 预算都会被拒绝。这些形状需要显式 Lua-native 领域构造器，不能用空的
+targets/values 强行构造，也不能暗中重新进入 EOC。`cancel` 只在确有当前 activity 时调用
+`Character::cancel_activity`，因此既保留 actor 清理、可恢复 backlog、搬运清理、事件与活动
+音效收尾，也不会让无操作取消悄悄改写 backlog。三个操作都返回统一的结构化 service result。
+伤口状态使用
+`ccb.services.wounds.snapshot(character, body_part)` 和类型化的
+`GameId<body_part>` 读取。返回值按该身体部位的原生顺序给出脱离原生对象的数组，每项包含
+类型化伤口 id、基础/当前疼痛、类型化愈合总时长/已进度与愈合比例。身体部位必须精确存在
+于该 Character 当前解剖，service 不会选择 next-best 或其他回退部位。
+通过 Platform 的精确部位与每部位上限策略后，`add(character, body_part, wound)` 会调用
+`Character::apply_wound`，保留原生 add-or-worsen 规则并立即同步 Character 的
+`perceived_pain` 派生状态；`remove` 则删除该精确部位上指定类型的全部实例，并在发生变化后
+执行同样的同步。显式 direct add 有意绕过 Wound 在自然伤害候选选择中的身体部位
+eligibility，调用者指定的精确部位具有最终决定权。Platform service 会执行 Wound 的每部位
+上限策略，达到上限后的 add 是
+成功的无操作并返回 `changed = false`。写操作只允许在 Platform runtime callback 内进行；snapshot
+仍是 world-ready 只读查询。成功变更返回 `changed` 和完整的 `before`/`after` 快照；移除
+不存在的类型时 `changed = false`。错误 GameId kind 或未知 id 会在变更前抛出
+`invalid_argument`；过期/已销毁 handle、非 Character 目标与不存在的身体部位则返回统一的
+结构化 service 错误。这个 API 建模的是伤口
+领域，不公开 `u_add_wound`、alpha/beta、EOC runner 或 JSON 对象通道。
+2026-08-11 的本地门禁直接证明了这些 service 语义。确定性 callback 依次添加伤口
+A（疼痛 4）、B（疼痛 7）、A（疼痛 4），快照保持原生 A/B/A 顺序；随后 add/remove
+过程中 pain、perceived pain 与 Character morale 依次同步为 4、11、15、7、0。门禁还证明
+callback 外仍可读取空 snapshot，而直接 `add` 与 `remove` 都会以 callback-only 诊断拒绝。
+聚焦 service 标签与完整 Platform 套件都在原生实现和测试重新编译后通过。
+这套 Lua-native 策略有意不作为旧伤口 selector 的直接执行后端。旧
+`f_add_wound`/`f_remove_wound` 通过默认可采用 `next_best` 的
+`Creature::get_part(bodypart_id)` 解析身体部位，而 Platform service 只接受当前解剖中精确
+存在的部位；旧 add 路径也直接调用 add-or-worsen，不执行 Platform service 所强制的每部位
+上限检查。因此即使 id 都是字面量且 Character actor 已证明，`u_add_wound`、
+`npc_add_wound`、`u_remove_wound` 与 `npc_remove_wound` 仍是 planned 迁移工作。迁移器会
+生成 TODO，不会静默改变玩法。作者重写时必须显式选择新的“精确部位、上限生效”策略；
+Platform 不会增加旧字段形状的兼容开关或入口。
+生物效果复用类型化的 `ccb.services.effects` 领域。当前有界迁移只接受字面量效果 ID，
+其 duration 必须是正整数且不超过 365 天，或为 `PERMANENT`；移除只接受不带身体部位
+选择器的单个字面量 ID。动态 ID/时长、随机范围、intensity/force/身体部位扩展、数组、
+`RANDOM` 与 `ALL` 都继续保持 partial，因为这些形状需要显式建模取值、角色和解剖语义，
+不能伪装成旧 key 包装。旧版单个变量对象 remove 实际会静默不做任何移除，因此也不会被
+迁移器擅自“修好”。
+旧 `u_*` 名称表示 EOC 的 alpha talker，并不等于 avatar 类型。迁移器只在有界的
+`game_start` 事件形状中把私有局部 actor 绑定为 avatar，因为该身份在这里已经证明；迁移器
+还会检查经过审查的原生规范 sender 集合，一旦集合变化就安全降级，绝不会只凭事件名证明。
+另一个单独审计过的切片只覆盖 `character_wields_item`、`character_wears_item`、
+`character_takeoff_item` 与 `character_armor_destroyed`：其中旧 `u` Character 绑定为
+`context.actors.character`；也只有在这四类事件中，字面量旧
+`npc_set_flag`/`npc_unset_flag` 才能以 `context.actors.item` 为目标。普通原生 send 没有
+物品 talker，所以生成代码必须先检查 nil。该规则不会把其他上下文的 `npc` 泛化成物品或
+Character；这里的 `u_set_flag` 也继续保持 partial，因为 `u` 是 Character talker。
+其他事件和对话形状会保持 partial，直到迁移器把对应的 Platform 语义 actor 字段映射清楚，
+并证明每个 handle 的类型；擅自把未证明的角色替换成 `services.characters.avatar()` 会改变
+玩法。对话 Hook 已提供 `avatar`/`interlocutor`，但这本身并不能证明某个旧 selector 使用
+哪一个 talker。这个仅属于迁移器的决定绝不会给 Platform 添加 alpha/beta。
+领域语义审计会有意覆盖按名称猜测的账本结果。原生 `Wound`/`WoundFix` 暂存与精确身体
+部位伤口 service 已通过本地编译验证门禁：内容标签的 5 个用例、321 个断言覆盖
+add/replace/edit、回滚、requirement finalize、反向链接刷新、身体部位缓存刷新与过期 handle；
+service 证据见上文。静态提取器现在可把有界、具体的 `wound` 与 `wound_fix` JSON 定义转换为
+原生 builder，包括有限疼痛/愈合/伤害区间、类型化链接、身体部位过滤、技能、熟练度、移除/
+新增伤口及外部 Requirement 引用；继承、隐式无限愈合、复杂翻译元数据和内联 requirement
+对象仍会生成明确 TODO，不会暗中调用旧 loader。因此这两个 JSON selector 已是
+`bounded_implemented_unverified`。
+本地 creator/migrator 现已通过 55 个用例（提取器 46 个、脚手架 9 个）。Wound/WoundFix
+提取会按 Platform 的 UTF-8 字节上限安全失败：超长 id/文本及互相冲突的身体部位 flag 会
+生成明确 TODO 或拒绝该定义，熟练度倍率转成原生 `float` 后不再为正时也会被拒绝。
+
+四个旧 `u_*`/`npc_*` 伤口变更 selector 仍保持 planned，因为它们的 next-best 身体部位解析
+和 add 上限行为与这套有意采用严格部位、上限生效的 service 不一致。具备领域 service 或
+静态定义提取器不等于 effect selector 等价，也不能据此自动转换。淋雨湿润、直接伤害、专用 activity actor 构造、
+导航和通用传送仍是 planned 原生领域，因为当前
+Character/物品原语没有保留它们的完整副作用。Character activity 快照、普通 time-based
+分配与取消已经实现，其书面本地 C++ 策略覆盖也已通过；旧 selector 仍需完成精确形状转换后
+才能晋级。在已证明为
+`game_start` actor 的形状中，
+字面量 `u_has_item` 现在会通过局部 Lua helper 组合 `inventory.resources` 并保留原生的
+“charges 或 amount”判断；字面量 `u_has_move_mode` 则比较类型化 Character snapshot。
+已证明为 Character 的有界切片会转换字符串 `u_has_weapon`/`u_can_drop_weapon` 与字面量
+`u_has_wielded_with_flag`；生成 helper 会精确组合单项物理持握 handle、`force_unarmed`、
+有效物品 flag 和 `NO_UNWIELD`，不会公开 EOC 形状 API。四事件物品 talker 切片也会在
+语义物品 nil guard 后转换字面量 `npc_set_flag`/`npc_unset_flag`。因此这五个 selector 是
+`bounded_implemented_unverified`，绝不表示完整 parity；NPC 武器谓词、
+`u_set_flag`/`u_unset_flag`、动态 flag、其他角色来源、任务预留与有界 moves 扣减仍保持
+primitive-only 或 planned。账本 target 只描述领域归属，不能证明未列出的 selector 形状
+已经可互换。
+类型化角色谓词复用同一批带结果的 service：`mutations.has` 查询单个或任一突变，
+`martial_arts.get` 查询武术知识和当前选中状态，`proficiencies.get` 查询熟练度知识，
+`bionics.has` 查询指定已安装仿生装置，`bionics.summary` 查询安装数量与容量事实，
+`recipes.knows` 查询已学配方知识。它们仍是普通 Lua
+表达式；迁移输出只用一个局部 helper 在读取值前传播 `CcbResult` 错误。
 
 ## Internal reuse and replacement boundary / 内部复用与替换边界
 
@@ -1137,8 +1637,13 @@ those formats does not increase Lua authoring power and is not a Platform goal.
 inventories and contains exactly one disposition for every JSON type, EOC
 condition key, and EOC effect key.  Its statuses have strict meanings:
 
-- `implemented_unverified`: matching Platform code and declaration exist, but
-  the requested validation gate has not run;
+- `implemented_unverified`: full selector-level replacement is represented by
+  matching Platform code, declaration, tests, migration, and documentation,
+  but the requested validation gate has not run;
+- `bounded_implemented_unverified`: at least one explicitly bounded, real
+  legacy shape has matching Platform code, declaration, tests, migration, and
+  documentation, but other legal values, actors, options, or shapes keep the
+  selector below full parity;
 - `primitive_available_unverified`: one or more native domain primitives exist
   without a public legacy dependency, but selector-level semantic parity has
   not been demonstrated and migration remains open;
@@ -1151,14 +1656,37 @@ condition key, and EOC effect key.  Its statuses have strict meanings:
 The generator, schema, and exact-set checker live under `tools/agent/`.  A
 selector changes status only with source, declaration, test, and documentation
 evidence.  Grouping a selector under a service is architecture classification,
-not proof that the service exists.
+not proof that the service exists.  A bounded migratable shape may reach only
+`bounded_implemented_unverified`; it never promotes its whole selector to
+`implemented_unverified` while dynamic, actor, option, or alternate-shape
+semantics remain.
+
+The audit also records composable-but-inexact starting points instead of
+leaving them as unspecified plans: follower presence, following transitions,
+NPC hostility/neutrality, nearest-city and route reveal operations, aid,
+equipment selection, turn cost, trap placement, and horde signalling already
+have native follower, NPC, overmap, character, effect, inventory,
+presentation, time, world, coordinate, or horde primitives.  Their legacy
+selectors remain unconverted until target selection, variable semantics,
+side effects, and result behaviour are proven end to end.
 
 `ai/lua-first-replacement-ledger.yml` 由三份受检清单生成，每个 JSON type、EOC
-condition key 和 effect key 恰好出现一次。`implemented_unverified` 表示已有代码但尚未
-通过本次验证门；`primitive_available_unverified` 表示已有不依赖旧公共接口的原生积木，
+condition key 和 effect key 恰好出现一次。`implemented_unverified` 表示整个 selector
+已由源码、声明、测试、迁移与文档表示，但尚未通过本次验证门；
+`bounded_implemented_unverified` 表示至少一个明确限定的真实旧形状已经具备源码、声明、
+测试、迁移输出与文档，但 selector 的其他合法动态值、角色、选项或形状仍未等价；
+`primitive_available_unverified` 表示已有不依赖旧公共接口的原生积木，
 但还没有逐 selector 证明等价；`planned` 只表示已确定目标而没有声称替代完成，`private_adapter` 表示
 仍有不公开的旧实现依赖，`reviewed_not_applicable` 表示 Lua 控制流或引擎配置本来就不该
 产生作者 API。把一项归入某个 service 只是架构分类，不能当作 service 已存在的证据。
+只完成有界可迁移形状最多晋级为 `bounded_implemented_unverified`，绝不会让整个 selector
+成为 `implemented_unverified`；仍缺动态值、角色、选项或其他合法形状时必须保留该边界。
+
+审计也会把“已有组合积木但还不等价”的入口从笼统计划中拆出来：随从存在与跟随状态、
+NPC 敌对/中立、最近城市与路线揭示、治疗援助、装备选择、回合消耗、陷阱放置和尸群信号
+已经有 follower、NPC、overmap、character、effect、inventory、presentation、time、
+world、coordinate 或 horde 原语；在目标选择、变量语义、副作用与返回行为完成端到端证明
+之前，它们仍不会被标成已完成迁移。
 
 ## Migration and removal gates / 迁移与移除门槛
 
@@ -1194,12 +1722,58 @@ scores, the global hit-range configuration, bash-damage profiles, clothing
 modifications, overmap land-use codes, overmap-vision profiles,
 overmap locations, profession groups, map-extra collections, vehicle groups,
 fault groups, explosion-light recipes, ammunition effects, addiction types, character modifiers, start locations, climbing aids, weather types, scores, the global mutation-overlay order, zone types, speech pools, end screens, nested recipe categories, attack vectors, magic types, and movement modes), and simple
-event/message behaviour, emits normal Lua composition, and
+event/message behaviour.  Bounded literal `compare_string`,
+`compare_string_match_all`, `one_in_chance`, `x_in_y_chance`,
+`roll_contested`, `mod_is_loaded`, and `current_dimension` conditions become ordinary Lua
+predicates over Platform services.  Random conditions convert only finite
+literal values inside the native service ranges: dynamic denominators,
+non-positive or out-of-range `x/y`, and non-positive, dynamic, or oversized
+die sizes remain explicit TODOs.  Literal avatar `u_has_trait`,
+literal-array `u_has_any_trait`,
+`u_has_martial_art`, `u_using_martial_art`, `u_has_proficiency`, and specific-id
+`u_has_bionics` conditions reuse typed mutation, martial-art, proficiency, and
+bionic queries.  In the proven `game_start` avatar slice, literal
+`u_has_bionics: "ANY"` composes `bionics.summary`, and literal
+`u_know_recipe` composes `recipes.knows`; dynamic values and unproven actor
+contexts remain explicit TODOs.  The proven `game_start` and four item-event Character slices
+also convert string `u_has_weapon`/`u_can_drop_weapon` and literal
+`u_has_wielded_with_flag`; literal `npc_set_flag`/`npc_unset_flag` convert only
+for those item events and retain the optional semantic item guard.  `and`,
+`or`, and `not` become native Lua
+control flow.  Literal values, typed native-event data values, and character-state
+values are emitted as normal Lua expressions instead of legacy variable
+objects.  Literal `message` effects call the Platform message service;
+`give_achievement` effects become typed achievement-service calls; literal
+avatar `u_add_bionic` and `u_lose_bionic` effects become typed bionic-service
+calls; literal one-recipe `u_learn_recipe` and `u_forget_recipe` effects become
+typed recipe-service calls.  Literal category and subcategory
+`u_forget_recipe` shapes become `recipes.forget_category`; dynamic identifiers,
+dynamic subcategories, NPC targets, and unproven actor contexts stay partial.
+Literal avatar `u_learn_martial_art` and
+`u_forget_martial_art` effects become presentation-independent typed
+martial-art service calls.  The exact three-field literal avatar
+`u_add_morale` shape and the one-field literal avatar `u_lose_morale` shape
+become typed morale-service calls; dynamic values and timing extensions remain
+partial until their actor and value semantics are represented explicitly.
+Bounded literal avatar `u_add_effect` and `u_lose_effect` shapes become typed
+effect-service calls; effect options, dynamic values, body-part selectors, and
+batch removal remain partial.
+All legacy `u_add_wound`, `npc_add_wound`, `u_remove_wound`, and
+`npc_remove_wound` shapes remain explicit TODOs.  This includes literal ids,
+non-empty literal removal arrays, and proven Character actors: the old path
+may select a next-best body part and its add bypasses the per-part limit, while
+the Lua-native wound service is exact-part and limit-aware.  Emitting service
+calls would therefore be a behavioural rewrite rather than extraction.
+The extractor emits normal Lua composition and
 writes `MIGRATION_REPORT.md` with a source location for every unresolved
 field.  It accepts the comments and trailing commas used by game data;
 unsupported inheritance, anonymous definitions, disassembly recipes, mixed
 effects, lossy field shapes, malformed numeric shapes, and values outside the
-native integer or skill ranges remain partial with explicit TODOs.  `--check`
+native integer or skill ranges remain partial with explicit TODOs.  A legacy
+`MOD_INFO` is fully classified only for the bounded `id`, plain `name`, string
+`version`, unique `dependencies`, and Boolean `core` shape; every additional
+metadata field remains an explicit TODO rather than being silently discarded.
+`--check`
 compares an existing extraction without writing.  Normal writes stage output
 before installation, and `--force` restores every previous generated file if
 installation fails midway.  The tool never emits a JSON loader, EOC runner, or
@@ -1213,10 +1787,40 @@ equivalence.
 部件位置、载具部件分类、心情表情、伤害信息显示顺序、命名颜色、可旋转符号、物品、
 ASCII 图、肢体评分、全局命中距离配置、bash 伤害配置、服装改造、大地图土地用途、
 大地图视野配置、大地图位置、职业组、地图额外内容集合、载具组、故障组、爆炸光效、弹药效果、成瘾类型、角色修正器、起始位置、攀爬辅助、天气类型、分数、全局突变覆盖显示顺序、区域类型、语音池、结束画面、嵌套配方分类、攻击向量、
-魔法类型、移动模式、配方与简单事件/消息行为，其余字段全部以
+魔法类型、移动模式、配方与简单事件/消息行为。受限的字面量
+`compare_string`、`compare_string_match_all`、`one_in_chance`、
+`x_in_y_chance`、`roll_contested`、`mod_is_loaded` 和 `current_dimension` 条件会转成 Platform service
+上的普通 Lua 谓词；随机条件只转换处于原生 service 范围内的有限字面量，动态分母、非正或
+越界的 `x/y`，以及非正、动态或过大的 die size 都会保留显式 TODO。字面量玩家
+`u_has_trait`、字面量数组 `u_has_any_trait`、`u_has_martial_art`、
+`u_using_martial_art`、`u_has_proficiency` 与指定 ID 的 `u_has_bionics` 会复用类型化
+突变、武术、熟练度和仿生装置查询。在已证明的 `game_start` avatar 切片中，字面量
+`u_has_bionics: "ANY"` 会组合 `bionics.summary`，字面量 `u_know_recipe` 会组合
+`recipes.knows`；动态值和未证明的 actor 上下文仍生成明确 TODO。已证明的
+`game_start` 与四类物品事件 Character 切片还会转换字符串
+`u_has_weapon`/`u_can_drop_weapon` 和字面量 `u_has_wielded_with_flag`；字面量
+`npc_set_flag`/`npc_unset_flag` 只在这四类物品事件中转换，并保留可选语义物品 guard。
+`and/or/not` 会转成 Lua 自身控制流。字面量、类型化原生事件 data 值
+和角色 state 值会直接生成普通 Lua 表达式，而不是旧变量对象；字面量 `message` effect
+会调用 Platform 消息 service，`give_achievement` effect 会生成类型化成就 service 调用，字面量玩家
+`u_add_bionic` 与 `u_lose_bionic` effect 会生成类型化仿生装置 service 调用，字面量
+`u_learn_recipe` 与单配方 `u_forget_recipe` effect 会生成类型化配方 service 调用；字面量
+分类和子分类 `u_forget_recipe` 会生成 `recipes.forget_category`，动态 ID、动态子分类、
+NPC 目标与未证明 actor 上下文仍保持 partial；字面量玩家 `u_learn_martial_art` 与
+`u_forget_martial_art` 会生成不绑定呈现的类型化武术 service 调用；仅含三个必需字段的
+字面量玩家 `u_add_morale` 与单字段字面量玩家 `u_lose_morale` 会生成类型化士气 service
+调用，动态值和扩展计时形状在角色与取值语义被显式建模前仍保持 partial；有界的字面量
+玩家 `u_add_effect` 与 `u_lose_effect` 会生成类型化效果 service 调用，效果选项、动态值、
+身体部位选择器与批量移除仍保持 partial。所有旧 `u_add_wound`、`npc_add_wound`、
+`u_remove_wound` 与 `npc_remove_wound` 形状都会生成显式 TODO；即使 id 是字面量、remove
+数组非空且 Character actor 已证明也不会自动转换，因为旧路径可能选择 next-best 身体部位，
+且旧 add 绕过每部位上限，而 Lua-native 伤口 service 要求精确部位并执行上限。生成 service
+调用会成为行为重写而不是提取；其余字段全部以
 带来源位置的 TODO 写入报告；`--check` 只比较
 现有输出。它支持游戏数据使用的注释与尾逗号；继承、匿名定义、拆解配方、混合 effect
 以及有损字段形状、畸形数字和超出原生整数/技能范围的值都会保持 partial 并写明 TODO。
+旧 `MOD_INFO` 只有 `id`、普通 `name`、字符串 `version`、唯一 `dependencies` 与布尔
+`core` 的有界形状才能完整归类；任何额外元数据字段都会保留显式 TODO，不会被静默丢弃。
 普通写入先暂存再安装，`--force` 中途失败时会恢复全部旧生成文件。工具绝不会生成 JSON
 loader、EOC runner 或原始旧对象，报告也
 不等于玩法等价证明。

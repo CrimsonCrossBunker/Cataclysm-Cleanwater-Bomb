@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "calendar.h"
+#include "catalua_platform_content.h"
 #include "character.h"
 #include "condition.h"
 #include "creature.h"
@@ -789,4 +790,3 @@ void weakpoints::del_from_set( const weakpoints &set )
         }
     }
 }
-#include "catalua_platform_content.h"

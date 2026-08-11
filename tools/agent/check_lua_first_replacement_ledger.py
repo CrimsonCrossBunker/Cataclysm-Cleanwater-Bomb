@@ -21,10 +21,17 @@ def check() -> dict[str, int]:
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
     jsonschema.Draft202012Validator(schema).validate(ledger)
     entries = ledger["entries"]
-    identities = [(entry["inventory"], entry["selector"]) for entry in entries]
-    duplicates = sorted(key for key, count in Counter(identities).items() if count != 1)
+    identities = [
+        (entry["inventory"], entry["selector"]) for entry in entries
+    ]
+    duplicates = sorted(
+        key for key, count in Counter(identities).items() if count != 1
+    )
     if duplicates:
-        raise RuntimeError(f"replacement ledger has duplicate selectors: {duplicates[:20]}")
+        raise RuntimeError(
+            "replacement ledger has duplicate selectors: "
+            f"{duplicates[:20]}"
+        )
 
     source_ids = [source["id"] for source in ledger["sources"]]
     if len(source_ids) != len(set(source_ids)):
@@ -32,9 +39,16 @@ def check() -> dict[str, int]:
 
     expected: set[tuple[str, str]] = set()
     for source in ledger["sources"]:
-        document = json.loads((ROOT / source["path"]).read_text(encoding="utf-8"))
-        if source["source_fingerprint"] != document["source"]["source_fingerprint"]:
-            raise RuntimeError(f"inventory fingerprint changed for {source['id']}")
+        document = json.loads(
+            (ROOT / source["path"]).read_text(encoding="utf-8")
+        )
+        if (
+            source["source_fingerprint"] !=
+            document["source"]["source_fingerprint"]
+        ):
+            raise RuntimeError(
+                f"inventory fingerprint changed for {source['id']}"
+            )
         values = {entry[source["selector"]] for entry in document["entries"]}
         if len(values) != source["entry_count"]:
             raise RuntimeError(f"inventory count changed for {source['id']}")
@@ -44,25 +58,33 @@ def check() -> dict[str, int]:
     extra = sorted(actual - expected)
     if missing or extra:
         raise RuntimeError(
-            f"replacement ledger coverage differs: missing={missing[:20]}, extra={extra[:20]}"
+            "replacement ledger coverage differs: "
+            f"missing={missing[:20]}, extra={extra[:20]}"
         )
     expected_summary = {"total": len(entries)}
     for status in (
         "implemented_unverified",
+        "bounded_implemented_unverified",
         "primitive_available_unverified",
         "planned",
         "private_adapter",
         "reviewed_not_applicable",
     ):
-        expected_summary[status] = sum(entry["status"] == status for entry in entries)
+        expected_summary[status] = sum(
+            entry["status"] == status for entry in entries
+        )
     if ledger["summary"] != expected_summary:
         raise RuntimeError("replacement ledger status summary is stale")
 
+    implemented_statuses = {
+        "implemented_unverified",
+        "bounded_implemented_unverified",
+    }
+    evidenced_statuses = implemented_statuses | {
+        "primitive_available_unverified",
+    }
     for entry in entries:
-        if entry["status"] in {
-            "implemented_unverified",
-            "primitive_available_unverified",
-        }:
+        if entry["status"] in evidenced_statuses:
             evidence = entry["evidence"]
             required_kinds = (
                 "src/",
@@ -73,32 +95,46 @@ def check() -> dict[str, int]:
             if any(not any(value.startswith(kind) for value in evidence)
                    for kind in required_kinds):
                 raise RuntimeError(
-                    "implemented selector or primitive lacks source, declaration, test, or "
-                    f"documentation evidence: {entry['inventory']}:{entry['selector']}"
+                    "implemented selector or primitive lacks source, "
+                    "declaration, test, or "
+                    "documentation evidence: "
+                    f"{entry['inventory']}:{entry['selector']}"
+                )
+            if (
+                entry["status"] in implemented_statuses and
+                "tools/migrate_lua_first.py" not in evidence
+            ):
+                raise RuntimeError(
+                    "implemented selector lacks migration evidence: "
+                    f"{entry['inventory']}:{entry['selector']}"
                 )
             if entry["legacy_dependency"] != "none":
                 raise RuntimeError(
-                    "implemented selector has an unresolved public legacy dependency: "
+                    "implemented selector has an unresolved public legacy "
+                    "dependency: "
                     f"{entry['inventory']}:{entry['selector']}"
                 )
         for evidence in entry["evidence"]:
-            if evidence.startswith(("src/", "data/", "tests/", "tools/", "ai/")) and not (
-                ROOT / evidence
-            ).exists():
-                raise RuntimeError(f"replacement evidence path does not exist: {evidence}")
-    return {
-        "total": len(entries),
-        "implemented_unverified": sum(
-            entry["status"] == "implemented_unverified" for entry in entries
-        ),
-    }
+            if (
+                evidence.startswith(
+                    ("src/", "data/", "tests/", "tools/", "ai/")
+                ) and not (ROOT / evidence).exists()
+            ):
+                raise RuntimeError(
+                    "replacement evidence path does not exist: "
+                    f"{evidence}"
+                )
+    return expected_summary
 
 
 def main() -> int:
     result = check()
     print(
         f"Lua-first replacement ledger covers {result['total']} selectors; "
-        f"{result['implemented_unverified']} are implemented but not yet verified."
+        f"{result['implemented_unverified']} have full unverified coverage "
+        "and "
+        f"{result['bounded_implemented_unverified']} have bounded unverified "
+        "coverage."
     )
     return 0
 

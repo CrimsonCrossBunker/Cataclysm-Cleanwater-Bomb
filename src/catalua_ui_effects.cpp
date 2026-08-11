@@ -45,7 +45,7 @@ void require_id_kind( const script_game_id &id, const std::string &kind,
 }
 
 Creature *resolve_creature(
-    const game_handle &handle, const std::size_t runtime_generation,
+    const game_handle &handle, const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     std::optional<game_handle_error> &error )
 {
@@ -202,7 +202,7 @@ effect *find_effect(
 sol::table list_effects(
     sol::this_state lua, const game_handle &handle,
     const sol::optional<int> &requested_limit,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const int limit = effect_limit(
@@ -240,7 +240,7 @@ sol::table has_effect(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
     const std::optional<script_game_id> &requested_body_part,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_id_kind(
@@ -269,7 +269,7 @@ sol::table get_effect(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
     const std::optional<script_game_id> &requested_body_part,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_id_kind(
@@ -382,7 +382,7 @@ sol::table add_effect(
     const script_game_id &requested_id,
     const script_time_duration &duration,
     const sol::optional<sol::table> &requested_options,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_id_kind(
@@ -431,7 +431,7 @@ sol::table remove_effect(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
     const std::optional<script_game_id> &requested_body_part,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_id_kind(
@@ -522,7 +522,7 @@ sol::table update_effect(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
     const sol::table &requested_options,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_id_kind(
@@ -582,7 +582,7 @@ sol::table update_effect(
 
 void install_effect_api(
     sol::table &game,
-    std::function<std::size_t()> current_runtime_generation,
+    std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write )

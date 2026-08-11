@@ -18,6 +18,12 @@ and the gameplay random stream only when the static content fingerprint is
 unchanged.  A change to an item or recipe definition deliberately requires a
 full data reload.
 
+`runtime/behaviour.lua` also demonstrates Lua-native predicates: stable
+dimension ids come from `ccb.services.gameplay.environment`, string relations
+use the reusable `gameplay.strings` helpers, and gameplay randomness comes
+from the per-Mod `ccb.services.random` stream.  Build larger conditions as
+ordinary Lua functions and modules; do not recreate EOC key tables.
+
 The `runtime/` directory is only a suggested organization.  The loader does
 not require it, and the scaffold command never overwrites generated files.
 Likewise, `content/token.lua` is an ordinary root-local module with a

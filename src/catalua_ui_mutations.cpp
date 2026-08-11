@@ -50,7 +50,7 @@ void require_mutation_id(
 }
 
 Character *resolve_character(
-    const game_handle &handle, const std::size_t runtime_generation,
+    const game_handle &handle, const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     std::optional<game_handle_error> &error )
 {
@@ -588,7 +588,7 @@ sol::table snapshot_state(
 sol::table list_states(
     sol::this_state lua, const game_handle &handle,
     const sol::optional<sol::table> &requested_options,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const state_options options =
@@ -646,7 +646,7 @@ sol::table list_states(
 sol::table has_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_mutation_id(
@@ -668,7 +668,7 @@ sol::table has_state(
 sol::table get_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_mutation_id(
@@ -729,7 +729,7 @@ sol::table grant_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
     const sol::optional<std::string> &requested_variant_id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_mutation_id(
@@ -777,7 +777,7 @@ sol::table grant_state(
 sol::table remove_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_mutation_id(
@@ -822,7 +822,7 @@ sol::table remove_state(
 sol::table set_active_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id, const bool desired,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_mutation_id(
@@ -887,7 +887,7 @@ sol::table set_variant_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
     const std::string &requested_variant_id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_mutation_id(
@@ -931,7 +931,7 @@ sol::table set_variant_state(
 
 void install_mutation_api(
     sol::table &game,
-    std::function<std::size_t()> current_runtime_generation,
+    std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write )

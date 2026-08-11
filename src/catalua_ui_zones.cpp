@@ -6,6 +6,7 @@
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -37,7 +38,7 @@ constexpr std::int64_t maximum_zone_axis_length = 256;
 constexpr std::int64_t maximum_zone_volume = 65536;
 
 struct script_zone_token {
-    std::size_t runtime_generation = 0;
+    game_handle_runtime runtime;
     std::size_t world_generation = 0;
     std::string faction;
     std::string type;
@@ -47,7 +48,7 @@ struct script_zone_token {
     tripoint_rel_ms personal_start = tripoint_rel_ms::zero;
     tripoint_rel_ms personal_end = tripoint_rel_ms::zero;
     bool personal = false;
-    std::size_t ordinal = 0;
+    std::weak_ptr<const void> lifetime_identity;
 };
 
 std::string lowercase_ascii( std::string value )
@@ -188,17 +189,29 @@ bool token_matches_zone(
            token.end;
 }
 
+bool token_owns_zone(
+    const script_zone_token &token,
+    const zone_data &entry )
+{
+    const std::weak_ptr<const void> identity =
+        entry.get_lifetime_identity();
+    return !token.lifetime_identity.owner_before(
+               identity ) &&
+           !identity.owner_before(
+               token.lifetime_identity );
+}
+
 zone_data *resolve_zone(
     const script_zone_token &token,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     std::optional<game_handle_error> &error )
 {
-    if( token.runtime_generation !=
-        runtime_generation ) {
+    if( !token.runtime.is_active_match(
+            runtime_generation ) ) {
         error = game_handle_error{
             "stale_runtime",
-            "The ZoneToken belongs to a previous Lua runtime"
+            "The ZoneToken belongs to an inactive or different Lua runtime"
         };
         return nullptr;
     }
@@ -213,16 +226,15 @@ zone_data *resolve_zone(
     std::vector<zone_manager::ref_zone_data> zones =
         zone_manager::get_manager().get_zones(
             faction_id( token.faction ) );
-    std::size_t ordinal = 0;
     for( zone_data &entry : zones ) {
         if( !token_matches_zone(
                 token, entry ) ) {
             continue;
         }
-        if( ordinal == token.ordinal ) {
+        if( token_owns_zone(
+                token, entry ) ) {
             return &entry;
         }
-        ++ordinal;
     }
     error = game_handle_error{
         "not_found",
@@ -233,12 +245,11 @@ zone_data *resolve_zone(
 
 script_zone_token make_zone_token(
     zone_data &entry,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     script_zone_token result;
-    result.runtime_generation =
-        runtime_generation;
+    result.runtime = runtime_generation;
     result.world_generation =
         world_generation;
     result.faction =
@@ -253,23 +264,13 @@ script_zone_token make_zone_token(
         entry.get_end_point();
     result.personal =
         entry.get_is_personal();
+    result.lifetime_identity =
+        entry.get_lifetime_identity();
     if( result.personal ) {
         result.personal_start =
             entry.get_personal_start_point();
         result.personal_end =
             entry.get_personal_end_point();
-    }
-    std::vector<zone_manager::ref_zone_data> zones =
-        zone_manager::get_manager().get_zones(
-            entry.get_faction() );
-    for( zone_data &candidate : zones ) {
-        if( &candidate == &entry ) {
-            break;
-        }
-        if( token_matches_zone(
-                result, candidate ) ) {
-            ++result.ordinal;
-        }
     }
     return result;
 }
@@ -743,7 +744,7 @@ sol::table snapshot_option_descriptions(
 
 sol::table snapshot_zone(
     sol::state_view lua, zone_data &entry,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::table result = lua.create_table();
@@ -800,14 +801,13 @@ sol::table snapshot_zone(
 sol::table create_zone(
     sol::this_state lua,
     const sol::table &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const zone_create_options options =
         read_zone_create_options( requested );
     script_zone_token identity;
-    identity.runtime_generation =
-        runtime_generation;
+    identity.runtime = runtime_generation;
     identity.world_generation =
         world_generation;
     identity.faction =
@@ -946,7 +946,7 @@ sol::table rename_zone(
     sol::this_state lua,
     const script_zone_token &token,
     const std::string &requested_name,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     validate_zone_name(
@@ -996,7 +996,7 @@ sol::table set_zone_enabled(
     sol::this_state lua,
     const script_zone_token &token,
     const bool enabled,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -1045,7 +1045,7 @@ sol::table set_zone_temporary_disabled(
     sol::this_state lua,
     const script_zone_token &token,
     const bool disabled,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -1097,7 +1097,7 @@ sol::table set_zone_position(
     const script_zone_token &token,
     const script_tripoint_coord &requested_start,
     const script_tripoint_coord &requested_end,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -1240,7 +1240,7 @@ sol::table set_zone_position(
 sol::table remove_zone(
     sol::this_state lua,
     const script_zone_token &token,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -1324,7 +1324,7 @@ sol::table list_zone_matches(
     sol::this_state lua,
     const zone_list_options &options,
     const std::optional<tripoint_abs_ms> &position,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const std::vector<zone_match> matches =
@@ -1375,7 +1375,7 @@ sol::table list_zone_matches(
 sol::table list_zones(
     sol::this_state lua,
     const sol::optional<sol::table> &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     return list_zone_matches(
@@ -1391,7 +1391,7 @@ sol::table zones_at(
     sol::this_state lua,
     const script_tripoint_coord &position,
     const sol::optional<sol::table> &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     return list_zone_matches(
@@ -1407,7 +1407,7 @@ sol::table zones_at(
 sol::table get_zone(
     sol::this_state lua,
     const script_zone_token &token,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -1432,7 +1432,7 @@ sol::table zone_contains(
     sol::this_state lua,
     const script_zone_token &token,
     const script_tripoint_coord &position,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const tripoint_abs_ms native_position =
@@ -1459,7 +1459,7 @@ sol::table zone_contains(
 
 void install_zone_api(
     sol::state &lua, sol::table &game,
-    std::function<std::size_t()> current_runtime_generation,
+    std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write )

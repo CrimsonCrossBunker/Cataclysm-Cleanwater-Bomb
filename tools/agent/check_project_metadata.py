@@ -15,7 +15,9 @@ import jsonschema
 import yaml
 
 from audit_repository_governance import validate_repository, validate_target
-from check_lua_first_replacement_ledger import check as check_lua_first_replacement_ledger
+from check_lua_first_replacement_ledger import (
+    check as check_lua_first_replacement_ledger,
+)
 from generate_markdown_inventory import contributor_rejection_reason
 
 
@@ -159,8 +161,8 @@ def validate_lua_first_roadmap(roadmap: dict | None = None) -> None:
         raise ValueError("duplicate capability id in Lua-first roadmap")
     for capability in roadmap["capabilities"]:
         if (
-            capability["status"] == "available"
-            and capability["legacy_dependency"] == "public_legacy"
+            capability["status"] == "available" and
+            capability["legacy_dependency"] == "public_legacy"
         ):
             raise ValueError(
                 f"available Lua-first capability exposes public legacy "

@@ -20,6 +20,18 @@
 ---@field core boolean
 local ModDefinition = {}
 
+---@class CcbPlatformBubbleMapSquarePayload
+---@field coordinate_space 'bub_ms' Literal native space tag.
+---@field x integer Bubble map-square x coordinate.
+---@field y integer Bubble map-square y coordinate.
+---@field z integer Bubble map-square z coordinate.
+
+---@class CcbPlatformAbsoluteMapSquarePayload
+---@field coordinate_space 'abs_ms' Literal native space tag.
+---@field x integer Absolute map-square x coordinate.
+---@field y integer Absolute map-square y coordinate.
+---@field z integer Absolute map-square z coordinate.
+
 ---@class ItemDefinitionOptions
 ---@field id string Stable item type id.
 ---@field name? string Display name; defaults to id.
@@ -569,6 +581,45 @@ function SubBodyPartDefinition:location_under(sub_body_part_id) end
 ---@return SubBodyPartDefinition self
 function SubBodyPartDefinition:unarmed_damage(damage_type, amount) end
 
+---@class WoundDefinitionOptions
+---@field id string Stable native wound-type id.
+---@field name? string Player-facing singular name; defaults to id.
+---@field plural_name? string Player-facing plural name; defaults to name.
+---@field description string Non-empty player-facing description.
+---@field pain_min? integer Minimum pain rolled when the wound is created; defaults to zero.
+---@field pain_max? integer Maximum pain no lower than pain_min; defaults to zero.
+---@field healing_min_turns? integer Positive minimum healing duration in turns; defaults to one.
+---@field healing_max_turns? integer Maximum healing duration no shorter than healing_min_turns; defaults to one.
+---@field damage_min? integer Non-negative minimum incoming damage used by natural wound candidate selection.
+---@field damage_max? integer Maximum incoming damage no lower than damage_min, used by natural candidate selection.
+---@field weight? integer Positive relative natural-selection weight; defaults to one.
+---@field per_part_limit? integer Non-negative per-body-part instance limit; zero is unlimited.
+---@field required_body_part_flag? string Existing or same-transaction JsonFlag required when natural damage selection tests a body part.
+---@field forbidden_body_part_flag? string Existing or same-transaction JsonFlag forbidden when natural damage selection tests a body part.
+
+---@class WoundDefinition
+---@field id string
+local WoundDefinition = {}
+---@param id string Existing or same-transaction DamageType id; each id may be added once and at least one is required.
+---@return WoundDefinition self
+function WoundDefinition:damage_type(id) end
+---@param id string Existing or same-transaction LimbScore id.
+---@param penalty number Finite penalty from zero through one.
+---@return WoundDefinition self
+function WoundDefinition:limb_score(id, penalty) end
+---@param id string Existing or same-transaction non-self Wound id.
+---@param chance integer Progression chance from zero through 100.
+---@return WoundDefinition self
+function WoundDefinition:progression(id, chance) end
+---Require this body-part type during natural damage-selection candidate filtering.
+---@param kind 'head'|'torso'|'sensor'|'mouth'|'arm'|'hand'|'leg'|'foot'|'wing'|'tail'|'other'
+---@return WoundDefinition self
+function WoundDefinition:require_body_part_type(kind) end
+---Forbid this body-part type during natural damage-selection candidate filtering.
+---@param kind 'head'|'torso'|'sensor'|'mouth'|'arm'|'hand'|'leg'|'foot'|'wing'|'tail'|'other'
+---@return WoundDefinition self
+function WoundDefinition:forbid_body_part_type(kind) end
+
 ---@class BodyPartDefinitionOptions
 ---@field id string Stable native body-part id.
 ---@field name string Player-facing singular name.
@@ -621,6 +672,37 @@ function BodyPartDefinition:limb_score(limb_score_id, score, maximum) end
 ---@param disable_fraction? number Fraction from zero through one.
 ---@return BodyPartDefinition self
 function BodyPartDefinition:quality(quality_id, level, disable_fraction) end
+
+---@class WoundFixDefinitionOptions
+---@field id string Stable native wound-fix id.
+---@field name? string Player-facing action name; defaults to id.
+---@field description string Non-empty player-facing treatment description.
+---@field success_message? string Player-facing successful-treatment message.
+---@field duration_turns? integer Non-negative base duration whose move cost fits the native integer range.
+---@field health_delta? integer Signed body-part HP change applied by the treatment.
+
+---@class WoundFixDefinition
+---@field id string
+local WoundFixDefinition = {}
+---@param id string Existing or same-transaction Skill id.
+---@param level integer Required level from zero through the native skill maximum.
+---@return WoundFixDefinition self
+function WoundFixDefinition:skill(id, level) end
+---@param id string Existing or same-transaction Proficiency id.
+---@param multiplier number Positive finite treatment-time multiplier that remains positive as a native float.
+---@param mandatory boolean Whether the proficiency is required to perform the treatment.
+---@return WoundFixDefinition self
+function WoundFixDefinition:proficiency(id, multiplier, mandatory) end
+---@param id string Existing or same-transaction Wound id removed by the treatment; at least one removal is required.
+---@return WoundFixDefinition self
+function WoundFixDefinition:removes(id) end
+---@param id string Existing or same-transaction Wound id added by the treatment.
+---@return WoundFixDefinition self
+function WoundFixDefinition:adds(id) end
+---@param id string Existing or same-transaction Requirement id.
+---@param count integer Positive native requirement multiplier; multiplied and subsequently consolidated component/tool counts must fit signed native integers.
+---@return WoundFixDefinition self
+function WoundFixDefinition:requires(id, count) end
 
 ---@class AnatomyDefinitionOptions
 ---@field id string Stable native anatomy id.
@@ -833,7 +915,7 @@ function SpeciesDefinition:placate(trigger) end
 
 ---@class EmissionProfilePayload
 ---@field emission_id string
----@field position CcbCoordinateTable Bubble map-square position of this emission.
+---@field position CcbPlatformBubbleMapSquarePayload Detached bubble map-square position of this emission.
 ---@field fallback EmissionProfile Immutable static fallback authored on the definition.
 
 ---@class EmissionDefinition
@@ -1238,9 +1320,9 @@ function ExplosionLightDefinition:shockwave(options) end
 ---@class AmmoImpactPolicyPayload
 ---@field ammo_effect_id string
 ---@field dealt_damage integer
----@field source CcbGameHandle|nil
----@field target CcbGameHandle|nil
----@field position CcbCoordinateTable
+---@field source GameHandle|nil Generation-checked source creature when present.
+---@field target GameHandle|nil Generation-checked target creature when present.
+---@field position CcbPlatformBubbleMapSquarePayload Detached impact position.
 
 ---@class AmmoEffectDefinition
 ---@field id string
@@ -1303,7 +1385,7 @@ function AmmoEffectDefinition:impact_policy(handler_id) end
 ---@field addiction_type_id string
 ---@field intensity integer
 ---@field sated_turns integer
----@field character CcbGameHandle Generation-checked addicted character.
+---@field character GameHandle Generation-checked addicted character.
 
 ---@class AddictionTypeDefinition
 ---@field id string
@@ -1321,7 +1403,7 @@ function AddictionTypeDefinition:tick_policy(handler_id) end
 ---@class CharacterModifierPayload
 ---@field modifier_id string
 ---@field skill_id string Empty when the consumer did not provide a skill.
----@field character CcbGameHandle Generation-checked character being evaluated.
+---@field character GameHandle Generation-checked character being evaluated.
 
 ---@class CharacterModifierDefinition
 ---@field id string
@@ -1465,7 +1547,7 @@ function ClimbingAidDefinition:deploy(furniture_id) end
 ---@field wind_description string
 ---@field wind_direction integer
 ---@field turn integer
----@field location CcbCoordinateTable Absolute map-square sample location.
+---@field location CcbPlatformAbsoluteMapSquarePayload Detached absolute map-square sample location.
 
 ---@class WeatherTypeDefinition
 ---@field id string
@@ -2103,11 +2185,13 @@ local WeaponCategoryDefinition = {}
 ---@return WeaponCategoryDefinition self
 function WeaponCategoryDefinition:proficiency(proficiency_id) end
 
+---Non-copyable borrowed callback context. Every member becomes stale after the
+---item-use handler returns or fails; saving the userdata does not extend its lease.
 ---@class ItemUseContext
 ---@field player_name string
 ---@field item_id string
----@field character GameHandle Generation-safe handle for the using character.
----@field item GameHandle Generation-safe handle for the used item instance.
+---@field character GameHandle Runtime-owner- and generation-safe handle for the using character.
+---@field item GameHandle Runtime-owner- and generation-safe handle for the used item instance.
 ---@field position TripointCoord Reality-bubble map-square (`bub`/`ms`) position of use.
 ---@field charges integer
 local ItemUseContext = {}
@@ -2234,9 +2318,17 @@ function CcbPlatformContent.ItemGroup(options) end
 ---@return SubBodyPartDefinition
 function CcbPlatformContent.SubBodyPart(options) end
 
+---@param options WoundDefinitionOptions
+---@return WoundDefinition
+function CcbPlatformContent.Wound(options) end
+
 ---@param options BodyPartDefinitionOptions
 ---@return BodyPartDefinition
 function CcbPlatformContent.BodyPart(options) end
+
+---@param options WoundFixDefinitionOptions
+---@return WoundFixDefinition
+function CcbPlatformContent.WoundFix(options) end
 
 ---@param options AnatomyDefinitionOptions
 ---@return AnatomyDefinition
@@ -2441,7 +2533,7 @@ function CcbPlatformContent.MagicType(options) end
 ---@return MovementModeDefinition
 function CcbPlatformContent.MovementMode(options) end
 
----@alias PlatformContentDefinition ItemDefinition|RecipeDefinition|NestedRecipeCategoryDefinition|ToolQualityDefinition|SkillDisplayDefinition|SkillDefinition|VitaminDefinition|JsonFlagDefinition|DamageTypeDefinition|MaterialDefinition|AmmunitionTypeDefinition|ItemCategoryDefinition|RecipeCategoryDefinition|ProficiencyCategoryDefinition|ProficiencyDefinition|WeaponCategoryDefinition|RequirementDefinition|RecipeGroupDefinition|ScentTypeDefinition|SpeedDescriptionDefinition|HarvestDropTypeDefinition|HarvestDefinition|BehaviorDefinition|MonsterAttackDefinition|EffectTypeDefinition|WeakpointSetDefinition|FieldTypeDefinition|ItemGroupDefinition|SubBodyPartDefinition|BodyPartDefinition|AnatomyDefinition|BodyGraphDefinition|MonsterDefinition|MoraleTypeDefinition|DiseaseTypeDefinition|MonsterFlagDefinition|SpeciesDefinition|EmissionDefinition|MonsterFactionDefinition|MutationTypeDefinition|ConnectGroupDefinition|MutationCategoryDefinition|ConstructionCategoryDefinition|ConstructionGroupDefinition|VehiclePartLocationDefinition|MoodFaceDefinition|DamageInfoOrderDefinition|VehiclePartCategoryDefinition|NamedColorDefinition|RotatableSymbolDefinition|AsciiArtDefinition|LimbScoreDefinition|HitRangeDefinition|BashDamageProfileDefinition|ClothingModDefinition|OvermapLandUseCodeDefinition|OvermapVisionDefinition|OvermapLocationDefinition|ProfessionGroupDefinition|MapExtraCollectionDefinition|VehicleGroupDefinition|FaultGroupDefinition|ExplosionLightDefinition|AmmoEffectDefinition|AddictionTypeDefinition|CharacterModifierDefinition|StartLocationDefinition|ClimbingAidDefinition|WeatherTypeDefinition|ScoreDefinition|OverlayOrderDefinition|ZoneTypeDefinition|SpeechPoolDefinition|EndScreenDefinition|ActivityTypeDefinition|HelpTopicDefinition|SnippetCategoryDefinition|PlaylistDefinition|AttackVectorDefinition|MagicTypeDefinition|MovementModeDefinition
+---@alias PlatformContentDefinition ItemDefinition|RecipeDefinition|NestedRecipeCategoryDefinition|ToolQualityDefinition|SkillDisplayDefinition|SkillDefinition|VitaminDefinition|JsonFlagDefinition|DamageTypeDefinition|MaterialDefinition|AmmunitionTypeDefinition|ItemCategoryDefinition|RecipeCategoryDefinition|ProficiencyCategoryDefinition|ProficiencyDefinition|WeaponCategoryDefinition|RequirementDefinition|RecipeGroupDefinition|ScentTypeDefinition|SpeedDescriptionDefinition|HarvestDropTypeDefinition|HarvestDefinition|BehaviorDefinition|MonsterAttackDefinition|EffectTypeDefinition|WeakpointSetDefinition|FieldTypeDefinition|ItemGroupDefinition|SubBodyPartDefinition|WoundDefinition|BodyPartDefinition|WoundFixDefinition|AnatomyDefinition|BodyGraphDefinition|MonsterDefinition|MoraleTypeDefinition|DiseaseTypeDefinition|MonsterFlagDefinition|SpeciesDefinition|EmissionDefinition|MonsterFactionDefinition|MutationTypeDefinition|ConnectGroupDefinition|MutationCategoryDefinition|ConstructionCategoryDefinition|ConstructionGroupDefinition|VehiclePartLocationDefinition|MoodFaceDefinition|DamageInfoOrderDefinition|VehiclePartCategoryDefinition|NamedColorDefinition|RotatableSymbolDefinition|AsciiArtDefinition|LimbScoreDefinition|HitRangeDefinition|BashDamageProfileDefinition|ClothingModDefinition|OvermapLandUseCodeDefinition|OvermapVisionDefinition|OvermapLocationDefinition|ProfessionGroupDefinition|MapExtraCollectionDefinition|VehicleGroupDefinition|FaultGroupDefinition|ExplosionLightDefinition|AmmoEffectDefinition|AddictionTypeDefinition|CharacterModifierDefinition|StartLocationDefinition|ClimbingAidDefinition|WeatherTypeDefinition|ScoreDefinition|OverlayOrderDefinition|ZoneTypeDefinition|SpeechPoolDefinition|EndScreenDefinition|ActivityTypeDefinition|HelpTopicDefinition|SnippetCategoryDefinition|PlaylistDefinition|AttackVectorDefinition|MagicTypeDefinition|MovementModeDefinition
 
 ---@param definition PlatformContentDefinition
 function CcbPlatformContent.add(definition) end
@@ -2566,9 +2658,17 @@ function CcbPlatformContent.edit_item_group(id) end
 ---@return SubBodyPartDefinition
 function CcbPlatformContent.edit_sub_body_part(id) end
 
+---@param id string Wound id staged earlier by this Mod.
+---@return WoundDefinition
+function CcbPlatformContent.edit_wound(id) end
+
 ---@param id string BodyPart id staged earlier by this Mod.
 ---@return BodyPartDefinition
 function CcbPlatformContent.edit_body_part(id) end
+
+---@param id string Wound-fix id staged earlier by this Mod.
+---@return WoundFixDefinition
+function CcbPlatformContent.edit_wound_fix(id) end
 
 ---@param id string Anatomy id staged earlier by this Mod.
 ---@return AnatomyDefinition
@@ -2769,6 +2869,35 @@ function CcbPlatformContent.edit_magic_type(id) end
 ---@return MovementModeDefinition
 function CcbPlatformContent.edit_movement_mode(id) end
 
+---@class CcbPlatformNativeEvent
+---@field type string Native event type without the `game:` prefix.
+---@field turn integer Absolute event turn.
+---@field data table<string, boolean|integer|string>
+---@field data_types table<string, string>
+---Live handles keyed by semantic native event fields. Character-id fields use
+---names such as `character`, `attacker`, `killer`, or `victim`. `item` exists
+---only for character_wields_item, character_wears_item,
+---character_takeoff_item, and character_armor_destroyed when the native event
+---actually carries an item_location talker. No positional/avatar fallback or
+---EOC alpha/beta aliases are added.
+---@field actors table<string, GameHandle>
+
+---@class CcbPlatformDialogueStartHook
+---@field avatar GameHandle The avatar starting the dialogue.
+---@field interlocutor GameHandle|table The creature/entity handle or detached non-entity talker snapshot.
+---@field initial_topic string Initial dialogue topic id.
+
+---@class CcbPlatformDialogueOptionHook
+---@field avatar GameHandle The avatar participating in the dialogue.
+---@field interlocutor GameHandle|table The creature/entity handle or detached non-entity talker snapshot.
+---@field current_topic string Topic being left.
+---@field selected_topic string Topic selected by the native dialogue response.
+
+---@class CcbPlatformDialogueEndHook
+---@field avatar GameHandle The avatar ending the dialogue.
+---@field interlocutor GameHandle|table The creature/entity handle or detached non-entity talker snapshot.
+---@field last_topic string Last processed dialogue topic id.
+
 ---@class CcbPlatformRuntime
 local CcbPlatformRuntime = {}
 
@@ -2870,9 +2999,10 @@ function CcbPlatformPresentation.choose(prompt, entries) end
 function CcbPlatformPresentation.input_text(prompt, options) end
 
 ---@class CcbPlatformServices
----@field achievements CcbAchievementsApi
+---@field achievements CcbPlatformAchievementsApi
+---@field activities CcbPlatformActivitiesApi
 ---@field addictions CcbAddictionsApi
----@field bionics CcbBionicsApi
+---@field bionics CcbPlatformBionicsApi
 ---@field camps CcbCampsApi
 ---@field characters CcbCharactersApi
 ---@field constants CcbConstantsApi
@@ -2883,20 +3013,21 @@ function CcbPlatformPresentation.input_text(prompt, options) end
 ---@field enums CcbEnumsApi
 ---@field factions CcbFactionsApi
 ---@field followers CcbFollowersApi
----@field handles CcbHandlesApi
+---@field handles CcbHandlesApi Handles are bound to the exact Platform Mod runtime owner as well as its runtime/world generations.
 ---@field hordes CcbHordesApi
----@field inventory CcbInventoryApi
+---@field inventory CcbPlatformInventoryApi
 ---@field items CcbItemsApi
----@field martial_arts CcbMartialArtsApi
+---@field martial_arts CcbPlatformMartialArtsApi
 ---@field messages CcbMessagesApi
 ---@field missions CcbMissionsApi
+---@field morale CcbPlatformMoraleApi
 ---@field mutations CcbMutationsApi
 ---@field needs CcbNeedsApi
 ---@field npcs CcbNpcsApi
 ---@field overmap CcbOvermapApi
 ---@field proficiencies CcbProficienciesApi
----@field random CcbRandomApi
----@field recipes CcbRecipesApi
+---@field random CcbPlatformRandomApi
+---@field recipes CcbPlatformRecipesApi
 ---@field relocation CcbRelocationApi
 ---@field requirements CcbRequirementsApi
 ---@field serde CcbSerdeApi
@@ -2913,9 +3044,292 @@ function CcbPlatformPresentation.input_text(prompt, options) end
 ---@field vehicles CcbVehiclesApi
 ---@field vitamins CcbVitaminsApi
 ---@field weather CcbWeatherApi
+---@field wounds CcbPlatformWoundsApi
 ---@field world CcbWorldApi
 ---@field zones CcbZonesApi
+---@field gameplay CcbPlatformGameplayApi
 local CcbPlatformServices = {}
+
+---@class CcbPlatformInventoryApi: CcbInventoryApi
+local CcbPlatformInventoryApi = {}
+
+---Return the Character's singular physical wielded item without scanning a page.
+---A force-unarmed martial-art style does not hide a physically wielded item;
+---compose that policy separately through `martial_arts.current`.
+---@param character GameHandle Character handle.
+---@return CcbResult result `value` is a live item GameHandle or nil when no item is wielded.
+function CcbPlatformInventoryApi.wielded(character) end
+
+---@class CcbPlatformAchievementsApi: CcbAchievementsApi
+local CcbPlatformAchievementsApi = {}
+
+---Complete any currently tracked pending achievement, matching native gameplay awards.
+---@param id GameId GameId<achievement>
+---@return CcbResult result `value` is true only when this call changed the completion state.
+function CcbPlatformAchievementsApi.complete(id) end
+
+---@class CcbPlatformActivitySnapshot
+---@field active boolean
+---@field id? GameId GameId<activity>; nil when no activity is active.
+---@field verb string Player-facing progressive verb, or an empty string when inactive.
+---@field moves_total integer Native total move budget.
+---@field moves_left integer Native remaining move budget.
+---@field interruptible boolean
+---@field interruptible_with_keyboard boolean
+---@field auto_resume boolean
+---@field rooted boolean
+---@field resumable boolean
+---@field progress number Clamped progress from zero through one when the move budget permits it.
+
+---@class CcbPlatformActivityMutation
+---@field changed boolean
+---@field activity CcbPlatformActivitySnapshot Resulting current activity.
+
+---@class CcbPlatformActivitiesApi
+local CcbPlatformActivitiesApi = {}
+
+---Read a detached snapshot of one Character's current native activity.
+---@param character GameHandle Character handle.
+---@return CcbResult result `value` is a CcbPlatformActivitySnapshot.
+function CcbPlatformActivitiesApi.snapshot(character) end
+
+---Assign a plain time-based activity through native Character assignment rules.
+---Native actors/handlers, EOC policies, multi-activity workflows, automatic-needs
+---activities, and speed/neither budgets require dedicated Lua-native services.
+---@param character GameHandle Character handle.
+---@param id GameId GameId<activity>
+---@param duration TimeDuration Positive duration whose move budget fits the native integer range.
+---@return CcbResult result `value` is a CcbPlatformActivityMutation.
+function CcbPlatformActivitiesApi.assign_timed(character, id, duration) end
+
+---Cancel the current activity through native cleanup, backlog, and resumption rules.
+---@param character GameHandle Character handle.
+---@return CcbResult result `value` is a CcbPlatformActivityMutation.
+function CcbPlatformActivitiesApi.cancel(character) end
+
+---@class CcbPlatformWoundSnapshot
+---@field id GameId GameId<wound>
+---@field base_pain integer Pain rolled when this wound instance was created.
+---@field current_pain integer Current pain after native healing attenuation.
+---@field healing_time TimeDuration Total native healing duration.
+---@field healing_progress TimeDuration Accumulated native healing progress.
+---@field healing_fraction number Native healing fraction from zero through one.
+
+---@class CcbPlatformWoundMutation
+---@field changed boolean Whether the exact body-part wound sequence changed.
+---@field before CcbPlatformWoundSnapshot[] Detached native-order snapshot before mutation.
+---@field after CcbPlatformWoundSnapshot[] Detached native-order snapshot after mutation.
+
+---@class CcbPlatformWoundsApi
+local CcbPlatformWoundsApi = {}
+
+---Read one Character's wounds on an exact current-anatomy body part.
+---No nearest-part or other body-part fallback is performed.
+---Wrong GameId kinds or unknown ids raise invalid_argument; handle, target,
+---and missing-part failures use the returned CcbResult error.
+---@param character GameHandle Character handle.
+---@param body_part GameId GameId<body_part>
+---@return CcbResult result `value` is a dense native-order CcbPlatformWoundSnapshot array.
+function CcbPlatformWoundsApi.snapshot(character, body_part) end
+
+---Add or worsen one typed wound on an exact body part; runtime-callback write only.
+---The Wound per-part limit is authoritative; reaching it returns `changed = false`.
+---The explicit body part is authoritative: direct add bypasses the Wound's natural
+---damage-selection body-part eligibility.  A changed add immediately resynchronizes
+---the Character's perceived-pain derived state.
+---Wrong GameId kinds or unknown ids raise invalid_argument before mutation.
+---@param character GameHandle Character handle.
+---@param body_part GameId GameId<body_part>
+---@param wound GameId GameId<wound>
+---@return CcbResult result `value` is a CcbPlatformWoundMutation with detached native-order before/after arrays.
+function CcbPlatformWoundsApi.add(character, body_part, wound) end
+
+---Remove every instance of one wound type from an exact body part; runtime-callback write only.
+---A changed removal immediately resynchronizes the Character's perceived-pain derived state.
+---Wrong GameId kinds or unknown ids raise invalid_argument before mutation.
+---@param character GameHandle Character handle.
+---@param body_part GameId GameId<body_part>
+---@param wound GameId GameId<wound>
+---@return CcbResult result `value` has detached native-order before/after arrays; absent instances produce `changed = false`.
+function CcbPlatformWoundsApi.remove(character, body_part, wound) end
+
+---@class CcbPlatformBionicsApi: CcbBionicsApi
+local CcbPlatformBionicsApi = {}
+
+---@class CcbPlatformBionicSummary
+---@field installed_count integer Number of installed bionic instances; power-storage capacity may exist without an instance.
+---@field power UnitValue Current bionic energy.
+---@field maximum_power UnitValue Maximum bionic energy.
+---@field has_capacity boolean Whether maximum bionic energy is greater than zero.
+
+---Read composable installed-count and power-capacity facts without a paginated instance scan.
+---@param character GameHandle Character handle.
+---@return CcbResult result `value` is a CcbPlatformBionicSummary.
+function CcbPlatformBionicsApi.summary(character) end
+
+---Grant a bionic through native gameplay rules without the v5 inspection-list limit.
+---@param character GameHandle Character handle.
+---@param id GameId GameId<bionic>
+---@return CcbResult result `value.changed` reports whether the character gained instances.
+function CcbPlatformBionicsApi.grant(character, id) end
+
+---Remove the first matching bionic instance through native gameplay rules.
+---@param character GameHandle Character handle.
+---@param id GameId GameId<bionic>
+---@return CcbResult result `value.changed` reports whether an instance was removed.
+function CcbPlatformBionicsApi.remove_type(character, id) end
+
+---@class CcbPlatformRecipesApi: CcbRecipesApi
+local CcbPlatformRecipesApi = {}
+
+---Query learned knowledge rather than temporary book/helper availability.
+---@param character GameHandle Character handle.
+---@param id GameId GameId<recipe>
+---@return CcbResult result `value` is true only when the Character knows this recipe.
+function CcbPlatformRecipesApi.knows(character, id) end
+
+---Teach a recipe through native character rules, including `never_learn` policy.
+---@param character GameHandle Character handle.
+---@param id GameId GameId<recipe>
+---@return CcbResult result `value.changed` reports whether learned state changed; `value.known` is the resulting state.
+function CcbPlatformRecipesApi.learn(character, id) end
+
+---Forget one learned recipe through native character rules.
+---@param character GameHandle Character handle.
+---@param id GameId GameId<recipe>
+---@return CcbResult result `value.changed` reports whether learned state changed; `value.known` is the resulting state.
+function CcbPlatformRecipesApi.forget(character, id) end
+
+---@class CcbPlatformRecipeCategoryForget
+---@field changed boolean Whether at least one learned recipe was forgotten.
+---@field forgotten_count integer Number of learned recipes removed.
+---@field known_before integer Learned-recipe count before removal.
+---@field known_after integer Learned-recipe count after removal.
+---@field category GameId GameId<crafting_category> used for selection.
+---@field subcategory? string Optional native subcategory selector.
+
+---Forget every learned recipe in one category, optionally narrowed to a subcategory.
+---This does not enumerate or mutate recipes available only from books, helpers, or other temporary sources.
+---Native CSC_ALL/FAVORITE/RECENT/HIDDEN selectors retain their engine selection rules.
+---@param character GameHandle Character handle.
+---@param category GameId GameId<crafting_category>
+---@param subcategory? string Native subcategory id; omitted or empty selects the whole category.
+---@return CcbResult result `value` is a CcbPlatformRecipeCategoryForget.
+function CcbPlatformRecipesApi.forget_category(character, category, subcategory) end
+
+---@class CcbPlatformMartialArtsApi: CcbMartialArtsApi
+local CcbPlatformMartialArtsApi = {}
+
+---Learn one martial-art style without coupling the mutation to presentation.
+---@param character GameHandle Character handle.
+---@param id GameId GameId<martial_art>
+---@return CcbResult result `value.changed` reports whether known state changed; `value.known` is the resulting state.
+function CcbPlatformMartialArtsApi.learn(character, id) end
+
+---Forget one martial-art style through the character's native style collection.
+---@param character GameHandle Character handle.
+---@param id GameId GameId<martial_art>
+---@return CcbResult result `value.changed` reports whether known state changed; `value.known` is the resulting state.
+function CcbPlatformMartialArtsApi.forget(character, id) end
+
+---@class CcbPlatformMoraleOptions
+---@field duration? TimeDuration Non-negative; defaults to one hour.
+---@field decay_start? TimeDuration Non-negative; defaults to thirty minutes.
+---@field capped? boolean Defaults to false.
+
+---@class CcbPlatformMoraleApi
+local CcbPlatformMoraleApi = {}
+
+---Add or combine one typed morale instance through native stacking rules.
+---@param character GameHandle Character handle.
+---@param id GameId GameId<morale>
+---@param bonus integer
+---@param max_bonus integer
+---@param options? CcbPlatformMoraleOptions
+---@return CcbResult result `value.before` and `value.after` are the matching net bonuses.
+function CcbPlatformMoraleApi.add(character, id, bonus, max_bonus, options) end
+
+---Remove all item-specific variants of one morale type.
+---@param character GameHandle Character handle.
+---@param id GameId GameId<morale>
+---@return CcbResult result `value.before` and `value.after` are the matching net bonuses; `value.changed` reports whether they differ.
+function CcbPlatformMoraleApi.remove(character, id) end
+
+---@class CcbPlatformRandomApi: CcbRandomApi
+local CcbPlatformRandomApi = {}
+
+---@param minimum integer Inclusive lower bound in -1000000000..1000000000.
+---@param maximum integer Inclusive upper bound in -1000000000..1000000000.
+---@return integer
+function CcbPlatformRandomApi.int(minimum, maximum) end
+
+---@param numerator integer
+---@param denominator integer Positive denominator up to 1000000000.
+---@return boolean
+function CcbPlatformRandomApi.chance(numerator, denominator) end
+
+---@param denominator number Converted to a native integer; values at or below one always succeed.
+---@return boolean
+function CcbPlatformRandomApi.one_in(denominator) end
+
+---@param numerator number
+---@param denominator number Positive finite denominator with `0 <= numerator <= denominator`.
+---@return boolean
+function CcbPlatformRandomApi.probability(numerator, denominator) end
+
+---@param minimum integer Inclusive lower bound.
+---@param maximum integer Inclusive upper bound.
+---@param count integer Number of results from 0 through 1024.
+---@param with_replacement? boolean Defaults to false.
+---@return integer[] values Dense sampled values; unique unless replacement was requested.
+function CcbPlatformRandomApi.sample_integers(minimum, maximum, count, with_replacement) end
+
+---@param check number
+---@param difficulty number
+---@param die_size? integer Defaults to 10.
+---@return boolean success True when `random(1, die_size) + check > difficulty`.
+function CcbPlatformRandomApi.contested(check, difficulty, die_size) end
+
+---@class CcbPlatformStringPredicates
+local CcbPlatformStringPredicates = {}
+
+---@param values string[] At least two strings.
+---@return boolean duplicate_found
+function CcbPlatformStringPredicates.any_equal(values) end
+
+---@param values string[] At least one string.
+---@return boolean all_match
+function CcbPlatformStringPredicates.all_equal(values) end
+
+---@class CcbPlatformModQueries
+local CcbPlatformModQueries = {}
+
+---@param mod_id string
+---@return boolean loaded Includes active Lua-first Platform Mods and the world's active Mod order.
+function CcbPlatformModQueries.is_loaded(mod_id) end
+
+---@class CcbPlatformEnvironmentQueries
+local CcbPlatformEnvironmentQueries = {}
+
+---@return string dimension_id Stable id of the currently active dimension.
+function CcbPlatformEnvironmentQueries.dimension() end
+
+---@param position TripointCoord Absolute map-square coordinate inside the active map.
+---@return boolean
+function CcbPlatformEnvironmentQueries.is_outside(position) end
+
+---@param from TripointCoord Absolute map-square coordinate inside the active map.
+---@param to TripointCoord Absolute map-square coordinate inside the active map.
+---@param range integer Non-negative maximum range.
+---@param with_fields? boolean Defaults to true.
+---@return boolean visible
+function CcbPlatformEnvironmentQueries.line_of_sight(from, to, range, with_fields) end
+
+---@class CcbPlatformGameplayApi
+---@field strings CcbPlatformStringPredicates
+---@field mods CcbPlatformModQueries
+---@field environment CcbPlatformEnvironmentQueries
+local CcbPlatformGameplayApi = {}
 
 ---@param text string
 function CcbPlatformServices.message(text) end
