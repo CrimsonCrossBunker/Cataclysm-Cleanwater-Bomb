@@ -225,7 +225,7 @@ sol::table get_definition(
 }
 
 Character *resolve_character(
-    const game_handle &handle, const std::size_t runtime_generation,
+    const game_handle &handle, const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     std::optional<game_handle_error> &error )
 {
@@ -317,7 +317,7 @@ std::vector<const vitamin *> sorted_vitamins()
 sol::table list_states(
     sol::this_state lua, const game_handle &handle,
     const sol::optional<sol::table> &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const state_list_options options =
@@ -358,7 +358,7 @@ sol::table list_states(
 sol::table get_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_vitamin_id(
@@ -382,7 +382,7 @@ sol::table get_state(
 sol::table set_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id, const int requested_amount,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_vitamin_id(
@@ -421,7 +421,7 @@ sol::table set_state(
 sol::table modify_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id, const int requested_delta,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_vitamin_id(
@@ -463,7 +463,7 @@ sol::table modify_state(
 sol::table reset_daily_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_vitamin_id(
@@ -494,7 +494,7 @@ sol::table reset_daily_state(
 
 void install_vitamin_api(
     sol::table &game,
-    std::function<std::size_t()> current_runtime_generation,
+    std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write )

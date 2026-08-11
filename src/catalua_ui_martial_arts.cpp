@@ -235,7 +235,7 @@ sol::table get_definition(
 }
 
 Character *resolve_character(
-    const game_handle &handle, const std::size_t runtime_generation,
+    const game_handle &handle, const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     std::optional<game_handle_error> &error )
 {
@@ -318,7 +318,7 @@ state_list_options read_state_list_options(
 sol::table list_states(
     sol::this_state lua, const game_handle &handle,
     const sol::optional<sol::table> &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const state_list_options options =
@@ -364,7 +364,7 @@ sol::table list_states(
 sol::table get_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_style_id(
@@ -387,7 +387,7 @@ sol::table get_state(
 
 sol::table get_current_state(
     sol::this_state lua, const game_handle &handle,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -409,7 +409,7 @@ sol::table get_current_state(
 sol::table learn_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_style_id(
@@ -445,7 +445,7 @@ sol::table learn_state(
 sol::table remove_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_style_id(
@@ -500,7 +500,7 @@ sol::table remove_state(
 sol::table select_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_style_id(
@@ -545,7 +545,7 @@ sol::table select_state(
 sol::table set_hands_free_state(
     sol::this_state lua, const game_handle &handle,
     const bool keep_hands_free,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -572,7 +572,7 @@ sol::table set_hands_free_state(
 sol::table trigger_state(
     sol::this_state lua, const game_handle &handle,
     const std::string &trigger,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -627,7 +627,7 @@ sol::table trigger_state(
 
 void install_martial_art_api(
     sol::table &game,
-    std::function<std::size_t()> current_runtime_generation,
+    std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write )

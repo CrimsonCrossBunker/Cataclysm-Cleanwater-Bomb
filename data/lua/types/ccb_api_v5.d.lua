@@ -308,7 +308,7 @@ local GameEnum = {}
 ---@field value? any
 ---@field error? CcbError
 
----Generation-bound opaque reference to a live native game object.
+---Runtime-owner-, runtime-generation-, and world-generation-bound opaque reference to a live native game object.
 ---@class GameHandle
 ---@field kind '"creature"'|'"item"'|'"vehicle"'
 local GameHandle = {}
@@ -2392,7 +2392,7 @@ function CcbItemsApi.has_flag(handle, flag) end
 ---@param handle GameHandle
 ---@param flag GameId
 ---@param enabled boolean
----@return CcbResult
+---@return CcbResult result `value.changed` reports whether the instance-owned flag changed; effective inherited state is reported separately.
 function CcbItemsApi.set_flag(handle, flag, enabled) end
 
 ---@param handle GameHandle
@@ -2617,7 +2617,8 @@ function CcbSpellsApi.set_favorite(character, id, favorite) end
 ---@return CcbResult
 function CcbSpellsApi.queue_cast(character, id, target) end
 
----Generation-bound mission identity.
+---Runtime-owner-, generation-, and world-bound mission identity. Equality
+---includes the originating runtime owner.
 ---@class MissionToken
 ---@field uid integer
 ---@field runtime_generation integer
@@ -2937,7 +2938,8 @@ function CcbOvermapApi.set_note_danger(position, radius, dangerous) end
 ---@return CcbResult
 function CcbOvermapApi.reveal(center, radius) end
 
----Generation-bound token for an individual overmap horde entity.
+---Runtime-owner-, generation-, and world-bound token for an individual
+---overmap horde entity. Equality includes the originating runtime owner.
 ---@class HordeEntityToken
 ---@field position TripointCoord
 ---@field monster GameId
@@ -2948,7 +2950,8 @@ local HordeEntityToken = {}
 ---@return boolean
 function HordeEntityToken:is_valid() end
 
----Generation-bound token for a legacy aggregate monster group.
+---Runtime-owner-, generation-, and world-bound token for a legacy aggregate
+---monster group. Equality includes the originating runtime owner.
 ---@class LegacyHordeToken
 ---@field position TripointCoord
 ---@field group GameId
@@ -4248,7 +4251,7 @@ function CcbCampsApi.set_owner(position, owner) end
 ---@return CcbResult
 function CcbCampsApi.set_board_position(position, board_position) end
 
----Generation-bound identity of a native zone.
+---Generation- and native-lifetime-bound identity of a native zone. Recreating an identical zone does not revive an old token.
 ---@class ZoneToken
 ---@field faction GameId
 ---@field type GameId

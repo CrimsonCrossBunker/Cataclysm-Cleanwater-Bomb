@@ -89,8 +89,10 @@ list(REMOVE_ITEM CATACLYSM_DDA_SOURCES ${MAIN_CPP} ${MESSAGES_CPP})
 file(GLOB CATACLYSM_DDA_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
-file(GLOB_RECURSE BUILTIN_MODINFO CONFIGURE_DEPENDS
-    ${CMAKE_SOURCE_DIR}/data/mods/**/modinfo.json)
+file(GLOB_RECURSE BUILTIN_MOD_SOURCES CONFIGURE_DEPENDS
+    ${CMAKE_SOURCE_DIR}/data/mods/**/modinfo.json
+    ${CMAKE_SOURCE_DIR}/data/mods/*/main.lua
+    ${CMAKE_SOURCE_DIR}/data/mods/*/mod.lua)
 set(BUILTIN_MODS_HEADER ${CMAKE_CURRENT_BINARY_DIR}/builtin_mods_generated.h)
 execute_process(
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/generate_builtin_mods.py
@@ -106,7 +108,7 @@ add_custom_command(
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/generate_builtin_mods.py
                 --source ${CMAKE_SOURCE_DIR}/data/mods
                 --output ${BUILTIN_MODS_HEADER}
-        DEPENDS ${CMAKE_SOURCE_DIR}/tools/generate_builtin_mods.py ${BUILTIN_MODINFO}
+        DEPENDS ${CMAKE_SOURCE_DIR}/tools/generate_builtin_mods.py ${BUILTIN_MOD_SOURCES}
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         VERBATIM)
 add_custom_target(builtin_mod_manifest DEPENDS ${BUILTIN_MODS_HEADER})

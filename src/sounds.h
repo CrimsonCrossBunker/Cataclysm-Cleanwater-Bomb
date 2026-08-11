@@ -99,6 +99,21 @@ struct enum_traits<sounds::sound_t> {
 
 namespace sfx
 {
+
+struct playlist_entry_definition {
+    std::string file;
+    int volume = 100;
+};
+
+struct playlist_definition {
+    std::string id;
+    bool shuffle = false;
+    std::vector<playlist_entry_definition> entries;
+};
+
+std::optional<playlist_definition> playlist_registry_get( std::string_view id );
+void playlist_registry_set( const playlist_definition &value );
+void playlist_registry_erase( std::string_view id );
 //Channel assignments:
 enum class channel : int {
     any = -1,                   //Finds the first available channel

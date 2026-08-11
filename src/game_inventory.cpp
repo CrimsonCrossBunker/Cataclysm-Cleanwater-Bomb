@@ -275,7 +275,9 @@ void game_menus::inv::common()
 
     inv_s.set_title( _( "Inventory" ) );
     inv_s.set_hint( string_format(
-                        _( "Item hotkeys assigned: <color_light_gray>%d</color>/<color_light_gray>%d</color>" ),
+                        _( "<color_yellow>%s</color> Wield  <color_yellow>%s</color> Wear  Item hotkeys assigned: <color_light_gray>%d</color>/<color_light_gray>%d</color>" ),
+                        inv_s.key_desc( "WIELD" ),
+                        inv_s.key_desc( "WEAR" ),
                         you.allocated_invlets().count(), inv_chars.size() ) );
 
     int res = 0;

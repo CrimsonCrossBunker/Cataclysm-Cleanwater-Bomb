@@ -28,6 +28,7 @@
 #include "bodygraph.h"
 #include "bodypart.h"
 #include "calendar.h"
+#include "catalua_platform_runtime.h"
 #include "cata_utility.h"
 #include "character.h"
 #include "character_martial_arts.h"
@@ -300,12 +301,18 @@ void item::basic_info( std::vector<iteminfo> &info, const iteminfo_query *parts,
 
             // only ever do the effect for a snippet the first time you see it
             if( !get_avatar().has_seen_snippet( snip_id ) ) {
-                // Have looked at the item so call the on examine EOC for the snippet
-                const std::optional<talk_effect_t> examine_effect = SNIPPET.get_EOC_by_id( snip_id );
-                if( examine_effect.has_value() ) {
-                    // activate the effect
-                    dialogue d( get_talker_for( get_avatar() ), nullptr );
-                    examine_effect.value().apply( d );
+                // Lua-first snippets dispatch their named policy directly and
+                // never store an EOC.  Legacy snippets retain their old path.
+                const bool lua_first_snippet =
+                    cata::lua_platform::invoke_snippet_examine_handler(
+                        snip_id.str(), typeId().str(), get_avatar() );
+                if( !lua_first_snippet ) {
+                    const std::optional<talk_effect_t> examine_effect =
+                        SNIPPET.get_EOC_by_id( snip_id );
+                    if( examine_effect.has_value() ) {
+                        dialogue d( get_talker_for( get_avatar() ), nullptr );
+                        examine_effect.value().apply( d );
+                    }
                 }
 
                 //note that you have seen the snippet

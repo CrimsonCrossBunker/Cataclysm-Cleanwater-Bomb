@@ -1649,9 +1649,14 @@ void Item_factory::finalize()
             continue;
         }
         const itype_id &result = rec.result();
-        auto it = find_template_list_mod( result );
-        if( it.has_value() ) {
-            it->get().recipes.push_back( p.first );
+        auto runtime = m_runtimes.find( result );
+        if( runtime != m_runtimes.end() ) {
+            runtime->second->recipes.push_back( p.first );
+        } else {
+            auto it = find_template_list_mod( result );
+            if( it.has_value() ) {
+                it->get().recipes.push_back( p.first );
+            }
         }
     }
 }
@@ -3097,14 +3102,14 @@ const itype *Item_factory::find_template( const itype_id &id ) const
 {
     cata_assert( frozen );
 
-    auto found = find_template_list_const( id );
-    if( found.has_value() ) {
-        return &found->get();
-    }
-
     auto rt = m_runtimes.find( id );
     if( rt != m_runtimes.end() ) {
         return rt->second.get();
+    }
+
+    auto found = find_template_list_const( id );
+    if( found.has_value() ) {
+        return &found->get();
     }
 
     //If we didn't find the item maybe it is a building instead!
@@ -5426,7 +5431,9 @@ const std::vector<const itype *> &Item_factory::all() const
         templates_all_cache.reserve( item_factory.get_all().size() + m_runtimes.size() );
 
         for( const itype &e : item_factory.get_all() ) {
-            templates_all_cache.push_back( &e );
+            if( m_runtimes.count( e.id ) == 0 ) {
+                templates_all_cache.push_back( &e );
+            }
         }
         for( const auto &e : m_runtimes ) {
             templates_all_cache.push_back( e.second.get() );

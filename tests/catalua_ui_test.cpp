@@ -1,12 +1,22 @@
 #include "cata_catch.h"
 #include "addiction.h"
 #include "achievement.h"
+#include "ammo.h"
+#include "ammo_effect.h"
+#include "ascii_art.h"
+#include "anatomy.h"
 #include "avatar.h"
 #include "basecamp.h"
 #include "bionics.h"
+#include "behavior.h"
+#include "bodygraph.h"
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_scope_helpers.h"
+#include "catacharset.h"
+#include "catalua_platform.h"
+#include "catalua_platform_content.h"
+#include "catalua_platform_runtime.h"
 #include "catalua_bindings.h"
 #include "catalua_bindings_coords.h"
 #include "catalua_bindings_enums.h"
@@ -19,6 +29,7 @@
 #include "catalua_ui_i18n.h"
 #include "catalua_ui_manifest.h"
 #include "catalua_ui_mapgen.h"
+#include "catalua_ui_missions.h"
 #include "catalua_ui_modules.h"
 #include "catalua_ui_navigation.h"
 #include "catalua_ui_navigation_internal.h"
@@ -27,50 +38,107 @@
 #include "catalua_ui_services.h"
 #include "catalua_ui_state.h"
 #include "character_martial_arts.h"
+#include "character_oracle.h"
+#include "character_modifier.h"
+#include "clothing_mod.h"
+#include "climbing.h"
 #include "clzones.h"
 #include "creature_tracker.h"
+#include "construction_category.h"
+#include "construction_group.h"
+#include "crafting_gui.h"
 #include "damage.h"
+#include "debug.h"
 #include "dialogue.h"
+#include "disease.h"
 #include "effect.h"
+#include "emit.h"
+#include "end_screen.h"
 #include "event_bus.h"
 #include "event_subscriber.h"
+#include "event_statistics.h"
+#include "explosion_light.h"
 #include "explosion.h"
 #include "faction.h"
 #include "flag.h"
+#include "fault.h"
+#include "field_type.h"
 #include "game.h"
+#include "generic_factory.h"
+#include "harvest.h"
+#include "help.h"
+#include "hsv_color.h"
 #include "input_context_actions.h"
 #include "item.h"
+#include "item_category.h"
+#include "item_factory.h"
+#include "item_group.h"
 #include "itype.h"
 #include "json_loader.h"
 #include "magic.h"
 #include "map.h"
+#include "map_accessories.h"
+#include "mapdata.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "mapgen.h"
 #include "mapgendata.h"
+#include "material.h"
 #include "martialarts.h"
 #include "mission.h"
+#include "morale_types.h"
+#include "mood_face.h"
+#include "move_mode.h"
+#include "monfaction.h"
 #include "monster.h"
+#include "monstergenerator.h"
 #include "mod_manager.h"
+#include "mtype.h"
+#include "mutation.h"
 #include "npc.h"
+#include "omdata.h"
+#include "overmap.h"
+#include "overmap_location.h"
 #include "overmapbuffer.h"
+#include "overlay_ordering.h"
+#include "options_helpers.h"
 #include "panels.h"
 #include "path_info.h"
 #include "player_activity.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
 #include "projectile.h"
+#include "proficiency.h"
+#include "profession_group.h"
 #include "requirements.h"
+#include "recipe_dictionary.h"
+#include "recipe_groups.h"
+#include "regional_settings.h"
 #include "rng.h"
+#include "rotatable_symbols.h"
+#include "scent_map.h"
 #include "skill.h"
+#include "sounds.h"
+#include "speech.h"
+#include "speed_description.h"
+#include "start_location.h"
+#include "subbodypart.h"
 #include "stats_tracker.h"
 #include "talker.h"
+#include "text_snippets.h"
 #include "trap.h"
 #include "ui_profile.h"
 #include "units.h"
 #include "vehicle.h"
+#include "vehicle_group.h"
+#include "vehicle_part_location.h"
+#include "veh_type.h"
 #include "vitamin.h"
 #include "weather.h"
+#include "weather_gen.h"
+#include "weather_type.h"
+#include "weakpoint.h"
+#include "wound.h"
 #include "worldfactory.h"
 
 #include <algorithm>
@@ -84,6 +152,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -530,6 +599,103 @@ class scoped_lua_test_mod
         bool active_ = false;
 };
 
+class scoped_platform_test_mod
+{
+    public:
+        explicit scoped_platform_test_mod( std::string root_name ) :
+            root_name_( std::move( root_name ) ),
+            root_( PATH_INFO::user_moddir_path().get_unrelative_path() / root_name_ ) {
+            if( fs::exists( root_ ) ) {
+                throw std::runtime_error( "Refusing to replace existing Platform test Mod: " +
+                                          root_.string() );
+            }
+            std::error_code error;
+            fs::create_directories( root_, error );
+            if( error ) {
+                throw std::runtime_error( "Unable to create Platform test Mod: " +
+                                          error.message() );
+            }
+        }
+
+        scoped_platform_test_mod( const scoped_platform_test_mod & ) = delete;
+        scoped_platform_test_mod &operator=( const scoped_platform_test_mod & ) = delete;
+
+        ~scoped_platform_test_mod() noexcept {
+            cata::lua_platform::shutdown();
+            std::error_code error;
+            fs::remove_all( root_, error );
+            try {
+                world_generator->get_mod_manager().refresh_mod_list();
+            } catch( ... ) {
+                // A test fixture destructor must not terminate the test process.
+            }
+        }
+
+        void write( const fs::path &relative_path, const std::string &contents ) const {
+            const fs::path path = root_ / relative_path;
+            std::error_code error;
+            fs::create_directories( path.parent_path(), error );
+            if( error ) {
+                throw std::runtime_error( "Unable to create Platform test directory: " +
+                                          error.message() );
+            }
+            std::ofstream output( path, std::ios::binary | std::ios::trunc );
+            output << contents;
+            if( !output ) {
+                throw std::runtime_error( "Unable to write Platform test file: " + path.string() );
+            }
+        }
+
+        void refresh() const {
+            world_generator->get_mod_manager().refresh_mod_list();
+        }
+
+        const std::string &root_name() const {
+            return root_name_;
+        }
+
+        const fs::path &root() const {
+            return root_;
+        }
+
+        cata::lua_platform::mod_source source( const std::string &id,
+                                               const fs::path &entry = "main.lua" ) const {
+            return { id, root_, root_ / entry };
+        }
+
+    private:
+        std::string root_name_;
+        fs::path root_;
+};
+
+class scoped_platform_output_directory
+{
+    public:
+        explicit scoped_platform_output_directory( std::string name ) :
+            path_( fs::u8path( PATH_INFO::config_dir() ) / std::move( name ) ) {
+            if( fs::exists( path_ ) ) {
+                throw std::runtime_error( "Refusing to replace existing Platform test output: " +
+                                          path_.string() );
+            }
+        }
+
+        scoped_platform_output_directory( const scoped_platform_output_directory & ) = delete;
+        scoped_platform_output_directory &operator=(
+            const scoped_platform_output_directory & ) = delete;
+
+        ~scoped_platform_output_directory() {
+            std::error_code error;
+            fs::remove_all( path_, error );
+        }
+
+        const fs::path &path() const {
+            return path_;
+        }
+
+    private:
+        fs::path path_;
+};
+
 class scoped_calendar_turn
 {
     public:
@@ -688,6 +854,6077 @@ class scoped_lua_state_file
 };
 
 } // namespace
+
+TEST_CASE( "lua_first_platform_discovers_root_entries_without_json",
+           "[lua][platform][mod]" )
+{
+    scoped_platform_test_mod test_mod( "ccb_platform_minimal_test" );
+    test_mod.write( "main.lua", "return true\n" );
+    test_mod.refresh();
+
+    const mod_id id( test_mod.root_name() );
+    REQUIRE( id.is_valid() );
+    const MOD_INFORMATION &mod = *id;
+    CHECK( mod.name() == test_mod.root_name() );
+    CHECK( mod.dependencies.empty() );
+    CHECK( mod.category.first >= 0 );
+    CHECK( mod.lua_platform_version == cata::lua_platform::platform_version );
+    CHECK( mod.mod_root_path.get_unrelative_path() == test_mod.root() );
+    CHECK( mod.lua_platform_entry.get_unrelative_path() == test_mod.root() / "main.lua" );
+    CHECK_FALSE( fs::exists( test_mod.root() / "lua" ) );
+    CHECK_FALSE( fs::exists( test_mod.root() / "manifest.json" ) );
+    CHECK_FALSE( fs::exists( test_mod.root() / "modinfo.json" ) );
+}
+
+TEST_CASE( "lua_first_mod_definition_is_native_and_overrides_defaults",
+           "[lua][platform][mod]" )
+{
+    scoped_platform_test_mod test_mod( "ccb_platform_metadata_root" );
+    test_mod.write( "boot.lua", "return true\n" );
+    test_mod.write( "mod.lua", R"lua(
+local ccb = require("ccb")
+local definition = ccb.ModDefinition {}
+assert(type(definition) == "userdata")
+definition.id = "ccb_platform_metadata_test"
+definition.name = "Platform metadata test"
+definition.version = "1.2.3"
+definition.entry = "boot.lua"
+definition.dependencies = { "dda" }
+definition.core = true
+return definition
+)lua" );
+    test_mod.refresh();
+
+    const mod_id id( "ccb_platform_metadata_test" );
+    REQUIRE( id.is_valid() );
+    const MOD_INFORMATION &mod = *id;
+    CHECK( mod.name() == "Platform metadata test" );
+    CHECK( mod.version == "1.2.3" );
+    CHECK( ( mod.dependencies == std::vector<mod_id> { mod_id( "dda" ) } ) );
+    CHECK( mod.core );
+    CHECK( mod.lua_platform_entry.get_unrelative_path() == test_mod.root() / "boot.lua" );
+}
+
+TEST_CASE( "lua_first_discovery_rejects_non_native_and_unsafe_metadata",
+           "[lua][platform][mod]" )
+{
+    SECTION( "plain Lua tables are not metadata definitions" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_plain_table_test" );
+        test_mod.write( "main.lua", "return true\n" );
+        test_mod.write( "mod.lua", "return { id = 'ccb_platform_plain_table_test' }\n" );
+        test_mod.refresh();
+        const mod_id rejected( test_mod.root_name() );
+        REQUIRE( rejected.is_valid() );
+        CHECK( rejected->lua_platform_version == cata::lua_platform::platform_version );
+        CHECK( rejected->lua_platform_error.find( "native ccb.ModDefinition" ) !=
+               std::string::npos );
+    }
+
+    SECTION( "self dependencies are rejected" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_self_dependency_test" );
+        test_mod.write( "main.lua", "return true\n" );
+        test_mod.write( "mod.lua", R"lua(
+local ccb = require("ccb")
+return ccb.ModDefinition {
+    id = "ccb_platform_self_dependency_test",
+    dependencies = { "ccb_platform_self_dependency_test" },
+}
+        )lua" );
+    test_mod.refresh();
+    const mod_id rejected( test_mod.root_name() );
+    REQUIRE( rejected.is_valid() );
+    CHECK( rejected->lua_platform_error.find( "itself as a dependency" ) !=
+           std::string::npos );
+}
+
+SECTION( "dependency metadata must be a unique dense array" )
+{
+    scoped_platform_test_mod sparse( "ccb_platform_sparse_dependencies" );
+    sparse.write( "main.lua", "return true\n" );
+    sparse.write( "mod.lua", R"lua(
+local ccb = require("ccb")
+return ccb.ModDefinition {
+    dependencies = { [1] = "dda", [3] = "aftershock" },
+}
+)lua" );
+        sparse.refresh();
+        const mod_id sparse_id( sparse.root_name() );
+        REQUIRE( sparse_id.is_valid() );
+        CHECK( sparse_id->lua_platform_error.find( "dense array" ) !=
+               std::string::npos );
+
+        scoped_platform_test_mod duplicate( "ccb_platform_duplicate_dependencies" );
+        duplicate.write( "main.lua", "return true\n" );
+        duplicate.write( "mod.lua", R"lua(
+local ccb = require("ccb")
+return ccb.ModDefinition { dependencies = { "dda", "dda" } }
+)lua" );
+        duplicate.refresh();
+        const mod_id duplicate_id( duplicate.root_name() );
+        REQUIRE( duplicate_id.is_valid() );
+        CHECK( duplicate_id->lua_platform_error.find( "duplicate dependency" ) !=
+               std::string::npos );
+    }
+
+    SECTION( "explicit empty and reserved ids are rejected" ) {
+        scoped_platform_test_mod empty_id( "ccb_platform_empty_id_test" );
+        scoped_platform_test_mod reserved_id( "ccb_platform_reserved_id_test" );
+        empty_id.write( "main.lua", "return true\n" );
+        empty_id.write( "mod.lua", R"lua(
+local ccb = require("ccb")
+return ccb.ModDefinition { id = "" }
+)lua" );
+        reserved_id.write( "main.lua", "return true\n" );
+        reserved_id.write( "mod.lua", R"lua(
+local ccb = require("ccb")
+return ccb.ModDefinition { id = "reserved#id" }
+        )lua" );
+    empty_id.refresh();
+    REQUIRE( mod_id( empty_id.root_name() ).is_valid() );
+    REQUIRE( mod_id( reserved_id.root_name() ).is_valid() );
+    CHECK_FALSE( mod_id( empty_id.root_name() )->lua_platform_error.empty() );
+    CHECK_FALSE( mod_id( reserved_id.root_name() )->lua_platform_error.empty() );
+}
+
+SECTION( "absolute entries are rejected" )
+{
+    scoped_platform_test_mod test_mod( "ccb_platform_absolute_entry_test" );
+    test_mod.write( "mod.lua", R"lua(
+local ccb = require("ccb")
+return ccb.ModDefinition { entry = "/outside.lua" }
+        )lua" );
+    test_mod.refresh();
+    REQUIRE( mod_id( test_mod.root_name() ).is_valid() );
+    CHECK( mod_id( test_mod.root_name() )->lua_platform_error.find( "relative path" ) !=
+           std::string::npos );
+}
+
+SECTION( "parent traversal entries are rejected" )
+{
+    scoped_platform_test_mod target( "ccb_platform_escape_target" );
+    scoped_platform_test_mod test_mod( "ccb_platform_escape_test" );
+    target.write( "main.lua", "return true\n" );
+    test_mod.write( "mod.lua", R"lua(
+local ccb = require("ccb")
+return ccb.ModDefinition { entry = "../ccb_platform_escape_target/main.lua" }
+        )lua" );
+    test_mod.refresh();
+    REQUIRE( mod_id( test_mod.root_name() ).is_valid() );
+    CHECK( mod_id( test_mod.root_name() )->lua_platform_error.find( "escapes" ) !=
+           std::string::npos );
+    CHECK( mod_id( target.root_name() ).is_valid() );
+}
+
+SECTION( "the first deterministically discovered duplicate id wins" )
+{
+    scoped_platform_test_mod first( "ccb_platform_duplicate_a" );
+    scoped_platform_test_mod second( "ccb_platform_duplicate_b" );
+    const std::string metadata = R"lua(
+local ccb = require("ccb")
+return ccb.ModDefinition { id = "ccb_platform_duplicate_test" }
+)lua";
+        first.write( "main.lua", "return true\n" );
+        first.write( "mod.lua", metadata );
+        second.write( "main.lua", "return true\n" );
+        second.write( "mod.lua", metadata );
+        first.refresh();
+        const mod_id duplicate( "ccb_platform_duplicate_test" );
+        REQUIRE( duplicate.is_valid() );
+        CHECK( duplicate->mod_root_path.get_unrelative_path() == first.root() );
+        const mod_id rejected_duplicate( second.root_name() );
+        REQUIRE( rejected_duplicate.is_valid() );
+        CHECK( rejected_duplicate->lua_platform_error.find( "already uses id" ) !=
+               std::string::npos );
+    }
+
+    SECTION( "a duplicate directory id keeps a separate bounded diagnostic" ) {
+        scoped_platform_test_mod first( "ccb_platform_directory_collision_a" );
+        scoped_platform_test_mod second( "ccb_platform_directory_collision_b" );
+        first.write( "main.lua", "return true\n" );
+        first.write( "mod.lua", R"lua(
+local ccb = require("ccb")
+return ccb.ModDefinition { id = "ccb_platform_directory_collision_b" }
+)lua" );
+        second.write( "main.lua", "return true\n" );
+        second.write( "mod.lua", R"lua(
+error(string.rep("bounded discovery failure ", 512))
+)lua" );
+        first.refresh();
+
+        const mod_id winner( "ccb_platform_directory_collision_b" );
+        REQUIRE( winner.is_valid() );
+        CHECK( winner->mod_root_path.get_unrelative_path() == first.root() );
+
+        const mod_id diagnostic(
+            "ccb_platform_directory_collision_b_lua_platform_rejected_1" );
+        REQUIRE( diagnostic.is_valid() );
+        CHECK( diagnostic->mod_root_path.get_unrelative_path() == second.root() );
+        CHECK_FALSE( diagnostic->lua_platform_error.empty() );
+        CHECK( diagnostic->lua_platform_error.size() <= 4096 );
+    }
+
+    SECTION( "hybrid metadata cannot change the legacy id" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_hybrid_test" );
+        test_mod.write( "main.lua", "return true\n" );
+        test_mod.write( "modinfo.json", R"json([
+  { "type": "MOD_INFO", "id": "ccb_platform_hybrid_test", "name": "Hybrid" }
+])json" );
+        test_mod.write( "mod.lua", R"lua(
+local ccb = require("ccb")
+return ccb.ModDefinition { id = "ccb_platform_conflicting_id" }
+)lua" );
+        test_mod.refresh();
+        const mod_id legacy_id( test_mod.root_name() );
+        REQUIRE( legacy_id.is_valid() );
+        CHECK( legacy_id->lua_platform_version == 0 );
+        CHECK( legacy_id->lua_platform_error.find( "conflicts with legacy id" ) !=
+               std::string::npos );
+        CHECK_FALSE( mod_id( "ccb_platform_conflicting_id" ).is_valid() );
+    }
+
+    SECTION( "malformed optional metadata keeps hybrid legacy content available" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_rejected_optional_hybrid" );
+        test_mod.write( "main.lua", "return true\n" );
+        test_mod.write( "modinfo.json", R"json([
+  {
+    "type": "MOD_INFO",
+    "id": "ccb_platform_rejected_optional_hybrid",
+    "name": "Rejected optional hybrid"
+  }
+])json" );
+        test_mod.write( "mod.lua", "return { id = 'not_native' }\n" );
+        test_mod.refresh();
+        const mod_id legacy_id( test_mod.root_name() );
+        REQUIRE( legacy_id.is_valid() );
+        CHECK( legacy_id->lua_platform_version == 0 );
+        CHECK( legacy_id->lua_platform_entry.empty() );
+        CHECK( legacy_id->lua_platform_error.find( "native ccb.ModDefinition" ) !=
+               std::string::npos );
+        CHECK( legacy_id->path.get_unrelative_path() == test_mod.root() );
+    }
+
+    SECTION( "hybrid roots inherit an omitted stable legacy id" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_hybrid_directory_name" );
+        test_mod.write( "main.lua", "return true\n" );
+        test_mod.write( "modinfo.json", R"json([
+  { "type": "MOD_INFO", "id": "ccb_platform_hybrid_stable_id", "name": "Hybrid" }
+])json" );
+        test_mod.refresh();
+        const mod_id legacy_id( "ccb_platform_hybrid_stable_id" );
+        REQUIRE( legacy_id.is_valid() );
+        CHECK( legacy_id->lua_platform_version == cata::lua_platform::platform_version );
+        CHECK( legacy_id->mod_root_path.get_unrelative_path() == test_mod.root() );
+    }
+
+    SECTION( "hybrid discovery owns nested legacy data from the packaged root" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_nested_hybrid_root" );
+        test_mod.write( "main.lua", "return true\n" );
+        test_mod.write( "data/modinfo.json", R"json([
+  { "type": "MOD_INFO", "id": "ccb_platform_nested_hybrid_id", "name": "Nested hybrid" }
+])json" );
+        test_mod.refresh();
+        const mod_id legacy_id( "ccb_platform_nested_hybrid_id" );
+        REQUIRE( legacy_id.is_valid() );
+        CHECK( legacy_id->lua_platform_version == cata::lua_platform::platform_version );
+        CHECK( legacy_id->path.get_unrelative_path() == test_mod.root() / "data" );
+        CHECK( legacy_id->mod_root_path.get_unrelative_path() == test_mod.root() );
+        CHECK( legacy_id->lua_platform_entry.get_unrelative_path() ==
+               test_mod.root() / "main.lua" );
+    }
+}
+
+TEST_CASE( "lua_first_platform_states_are_trusted_isolated_and_transactional",
+           "[lua][platform][integration]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod first( "ccb_platform_runtime_first" );
+    scoped_platform_test_mod second( "ccb_platform_runtime_second" );
+    first.write( "helper.lua", "return { value = 42 }\n" );
+    first.write( "cycle_a.lua", "return require('cycle_b')\n" );
+    first.write( "cycle_b.lua", "return require('cycle_a')\n" );
+    first.write( "broken.lua",
+                 "broken_attempts = (broken_attempts or 0) + 1; error('broken')\n" );
+    first.write( "main.lua", R"lua(
+local ccb = require("ccb")
+assert(ccb.platform_version == 1)
+assert(type(io.open) == "function")
+assert(type(os.execute) == "function")
+assert(type(debug.getinfo) == "function")
+assert(type(coroutine.create) == "function")
+assert(type(package.loadlib) == "function")
+assert(require("helper").value == 42)
+package.loaded.helper = nil
+package.path = "/outside/?.lua"
+assert(require("helper").value == 42)
+assert(require("cycle_a") == true)
+assert(not pcall(require, "broken"))
+assert(not pcall(require, "broken"))
+assert(broken_attempts == 2)
+local escaped, escape_error = pcall(require, "../ccb_platform_runtime_second.main")
+assert(not escaped)
+assert(string.find(escape_error, "invalid local module name", 1, true))
+assert(package.cpath == "")
+platform_state_must_not_leak = true
+)lua" );
+    second.write( "main.lua", R"lua(
+assert(platform_state_must_not_leak == nil)
+assert(package.loaded.helper == nil)
+)lua" );
+
+    const std::vector<cata::lua_platform::mod_source> sources = {
+        first.source( "ccb_platform_runtime_first" ),
+        second.source( "ccb_platform_runtime_second" )
+    };
+    std::string error;
+    const bool prepared = cata::lua_platform::prepare_mods( sources, error );
+    INFO( error );
+    REQUIRE( prepared );
+    CHECK( error.empty() );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    CHECK( ( cata::lua_platform::loaded_mod_ids() == std::vector<std::string> {
+        "ccb_platform_runtime_first", "ccb_platform_runtime_second"
+    } ) );
+
+    second.write( "main.lua", "error('candidate failure sentinel')\n" );
+    CHECK_FALSE( cata::lua_platform::prepare_mods( sources, error ) );
+    CHECK( error.find( "candidate failure sentinel" ) != std::string::npos );
+    CHECK( ( cata::lua_platform::loaded_mod_ids() == std::vector<std::string> {
+        "ccb_platform_runtime_first", "ccb_platform_runtime_second"
+    } ) );
+    cata::lua_platform::shutdown();
+    CHECK( cata::lua_platform::loaded_mod_ids().empty() );
+}
+
+TEST_CASE( "lua_first_native_item_recipe_content_is_transactional",
+           "[lua][platform][content]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_native_content" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.runtime.handler("activate", function(context)
+    context:message("native Lua item callback")
+    return 0
+end, 1)
+
+local item = ccb.content.Item {
+    id = "ccb_platform_native_item",
+    name = "native Platform item",
+    description = "defined without JSON",
+    symbol = "*",
+}
+item:mass_grams(25)
+item:volume_ml(10)
+item:material("steel", 1)
+item:on_use("activate", "Activate native item")
+ccb.content.add(item)
+
+local recipe = ccb.content.Recipe {
+    id = "ccb_platform_native_recipe",
+    result = "ccb_platform_native_item",
+    duration_moves = 500,
+}
+recipe:component("scrap", 1)
+ccb.content.add(recipe)
+)lua" );
+
+    std::string error;
+    const bool prepared = cata::lua_platform::prepare_mods(
+                              { test_mod.source( "ccb_platform_native_content" ) }, error );
+    INFO( error );
+    REQUIRE( prepared );
+    CHECK_FALSE( cata::lua_platform::prepared_content_fingerprint().empty() );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    CHECK( item_controller->has_template( itype_id( "ccb_platform_native_item" ) ) );
+    CHECK( recipe_id( "ccb_platform_native_recipe" ).is_valid() );
+
+    cata::lua_platform::discard_prepared_mods();
+    CHECK_FALSE( item_controller->has_template( itype_id( "ccb_platform_native_item" ) ) );
+    CHECK_FALSE( recipe_id( "ccb_platform_native_recipe" ).is_valid() );
+}
+
+TEST_CASE( "lua_first_foundational_catalogs_are_native_and_transactional",
+           "[lua][platform][content][catalog]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_native_catalogs" );
+    const std::vector<int> previous_hit_range =
+        Creature::dispersion_for_even_chance_of_good_hit;
+    const std::size_t previous_movement_mode_count = move_modes_by_speed().size();
+    REQUIRE( base_mutation_overlay_ordering.count(
+                 "ccb_platform_test_overlay" ) == 0 );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+ccb.runtime.handler("ccb_platform_test_damage_hit", function(payload)
+    assert(payload.phase == "on_hit")
+    assert(payload.damage_type_id == "ccb_platform_test_damage")
+end, 1)
+ccb.runtime.handler("ccb_platform_magic_level", function(payload)
+    return math.floor(payload.experience / 100)
+end, 1)
+ccb.runtime.handler("ccb_platform_magic_experience", function(payload)
+    return payload.level * 100
+end, 1)
+ccb.runtime.handler("ccb_platform_magic_casting_experience", function(payload)
+    return 25
+end, 1)
+ccb.runtime.handler("ccb_platform_magic_failure_chance", function(payload)
+    return 0.25
+end, 1)
+ccb.runtime.handler("ccb_platform_magic_failure_cost", function(payload)
+    return 0.5
+end, 1)
+ccb.runtime.handler("ccb_platform_magic_failure_experience", function(payload)
+    return 0.75
+end, 1)
+ccb.runtime.handler("ccb_platform_magic_failure", function(payload)
+end, 1)
+ccb.runtime.handler("ccb_platform_ammo_impact", function(payload)
+    assert(payload.ammo_effect_id == "ccb_platform_test_ammo_effect")
+end, 1)
+ccb.runtime.handler("ccb_platform_addiction_tick", function(payload)
+    assert(payload.addiction_type_id == "ccb_platform_test_addiction")
+    return payload.intensity >= 3
+end, 1)
+ccb.runtime.handler("ccb_platform_character_modifier", function(payload)
+    assert(payload.modifier_id == "ccb_platform_test_character_modifier")
+    return 1.25
+end, 1)
+ccb.runtime.handler("ccb_platform_weather_condition", function(payload)
+    assert(payload.weather_type_id == "ccb_platform_test_weather")
+    return payload.humidity >= 75
+end, 1)
+ccb.runtime.handler("ccb_platform_end_screen_condition", function(payload)
+    assert(payload.end_screen_id == "ccb_platform_test_end_screen")
+    return true
+end, 1)
+
+local quality = ccb.content.ToolQuality {
+    id = "CCB_PLATFORM_TEST_QUALITY",
+    name = "Platform test quality",
+}
+quality:usage(1, "performs a Platform test")
+ccb.content.add(quality)
+
+ccb.content.add(ccb.content.SkillDisplay {
+    id = "ccb_platform_test_skill_display",
+    label = "Platform test skills",
+})
+
+local skill = ccb.content.Skill {
+    id = "ccb_platform_test_skill",
+    name = "Platform testing",
+    description = "Tests Lua-first native catalogs.",
+    display_category = "ccb_platform_test_skill_display",
+    sort_rank = 12345,
+}
+skill:tag("combat_skill")
+skill:level_description(0, "untested", "unpracticed")
+skill:companion_practice("testing", 7)
+ccb.content.add(skill)
+
+local vitamin = ccb.content.Vitamin {
+    id = "ccb_platform_test_vitamin",
+    name = "Platform vitamin",
+    kind = "counter",
+    minimum = 0,
+    maximum = 100,
+    rate_turns = 1,
+}
+vitamin:weight_micrograms(10)
+vitamin:excess_range(50, 100)
+vitamin:flag("NO_DISPLAY")
+ccb.content.add(vitamin)
+
+local flag = ccb.content.JsonFlag {
+    id = "CCB_PLATFORM_TEST_FLAG",
+    name = "Platform flag",
+    info = "Defined directly by native Lua.",
+}
+ccb.content.add(flag)
+
+local damage = ccb.content.DamageType {
+    id = "ccb_platform_test_damage",
+    name = "Platform damage",
+    skill = "ccb_platform_test_skill",
+    physical = true,
+    material_required = true,
+}
+damage:immune_character_flag("CCB_PLATFORM_TEST_IMMUNE")
+damage:on_hit("ccb_platform_test_damage_hit")
+ccb.content.add(damage)
+
+local damage_order = ccb.content.DamageInfoOrder {
+    id = "ccb_platform_test_damage",
+    display = "detailed",
+    verb = "Platform striking",
+}
+damage_order:section("bionic", 321, true)
+damage_order:section("protection", 322, true)
+ccb.content.add(damage_order)
+
+local material = ccb.content.Material {
+    id = "ccb_platform_test_material",
+    name = "Platform material",
+    chip_resistance = 1,
+    density = 1.5,
+    repair_difficulty = 2,
+}
+material:resistance("ccb_platform_test_damage", 3.5)
+material:vitamin("ccb_platform_test_vitamin", 1.0)
+material:burn(1, false, 1, 1.0, 0.0, 0.1)
+ccb.content.add(material)
+
+ccb.content.add(ccb.content.ProficiencyCategory {
+    id = "ccb_platform_test_proficiency_category",
+    name = "Platform proficiencies",
+    description = "Proficiencies defined directly by Lua.",
+})
+
+local proficiency = ccb.content.Proficiency {
+    id = "ccb_platform_test_proficiency",
+    name = "Platform proficiency",
+    description = "Exercises a native proficiency registrar.",
+    category = "ccb_platform_test_proficiency_category",
+    time_to_learn_turns = 3600,
+    can_learn = true,
+}
+proficiency:bonus("platform_testing", "intelligence", 1.0)
+ccb.content.add(proficiency)
+
+local weapon_category = ccb.content.WeaponCategory {
+    id = "CCB_PLATFORM_TEST_WEAPONS",
+    name = "PLATFORM TEST WEAPONS",
+}
+weapon_category:proficiency("ccb_platform_test_proficiency")
+ccb.content.add(weapon_category)
+
+local item_category = ccb.content.ItemCategory {
+    id = "ccb_platform_test_items",
+    header = "Platform test items",
+    noun = "Platform test item",
+    sort_rank = 123,
+    spawn_rate = 1.0,
+}
+item_category:priority_zone("LOOT_OTHER", { "CCB_PLATFORM_TEST_FLAG" }, false)
+ccb.content.add(item_category)
+
+local recipe_category = ccb.content.RecipeCategory {
+    id = "CC_CCB_PLATFORM_TEST",
+}
+recipe_category:subcategory("CSC_ALL")
+recipe_category:subcategory("CSC_CCB_PLATFORM_TEST_MISC")
+ccb.content.add(recipe_category)
+
+ccb.content.add(ccb.content.AmmunitionType {
+    id = "ccb_platform_test_ammunition",
+    name = "Platform test ammunition",
+    default_item = "ccb_platform_catalog_item",
+})
+
+local scent = ccb.content.ScentType {
+    id = "ccb_platform_test_scent",
+}
+scent:receptive_species("MAMMAL")
+ccb.content.add(scent)
+
+local speed = ccb.content.SpeedDescription {
+    id = "ccb_platform_test_speed",
+}
+speed:value(1.25, { "It is faster than native Lua." })
+speed:value(0.0, { "It is immobile in native Lua." })
+ccb.content.add(speed)
+
+local harvest_drop = ccb.content.HarvestDropType {
+    id = "ccb_platform_test_harvest_drop",
+    dissect_only = true,
+    dissect_failure = "harvest_drop_tissue_dissect_failed",
+}
+harvest_drop:skill("ccb_platform_test_skill")
+ccb.content.add(harvest_drop)
+
+local harvest = ccb.content.Harvest {
+    id = "ccb_platform_test_harvest",
+    message = "Native Lua harvest",
+    leftovers = "ccb_platform_catalog_item",
+    butchery_requirements = "default",
+}
+harvest:drop {
+    output = "ccb_platform_catalog_item",
+    category = "ccb_platform_test_harvest_drop",
+    base_minimum = 1.5,
+    base_maximum = 3.5,
+    skill_minimum = 0.25,
+    skill_maximum = 0.75,
+    maximum = 12,
+    mass_ratio = 0.5,
+}
+harvest:item_flag("ccb_platform_catalog_item", "CCB_PLATFORM_TEST_FLAG")
+harvest:item_fault("ccb_platform_catalog_item", "fault_armor_lc_dented")
+ccb.content.add(harvest)
+
+ccb.content.add(ccb.content.Behavior {
+    id = "ccb_platform_test_behavior_leaf",
+    goal = "ccb_platform_test_goal",
+})
+local behavior_root = ccb.content.Behavior {
+    id = "ccb_platform_test_behavior_root",
+    strategy = "fallback",
+}
+behavior_root:child("ccb_platform_test_behavior_leaf")
+ccb.content.add(behavior_root)
+
+ccb.content.add(ccb.content.MoraleType {
+    id = "ccb_platform_test_morale",
+    text = "Enjoyed native Lua",
+    permanent = true,
+})
+
+local disease = ccb.content.DiseaseType {
+    id = "ccb_platform_test_disease",
+    symptoms = "cold",
+    minimum_duration_turns = 60,
+    maximum_duration_turns = 120,
+    minimum_intensity = 1,
+    maximum_intensity = 2,
+    health_threshold = 100,
+}
+disease:affected_body_part("torso")
+ccb.content.add(disease)
+
+ccb.content.add(ccb.content.MonsterFlag {
+    id = "CCB_PLATFORM_TEST_MONSTER_FLAG",
+})
+
+local species = ccb.content.Species {
+    id = "CCB_PLATFORM_TEST_SPECIES",
+    description = "a native Lua species",
+    footsteps = "Lua footsteps.",
+    bleeds = "fd_blood",
+}
+species:flag("CCB_PLATFORM_TEST_MONSTER_FLAG")
+species:anger("HURT")
+species:fear("FIRE")
+species:placate("SOUND")
+ccb.content.add(species)
+
+ccb.content.add(ccb.content.Emission {
+    id = "ccb_platform_test_emission",
+    field = "fd_smoke",
+    intensity = 2,
+    quantity = 7,
+    chance = 50,
+})
+
+local root_faction = ccb.content.MonsterFaction {
+    id = "ccb_platform_test_faction_root",
+}
+root_faction:attitude("friendly", "player")
+ccb.content.add(root_faction)
+
+local child_faction = ccb.content.MonsterFaction {
+    id = "ccb_platform_test_faction_child",
+    base = "ccb_platform_test_faction_root",
+}
+child_faction:attitude("hate", "zombie")
+ccb.content.add(child_faction)
+
+ccb.content.add(ccb.content.MutationType {
+    id = "ccb_platform_test_mutation_type",
+})
+
+ccb.content.add(ccb.content.ConnectGroup {
+    id = "CCB_PLATFORM_TEST_CONNECT_GROUP",
+})
+
+ccb.content.add(ccb.content.MutationCategory {
+    id = "CCB_PLATFORM_TEST_MUTATION_CATEGORY",
+    name = "Platform mutation category",
+    mutagen_message = "Native Lua changes you.",
+    memorial_message = "Crossed a native Lua threshold.",
+    threshold_minimum = 1234,
+    base_removal_chance = 25,
+    base_removal_cost_multiplier = 1.5,
+})
+
+ccb.content.add(ccb.content.ConstructionCategory {
+    id = "CCB_PLATFORM_TEST_CONSTRUCTION_CATEGORY",
+    name = "Platform construction category",
+})
+
+ccb.content.add(ccb.content.ConstructionGroup {
+    id = "ccb_platform_test_construction_group",
+    name = "Platform construction group",
+})
+
+ccb.content.add(ccb.content.VehiclePartLocation {
+    id = "ccb_platform_test_vehicle_location",
+    name = "Platform vehicle location",
+    description = "Defined directly by native Lua.",
+    z_order = 7,
+    list_order = 3,
+})
+
+local mood = ccb.content.MoodFace {
+    id = "CCB_PLATFORM_TEST_MOOD",
+}
+mood:value(100, ":D")
+mood:value(-100, "D:")
+ccb.content.add(mood)
+
+ccb.content.add(ccb.content.VehiclePartCategory {
+    id = "ccb_platform_test_vehicle_category",
+    name = "Platform vehicle parts",
+    short_name = "P",
+    priority = 42,
+})
+
+ccb.content.add(ccb.content.NamedColor {
+    name = "Platform blue",
+    red = 10,
+    green = 20,
+    blue = 200,
+    alpha = 255,
+})
+
+ccb.content.add(ccb.content.RotatableSymbol {
+    symbols = { "①", "②", "③", "④" },
+})
+
+local art = ccb.content.AsciiArt {
+    id = "ccb_platform_test_art",
+}
+art:line("native Lua")
+art:line("content art")
+ccb.content.add(art)
+
+local end_screen = ccb.content.EndScreen {
+    id = "ccb_platform_test_end_screen",
+    picture = "ccb_platform_test_art",
+    priority = 250,
+    last_words_label = "Platform last words:",
+}
+end_screen:info(2, 1, "Native Lua ending")
+end_screen:condition("ccb_platform_end_screen_condition")
+ccb.content.add(end_screen)
+
+ccb.content.add(ccb.content.LimbScore {
+    id = "ccb_platform_test_limb_score",
+    name = "Platform balance",
+    affected_by_wounds = false,
+    affected_by_encumbrance = true,
+})
+
+ccb.content.replace(ccb.content.HitRange {
+    even_good = { 1000, 500, 250 },
+})
+
+local bash_profile = ccb.content.BashDamageProfile {
+    id = "ccb_platform_test_bash_profile",
+}
+bash_profile:factor("ccb_platform_test_damage", 0.5)
+ccb.content.add(bash_profile)
+
+ccb.content.add(ccb.content.OvermapLandUseCode {
+    id = "ccb_platform_test_land_use",
+    code = 321,
+    name = "Platform land use",
+    description = "Defined directly by native Lua.",
+    symbol = "L",
+    color = "light_blue",
+})
+
+local vision = ccb.content.OvermapVision {
+    id = "ccb_platform_test_vision",
+}
+vision:appearance {
+    name = "distant Platform structure",
+    symbol = "?",
+    color = "light_blue",
+    looks_like = "cabin",
+}
+vision:blend_adjacent()
+vision:appearance {
+    name = "Platform structure",
+    symbol = "P",
+    color = "blue",
+}
+ccb.content.add(vision)
+
+local attack = ccb.content.AttackVector {
+    id = "ccb_platform_test_attack_vector",
+    health_percent_limit = 25,
+    encumbrance_limit = 50,
+}
+attack:limb("hand_l")
+attack:contact("hand_palm_l")
+attack:requires_limb("hand", 1)
+ccb.content.add(attack)
+
+local magic_type = ccb.content.MagicType {
+    id = "ccb_platform_test_magic",
+    energy = "vitamin",
+    vitamin = "ccb_platform_test_vitamin",
+    energy_color = "light_blue",
+    cannot_cast_message = "Platform magic is unavailable.",
+    max_book_level = 7,
+    failure_cost_fraction = 0.2,
+    failure_experience_fraction = 0.4,
+}
+magic_type:cannot_cast_when("NO_PLATFORM_MAGIC")
+magic_type:progression("ccb_platform_magic_level", "ccb_platform_magic_experience")
+magic_type:casting_experience("ccb_platform_magic_casting_experience")
+magic_type:failure_chance("ccb_platform_magic_failure_chance")
+magic_type:failure_cost("ccb_platform_magic_failure_cost")
+magic_type:failure_experience("ccb_platform_magic_failure_experience")
+magic_type:on_failure("ccb_platform_magic_failure")
+ccb.content.add(magic_type)
+
+local movement = ccb.content.MovementMode {
+    id = "ccb_platform_test_movement",
+    name = "stride",
+    kind = "walking",
+    character_symbol = "s",
+    panel_symbol = "S",
+    panel_color = "light_green",
+    symbol_color = "green",
+    exertion = 3.0,
+    riding_exertion = 2.0,
+    stamina_multiplier = 1.5,
+    sound_multiplier = 0.75,
+    speed_multiplier = 1.25,
+    mech_power_kilojoules = 3,
+    swim_speed_modifier = -10,
+    stop_hauling = true,
+}
+movement:messages("none", {
+    prepare = "You prepare to stride.",
+    success = "You start striding.",
+    failure = "You cannot stride.",
+})
+movement:messages("animal", {
+    prepare = "Your steed prepares to stride.",
+    success = "Your steed starts striding.",
+    failure = "Your steed cannot stride.",
+})
+movement:messages("mech", {
+    prepare = "Your mech prepares to stride.",
+    success = "Your mech starts striding.",
+    failure = "Your mech cannot stride.",
+})
+ccb.content.add(movement)
+
+local overmap_location = ccb.content.OvermapLocation {
+    id = "ccb_platform_test_overmap_location",
+}
+overmap_location:terrain("field")
+ccb.content.add(overmap_location)
+
+local profession_group = ccb.content.ProfessionGroup {
+    id = "ccb_platform_test_profession_group",
+}
+profession_group:profession("unemployed")
+ccb.content.add(profession_group)
+
+local map_extras = ccb.content.MapExtraCollection {
+    id = "ccb_platform_test_map_extras",
+    chance = 17,
+}
+map_extras:extra("mx_crater", 25)
+ccb.content.add(map_extras)
+
+local vehicles = ccb.content.VehicleGroup {
+    id = "ccb_platform_test_vehicle_group",
+}
+vehicles:vehicle("car", 80)
+ccb.content.add(vehicles)
+
+local faults = ccb.content.FaultGroup {
+    id = "ccb_platform_test_fault_group",
+}
+faults:fault("fault_armor_lc_dented", 100)
+ccb.content.add(faults)
+
+local light = ccb.content.ExplosionLight {
+    id = "ccb_platform_test_explosion_light",
+}
+light:stop(255, 180, 40, 150)
+light:stop(180, 20, 0, 60)
+light:waves {
+    travel = 0.4,
+    gap = 0.2,
+    easing = "smoothstep",
+    flicker = 0.1,
+}
+light:duration {
+    base_ms = 100,
+    per_tile_ms = 20,
+    minimum_ms = 120,
+    maximum_ms = 500,
+}
+light:screen_shake(2.0, 80.0)
+light:shockwave {
+    strength = 0.25,
+    speed = 1.5,
+    thickness = 1.0,
+}
+ccb.content.add(light)
+
+local ammo_effect = ccb.content.AmmoEffect {
+    id = "ccb_platform_test_ammo_effect",
+    trigger_chance = 75,
+}
+ammo_effect:field_burst {
+    field = "fd_smoke",
+    intensity_min = 1,
+    intensity_max = 2,
+    radius = 2,
+    chance = 50,
+    footprint = 3,
+    passable_only = true,
+}
+ammo_effect:trail {
+    field = "fd_smoke",
+    intensity_min = 1,
+    intensity_max = 1,
+    chance = 80,
+}
+ammo_effect:on_hit {
+    effect = "onfire",
+    duration_turns = 5,
+    intensity = 1,
+    touch_skin = true,
+}
+ammo_effect:area_effect {
+    effect = "onfire",
+    duration_turns = 3,
+    intensity_min = 1,
+    intensity_max = 2,
+    radius = 1,
+    hits_min = 1,
+    hits_max = 2,
+}
+ammo_effect:explosion {
+    power = 10,
+    distance_factor = 0.5,
+    max_noise = 20,
+    fire = true,
+    light = "ccb_platform_test_explosion_light",
+}
+ammo_effect:shrapnel {
+    casing_mass = 10,
+    fragment_mass = 0.1,
+    recovery = 25,
+}
+ammo_effect:impact_policy("ccb_platform_ammo_impact")
+ccb.content.add(ammo_effect)
+
+local addiction = ccb.content.AddictionType {
+    id = "ccb_platform_test_addiction",
+    name = "Platform withdrawal",
+    type_name = "Platform testing",
+    description = "Runs a named Lua tick policy.",
+    craving_morale = "ccb_platform_test_morale",
+}
+addiction:tick_policy("ccb_platform_addiction_tick")
+ccb.content.add(addiction)
+
+local character_modifier = ccb.content.CharacterModifier {
+    id = "ccb_platform_test_character_modifier",
+    description = "Lua-evaluated Platform modifier",
+    operation = "multiply",
+}
+character_modifier:evaluate_with("ccb_platform_character_modifier")
+ccb.content.add(character_modifier)
+
+local start_location = ccb.content.StartLocation {
+    id = "ccb_platform_test_start_location",
+    name = "Platform start",
+}
+start_location:terrain("field", {
+    match = "type",
+    parameters = { platform_palette = "test" },
+})
+start_location:flag("ALLOW_OUTSIDE")
+start_location:city_size(0, 20)
+start_location:city_distance(0, 100)
+start_location:z_levels(0, 0)
+ccb.content.add(start_location)
+
+local climbing_aid = ccb.content.ClimbingAid {
+    id = "ccb_platform_test_climbing_aid",
+    slip_chance_modifier = -10,
+}
+climbing_aid:available_when {
+    category = "special",
+    flag = "CCB_PLATFORM_TEST_CLIMB",
+}
+climbing_aid:descent {
+    max_height = 2,
+    easy_climb_back_up = 1,
+    menu_text = "Use the Platform climbing aid.",
+    confirm_text = "Climb with the Platform aid?",
+    after_message = "You climb safely.",
+}
+climbing_aid:cost { pain = 1, kilocalories = 2 }
+ccb.content.add(climbing_aid)
+
+local weather = ccb.content.WeatherType {
+    id = "ccb_platform_test_weather",
+    name = "Platform rain",
+    color = "light_blue",
+    map_color = "h_light_blue",
+    symbol = ".",
+    sun_symbol = "☂",
+    ranged_penalty = 2,
+    sight_penalty = 1.1,
+    light_modifier = -10,
+    temperature_delta_kelvin = -2.5,
+    light_multiplier = 0.8,
+    sun_multiplier = 0.4,
+    sound_attenuation = 3,
+    dangerous = true,
+    precipitation = "light",
+    rains = true,
+    tiles_animation = "weather_rain_drop",
+    sound_category = "rainy",
+    priority = 45,
+}
+weather:duration(300, 600)
+weather:animation {
+    factor = 0.02,
+    color = "light_blue",
+    symbol = ",",
+}
+weather:requires("clear")
+weather:passive_effect {
+    effect = "cold",
+    minimum_duration_turns = 60,
+    maximum_duration_turns = 120,
+    intensity = 2,
+    body_part = "torso",
+    chance_outside_vehicle = 25,
+    message = "Platform rain chills you.",
+}
+weather:condition("ccb_platform_weather_condition")
+ccb.content.add(weather)
+
+ccb.content.add(ccb.content.Score {
+    id = "ccb_platform_test_score",
+    statistic = "num_moves",
+    description = "%s Platform moves",
+})
+
+local overlay_order = ccb.content.OverlayOrder()
+overlay_order:mutation("ccb_platform_test_overlay", 707)
+ccb.content.add(overlay_order)
+
+ccb.content.add(ccb.content.ZoneType {
+    id = "CCB_PLATFORM_TEST_ZONE",
+    name = "Platform test zone",
+    description = "Defined directly by native Lua.",
+    display_field = "fd_no_auto_pickup_zone",
+    can_be_personal = true,
+})
+
+local speech = ccb.content.SpeechPool {
+    id = "ccb_platform_test_speaker",
+}
+speech:line("Native Lua speaks.", 23)
+speech:line("Pure Platform speech.", 17)
+ccb.content.add(speech)
+
+local requirement = ccb.content.Requirement {
+    id = "ccb_platform_test_requirement",
+    name = "Platform test requirement",
+}
+requirement:component("ccb_platform_catalog_item", 1)
+requirement:quality("CCB_PLATFORM_TEST_QUALITY", 1, 1)
+ccb.content.add(requirement)
+
+local item = ccb.content.Item {
+    id = "ccb_platform_catalog_item",
+    name = "Platform catalog item",
+}
+item:material("ccb_platform_test_material", 1)
+item:quality("CCB_PLATFORM_TEST_QUALITY", 1)
+item:flag("CCB_PLATFORM_TEST_FLAG")
+ccb.content.add(item)
+
+local clothing = ccb.content.ClothingMod {
+    id = "ccb_platform_test_clothing_mod",
+    flag = "CCB_PLATFORM_TEST_FLAG",
+    material_item = "ccb_platform_catalog_item",
+    apply_prompt = "Apply Platform layer",
+    remove_prompt = "Remove Platform layer",
+}
+clothing:modifier {
+    stat = "bash",
+    amount = 2.5,
+    scale = { "thickness", "coverage" },
+    round_up = true,
+}
+ccb.content.add(clothing)
+
+ccb.content.add(ccb.content.Recipe {
+    id = "ccb_platform_catalog_recipe",
+    result = "ccb_platform_catalog_item",
+    category = "CC_CCB_PLATFORM_TEST",
+    subcategory = "CSC_CCB_PLATFORM_TEST_MISC",
+    skill = "ccb_platform_test_skill",
+    difficulty = 1,
+})
+local edited_recipe = ccb.content.edit_recipe("ccb_platform_catalog_recipe")
+edited_recipe:requirement("ccb_platform_test_requirement", 1)
+ccb.content.edit(edited_recipe)
+
+local nested = ccb.content.NestedRecipeCategory {
+    id = "ccb_platform_test_nested_recipe",
+    name = "Platform nested recipes",
+    description = "Composed directly in Lua.",
+    category = "CC_CCB_PLATFORM_TEST",
+    subcategory = "CSC_CCB_PLATFORM_TEST_MISC",
+    activity_level = 2.0,
+}
+nested:recipe("ccb_platform_catalog_recipe")
+ccb.content.add(nested)
+
+local recipe_group = ccb.content.RecipeGroup {
+    id = "ccb_platform_test_recipe_group",
+    building_type = "BASE",
+}
+recipe_group:recipe("ccb_platform_catalog_recipe", "Craft Platform catalog item")
+recipe_group:terrain("ccb_platform_catalog_recipe", "ANY", "TYPE")
+ccb.content.add(recipe_group)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_native_catalogs" ) }, error ) );
+    const bool applied = cata::lua_platform::apply_prepared_content( error );
+    INFO( error );
+    REQUIRE( applied );
+
+    CHECK( quality_id( "CCB_PLATFORM_TEST_QUALITY" ).is_valid() );
+    CHECK( skill_displayType_id( "ccb_platform_test_skill_display" ).is_valid() );
+    CHECK( skill_id( "ccb_platform_test_skill" ).is_valid() );
+    CHECK( vitamin_id( "ccb_platform_test_vitamin" ).is_valid() );
+    CHECK( flag_id( "CCB_PLATFORM_TEST_FLAG" ).is_valid() );
+    CHECK( damage_type_id( "ccb_platform_test_damage" ).is_valid() );
+    CHECK( damage_info_order_id( "ccb_platform_test_damage" ).is_valid() );
+    CHECK( damage_info_order_id( "ccb_platform_test_damage" ).obj().bionic_info.order == 321 );
+    CHECK( material_id( "ccb_platform_test_material" ).is_valid() );
+    CHECK( proficiency_category_id( "ccb_platform_test_proficiency_category" ).is_valid() );
+    CHECK( proficiency_id( "ccb_platform_test_proficiency" ).is_valid() );
+    CHECK( weapon_category_id( "CCB_PLATFORM_TEST_WEAPONS" ).is_valid() );
+    CHECK( item_category_id( "ccb_platform_test_items" ).is_valid() );
+    CHECK( crafting_category_id( "CC_CCB_PLATFORM_TEST" ).is_valid() );
+    CHECK( ammotype( "ccb_platform_test_ammunition" ).is_valid() );
+    CHECK( scenttype_id( "ccb_platform_test_scent" ).is_valid() );
+    CHECK( scenttype_id( "ccb_platform_test_scent" ).obj().receptive_species.count(
+               species_id( "MAMMAL" ) ) == 1 );
+    CHECK( speed_description_id( "ccb_platform_test_speed" ).is_valid() );
+    CHECK( speed_description_id( "ccb_platform_test_speed" ).obj().values().size() == 2 );
+    CHECK( harvest_drop_type_id( "ccb_platform_test_harvest_drop" ).is_valid() );
+    CHECK( harvest_drop_type_id( "ccb_platform_test_harvest_drop" ).obj().dissect_only() );
+    CHECK( harvest_drop_type_id( "ccb_platform_test_harvest_drop" ).obj().
+           get_harvest_skills() == std::vector<skill_id>{
+               skill_id( "ccb_platform_test_skill" )
+           } );
+    REQUIRE( harvest_id( "ccb_platform_test_harvest" ).is_valid() );
+    const harvest_list &platform_harvest = harvest_id(
+            "ccb_platform_test_harvest" ).obj();
+    CHECK( platform_harvest.message() == "Native Lua harvest" );
+    CHECK( platform_harvest.leftovers == itype_id( "ccb_platform_catalog_item" ) );
+    REQUIRE( platform_harvest.entries().size() == 1 );
+    const harvest_entry &platform_drop = platform_harvest.entries().front();
+    CHECK( platform_drop.drop == "ccb_platform_catalog_item" );
+    CHECK( platform_drop.type == harvest_drop_type_id(
+               "ccb_platform_test_harvest_drop" ) );
+    CHECK( platform_drop.base_num == ( std::pair<float, float>{ 1.5f, 3.5f } ) );
+    CHECK( platform_drop.scale_num == ( std::pair<float, float>{ 0.25f, 0.75f } ) );
+    CHECK( platform_drop.max == 12 );
+    CHECK( platform_drop.mass_ratio == 0.5f );
+    CHECK( platform_drop.flags == std::vector<flag_id>{
+        flag_id( "CCB_PLATFORM_TEST_FLAG" )
+    } );
+    CHECK( platform_drop.faults == std::vector<fault_id>{
+        fault_id( "fault_armor_lc_dented" )
+    } );
+    REQUIRE( string_id<behavior::node_t>(
+                 "ccb_platform_test_behavior_leaf" ).is_valid() );
+    REQUIRE( string_id<behavior::node_t>(
+                 "ccb_platform_test_behavior_root" ).is_valid() );
+    CHECK( string_id<behavior::node_t>(
+               "ccb_platform_test_behavior_leaf" )->goal() ==
+           "ccb_platform_test_goal" );
+    CHECK( string_id<behavior::node_t>(
+               "ccb_platform_test_behavior_root" )->child_ids() ==
+           std::vector<std::string>{ "ccb_platform_test_behavior_leaf" } );
+    CHECK( morale_type( "ccb_platform_test_morale" ).is_valid() );
+    CHECK( morale_type( "ccb_platform_test_morale" ).obj().is_permanent() );
+    CHECK( diseasetype_id( "ccb_platform_test_disease" ).is_valid() );
+    CHECK( diseasetype_id( "ccb_platform_test_disease" ).obj().symptoms == effect_cold );
+    CHECK( mon_flag_str_id( "CCB_PLATFORM_TEST_MONSTER_FLAG" ).is_valid() );
+    REQUIRE( species_id( "CCB_PLATFORM_TEST_SPECIES" ).is_valid() );
+    CHECK( species_id( "CCB_PLATFORM_TEST_SPECIES" )->description.translated() ==
+           "a native Lua species" );
+    CHECK( species_id( "CCB_PLATFORM_TEST_SPECIES" )->flags.count(
+               mon_flag_str_id( "CCB_PLATFORM_TEST_MONSTER_FLAG" ) ) == 1 );
+    CHECK( species_id( "CCB_PLATFORM_TEST_SPECIES" )->anger.test( mon_trigger::HURT ) );
+    CHECK( species_id( "CCB_PLATFORM_TEST_SPECIES" )->fear.test( mon_trigger::FIRE ) );
+    CHECK( species_id( "CCB_PLATFORM_TEST_SPECIES" )->placate.test( mon_trigger::SOUND ) );
+    CHECK( emit_id( "ccb_platform_test_emission" ).is_valid() );
+    REQUIRE( mfaction_str_id( "ccb_platform_test_faction_child" ).is_valid() );
+    CHECK( mfaction_str_id( "ccb_platform_test_faction_child" )->base_faction ==
+           mfaction_str_id( "ccb_platform_test_faction_root" ) );
+    CHECK( mfaction_str_id( "ccb_platform_test_faction_child" )->attitude(
+               mfaction_str_id( "zombie" ).id() ) == MFA_HATE );
+    CHECK( mutation_type_exists( "ccb_platform_test_mutation_type" ) );
+    const connect_group *const platform_connect_group =
+        cata::lua_platform::detail::connect_group_registry_find(
+            "CCB_PLATFORM_TEST_CONNECT_GROUP" );
+    REQUIRE( platform_connect_group != nullptr );
+    CHECK( platform_connect_group->id ==
+           connect_group_id( "CCB_PLATFORM_TEST_CONNECT_GROUP" ) );
+    const mutation_category_trait *const platform_mutation_category =
+        cata::lua_platform::detail::mutation_category_registry_find(
+            "CCB_PLATFORM_TEST_MUTATION_CATEGORY" );
+    REQUIRE( platform_mutation_category != nullptr );
+    CHECK( platform_mutation_category->name() == "Platform mutation category" );
+    CHECK( platform_mutation_category->mutagen_message() ==
+           "Native Lua changes you." );
+    CHECK( platform_mutation_category->threshold_min == 1234 );
+    CHECK( platform_mutation_category->base_removal_chance == 25 );
+    CHECK( construction_category_id(
+               "CCB_PLATFORM_TEST_CONSTRUCTION_CATEGORY" ).is_valid() );
+    CHECK( construction_category_id(
+               "CCB_PLATFORM_TEST_CONSTRUCTION_CATEGORY" ).obj().name() ==
+           "Platform construction category" );
+    CHECK( construction_group_str_id(
+               "ccb_platform_test_construction_group" ).is_valid() );
+    CHECK( construction_group_str_id(
+               "ccb_platform_test_construction_group" ).obj().name() ==
+           "Platform construction group" );
+    CHECK( vpart_location_id( "ccb_platform_test_vehicle_location" ).is_valid() );
+    CHECK( vpart_location_id( "ccb_platform_test_vehicle_location" ).obj().z_order == 7 );
+    CHECK( mood_face_id( "CCB_PLATFORM_TEST_MOOD" ).is_valid() );
+    CHECK( mood_face_id( "CCB_PLATFORM_TEST_MOOD" ).obj().values().front().value() == 100 );
+    const auto vehicle_category = std::find_if(
+                                      vpart_category::all().begin(), vpart_category::all().end(),
+    []( const vpart_category & value ) {
+        return value.get_id() == "ccb_platform_test_vehicle_category";
+    } );
+    REQUIRE( vehicle_category != vpart_category::all().end() );
+    CHECK( vehicle_category->short_name() == "P" );
+    CHECK( RGBColor::get_all_named_colors().count( RGBColor{ 10, 20, 200, 255 } ) == 1 );
+    CHECK( rotatable_symbols::get( UTF8_getch( "①" ), 1 ) == UTF8_getch( "②" ) );
+    CHECK( ascii_art_id( "ccb_platform_test_art" ).is_valid() );
+    CHECK( ascii_art_id( "ccb_platform_test_art" ).obj().picture.size() == 2 );
+    REQUIRE( end_screen_id( "ccb_platform_test_end_screen" ).is_valid() );
+    CHECK( end_screen_id( "ccb_platform_test_end_screen" )->picture_id ==
+           ascii_art_id( "ccb_platform_test_art" ) );
+    CHECK( end_screen_id( "ccb_platform_test_end_screen" )->added_info.size() == 1 );
+    CHECK( limb_score_id( "ccb_platform_test_limb_score" ).is_valid() );
+    CHECK( limb_score_id( "ccb_platform_test_limb_score" ).obj().name().translated() ==
+           "Platform balance" );
+    CHECK_FALSE( limb_score_id(
+                     "ccb_platform_test_limb_score" ).obj().affected_by_wounds() );
+    CHECK( Creature::dispersion_for_even_chance_of_good_hit ==
+           ( std::vector<int>{ 1000, 500, 250 } ) );
+    REQUIRE( bash_damage_profile_id( "ccb_platform_test_bash_profile" ).is_valid() );
+    CHECK( bash_damage_profile_id( "ccb_platform_test_bash_profile" )->damage_from(
+               { { damage_type_id( "ccb_platform_test_damage" ), 10 } }, 0 ) == 5 );
+    REQUIRE( clothing_mod_id( "ccb_platform_test_clothing_mod" ).is_valid() );
+    CHECK( clothing_mod_id( "ccb_platform_test_clothing_mod" )->has_mod_type(
+               clothing_mod_type_bash ) );
+    REQUIRE( overmap_land_use_code_id( "ccb_platform_test_land_use" ).is_valid() );
+    CHECK( overmap_land_use_code_id( "ccb_platform_test_land_use" )->land_use_code == 321 );
+    CHECK( overmap_land_use_code_id( "ccb_platform_test_land_use" )->get_symbol() == "L" );
+    REQUIRE( oter_vision_id( "ccb_platform_test_vision" ).is_valid() );
+    const oter_vision::level *const vague_vision =
+        oter_vision_id( "ccb_platform_test_vision" )->viewed(
+            om_vision_level::vague );
+    REQUIRE( vague_vision != nullptr );
+    CHECK( vague_vision->name.translated() == "distant Platform structure" );
+    const oter_vision::level *const outline_vision =
+        oter_vision_id( "ccb_platform_test_vision" )->viewed(
+            om_vision_level::outlines );
+    REQUIRE( outline_vision != nullptr );
+    CHECK( outline_vision->blends_adjacent );
+    REQUIRE( attack_vector_id( "ccb_platform_test_attack_vector" ).is_valid() );
+    const std::size_t expanded_attack_limbs =
+        attack_vector_id( "ccb_platform_test_attack_vector" )->limbs.size();
+    const std::size_t expanded_attack_contacts =
+        attack_vector_id( "ccb_platform_test_attack_vector" )->contact_area.size();
+    cata::lua_platform::detail::refresh_attack_vector_registry();
+    CHECK( attack_vector_id( "ccb_platform_test_attack_vector" )->limbs.size() ==
+           expanded_attack_limbs );
+    CHECK( attack_vector_id( "ccb_platform_test_attack_vector" )->contact_area.size() ==
+           expanded_attack_contacts );
+    REQUIRE( magic_type_id( "ccb_platform_test_magic" ).is_valid() );
+    CHECK( magic_type_id( "ccb_platform_test_magic" )->energy_source ==
+           magic_energy_type::vitamin );
+    REQUIRE( magic_type_id( "ccb_platform_test_magic" )->vitamin_energy_source_ );
+    CHECK( *magic_type_id( "ccb_platform_test_magic" )->vitamin_energy_source_ ==
+           vitamin_id( "ccb_platform_test_vitamin" ) );
+    CHECK( magic_type_id( "ccb_platform_test_magic" )->failure_eocs.empty() );
+    CHECK_FALSE( magic_type_id( "ccb_platform_test_magic" )->failure_chance_formula_id );
+    REQUIRE( move_mode_id( "ccb_platform_test_movement" ).is_valid() );
+    CHECK( move_mode_id( "ccb_platform_test_movement" )->name() == "stride" );
+    CHECK( move_mode_id( "ccb_platform_test_movement" )->move_speed_mult() == 1.25f );
+    CHECK( move_modes_by_speed().size() == previous_movement_mode_count + 1 );
+    cata::lua_platform::detail::refresh_movement_mode_registry();
+    CHECK( move_modes_by_speed().size() == previous_movement_mode_count + 1 );
+    REQUIRE( overmap_location_id(
+                 "ccb_platform_test_overmap_location" ).is_valid() );
+    CHECK( overmap_location_id( "ccb_platform_test_overmap_location" )->
+           get_all_terrains().count( oter_type_str_id( "field" ) ) == 1 );
+    REQUIRE( profession_group_id( "ccb_platform_test_profession_group" ).is_valid() );
+    CHECK( profession_group_id( "ccb_platform_test_profession_group" )->
+           get_professions() == std::vector<profession_id>{ profession_id( "unemployed" ) } );
+    REQUIRE( map_extra_collection_id( "ccb_platform_test_map_extras" ).is_valid() );
+    CHECK( map_extra_collection_id( "ccb_platform_test_map_extras" )->chance == 17 );
+    CHECK( map_extra_collection_id( "ccb_platform_test_map_extras" )->values.size() == 1 );
+    const VehicleGroup *const platform_vehicle_group =
+        cata::lua_platform::detail::vehicle_group_registry_find(
+            "ccb_platform_test_vehicle_group" );
+    REQUIRE( platform_vehicle_group != nullptr );
+    CHECK( platform_vehicle_group->all_possible_results() ==
+           std::vector<vproto_id>{ vproto_id( "car" ) } );
+    REQUIRE( fault_group_id( "ccb_platform_test_fault_group" ).is_valid() );
+    CHECK( fault_group_id( "ccb_platform_test_fault_group" )->
+           get_weighted_list().size() == 1 );
+    REQUIRE( explosion_light_str_id(
+                 "ccb_platform_test_explosion_light" ).is_valid() );
+    CHECK( explosion_light_str_id( "ccb_platform_test_explosion_light" )->
+           stops.size() == 2 );
+    CHECK( explosion_light_str_id( "ccb_platform_test_explosion_light" )->
+           easing == vfx_easing::smoothstep );
+    CHECK( explosion_light_str_id( "ccb_platform_test_explosion_light" )->shockwave );
+    REQUIRE( ammo_effect_str_id( "ccb_platform_test_ammo_effect" ).is_valid() );
+    CHECK( ammo_effect_str_id( "ccb_platform_test_ammo_effect" )->trigger_chance == 75 );
+    CHECK( ammo_effect_str_id( "ccb_platform_test_ammo_effect" )->aoe_field_types.size() == 1 );
+    CHECK( ammo_effect_str_id( "ccb_platform_test_ammo_effect" )->trail_field_types.size() == 1 );
+    CHECK( ammo_effect_str_id( "ccb_platform_test_ammo_effect" )->on_hit_effects.size() == 1 );
+    CHECK( ammo_effect_str_id( "ccb_platform_test_ammo_effect" )->aoe_effects.size() == 1 );
+    CHECK( ammo_effect_str_id( "ccb_platform_test_ammo_effect" )->eoc.empty() );
+    REQUIRE( addiction_id( "ccb_platform_test_addiction" ).is_valid() );
+    CHECK( addiction_id( "ccb_platform_test_addiction" )->get_name().translated() ==
+           "Platform withdrawal" );
+    CHECK( addiction_id( "ccb_platform_test_addiction" )->get_effect().is_null() );
+    CHECK( addiction_id( "ccb_platform_test_addiction" )->get_builtin().empty() );
+    REQUIRE( character_modifier_id(
+                 "ccb_platform_test_character_modifier" ).is_valid() );
+    CHECK( character_modifier_id( "ccb_platform_test_character_modifier" )->
+           description().translated() == "Lua-evaluated Platform modifier" );
+    CHECK_FALSE( character_modifier_id(
+                     "ccb_platform_test_character_modifier" )->is_builtin() );
+    REQUIRE( start_location_id( "ccb_platform_test_start_location" ).is_valid() );
+    CHECK( start_location_id( "ccb_platform_test_start_location" )->name() ==
+           "Platform start" );
+    CHECK( start_location_id( "ccb_platform_test_start_location" )->targets_count() == 1 );
+    CHECK( start_location_id( "ccb_platform_test_start_location" )->flags().count(
+               "ALLOW_OUTSIDE" ) == 1 );
+    REQUIRE( climbing_aid_id( "ccb_platform_test_climbing_aid" ).is_valid() );
+    CHECK( climbing_aid_id( "ccb_platform_test_climbing_aid" )->slip_chance_mod == -10 );
+    CHECK( climbing_aid_id( "ccb_platform_test_climbing_aid" )->down.max_height == 2 );
+    REQUIRE( weather_type_id( "ccb_platform_test_weather" ).is_valid() );
+    const weather_type &platform_weather =
+        weather_type_id( "ccb_platform_test_weather" ).obj();
+    CHECK( platform_weather.name.translated() == "Platform rain" );
+    CHECK( platform_weather.get_symbol() == "." );
+    CHECK( platform_weather.get_sun_symbol() == "☂" );
+    CHECK( platform_weather.precip == precip_class::light );
+    CHECK( platform_weather.rains );
+    CHECK( platform_weather.priority == 45 );
+    CHECK( platform_weather.duration_min == 300_turns );
+    CHECK( platform_weather.duration_max == 600_turns );
+    CHECK( units::to_kelvin_delta( platform_weather.temperature_modifier ) == -2.5f );
+    CHECK( platform_weather.weather_animation.get_symbol() == "," );
+    REQUIRE( platform_weather.required_weathers.size() == 1 );
+    CHECK( platform_weather.required_weathers.front() == WEATHER_CLEAR );
+    REQUIRE( platform_weather.passive_effect.size() == 1 );
+    CHECK( platform_weather.passive_effect.front().id == effect_cold );
+    CHECK_FALSE( platform_weather.debug_cause_eoc );
+    CHECK_FALSE( platform_weather.debug_leave_eoc );
+    REQUIRE( score_id( "ccb_platform_test_score" ).is_valid() );
+    CHECK_FALSE( score_id( "ccb_platform_test_score" )->description( get_stats() ).empty() );
+    REQUIRE( base_mutation_overlay_ordering.count(
+                 "ccb_platform_test_overlay" ) == 1 );
+    CHECK( get_overlay_order_of_mutation( "ccb_platform_test_overlay" ) == 707 );
+    REQUIRE( zone_type_id( "CCB_PLATFORM_TEST_ZONE" ).is_valid() );
+    CHECK( zone_type_id( "CCB_PLATFORM_TEST_ZONE" ).obj().name() ==
+           "Platform test zone" );
+    CHECK( zone_type_id( "CCB_PLATFORM_TEST_ZONE" ).obj().can_be_personal );
+    const std::vector<SpeechBubble> *const platform_speech =
+        cata::lua_platform::detail::speech_registry_find(
+            "ccb_platform_test_speaker" );
+    REQUIRE( platform_speech != nullptr );
+    REQUIRE( platform_speech->size() == 2 );
+    CHECK( platform_speech->front().text.translated() == "Native Lua speaks." );
+    CHECK( platform_speech->front().volume == 23 );
+    CHECK( requirement_id( "ccb_platform_test_requirement" ).is_valid() );
+    CHECK( item_controller->has_template( itype_id( "ccb_platform_catalog_item" ) ) );
+    CHECK( recipe_id( "ccb_platform_catalog_recipe" ).is_valid() );
+    REQUIRE( recipe_id( "ccb_platform_test_nested_recipe" ).is_valid() );
+    CHECK( recipe_id( "ccb_platform_test_nested_recipe" )->is_nested() );
+    CHECK( recipe_id( "ccb_platform_test_nested_recipe" )->nested_category_data.count(
+               recipe_id( "ccb_platform_catalog_recipe" ) ) == 1 );
+    CHECK( recipe_group::get_recipes_by_id(
+               "ccb_platform_test_recipe_group" ).count(
+                   recipe_id( "ccb_platform_catalog_recipe" ) ) == 1 );
+
+    cata::lua_platform::discard_prepared_mods();
+    CHECK_FALSE( quality_id( "CCB_PLATFORM_TEST_QUALITY" ).is_valid() );
+    CHECK_FALSE( skill_displayType_id( "ccb_platform_test_skill_display" ).is_valid() );
+    CHECK_FALSE( skill_id( "ccb_platform_test_skill" ).is_valid() );
+    CHECK_FALSE( vitamin_id( "ccb_platform_test_vitamin" ).is_valid() );
+    CHECK_FALSE( flag_id( "CCB_PLATFORM_TEST_FLAG" ).is_valid() );
+    CHECK_FALSE( damage_type_id( "ccb_platform_test_damage" ).is_valid() );
+    CHECK_FALSE( damage_info_order_id( "ccb_platform_test_damage" ).is_valid() );
+    CHECK_FALSE( material_id( "ccb_platform_test_material" ).is_valid() );
+    CHECK_FALSE( proficiency_category_id( "ccb_platform_test_proficiency_category" ).is_valid() );
+    CHECK_FALSE( proficiency_id( "ccb_platform_test_proficiency" ).is_valid() );
+    CHECK_FALSE( weapon_category_id( "CCB_PLATFORM_TEST_WEAPONS" ).is_valid() );
+    CHECK_FALSE( item_category_id( "ccb_platform_test_items" ).is_valid() );
+    CHECK_FALSE( crafting_category_id( "CC_CCB_PLATFORM_TEST" ).is_valid() );
+    CHECK_FALSE( ammotype( "ccb_platform_test_ammunition" ).is_valid() );
+    CHECK_FALSE( scenttype_id( "ccb_platform_test_scent" ).is_valid() );
+    CHECK_FALSE( speed_description_id( "ccb_platform_test_speed" ).is_valid() );
+    CHECK_FALSE( harvest_drop_type_id( "ccb_platform_test_harvest_drop" ).is_valid() );
+    CHECK_FALSE( harvest_id( "ccb_platform_test_harvest" ).is_valid() );
+    CHECK_FALSE( string_id<behavior::node_t>(
+                     "ccb_platform_test_behavior_leaf" ).is_valid() );
+    CHECK_FALSE( string_id<behavior::node_t>(
+                     "ccb_platform_test_behavior_root" ).is_valid() );
+    CHECK_FALSE( morale_type( "ccb_platform_test_morale" ).is_valid() );
+    CHECK_FALSE( diseasetype_id( "ccb_platform_test_disease" ).is_valid() );
+    CHECK_FALSE( mon_flag_str_id( "CCB_PLATFORM_TEST_MONSTER_FLAG" ).is_valid() );
+    CHECK_FALSE( species_id( "CCB_PLATFORM_TEST_SPECIES" ).is_valid() );
+    CHECK_FALSE( emit_id( "ccb_platform_test_emission" ).is_valid() );
+    CHECK_FALSE( mfaction_str_id( "ccb_platform_test_faction_root" ).is_valid() );
+    CHECK_FALSE( mfaction_str_id( "ccb_platform_test_faction_child" ).is_valid() );
+    CHECK_FALSE( mutation_type_exists( "ccb_platform_test_mutation_type" ) );
+    CHECK( cata::lua_platform::detail::connect_group_registry_find(
+               "CCB_PLATFORM_TEST_CONNECT_GROUP" ) == nullptr );
+    CHECK( cata::lua_platform::detail::mutation_category_registry_find(
+               "CCB_PLATFORM_TEST_MUTATION_CATEGORY" ) == nullptr );
+    CHECK_FALSE( construction_category_id(
+                     "CCB_PLATFORM_TEST_CONSTRUCTION_CATEGORY" ).is_valid() );
+    CHECK_FALSE( construction_group_str_id(
+                     "ccb_platform_test_construction_group" ).is_valid() );
+    CHECK_FALSE( vpart_location_id(
+                     "ccb_platform_test_vehicle_location" ).is_valid() );
+    CHECK_FALSE( mood_face_id( "CCB_PLATFORM_TEST_MOOD" ).is_valid() );
+    CHECK( std::none_of( vpart_category::all().begin(), vpart_category::all().end(),
+    []( const vpart_category & value ) {
+        return value.get_id() == "ccb_platform_test_vehicle_category";
+    } ) );
+    CHECK( RGBColor::get_all_named_colors().count( RGBColor{ 10, 20, 200, 255 } ) == 0 );
+    CHECK( rotatable_symbols::get( UTF8_getch( "①" ), 1 ) == UTF8_getch( "①" ) );
+    CHECK_FALSE( ascii_art_id( "ccb_platform_test_art" ).is_valid() );
+    CHECK_FALSE( end_screen_id( "ccb_platform_test_end_screen" ).is_valid() );
+    CHECK_FALSE( limb_score_id( "ccb_platform_test_limb_score" ).is_valid() );
+    CHECK( Creature::dispersion_for_even_chance_of_good_hit == previous_hit_range );
+    CHECK_FALSE( bash_damage_profile_id(
+                     "ccb_platform_test_bash_profile" ).is_valid() );
+    CHECK_FALSE( clothing_mod_id( "ccb_platform_test_clothing_mod" ).is_valid() );
+    CHECK_FALSE( overmap_land_use_code_id(
+                     "ccb_platform_test_land_use" ).is_valid() );
+    CHECK_FALSE( oter_vision_id( "ccb_platform_test_vision" ).is_valid() );
+    CHECK_FALSE( attack_vector_id(
+                     "ccb_platform_test_attack_vector" ).is_valid() );
+    CHECK_FALSE( magic_type_id( "ccb_platform_test_magic" ).is_valid() );
+    CHECK_FALSE( move_mode_id( "ccb_platform_test_movement" ).is_valid() );
+    CHECK( move_modes_by_speed().size() == previous_movement_mode_count );
+    CHECK_FALSE( overmap_location_id(
+                     "ccb_platform_test_overmap_location" ).is_valid() );
+    CHECK_FALSE( profession_group_id(
+                     "ccb_platform_test_profession_group" ).is_valid() );
+    CHECK_FALSE( map_extra_collection_id(
+                     "ccb_platform_test_map_extras" ).is_valid() );
+    CHECK( cata::lua_platform::detail::vehicle_group_registry_find(
+               "ccb_platform_test_vehicle_group" ) == nullptr );
+    CHECK_FALSE( fault_group_id( "ccb_platform_test_fault_group" ).is_valid() );
+    CHECK_FALSE( explosion_light_str_id(
+                     "ccb_platform_test_explosion_light" ).is_valid() );
+    CHECK_FALSE( ammo_effect_str_id( "ccb_platform_test_ammo_effect" ).is_valid() );
+    CHECK_FALSE( addiction_id( "ccb_platform_test_addiction" ).is_valid() );
+    CHECK_FALSE( character_modifier_id(
+                     "ccb_platform_test_character_modifier" ).is_valid() );
+    CHECK_FALSE( start_location_id( "ccb_platform_test_start_location" ).is_valid() );
+    CHECK_FALSE( climbing_aid_id( "ccb_platform_test_climbing_aid" ).is_valid() );
+    CHECK_FALSE( weather_type_id( "ccb_platform_test_weather" ).is_valid() );
+    CHECK_FALSE( score_id( "ccb_platform_test_score" ).is_valid() );
+    CHECK( base_mutation_overlay_ordering.count(
+               "ccb_platform_test_overlay" ) == 0 );
+    CHECK_FALSE( zone_type_id( "CCB_PLATFORM_TEST_ZONE" ).is_valid() );
+    CHECK( cata::lua_platform::detail::speech_registry_find(
+               "ccb_platform_test_speaker" ) == nullptr );
+    CHECK_FALSE( requirement_id( "ccb_platform_test_requirement" ).is_valid() );
+    CHECK_FALSE( item_controller->has_template( itype_id( "ccb_platform_catalog_item" ) ) );
+    CHECK_FALSE( recipe_id( "ccb_platform_catalog_recipe" ).is_valid() );
+    CHECK_FALSE( recipe_id( "ccb_platform_test_nested_recipe" ).is_valid() );
+    CHECK( recipe_group::get_recipes_by_id(
+               "ccb_platform_test_recipe_group" ).empty() );
+}
+
+TEST_CASE( "lua_first_behavior_runs_named_lua_condition_and_score_policies",
+           "[lua][platform][content][behavior]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_behavior_policy" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+ccb.runtime.handler("behavior_condition", function(payload)
+    assert(payload.behavior_id == "ccb_platform_policy_behavior")
+    assert(payload.argument == "condition argument")
+    assert(payload.subject_kind == "avatar")
+    assert(payload.subject.kind == "creature")
+    assert(payload.subject:is_valid())
+    return true
+end, 1)
+
+ccb.runtime.handler("behavior_score", function(payload)
+    assert(payload.behavior_id == "ccb_platform_policy_behavior")
+    assert(payload.argument == "score argument")
+    assert(payload.subject_kind == "avatar")
+    assert(payload.subject.kind == "creature")
+    assert(payload.subject:is_valid())
+    return 0.75
+end, 1)
+
+local behavior = ccb.content.Behavior {
+    id = "ccb_platform_policy_behavior",
+    goal = "ccb_platform_policy_goal",
+}
+behavior:when("behavior_condition", "condition argument", false)
+behavior:score("behavior_score", "score argument")
+ccb.content.add(behavior)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_behavior_policy" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    const string_id<behavior::node_t> id( "ccb_platform_policy_behavior" );
+    REQUIRE( id.is_valid() );
+    const behavior::character_oracle_t oracle( &get_avatar() );
+    const behavior::behavior_return result = id->tick( &oracle );
+    CHECK( result.result == behavior::status_t::running );
+    REQUIRE( result.selection != nullptr );
+    CHECK( result.selection->goal() == "ccb_platform_policy_goal" );
+    CHECK( result.score == 0.75f );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_monster_finalization_waits_for_the_global_data_pass",
+           "[lua][platform][content][monster][finalize]" )
+{
+    override_option monster_speed( "MONSTER_SPEED", "50%" );
+    override_option monster_resilience( "MONSTER_RESILIENCE", "200%" );
+
+    mtype candidate;
+    candidate.id = mtype_id( "mon_ccb_platform_finalize_once" );
+    candidate.hp = 100;
+    candidate.speed = 100;
+
+    MonsterGenerator &generator = MonsterGenerator::generator();
+    generator.finalize_lua_first_mtype_if_ready( candidate, false );
+    CHECK( candidate.hp == 100 );
+    CHECK( candidate.speed == 100 );
+
+    generator.finalize_lua_first_mtype_if_ready( candidate, true );
+    CHECK( candidate.hp == 200 );
+    CHECK( candidate.speed == 50 );
+}
+
+TEST_CASE( "lua_first_body_similarity_caches_survive_the_global_finalize_pass",
+           "[lua][platform][content][bodypart][finalize]" )
+{
+    body_part_type &body = const_cast<body_part_type &>( body_part_arm_l.obj() );
+    const std::optional<bodypart_str_id> previous_body_similarity = body.similar_bodypart;
+    const bodypart_str_id body_peer = body_part_arm_r;
+
+    const sub_bodypart_str_id sub_id( "hand_palm_l" );
+    const sub_bodypart_str_id sub_peer( "hand_palm_r" );
+    REQUIRE( sub_id.is_valid() );
+    REQUIRE( sub_peer.is_valid() );
+    sub_body_part_type &sub = const_cast<sub_body_part_type &>( sub_id.obj() );
+    const std::optional<sub_bodypart_str_id> previous_sub_similarity = sub.similar_bodypart;
+
+    on_out_of_scope restore_similarity( [&]() {
+        body.similar_bodypart = previous_body_similarity;
+        sub.similar_bodypart = previous_sub_similarity;
+        cata::lua_platform::detail::refresh_body_part_similarity_cache();
+        cata::lua_platform::detail::refresh_sub_body_part_similarity_cache();
+    } );
+
+    body.similar_bodypart = body_peer;
+    sub.similar_bodypart = sub_peer;
+    cata::lua_platform::detail::refresh_body_part_similarity_cache();
+    cata::lua_platform::detail::refresh_sub_body_part_similarity_cache();
+
+    // Lua-first insertion refreshes these caches before the normal global
+    // finalization pass.  Re-running the native finalizers must not append the
+    // same relationship a second time.
+    body_part_type::finalize_all();
+    sub_body_part_type::finalize_all();
+
+    const std::vector<bodypart_str_id> body_similar =
+        body.get_all_combined_similar_bodyparts();
+    CHECK( std::count( body_similar.begin(), body_similar.end(), body_peer ) == 1 );
+    const std::vector<sub_bodypart_str_id> sub_similar =
+        sub.get_all_combined_similar_sub_bodyparts();
+    CHECK( std::count( sub_similar.begin(), sub_similar.end(), sub_peer ) == 1 );
+}
+
+TEST_CASE( "lua_first_creature_catalogs_are_native_and_transactional",
+           "[lua][platform][content][monster][body]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_creature_catalogs" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local effect = ccb.content.EffectType {
+    id = "ccb_platform_creature_effect",
+    name = "creature effect",
+    description = "Applied by native Lua creature content.",
+    maximum_intensity = 2,
+}
+effect:reduced_description("Reduced native Lua creature effect.")
+ccb.content.add(effect)
+
+local weakpoints = ccb.content.WeakpointSet {
+    id = "ccb_platform_creature_weakpoints",
+}
+weakpoints:weakpoint {
+    id = "core",
+    name = "core",
+    coverage = 100,
+    good = true,
+}
+weakpoints:armor_multiplier("core", "bash", 0.5)
+weakpoints:damage_multiplier("core", "bash", 1.5)
+weakpoints:effect("core", {
+    effect = "ccb_platform_creature_effect",
+    chance = 25,
+    duration_min_turns = 1,
+    duration_max_turns = 3,
+})
+ccb.content.add(weakpoints)
+
+local group = ccb.content.ItemGroup {
+    id = "ccb_platform_creature_drops",
+    kind = "distribution",
+}
+group:item("rock", 100)
+ccb.content.add(group)
+
+local sub = ccb.content.SubBodyPart {
+    id = "ccb_platform_creature_core_surface",
+    name = "core surface",
+    parent = "ccb_platform_creature_core",
+}
+sub:location_under("ccb_platform_creature_core_surface")
+sub:unarmed_damage("bash", 1)
+
+local body = ccb.content.BodyPart {
+    id = "ccb_platform_creature_core",
+    name = "core",
+    main_part = "ccb_platform_creature_core",
+    connected_to = "ccb_platform_creature_core",
+    hit_size = 1,
+    hit_difficulty = 1,
+    base_health = 20,
+}
+body:sub_part("ccb_platform_creature_core_surface")
+body:limb_type("torso")
+body:armor("bash", 1)
+body:unarmed_damage("bash", 2)
+ccb.content.add(sub)
+ccb.content.add(body)
+
+local anatomy = ccb.content.Anatomy {
+    id = "ccb_platform_creature_anatomy",
+}
+anatomy:part("ccb_platform_creature_core")
+ccb.content.add(anatomy)
+
+local graph = ccb.content.BodyGraph {
+    id = "ccb_platform_creature_graph",
+    parent_body_part = "ccb_platform_creature_core",
+}
+graph:row("C")
+graph:part("C", {
+    body_parts = { "ccb_platform_creature_core" },
+    sub_body_parts = { "ccb_platform_creature_core_surface" },
+    selected_color = "light_red",
+    display_symbol = "C",
+})
+ccb.content.add(graph)
+
+local field = ccb.content.FieldType {
+    id = "ccb_platform_creature_field",
+    phase = "gas",
+}
+field:intensity {
+    name = "creature mist",
+    symbol = "%",
+    color = "light_blue",
+}
+field:effect(1, {
+    effect = "ccb_platform_creature_effect",
+    duration_min_turns = 1,
+    duration_max_turns = 2,
+    body_part = "ccb_platform_creature_core",
+})
+field:immune_monster("mon_ccb_platform_creature")
+ccb.content.add(field)
+
+ccb.runtime.handler("creature_attack", function(payload)
+    return payload.attack_id == "ccb_platform_creature_attack"
+end, 1)
+local attack = ccb.content.MonsterAttack {
+    id = "ccb_platform_creature_attack",
+    cooldown = 5,
+}
+attack:policy("creature_attack")
+ccb.content.add(attack)
+
+local behavior = ccb.content.Behavior {
+    id = "ccb_platform_creature_goal",
+    goal = "attack",
+}
+ccb.content.add(behavior)
+
+local monster = ccb.content.Monster {
+    id = "mon_ccb_platform_creature",
+    name = "native Lua creature",
+    plural_name = "native Lua creatures",
+    description = "A monster assembled without JSON or EOC.",
+    symbol = "C",
+    color = "light_blue",
+    default_faction = "zombie",
+    harvest = "human",
+    speed_description = "DEFAULT",
+    death_drops = "ccb_platform_creature_drops",
+    hp = 20,
+    speed = 80,
+    melee_skill = 2,
+}
+monster:material("flesh", 1)
+monster:species("ZOMBIE")
+monster:armor("bash", 2)
+monster:melee_damage("bash", 3, 1)
+monster:attack("ccb_platform_creature_attack", 7)
+monster:weakpoint_set("ccb_platform_creature_weakpoints")
+monster:goal("ccb_platform_creature_goal")
+monster:anger_trigger("HURT")
+ccb.content.add(monster)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_creature_catalogs" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+
+    CHECK( cata::lua_platform::detail::effect_type_registry_find(
+               "ccb_platform_creature_effect" ) != nullptr );
+    CHECK( weakpoints_id( "ccb_platform_creature_weakpoints" ).is_valid() );
+    CHECK( item_group::group_is_defined(
+               item_group_id( "ccb_platform_creature_drops" ) ) );
+    CHECK( sub_bodypart_str_id( "ccb_platform_creature_core_surface" ).is_valid() );
+    CHECK( bodypart_str_id( "ccb_platform_creature_core" ).is_valid() );
+    REQUIRE( anatomy_id( "ccb_platform_creature_anatomy" ).is_valid() );
+    CHECK( anatomy_id( "ccb_platform_creature_anatomy" )->get_bodyparts().size() == 1 );
+    CHECK( bodygraph_id( "ccb_platform_creature_graph" ).is_valid() );
+    REQUIRE( field_type_str_id( "ccb_platform_creature_field" ).is_valid() );
+    CHECK( field_type_str_id( "ccb_platform_creature_field" )->intensity_levels.size() == 1 );
+    CHECK( cata::lua_platform::detail::monster_attack_registry_find(
+               "ccb_platform_creature_attack" ) != nullptr );
+    REQUIRE( mtype_id( "mon_ccb_platform_creature" ).is_valid() );
+    CHECK( mtype_id( "mon_ccb_platform_creature" )->special_attacks.count(
+               "ccb_platform_creature_attack" ) == 1 );
+    CHECK( mtype_id( "mon_ccb_platform_creature" )->weakpoints.weakpoint_list.size() == 1 );
+    REQUIRE( mtype_id( "mon_ccb_platform_creature" )->weakpoints.weakpoint_list.front().effects.size() == 1 );
+    CHECK( mtype_id( "mon_ccb_platform_creature" )->weakpoints.weakpoint_list.front().effects.front().damage_required ==
+           std::pair<float, float>( 0.0f, 100.0f ) );
+
+    cata::lua_platform::discard_prepared_mods();
+    CHECK( cata::lua_platform::detail::effect_type_registry_find(
+               "ccb_platform_creature_effect" ) == nullptr );
+    CHECK_FALSE( weakpoints_id( "ccb_platform_creature_weakpoints" ).is_valid() );
+    CHECK_FALSE( item_group::group_is_defined(
+                     item_group_id( "ccb_platform_creature_drops" ) ) );
+    CHECK_FALSE( sub_bodypart_str_id(
+                     "ccb_platform_creature_core_surface" ).is_valid() );
+    CHECK_FALSE( bodypart_str_id( "ccb_platform_creature_core" ).is_valid() );
+    CHECK_FALSE( anatomy_id( "ccb_platform_creature_anatomy" ).is_valid() );
+    CHECK_FALSE( bodygraph_id( "ccb_platform_creature_graph" ).is_valid() );
+    CHECK_FALSE( field_type_str_id( "ccb_platform_creature_field" ).is_valid() );
+    CHECK( cata::lua_platform::detail::monster_attack_registry_find(
+               "ccb_platform_creature_attack" ) == nullptr );
+    CHECK_FALSE( mtype_id( "mon_ccb_platform_creature" ).is_valid() );
+}
+
+TEST_CASE( "lua_first_wound_content_adds_replaces_edits_and_refreshes_derived_state",
+           "[lua][platform][content][wound]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+    scoped_platform_test_mod provider( "ccb_platform_wound_provider" );
+    scoped_platform_test_mod consumer( "ccb_platform_wound_consumer" );
+    provider.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local requirement = ccb.content.Requirement {
+    id = "ccb_platform_wound_provider_requirement",
+    name = "Provider wound requirement",
+}
+requirement:component("rock", 1)
+ccb.content.add(requirement)
+
+local wound = ccb.content.Wound {
+    id = "ccb_platform_layered_wound",
+    name = "Provider wound",
+    plural_name = "Provider wounds",
+    description = "The provider definition.",
+    pain_min = 1,
+    pain_max = 1,
+    healing_min_turns = 10,
+    healing_max_turns = 10,
+    damage_min = 1,
+    damage_max = 2,
+    weight = 2,
+    per_part_limit = 1,
+}
+wound:damage_type("bash")
+wound:require_body_part_type("arm")
+ccb.content.add(wound)
+
+local target = ccb.content.Wound {
+    id = "ccb_platform_provider_wound_target",
+    name = "Provider target wound",
+    plural_name = "Provider target wounds",
+    description = "The provider treatment target.",
+    healing_min_turns = 5,
+    healing_max_turns = 5,
+    damage_min = 1,
+    damage_max = 1,
+}
+target:damage_type("bash")
+target:require_body_part_type("hand")
+ccb.content.add(target)
+
+local fix = ccb.content.WoundFix {
+    id = "ccb_platform_layered_wound_fix",
+    name = "Provider treatment",
+    description = "The provider treatment definition.",
+    success_message = "Provider treatment succeeded.",
+    duration_turns = 10,
+    health_delta = 1,
+}
+fix:removes("ccb_platform_layered_wound")
+fix:adds("ccb_platform_provider_wound_target")
+fix:requires("ccb_platform_wound_provider_requirement", 1)
+ccb.content.add(fix)
+)lua" );
+    consumer.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+ccb.content.add(ccb.content.SkillDisplay {
+    id = "ccb_platform_wound_skill_display",
+    label = "Wound test skills",
+})
+ccb.content.add(ccb.content.Skill {
+    id = "ccb_platform_wound_skill",
+    name = "Wound testing",
+    description = "Tests same-transaction wound-fix skill references.",
+    display_category = "ccb_platform_wound_skill_display",
+    sort_rank = 30000,
+})
+ccb.content.add(ccb.content.DamageType {
+    id = "ccb_platform_wound_damage_a",
+    name = "Wound test damage A",
+    skill = "ccb_platform_wound_skill",
+    physical = true,
+})
+ccb.content.add(ccb.content.DamageType {
+    id = "ccb_platform_wound_damage_b",
+    name = "Wound test damage B",
+    skill = "ccb_platform_wound_skill",
+    physical = true,
+})
+ccb.content.add(ccb.content.ProficiencyCategory {
+    id = "ccb_platform_wound_proficiency_category",
+    name = "Wound test proficiencies",
+    description = "Same-transaction wound-fix proficiency references.",
+})
+ccb.content.add(ccb.content.Proficiency {
+    id = "ccb_platform_wound_proficiency",
+    name = "Wound treatment testing",
+    description = "A same-transaction wound treatment proficiency.",
+    category = "ccb_platform_wound_proficiency_category",
+    time_to_learn_turns = 100,
+    can_learn = true,
+})
+ccb.content.add(ccb.content.LimbScore {
+    id = "ccb_platform_wound_limb_score",
+    name = "Wound test limb score",
+    affected_by_wounds = true,
+})
+
+local primary_requirement = ccb.content.Requirement {
+    id = "ccb_platform_wound_primary_requirement",
+    name = "Primary wound requirement",
+}
+primary_requirement:component("scrap", 2)
+ccb.content.add(primary_requirement)
+local edited_requirement = ccb.content.Requirement {
+    id = "ccb_platform_wound_edited_requirement",
+    name = "Edited wound requirement",
+}
+edited_requirement:component("rock", 1)
+ccb.content.add(edited_requirement)
+
+local first_target = ccb.content.Wound {
+    id = "ccb_platform_wound_progression_first",
+    name = "First progression target",
+    plural_name = "First progression targets",
+    description = "The first deterministic progression target.",
+    pain_min = 1,
+    pain_max = 1,
+    healing_min_turns = 5,
+    healing_max_turns = 5,
+    damage_min = 1,
+    damage_max = 1,
+}
+first_target:damage_type("ccb_platform_wound_damage_a")
+first_target:require_body_part_type("hand")
+ccb.content.add(first_target)
+local second_target = ccb.content.Wound {
+    id = "ccb_platform_wound_progression_second",
+    name = "Second progression target",
+    plural_name = "Second progression targets",
+    description = "The second deterministic progression target.",
+    pain_min = 1,
+    pain_max = 1,
+    healing_min_turns = 5,
+    healing_max_turns = 5,
+    damage_min = 1,
+    damage_max = 1,
+}
+second_target:damage_type("ccb_platform_wound_damage_b")
+second_target:require_body_part_type("hand")
+ccb.content.add(second_target)
+
+local wound = ccb.content.Wound {
+    id = "ccb_platform_layered_wound",
+    name = "Consumer wound",
+    plural_name = "Consumer wounds",
+    description = "The consumer replacement definition.",
+    pain_min = 6,
+    pain_max = 6,
+    healing_min_turns = 30,
+    healing_max_turns = 30,
+    damage_min = 3,
+    damage_max = 11,
+    weight = 13,
+    per_part_limit = 4,
+}
+wound:damage_type("ccb_platform_wound_damage_a")
+wound:limb_score("ccb_platform_wound_limb_score", 0.35)
+wound:progression("ccb_platform_wound_progression_first", 100)
+wound:require_body_part_type("arm")
+ccb.content.replace(wound)
+
+local edited_wound = ccb.content.edit_wound("ccb_platform_layered_wound")
+edited_wound:damage_type("ccb_platform_wound_damage_b")
+edited_wound:progression("ccb_platform_wound_progression_second", 100)
+ccb.content.edit(edited_wound)
+assert(not pcall(ccb.content.edit_wound, "not_staged_by_this_mod"))
+
+local fix = ccb.content.WoundFix {
+    id = "ccb_platform_layered_wound_fix",
+    name = "Consumer treatment",
+    description = "The consumer replacement treatment.",
+    success_message = "Consumer treatment succeeded.",
+    duration_turns = 45,
+    health_delta = 3,
+}
+fix:skill("ccb_platform_wound_skill", 2)
+fix:proficiency("ccb_platform_wound_proficiency", 0.4, true)
+fix:removes("ccb_platform_layered_wound")
+fix:adds("ccb_platform_wound_progression_first")
+fix:requires("ccb_platform_wound_primary_requirement", 2)
+ccb.content.replace(fix)
+
+local edited_fix = ccb.content.edit_wound_fix("ccb_platform_layered_wound_fix")
+edited_fix:adds("ccb_platform_wound_progression_second")
+edited_fix:requires("ccb_platform_wound_edited_requirement", 3)
+ccb.content.edit(edited_fix)
+assert(not pcall(ccb.content.edit_wound_fix, "not_staged_by_this_mod"))
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods( {
+        provider.source( "ccb_platform_wound_provider" ),
+        consumer.source( "ccb_platform_wound_consumer" )
+    }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+
+    const wound_type_id wound_id( "ccb_platform_layered_wound" );
+    const wound_type_id provider_target_id( "ccb_platform_provider_wound_target" );
+    const wound_type_id first_target_id( "ccb_platform_wound_progression_first" );
+    const wound_type_id second_target_id( "ccb_platform_wound_progression_second" );
+    const wound_fix_id fix_id( "ccb_platform_layered_wound_fix" );
+    const requirement_id provider_requirement_id(
+        "ccb_platform_wound_provider_requirement" );
+    const requirement_id primary_requirement_id(
+        "ccb_platform_wound_primary_requirement" );
+    const requirement_id edited_requirement_id(
+        "ccb_platform_wound_edited_requirement" );
+    REQUIRE( wound_id.is_valid() );
+    REQUIRE( provider_target_id.is_valid() );
+    REQUIRE( first_target_id.is_valid() );
+    REQUIRE( second_target_id.is_valid() );
+    REQUIRE( fix_id.is_valid() );
+    REQUIRE( skill_id( "ccb_platform_wound_skill" ).is_valid() );
+    REQUIRE( damage_type_id( "ccb_platform_wound_damage_a" ).is_valid() );
+    REQUIRE( damage_type_id( "ccb_platform_wound_damage_b" ).is_valid() );
+    REQUIRE( proficiency_id( "ccb_platform_wound_proficiency" ).is_valid() );
+    REQUIRE( limb_score_id( "ccb_platform_wound_limb_score" ).is_valid() );
+    CHECK( requirement_data::all().count( primary_requirement_id ) == 1 );
+    CHECK( requirement_data::all().count( edited_requirement_id ) == 1 );
+
+    CHECK( wound_id->get_name() == "Consumer wound" );
+    CHECK( wound_id->get_description() == "The consumer replacement definition." );
+    CHECK( wound_id->damage_required == ( std::pair<int, int>{ 3, 11 } ) );
+    CHECK( wound_id->damage_types ==
+           ( std::vector<damage_type_id>{
+        damage_type_id( "ccb_platform_wound_damage_a" ),
+        damage_type_id( "ccb_platform_wound_damage_b" )
+    } ) );
+    CHECK( wound_id->weight == 13 );
+    CHECK( wound_id->get_limit() == 4 );
+    CHECK( wound_id->allowed_on_bodypart( body_part_arm_l ) );
+    CHECK_FALSE( wound_id->allowed_on_bodypart( body_part_hand_l ) );
+    REQUIRE( wound_id->get_limb_scores().size() == 1 );
+    CHECK( wound_id->get_limb_scores().front().score ==
+           limb_score_id( "ccb_platform_wound_limb_score" ) );
+    CHECK( wound_id->get_limb_scores().front().value == Approx( 0.35f ) );
+    REQUIRE( wound_id->wound_progression.size() == 2 );
+    CHECK( wound_id->wound_progression[0].id == first_target_id );
+    CHECK( wound_id->wound_progression[0].chance == 100 );
+    CHECK( wound_id->wound_progression[1].id == second_target_id );
+    CHECK( wound_id->wound_progression[1].chance == 100 );
+
+    wound wound_snapshot( wound_id );
+    CHECK( wound_snapshot.get_base_pain() == 6 );
+    CHECK( wound_snapshot.get_healing_time() == 30_turns );
+    CHECK( wound_snapshot.get_healing_progress() == 0_turns );
+
+    CHECK( fix_id->get_name() == "Consumer treatment" );
+    CHECK( fix_id->get_description() == "The consumer replacement treatment." );
+    CHECK( fix_id->success_msg.translated() == "Consumer treatment succeeded." );
+    CHECK( fix_id->time == 45_turns );
+    CHECK( fix_id->mod_hp == 3 );
+    CHECK( fix_id->skills ==
+           ( std::map<skill_id, int>{ { skill_id( "ccb_platform_wound_skill" ), 2 } } ) );
+    REQUIRE( fix_id->proficiencies.size() == 1 );
+    CHECK( fix_id->proficiencies.front().prof ==
+           proficiency_id( "ccb_platform_wound_proficiency" ) );
+    CHECK( fix_id->proficiencies.front().time_save == Approx( 0.4f ) );
+    CHECK( fix_id->proficiencies.front().is_mandatory );
+    CHECK( fix_id->wounds_removed == ( std::set<wound_type_id>{ wound_id } ) );
+    CHECK( fix_id->wounds_added ==
+           ( std::set<wound_type_id>{ first_target_id, second_target_id } ) );
+    CHECK( wound_id->fixes == ( std::set<wound_fix_id>{ fix_id } ) );
+    CHECK( provider_target_id->fixes.empty() );
+    CHECK( first_target_id->fixes.empty() );
+    CHECK( second_target_id->fixes.empty() );
+
+    const auto component_count = []( const requirement_data &requirements,
+                                     const itype_id &item_id ) {
+        int result = 0;
+        for( const std::vector<item_comp> &group : requirements.get_components() ) {
+            for( const item_comp &component : group ) {
+                if( component.type == item_id ) {
+                    result += component.count;
+                }
+            }
+        }
+        return result;
+    };
+    CHECK( component_count( fix_id->get_requirements(), itype_id( "scrap" ) ) == 4 );
+    CHECK( component_count( fix_id->get_requirements(), itype_id( "rock" ) ) == 3 );
+
+    const auto cached_count = []( const bodypart_str_id &part_id,
+                                  const wound_type_id &candidate_id ) {
+        const body_part_type &part = part_id.obj();
+        return std::count_if( part.potential_wounds.begin(), part.potential_wounds.end(),
+        [&candidate_id]( const std::pair<bp_wounds, int> &entry ) {
+            return entry.first.id == candidate_id;
+        } );
+    };
+    CHECK( cached_count( body_part_arm_l, wound_id ) == 1 );
+    CHECK( cached_count( body_part_hand_l, wound_id ) == 0 );
+    CHECK( cached_count( body_part_hand_l, first_target_id ) == 1 );
+    CHECK( cached_count( body_part_arm_l, first_target_id ) == 0 );
+
+    cata::lua_platform::detail::refresh_wound_fix_links();
+    cata::lua_platform::detail::refresh_wound_fix_links();
+    cata::lua_platform::detail::refresh_body_part_wound_cache();
+    cata::lua_platform::detail::refresh_body_part_wound_cache();
+    CHECK( wound_id->fixes == ( std::set<wound_fix_id>{ fix_id } ) );
+    CHECK( first_target_id->fixes.empty() );
+    CHECK( second_target_id->fixes.empty() );
+    CHECK( cached_count( body_part_arm_l, wound_id ) == 1 );
+    CHECK( cached_count( body_part_hand_l, first_target_id ) == 1 );
+
+    INFO( "wound progression RNG seed: 42424242" );
+    // NOLINTNEXTLINE(cata-determinism)
+    const cata_default_random_engine saved_engine = rng_get_engine();
+    on_out_of_scope restore_rng( [saved_engine]() {
+        rng_get_engine() = saved_engine;
+    } );
+    rng_set_engine_seed( 42424242 );
+    bodypart part( body_part_arm_l );
+    part.add_wound( wound_id );
+    for( int attempt = 0; attempt < 1000 &&
+         !part.has_wound( first_target_id ); ++attempt ) {
+        part.add_or_worsen_wound( wound_id );
+    }
+    REQUIRE( part.has_wound( first_target_id ) );
+    CHECK_FALSE( part.has_wound( second_target_id ) );
+
+    cata::lua_platform::discard_prepared_mods();
+    CHECK_FALSE( wound_id.is_valid() );
+    CHECK_FALSE( provider_target_id.is_valid() );
+    CHECK_FALSE( first_target_id.is_valid() );
+    CHECK_FALSE( second_target_id.is_valid() );
+    CHECK_FALSE( fix_id.is_valid() );
+    CHECK_FALSE( skill_id( "ccb_platform_wound_skill" ).is_valid() );
+    CHECK_FALSE( damage_type_id( "ccb_platform_wound_damage_a" ).is_valid() );
+    CHECK_FALSE( damage_type_id( "ccb_platform_wound_damage_b" ).is_valid() );
+    CHECK_FALSE( proficiency_id( "ccb_platform_wound_proficiency" ).is_valid() );
+    CHECK_FALSE( limb_score_id( "ccb_platform_wound_limb_score" ).is_valid() );
+    CHECK( requirement_data::all().count( provider_requirement_id ) == 0 );
+    CHECK( requirement_data::all().count( primary_requirement_id ) == 0 );
+    CHECK( requirement_data::all().count( edited_requirement_id ) == 0 );
+    CHECK( cached_count( body_part_arm_l, wound_id ) == 0 );
+    CHECK( cached_count( body_part_hand_l, first_target_id ) == 0 );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_wound_content_validates_native_numeric_composition",
+           "[lua][platform][content][wound][validation]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+
+    const requirement_id existing_requirement_id( "welding_standard" );
+    REQUIRE( requirement_data::all().count( existing_requirement_id ) == 1 );
+    const uint64_t existing_requirement_hash =
+        requirement_data::all().at( existing_requirement_id ).make_hash();
+
+    SECTION( "a same-transaction requirement must remain representable after scaling" ) {
+        scoped_platform_test_mod test_mod( "ccb_wound_staged_requirement_overflow" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local requirement = ccb.content.Requirement {
+    id = "ccb_wound_staged_overflow_requirement",
+    name = "Staged overflow requirement",
+}
+requirement:component("rock", 1073741824)
+ccb.content.add(requirement)
+
+local wound = ccb.content.Wound {
+    id = "ccb_wound_staged_overflow_target",
+    name = "Staged overflow wound",
+    plural_name = "Staged overflow wounds",
+    description = "A validation-only treatment target.",
+    healing_min_turns = 1,
+    healing_max_turns = 1,
+    damage_min = 1,
+    damage_max = 1,
+}
+wound:damage_type("bash")
+ccb.content.add(wound)
+
+local fix = ccb.content.WoundFix {
+    id = "ccb_wound_staged_overflow_fix",
+    name = "Staged overflow treatment",
+    description = "Must fail before native integer multiplication.",
+}
+fix:removes("ccb_wound_staged_overflow_target")
+fix:requires("ccb_wound_staged_overflow_requirement", 2)
+ccb.content.add(fix)
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods( {
+            test_mod.source( "ccb_wound_staged_requirement_overflow" )
+        }, error ) );
+        CHECK( error.find( "exceeds the native component/tool count range when scaled" ) !=
+               std::string::npos );
+        CHECK( requirement_data::all().count(
+                   requirement_id( "ccb_wound_staged_overflow_requirement" ) ) == 0 );
+        CHECK_FALSE( wound_type_id( "ccb_wound_staged_overflow_target" ).is_valid() );
+        CHECK_FALSE( wound_fix_id( "ccb_wound_staged_overflow_fix" ).is_valid() );
+    }
+
+    SECTION( "an exact native integer minimum product clamps a negative tool count" ) {
+        scoped_platform_test_mod test_mod( "ccb_wound_tool_integer_minimum" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local requirement = ccb.content.Requirement {
+    id = "ccb_wound_tool_integer_minimum_requirement",
+    name = "Native integer minimum tool requirement",
+}
+requirement:tool("rock", 1073741824)
+ccb.content.add(requirement)
+
+local wound = ccb.content.Wound {
+    id = "ccb_wound_tool_integer_minimum_target",
+    name = "Native integer minimum wound",
+    plural_name = "Native integer minimum wounds",
+    description = "A treatment target for exact signed multiplication.",
+    healing_min_turns = 1,
+    healing_max_turns = 1,
+    damage_min = 1,
+    damage_max = 1,
+}
+wound:damage_type("bash")
+ccb.content.add(wound)
+
+local fix = ccb.content.WoundFix {
+    id = "ccb_wound_tool_integer_minimum_fix",
+    name = "Native integer minimum treatment",
+    description = "Safely multiplies to INT_MIN before the native negative-tool clamp.",
+}
+fix:removes("ccb_wound_tool_integer_minimum_target")
+fix:requires("ccb_wound_tool_integer_minimum_requirement", 2)
+ccb.content.add(fix)
+)lua" );
+
+        std::string error;
+        REQUIRE( cata::lua_platform::prepare_mods( {
+            test_mod.source( "ccb_wound_tool_integer_minimum" )
+        }, error ) );
+        REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+        REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+
+        const requirement_id requirement_id_value(
+            "ccb_wound_tool_integer_minimum_requirement" );
+        const wound_fix_id fix_id( "ccb_wound_tool_integer_minimum_fix" );
+        REQUIRE( requirement_data::all().count( requirement_id_value ) == 1 );
+        REQUIRE( fix_id.is_valid() );
+        const requirement_data::alter_tool_comp_vector &tools =
+            fix_id->get_requirements().get_tools();
+        REQUIRE( tools.size() == 1 );
+        REQUIRE( tools.front().size() == 1 );
+        CHECK( tools.front().front().type == itype_id( "rock" ) );
+        CHECK( tools.front().front().count == -1 );
+
+        cata::lua_platform::discard_prepared_mods();
+        CHECK( requirement_data::all().count( requirement_id_value ) == 0 );
+        CHECK_FALSE( fix_id.is_valid() );
+    }
+
+    SECTION( "non-subset alternatives retain independent maximum component counts" ) {
+        scoped_platform_test_mod test_mod( "ccb_wound_non_subset_requirements" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local first = ccb.content.Requirement {
+    id = "ccb_wound_non_subset_requirement_a",
+    name = "First non-subset requirement",
+}
+first:component_any({
+    { id = "rock", count = 2147483647 },
+    { id = "scrap", count = 1 },
+})
+ccb.content.add(first)
+
+local second = ccb.content.Requirement {
+    id = "ccb_wound_non_subset_requirement_b",
+    name = "Second non-subset requirement",
+}
+second:component_any({
+    { id = "rock", count = 2147483647 },
+    { id = "stick", count = 1 },
+})
+ccb.content.add(second)
+
+local wound = ccb.content.Wound {
+    id = "ccb_wound_non_subset_target",
+    name = "Non-subset wound",
+    plural_name = "Non-subset wounds",
+    description = "A treatment target for independent alternative groups.",
+    healing_min_turns = 1,
+    healing_max_turns = 1,
+    damage_min = 1,
+    damage_max = 1,
+}
+wound:damage_type("bash")
+ccb.content.add(wound)
+
+local fix = ccb.content.WoundFix {
+    id = "ccb_wound_non_subset_fix",
+    name = "Non-subset treatment",
+    description = "Keeps alternative groups that are not subsets independent.",
+}
+fix:removes("ccb_wound_non_subset_target")
+fix:requires("ccb_wound_non_subset_requirement_a", 1)
+fix:requires("ccb_wound_non_subset_requirement_b", 1)
+ccb.content.add(fix)
+)lua" );
+
+        std::string error;
+        REQUIRE( cata::lua_platform::prepare_mods( {
+            test_mod.source( "ccb_wound_non_subset_requirements" )
+        }, error ) );
+        REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+        REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+
+        const wound_fix_id fix_id( "ccb_wound_non_subset_fix" );
+        REQUIRE( fix_id.is_valid() );
+        const requirement_data::alter_item_comp_vector &components =
+            fix_id->get_requirements().get_components();
+        REQUIRE( components.size() == 2 );
+        int maximum_rock_groups = 0;
+        std::set<std::string> companions;
+        for( const std::vector<item_comp> &group : components ) {
+            CHECK( group.size() == 2 );
+            bool has_maximum_rock = false;
+            for( const item_comp &component : group ) {
+                if( component.type == itype_id( "rock" ) ) {
+                    has_maximum_rock =
+                        component.count == std::numeric_limits<int>::max();
+                } else {
+                    companions.insert( component.type.str() );
+                }
+            }
+            if( has_maximum_rock ) {
+                ++maximum_rock_groups;
+            }
+        }
+        CHECK( maximum_rock_groups == 2 );
+        CHECK( companions == ( std::set<std::string>{ "scrap", "stick" } ) );
+
+        cata::lua_platform::discard_prepared_mods();
+        CHECK_FALSE( fix_id.is_valid() );
+        CHECK( requirement_data::all().count(
+                   requirement_id( "ccb_wound_non_subset_requirement_a" ) ) == 0 );
+        CHECK( requirement_data::all().count(
+                   requirement_id( "ccb_wound_non_subset_requirement_b" ) ) == 0 );
+    }
+
+    SECTION( "components merged from separate requirements must remain representable" ) {
+        scoped_platform_test_mod test_mod( "ccb_wound_component_consolidation_overflow" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local function add_requirement(id)
+    local requirement = ccb.content.Requirement {
+        id = id,
+        name = id,
+    }
+    requirement:component("rock", 2147483647)
+    ccb.content.add(requirement)
+end
+add_requirement("ccb_wound_component_overflow_a")
+add_requirement("ccb_wound_component_overflow_b")
+
+local wound = ccb.content.Wound {
+    id = "ccb_wound_component_overflow_target",
+    name = "Component consolidation wound",
+    plural_name = "Component consolidation wounds",
+    description = "A validation-only treatment target.",
+    healing_min_turns = 1,
+    healing_max_turns = 1,
+    damage_min = 1,
+    damage_max = 1,
+}
+wound:damage_type("bash")
+ccb.content.add(wound)
+
+local fix = ccb.content.WoundFix {
+    id = "ccb_wound_component_overflow_fix",
+    name = "Component consolidation treatment",
+    description = "Must fail before native requirement consolidation.",
+}
+fix:removes("ccb_wound_component_overflow_target")
+fix:requires("ccb_wound_component_overflow_a", 1)
+fix:requires("ccb_wound_component_overflow_b", 1)
+ccb.content.add(fix)
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods( {
+            test_mod.source( "ccb_wound_component_consolidation_overflow" )
+        }, error ) );
+        CHECK( error.find( "during consolidation" ) != std::string::npos );
+        CHECK( requirement_data::all().count(
+                   requirement_id( "ccb_wound_component_overflow_a" ) ) == 0 );
+        CHECK( requirement_data::all().count(
+                   requirement_id( "ccb_wound_component_overflow_b" ) ) == 0 );
+        CHECK_FALSE( wound_type_id( "ccb_wound_component_overflow_target" ).is_valid() );
+        CHECK_FALSE( wound_fix_id( "ccb_wound_component_overflow_fix" ).is_valid() );
+    }
+
+    SECTION( "positive tool charges merged from separate requirements must remain representable" ) {
+        scoped_platform_test_mod test_mod( "ccb_wound_tool_consolidation_overflow" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local function add_requirement(id)
+    local requirement = ccb.content.Requirement {
+        id = id,
+        name = id,
+    }
+    requirement:tool_charges("rock", 2147483647)
+    ccb.content.add(requirement)
+end
+add_requirement("ccb_wound_tool_overflow_a")
+add_requirement("ccb_wound_tool_overflow_b")
+
+local wound = ccb.content.Wound {
+    id = "ccb_wound_tool_overflow_target",
+    name = "Tool consolidation wound",
+    plural_name = "Tool consolidation wounds",
+    description = "A validation-only treatment target.",
+    healing_min_turns = 1,
+    healing_max_turns = 1,
+    damage_min = 1,
+    damage_max = 1,
+}
+wound:damage_type("bash")
+ccb.content.add(wound)
+
+local fix = ccb.content.WoundFix {
+    id = "ccb_wound_tool_overflow_fix",
+    name = "Tool consolidation treatment",
+    description = "Must fail before native tool-charge consolidation.",
+}
+fix:removes("ccb_wound_tool_overflow_target")
+fix:requires("ccb_wound_tool_overflow_a", 1)
+fix:requires("ccb_wound_tool_overflow_b", 1)
+ccb.content.add(fix)
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods( {
+            test_mod.source( "ccb_wound_tool_consolidation_overflow" )
+        }, error ) );
+        CHECK( error.find( "during consolidation" ) != std::string::npos );
+        CHECK( requirement_data::all().count(
+                   requirement_id( "ccb_wound_tool_overflow_a" ) ) == 0 );
+        CHECK( requirement_data::all().count(
+                   requirement_id( "ccb_wound_tool_overflow_b" ) ) == 0 );
+        CHECK_FALSE( wound_type_id( "ccb_wound_tool_overflow_target" ).is_valid() );
+        CHECK_FALSE( wound_fix_id( "ccb_wound_tool_overflow_fix" ).is_valid() );
+    }
+
+    SECTION( "mergeable groups inside one requirement must remain representable" ) {
+        scoped_platform_test_mod test_mod( "ccb_wound_internal_consolidation_overflow" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local requirement = ccb.content.Requirement {
+    id = "ccb_wound_internal_overflow_requirement",
+    name = "Internal consolidation overflow requirement",
+}
+requirement:component("rock", 2147483647)
+requirement:component("rock", 1)
+ccb.content.add(requirement)
+
+local wound = ccb.content.Wound {
+    id = "ccb_wound_internal_overflow_target",
+    name = "Internal consolidation wound",
+    plural_name = "Internal consolidation wounds",
+    description = "A validation-only treatment target.",
+    healing_min_turns = 1,
+    healing_max_turns = 1,
+    damage_min = 1,
+    damage_max = 1,
+}
+wound:damage_type("bash")
+ccb.content.add(wound)
+
+local fix = ccb.content.WoundFix {
+    id = "ccb_wound_internal_overflow_fix",
+    name = "Internal consolidation treatment",
+    description = "Must fail before consolidating one requirement's groups.",
+}
+fix:removes("ccb_wound_internal_overflow_target")
+fix:requires("ccb_wound_internal_overflow_requirement", 1)
+ccb.content.add(fix)
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods( {
+            test_mod.source( "ccb_wound_internal_consolidation_overflow" )
+        }, error ) );
+        CHECK( error.find( "during consolidation" ) != std::string::npos );
+        CHECK( requirement_data::all().count(
+                   requirement_id( "ccb_wound_internal_overflow_requirement" ) ) == 0 );
+        CHECK_FALSE( wound_type_id( "ccb_wound_internal_overflow_target" ).is_valid() );
+        CHECK_FALSE( wound_fix_id( "ccb_wound_internal_overflow_fix" ).is_valid() );
+    }
+
+    SECTION( "an existing requirement must remain representable after scaling" ) {
+        scoped_platform_test_mod test_mod( "ccb_wound_existing_requirement_overflow" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local wound = ccb.content.Wound {
+    id = "ccb_wound_existing_overflow_target",
+    name = "Existing overflow wound",
+    plural_name = "Existing overflow wounds",
+    description = "A validation-only treatment target.",
+    healing_min_turns = 1,
+    healing_max_turns = 1,
+    damage_min = 1,
+    damage_max = 1,
+}
+wound:damage_type("bash")
+ccb.content.add(wound)
+
+local fix = ccb.content.WoundFix {
+    id = "ccb_wound_existing_overflow_fix",
+    name = "Existing overflow treatment",
+    description = "Must fail before native integer multiplication.",
+}
+fix:removes("ccb_wound_existing_overflow_target")
+fix:requires("welding_standard", 2147483647)
+ccb.content.add(fix)
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods( {
+            test_mod.source( "ccb_wound_existing_requirement_overflow" )
+        }, error ) );
+        CHECK( error.find( "exceeds the native component/tool count range when scaled" ) !=
+               std::string::npos );
+        REQUIRE( requirement_data::all().count( existing_requirement_id ) == 1 );
+        CHECK( requirement_data::all().at( existing_requirement_id ).make_hash() ==
+               existing_requirement_hash );
+        CHECK_FALSE( wound_type_id( "ccb_wound_existing_overflow_target" ).is_valid() );
+        CHECK_FALSE( wound_fix_id( "ccb_wound_existing_overflow_fix" ).is_valid() );
+    }
+
+    SECTION( "a positive proficiency multiplier must remain positive as a native float" ) {
+        scoped_platform_test_mod test_mod( "ccb_wound_proficiency_underflow" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local wound = ccb.content.Wound {
+    id = "ccb_wound_proficiency_underflow_target",
+    name = "Proficiency underflow wound",
+    plural_name = "Proficiency underflow wounds",
+    description = "A validation-only treatment target.",
+    healing_min_turns = 1,
+    healing_max_turns = 1,
+    damage_min = 1,
+    damage_max = 1,
+}
+wound:damage_type("bash")
+ccb.content.add(wound)
+
+local fix = ccb.content.WoundFix {
+    id = "ccb_wound_proficiency_underflow_fix",
+    name = "Proficiency underflow treatment",
+    description = "Must reject a native zero time multiplier.",
+}
+fix:proficiency("prof_knapping", 1e-100, false)
+fix:removes("ccb_wound_proficiency_underflow_target")
+ccb.content.add(fix)
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods( {
+            test_mod.source( "ccb_wound_proficiency_underflow" )
+        }, error ) );
+        CHECK( error.find( "positive finite multiplier" ) != std::string::npos );
+        CHECK_FALSE( wound_type_id( "ccb_wound_proficiency_underflow_target" ).is_valid() );
+        CHECK_FALSE( wound_fix_id( "ccb_wound_proficiency_underflow_fix" ).is_valid() );
+    }
+}
+
+TEST_CASE( "wound_pain_preserves_the_native_integer_maximum_at_zero_progress",
+           "[wound][lua][platform][content]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+    scoped_platform_test_mod test_mod( "ccb_wound_maximum_pain" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+local wound = ccb.content.Wound {
+    id = "ccb_wound_maximum_pain",
+    name = "Maximum pain wound",
+    plural_name = "Maximum pain wounds",
+    description = "Exercises native integer pain without float rounding.",
+    pain_min = 2147483647,
+    pain_max = 2147483647,
+    healing_min_turns = 1,
+    healing_max_turns = 1,
+    damage_min = 1,
+    damage_max = 1,
+}
+wound:damage_type("bash")
+ccb.content.add(wound)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods( {
+        test_mod.source( "ccb_wound_maximum_pain" )
+    }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+
+    const wound_type_id type( "ccb_wound_maximum_pain" );
+    REQUIRE( type.is_valid() );
+    wound current( type );
+    CHECK( current.get_base_pain() == std::numeric_limits<int>::max() );
+    CHECK( current.get_healing_progress() == 0_turns );
+    CHECK( current.get_pain() == std::numeric_limits<int>::max() );
+
+    cata::lua_platform::discard_prepared_mods();
+    CHECK_FALSE( type.is_valid() );
+}
+
+TEST_CASE( "lua_first_wound_content_fingerprint_tracks_every_public_input",
+           "[lua][platform][content][wound][fingerprint]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+    scoped_platform_test_mod test_mod( "ccb_platform_wound_fingerprint" );
+    const auto source_for = []( const std::string &changed_field ) {
+        std::string source = R"lua(
+local ccb = require("ccb")
+local changed_field = "@@FIELD@@"
+local function pick(field, baseline, changed)
+    if changed_field == field then
+        return changed
+    end
+    return baseline
+end
+
+local function add_flag(id)
+    ccb.content.add(ccb.content.JsonFlag {
+        id = id,
+        name = id,
+        info = "Wound fingerprint flag.",
+    })
+end
+add_flag("CCB_WOUND_FP_REQUIRED_A")
+add_flag("CCB_WOUND_FP_REQUIRED_B")
+add_flag("CCB_WOUND_FP_FORBIDDEN_A")
+add_flag("CCB_WOUND_FP_FORBIDDEN_B")
+
+ccb.content.add(ccb.content.SkillDisplay {
+    id = "ccb_wound_fp_skill_display",
+    label = "Wound fingerprint skills",
+})
+local function add_skill(id, name, rank)
+    ccb.content.add(ccb.content.Skill {
+        id = id,
+        name = name,
+        description = "A WoundFix fingerprint dependency.",
+        display_category = "ccb_wound_fp_skill_display",
+        sort_rank = rank,
+    })
+end
+add_skill("ccb_wound_fp_skill_a", "Wound fingerprint skill A", 31000)
+add_skill("ccb_wound_fp_skill_b", "Wound fingerprint skill B", 31001)
+
+ccb.content.add(ccb.content.ProficiencyCategory {
+    id = "ccb_wound_fp_proficiency_category",
+    name = "Wound fingerprint proficiencies",
+    description = "WoundFix fingerprint dependencies.",
+})
+local function add_proficiency(id, name)
+    ccb.content.add(ccb.content.Proficiency {
+        id = id,
+        name = name,
+        description = "A WoundFix fingerprint proficiency.",
+        category = "ccb_wound_fp_proficiency_category",
+        time_to_learn_turns = 100,
+        can_learn = true,
+    })
+end
+add_proficiency("ccb_wound_fp_proficiency_a", "Wound fingerprint proficiency A")
+add_proficiency("ccb_wound_fp_proficiency_b", "Wound fingerprint proficiency B")
+
+local function add_requirement(id, item)
+    local requirement = ccb.content.Requirement {
+        id = id,
+        name = id,
+    }
+    requirement:component(item, 1)
+    ccb.content.add(requirement)
+end
+add_requirement("ccb_wound_fp_requirement_a", "rock")
+add_requirement("ccb_wound_fp_requirement_b", "scrap")
+
+ccb.content.add(ccb.content.LimbScore {
+    id = "ccb_wound_fp_limb_score_a",
+    name = "Wound fingerprint limb score A",
+    affected_by_wounds = true,
+})
+ccb.content.add(ccb.content.LimbScore {
+    id = "ccb_wound_fp_limb_score_b",
+    name = "Wound fingerprint limb score B",
+    affected_by_wounds = true,
+})
+
+local function add_simple_wound(id)
+    local wound = ccb.content.Wound {
+        id = id,
+        name = id,
+        plural_name = id .. "s",
+        description = "A Wound fingerprint dependency.",
+        healing_min_turns = 1,
+        healing_max_turns = 1,
+        damage_min = 1,
+        damage_max = 1,
+    }
+    wound:damage_type("bash")
+    ccb.content.add(wound)
+end
+add_simple_wound("ccb_wound_fp_progression_a")
+add_simple_wound("ccb_wound_fp_progression_b")
+add_simple_wound("ccb_wound_fp_removed_a")
+add_simple_wound("ccb_wound_fp_removed_b")
+add_simple_wound("ccb_wound_fp_added_a")
+add_simple_wound("ccb_wound_fp_added_b")
+
+local wound = ccb.content.Wound {
+    id = pick("wound.id", "ccb_wound_fp_primary_a", "ccb_wound_fp_primary_b"),
+    name = pick("wound.name", "Fingerprint wound A", "Fingerprint wound B"),
+    plural_name = pick("wound.plural_name", "Fingerprint wounds A", "Fingerprint wounds B"),
+    description = pick("wound.description", "Fingerprint description A", "Fingerprint description B"),
+    pain_min = pick("wound.pain_min", 1, 2),
+    pain_max = pick("wound.pain_max", 5, 6),
+    healing_min_turns = pick("wound.healing_min_turns", 10, 11),
+    healing_max_turns = pick("wound.healing_max_turns", 20, 21),
+    damage_min = pick("wound.damage_min", 2, 3),
+    damage_max = pick("wound.damage_max", 8, 9),
+    weight = pick("wound.weight", 3, 4),
+    per_part_limit = pick("wound.per_part_limit", 1, 2),
+    required_body_part_flag = pick("wound.required_body_part_flag",
+                                   "CCB_WOUND_FP_REQUIRED_A", "CCB_WOUND_FP_REQUIRED_B"),
+    forbidden_body_part_flag = pick("wound.forbidden_body_part_flag",
+                                    "CCB_WOUND_FP_FORBIDDEN_A", "CCB_WOUND_FP_FORBIDDEN_B"),
+}
+wound:damage_type(pick("wound.damage_type.id", "bash", "cut"))
+wound:limb_score(pick("wound.limb_score.id", "ccb_wound_fp_limb_score_a",
+                      "ccb_wound_fp_limb_score_b"),
+                 pick("wound.limb_score.penalty", 0.2, 0.3))
+wound:progression(pick("wound.progression.id", "ccb_wound_fp_progression_a",
+                       "ccb_wound_fp_progression_b"),
+                  pick("wound.progression.chance", 40, 41))
+wound:require_body_part_type(pick("wound.require_body_part_type", "arm", "leg"))
+wound:forbid_body_part_type(pick("wound.forbid_body_part_type", "hand", "foot"))
+ccb.content.add(wound)
+
+local fix = ccb.content.WoundFix {
+    id = pick("fix.id", "ccb_wound_fp_fix_a", "ccb_wound_fp_fix_b"),
+    name = pick("fix.name", "Fingerprint fix A", "Fingerprint fix B"),
+    description = pick("fix.description", "Fingerprint fix description A",
+                       "Fingerprint fix description B"),
+    success_message = pick("fix.success_message", "Fingerprint success A",
+                           "Fingerprint success B"),
+    duration_turns = pick("fix.duration_turns", 30, 31),
+    health_delta = pick("fix.health_delta", 2, 3),
+}
+fix:skill(pick("fix.skill.id", "ccb_wound_fp_skill_a", "ccb_wound_fp_skill_b"),
+          pick("fix.skill.level", 1, 2))
+fix:proficiency(pick("fix.proficiency.id", "ccb_wound_fp_proficiency_a",
+                     "ccb_wound_fp_proficiency_b"),
+                pick("fix.proficiency.multiplier", 0.4, 0.5),
+                pick("fix.proficiency.mandatory", false, true))
+fix:removes(pick("fix.removes.id", "ccb_wound_fp_removed_a", "ccb_wound_fp_removed_b"))
+fix:adds(pick("fix.adds.id", "ccb_wound_fp_added_a", "ccb_wound_fp_added_b"))
+fix:requires(pick("fix.requires.id", "ccb_wound_fp_requirement_a",
+                  "ccb_wound_fp_requirement_b"),
+             pick("fix.requires.count", 2, 3))
+ccb.content.add(fix)
+)lua";
+        const std::string marker = "@@FIELD@@";
+        source.replace( source.find( marker ), marker.size(), changed_field );
+        return source;
+    };
+    const auto fingerprint_for = [&test_mod, &source_for]( const std::string &field ) {
+        test_mod.write( "main.lua", source_for( field ) );
+        std::string error;
+        const bool prepared = cata::lua_platform::prepare_mods(
+                                  { test_mod.source( "ccb_platform_wound_fingerprint" ) }, error );
+        INFO( error );
+        REQUIRE( prepared );
+        const std::string fingerprint =
+            cata::lua_platform::prepared_content_fingerprint();
+        REQUIRE_FALSE( fingerprint.empty() );
+        cata::lua_platform::discard_prepared_mods();
+        return fingerprint;
+    };
+
+    const std::string baseline = fingerprint_for( "" );
+    const std::vector<std::string> fields = {
+        "wound.id",
+        "wound.name",
+        "wound.plural_name",
+        "wound.description",
+        "wound.pain_min",
+        "wound.pain_max",
+        "wound.healing_min_turns",
+        "wound.healing_max_turns",
+        "wound.damage_min",
+        "wound.damage_max",
+        "wound.weight",
+        "wound.per_part_limit",
+        "wound.required_body_part_flag",
+        "wound.forbidden_body_part_flag",
+        "wound.damage_type.id",
+        "wound.limb_score.id",
+        "wound.limb_score.penalty",
+        "wound.progression.id",
+        "wound.progression.chance",
+        "wound.require_body_part_type",
+        "wound.forbid_body_part_type",
+        "fix.id",
+        "fix.name",
+        "fix.description",
+        "fix.success_message",
+        "fix.duration_turns",
+        "fix.health_delta",
+        "fix.skill.id",
+        "fix.skill.level",
+        "fix.proficiency.id",
+        "fix.proficiency.multiplier",
+        "fix.proficiency.mandatory",
+        "fix.removes.id",
+        "fix.adds.id",
+        "fix.requires.id",
+        "fix.requires.count",
+    };
+    for( const std::string &field : fields ) {
+        CAPTURE( field );
+        const std::string fingerprint = fingerprint_for( field );
+        CHECK( fingerprint != baseline );
+    }
+}
+
+TEST_CASE( "lua_first_wound_content_rolls_back_apply_and_finalized_failures",
+           "[lua][platform][content][wound][rollback]" )
+{
+    cata::lua_platform::shutdown();
+    const requirement_id rollback_requirement_id( "ccb_wound_rollback_requirement" );
+    const wound_type_id wound_id( "ccb_wound_rollback_baseline" );
+    const wound_type_id target_id( "ccb_wound_rollback_target" );
+    const wound_fix_id fix_id( "ccb_wound_rollback_fix" );
+    const wound_type_id transient_wound_id( "ccb_wound_rollback_transient" );
+    const wound_fix_id transient_fix_id( "ccb_wound_rollback_transient_fix" );
+    auto &all_requirements = const_cast<
+                             std::map<requirement_id, requirement_data> &>(
+                                 requirement_data::all() );
+    REQUIRE( all_requirements.count( rollback_requirement_id ) == 0 );
+    on_out_of_scope cleanup( [=, &all_requirements]() {
+        cata::lua_platform::shutdown();
+        cata::lua_platform::detail::wound_fix_registry().erase( transient_fix_id );
+        cata::lua_platform::detail::wound_fix_registry().erase( fix_id );
+        all_requirements.erase( rollback_requirement_id );
+        cata::lua_platform::detail::wound_type_registry().erase( transient_wound_id );
+        cata::lua_platform::detail::wound_type_registry().erase( wound_id );
+        cata::lua_platform::detail::wound_type_registry().erase( target_id );
+        cata::lua_platform::detail::refresh_wound_fix_links();
+        cata::lua_platform::detail::refresh_body_part_wound_cache();
+    } );
+
+    const auto component_count = []( const requirement_data &requirements,
+                                     const itype_id &item_id ) {
+        int result = 0;
+        for( const std::vector<item_comp> &group : requirements.get_components() ) {
+            for( const item_comp &component : group ) {
+                if( component.type == item_id ) {
+                    result += component.count;
+                }
+            }
+        }
+        return result;
+    };
+    const auto cached_count = []( const bodypart_str_id &part_id,
+                                  const wound_type_id &candidate_id ) {
+        const body_part_type &part = part_id.obj();
+        return std::count_if( part.potential_wounds.begin(), part.potential_wounds.end(),
+        [&candidate_id]( const std::pair<bp_wounds, int> &entry ) {
+            return entry.first.id == candidate_id;
+        } );
+    };
+
+    scoped_platform_test_mod baseline( "ccb_wound_rollback_baseline_mod" );
+    baseline.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local requirement = ccb.content.Requirement {
+    id = "ccb_wound_rollback_requirement",
+    name = "Rollback baseline requirement",
+}
+requirement:component("rock", 1)
+ccb.content.add(requirement)
+
+local wound = ccb.content.Wound {
+    id = "ccb_wound_rollback_baseline",
+    name = "Rollback baseline wound",
+    plural_name = "Rollback baseline wounds",
+    description = "The definition that failed candidates must restore.",
+    pain_min = 2,
+    pain_max = 2,
+    healing_min_turns = 20,
+    healing_max_turns = 20,
+    damage_min = 2,
+    damage_max = 4,
+    weight = 5,
+}
+wound:damage_type("bash")
+wound:require_body_part_type("arm")
+ccb.content.add(wound)
+
+local target = ccb.content.Wound {
+    id = "ccb_wound_rollback_target",
+    name = "Rollback target wound",
+    plural_name = "Rollback target wounds",
+    description = "The stable treatment target.",
+    healing_min_turns = 5,
+    healing_max_turns = 5,
+    damage_min = 1,
+    damage_max = 1,
+}
+target:damage_type("cut")
+target:require_body_part_type("hand")
+ccb.content.add(target)
+
+local fix = ccb.content.WoundFix {
+    id = "ccb_wound_rollback_fix",
+    name = "Rollback baseline treatment",
+    description = "The treatment whose derived requirements must be restored.",
+    success_message = "Rollback baseline treatment succeeded.",
+    duration_turns = 20,
+    health_delta = 1,
+}
+fix:removes("ccb_wound_rollback_baseline")
+fix:adds("ccb_wound_rollback_target")
+fix:requires("ccb_wound_rollback_requirement", 2)
+ccb.content.add(fix)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { baseline.source( "ccb_wound_rollback_baseline_mod" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    REQUIRE( wound_id.is_valid() );
+    REQUIRE( target_id.is_valid() );
+    REQUIRE( fix_id.is_valid() );
+    REQUIRE( requirement_data::all().count( rollback_requirement_id ) == 1 );
+    CHECK( wound_id->get_name() == "Rollback baseline wound" );
+    CHECK( wound_id->fixes == ( std::set<wound_fix_id>{ fix_id } ) );
+    CHECK( target_id->fixes.empty() );
+    CHECK( component_count( fix_id->get_requirements(), itype_id( "rock" ) ) == 2 );
+    CHECK( component_count( fix_id->get_requirements(), itype_id( "scrap" ) ) == 0 );
+    CHECK( component_count( requirement_data::all().at( rollback_requirement_id ),
+                            itype_id( "rock" ) ) == 1 );
+    CHECK( cached_count( body_part_arm_l, wound_id ) == 1 );
+    CHECK( cached_count( body_part_hand_l, wound_id ) == 0 );
+    CHECK( cached_count( body_part_hand_l, target_id ) == 1 );
+    CHECK( cached_count( body_part_arm_l, target_id ) == 0 );
+
+    scoped_platform_test_mod apply_provider( "ccb_wound_rollback_apply_provider" );
+    scoped_platform_test_mod apply_consumer( "ccb_wound_rollback_apply_consumer" );
+    apply_provider.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local requirement = ccb.content.Requirement {
+    id = "ccb_wound_rollback_requirement",
+    name = "Temporary apply requirement",
+}
+requirement:component("scrap", 3)
+ccb.content.replace(requirement)
+
+local wound = ccb.content.Wound {
+    id = "ccb_wound_rollback_transient",
+    name = "Transient apply wound",
+    plural_name = "Transient apply wounds",
+    description = "Must disappear when the later Mod fails to apply.",
+    healing_min_turns = 10,
+    healing_max_turns = 10,
+    damage_min = 1,
+    damage_max = 2,
+}
+wound:damage_type("bash")
+wound:require_body_part_type("hand")
+ccb.content.add(wound)
+
+local fix = ccb.content.WoundFix {
+    id = "ccb_wound_rollback_transient_fix",
+    name = "Transient apply treatment",
+    description = "Must leave no reverse-link residue.",
+    success_message = "Transient treatment succeeded.",
+    duration_turns = 5,
+}
+fix:removes("ccb_wound_rollback_transient")
+fix:requires("ccb_wound_rollback_requirement", 1)
+ccb.content.add(fix)
+)lua" );
+    apply_consumer.write( "main.lua", R"lua(
+local ccb = require("ccb")
+local duplicate = ccb.content.Wound {
+    id = "ccb_wound_rollback_transient",
+    name = "Conflicting transient wound",
+    plural_name = "Conflicting transient wounds",
+    description = "The duplicate add fails after the provider was applied.",
+    healing_min_turns = 1,
+    healing_max_turns = 1,
+    damage_min = 1,
+    damage_max = 1,
+}
+duplicate:damage_type("bash")
+ccb.content.add(duplicate)
+)lua" );
+
+    REQUIRE( cata::lua_platform::prepare_mods( {
+        apply_provider.source( "ccb_wound_rollback_apply_provider" ),
+        apply_consumer.source( "ccb_wound_rollback_apply_consumer" )
+    }, error ) );
+    CHECK_FALSE( cata::lua_platform::apply_prepared_content( error ) );
+    CHECK( error.find( "add would overwrite existing wound" ) != std::string::npos );
+    CHECK_FALSE( transient_wound_id.is_valid() );
+    CHECK_FALSE( transient_fix_id.is_valid() );
+    REQUIRE( wound_id.is_valid() );
+    REQUIRE( fix_id.is_valid() );
+    REQUIRE( requirement_data::all().count( rollback_requirement_id ) == 1 );
+    CHECK( wound_id->fixes == ( std::set<wound_fix_id>{ fix_id } ) );
+    CHECK( target_id->fixes.empty() );
+    CHECK( component_count( fix_id->get_requirements(), itype_id( "rock" ) ) == 2 );
+    CHECK( component_count( fix_id->get_requirements(), itype_id( "scrap" ) ) == 0 );
+    CHECK( component_count( requirement_data::all().at( rollback_requirement_id ),
+                            itype_id( "rock" ) ) == 1 );
+    CHECK( cached_count( body_part_arm_l, wound_id ) == 1 );
+    CHECK( cached_count( body_part_hand_l, transient_wound_id ) == 0 );
+    CHECK( cached_count( body_part_hand_l, target_id ) == 1 );
+    cata::lua_platform::discard_prepared_mods();
+
+    scoped_platform_test_mod finalized_candidate(
+        "ccb_wound_rollback_finalized_candidate" );
+    finalized_candidate.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local requirement = ccb.content.Requirement {
+    id = "ccb_wound_rollback_requirement",
+    name = "Temporary finalized requirement",
+}
+requirement:component("scrap", 4)
+ccb.content.replace(requirement)
+
+local wound = ccb.content.Wound {
+    id = "ccb_wound_rollback_baseline",
+    name = "Temporary finalized wound",
+    plural_name = "Temporary finalized wounds",
+    description = "Must roll back after finalized validation fails.",
+    pain_min = 7,
+    pain_max = 7,
+    healing_min_turns = 70,
+    healing_max_turns = 70,
+    damage_min = 7,
+    damage_max = 8,
+    weight = 9,
+}
+wound:damage_type("cut")
+wound:require_body_part_type("hand")
+ccb.content.replace(wound)
+
+local fix = ccb.content.WoundFix {
+    id = "ccb_wound_rollback_fix",
+    name = "Temporary finalized treatment",
+    description = "Its requirement cache must not survive rollback.",
+    success_message = "Temporary finalized treatment succeeded.",
+    duration_turns = 70,
+    health_delta = 7,
+}
+fix:removes("ccb_wound_rollback_baseline")
+fix:adds("ccb_wound_rollback_target")
+fix:requires("ccb_wound_rollback_requirement", 3)
+ccb.content.replace(fix)
+)lua" );
+
+    REQUIRE( cata::lua_platform::prepare_mods( {
+        finalized_candidate.source( "ccb_wound_rollback_finalized_candidate" )
+    }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( wound_id.is_valid() );
+    REQUIRE( fix_id.is_valid() );
+    REQUIRE( requirement_data::all().count( rollback_requirement_id ) == 1 );
+    CHECK( wound_id->get_name() == "Temporary finalized wound" );
+    CHECK( fix_id->get_name() == "Temporary finalized treatment" );
+    CHECK( component_count( fix_id->get_requirements(), itype_id( "rock" ) ) == 0 );
+    CHECK( component_count( fix_id->get_requirements(), itype_id( "scrap" ) ) == 12 );
+    CHECK( component_count( requirement_data::all().at( rollback_requirement_id ),
+                            itype_id( "scrap" ) ) == 4 );
+    CHECK( cached_count( body_part_arm_l, wound_id ) == 0 );
+    CHECK( cached_count( body_part_hand_l, wound_id ) == 1 );
+
+    const_cast<wound_type &>( wound_id.obj() ).fixes.clear();
+    CHECK_FALSE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    CHECK( error.find( "missing a wound reverse link" ) != std::string::npos );
+    cata::lua_platform::discard_prepared_mods();
+
+    REQUIRE( wound_id.is_valid() );
+    REQUIRE( target_id.is_valid() );
+    REQUIRE( fix_id.is_valid() );
+    REQUIRE( requirement_data::all().count( rollback_requirement_id ) == 1 );
+    CHECK( wound_id->get_name() == "Rollback baseline wound" );
+    CHECK( fix_id->get_name() == "Rollback baseline treatment" );
+    CHECK( wound_id->fixes == ( std::set<wound_fix_id>{ fix_id } ) );
+    CHECK( target_id->fixes.empty() );
+    CHECK( component_count( fix_id->get_requirements(), itype_id( "rock" ) ) == 2 );
+    CHECK( component_count( fix_id->get_requirements(), itype_id( "scrap" ) ) == 0 );
+    CHECK( component_count( requirement_data::all().at( rollback_requirement_id ),
+                            itype_id( "rock" ) ) == 1 );
+    CHECK( cached_count( body_part_arm_l, wound_id ) == 1 );
+    CHECK( cached_count( body_part_hand_l, wound_id ) == 0 );
+    CHECK( cached_count( body_part_hand_l, target_id ) == 1 );
+}
+
+TEST_CASE( "lua_first_monster_attack_policy_receives_generation_safe_handles",
+           "[lua][platform][content][monster][policy]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_monster_attack_policy" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.runtime.handler("monster_attack_policy", function(payload)
+    assert(payload.attack_id == "ccb_platform_policy_monster_attack")
+    assert(payload.attacker.kind == "creature")
+    assert(payload.attacker:is_valid())
+    assert(payload.target == nil)
+    return true
+end, 1)
+local attack = ccb.content.MonsterAttack {
+    id = "ccb_platform_policy_monster_attack",
+    cooldown = 1,
+}
+attack:policy("monster_attack_policy")
+ccb.content.add(attack)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_monster_attack_policy" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    const mtype_special_attack *attack =
+        cata::lua_platform::detail::monster_attack_registry_find(
+            "ccb_platform_policy_monster_attack" );
+    REQUIRE( attack != nullptr );
+    monster attacker( mtype_id( "mon_zombie" ) );
+    CHECK( ( *attack )->call( attacker ) );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_emission_uses_one_complete_named_lua_profile_without_jmath",
+           "[lua][platform][content][emission]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_emission_policy" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+ccb.runtime.handler("dynamic_emission", function(payload)
+    assert(payload.emission_id == "ccb_platform_policy_emission")
+    assert(payload.position.coordinate_space == "bub_ms")
+    assert(payload.position.x == 4)
+    assert(payload.position.y == 5)
+    assert(payload.position.z == 0)
+    assert(payload.fallback.field == "fd_smoke")
+    assert(payload.fallback.intensity == 1)
+    assert(payload.fallback.quantity == 2)
+    assert(payload.fallback.chance == 100)
+    return {
+        field = "fd_blood",
+        intensity = 1,
+        quantity = 3,
+        chance = 75,
+    }
+end, 1)
+
+local emission = ccb.content.Emission {
+    id = "ccb_platform_policy_emission",
+    field = "fd_smoke",
+    intensity = 1,
+    quantity = 2,
+    chance = 100,
+}
+emission:profile("dynamic_emission")
+ccb.content.add(emission)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_emission_policy" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    const cata::lua_platform::emission_profile fallback = {
+        "fd_smoke", 1, 2, 100
+    };
+    const std::optional<cata::lua_platform::emission_profile> profile =
+        cata::lua_platform::invoke_emission_profile_handler(
+            "ccb_platform_policy_emission", tripoint_bub_ms( 4, 5, 0 ), fallback );
+    REQUIRE( profile );
+    CHECK( profile->field == "fd_blood" );
+    CHECK( profile->intensity == 1 );
+    CHECK( profile->quantity == 3 );
+    CHECK( profile->chance == 75 );
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_weather_type_uses_named_lua_condition_without_eoc_or_jmath",
+           "[lua][platform][content][weather]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_weather_policy" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+ccb.runtime.handler("is_humid", function(payload)
+    assert(payload.weather_type_id == "ccb_platform_policy_weather")
+    assert(type(payload.temperature_kelvin) == "number")
+    assert(type(payload.pressure) == "number")
+    assert(type(payload.windpower) == "number")
+    assert(type(payload.turn) == "number")
+    assert(payload.location.coordinate_space == "abs_ms")
+    return payload.humidity >= 80
+end, 1)
+
+local weather = ccb.content.WeatherType {
+    id = "ccb_platform_policy_weather",
+    name = "Policy weather",
+    symbol = "w",
+    priority = 1000,
+}
+weather:condition("is_humid")
+ccb.content.add(weather)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_weather_policy" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    w_point sample;
+    sample.temperature = units::from_celsius( 12 );
+    sample.humidity = 85;
+    sample.pressure = 1005;
+    sample.windpower = 8;
+    sample.wind_desc = "breeze";
+    sample.winddirection = 90;
+    sample.location = tripoint_abs_ms( 10, 20, 0 );
+    const std::optional<bool> humid =
+        cata::lua_platform::invoke_weather_type_handler(
+            "ccb_platform_policy_weather", sample );
+    REQUIRE( humid );
+    CHECK( *humid );
+
+    weather_generator generator;
+    generator.sorted_weather = { weather_type_id( "ccb_platform_policy_weather" ) };
+    CHECK( generator.get_weather_conditions( sample ) ==
+           weather_type_id( "ccb_platform_policy_weather" ) );
+    sample.humidity = 40;
+    CHECK( generator.get_weather_conditions( sample ) == WEATHER_CLEAR );
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_end_screen_uses_named_lua_condition_without_legacy_tree",
+           "[lua][platform][content][end_screen]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_end_screen_policy" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+ccb.runtime.handler("select_end_screen", function(payload)
+    assert(payload.end_screen_id == "ccb_platform_policy_end_screen")
+    assert(payload.character.kind == "creature")
+    assert(payload.character:is_valid())
+    return true
+end, 1)
+
+local art = ccb.content.AsciiArt { id = "ccb_platform_policy_end_art" }
+art:line("Lua ending")
+ccb.content.add(art)
+
+local ending = ccb.content.EndScreen {
+    id = "ccb_platform_policy_end_screen",
+    picture = "ccb_platform_policy_end_art",
+    priority = 1000,
+}
+ending:condition("select_end_screen")
+ccb.content.add(ending)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_end_screen_policy" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    const std::optional<bool> selected =
+        cata::lua_platform::invoke_end_screen_handler(
+            "ccb_platform_policy_end_screen", get_avatar() );
+    REQUIRE( selected );
+    CHECK( *selected );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_activity_type_uses_bounded_lua_policies_without_eocs",
+           "[lua][platform][content][activity_type]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_activity_policy" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+ccb.runtime.handler("activity_turn", function(payload)
+    assert(payload.activity_type_id == "ACT_CCB_PLATFORM_POLICY")
+    assert(payload.phase == "do_turn")
+    assert(payload.character.kind == "creature")
+    assert(payload.character:is_valid())
+    assert(payload.moves_total == 100)
+    return {
+        moves_left = 17,
+        index = 8,
+        position = 9,
+        name = "Lua turn state",
+    }
+end, 1)
+
+ccb.runtime.handler("activity_finish", function(payload)
+    assert(payload.phase == "completion")
+    return {
+        moves_total = 150,
+        moves_left = 50,
+        name = "Lua extended state",
+    }
+end, 1)
+
+local activity = ccb.content.ActivityType {
+    id = "ACT_CCB_PLATFORM_POLICY",
+    verb = "testing Lua activity",
+    based_on = "neither",
+    activity_level = 2,
+    rooted = true,
+}
+activity:ignore("noise")
+activity:on_turn("activity_turn")
+activity:on_finish("activity_finish")
+ccb.content.add(activity)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_activity_policy" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    const activity_id activity_id_value( "ACT_CCB_PLATFORM_POLICY" );
+    REQUIRE( activity_id_value.is_valid() );
+    CHECK( activity_id_value->do_turn_EOC.is_null() );
+    CHECK( activity_id_value->completion_EOC.is_null() );
+    CHECK( activity_id_value->rooted() );
+    CHECK( activity_id_value->default_ignored_distractions().count(
+               distraction_type::noise ) == 1 );
+
+    player_activity activity( activity_id_value, 100, 1, 2, "native state" );
+    CHECK( cata::lua_platform::invoke_activity_type_handler(
+               activity_id_value.str(), "do_turn", activity, get_avatar() ) );
+    CHECK( activity.moves_left == 17 );
+    CHECK( activity.index == 8 );
+    CHECK( activity.position == 9 );
+    CHECK( activity.name == "Lua turn state" );
+
+    activity.moves_left = 0;
+    CHECK( cata::lua_platform::invoke_activity_type_handler(
+               activity_id_value.str(), "completion", activity, get_avatar() ) );
+    CHECK( activity.moves_total == 150 );
+    CHECK( activity.moves_left == 50 );
+    CHECK( activity.name == "Lua extended state" );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_activity_services_use_native_character_rules",
+           "[lua][platform][runtime][services][activity]" )
+{
+    cata::lua_platform::shutdown();
+    clear_avatar();
+    on_out_of_scope reset_platform( []() {
+        avatar &player = get_avatar();
+        if( player.activity ) {
+            player.cancel_activity();
+        }
+        cata::lua_platform::shutdown();
+        clear_avatar();
+    } );
+    scoped_platform_test_mod test_mod( "ccb_platform_activity_services" );
+    const fs::path marker = test_mod.root() / "activity-services.txt";
+    test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+
+local activity = ccb.content.ActivityType {
+    id = "ACT_CCB_PLATFORM_TIMED_SERVICE",
+    verb = "testing a native timed service",
+    based_on = "time",
+    activity_level = 1,
+}
+ccb.content.add(activity)
+ccb.content.add(ccb.content.ActivityType {
+    id = "ACT_CCB_PLATFORM_MAXIMUM_SERVICE",
+    verb = "testing a maximum native timed service",
+    based_on = "time",
+    can_resume = false,
+    activity_level = 1,
+})
+ccb.content.add(ccb.content.ActivityType {
+    id = "ACT_CCB_PLATFORM_AUTOMATIC_NEEDS",
+    verb = "testing rejected automatic needs",
+    based_on = "time",
+    auto_needs = true,
+    activity_level = 1,
+})
+ccb.content.add(ccb.content.ActivityType {
+    id = "ACT_CCB_PLATFORM_MULTI_SERVICE",
+    verb = "testing rejected multi activity",
+    based_on = "time",
+    multi_activity = true,
+    activity_level = 1,
+})
+
+ccb.runtime.handler("exercise_activity_services", function()
+    local character = ccb.services.creatures.avatar()
+    local activity_id = ccb.services.types.id(
+        "activity", "ACT_CCB_PLATFORM_TIMED_SERVICE")
+
+    local initial = ccb.services.activities.snapshot(character)
+    assert(initial.ok and not initial.value.active)
+    assert(initial.value.id == nil)
+    assert(not pcall(function()
+        ccb.services.activities.assign_timed(
+            character, activity_id,
+            ccb.services.time.duration(0, "turn"))
+    end))
+    assert(not pcall(function()
+        ccb.services.activities.assign_timed(
+            character, activity_id,
+            ccb.services.time.duration(21474837, "turn"))
+    end))
+    assert(not pcall(function()
+        ccb.services.activities.assign_timed(
+            character, ccb.services.types.id("item", "rock"),
+            ccb.services.time.duration(1, "turn"))
+    end))
+
+    local specialized_id = ccb.services.types.id(
+        "activity", "ACT_TARGET_PRACTICE")
+    local specialized = ccb.services.activities.assign_timed(
+        character, specialized_id,
+        ccb.services.time.duration(1, "turn"))
+    assert(not specialized.ok)
+    assert(specialized.error.code == "specialized_activity")
+
+    local native_handler = ccb.services.activities.assign_timed(
+        character,
+        ccb.services.types.id("activity", "ACT_FILL_LIQUID"),
+        ccb.services.time.duration(1, "turn"))
+    assert(not native_handler.ok)
+    assert(native_handler.error.code == "specialized_activity")
+
+    local legacy_policy = ccb.services.activities.assign_timed(
+        character,
+        ccb.services.types.id("activity", "ACT_PHONE_RECOVERY_BASIC"),
+        ccb.services.time.duration(1, "turn"))
+    assert(not legacy_policy.ok)
+    assert(legacy_policy.error.code == "legacy_activity_policy")
+
+    local speed_budget = ccb.services.activities.assign_timed(
+        character,
+        ccb.services.types.id("activity", "ACT_MORTAR_AIMING"),
+        ccb.services.time.duration(1, "turn"))
+    assert(not speed_budget.ok)
+    assert(speed_budget.error.code == "not_timed_activity")
+
+    local automatic_needs = ccb.services.activities.assign_timed(
+        character,
+        ccb.services.types.id("activity", "ACT_CCB_PLATFORM_AUTOMATIC_NEEDS"),
+        ccb.services.time.duration(21474836, "turn"))
+    assert(not automatic_needs.ok)
+    assert(automatic_needs.error.code == "specialized_activity")
+
+    local multi_activity = ccb.services.activities.assign_timed(
+        character,
+        ccb.services.types.id("activity", "ACT_CCB_PLATFORM_MULTI_SERVICE"),
+        ccb.services.time.duration(1, "turn"))
+    assert(not multi_activity.ok)
+    assert(multi_activity.error.code == "specialized_activity")
+
+    local assigned = ccb.services.activities.assign_timed(
+        character, activity_id,
+        ccb.services.time.duration(2, "turn"))
+    assert(assigned.ok and assigned.value.changed)
+    assert(assigned.value.activity.active)
+    assert(assigned.value.activity.id == activity_id)
+    assert(assigned.value.activity.moves_total == 200)
+    assert(assigned.value.activity.moves_left == 200)
+    assert(assigned.value.activity.progress == 0)
+
+    local observed = ccb.services.activities.snapshot(character)
+    assert(observed.ok and observed.value.active)
+    assert(observed.value.id == activity_id)
+    assert(observed.value.verb == "testing a native timed service")
+    assert(observed.value.rooted == false)
+    assert(observed.value.resumable == true)
+
+    local cancelled = ccb.services.activities.cancel(character)
+    assert(cancelled.ok and cancelled.value.changed)
+    assert(not cancelled.value.activity.active)
+    assert(cancelled.value.activity.id == nil)
+
+    local maximum = ccb.services.activities.assign_timed(
+        character,
+        ccb.services.types.id("activity", "ACT_CCB_PLATFORM_MAXIMUM_SERVICE"),
+        ccb.services.time.duration(21474836, "turn"))
+    assert(maximum.ok and maximum.value.changed)
+    assert(maximum.value.activity.moves_total == 2147483600)
+    assert(maximum.value.activity.moves_left == 2147483600)
+    local maximum_cancelled = ccb.services.activities.cancel(character)
+    assert(maximum_cancelled.ok and maximum_cancelled.value.changed)
+
+    local unchanged = ccb.services.activities.cancel(character)
+    assert(unchanged.ok and not unchanged.value.changed)
+
+    local output = assert(io.open([[%s]], "wb"))
+    output:write("native")
+    output:close()
+end)
+ccb.runtime.on("world_ready", "exercise_activity_services")
+)lua", marker.generic_u8string() ) );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_activity_services" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    REQUIRE( fs::is_regular_file( marker ) );
+    std::ifstream input( marker );
+    std::string text;
+    input >> text;
+    CHECK( text == "native" );
+    CHECK_FALSE( get_avatar().activity );
+}
+
+TEST_CASE( "lua_first_activity_cancel_is_side_effect_free_without_a_current_activity",
+           "[lua][platform][runtime][services][activity]" )
+{
+    cata::lua_platform::shutdown();
+    clear_avatar();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+        clear_avatar();
+    } );
+    avatar &player = get_avatar();
+    player_activity queued( activity_id( "ACT_GENERIC_EOC" ), 100 );
+    queued.auto_resume = true;
+    player.backlog.push_back( queued );
+
+    scoped_platform_test_mod test_mod( "ccb_platform_activity_noop_cancel" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.runtime.handler("cancel_inactive", function()
+    local result = ccb.services.activities.cancel(ccb.services.creatures.avatar())
+    assert(result.ok and not result.value.changed)
+    assert(not result.value.activity.active)
+end)
+ccb.runtime.on("world_ready", "cancel_inactive")
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_activity_noop_cancel" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    CHECK_FALSE( player.activity );
+    REQUIRE( player.backlog.size() == 1 );
+    CHECK( player.backlog.front().auto_resume );
+}
+
+TEST_CASE( "lua_first_help_snippets_and_playlists_use_native_domain_models",
+           "[lua][platform][content][presentation]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_presentation_catalogs" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+ccb.runtime.handler("read_lore", function(payload)
+    assert(payload.snippet_id == "ccb_platform_lore_entry")
+    assert(payload.category_id == "<ccb_platform_lore>")
+    assert(payload.item_type_id == "test_item")
+    assert(payload.character.kind == "creature")
+    assert(payload.character:is_valid())
+end, 1)
+
+local topic = ccb.content.HelpTopic {
+    id = "ccb_platform_help_topic",
+    title = "Native Lua help",
+    order = 123456,
+}
+topic:paragraph("This topic is authored without JSON.")
+topic:paragraph("<HELP_DRAW_DIRECTIONS>")
+ccb.content.add(topic)
+
+local snippets = ccb.content.SnippetCategory {
+    id = "<ccb_platform_lore>",
+}
+snippets:text("Anonymous native Lua lore.", 2)
+snippets:entry {
+    id = "ccb_platform_lore_entry",
+    text = "Named native Lua lore.",
+    name = "Lua lore",
+    weight = 3,
+    on_examine = "read_lore",
+}
+ccb.content.add(snippets)
+
+local playlist = ccb.content.Playlist {
+    id = "ccb_platform_playlist",
+    shuffle = true,
+}
+playlist:track("music/first.ogg", 96)
+playlist:track("music/second.ogg")
+ccb.content.add(playlist)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_presentation_catalogs" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    REQUIRE( get_help().platform_topic_order( "ccb_platform_help_topic" ) );
+    CHECK( *get_help().platform_topic_order( "ccb_platform_help_topic" ) == 123456 );
+
+    const snippet_id lore( "ccb_platform_lore_entry" );
+    REQUIRE( lore.is_valid() );
+    CHECK( lore->translated() == "Named native Lua lore." );
+    CHECK_FALSE( SNIPPET.get_EOC_by_id( lore ) );
+    CHECK( cata::lua_platform::invoke_snippet_examine_handler(
+               lore.str(), "test_item", get_avatar() ) );
+
+    const std::optional<sfx::playlist_definition> playlist =
+        sfx::playlist_registry_get( "ccb_platform_playlist" );
+    REQUIRE( playlist );
+    CHECK( playlist->shuffle );
+    REQUIRE( playlist->entries.size() == 2 );
+    CHECK( playlist->entries[0].file == "music/first.ogg" );
+    CHECK( playlist->entries[0].volume == 96 );
+    CHECK( playlist->entries[1].volume == 100 );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_hit_range_requires_explicit_singleton_replacement",
+           "[lua][platform][content][catalog]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_hit_range_replace_only" );
+    const std::vector<int> previous_hit_range =
+        Creature::dispersion_for_even_chance_of_good_hit;
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+assert(ccb.content.edit_hit_range == nil)
+ccb.content.add(ccb.content.HitRange {
+    even_good = { 1000, 500, 250 },
+})
+)lua" );
+
+    std::string error;
+    const bool prepared = cata::lua_platform::prepare_mods(
+                              { test_mod.source( "ccb_platform_hit_range_replace_only" ) }, error );
+    INFO( error );
+    REQUIRE( prepared );
+    CHECK_FALSE( cata::lua_platform::apply_prepared_content( error ) );
+    CHECK( error.find( "must use replace" ) != std::string::npos );
+    CHECK( Creature::dispersion_for_even_chance_of_good_hit == previous_hit_range );
+    cata::lua_platform::discard_prepared_mods();
+}
+
+TEST_CASE( "lua_first_magic_type_uses_named_lua_policies_without_eocs",
+           "[lua][platform][content][magic]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_magic_policy" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+ccb.runtime.handler("level_for_experience", function(payload)
+    assert(payload.magic_type_id == "ccb_platform_policy_magic")
+    assert(payload.spell_id == "ccb_platform_policy_spell")
+    assert(payload.caster == nil)
+    return payload.experience / 50
+end, 1)
+ccb.runtime.handler("experience_for_level", function(payload)
+    return payload.level * 50
+end, 1)
+ccb.runtime.handler("record_failure", function(payload)
+    assert(payload.caster.kind == "creature")
+    assert(payload.caster:is_valid())
+    ccb.state.world.set("failure_cost", 0.6)
+end, 1)
+ccb.runtime.handler("failure_cost", function(payload)
+    return ccb.state.world.get("failure_cost", 0.1)
+end, 1)
+
+local magic_type = ccb.content.MagicType {
+    id = "ccb_platform_policy_magic",
+    energy = "mana",
+}
+magic_type:progression("level_for_experience", "experience_for_level")
+magic_type:failure_cost("failure_cost")
+magic_type:on_failure("record_failure")
+ccb.content.add(magic_type)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_magic_policy" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    const std::optional<double> level =
+        cata::lua_platform::invoke_magic_type_number_handler(
+            "ccb_platform_policy_magic", "level_for_experience",
+            "ccb_platform_policy_spell", nullptr, 125.0 );
+    REQUIRE( level );
+    CHECK( *level == 2.5 );
+    cata::lua_platform::invoke_magic_type_failure_handler(
+        "ccb_platform_policy_magic", "ccb_platform_policy_spell", get_avatar() );
+    const std::optional<double> failure_cost =
+        cata::lua_platform::invoke_magic_type_number_handler(
+            "ccb_platform_policy_magic", "failure_cost",
+            "ccb_platform_policy_spell", &get_avatar() );
+    REQUIRE( failure_cost );
+    CHECK( *failure_cost == 0.6 );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_lifecycle_uses_dependency_order_and_reverse_shutdown",
+           "[lua][platform][runtime]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod dependency( "ccb_platform_lifecycle_dependency" );
+    scoped_platform_test_mod dependent( "ccb_platform_lifecycle_dependent" );
+    const fs::path marker = dependency.root() / "lifecycle-order.txt";
+    const auto source = [&marker]( const std::string &label ) {
+        return string_format( R"lua(
+local ccb = require("ccb")
+local function append(value)
+    local output = assert(io.open([[%s]], "ab"))
+    output:write(value)
+    output:close()
+end
+ccb.runtime.handler("ready", function()
+    append("ready:%s;")
+end)
+ccb.runtime.handler("shutdown", function()
+    append("shutdown:%s;")
+end)
+ccb.runtime.on("world_ready", "ready")
+ccb.runtime.on("shutdown", "shutdown")
+)lua", marker.generic_u8string(), label, label );
+    };
+    dependency.write( "main.lua", source( "dependency" ) );
+    dependent.write( "main.lua", source( "dependent" ) );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods( {
+        dependency.source( "ccb_platform_lifecycle_dependency" ),
+        dependent.source( "ccb_platform_lifecycle_dependent" )
+    }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+    cata::lua_platform::shutdown();
+
+    std::ifstream input( marker, std::ios::binary );
+    const std::string order{
+        std::istreambuf_iterator<char>( input ),
+        std::istreambuf_iterator<char>()
+    };
+    REQUIRE( input );
+    CHECK( order ==
+           "ready:dependency;ready:dependent;shutdown:dependent;shutdown:dependency;" );
+}
+
+TEST_CASE( "lua_first_item_use_context_exposes_safe_handles_position_and_prompt_guards",
+           "[lua][platform][runtime][item][presentation]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_item_use_context" );
+    avatar &player = get_avatar();
+    const tripoint_bub_ms position = player.pos_bub();
+    test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+
+ccb.runtime.handler("inspect_use_context", function(context)
+    saved_use_context = context
+    assert(context.player_name ~= "")
+    assert(context.item_id == "rock")
+    assert(context.character.kind == "creature")
+    assert(context.item.kind == "item")
+    assert(context.character:is_valid())
+    assert(context.item:is_valid())
+    assert(context.position.origin == "bub")
+    assert(context.position.scale == "ms")
+    assert(context.position.x == %d)
+    assert(context.position.y == %d)
+    assert(context.position.z == %d)
+
+    local duplicate_ok = pcall(ccb.presentation.choose, "Duplicate ids", {
+        { id = "same", label = "First" },
+        { id = "same", label = "Second" },
+    })
+    assert(not duplicate_ok)
+
+    local sparse = {
+        [1] = { id = "one", label = "One" },
+        [3] = { id = "three", label = "Three" },
+    }
+    local sparse_ok = pcall(ccb.presentation.choose, "Sparse choices", sparse)
+    assert(not sparse_ok)
+    local keyed = {
+        { id = "one", label = "One" },
+        metadata = { id = "two", label = "Two" },
+    }
+    assert(not pcall(ccb.presentation.choose, "Keyed choices", keyed))
+    assert(not pcall(ccb.presentation.input_text, "Input", { max_length = 0 }))
+    assert(not pcall(ccb.presentation.notice, ""))
+
+    context.charges = 7
+    return 17
+end)
+ccb.runtime.handler("fail_use_context", function(context)
+    failed_use_context = context
+    error("intentional item-use failure")
+end)
+ccb.runtime.handler("assert_use_context_expired", function()
+    local function assert_expired(context)
+        local readable, failure = pcall(function()
+            return context.item_id
+        end)
+        assert(not readable)
+        assert(string.find(failure, "stale item-use context", 1, true))
+    end
+    assert_expired(saved_use_context)
+    assert_expired(failed_use_context)
+end)
+ccb.runtime.on("before_save", "assert_use_context_expired")
+)lua", position.x(), position.y(), position.z() ) );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_item_use_context" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    item used( itype_id( "rock" ) );
+    used.charges = 3;
+    const std::optional<int> result = cata::lua_platform::invoke_use_handler(
+            "ccb_platform_item_use_context", "inspect_use_context", &player,
+            used, &get_map(), position );
+    REQUIRE( result );
+    CHECK( *result == 17 );
+    CHECK( used.charges == 7 );
+    REQUIRE_FALSE( debug_has_error_been_observed() );
+    CHECK_FALSE( cata::lua_platform::invoke_use_handler(
+                     "ccb_platform_item_use_context", "fail_use_context",
+                     &player, used, &get_map(), position ) );
+    REQUIRE( debug_has_error_been_observed() );
+    debug_reset_error_observed();
+    cata::lua_platform::before_save();
+    CHECK_FALSE( debug_has_error_been_observed() );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_content_layers_replace_and_rollback_in_mod_order",
+           "[lua][platform][content]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod provider( "ccb_platform_content_provider" );
+    scoped_platform_test_mod consumer( "ccb_platform_content_consumer" );
+    provider.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.Item {
+    id = "ccb_platform_layered_item",
+    name = "provider definition",
+})
+)lua" );
+    consumer.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.replace(ccb.content.Item {
+    id = "ccb_platform_layered_item",
+    name = "consumer replacement",
+})
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods( {
+        provider.source( "ccb_platform_content_provider" ),
+        consumer.source( "ccb_platform_content_consumer" )
+    }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( item_controller->find_template(
+                 itype_id( "ccb_platform_layered_item" ) ) != nullptr );
+    CHECK( item_controller->find_template(
+               itype_id( "ccb_platform_layered_item" ) )->nname( 1 ) ==
+           "consumer replacement" );
+
+    cata::lua_platform::discard_prepared_mods();
+    CHECK_FALSE( item_controller->has_template(
+                     itype_id( "ccb_platform_layered_item" ) ) );
+}
+
+TEST_CASE( "lua_first_content_edits_earlier_staged_definitions",
+           "[lua][platform][content]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_content_edit" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local item = ccb.content.Item {
+    id = "ccb_platform_edited_item",
+    name = "edited staged item",
+}
+item:mass_grams(10)
+ccb.content.add(item)
+
+local edited_item = ccb.content.edit_item("ccb_platform_edited_item")
+edited_item:mass_grams(42)
+ccb.content.edit(edited_item)
+
+local recipe = ccb.content.Recipe {
+    id = "ccb_platform_edited_recipe",
+    result = "ccb_platform_edited_item",
+    duration_moves = 100,
+}
+assert(not pcall(recipe.component_any, recipe, {
+    [1] = { id = "scrap", count = 1 },
+    [3] = { id = "rock", count = 1 },
+}))
+assert(not pcall(recipe.tool_any, recipe, {
+    { id = "hammer", count = 1 },
+    metadata = { id = "rock", count = 1 },
+}))
+ccb.content.add(recipe)
+local edited_recipe = ccb.content.edit_recipe("ccb_platform_edited_recipe")
+edited_recipe:duration_moves(250)
+edited_recipe:component("scrap", 1)
+ccb.content.edit(edited_recipe)
+
+assert(not pcall(ccb.content.edit_item, "not_staged"))
+assert(not pcall(ccb.content.edit_recipe, "not_staged"))
+assert(not pcall(ccb.content.edit, ccb.content.Item {
+    id = "not_staged",
+    name = "must be rejected",
+}))
+)lua" );
+
+    std::string error;
+    const bool prepared = cata::lua_platform::prepare_mods(
+                              { test_mod.source( "ccb_platform_content_edit" ) }, error );
+    INFO( error );
+    REQUIRE( prepared );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    const itype *edited = item_controller->find_template(
+                              itype_id( "ccb_platform_edited_item" ) );
+    REQUIRE( edited != nullptr );
+    CHECK( edited->weight == 42_gram );
+    CHECK( recipe_id( "ccb_platform_edited_recipe" ).is_valid() );
+
+    cata::lua_platform::discard_prepared_mods();
+    CHECK_FALSE( item_controller->has_template(
+                     itype_id( "ccb_platform_edited_item" ) ) );
+    CHECK_FALSE( recipe_id( "ccb_platform_edited_recipe" ).is_valid() );
+}
+
+TEST_CASE( "lua_first_content_requires_explicit_replacement_and_named_handlers",
+           "[lua][platform][content]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_content_validation" );
+
+    SECTION( "duplicate ids require replace" ) {
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+local item = ccb.content.Item { id = "null", name = "bad replacement" }
+ccb.content.add(item)
+)lua" );
+        std::string error;
+        REQUIRE( cata::lua_platform::prepare_mods(
+                     { test_mod.source( "ccb_platform_content_validation" ) }, error ) );
+        CHECK_FALSE( cata::lua_platform::apply_prepared_content( error ) );
+        CHECK( error.find( "use replace explicitly" ) != std::string::npos );
+        cata::lua_platform::discard_prepared_mods();
+    }
+
+    SECTION( "item callbacks resolve a registered stable handler id" ) {
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+local item = ccb.content.Item {
+    id = "ccb_platform_missing_handler_item",
+    name = "missing handler item",
+}
+item:on_use("not_registered")
+ccb.content.add(item)
+)lua" );
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+                         { test_mod.source( "ccb_platform_content_validation" ) }, error ) );
+        CHECK( error.find( "missing handler" ) != std::string::npos );
+    }
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_named_tasks_run_from_serializable_payloads",
+           "[lua][platform][runtime][state]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_named_task" );
+    const fs::path marker = test_mod.root() / "task-ran.txt";
+    test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+local callback_accepted, callback_error = pcall(
+    ccb.runtime.handler, "invalid_callback", {}, 1)
+assert(not callback_accepted)
+assert(string.find(callback_error, "must be a Lua function", 1, true))
+local version_accepted, version_error = pcall(
+    ccb.runtime.handler, "invalid_version", function() end, math.maxinteger)
+assert(not version_accepted)
+assert(string.find(version_error, "outside the native range", 1, true))
+ccb.runtime.handler("run_task", function(task)
+    assert(task.payload_version == 2)
+    assert(task.payload.answer == 42)
+    local output = assert(io.open([[%s]], "wb"))
+    output:write(ccb.state.world.get("task_marker", "missing"))
+    output:close()
+end, 2)
+ccb.runtime.handler("ready", function()
+    local cancelled, cancel_error = pcall(ccb.tasks.cancel, 0)
+    assert(not cancelled)
+    assert(string.find(cancel_error, "must be positive", 1, true))
+    local versioned, version_error = pcall(
+        ccb.tasks.after, 0, "run_task", {}, math.maxinteger, "world")
+    assert(not versioned)
+    assert(string.find(version_error, "outside the native range", 1, true))
+    ccb.state.world.set("task_marker", "restored")
+    ccb.tasks.after(0, "run_task", { answer = 42 }, 2, "world")
+end, 1)
+ccb.runtime.on("world_ready", "ready")
+)lua", marker.generic_u8string() ) );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_named_task" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    REQUIRE( fs::is_regular_file( marker ) );
+    std::ifstream input( marker );
+    std::string contents;
+    input >> contents;
+    CHECK( contents == "restored" );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_state_and_tasks_round_trip_across_runtime_recreation",
+           "[lua][platform][runtime][state]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_state_round_trip" );
+    scoped_calendar_turn turn;
+    scoped_lua_state_file character_sidecar(
+        ( PATH_INFO::player_base_save_path() +
+          ".lua_platform.json" ).get_unrelative_path() );
+    std::unique_ptr<scoped_lua_state_file> world_sidecar;
+    if( world_generator && world_generator->active_world != nullptr ) {
+        world_sidecar = std::make_unique<scoped_lua_state_file>(
+                            ( world_generator->active_world->folder_path() /
+                              "lua_platform_world.json" ).get_unrelative_path() );
+    }
+    character_sidecar.write( R"json({
+  "version": 1,
+  "scope": "character",
+  "mods": {}
+})json" );
+    const fs::path marker = test_mod.root() / "restored-task.txt";
+    test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+
+ccb.runtime.handler("resume", function(task)
+    assert(math.type(ccb.state.character.get("integer")) == "integer")
+    assert(ccb.state.character.get("integer") == 42)
+    assert(ccb.state.character.get("float") == 1.5)
+    assert(ccb.state.character.get("boolean") == true)
+    assert(ccb.state.character.get("string") == "kept")
+    assert(task.payload.text == "serializable")
+    local output = assert(io.open([[%s]], "wb"))
+    output:write(tostring(task.overdue_turns))
+    output:close()
+end, 3)
+
+ccb.runtime.handler("ready", function()
+    if ccb.state.character.get("scheduled", false) then
+        return
+    end
+    local accepted, schedule_error = pcall(ccb.tasks.after, -1, "resume")
+    assert(not accepted)
+    assert(string.find(schedule_error, "cannot be negative", 1, true))
+    ccb.state.character.set("scheduled", true)
+    ccb.state.character.set("integer", 42)
+    ccb.state.character.set("float", 1.5)
+    ccb.state.character.set("boolean", true)
+    ccb.state.character.set("string", "kept")
+    ccb.tasks.after(5, "resume", { text = "serializable" }, 3, "character")
+end)
+ccb.runtime.on("world_ready", "ready")
+)lua", marker.generic_u8string() ) );
+
+    const auto prepare_and_commit = [&test_mod]() {
+        std::string error;
+        REQUIRE( cata::lua_platform::prepare_mods(
+                     { test_mod.source( "ccb_platform_state_round_trip" ) }, error ) );
+        REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+        REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+        cata::lua_platform::commit_prepared_mods();
+    };
+
+    calendar::turn = turn.original();
+    prepare_and_commit();
+    cata::lua_platform::on_world_ready( true );
+    std::string error;
+    REQUIRE( cata::lua_platform::save_persistent_state( error ) );
+    cata::lua_platform::shutdown();
+
+    calendar::turn = turn.original() + 7_turns;
+    prepare_and_commit();
+    cata::lua_platform::on_world_ready( false );
+    REQUIRE( fs::is_regular_file( marker ) );
+    std::ifstream input( marker );
+    std::string overdue_turns;
+    input >> overdue_turns;
+    REQUIRE( input );
+    CHECK( overdue_turns == "2" );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_bundled_mod_completes_a_playable_save_reload_loop",
+           "[lua][platform][integration][playable_mvp]" )
+{
+    REQUIRE( world_generator != nullptr );
+    REQUIRE( world_generator->active_world != nullptr );
+    REQUIRE( g != nullptr );
+
+    cata::lua_platform::shutdown();
+    mod_manager &manager = world_generator->get_mod_manager();
+    manager.refresh_mod_list();
+    const mod_id example_id( "Lua_First_Example" );
+    REQUIRE( example_id.is_valid() );
+    CHECK( example_id->name() == "Lua-first playable example" );
+    CHECK( example_id->version == "0.1.0" );
+    CHECK( ( example_id->dependencies == std::vector<mod_id> { mod_id( "dda" ) } ) );
+    CHECK( example_id->mod_root_path.get_unrelative_path() ==
+           PATH_INFO::moddir().get_unrelative_path() / "Lua_First_Example" );
+
+    std::vector<mod_id> &active_mods =
+        world_generator->active_world->active_mod_order;
+    const std::vector<mod_id> original_mods = active_mods;
+    std::vector<mod_id> selected_mods = original_mods;
+    mod_ui selector( manager );
+    selector.try_add( example_id, selected_mods, false );
+    CHECK( std::find( selected_mods.begin(), selected_mods.end(), mod_id( "dda" ) ) !=
+           selected_mods.end() );
+    CHECK( std::count( selected_mods.begin(), selected_mods.end(), example_id ) == 1 );
+
+    const auto reset_playable_avatar = []() {
+        get_avatar() = avatar();
+        get_avatar().create( character_type::NOW );
+        get_avatar().setID( g->assign_npc_id(), false );
+        get_avatar().set_save_id( "Lua-first playable MVP" );
+        get_avatar().setpos( get_map(), tripoint_bub_ms( 30, 30, 0 ) );
+    };
+    bool restored_original_mods = false;
+    on_out_of_scope restore_mods( [&]() {
+        if( restored_original_mods ) {
+            return;
+        }
+        try {
+            cata::lua_platform::shutdown();
+            active_mods = original_mods;
+            g->load_core_data();
+            g->load_world_modfiles();
+            reset_playable_avatar();
+        } catch( ... ) {
+            // Preserve the original test failure; this process-level fixture is
+            // reinitialized by the next cata_test invocation.
+        }
+    } );
+    active_mods = selected_mods;
+
+    scoped_calendar_turn turn;
+    const auto load_selected_mods = [&]() {
+        cata::lua_platform::shutdown();
+        g->load_core_data();
+        g->load_world_modfiles();
+        CHECK( ( cata::lua_platform::loaded_mod_ids() ==
+                 std::vector<std::string> { "Lua_First_Example" } ) );
+    };
+    load_selected_mods();
+    reset_playable_avatar();
+
+    scoped_lua_state_file character_sidecar(
+        ( PATH_INFO::player_base_save_path() +
+          ".lua_platform.json" ).get_unrelative_path() );
+    scoped_lua_state_file world_sidecar(
+        ( world_generator->active_world->folder_path() /
+          "lua_platform_world.json" ).get_unrelative_path() );
+    character_sidecar.write( R"json({
+  "version": 1,
+  "scope": "character",
+  "mods": {}
+})json" );
+    world_sidecar.write( R"json({
+  "version": 1,
+  "scope": "world",
+  "mods": {}
+})json" );
+
+    const auto platform_record = []( const std::string &contents ) {
+        JsonObject root = json_loader::from_string( contents ).get_object();
+        root.allow_omitted_members();
+        JsonObject mods = root.get_object( "mods" );
+        mods.allow_omitted_members();
+        JsonObject record = mods.get_object( "Lua_First_Example" );
+        record.allow_omitted_members();
+        return record;
+    };
+    const auto platform_integer = [&platform_record]( const std::string &contents,
+    const std::string &key ) {
+        JsonObject record = platform_record( contents );
+        JsonObject values = record.get_object( "values" );
+        values.allow_omitted_members();
+        JsonObject value = values.get_object( key );
+        value.allow_omitted_members();
+        return value.get_int64( "value" );
+    };
+    const auto platform_boolean = [&platform_record]( const std::string &contents,
+    const std::string &key ) {
+        JsonObject record = platform_record( contents );
+        JsonObject values = record.get_object( "values" );
+        values.allow_omitted_members();
+        JsonObject value = values.get_object( key );
+        value.allow_omitted_members();
+        return value.get_bool( "value" );
+    };
+    const auto platform_task_handlers = [&platform_record]( const std::string &contents ) {
+        JsonObject record = platform_record( contents );
+        JsonArray tasks = record.get_array( "tasks" );
+        std::vector<std::string> handlers;
+        handlers.reserve( tasks.size() );
+        while( tasks.has_more() ) {
+            JsonObject task = tasks.next_object();
+            task.allow_omitted_members();
+            handlers.push_back( task.get_string( "handler" ) );
+        }
+        return handlers;
+    };
+
+    cata::lua_platform::on_world_ready( true );
+    REQUIRE( item_controller->has_template(
+                 itype_id( "lua_first_cleanwater_charm" ) ) );
+    REQUIRE( recipe_id( "lua_first_cleanwater_charm" ).is_valid() );
+
+    avatar &player = get_avatar();
+    item first_charm( itype_id( "lua_first_cleanwater_charm" ) );
+    const std::optional<int> first_use = first_charm.type->invoke(
+            &player, first_charm, &get_map(), player.pos_bub() );
+    REQUIRE( first_use );
+    CHECK( *first_use == 0 );
+
+    REQUIRE( g->save() );
+    CHECK_FALSE( world_generator->active_world->world_saves.empty() );
+    CHECK( platform_integer( character_sidecar.read(), "cleanwater_charm_uses" ) == 1 );
+    CHECK( platform_boolean( world_sidecar.read(),
+                             "cleanwater_example_initialized" ) );
+    const std::vector<std::string> first_tasks =
+        platform_task_handlers( world_sidecar.read() );
+    REQUIRE( first_tasks.size() == 1 );
+    CHECK( first_tasks.front() == "lua_first_example_reminder" );
+
+    load_selected_mods();
+    reset_playable_avatar();
+    cata::lua_platform::on_world_ready( false );
+    REQUIRE( item_controller->has_template(
+                 itype_id( "lua_first_cleanwater_charm" ) ) );
+    REQUIRE( recipe_id( "lua_first_cleanwater_charm" ).is_valid() );
+
+    item restored_charm( itype_id( "lua_first_cleanwater_charm" ) );
+    const std::optional<int> restored_use = restored_charm.type->invoke(
+            &player, restored_charm, &get_map(), player.pos_bub() );
+    REQUIRE( restored_use );
+    CHECK( *restored_use == 0 );
+    REQUIRE( g->save() );
+    CHECK( platform_integer( character_sidecar.read(), "cleanwater_charm_uses" ) == 2 );
+    CHECK( platform_task_handlers( world_sidecar.read() ).size() == 1 );
+
+    calendar::turn += 11_turns;
+    cata::lua_platform::on_turn();
+    REQUIRE( g->save() );
+    CHECK( platform_integer( world_sidecar.read(),
+                             "cleanwater_example_reminders" ) == 1 );
+    CHECK( platform_task_handlers( world_sidecar.read() ).empty() );
+
+    cata::lua_platform::shutdown();
+    active_mods = original_mods;
+    g->load_core_data();
+    g->load_world_modfiles();
+    reset_playable_avatar();
+    restored_original_mods = true;
+}
+
+TEST_CASE( "lua_first_corrupt_duplicate_task_ids_clear_the_scope",
+           "[lua][platform][runtime][state]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_duplicate_task_state" );
+    scoped_lua_state_file character_sidecar(
+        ( PATH_INFO::player_base_save_path() +
+          ".lua_platform.json" ).get_unrelative_path() );
+    const fs::path marker = test_mod.root() / "state-load-result.txt";
+    character_sidecar.write( R"json({
+  "version": 1,
+  "scope": "character",
+  "mods": {
+    "ccb_platform_duplicate_task_state": {
+      "values": {
+        "poison": { "type": "string", "value": "not cleared" }
+      },
+      "tasks": [
+        {
+          "id": 1,
+          "handler": "unused",
+          "due_turn": 0,
+          "payload_version": 1,
+          "payload": {}
+        },
+        {
+          "id": 1,
+          "handler": "unused",
+          "due_turn": 0,
+          "payload_version": 1,
+          "payload": {}
+        }
+      ]
+    }
+  }
+})json" );
+    test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+ccb.runtime.handler("ready", function()
+    local output = assert(io.open([[%s]], "wb"))
+    output:write(ccb.state.character.get("poison", "cleared"))
+    output:close()
+end)
+ccb.runtime.on("world_ready", "ready")
+)lua", marker.generic_u8string() ) );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_duplicate_task_state" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( false );
+
+    std::ifstream input( marker );
+    std::string result;
+    input >> result;
+    REQUIRE( input );
+    CHECK( result == "cleared" );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_restored_tasks_preserve_missing_and_migrate_versioned_handlers",
+           "[lua][platform][runtime][state]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_dropped_task_state" );
+    scoped_lua_state_file character_sidecar(
+        ( PATH_INFO::player_base_save_path() +
+          ".lua_platform.json" ).get_unrelative_path() );
+    std::unique_ptr<scoped_lua_state_file> world_sidecar;
+    if( world_generator && world_generator->active_world != nullptr ) {
+        world_sidecar = std::make_unique<scoped_lua_state_file>(
+                            ( world_generator->active_world->folder_path() /
+                              "lua_platform_world.json" ).get_unrelative_path() );
+    }
+    const fs::path marker = test_mod.root() / "unexpected-task.txt";
+    character_sidecar.write( R"json({
+  "version": 1,
+  "scope": "character",
+  "mods": {
+    "ccb_platform_dropped_task_state": {
+      "values": {},
+      "tasks": [
+        {
+          "id": 1,
+          "handler": "missing",
+          "due_turn": 0,
+          "payload_version": 1,
+          "payload": {}
+        },
+        {
+          "id": 2,
+          "handler": "known",
+          "due_turn": 0,
+          "payload_version": 1,
+          "payload": {}
+        },
+        {
+          "id": 3,
+          "handler": "failing_chain",
+          "due_turn": 0,
+          "payload_version": 1,
+          "payload": {
+            "step": { "type": "string", "value": "original" }
+          }
+        }
+      ]
+    }
+  }
+})json" );
+    test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+ccb.runtime.handler("known", function()
+    local output = assert(io.open([[%s]], "wb"))
+    output:write("migrated")
+    output:close()
+end, 2)
+ccb.runtime.migrate_task_payload("known", 1, 2, function(payload, migration)
+    assert(migration.handler_id == "known")
+    assert(migration.from_version == 1)
+    assert(migration.to_version == 2)
+    payload.upgraded = true
+    return payload
+end)
+ccb.runtime.handler("failing_chain", function()
+    error("half-migrated task must not run")
+end, 3)
+ccb.runtime.migrate_task_payload("failing_chain", 1, 2, function(payload)
+    payload.step = "half-migrated"
+    return payload
+end)
+ccb.runtime.migrate_task_payload("failing_chain", 2, 3, function()
+    error("late migration failure")
+end)
+)lua", marker.generic_u8string() ) );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_dropped_task_state" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( false );
+    REQUIRE( fs::is_regular_file( marker ) );
+    std::ifstream marker_input( marker );
+    std::string marker_text;
+    marker_input >> marker_text;
+    CHECK( marker_text == "migrated" );
+    REQUIRE( cata::lua_platform::save_persistent_state( error ) );
+    const std::string saved = character_sidecar.read();
+    CHECK( saved.find( "\"handler\": \"missing\"" ) != std::string::npos );
+    CHECK( saved.find( "\"handler\": \"known\"" ) == std::string::npos );
+    CHECK( saved.find( "\"handler\": \"failing_chain\"" ) != std::string::npos );
+    CHECK( saved.find( "\"payload_version\": 1" ) != std::string::npos );
+    CHECK( saved.find( "\"value\": \"original\"" ) != std::string::npos );
+    CHECK( saved.find( "half-migrated" ) == std::string::npos );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_platform_exposes_shared_domains_and_synchronous_hooks",
+           "[lua][platform][runtime][services][hooks]" )
+{
+    cata::lua_platform::shutdown();
+    const achievement_id shared_achievement( "lua_test_manual_achievement" );
+    REQUIRE( shared_achievement.is_valid() );
+    achievements_tracker &achievement_tracker = get_achievements();
+    if( achievement_tracker.valid_achievements().empty() ) {
+        get_event_bus().send<event_type::game_start>( "lua-platform-shared-domains-test" );
+    }
+    REQUIRE( achievement_tracker.reset_manual_achievement( shared_achievement.obj() ) );
+    on_out_of_scope reset_achievement( [&achievement_tracker, shared_achievement]() {
+        achievement_tracker.reset_manual_achievement( shared_achievement.obj() );
+    } );
+    scoped_platform_test_mod test_mod( "ccb_platform_shared_domains" );
+    const fs::path marker = test_mod.root() / "shared-domains.txt";
+    test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+assert(type(ccb.presentation) == "table")
+local early_prompt, early_prompt_error = pcall(
+    ccb.presentation.confirm, "must not open before world_ready")
+assert(not early_prompt)
+assert(string.find(early_prompt_error, "inside a runtime callback", 1, true) or
+       string.find(early_prompt_error, "after world_ready", 1, true))
+
+local required_domains = {
+    "achievements", "activities", "addictions", "bionics", "camps", "characters",
+    "crafting", "creatures", "effects", "factions", "handles", "hordes",
+    "gameplay", "inventory", "items", "martial_arts", "missions", "morale", "mutations", "needs",
+    "npcs", "overmap", "proficiencies", "recipes", "skills", "spells",
+    "statistics", "time", "types", "units", "variables", "vehicles",
+    "vitamins", "weather", "world", "wounds", "zones",
+}
+
+assert(not pcall(function()
+    ccb.services.random.int(1, 1)
+end))
+assert(not pcall(function()
+    ccb.services.random.chance(0, 1)
+end))
+assert(not pcall(function()
+    ccb.services.random.chance(1, 1)
+end))
+assert(not pcall(function()
+    ccb.services.random.one_in(1)
+end))
+assert(not pcall(function()
+    ccb.services.random.probability(0, 1)
+end))
+assert(not pcall(function()
+    ccb.services.random.probability(1, 1)
+end))
+
+ccb.runtime.handler("ready", function()
+    for _, name in ipairs(required_domains) do
+        assert(type(ccb.services[name]) == "table", "missing domain " .. name)
+    end
+    local avatar = ccb.services.creatures.avatar()
+    assert(avatar.kind == "creature")
+    assert(ccb.services.gameplay.strings.any_equal({ "a", "b", "a" }))
+    assert(not ccb.services.gameplay.strings.any_equal({ "a", "b" }))
+    assert(ccb.services.gameplay.strings.all_equal({ "same", "same" }))
+    assert(not ccb.services.gameplay.strings.all_equal({ "same", "different" }))
+    assert(not pcall(function()
+        ccb.services.gameplay.strings.any_equal({ "only-one" })
+    end))
+    assert(ccb.services.gameplay.mods.is_loaded("ccb_platform_shared_domains"))
+    assert(not ccb.services.gameplay.mods.is_loaded("missing-platform-mod"))
+    local dimension = ccb.services.gameplay.environment.dimension()
+    assert(type(dimension) == "string" and #dimension > 0)
+    local locator = avatar:locator()
+    local avatar_position = ccb.services.coords.tripoint_abs_ms(
+        locator.position.x, locator.position.y, locator.position.z)
+    assert(type(ccb.services.gameplay.environment.is_outside(avatar_position)) == "boolean")
+    assert(ccb.services.gameplay.environment.line_of_sight(
+        avatar_position, avatar_position, 0))
+    assert(not pcall(function()
+        ccb.services.gameplay.environment.line_of_sight(
+            avatar_position, avatar_position, -1)
+    end))
+    local achievement_id = ccb.services.types.id(
+        "achievement", "lua_test_manual_achievement")
+    local completed = ccb.services.achievements.complete(achievement_id)
+    assert(completed.ok and completed.value)
+    local reset = ccb.services.achievements.reset(achievement_id)
+    assert(reset.ok)
+
+    local bionic_id = ccb.services.types.id("bionic", "bio_earplugs")
+    while true do
+        local initially_removed_bionic = ccb.services.bionics.remove_type(
+            avatar, bionic_id)
+        assert(initially_removed_bionic.ok)
+        if not initially_removed_bionic.value.changed then
+            break
+        end
+    end
+    local installed_bionic = ccb.services.bionics.grant(avatar, bionic_id)
+    assert(installed_bionic.ok)
+    assert(installed_bionic.value.changed)
+    local has_installed_bionic = ccb.services.bionics.has(avatar, bionic_id)
+    assert(has_installed_bionic.ok and has_installed_bionic.value)
+    local removed_bionic = ccb.services.bionics.remove_type(avatar, bionic_id)
+    assert(removed_bionic.ok and removed_bionic.value.changed)
+    local has_removed_bionic = ccb.services.bionics.has(avatar, bionic_id)
+    assert(has_removed_bionic.ok and not has_removed_bionic.value)
+    local absent_bionic = ccb.services.bionics.remove_type(avatar, bionic_id)
+    assert(absent_bionic.ok and not absent_bionic.value.changed)
+
+    local recipe_id = ccb.services.types.id("recipe", "cudgel_test_no_tools")
+    local initially_forgotten = ccb.services.recipes.forget(avatar, recipe_id)
+    assert(initially_forgotten.ok and not initially_forgotten.value.known)
+    local learned_recipe = ccb.services.recipes.learn(avatar, recipe_id)
+    assert(learned_recipe.ok and learned_recipe.value.changed)
+    assert(learned_recipe.value.known)
+    local duplicate_recipe = ccb.services.recipes.learn(avatar, recipe_id)
+    assert(duplicate_recipe.ok and not duplicate_recipe.value.changed)
+    local forgotten_recipe = ccb.services.recipes.forget(avatar, recipe_id)
+    assert(forgotten_recipe.ok and forgotten_recipe.value.changed)
+    assert(not forgotten_recipe.value.known)
+    local absent_recipe = ccb.services.recipes.forget(avatar, recipe_id)
+    assert(absent_recipe.ok and not absent_recipe.value.changed)
+
+    local martial_art_id = ccb.services.types.id("martial_art", "style_karate")
+    local initially_forgotten_style = ccb.services.martial_arts.forget(
+        avatar, martial_art_id)
+    assert(initially_forgotten_style.ok and not initially_forgotten_style.value.known)
+    local learned_style = ccb.services.martial_arts.learn(avatar, martial_art_id)
+    assert(learned_style.ok and learned_style.value.changed)
+    assert(learned_style.value.known)
+    local known_style = ccb.services.martial_arts.get(avatar, martial_art_id)
+    assert(known_style.ok and known_style.value.known)
+    local duplicate_style = ccb.services.martial_arts.learn(avatar, martial_art_id)
+    assert(duplicate_style.ok and not duplicate_style.value.changed)
+    local forgotten_style = ccb.services.martial_arts.forget(avatar, martial_art_id)
+    assert(forgotten_style.ok and forgotten_style.value.changed)
+    assert(not forgotten_style.value.known)
+    local absent_style = ccb.services.martial_arts.forget(avatar, martial_art_id)
+    assert(absent_style.ok and not absent_style.value.changed)
+
+    local mutation_id = ccb.services.types.id("mutation", "TOUGH")
+    local has_mutation = ccb.services.mutations.has(avatar, mutation_id)
+    assert(has_mutation.ok and type(has_mutation.value) == "boolean")
+    local proficiency_id = ccb.services.types.id("proficiency", "prof_knapping")
+    local proficiency = ccb.services.proficiencies.get(avatar, proficiency_id)
+    assert(proficiency.ok and type(proficiency.value.known) == "boolean")
+
+    local morale_id = ccb.services.types.id("morale", "morale_feeling_good")
+    local initial_morale = ccb.services.morale.remove(avatar, morale_id)
+    assert(initial_morale.ok and initial_morale.value.after == 0)
+    local default_morale = ccb.services.morale.add(avatar, morale_id, 10, 50)
+    assert(default_morale.ok and default_morale.value.changed)
+    assert(default_morale.value.before == 0 and default_morale.value.after == 10)
+    local cleared_default_morale = ccb.services.morale.remove(avatar, morale_id)
+    assert(cleared_default_morale.ok and cleared_default_morale.value.changed)
+    assert(cleared_default_morale.value.before == 10)
+    assert(cleared_default_morale.value.after == 0)
+    local added_morale = ccb.services.morale.add(avatar, morale_id, 10, 50, {
+        duration = ccb.services.time.duration(2, "hour"),
+        decay_start = ccb.services.time.duration(1, "hour"),
+        capped = false,
+    })
+    assert(added_morale.ok and added_morale.value.changed)
+    assert(added_morale.value.before == 0 and added_morale.value.after == 10)
+    local removed_morale = ccb.services.morale.remove(avatar, morale_id)
+    assert(removed_morale.ok and removed_morale.value.changed)
+    assert(removed_morale.value.after == 0)
+    assert(not pcall(function()
+        ccb.services.morale.add(avatar, morale_id, 1, 10, { unknown = true })
+    end))
+
+    assert(ccb.services.random.int(37, 37) == 37)
+    assert(not ccb.services.random.chance(0, 1))
+    assert(ccb.services.random.chance(1, 1))
+    assert(ccb.services.random.one_in(1))
+    assert(not ccb.services.random.probability(0, 1))
+    assert(ccb.services.random.probability(1, 1))
+    assert(ccb.services.random.contested(1, 1, 1))
+    assert(not ccb.services.random.contested(0, 1, 1))
+    local repeated = ccb.services.random.sample_integers(7, 7, 3, true)
+    assert(#repeated == 3 and repeated[1] == 7 and repeated[3] == 7)
+    local unique = ccb.services.random.sample_integers(1, 3, 3)
+    assert(#unique == 3)
+    assert(unique[1] ~= unique[2] and unique[1] ~= unique[3] and unique[2] ~= unique[3])
+    assert(not pcall(function()
+        ccb.services.random.sample_integers(1, 2, 3)
+    end))
+end)
+
+ccb.runtime.handler("deny_move", function(payload)
+    assert(payload.hook == "on_player_try_move")
+    local output = assert(io.open([[%s]], "wb"))
+    output:write("denied")
+    output:close()
+    return false
+end)
+
+ccb.runtime.on("world_ready", "ready")
+ccb.runtime.hook("on_player_try_move", "deny_move")
+)lua", marker.generic_u8string() ) );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_shared_domains" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    CHECK_FALSE( cata::lua_ui::dispatch_native_hook( "on_player_try_move" ) );
+    REQUIRE( fs::is_regular_file( marker ) );
+    std::ifstream input( marker );
+    std::string text;
+    input >> text;
+    CHECK( text == "denied" );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_bionic_and_recipe_services_expose_composable_character_facts",
+           "[lua][platform][runtime][services][bionics][recipes]" )
+{
+    cata::lua_platform::shutdown();
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    player.clear_bionics();
+    player.set_max_power_level( 1_kJ );
+    player.set_power_level( 0_kJ );
+    const recipe &target_recipe = recipe_id( "cudgel_test_no_tools" ).obj();
+    REQUIRE( target_recipe.category.is_valid() );
+    REQUIRE_FALSE( target_recipe.subcategory.empty() );
+    player.forget_recipe( &target_recipe );
+    on_out_of_scope cleanup( [&player, &target_recipe]() {
+        player.clear_bionics();
+        player.set_max_power_level( 0_kJ );
+        player.set_power_level( 0_kJ );
+        player.forget_recipe( &target_recipe );
+        cata::lua_platform::shutdown();
+        clear_avatar();
+        clear_map_without_vision();
+    } );
+
+    scoped_platform_test_mod test_mod( "ccb_platform_bionic_recipe_facts" );
+    const fs::path marker = test_mod.root() / "bionic-recipe-facts.txt";
+    test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+local services = ccb.services
+
+local function value(result)
+    assert(result.ok, result.error and result.error.message)
+    return result.value
+end
+
+ccb.runtime.handler("ready", function()
+    local character = services.creatures.avatar()
+    local initial_bionics = value(services.bionics.summary(character))
+    assert(initial_bionics.installed_count == 0)
+    assert(initial_bionics.power:value("millijoule") == 0)
+    assert(initial_bionics.maximum_power:value("millijoule") > 0)
+    assert(initial_bionics.has_capacity)
+    local initial_maximum = initial_bionics.maximum_power:value("millijoule")
+
+    local storage = services.types.id("bionic", "bio_power_storage")
+    value(services.bionics.grant(character, storage))
+    local stored_power = value(services.bionics.summary(character))
+    assert(stored_power.installed_count == 1)
+    assert(stored_power.maximum_power:value("millijoule") > initial_maximum)
+    assert(stored_power.has_capacity)
+
+    local earplugs = services.types.id("bionic", "bio_earplugs")
+    value(services.bionics.grant(character, earplugs))
+    local installed = value(services.bionics.summary(character))
+    assert(installed.installed_count == 2)
+    assert(installed.has_capacity)
+    assert(value(services.bionics.remove_type(character, earplugs)).changed)
+    assert(value(services.bionics.summary(character)).installed_count == 1)
+    assert(not pcall(function()
+        services.bionics.summary(services.types.id("bionic", "bio_earplugs"))
+    end))
+
+    local recipe = services.types.id("recipe", "cudgel_test_no_tools")
+    local category = services.types.id("crafting_category", "%s")
+    local subcategory = "%s"
+    assert(not value(services.recipes.knows(character, recipe)))
+    value(services.recipes.learn(character, recipe))
+    assert(value(services.recipes.knows(character, recipe)))
+
+    local subcategory_result = value(services.recipes.forget_category(
+        character, category, subcategory))
+    assert(subcategory_result.changed)
+    assert(subcategory_result.forgotten_count >= 1)
+    assert(subcategory_result.known_before ==
+        subcategory_result.known_after + subcategory_result.forgotten_count)
+    assert(subcategory_result.category == category)
+    assert(subcategory_result.subcategory == subcategory)
+    assert(not value(services.recipes.knows(character, recipe)))
+
+    value(services.recipes.learn(character, recipe))
+    local category_result = value(services.recipes.forget_category(
+        character, category))
+    assert(category_result.changed and category_result.forgotten_count >= 1)
+    assert(category_result.subcategory == nil)
+    assert(not value(services.recipes.knows(character, recipe)))
+
+    local empty_result = value(services.recipes.forget_category(
+        character, category, "CSC_NOT_A_REAL_SUBCATEGORY"))
+    assert(not empty_result.changed and empty_result.forgotten_count == 0)
+    assert(not pcall(function()
+        services.recipes.knows(character, category)
+    end))
+    assert(not pcall(function()
+        services.recipes.forget_category(character, recipe)
+    end))
+    assert(not pcall(function()
+        services.recipes.forget_category(character, category, string.rep("x", 257))
+    end))
+
+    local output = assert(io.open([[%s]], "wb"))
+    output:write("ok")
+    output:close()
+end)
+ccb.runtime.on("world_ready", "ready")
+)lua", target_recipe.category.str(), target_recipe.subcategory,
+                                      marker.generic_u8string() ) );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_bionic_recipe_facts" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    std::ifstream input( marker, std::ios::binary );
+    std::string contents;
+    input >> contents;
+    REQUIRE( input );
+    CHECK( contents == "ok" );
+}
+
+TEST_CASE( "lua_first_wielded_service_reports_physical_item_without_policy_aliases",
+           "[lua][platform][runtime][services][inventory][wielded]" )
+{
+    cata::lua_platform::shutdown();
+    clear_avatar();
+    clear_map_without_vision();
+    on_out_of_scope restore_map( []() {
+        clear_map_without_vision();
+    } );
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    player.remove_weapon();
+    const auto storage = player.worn.wear_item(
+                             player, item( itype_id( "debug_backpack" ) ),
+                             false, false );
+    REQUIRE( storage );
+    const std::int64_t storage_uid =
+        ( **storage ).uid().get_value();
+    const std::vector<matype_id> original_styles = player.known_styles( false );
+    const matype_id original_selected =
+        player.martial_arts_data->selected_style();
+    const bool original_hands_free =
+        player.martial_arts_data->keep_hands_free;
+    on_out_of_scope cleanup( [&player, storage_uid, original_styles,
+    original_selected, original_hands_free]() {
+        player.remove_weapon();
+        player.remove_items_with( [storage_uid]( const item &candidate ) {
+            return candidate.uid().get_value() == storage_uid ||
+                   candidate.typeId() == itype_id( "rock" );
+        }, 100 );
+        player.clear_bionics();
+        player.martial_arts_data->clear_styles();
+        for( const matype_id &style : original_styles ) {
+            player.martial_arts_data->add_martialart( style );
+        }
+        player.martial_arts_data->set_style( original_selected, true );
+        player.martial_arts_data->keep_hands_free = original_hands_free;
+        cata::lua_platform::shutdown();
+    } );
+
+    npc &native_npc = spawn_npc(
+                          ( player.pos_bub( here ) +
+                            tripoint_rel_ms::east * 3 ).xy(),
+                          "test_talker" );
+    native_npc.name = "Lua wielded service NPC";
+    item_location npc_weapon = native_npc.i_add( item( itype_id( "rock" ) ) );
+    REQUIRE( npc_weapon );
+    REQUIRE( native_npc.wield( npc_weapon ) );
+    const character_id native_npc_id = native_npc.getID();
+    on_out_of_scope cleanup_npc( [native_npc_id]() {
+        g->remove_npc_follower( native_npc_id );
+        g->remove_npc( native_npc_id );
+        overmap_buffer.remove_npc( native_npc_id );
+    } );
+
+    scoped_platform_test_mod test_mod( "ccb_platform_wielded_service" );
+    const fs::path marker = test_mod.root() / "wielded-service.txt";
+    test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+local services = ccb.services
+
+local function value(result)
+    assert(result.ok, result.error and result.error.message)
+    return result.value
+end
+
+ccb.runtime.handler("ready", function()
+    local character = services.creatures.avatar()
+    assert(value(services.inventory.wielded(character)) == nil)
+
+    local npc_page = value(services.npcs.list({
+        query = "Lua wielded service NPC", limit = 2,
+    }))
+    assert(npc_page.total == 1 and npc_page.returned == 1)
+    local npc_item = value(services.inventory.wielded(
+        npc_page.items[1].handle))
+    assert(npc_item.kind == "item")
+    assert(value(services.items.snapshot(npc_item)).id ==
+           services.types.id("item", "rock"))
+
+    local created = value(services.inventory.give(
+        character, services.types.id("item", "rock"), 1,
+        { allow_wield = false }))
+    assert(created.instances == 1)
+    local item = created.items[1].handle
+    local wrong_kind = services.inventory.wielded(item)
+    assert(not wrong_kind.ok and wrong_kind.error.code == "wrong_kind")
+
+    local source_uid = item:locator().stable_id
+    local wield_result = value(services.inventory.wield(character, item))
+    assert(wield_result.accepted)
+    local physical = value(services.inventory.wielded(character))
+    assert(physical.kind == "item")
+    local physical_locator = physical:locator()
+    assert(physical_locator.scope == "character_wielded")
+    assert(physical_locator.stable_id == wield_result.uid)
+    if wield_result.previous_uid ~= nil then
+        assert(wield_result.previous_uid == source_uid)
+    else
+        assert(wield_result.uid == source_uid)
+    end
+
+    local locked = services.types.id("json_flag", "NO_UNWIELD")
+    assert(value(services.items.set_flag(physical, locked, true)).changed)
+    assert(value(services.items.has_flag(physical, locked)))
+    assert(value(services.inventory.wielded(character)):locator().stable_id ==
+           physical_locator.stable_id)
+
+    local forced = services.types.id("martial_art", "style_taekwondo")
+    value(services.martial_arts.learn(character, forced))
+    value(services.martial_arts.select(character, forced))
+    assert(value(services.martial_arts.current(character)).force_unarmed)
+    assert(value(services.inventory.wielded(character)):locator().stable_id ==
+           physical_locator.stable_id)
+
+    assert(value(services.items.set_flag(physical, locked, false)).changed)
+    local stashed = value(services.inventory.stash_wielded(character))
+    assert(stashed.accepted)
+    assert(value(services.inventory.wielded(character)) == nil)
+    local removed = value(services.inventory.remove(
+        character, stashed.item.handle))
+    assert(removed.removed == 1)
+    assert(services.items.snapshot(physical).error.code == "destroyed")
+
+    local storage = services.types.id("bionic", "bio_power_storage")
+    value(services.bionics.grant(character, storage))
+    value(services.bionics.grant(character, storage))
+    value(services.bionics.set_power(
+        character, services.units.new("energy", 200, "kilojoule")))
+    local blade = value(services.bionics.grant(
+        character, services.types.id("bionic", "bio_blade")))
+    value(services.bionics.activate(character, blade.uid))
+    local bionic_item = value(services.inventory.wielded(character))
+    assert(bionic_item.kind == "item")
+    assert(value(services.items.snapshot(bionic_item)).id ==
+           services.types.id("item", "bio_blade_weapon"))
+    assert(value(services.items.has_flag(bionic_item, locked)))
+    value(services.bionics.deactivate(character, blade.uid))
+    assert(value(services.inventory.wielded(character)) == nil)
+    assert(services.items.snapshot(bionic_item).error.code == "destroyed")
+
+    local output = assert(io.open([[%s]], "wb"))
+    output:write("ok")
+    output:close()
+end)
+ccb.runtime.on("world_ready", "ready")
+)lua", marker.generic_u8string() ) );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_wielded_service" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    std::ifstream input( marker, std::ios::binary );
+    std::string contents;
+    input >> contents;
+    REQUIRE( input );
+    CHECK( contents == "ok" );
+
+}
+
+TEST_CASE( "lua_first_wound_services_preserve_native_character_and_handle_rules",
+           "[lua][platform][runtime][services][wound]" )
+{
+    cata::lua_platform::shutdown();
+    clear_avatar();
+    clear_map_without_vision();
+    on_out_of_scope reset_platform( []() {
+        avatar &player = get_avatar();
+        player.get_part( bodypart_str_id( "torso" ).id() )->remove_all_wounds_of_type(
+            wound_type_id( "ccb_platform_service_wound" ) );
+        player.get_part( bodypart_str_id( "torso" ).id() )->remove_all_wounds_of_type(
+            wound_type_id( "ccb_platform_service_ordered_wound" ) );
+        const trait_id masochist( "MASOCHIST" );
+        if( player.has_permanent_trait( masochist ) ) {
+            player.on_mutation_loss( masochist );
+            player.unset_mutation( masochist );
+        }
+        cata::lua_platform::shutdown();
+        clear_avatar();
+        clear_map_without_vision();
+    } );
+
+    avatar &player = get_avatar();
+    const trait_id masochist( "MASOCHIST" );
+    const morale_type masochist_morale( "morale_perm_masochist" );
+    REQUIRE_FALSE( player.has_permanent_trait( masochist ) );
+    player.set_pain( 0 );
+    player.set_painkiller( 0 );
+    player.set_mutation( masochist );
+    player.on_mutation_gain( masochist );
+    REQUIRE( player.has_morale( masochist_morale ) == 0 );
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    const tripoint_bub_ms npc_position =
+        player.pos_bub( here ) + tripoint_rel_ms::west * 3;
+    const tripoint_bub_ms monster_position =
+        player.pos_bub( here ) + tripoint_rel_ms::east * 3;
+    npc &native_npc = spawn_npc( npc_position.xy(), "test_talker" );
+    native_npc.name = "Lua wound service NPC";
+    const character_id native_npc_id = native_npc.getID();
+    monster &native_monster = spawn_test_monster( "mon_zombie", monster_position );
+    REQUIRE( native_monster.pos_bub( here ) == monster_position );
+    on_out_of_scope cleanup_creatures( [native_npc_id, monster_position]() {
+        if( monster *placed = get_creature_tracker().creature_at<monster>(
+                                  monster_position, true ) ) {
+            g->remove_zombie( *placed );
+        }
+        g->remove_npc_follower( native_npc_id );
+        g->remove_npc( native_npc_id );
+        overmap_buffer.remove_npc( native_npc_id );
+    } );
+
+    const tripoint_abs_ms npc_absolute = native_npc.pos_abs();
+    const tripoint_abs_ms monster_absolute = here.get_abs( monster_position );
+    scoped_platform_test_mod test_mod( "ccb_platform_wound_services" );
+    const fs::path marker = test_mod.root() / "wound-services.txt";
+    test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+local services = ccb.services
+
+local wound_definition = ccb.content.Wound {
+    id = "ccb_platform_service_wound",
+    name = "Platform service wound",
+    plural_name = "Platform service wounds",
+    description = "A deterministic wound used by the native service test.",
+    pain_min = 4,
+    pain_max = 4,
+    healing_min_turns = 10,
+    healing_max_turns = 10,
+    per_part_limit = 2,
+}
+wound_definition:damage_type("bash")
+wound_definition:require_body_part_type("hand")
+ccb.content.add(wound_definition)
+
+local ordered_wound_definition = ccb.content.Wound {
+    id = "ccb_platform_service_ordered_wound",
+    name = "Platform ordered wound",
+    plural_name = "Platform ordered wounds",
+    description = "A second deterministic wound used to prove native order.",
+    pain_min = 7,
+    pain_max = 7,
+    healing_min_turns = 20,
+    healing_max_turns = 20,
+    per_part_limit = 1,
+}
+ordered_wound_definition:damage_type("bash")
+ordered_wound_definition:require_body_part_type("hand")
+ccb.content.add(ordered_wound_definition)
+
+local torso = nil
+local debug_tail = nil
+local wound_id = nil
+local saved_avatar = nil
+local saved_monster = nil
+local ready_count = 0
+local destroyed_checked = false
+
+local function value(result)
+    assert(result.ok, result.error and result.error.message)
+    return result.value
+end
+
+local function same_snapshot(lhs, rhs)
+    if #lhs ~= #rhs then
+        return false
+    end
+    for index = 1, #lhs do
+        local a = lhs[index]
+        local b = rhs[index]
+        if a.id ~= b.id or
+           a.base_pain ~= b.base_pain or
+           a.current_pain ~= b.current_pain or
+           a.healing_time ~= b.healing_time or
+           a.healing_progress ~= b.healing_progress or
+           a.healing_fraction ~= b.healing_fraction then
+            return false
+        end
+    end
+    return true
+end
+
+local function assert_derived(character, expected)
+    local creature_state = value(services.creatures.snapshot(character))
+    local character_state = value(services.characters.snapshot(character, 1))
+    assert(creature_state.pain == expected)
+    assert(creature_state.perceived_pain == expected)
+    assert(character_state.creature.perceived_pain == expected)
+    assert(character_state.needs.morale == expected)
+end
+
+ccb.runtime.handler("ready", function()
+    ready_count = ready_count + 1
+    if ready_count == 2 then
+        local stale = services.wounds.snapshot(saved_avatar, torso)
+        assert(not stale.ok and stale.error.code == "stale_world")
+        assert(destroyed_checked)
+        local output = assert(io.open([[%s]], "wb"))
+        output:write("ok")
+        output:close()
+        return
+    end
+    assert(ready_count == 1)
+
+    local avatar = services.creatures.avatar()
+    saved_avatar = avatar
+    torso = services.types.id("body_part", "torso")
+    debug_tail = services.types.id("body_part", "debug_tail")
+    wound_id = services.types.id("wound", "ccb_platform_service_wound")
+    local ordered_wound_id = services.types.id(
+        "wound", "ccb_platform_service_ordered_wound")
+    assert(#value(services.wounds.snapshot(avatar, torso)) == 0)
+
+    local first = value(services.wounds.add(avatar, torso, wound_id))
+    assert(first.changed and #first.before == 0 and #first.after == 1)
+    local first_wound = first.after[1]
+    assert(first_wound.id == wound_id)
+    assert(first_wound.base_pain == 4 and first_wound.current_pain == 4)
+    assert(first_wound.healing_time.turns == 10)
+    assert(first_wound.healing_progress.turns == 0)
+    assert(first_wound.healing_fraction == 0)
+    assert_derived(avatar, 4)
+
+    local second = value(services.wounds.add(avatar, torso, ordered_wound_id))
+    assert(second.changed and #second.before == 1 and #second.after == 2)
+    assert(second.after[1].id == wound_id)
+    assert(second.after[2].id == ordered_wound_id)
+    assert_derived(avatar, 11)
+
+    local third = value(services.wounds.add(avatar, torso, wound_id))
+    assert(third.changed and #third.before == 2 and #third.after == 3)
+    assert(third.after[1].id == wound_id)
+    assert(third.after[2].id == ordered_wound_id)
+    assert(third.after[3].id == wound_id)
+    assert_derived(avatar, 15)
+
+    local limited = value(services.wounds.add(avatar, torso, wound_id))
+    assert(not limited.changed)
+    assert(#limited.before == 3 and #limited.after == 3)
+    assert(same_snapshot(limited.before, limited.after))
+    assert_derived(avatar, 15)
+
+    local removed = value(services.wounds.remove(avatar, torso, wound_id))
+    assert(removed.changed and #removed.before == 3 and #removed.after == 1)
+    assert(removed.after[1].id == ordered_wound_id)
+    assert_derived(avatar, 7)
+    local absent = value(services.wounds.remove(avatar, torso, wound_id))
+    assert(not absent.changed and #absent.before == 1 and #absent.after == 1)
+    assert(absent.after[1].id == ordered_wound_id)
+    assert_derived(avatar, 7)
+    local last = value(services.wounds.remove(avatar, torso, ordered_wound_id))
+    assert(last.changed and #last.after == 0)
+    assert_derived(avatar, 0)
+
+    local npc_position = services.coords.tripoint_abs_ms(%d, %d, %d)
+    local npc_handle = value(services.creatures.at(npc_position))
+    assert(value(services.creatures.snapshot(npc_handle)).kind == "npc")
+    local npc_added = value(services.wounds.add(npc_handle, torso, wound_id))
+    assert(npc_added.changed and #npc_added.after == 1)
+    local npc_snapshot = value(services.wounds.snapshot(npc_handle, torso))
+    assert(#npc_snapshot == 1 and npc_snapshot[1].id == wound_id)
+    local npc_removed = value(services.wounds.remove(npc_handle, torso, wound_id))
+    assert(npc_removed.changed and #npc_removed.after == 0)
+
+    local monster_position = services.coords.tripoint_abs_ms(%d, %d, %d)
+    saved_monster = value(services.creatures.at(monster_position))
+    assert(value(services.creatures.snapshot(saved_monster)).kind == "monster")
+    local wrong_target = services.wounds.add(saved_monster, torso, wound_id)
+    assert(not wrong_target.ok and wrong_target.error.code == "wrong_target")
+
+    assert(debug_tail:is_valid())
+    local missing_part = services.wounds.snapshot(avatar, debug_tail)
+    assert(not missing_part.ok and missing_part.error.code == "missing_part")
+
+    local rock = services.types.id("item", "rock")
+    local missing_body_part = services.types.id(
+        "body_part", "__missing_platform_service_body_part__")
+    local missing_wound = services.types.id(
+        "wound", "__missing_platform_service_wound__")
+    assert(not missing_body_part:is_valid() and not missing_wound:is_valid())
+    assert(not pcall(services.wounds.snapshot, avatar, rock))
+    assert(not pcall(services.wounds.snapshot, avatar, missing_body_part))
+    assert(not pcall(services.wounds.add, avatar, torso, rock))
+    assert(not pcall(services.wounds.add, avatar, torso, missing_wound))
+end)
+
+ccb.runtime.handler("destroyed", function()
+    local destroyed = services.wounds.snapshot(saved_monster, torso)
+    assert(not destroyed.ok and destroyed.error.code == "destroyed")
+    destroyed_checked = true
+    return true
+end)
+
+ccb.runtime.on("world_ready", "ready")
+ccb.runtime.hook("on_player_try_move", "destroyed")
+)lua",
+                    marker.generic_u8string(),
+                    npc_absolute.x(), npc_absolute.y(), npc_absolute.z(),
+                    monster_absolute.x(), monster_absolute.y(), monster_absolute.z() ) );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_wound_services" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    if( monster *placed = get_creature_tracker().creature_at<monster>(
+                              monster_position, true ) ) {
+        g->remove_zombie( *placed );
+    }
+    g->clear_zombies();
+    CHECK( cata::lua_ui::dispatch_native_hook( "on_player_try_move" ) );
+    cata::lua_platform::on_world_ready( false );
+
+    std::ifstream input( marker, std::ios::binary );
+    std::string contents;
+    input >> contents;
+    REQUIRE( input );
+    CHECK( contents == "ok" );
+
+    cata::lua_platform::clear_active_runtimes();
+    sol::state gate_lua;
+    gate_lua.open_libraries(
+        sol::lib::base, sol::lib::string, sol::lib::table );
+    sol::table gate_ccb = gate_lua.create_named_table( "ccb" );
+    const std::shared_ptr<cata::lua_platform::runtime> gate_runtime =
+        cata::lua_platform::make_runtime(
+            "ccb_platform_wound_write_gate", 424242, gate_lua );
+    cata::lua_platform::install_runtime_api(
+        gate_runtime, gate_lua, gate_ccb );
+    cata::lua_platform::set_active_runtimes( { gate_runtime } );
+    on_out_of_scope clear_gate_runtime( []() {
+        cata::lua_platform::clear_active_runtimes();
+    } );
+    cata::lua_platform::runtime_world_ready( true );
+
+    const sol::protected_function_result gate_result = gate_lua.safe_script( R"lua(
+local services = ccb.services
+local function value(result)
+    assert(result.ok, result.error and result.error.message)
+    return result.value
+end
+
+local avatar = services.creatures.avatar()
+local torso = services.types.id("body_part", "torso")
+local wound = services.types.id("wound", "ccb_platform_service_wound")
+assert(#value(services.wounds.snapshot(avatar, torso)) == 0)
+
+local add_ok, add_error = pcall(function()
+    services.wounds.add(avatar, torso, wound)
+end)
+assert(not add_ok)
+assert(string.find(tostring(add_error),
+    "only available inside a runtime callback", 1, true) ~= nil)
+
+local remove_ok, remove_error = pcall(function()
+    services.wounds.remove(avatar, torso, wound)
+end)
+assert(not remove_ok)
+assert(string.find(tostring(remove_error),
+    "only available inside a runtime callback", 1, true) ~= nil)
+
+assert(#value(services.wounds.snapshot(avatar, torso)) == 0)
+)lua" );
+    REQUIRE( gate_result.valid() );
+}
+
+TEST_CASE( "lua_first_hooks_preserve_and_deduplicate_cross_runtime_results",
+           "[lua][platform][runtime][hooks]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod first( "ccb_platform_hook_aggregate_first" );
+    scoped_platform_test_mod second( "ccb_platform_hook_aggregate_second" );
+    const fs::path stop_marker = first.root() / "stop-was-ignored.txt";
+    first.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+ccb.runtime.handler("text_first", function(payload)
+    assert(payload.prev == nil)
+    assert(payload.results.text == "native")
+    return { text = "first" }
+end)
+ccb.runtime.handler("text_same_mod", function(payload)
+    assert(type(payload.prev) == "table")
+    assert(payload.prev.text == "first")
+    assert(payload.results.text == "native\nfirst")
+    return { text = "same" }
+end)
+ccb.runtime.handler("list_first", function()
+    return { results = { "native-id", "first-id" } }
+end)
+ccb.runtime.handler("list_same_mod", function()
+    return { results = { "first-id", "same-mod-id" } }
+end)
+ccb.runtime.handler("menu_first", function()
+    return { entries = {
+        { id = "native-entry", label = "ignored duplicate" },
+        { id = "first-entry", label = "First" },
+    } }
+end)
+ccb.runtime.handler("result_first", function()
+    return "first-result"
+end)
+ccb.runtime.handler("stop_after_first", function(payload)
+    payload.results.stop = true
+    return true
+end)
+ccb.runtime.handler("must_not_run", function()
+    local output = assert(io.open([[%s]], "wb"))
+    output:write("ran")
+    output:close()
+    return false
+end)
+ccb.runtime.hook("on_character_display_skill_info", "text_first")
+ccb.runtime.hook("on_character_display_skill_info", "text_same_mod")
+ccb.runtime.hook("on_make_mapgen_factory_list", "list_first")
+ccb.runtime.hook("on_make_mapgen_factory_list", "list_same_mod")
+ccb.runtime.hook("on_monster_get_examine_menu_entries", "menu_first")
+ccb.runtime.hook("on_dialogue_option", "result_first")
+ccb.runtime.hook("on_player_try_move", "stop_after_first")
+ccb.runtime.hook("on_player_try_move", "must_not_run")
+)lua", stop_marker.generic_u8string() ) );
+    second.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.runtime.handler("text_second", function(payload)
+    assert(payload.prev == nil)
+    assert(payload.results.text == "native\nfirst\nsame")
+    return { text = "second" }
+end)
+ccb.runtime.handler("list_second", function()
+    return { results = { "same-mod-id", "second-id" } }
+end)
+ccb.runtime.handler("menu_second", function()
+    return { entries = {
+        { id = "first-entry", label = "ignored duplicate" },
+        { id = "second-entry", label = "Second" },
+    } }
+end)
+ccb.runtime.handler("result_second", function()
+    return "second-result"
+end)
+ccb.runtime.hook("on_character_display_skill_info", "text_second")
+ccb.runtime.hook("on_make_mapgen_factory_list", "list_second")
+ccb.runtime.hook("on_monster_get_examine_menu_entries", "menu_second")
+ccb.runtime.hook("on_dialogue_option", "result_second")
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods( {
+        first.source( "ccb_platform_hook_aggregate_first" ),
+        second.source( "ccb_platform_hook_aggregate_second" )
+    }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    cata::lua_ui::native_hook_result text_initial;
+    text_initial.text = "native";
+    const cata::lua_ui::native_hook_result text_result =
+        cata::lua_platform::dispatch_runtime_hook(
+            "on_character_display_skill_info", {}, text_initial );
+    CHECK( text_result.text == "native\nfirst\nsame\nsecond" );
+
+    cata::lua_ui::native_hook_result list_initial;
+    list_initial.results = { "native-id" };
+    const cata::lua_ui::native_hook_result list_result =
+        cata::lua_platform::dispatch_runtime_hook(
+            "on_make_mapgen_factory_list", {}, list_initial );
+    CHECK( ( list_result.results == std::vector<std::string> {
+        "native-id", "first-id", "same-mod-id", "second-id"
+    } ) );
+
+    cata::lua_ui::native_hook_result menu_initial;
+    menu_initial.menu_entries = { { "native-entry", "Native", true } };
+    const cata::lua_ui::native_hook_result menu_result =
+        cata::lua_platform::dispatch_runtime_hook(
+            "on_monster_get_examine_menu_entries", {}, menu_initial );
+    REQUIRE( menu_result.menu_entries.size() == 3 );
+    CHECK( menu_result.menu_entries[0].id == "native-entry" );
+    CHECK( menu_result.menu_entries[1].id == "first-entry" );
+    CHECK( menu_result.menu_entries[2].id == "second-entry" );
+
+    cata::lua_ui::native_hook_result result_initial;
+    result_initial.result = "native-result";
+    const cata::lua_ui::native_hook_result replacement_result =
+        cata::lua_platform::dispatch_runtime_hook(
+            "on_dialogue_option", {}, result_initial );
+    REQUIRE( replacement_result.result );
+    CHECK( *replacement_result.result == "second-result" );
+    CHECK( cata::lua_ui::dispatch_native_hook( "on_player_try_move" ) );
+    CHECK_FALSE( fs::exists( stop_marker ) );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_runtime_supports_multiple_handlers_and_stale_definition_guards",
+           "[lua][platform][runtime]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_multiple_handlers" );
+    const fs::path marker = test_mod.root() / "handlers-ran.txt";
+    test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+local unregistered = ccb.content.Item {
+    id = "ccb_platform_unregistered_handle",
+    name = "unregistered handle",
+}
+
+local function append(value)
+    local output = assert(io.open([[%s]], "ab"))
+    output:write(value)
+    output:close()
+end
+
+ccb.runtime.handler("first", function()
+    append("A")
+end)
+ccb.runtime.handler("second", function()
+    local readable, failure = pcall(function()
+        return unregistered.id
+    end)
+    append(readable and "live" or (string.find(failure, "stale item definition handle", 1, true) and "B" or "bad"))
+end)
+ccb.runtime.on("world_ready", "first")
+ccb.runtime.on("world_ready", "second")
+)lua", marker.generic_u8string() ) );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_multiple_handlers" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    std::ifstream input( marker, std::ios::binary );
+    const std::string contents{
+        std::istreambuf_iterator<char>( input ),
+        std::istreambuf_iterator<char>()
+    };
+    REQUIRE( input );
+    CHECK( contents == "AB" );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_runtime_hot_reload_requires_an_unchanged_static_fingerprint",
+           "[lua][platform][runtime][reload]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_runtime_reload" );
+    const fs::path marker = test_mod.root() / "reload-marker.txt";
+    const auto source = [&marker]( const std::string &version,
+    const std::string &item_name ) {
+        return string_format( R"lua(
+local ccb = require("ccb")
+local item = ccb.content.Item {
+    id = "ccb_platform_reload_item",
+    name = [[%s]],
+}
+ccb.content.add(item)
+ccb.runtime.handler("never", function()
+    error("preserved delayed task ran too early")
+end)
+ccb.runtime.handler("ready", function(event)
+    local count = ccb.state.world.get("reload_count", 0) + 1
+    ccb.state.world.set("reload_count", count)
+    local kept_task = false
+    local next_task_id = 0
+    if event.new_game then
+        local first_task_id = ccb.tasks.after(100000, "never", {}, 1, "world")
+        ccb.state.world.set("first_task_id", first_task_id)
+    elseif event.reloaded then
+        kept_task = ccb.tasks.cancel(ccb.state.world.get("first_task_id", 0))
+        next_task_id = ccb.tasks.after(100000, "never", {}, 1, "world")
+    end
+    local output = assert(io.open([[%s]], "wb"))
+    output:write([[%s]] .. ":" .. tostring(count) .. ":" ..
+        tostring(event.reloaded == true) .. ":" .. tostring(kept_task) .. ":" ..
+        tostring(next_task_id))
+    output:close()
+end)
+ccb.runtime.on("world_ready", "ready")
+)lua", item_name, marker.generic_u8string(), version );
+    };
+    test_mod.write( "main.lua", source( "v1", "stable item" ) );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_runtime_reload" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    test_mod.write( "main.lua", source( "v2", "stable item" ) );
+    REQUIRE( cata::lua_platform::reload_active_mods( error ) );
+    std::ifstream reloaded_input( marker );
+    const std::string reloaded{
+        std::istreambuf_iterator<char>( reloaded_input ),
+        std::istreambuf_iterator<char>()
+    };
+    CHECK( reloaded == "v2:2:true:true:2" );
+
+    test_mod.write( "main.lua", source( "v3", "changed static item" ) );
+    CHECK_FALSE( cata::lua_platform::reload_active_mods( error ) );
+    CHECK( error.find( "requires_full_data_reload" ) != std::string::npos );
+    CHECK( ( cata::lua_platform::loaded_mod_ids() == std::vector<std::string> {
+        "ccb_platform_runtime_reload"
+    } ) );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_native_events_expose_named_character_actors_without_eoc_aliases",
+           "[lua][platform][runtime][events][actors]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_event_actors" );
+    const fs::path marker = test_mod.root() / "event-actors.txt";
+    test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+ccb.runtime.handler("event_actors", function(event)
+    assert(event.type == "character_heals_damage")
+    assert(event.alpha == nil and event.beta == nil)
+    assert(event.data_types.character == "character_id")
+    assert(event.actors.character.kind == "creature")
+    local character = ccb.services.creatures.snapshot(event.actors.character)
+    assert(character.ok and character.value.kind == "avatar")
+    local output = assert(io.open([[%s]], "ab"))
+    output:write("A")
+    output:close()
+end)
+ccb.runtime.on("game:character_heals_damage", "event_actors")
+)lua", marker.generic_u8string() ) );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_event_actors" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    const cata::event event = cata::event::make<event_type::character_heals_damage>(
+                                  get_avatar().getID(), 1 );
+    get_event_bus().send_with_talker( &get_avatar(), &get_avatar(), event );
+
+    std::ifstream input( marker, std::ios::binary );
+    const std::string contents{
+        std::istreambuf_iterator<char>( input ),
+        std::istreambuf_iterator<char>()
+    };
+    REQUIRE( input );
+    CHECK( contents == "A" );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_native_event_actor_snapshots_are_semantic_and_handler_isolated",
+           "[lua][platform][runtime][events][actors]" )
+{
+    cata::lua_platform::shutdown();
+    REQUIRE_FALSE( debug_has_error_been_observed() );
+    scoped_platform_test_mod test_mod( "ccb_platform_event_actor_snapshots" );
+    const fs::path marker = test_mod.root() / "event-actor-snapshots.txt";
+    test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+assert(not pcall(function()
+    ccb.runtime.on("game:not_a_native_event", "observe_independent_copy")
+end))
+
+ccb.runtime.handler("mutate_then_fail", function(event)
+    assert(event.alpha == nil and event.beta == nil)
+    assert(event.actors.killer.kind == "creature")
+    assert(event.actors.victim.kind == "creature")
+    event.data.killer = -1
+    event.data_types.killer = "mutated"
+    event.actors.killer = nil
+    error("intentional event payload mutation")
+end)
+
+ccb.runtime.handler("observe_independent_copy", function(event)
+    assert(event.data.killer ~= -1)
+    assert(event.data_types.killer == "character_id")
+    assert(event.actors.killer.kind == "creature")
+    assert(event.actors.victim.kind == "creature")
+    local killer = ccb.services.creatures.snapshot(event.actors.killer)
+    local victim = ccb.services.creatures.snapshot(event.actors.victim)
+    assert(killer.ok and killer.value.kind == "avatar")
+    assert(victim.ok and victim.value.kind == "avatar")
+    local output = assert(io.open([[%s]], "ab"))
+    output:write("K")
+    output:close()
+end)
+
+ccb.runtime.handler("observe_actor_free_event", function(event)
+    assert(event.type == "game_begin")
+    assert(event.data.cdda_version == "event-contract-test")
+    assert(event.alpha == nil and event.beta == nil)
+    assert(next(event.actors) == nil)
+    local output = assert(io.open([[%s]], "ab"))
+    output:write("E")
+    output:close()
+end)
+
+ccb.runtime.handler("observe_unresolved_character", function(event)
+    assert(event.type == "character_heals_damage")
+    assert(event.data.character == -31337)
+    assert(event.data_types.character == "character_id")
+    assert(event.actors.character == nil)
+    local output = assert(io.open([[%s]], "ab"))
+    output:write("U")
+    output:close()
+end)
+
+ccb.runtime.on("game:character_kills_character", "mutate_then_fail")
+ccb.runtime.on("game:character_kills_character", "observe_independent_copy")
+ccb.runtime.on("game:game_begin", "observe_actor_free_event")
+ccb.runtime.on("game:character_heals_damage", "observe_unresolved_character")
+)lua", marker.generic_u8string(), marker.generic_u8string(),
+    marker.generic_u8string() ) );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_event_actor_snapshots" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    get_event_bus().send<event_type::character_kills_character>(
+        get_avatar().getID(), get_avatar().getID(), "avatar", "test" );
+    get_event_bus().send<event_type::game_begin>( "event-contract-test" );
+    get_event_bus().send<event_type::character_heals_damage>(
+        character_id( -31337 ), 1 );
+
+    std::ifstream input( marker, std::ios::binary );
+    const std::string contents{
+        std::istreambuf_iterator<char>( input ),
+        std::istreambuf_iterator<char>()
+    };
+    REQUIRE( input );
+    CHECK( contents == "KEU" );
+    cata::lua_platform::shutdown();
+    REQUIRE( debug_has_error_been_observed() );
+    debug_reset_error_observed();
+}
+
+TEST_CASE( "lua_first_native_item_event_actors_require_named_item_semantics",
+           "[lua][platform][runtime][events][actors][items]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_event_item_actors" );
+    const fs::path marker = test_mod.root() / "event-item-actors.txt";
+    test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+local wield_calls = 0
+local markers = {
+    character_wields_item = "W",
+    character_wears_item = "R",
+    character_takeoff_item = "T",
+    character_armor_destroyed = "D",
+}
+
+local function append(value)
+    local output = assert(io.open([[%s]], "ab"))
+    output:write(value)
+    output:close()
+end
+
+ccb.runtime.handler("observe_item_event", function(event)
+    assert(event.alpha == nil and event.beta == nil)
+    assert(event.data_types.character == "character_id")
+    assert(event.data_types.itype == "itype_id")
+    assert(event.actors.character.kind == "creature")
+    if event.type == "character_wields_item" then
+        wield_calls = wield_calls + 1
+        if wield_calls == 2 then
+            assert(event.actors.item == nil)
+            append("P")
+            return
+        end
+    end
+    local item = assert(event.actors.item)
+    assert(item.kind == "item")
+    assert(item:locator().scope == "platform_event_item")
+    assert(item:is_valid())
+    append(assert(markers[event.type]))
+end)
+
+ccb.runtime.handler("reject_positional_item_fallback", function(event)
+    assert(event.type == "game_begin")
+    assert(event.alpha == nil and event.beta == nil)
+    assert(next(event.actors) == nil)
+    append("G")
+end)
+
+ccb.runtime.on("game:character_wields_item", "observe_item_event")
+ccb.runtime.on("game:character_wears_item", "observe_item_event")
+ccb.runtime.on("game:character_takeoff_item", "observe_item_event")
+ccb.runtime.on("game:character_armor_destroyed", "observe_item_event")
+ccb.runtime.on("game:game_begin", "reject_positional_item_fallback")
+)lua", marker.generic_u8string() ) );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_event_item_actors" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    avatar &player = get_avatar();
+    item_location event_item = player.i_add(
+                                   item( itype_id( "rock" ) ), true, nullptr,
+                                   nullptr, true, false );
+    REQUIRE( event_item );
+    on_out_of_scope cleanup( [event_item]() mutable {
+        if( event_item ) {
+            event_item.remove_item();
+        }
+    } );
+    const character_id player_id = player.getID();
+    const itype_id item_type = event_item->typeId();
+
+    get_event_bus().send_with_talker(
+        &player, &event_item,
+        cata::event::make<event_type::character_wields_item>( player_id, item_type ) );
+    get_event_bus().send_with_talker(
+        &player, &event_item,
+        cata::event::make<event_type::character_wears_item>( player_id, item_type ) );
+    get_event_bus().send_with_talker(
+        &player, &event_item,
+        cata::event::make<event_type::character_takeoff_item>( player_id, item_type ) );
+    get_event_bus().send_with_talker(
+        &player, &event_item,
+        cata::event::make<event_type::character_armor_destroyed>( player_id, item_type ) );
+    get_event_bus().send<event_type::character_wields_item>( player_id, item_type );
+    get_event_bus().send_with_talker(
+        &player, &event_item,
+        cata::event::make<event_type::game_begin>( "event-item-fallback-test" ) );
+
+    std::ifstream input( marker, std::ios::binary );
+    const std::string contents{
+        std::istreambuf_iterator<char>( input ),
+        std::istreambuf_iterator<char>()
+    };
+    REQUIRE( input );
+    CHECK( contents == "WRTDPG" );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_native_event_recursion_is_globally_bounded_across_mods",
+           "[lua][platform][runtime][events][recursion]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod gains_mod( "ccb_platform_event_recursion_gains" );
+    scoped_platform_test_mod losses_mod( "ccb_platform_event_recursion_losses" );
+    const fs::path marker = gains_mod.root() / "event-recursion.txt";
+    gains_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+
+for index = 1, 9 do
+    ccb.content.add(ccb.content.EffectType {
+        id = "ccb_platform_recursion_gain_" .. index,
+        name = "Platform recursion gain " .. index,
+        description = "Exercises the global native-event recursion guard.",
+    })
+end
+for index = 1, 8 do
+    ccb.content.add(ccb.content.EffectType {
+        id = "ccb_platform_recursion_loss_" .. index,
+        name = "Platform recursion loss " .. index,
+        description = "Exercises the global native-event recursion guard.",
+    })
+end
+
+local running = false
+local next_loss = 1
+local function append(value)
+    local output = assert(io.open([[%s]], "ab"))
+    output:write(value)
+    output:close()
+end
+
+ccb.runtime.handler("gain", function(event)
+    if not running then
+        return
+    end
+    local loss_index = next_loss
+    assert(event.type == "character_gains_effect")
+    assert(event.data.effect == "ccb_platform_recursion_gain_" .. loss_index)
+    append("A")
+    next_loss = loss_index + 1
+    local removed = ccb.services.effects.remove(
+        event.actors.character,
+        ccb.services.types.id(
+            "effect", "ccb_platform_recursion_loss_" .. loss_index))
+    assert(removed.ok and removed.value)
+end)
+
+ccb.runtime.handler("ready", function()
+    local character = ccb.services.creatures.avatar()
+    local duration = ccb.services.time.duration(1, "hour")
+    for index = 1, 8 do
+        local added = ccb.services.effects.add(
+            character,
+            ccb.services.types.id(
+                "effect", "ccb_platform_recursion_loss_" .. index),
+            duration)
+        assert(added.ok)
+    end
+    running = true
+    local started = ccb.services.effects.add(
+        character,
+        ccb.services.types.id("effect", "ccb_platform_recursion_gain_1"),
+        duration)
+    assert(started.ok)
+end)
+
+ccb.runtime.on("game:character_gains_effect", "gain")
+ccb.runtime.on("world_ready", "ready")
+)lua", marker.generic_u8string() ) );
+
+    losses_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+local next_gain = 2
+
+local function append(value)
+    local output = assert(io.open([[%s]], "ab"))
+    output:write(value)
+    output:close()
+end
+
+ccb.runtime.handler("loss", function(event)
+    local gain_index = next_gain
+    assert(event.type == "character_loses_effect")
+    assert(event.data.effect == "ccb_platform_recursion_loss_" .. (gain_index - 1))
+    append("B")
+    next_gain = gain_index + 1
+    local added = ccb.services.effects.add(
+        event.actors.character,
+        ccb.services.types.id(
+            "effect", "ccb_platform_recursion_gain_" .. gain_index),
+        ccb.services.time.duration(1, "hour"))
+    assert(added.ok)
+end)
+
+ccb.runtime.on("game:character_loses_effect", "loss")
+)lua", marker.generic_u8string() ) );
+
+    gains_mod.refresh();
+    const mod_id gains_id( gains_mod.root_name() );
+    const mod_id losses_id( losses_mod.root_name() );
+    REQUIRE( gains_id.is_valid() );
+    REQUIRE( losses_id.is_valid() );
+    CHECK( gains_id->mod_root_path.get_unrelative_path() == gains_mod.root() );
+    CHECK( losses_id->mod_root_path.get_unrelative_path() == losses_mod.root() );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods( {
+        gains_mod.source( "ccb_platform_event_recursion_gains" ),
+        losses_mod.source( "ccb_platform_event_recursion_losses" )
+    }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    avatar &player = get_avatar();
+    on_out_of_scope cleanup( [&player]() {
+        for( int index = 1; index <= 9; ++index ) {
+            player.remove_effect( efftype_id(
+                                      "ccb_platform_recursion_gain_" + std::to_string( index ) ) );
+        }
+        for( int index = 1; index <= 8; ++index ) {
+            player.remove_effect( efftype_id(
+                                      "ccb_platform_recursion_loss_" + std::to_string( index ) ) );
+        }
+    } );
+    cata::lua_platform::on_world_ready( true );
+
+    std::ifstream input( marker, std::ios::binary );
+    const std::string contents{
+        std::istreambuf_iterator<char>( input ),
+        std::istreambuf_iterator<char>()
+    };
+    REQUIRE( input );
+    CHECK( contents == "ABABABABABABABAB" );
+    CHECK( player.has_effect( efftype_id( "ccb_platform_recursion_gain_9" ) ) );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_sidecars_preserve_temporarily_disabled_mod_records",
+           "[lua][platform][runtime][state]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_lua_state_file character_sidecar(
+        ( PATH_INFO::player_base_save_path() +
+          ".lua_platform.json" ).get_unrelative_path() );
+    std::unique_ptr<scoped_lua_state_file> world_sidecar;
+    if( world_generator && world_generator->active_world != nullptr ) {
+        world_sidecar = std::make_unique<scoped_lua_state_file>(
+                            ( world_generator->active_world->folder_path() /
+                              "lua_platform_world.json" ).get_unrelative_path() );
+    }
+    character_sidecar.write( R"json({
+  "version": 1,
+  "scope": "character",
+  "mods": {
+    "temporarily_disabled": {
+      "values": {
+        "kept": { "type": "string", "value": "yes" }
+      },
+      "tasks": []
+    }
+  }
+})json" );
+
+    scoped_platform_test_mod test_mod( "ccb_platform_sidecar_active" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.runtime.handler("ready", function()
+    ccb.state.character.set("active", true)
+end)
+ccb.runtime.on("world_ready", "ready")
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_sidecar_active" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( false );
+    REQUIRE( cata::lua_platform::save_persistent_state( error ) );
+
+    const std::string saved = character_sidecar.read();
+    CHECK( saved.find( "temporarily_disabled" ) != std::string::npos );
+    CHECK( saved.find( "ccb_platform_sidecar_active" ) != std::string::npos );
+    CHECK( saved.find( "\"kept\"" ) != std::string::npos );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "copy_mod_contents_preserves_lua_first_sources", "[lua][platform][mod]" )
+{
+    scoped_platform_test_mod test_mod( "ccb_platform_copy_test" );
+    scoped_platform_output_directory output( "ccb_platform_copy_output" );
+    test_mod.write( "main.lua", "return require('content.item')\n" );
+    test_mod.write( "content/item.lua", "return true\n" );
+    test_mod.refresh();
+
+    const mod_id id( test_mod.root_name() );
+    REQUIRE( id.is_valid() );
+    const cata_path output_path( cata_path::root_path::unknown, output.path() );
+    REQUIRE( world_generator->get_mod_manager().copy_mod_contents( { id }, output_path ) );
+    CHECK( fs::is_regular_file( output.path() / "mod_00001" / "main.lua" ) );
+    CHECK( fs::is_regular_file( output.path() / "mod_00001" / "content" / "item.lua" ) );
+}
 
 TEST_CASE( "lua_ui_context_uses_a_platform_neutral_renderer", "[lua][ui][renderer]" )
 {
@@ -1363,7 +7600,7 @@ TEST_CASE( "lua_v5_registered_handlers_accept_native_context",
         "id": "user",
         "version": "5.0.0",
         "api_version": 5,
-        "capabilities": [ "game.write", "state.character" ],
+        "capabilities": [ "game.read", "game.write", "state.character" ],
         "dependencies": [ "builtin" ]
     })json" );
     script.write( R"lua(
@@ -1727,42 +7964,56 @@ TEST_CASE( "lua_binding_catalog_is_unique_capability_scoped_and_detached",
     CHECK_FALSE( api_supports( "missing" ).get<bool>() );
 }
 
-TEST_CASE( "lua_game_handles_reject_stale_destroyed_and_wrong_kind_references",
+TEST_CASE( "lua_game_handles_reject_foreign_stale_destroyed_and_wrong_kind_references",
            "[lua][bindings][handles]" )
 {
     using namespace cata::lua_ui;
 
     constexpr std::size_t runtime_generation = 17;
     constexpr std::size_t world_generation = 23;
+    const game_handle_runtime_owner_ptr runtime_owner =
+        make_game_handle_runtime_owner();
+    const game_handle_runtime runtime_context( runtime_owner, runtime_generation );
     game_handle_locator locator{ "test", 42, 1, 2, 3, { 4, 5 } };
     auto value = std::make_unique<item>();
     game_handle handle = game_handle::from_item(
-                             *value, locator, runtime_generation, world_generation );
+                             *value, locator, runtime_context, world_generation );
 
     native_handle_result<item> resolved =
-        handle.resolve_item( runtime_generation, world_generation );
+        handle.resolve_item( runtime_context, world_generation );
     REQUIRE( resolved );
     CHECK( resolved.value == value.get() );
     CHECK_FALSE( resolved.error );
 
     const native_handle_result<Creature> wrong =
-        handle.resolve_creature( runtime_generation, world_generation );
+        handle.resolve_creature( runtime_context, world_generation );
     REQUIRE_FALSE( wrong );
     REQUIRE( wrong.error );
     CHECK( wrong.error->code == "wrong_kind" );
 
-    resolved = handle.resolve_item( runtime_generation + 1, world_generation );
+    resolved = handle.resolve_item(
+                   game_handle_runtime( runtime_owner, runtime_generation + 1 ),
+                   world_generation );
     REQUIRE_FALSE( resolved );
     REQUIRE( resolved.error );
     CHECK( resolved.error->code == "stale_runtime" );
 
-    resolved = handle.resolve_item( runtime_generation, world_generation + 1 );
+    resolved = handle.resolve_item( runtime_context, world_generation + 1 );
     REQUIRE_FALSE( resolved );
     REQUIRE( resolved.error );
     CHECK( resolved.error->code == "stale_world" );
 
+    const game_handle_runtime_owner_ptr foreign_owner =
+        make_game_handle_runtime_owner();
+    resolved = handle.resolve_item(
+                   game_handle_runtime( foreign_owner, runtime_generation ),
+                   world_generation );
+    REQUIRE_FALSE( resolved );
+    REQUIRE( resolved.error );
+    CHECK( resolved.error->code == "stale_runtime" );
+
     value.reset();
-    resolved = handle.resolve_item( runtime_generation, world_generation );
+    resolved = handle.resolve_item( runtime_context, world_generation );
     REQUIRE_FALSE( resolved );
     REQUIRE( resolved.error );
     CHECK( resolved.error->code == "destroyed" );
@@ -1774,8 +8025,8 @@ TEST_CASE( "lua_game_handles_reject_stale_destroyed_and_wrong_kind_references",
     std::size_t current_world = world_generation;
     install_game_handle_api(
         lua, game,
-    [&current_runtime]() {
-        return current_runtime;
+    [&runtime_owner, &current_runtime]() {
+        return game_handle_runtime( runtime_owner, current_runtime );
     },
     [&current_world]() {
         return current_world;
@@ -1784,7 +8035,9 @@ TEST_CASE( "lua_game_handles_reject_stale_destroyed_and_wrong_kind_references",
 
     auto live_value = std::make_unique<item>();
     lua["test_handle"] = game_handle::from_item(
-                             *live_value, locator, runtime_generation, world_generation );
+                             *live_value, locator,
+                             game_handle_runtime( runtime_owner, runtime_generation ),
+                             world_generation );
     sol::protected_function_result script = lua.safe_script( R"lua(
 assert(test_handle.kind == "item")
 local locator = test_handle:locator()
@@ -1812,6 +8065,172 @@ assert(status.error.code == "stale_runtime")
 assert(type(status.error.message) == "string")
 )lua" );
     REQUIRE( script.valid() );
+
+    const game_handle_runtime_owner_ptr boundary_owner =
+        make_game_handle_runtime_owner();
+    const game_handle_runtime boundary_runtime(
+        boundary_owner, std::numeric_limits<std::size_t>::max() );
+    auto boundary_value = std::make_unique<item>();
+    const game_handle boundary_handle = game_handle::from_item(
+                                            *boundary_value, locator,
+                                            boundary_runtime, world_generation );
+    CHECK( boundary_handle.resolve_item( boundary_runtime, world_generation ) );
+    const native_handle_result<item> inactive_boundary =
+        boundary_handle.resolve_item( game_handle_runtime(), world_generation );
+    REQUIRE_FALSE( inactive_boundary );
+    REQUIRE( inactive_boundary.error );
+    CHECK( inactive_boundary.error->code == "stale_runtime" );
+
+    game_handle_runtime_owner_ptr expiring_owner =
+        make_game_handle_runtime_owner();
+    const game_handle_runtime expiring_runtime(
+        expiring_owner, runtime_generation );
+    auto expiring_value = std::make_unique<item>();
+    const game_handle expiring_handle = game_handle::from_item(
+                                            *expiring_value, locator,
+                                            expiring_runtime, world_generation );
+    REQUIRE( expiring_runtime.has_live_owner() );
+    expiring_owner.reset();
+    CHECK_FALSE( expiring_runtime.has_live_owner() );
+    const native_handle_result<item> expired = expiring_handle.resolve_item(
+                game_handle_runtime( make_game_handle_runtime_owner(), runtime_generation ),
+                world_generation );
+    REQUIRE_FALSE( expired );
+    REQUIRE( expired.error );
+    CHECK( expired.error->code == "stale_runtime" );
+}
+
+TEST_CASE( "lua_native_tokens_bind_owner_identity_and_keep_expired_equality_stable",
+           "[lua][bindings][tokens][owner]" )
+{
+    using namespace cata::lua_ui;
+
+    constexpr std::size_t runtime_generation = 41;
+    constexpr std::size_t world_generation = 73;
+    game_handle_runtime_owner_ptr first_owner =
+        make_game_handle_runtime_owner();
+    const game_handle_runtime_owner_ptr foreign_owner =
+        make_game_handle_runtime_owner();
+    const game_handle_runtime first_runtime(
+        first_owner, runtime_generation );
+    const game_handle_runtime first_runtime_copy(
+        first_owner, runtime_generation );
+    const game_handle_runtime next_generation(
+        first_owner, runtime_generation + 1 );
+    const game_handle_runtime foreign_runtime(
+        foreign_owner, runtime_generation );
+
+    CHECK( first_runtime.same_identity( first_runtime_copy ) );
+    CHECK( first_runtime.is_active_match( first_runtime_copy ) );
+    CHECK_FALSE( game_handle_runtime().same_identity(
+                     game_handle_runtime() ) );
+    CHECK_FALSE( first_runtime.same_identity( next_generation ) );
+    CHECK_FALSE( first_runtime.is_active_match( foreign_runtime ) );
+
+    const mission_token token(
+        123456, first_runtime, world_generation );
+    const mission_token token_copy = token;
+    const mission_token foreign_token(
+        123456, foreign_runtime, world_generation );
+    const mission_token next_generation_token(
+        123456, next_generation, world_generation );
+
+    CHECK( token.runtime_generation() == runtime_generation );
+    CHECK( token == token_copy );
+    CHECK_FALSE( token == foreign_token );
+    CHECK_FALSE( token == next_generation_token );
+    CHECK( token.belongs_to( first_runtime_copy ) );
+    CHECK_FALSE( token.belongs_to( foreign_runtime ) );
+
+    game_handle_runtime active_runtime = foreign_runtime;
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::table );
+    sol::table game = lua.create_named_table( "game" );
+    install_mission_api(
+        game,
+    [&active_runtime]() {
+        return active_runtime;
+    }, [world_generation]() {
+        return world_generation;
+    }, []() {}, []() {} );
+    lua["origin_token"] = token;
+    lua["same_token"] = token_copy;
+    lua["foreign_token"] = foreign_token;
+    sol::protected_function_result result = lua.safe_script( R"lua(
+assert(origin_token == same_token)
+assert(origin_token ~= foreign_token)
+local resolved = game.missions.get(origin_token)
+assert(resolved.ok == false)
+assert(resolved.error.code == "stale_runtime")
+)lua" );
+    REQUIRE( result.valid() );
+
+    first_owner.reset();
+    CHECK_FALSE( first_runtime.has_live_owner() );
+    CHECK( first_runtime.same_identity( first_runtime_copy ) );
+    CHECK_FALSE( first_runtime.is_active_match( first_runtime_copy ) );
+    CHECK( token == token_copy );
+    CHECK_FALSE( token == foreign_token );
+    CHECK_FALSE( token.belongs_to( first_runtime_copy ) );
+    result = lua.safe_script( R"lua(
+assert(origin_token == same_token)
+assert(origin_token ~= foreign_token)
+)lua" );
+    REQUIRE( result.valid() );
+}
+
+TEST_CASE( "lua_first_game_handles_reject_same_generation_foreign_runtime_owners",
+           "[lua][platform][runtime][handles][owner]" )
+{
+    using cata::lua_platform::runtime;
+    using cata::lua_ui::game_handle;
+
+    cata::lua_platform::clear_active_runtimes();
+    sol::state first_lua;
+    sol::state second_lua;
+    first_lua.open_libraries( sol::lib::base, sol::lib::table );
+    second_lua.open_libraries( sol::lib::base, sol::lib::table );
+    sol::table first_ccb = first_lua.create_named_table( "ccb" );
+    sol::table second_ccb = second_lua.create_named_table( "ccb" );
+    constexpr std::size_t shared_generation =
+        std::numeric_limits<std::size_t>::max();
+    const std::shared_ptr<runtime> first =
+        cata::lua_platform::make_runtime(
+            "ccb_platform_handle_owner_first", shared_generation, first_lua );
+    const std::shared_ptr<runtime> second =
+        cata::lua_platform::make_runtime(
+            "ccb_platform_handle_owner_second", shared_generation, second_lua );
+    cata::lua_platform::install_runtime_api( first, first_lua, first_ccb );
+    cata::lua_platform::install_runtime_api( second, second_lua, second_ccb );
+    cata::lua_platform::set_active_runtimes( { first, second } );
+    on_out_of_scope clear_runtimes( []() {
+        cata::lua_platform::clear_active_runtimes();
+    } );
+    cata::lua_platform::runtime_world_ready( true );
+
+    sol::protected_function_result created = first_lua.safe_script( R"lua(
+return ccb.services.creatures.avatar()
+)lua" );
+    REQUIRE( created.valid() );
+    const game_handle first_handle = created.get<game_handle>();
+    first_lua["same_owner"] = first_handle;
+    sol::protected_function_result local_result = first_lua.safe_script( R"lua(
+local result = ccb.services.creatures.snapshot(same_owner)
+assert(result.ok and result.value.kind == "avatar")
+return true
+)lua" );
+    REQUIRE( local_result.valid() );
+    CHECK( local_result.get<bool>() );
+
+    second_lua["foreign_owner"] = first_handle;
+    sol::protected_function_result foreign_result = second_lua.safe_script( R"lua(
+local result = ccb.services.creatures.snapshot(foreign_owner)
+assert(not result.ok)
+assert(result.error.code == "stale_runtime")
+return true
+)lua" );
+    REQUIRE( foreign_result.valid() );
+    CHECK( foreign_result.get<bool>() );
 }
 
 TEST_CASE( "lua_top_level_handles_use_the_committed_runtime_generation",
@@ -3146,6 +9565,11 @@ TEST_CASE( "lua_v5_gut_nutrients_are_generation_safe_and_bounded",
     const vitamin_id vitamin_c( "vitC" );
     const int original_calories = player.guts.get_calories();
     const int original_vitamin = player.guts.get_vitamin( vitamin_c );
+    on_out_of_scope restore_gut_nutrients( [&player, vitamin_c, original_calories,
+    original_vitamin]() {
+        player.guts.mod_calories( original_calories - player.guts.get_calories() );
+        player.guts.set_vitamin( vitamin_c, original_vitamin );
+    } );
 
     scoped_lua_user_script script;
     script.write_manifest( R"json({
@@ -3169,7 +9593,7 @@ assert(large_calories.value.after == 2000001)
 
 local assigned_calories = game.needs.set_gut_calories(avatar, 100)
 assert(assigned_calories.ok == true)
-assert(assigned_calories.value.before == calories.value)
+assert(assigned_calories.value.before == large_calories.value.after)
 assert(assigned_calories.value.after == 100)
 
 local modified_calories = game.needs.modify_gut_calories(avatar, -25)
@@ -3209,8 +9633,6 @@ end) == false)
     CHECK( error.empty() );
     CHECK( player.guts.get_calories() == std::numeric_limits<int>::max() );
     CHECK( player.guts.get_vitamin( vitamin_c ) == 15 );
-    player.guts.mod_calories( original_calories - std::numeric_limits<int>::max() );
-    player.guts.set_vitamin( vitamin_c, original_vitamin );
 }
 
 TEST_CASE( "lua_v5_calorie_sleep_and_health_services_use_native_rules",
@@ -5161,6 +11583,24 @@ assert(removed.value.zone.personal == true)
 assert(personal_token:is_valid() == false)
 assert(game.zones.get(
     personal_token).error.code == "not_found")
+
+local recreated_personal = game.zones.create({
+    name = "Lua personal zone",
+    type = zone_id,
+    start = game.coords.tripoint_rel_ms(
+        -2, -1, 0),
+    ["end"] = game.coords.tripoint_rel_ms(
+        2, 1, 0),
+    personal = true
+})
+assert(recreated_personal.ok == true)
+assert(recreated_personal.value.token:is_valid() == true)
+assert(personal_token:is_valid() == false)
+assert(game.zones.get(
+    personal_token).error.code == "not_found")
+local removed_recreated = game.zones.remove(
+    recreated_personal.value.token)
+assert(removed_recreated.ok == true)
 
 assert(pcall(function()
     game.zones.create({
@@ -8276,12 +14716,45 @@ assert(game.items.get_var(
     rock.handle, "ccb_lua_text").error.code == "not_found")
 
 local pseudo = game.types.id("json_flag", "PSEUDO")
+local added_pseudo = game.items.set_flag(
+    rock.handle, pseudo, true)
+assert(added_pseudo.value.own_before == false)
+assert(added_pseudo.value.own_after == true)
+assert(added_pseudo.value.changed == true)
 assert(game.items.set_flag(
-    rock.handle, pseudo, true).value.own_after == true)
+    rock.handle, pseudo, true).value.changed == false)
 assert(game.items.has_flag(
     rock.handle, pseudo).value == true)
+local removed_pseudo = game.items.set_flag(
+    rock.handle, pseudo, false)
+assert(removed_pseudo.value.own_before == true)
+assert(removed_pseudo.value.own_after == false)
+assert(removed_pseudo.value.changed == true)
 assert(game.items.set_flag(
-    rock.handle, pseudo, false).value.own_after == false)
+    rock.handle, pseudo, false).value.changed == false)
+
+local inherited = game.types.id("json_flag", "TRADER_AVOID")
+local inherited_before = game.items.set_flag(
+    rock.handle, inherited, false)
+assert(inherited_before.value.effective_before == true)
+assert(inherited_before.value.effective_after == true)
+assert(inherited_before.value.own_before == false)
+assert(inherited_before.value.own_after == false)
+assert(inherited_before.value.changed == false)
+local inherited_added = game.items.set_flag(
+    rock.handle, inherited, true)
+assert(inherited_added.value.effective_before == true)
+assert(inherited_added.value.effective_after == true)
+assert(inherited_added.value.own_before == false)
+assert(inherited_added.value.own_after == true)
+assert(inherited_added.value.changed == true)
+local inherited_removed = game.items.set_flag(
+    rock.handle, inherited, false)
+assert(inherited_removed.value.effective_before == true)
+assert(inherited_removed.value.effective_after == true)
+assert(inherited_removed.value.own_before == true)
+assert(inherited_removed.value.own_after == false)
+assert(inherited_removed.value.changed == true)
 
 local feint = game.types.id(
     "martial_art_technique", "tec_feint")
@@ -9733,7 +16206,7 @@ assert(string.find(error, "nesting limit", 1, true) ~= nil)
     local ok, error = pcall(
         require, "test_limits.budget_" .. tostring(index))
     if index < )lua" +
-                  std::to_string( maximum_modules_per_source ) + R"lua( then
+                                 std::to_string( maximum_modules_per_source ) + R"lua( then
         assert(ok)
     else
         assert(ok == false)
@@ -12215,6 +18688,7 @@ TEST_CASE( "lua_v5_dialogue_and_interaction_hooks_run_from_native_bridges",
 {
     using namespace cata::lua_ui;
 
+    cata::lua_platform::shutdown();
     clear_avatar();
     clear_map_without_vision();
     avatar &player = get_avatar();
@@ -12228,6 +18702,51 @@ TEST_CASE( "lua_v5_dialogue_and_interaction_hooks_run_from_native_bridges",
         player.pos_bub( here ) + tripoint_rel_ms::west * 2 );
     std::unique_ptr<talker> alpha = get_talker_for( player );
     std::unique_ptr<talker> beta = get_talker_for( test_npc );
+
+    scoped_platform_test_mod platform_mod( "ccb_platform_dialogue_projection" );
+    const fs::path platform_marker = platform_mod.root() / "dialogue-projection.txt";
+    platform_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+local function append(value)
+    local output = assert(io.open([[%s]], "ab"))
+    output:write(value)
+    output:close()
+end
+
+ccb.runtime.handler("dialogue_start", function(payload)
+    assert(payload.alpha == nil and payload.beta == nil and payload.topic == nil)
+    assert(payload.avatar.kind == "creature")
+    assert(payload.interlocutor.kind == "creature")
+    assert(payload.initial_topic == "TALK_TEST_START")
+    assert(payload.results.result == "TALK_LUA_START")
+    append("S")
+    return { result = "TALK_PLATFORM_START" }
+end)
+
+ccb.runtime.handler("dialogue_option", function(payload)
+    assert(payload.alpha == nil and payload.beta == nil)
+    assert(payload.topic == nil and payload.option == nil)
+    assert(payload.avatar.kind == "creature")
+    assert(payload.interlocutor.kind == "creature")
+    assert(payload.current_topic == "TALK_PLATFORM_START")
+    assert(payload.selected_topic == "TALK_TEST_OPTION")
+    assert(payload.results.result == "TALK_LUA_OPTION")
+    append("O")
+    return { result = "TALK_PLATFORM_OPTION" }
+end)
+
+ccb.runtime.handler("dialogue_end", function(payload)
+    assert(payload.alpha == nil and payload.beta == nil and payload.topic == nil)
+    assert(payload.avatar.kind == "creature")
+    assert(payload.interlocutor.kind == "creature")
+    assert(payload.last_topic == "TALK_PLATFORM_OPTION")
+    append("E")
+end)
+
+ccb.runtime.hook("on_dialogue_start", "dialogue_start")
+ccb.runtime.hook("on_dialogue_option", "dialogue_option")
+ccb.runtime.hook("on_dialogue_end", "dialogue_end")
+)lua", platform_marker.generic_u8string() ) );
 
     scoped_lua_user_script script;
     script.write_manifest( R"json({
@@ -12258,7 +18777,7 @@ end)
 game.hooks.on("on_dialogue_option", function(payload)
     assert(payload.alpha.kind == "creature")
     assert(payload.beta.kind == "creature")
-    assert(payload.topic == "TALK_LUA_START")
+    assert(payload.topic == "TALK_PLATFORM_START")
     assert(payload.option == "TALK_TEST_OPTION")
     count("dialogue_option")
     return { result = "TALK_LUA_OPTION" }
@@ -12266,7 +18785,7 @@ end)
 game.hooks.on("on_dialogue_end", function(payload)
     assert(payload.alpha.kind == "creature")
     assert(payload.beta.kind == "creature")
-    assert(payload.topic == "TALK_LUA_OPTION")
+    assert(payload.topic == "TALK_PLATFORM_OPTION")
     count("dialogue_end")
 end)
 game.hooks.on("on_try_npc_interaction", function(payload)
@@ -12300,22 +18819,36 @@ end)
 
     std::string error;
     REQUIRE( reload_scripts( error ) );
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { platform_mod.source( "ccb_platform_dialogue_projection" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
 
     const native_hook_result start =
         dispatch_native_dialogue_hook(
             "on_dialogue_start", *alpha, *beta,
             "TALK_TEST_START" );
     REQUIRE( start.result );
-    CHECK( *start.result == "TALK_LUA_START" );
+    CHECK( *start.result == "TALK_PLATFORM_START" );
 
     const native_hook_result option =
         dispatch_native_dialogue_hook(
             "on_dialogue_option", *alpha, *beta,
             *start.result, "TALK_TEST_OPTION" );
     REQUIRE( option.result );
-    CHECK( *option.result == "TALK_LUA_OPTION" );
+    CHECK( *option.result == "TALK_PLATFORM_OPTION" );
     dispatch_native_dialogue_hook(
         "on_dialogue_end", *alpha, *beta, *option.result );
+
+    std::ifstream platform_input( platform_marker, std::ios::binary );
+    const std::string platform_calls{
+        std::istreambuf_iterator<char>( platform_input ),
+        std::istreambuf_iterator<char>()
+    };
+    REQUIRE( platform_input );
+    CHECK( platform_calls == "SOE" );
 
     CHECK( begin_native_npc_interaction( player, test_npc ) );
     CHECK_FALSE( allow_native_monster_interaction(
@@ -12357,6 +18890,7 @@ TEST_CASE( "lua_v5_dialogue_topics_extend_json_without_replacing_it",
             { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
         ]
     })json" );
+    CHECK( base_topic.get_string( "type" ) == "talk_topic" );
     load_talk_topic( base_topic, "lua dialogue test" );
 
     clear_avatar();
@@ -12430,8 +18964,10 @@ game.dialogue.register_topic({
     CHECK( base_dialogue.dynamic_line( base_topic_id ) == "Base JSON line." );
     base_dialogue.gen_responses( base_topic_id );
     REQUIRE( base_dialogue.responses.size() == 3 );
-    CHECK( base_dialogue.responses[0].success.next_topic.id == "TALK_NONE" );
-    CHECK( base_dialogue.responses[1].success.next_topic.id == "TALK_LUA_DIALOGUE_TOPIC" );
+    // insert_before_standard_exits places the extension before both TALK_NONE
+    // and TALK_DONE, matching the JSON dialogue extension contract.
+    CHECK( base_dialogue.responses[0].success.next_topic.id == "TALK_LUA_DIALOGUE_TOPIC" );
+    CHECK( base_dialogue.responses[1].success.next_topic.id == "TALK_NONE" );
     CHECK( base_dialogue.responses[2].success.next_topic.id == "TALK_DONE" );
 
     dialogue lua_dialogue( get_talker_for( player ), get_talker_for( test_npc ) );

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "catalua_platform_content.h"
 #include "damage.h"
 #include "debug.h"
 #include "generic_factory.h"
@@ -10,6 +11,11 @@ namespace
 {
 generic_factory<bash_damage_profile> damage_profile_factory( "bash_damage_profile" );
 } // namespace
+
+generic_factory<bash_damage_profile> &cata::lua_platform::detail::bash_damage_profile_registry()
+{
+    return damage_profile_factory;
+}
 
 // boilerplate
 void bash_damage_profile::load_all( const JsonObject &jo, const std::string &src )

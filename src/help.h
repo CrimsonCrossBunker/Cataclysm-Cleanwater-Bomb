@@ -3,6 +3,7 @@
 #define CATA_SRC_HELP_H
 
 #include <map>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -13,6 +14,11 @@
 
 class JsonObject;
 struct input_event;
+
+namespace cata::lua_platform
+{
+class content_transaction;
+}
 
 namespace catacurses
 {
@@ -25,7 +31,9 @@ class help
         static void load( const JsonObject &jo, const std::string &src );
         static void reset();
         void display_help() const;
+        std::optional<int> platform_topic_order( const std::string &id ) const;
     private:
+        friend class cata::lua_platform::content_transaction;
         void load_object( const JsonObject &jo, const std::string &src );
         void reset_instance();
         std::map<int, inclusive_rectangle<point>> draw_menu( const catacurses::window &win,
@@ -37,6 +45,7 @@ class help
         int current_order_start = 0;
         std::string current_src;
         std::map<int, std::pair<translation, std::vector<translation>>> help_texts;
+        std::map<std::string, int> platform_help_topic_orders;
 };
 
 help &get_help();

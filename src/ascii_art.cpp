@@ -3,6 +3,7 @@
 #include <string>
 
 #include "catacharset.h"
+#include "catalua_platform_content.h"
 #include "debug.h"
 #include "generic_factory.h"
 #include "output.h"
@@ -13,6 +14,11 @@ namespace
 {
 generic_factory<ascii_art> ascii_art_factory( "ascii_art" );
 } // namespace
+
+generic_factory<ascii_art> &cata::lua_platform::detail::ascii_art_registry()
+{
+    return ascii_art_factory;
+}
 
 template<>
 const ascii_art &string_id<ascii_art>::obj() const
@@ -52,4 +58,3 @@ void ascii_art::reset()
 {
     ascii_art_factory.reset();
 }
-

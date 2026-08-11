@@ -3,6 +3,7 @@
 #define CATA_SRC_ACTIVITY_TYPE_H
 
 #include <set>
+#include <optional>
 #include <string>
 
 #include "game_constants.h"
@@ -15,6 +16,11 @@ class activity_type;
 class player_activity;
 enum class distraction_type : int;
 template <typename T> struct enum_traits;
+
+namespace cata::lua_platform
+{
+class content_transaction;
+}
 
 /** @relates string_id */
 template<>
@@ -36,6 +42,7 @@ struct enum_traits<based_on_type> {
 class activity_type
 {
     private:
+        friend class cata::lua_platform::content_transaction;
         bool was_loaded = false;
 
         activity_id id_;
@@ -111,5 +118,12 @@ class activity_type
         static void check_consistency();
         static void reset();
 };
+
+namespace cata::lua_platform::detail
+{
+std::optional<activity_type> activity_type_registry_get( const activity_id &id );
+void activity_type_registry_set( const activity_type &value );
+void activity_type_registry_erase( const activity_id &id );
+} // namespace cata::lua_platform::detail
 
 #endif // CATA_SRC_ACTIVITY_TYPE_H

@@ -122,7 +122,7 @@ std::string creature_scope( const Creature &creature )
 
 game_handle make_creature_handle(
     Creature &creature,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const tripoint_abs_ms position = creature.pos_abs();
@@ -153,7 +153,7 @@ sol::table spawn_monster(
     sol::this_state lua, const script_game_id &requested_type,
     const script_tripoint_coord &requested_position,
     const sol::optional<int> &requested_radius,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name = "game.spawns.monster";
@@ -253,7 +253,7 @@ sol::table spawn_hallucination(
     sol::this_state lua,
     const script_tripoint_coord &requested_position,
     const sol::optional<sol::table> &requested_options,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
@@ -293,7 +293,7 @@ sol::table spawn_hallucination(
 
 npc *resolve_npc(
     const game_handle &handle,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     std::optional<game_handle_error> &error )
 {
@@ -317,7 +317,7 @@ npc *resolve_npc(
 sol::table follower_mutation(
     sol::this_state lua, const game_handle &handle,
     const bool add,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -359,7 +359,7 @@ sol::table follower_mutation(
 
 sol::table follower_list(
     sol::this_state lua,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -525,7 +525,7 @@ sol::table relocate_overmap(
 
 void install_game_world_service_api(
     sol::table &game,
-    std::function<std::size_t()> current_runtime_generation,
+    std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write,

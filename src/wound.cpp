@@ -1,9 +1,13 @@
 #include "wound.h"
 
+#include <algorithm>
+#include <cstddef>
+#include <limits>
 #include <memory>
 #include <set>
 
 #include "bodypart.h"
+#include "catalua_platform_content.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
@@ -43,10 +47,12 @@ wound::wound( wound_type_id wd ) :
 namespace
 {
 generic_factory<wound_type> wound_type_factory( "wound" );
-
-// we'll store requirement_ids here and wait for requirements to load in, then we can actualize them
-std::multimap<wound_fix_id, std::pair<std::string, int>> reqs_temp_storage;
 } // namespace
+
+generic_factory<wound_type> &cata::lua_platform::detail::wound_type_registry()
+{
+    return wound_type_factory;
+}
 
 void wound_type::load_wounds( const JsonObject &jo, const std::string &src )
 {
@@ -70,6 +76,7 @@ bool string_id<wound_type>::is_valid() const
 void wound_type::reset()
 {
     wound_type_factory.reset();
+    cata::lua_platform::detail::refresh_body_part_wound_cache();
 }
 
 void wound_type::check_consistency()
@@ -90,6 +97,7 @@ const std::vector<wound_type> &wound_type::get_all()
 void wound_type::finalize_all()
 {
     wound_type_factory.finalize();
+    cata::lua_platform::detail::refresh_body_part_wound_cache();
 }
 
 void wound_type::finalize()
@@ -101,6 +109,26 @@ namespace
 {
 generic_factory<wound_fix> wound_fix_factory( "wound_fix" );
 } // namespace
+
+generic_factory<wound_fix> &cata::lua_platform::detail::wound_fix_registry()
+{
+    return wound_fix_factory;
+}
+
+void cata::lua_platform::detail::refresh_wound_fix_links()
+{
+    for( wound_type &wound_def : wound_type_factory.get_all_mod() ) {
+        wound_def.fixes.clear();
+    }
+
+    for( const wound_fix &fix : wound_fix_factory.get_all() ) {
+        for( const wound_type_id &wound_id : fix.wounds_removed ) {
+            if( wound_id.is_valid() ) {
+                const_cast<wound_type &>( *wound_id ).fixes.emplace( fix.id );
+            }
+        }
+    }
+}
 
 void wound_fix::load_wound_fixes( const JsonObject &jo, const std::string &src )
 {
@@ -134,7 +162,7 @@ bool string_id<wound_fix>::is_valid() const
 void wound_fix::reset()
 {
     wound_fix_factory.reset();
-    reqs_temp_storage.clear();
+    cata::lua_platform::detail::refresh_wound_fix_links();
 }
 
 void wound_fix::check_consistency()
@@ -173,14 +201,13 @@ void wound_fix::check() const
 void wound_fix::finalize_all()
 {
     wound_fix_factory.finalize();
+    cata::lua_platform::detail::refresh_wound_fix_links();
 }
 
 void wound_fix::finalize()
 {
-    const auto range = reqs_temp_storage.equal_range( id );
-    for( auto it = range.first; it != range.second; ++it ) {
-        const requirement_id req_id( it->second.first );
-        const int amount = it->second.second;
+    requirements = cata::make_value<requirement_data>();
+    for( const auto &[req_id, amount] : requirement_refs ) {
         if( !req_id.is_valid() ) {
             debugmsg( "wound_fix '%s' has invalid requirement_id '%s'", id.str(), req_id.str() );
             continue;
@@ -188,10 +215,6 @@ void wound_fix::finalize()
         *requirements = *requirements + ( *req_id ) * amount;
     }
     requirements->consolidate();
-    for( const wound_type_id &fid : wounds_removed ) {
-        const_cast<wound_type &>( *fid ).fixes.emplace( id );
-    }
-    requirement_data::finalize();
 }
 
 void wound_limb_score::deserialize( const JsonObject &jo )
@@ -234,19 +257,26 @@ void wound_fix::load( const JsonObject &jo, const std::string_view & )
     }
 
     if( jo.has_array( "requirements" ) ) {
+        requirement_refs.clear();
+        std::size_t inline_requirement_index = 0;
         for( const JsonValue &jv : jo.get_array( "requirements" ) ) {
             if( jv.test_array() ) {
                 // array of 2 elements filled with [requirement_id, count]
                 const JsonArray &req = static_cast<JsonArray>( jv );
-                const std::string req_id = req.get_string( 0 );
+                const requirement_id req_id( req.get_string( 0 ) );
                 const int req_amount = req.get_int( 1 );
-                reqs_temp_storage.emplace( id, std::make_pair( req_id, req_amount ) );
+                requirement_refs.emplace_back( req_id, req_amount );
             } else if( jv.test_object() ) {
                 // defining single requirement inline
                 const JsonObject &req = static_cast<JsonObject>( jv );
-                const requirement_id req_id( "wound_fix_" + id.str() + "_inline_req" );
+                std::string inline_requirement_id = "wound_fix_" + id.str() + "_inline_req";
+                if( inline_requirement_index > 0 ) {
+                    inline_requirement_id += "_" + std::to_string( inline_requirement_index + 1 );
+                }
+                ++inline_requirement_index;
+                const requirement_id req_id( inline_requirement_id );
                 requirement_data::load_requirement( req, req_id );
-                reqs_temp_storage.emplace( id, std::make_pair( req_id.str(), 1 ) );
+                requirement_refs.emplace_back( req_id, 1 );
             } else {
                 debugmsg( "wound_fix '%s' has has invalid requirement element", id.str() );
             }
@@ -340,17 +370,36 @@ void wound::deserialize( const JsonObject &jsin )
 
 float wound::healing_percentage() const
 {
-    return healing_progress / healing_time;
+    if( healing_time <= 0_seconds ) {
+        return healing_progress <= 0_seconds ? 0.0f : 1.0f;
+    }
+    const float progress = healing_progress / healing_time;
+    return std::clamp( progress, 0.0f, 1.0f );
 }
 
 int wound::get_pain() const
 {
-    return pain * ( 1 - healing_percentage() );
+    const double current_pain = static_cast<double>( pain ) *
+                                ( 1.0 - static_cast<double>( healing_percentage() ) );
+    return static_cast<int>( std::clamp(
+                                 current_pain,
+                                 static_cast<double>( std::numeric_limits<int>::min() ),
+                                 static_cast<double>( std::numeric_limits<int>::max() ) ) );
+}
+
+int wound::get_base_pain() const
+{
+    return pain;
 }
 
 time_duration wound::get_healing_time() const
 {
     return healing_time;
+}
+
+time_duration wound::get_healing_progress() const
+{
+    return healing_progress;
 }
 
 bool wound::update_wound( const time_duration time_passed )

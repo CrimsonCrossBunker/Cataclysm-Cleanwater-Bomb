@@ -65,14 +65,54 @@ sol::table handle_value_to_lua( sol::state_view lua, const game_handle &handle )
 
 } // namespace
 
+game_handle_runtime_owner_ptr make_game_handle_runtime_owner()
+{
+    return std::make_shared<game_handle_runtime_owner>();
+}
+
+game_handle_runtime::game_handle_runtime(
+    const game_handle_runtime_owner_ptr &owner,
+    const std::size_t generation ) : owner_( owner ), generation_( generation )
+{
+}
+
+std::size_t game_handle_runtime::generation() const noexcept
+{
+    return generation_;
+}
+
+bool game_handle_runtime::has_live_owner() const noexcept
+{
+    return !owner_.expired();
+}
+
+bool game_handle_runtime::same_identity(
+    const game_handle_runtime &other ) const noexcept
+{
+    const std::weak_ptr<const game_handle_runtime_owner> empty;
+    const bool has_identity = owner_.owner_before( empty ) ||
+                              empty.owner_before( owner_ );
+    return has_identity && generation_ == other.generation_ &&
+           !owner_.owner_before( other.owner_ ) &&
+           !other.owner_.owner_before( owner_ );
+}
+
+bool game_handle_runtime::is_active_match(
+    const game_handle_runtime &other ) const noexcept
+{
+    return has_live_owner() && other.has_live_owner() &&
+           same_identity( other );
+}
+
 game_handle game_handle::from_creature(
     Creature &value, game_handle_locator locator,
-    const std::size_t runtime_generation, const std::size_t world_generation )
+    const game_handle_runtime &runtime, const std::size_t world_generation )
 {
     game_handle result;
     result.kind_ = game_handle_kind::creature;
     result.locator_ = std::move( locator );
-    result.runtime_generation_ = runtime_generation;
+    result.runtime_owner_ = runtime.owner_;
+    result.runtime_generation_ = runtime.generation_;
     result.world_generation_ = world_generation;
     result.creature_ = value.get_safe_reference();
     return result;
@@ -80,12 +120,13 @@ game_handle game_handle::from_creature(
 
 game_handle game_handle::from_item(
     item &value, game_handle_locator locator,
-    const std::size_t runtime_generation, const std::size_t world_generation )
+    const game_handle_runtime &runtime, const std::size_t world_generation )
 {
     game_handle result;
     result.kind_ = game_handle_kind::item;
     result.locator_ = std::move( locator );
-    result.runtime_generation_ = runtime_generation;
+    result.runtime_owner_ = runtime.owner_;
+    result.runtime_generation_ = runtime.generation_;
     result.world_generation_ = world_generation;
     result.item_ = value.get_safe_reference();
     return result;
@@ -93,12 +134,13 @@ game_handle game_handle::from_item(
 
 game_handle game_handle::from_vehicle(
     vehicle &value, game_handle_locator locator,
-    const std::size_t runtime_generation, const std::size_t world_generation )
+    const game_handle_runtime &runtime, const std::size_t world_generation )
 {
     game_handle result;
     result.kind_ = game_handle_kind::vehicle;
     result.locator_ = std::move( locator );
-    result.runtime_generation_ = runtime_generation;
+    result.runtime_owner_ = runtime.owner_;
+    result.runtime_generation_ = runtime.generation_;
     result.world_generation_ = world_generation;
     result.vehicle_ = value.get_safe_reference();
     return result;
@@ -130,10 +172,26 @@ std::size_t game_handle::world_generation() const noexcept
 }
 
 std::optional<game_handle_error> game_handle::validation_error(
-    const std::size_t current_runtime_generation,
+    const game_handle_runtime &current_runtime,
     const std::size_t current_world_generation ) const
 {
-    if( runtime_generation_ != current_runtime_generation ) {
+    const std::shared_ptr<const game_handle_runtime_owner> owner =
+        runtime_owner_.lock();
+    const std::shared_ptr<const game_handle_runtime_owner> current_owner =
+        current_runtime.owner_.lock();
+    if( !owner ) {
+        return game_handle_error{
+            "stale_runtime",
+            "GameHandle owner runtime is no longer alive"
+        };
+    }
+    if( !current_owner || owner != current_owner ) {
+        return game_handle_error{
+            "stale_runtime",
+            "GameHandle belongs to a different Lua runtime owner"
+        };
+    }
+    if( runtime_generation_ != current_runtime.generation_ ) {
         return game_handle_error{
             "stale_runtime",
             "GameHandle belongs to an inactive Lua runtime generation"
@@ -170,14 +228,14 @@ std::optional<game_handle_error> game_handle::validation_error(
 }
 
 native_handle_result<Creature> game_handle::resolve_creature(
-    const std::size_t current_runtime_generation,
+    const game_handle_runtime &current_runtime,
     const std::size_t current_world_generation ) const
 {
     if( kind_ != game_handle_kind::creature ) {
         return { nullptr, wrong_kind_error( game_handle_kind::creature, kind_ ) };
     }
     if( const std::optional<game_handle_error> error =
-            validation_error( current_runtime_generation, current_world_generation ) ) {
+            validation_error( current_runtime, current_world_generation ) ) {
         return { nullptr, error };
     }
     Creature *value = creature_.get();
@@ -187,14 +245,14 @@ native_handle_result<Creature> game_handle::resolve_creature(
 }
 
 native_handle_result<item> game_handle::resolve_item(
-    const std::size_t current_runtime_generation,
+    const game_handle_runtime &current_runtime,
     const std::size_t current_world_generation ) const
 {
     if( kind_ != game_handle_kind::item ) {
         return { nullptr, wrong_kind_error( game_handle_kind::item, kind_ ) };
     }
     if( const std::optional<game_handle_error> error =
-            validation_error( current_runtime_generation, current_world_generation ) ) {
+            validation_error( current_runtime, current_world_generation ) ) {
         return { nullptr, error };
     }
     item *value = item_.get();
@@ -204,14 +262,14 @@ native_handle_result<item> game_handle::resolve_item(
 }
 
 native_handle_result<vehicle> game_handle::resolve_vehicle(
-    const std::size_t current_runtime_generation,
+    const game_handle_runtime &current_runtime,
     const std::size_t current_world_generation ) const
 {
     if( kind_ != game_handle_kind::vehicle ) {
         return { nullptr, wrong_kind_error( game_handle_kind::vehicle, kind_ ) };
     }
     if( const std::optional<game_handle_error> error =
-            validation_error( current_runtime_generation, current_world_generation ) ) {
+            validation_error( current_runtime, current_world_generation ) ) {
         return { nullptr, error };
     }
     vehicle *value = vehicle_.get();
@@ -256,7 +314,7 @@ sol::table make_game_error_result( sol::state_view lua, const game_handle_error 
 
 void install_game_handle_api(
     sol::state &lua, sol::table &game,
-    std::function<std::size_t()> current_runtime_generation,
+    std::function<game_handle_runtime()> current_runtime,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read )
 {
@@ -267,17 +325,17 @@ void install_game_handle_api(
         return locator_to_lua( sol::state_view( lua_state ), self.locator() );
     },
     "is_valid",
-    [current_runtime_generation, current_world_generation]( const game_handle & self ) {
+    [current_runtime, current_world_generation]( const game_handle & self ) {
         return !self.validation_error(
-                   current_runtime_generation(), current_world_generation() );
+                   current_runtime(), current_world_generation() );
     },
     "status",
-    [current_runtime_generation, current_world_generation](
+    [current_runtime, current_world_generation](
         sol::this_state lua_state, const game_handle & self ) {
         sol::state_view state( lua_state );
         if( const std::optional<game_handle_error> error =
                 self.validation_error(
-                    current_runtime_generation(), current_world_generation() ) ) {
+                    current_runtime(), current_world_generation() ) ) {
             return make_game_error_result( state, *error );
         }
         return make_game_value_result(
@@ -286,7 +344,7 @@ void install_game_handle_api(
 
     sol::table handles = lua.create_table();
     handles.set_function( "avatar", [
-                           current_runtime_generation,
+                           current_runtime,
                            current_world_generation,
                            require_read
     ]() {
@@ -298,7 +356,7 @@ void install_game_handle_api(
             "avatar", player.getID().get_value(),
             position.x(), position.y(), position.z(), {}
         },
-        current_runtime_generation(), current_world_generation() );
+        current_runtime(), current_world_generation() );
     } );
     game["handles"] = std::move( handles );
 }

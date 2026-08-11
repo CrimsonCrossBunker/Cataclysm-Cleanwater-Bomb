@@ -4,6 +4,7 @@
 #include <optional>
 
 #include "avatar.h"
+#include "catalua_platform_content.h"
 #include "generic_factory.h"
 #include "mutation.h"
 #include "options.h"
@@ -15,6 +16,11 @@ namespace
 {
 generic_factory<mood_face> mood_face_factory( "mood_face" );
 } // namespace
+
+generic_factory<mood_face> &cata::lua_platform::detail::mood_face_registry()
+{
+    return mood_face_factory;
+}
 
 template<>
 const mood_face &mood_face_id::obj() const

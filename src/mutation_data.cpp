@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "catalua_lua_call.h"
+#include "catalua_platform_content.h"
 #include "color.h"
 #include "condition.h"
 #include "debug.h"
@@ -57,6 +58,24 @@ generic_factory<mutation_branch> trait_factory( "trait" );
 std::vector<dream> dreams;
 std::map<mutation_category_id, std::vector<trait_id> > mutations_category;
 static std::map<mutation_category_id, mutation_category_trait> mutation_category_traits;
+
+const mutation_category_trait *
+cata::lua_platform::detail::mutation_category_registry_find( const std::string &id )
+{
+    const auto found = mutation_category_traits.find( mutation_category_id( id ) );
+    return found == mutation_category_traits.end() ? nullptr : &found->second;
+}
+
+void cata::lua_platform::detail::mutation_category_registry_set(
+    const mutation_category_trait &value )
+{
+    mutation_category_traits[value.id] = value;
+}
+
+void cata::lua_platform::detail::mutation_category_registry_erase( const std::string &id )
+{
+    mutation_category_traits.erase( mutation_category_id( id ) );
+}
 
 template<>
 const mutation_branch &string_id<mutation_branch>::obj() const

@@ -18,6 +18,7 @@ class character_oracle_t : public oracle_t
         explicit character_oracle_t( const Character *subject ) {
             this->subject = subject;
         }
+        const Creature *get_subject() const override;
         /**
          * Predicates used by AI to determine goals.
          */

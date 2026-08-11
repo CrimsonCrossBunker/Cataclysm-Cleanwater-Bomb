@@ -12,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include "catalua_platform_content.h"
 #include "enum_bitset.h"
 #include "mattack_common.h"
 #include "mtype.h"
@@ -74,6 +75,19 @@ class MonsterGenerator
         // combines mtype and species information, sets bitflags
         void finalize_mtypes();
 
+        /**
+         * Finalize one freshly constructed Lua-first mtype when the global
+         * data set was already finalized.  During initial data loading the
+         * normal global monster finalizer owns this work instead.
+         */
+        void finalize_lua_first_mtype_if_ready( mtype &mon, bool data_is_finalized );
+
+        /** Rebuild the derived hallucination candidate list after a transaction. */
+        void refresh_hallucination_monsters();
+
+        /** Re-resolve behavior ids after the behavior factory changes storage. */
+        void refresh_behavior_goals();
+
         mtype generate_fake_pseudo_dormant_monster( const mtype &mon );
 
         void check_monster_definitions() const;
@@ -110,6 +124,16 @@ class MonsterGenerator
         friend class string_id<mtype>;
         friend class string_id<species_type>;
         friend class string_id<mattack_actor>;
+        friend generic_factory<species_type> &
+        cata::lua_platform::detail::species_registry();
+        friend generic_factory<mtype> &
+        cata::lua_platform::detail::monster_type_registry();
+        friend const mtype_special_attack *
+        cata::lua_platform::detail::monster_attack_registry_find( const std::string &id );
+        friend void cata::lua_platform::detail::monster_attack_registry_set(
+            const mtype_special_attack &value );
+        friend void cata::lua_platform::detail::monster_attack_registry_erase(
+            const std::string &id );
 
         pimpl<generic_factory<mtype>> mon_templates;
         pimpl<generic_factory<species_type>> mon_species;

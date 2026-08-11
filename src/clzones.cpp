@@ -20,6 +20,7 @@
 #include "debug.h"
 #include "field_type.h"
 #include "flexbuffer_json.h"
+#include "catalua_platform_content.h"
 #include "generic_factory.h"
 #include "iexamine.h"
 #include "input_popup.h"
@@ -138,6 +139,11 @@ namespace
 {
 generic_factory<zone_type> zone_type_factory( "zone_type" );
 } // namespace
+
+generic_factory<zone_type> &cata::lua_platform::detail::zone_type_registry()
+{
+    return zone_type_factory;
+}
 
 template<>
 const zone_type &string_id<zone_type>::obj() const
@@ -1863,6 +1869,7 @@ void zone_data::serialize( JsonOut &json ) const
 
 void zone_data::deserialize( const JsonObject &data )
 {
+    lifetime_identity = std::make_shared<unsigned char>( 0 );
     data.allow_omitted_members();
     data.read( "name", name );
     // handle legacy zone types

@@ -16,6 +16,11 @@ class Character;
 class JsonObject;
 template <typename T> class generic_factory;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+}
+
 struct character_modifier {
     public:
         enum mod_type {
@@ -73,6 +78,7 @@ struct character_modifier {
         std::string builtin;
         bool was_loaded = false;
         friend class generic_factory<character_modifier>;
+        friend class cata::lua_platform::content_transaction;
         friend struct mod_tracker;
 };
 

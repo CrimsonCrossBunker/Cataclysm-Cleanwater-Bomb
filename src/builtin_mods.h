@@ -10,6 +10,7 @@
 
 inline constexpr bool builtin_mod_manifest_available = false;
 inline constexpr std::array<std::string_view, 0> builtin_mod_ids = {};
+inline constexpr std::array<std::string_view, 0> builtin_mod_roots = {};
 #endif
 
 #endif // CATA_SRC_BUILTIN_MODS_H

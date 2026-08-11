@@ -10,6 +10,7 @@
 
 #include "cached_options.h"
 #include "calendar.h"
+#include "catalua_platform_content.h"
 #include "cata_utility.h"
 #include "color.h"
 #include "condition.h"
@@ -55,6 +56,40 @@ namespace
 {
 generic_factory<mon_flag> mon_flags( "monster flags" );
 } // namespace
+
+generic_factory<mon_flag> &cata::lua_platform::detail::monster_flag_registry()
+{
+    return mon_flags;
+}
+
+generic_factory<species_type> &cata::lua_platform::detail::species_registry()
+{
+    return *MonsterGenerator::generator().mon_species;
+}
+
+generic_factory<mtype> &cata::lua_platform::detail::monster_type_registry()
+{
+    return *MonsterGenerator::generator().mon_templates;
+}
+
+const mtype_special_attack *cata::lua_platform::detail::monster_attack_registry_find(
+    const std::string &id )
+{
+    const auto &attacks = MonsterGenerator::generator().attack_map;
+    const auto found = attacks.find( id );
+    return found == attacks.end() ? nullptr : &found->second;
+}
+
+void cata::lua_platform::detail::monster_attack_registry_set(
+    const mtype_special_attack &value )
+{
+    MonsterGenerator::generator().attack_map.insert_or_assign( value->id, value );
+}
+
+void cata::lua_platform::detail::monster_attack_registry_erase( const std::string &id )
+{
+    MonsterGenerator::generator().attack_map.erase( id );
+}
 
 namespace behavior
 {
@@ -348,6 +383,7 @@ static void build_behavior_tree( mtype &type )
             type.add_goal( attack.first );
         } /* TODO: Make this an error once all the special attacks are migrated. */
     }
+    type.rebuild_goals();
 }
 
 void MonsterGenerator::finalize_mtypes()
@@ -477,15 +513,94 @@ void MonsterGenerator::finalize_mtypes()
         }
     }
 
+    refresh_hallucination_monsters();
+
+    // now add the fake monsters to the mon_templates
+    for( mtype &mon : extra_mtypes ) {
+        mon_templates->insert( mon );
+    }
+}
+
+void MonsterGenerator::finalize_lua_first_mtype_if_ready( mtype &mon,
+        const bool data_is_finalized )
+{
+    if( !data_is_finalized ) {
+        return;
+    }
+
+    mon.flags.clear();
+    for( const mon_flag_str_id &flag : mon.pre_flags_ ) {
+        mon.flags.emplace( flag );
+    }
+    apply_species_attributes( mon );
+    validate_species_ids( mon );
+    mon.size = volume_to_size( mon.volume );
+
+    mon.speed *= get_option<int>( "MONSTER_SPEED" ) / 100.0;
+    mon.hp *= get_option<int>( "MONSTER_RESILIENCE" ) / 100.0;
+    for( const monster_adjustment &adjustment : adjustments ) {
+        adjustment.apply( mon );
+    }
+
+    if( mon.bash_skill.empty() ) {
+        mon.bash_skill = calc_bash_skill( mon );
+    }
+    finalize_damage_map( mon.armor.resist_vals, true );
+
+    const float melee_damage_total = mon.melee_damage.total_damage();
+    float armor_difficulty = 3.0f;
+    for( const auto &[damage_id, value] : mon.armor.resist_vals ) {
+        if( damage_id->mon_difficulty ) {
+            armor_difficulty += value;
+        }
+    }
+    static const std::unordered_set<std::string> difficulty_exempt_attacks = {
+        "PARROT", "PARROT_AT_DANGER", "GRAZE", "EAT_CROP", "EAT_FOOD", "EAT_CARRION"
+    };
+    int special_attack_difficulty = 0;
+    for( const auto &[id, attack] : mon.special_attacks ) {
+        static_cast<void>( attack );
+        if( difficulty_exempt_attacks.count( id ) == 0 ) {
+            ++special_attack_difficulty;
+        }
+    }
+    mon.difficulty = ( mon.melee_skill + 1 ) * mon.melee_dice *
+                     ( melee_damage_total + mon.melee_sides ) * 0.04 +
+                     ( mon.sk_dodge + 1 ) * armor_difficulty * 0.04 +
+                     ( mon.get_difficulty_adjustment() + special_attack_difficulty +
+                       8 * mon.emit_fields.size() );
+    mon.difficulty *=
+        ( mon.hp + mon.speed - mon.attack_cost + ( mon.morale + mon.agro ) * 0.1 ) * 0.01 +
+        ( mon.vision_day + 2 * mon.vision_night ) * 0.01;
+    mon.difficulty = std::max( 1, mon.difficulty );
+    mon.status_chance_multiplier = std::max( 0.0f, mon.status_chance_multiplier );
+    mon.hp = std::max( mon.hp, 1 );
+
+    build_behavior_tree( mon );
+    finalize_pathfinding_settings( mon );
+    mon.mdeath_effect.has_effect = mon.mdeath_effect.sp.is_valid();
+
+    mon.weakpoints.clear();
+    for( const weakpoints_id &set : mon.weakpoints_deferred ) {
+        mon.weakpoints.add_from_set( set, true );
+    }
+    mon.weakpoints.finalize();
+}
+
+void MonsterGenerator::refresh_hallucination_monsters()
+{
+    hallucination_monsters.clear();
     for( const mtype &mon : mon_templates->get_all() ) {
         if( !mon.has_flag( mon_flag_NOT_HALLUCINATION ) ) {
             hallucination_monsters.push_back( mon.id );
         }
     }
+}
 
-    // now add the fake monsters to the mon_templates
-    for( mtype &mon : extra_mtypes ) {
-        mon_templates->insert( mon );
+void MonsterGenerator::refresh_behavior_goals()
+{
+    for( mtype &mon : mon_templates->get_all_mod() ) {
+        mon.rebuild_goals();
     }
 }
 

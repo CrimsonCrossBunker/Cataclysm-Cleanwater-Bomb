@@ -853,7 +853,7 @@ void vehicle::drive_to_local_target( map *here, const tripoint_abs_ms &target,
         if( ( turn_x > 0 || turn_x < 0 ) && velocity > 1000 ) {
             accel_y = 1;
         }
-        if( ( velocity < std::min( safe_velocity( *here ), is_rotorcraft( *here ) &&
+        if( ( velocity < std::min( safe_velocity( *here ), is_aircraft( *here ) &&
                                    is_flying_in_air() ? 12000 : 32 * 100 ) && turn_x == 0 ) || velocity < 500 ) {
             accel_y = -1;
         }
@@ -4134,20 +4134,17 @@ int vehicle::ground_acceleration( map &here, const bool fueled, int at_vel_in_vm
 
 int vehicle::rotor_acceleration( map &here, const bool fueled, int at_vel_in_vmi ) const
 {
+    ( void )at_vel_in_vmi;
     if( !( engine_on || is_flying ) ) {
         return 0;
     }
-    if( rotors.empty() ) {
-        // airship: forward thrust comes from propellers, not rotor lift
-        int target_vmiph = std::max( { at_vel_in_vmi, 1000, max_rotor_velocity( here, fueled ) / 4 } );
-        int cmps = vmiph_to_cmps( target_vmiph );
-        double weight = to_kilogram( total_mass( here ) );
-        int engine_power_ratio = units::to_watt( total_power( here, fueled ) ) / weight;
-        int accel_at_vel = 100 * 100 * engine_power_ratio / cmps;
-        return cmps_to_vmiph( accel_at_vel );
+    // Horizontal thrust comes from rotors and/or aircraft propellers.  An airship
+    // with no propeller gets no forward acceleration at all, matching CBN.
+    const double thrust = total_aircraft_thrust( here, fueled );
+    if( thrust <= 0.0 ) {
+        return 0;
     }
-    const int accel_at_vel = 100 * lift_thrust_of_rotorcraft( here,
-                             fueled ) / to_kilogram( total_mass( here ) );
+    const int accel_at_vel = 100 * thrust / to_kilogram( total_mass( here ) );
     return cmps_to_vmiph( accel_at_vel );
 }
 
@@ -4211,7 +4208,7 @@ int vehicle::acceleration( map &here, const bool fueled, int at_vel_in_vmi ) con
 {
     if( is_watercraft() ) {
         return water_acceleration( here, fueled, at_vel_in_vmi );
-    } else if( is_rotorcraft( here ) && is_flying ) {
+    } else if( is_aircraft( here ) && is_flying ) {
         return rotor_acceleration( here, fueled, at_vel_in_vmi );
     }
     return ground_acceleration( here, fueled, at_vel_in_vmi );
@@ -4283,16 +4280,17 @@ int vehicle::max_water_velocity( map &here, const bool fueled ) const
 
 int vehicle::max_rotor_velocity( map &here, const bool fueled ) const
 {
-    if( rotors.empty() ) {
-        // airship: thrust comes from propellers, top speed limited by air drag
-        // engine_power = c_air_drag * velocity^3  ->  v = cbrt( power / c_air_drag )
-        const int total_engine_w = units::to_watt( total_power( here, fueled ) );
-        const double max_air_mps = std::cbrt( total_engine_w / coeff_air_drag() );
+    // Top speed is reached when all available thrust overcomes air drag:
+    // F_thrust = c_air_drag * v^2  ->  v = sqrt( F_thrust / c_air_drag )
+    const double thrust = total_aircraft_thrust( here, fueled );
+    if( thrust <= 0.0 ) {
+        return 0;
+    }
+    const double max_air_mps = std::sqrt( thrust / coeff_air_drag() );
+    if( is_airship( here ) ) {
         // airships are slow, cap their top speed well below rotorcraft
         return std::min( 5001, mps_to_vmiph( max_air_mps ) );
     }
-    const double max_air_mps = std::sqrt( lift_thrust_of_rotorcraft( here,
-                                          fueled ) / coeff_air_drag() );
     // helicopters just cannot go over 250mph at very maximum
     // weird things start happening to their rotors if they do.
     // due to the rotor tips going supersonic.
@@ -4302,7 +4300,7 @@ int vehicle::max_rotor_velocity( map &here, const bool fueled ) const
 
 int vehicle::max_velocity( map &here, const bool fueled ) const
 {
-    if( is_flying && is_rotorcraft( here ) ) {
+    if( is_flying && is_aircraft( here ) ) {
         return max_rotor_velocity( here, fueled );
     } else if( is_watercraft() ) {
         return max_water_velocity( here, fueled );
@@ -4336,15 +4334,15 @@ int vehicle::safe_ground_velocity( map &here, const bool fueled ) const
 
 int vehicle::safe_rotor_velocity( map &here, const bool fueled ) const
 {
-    if( rotors.empty() ) {
-        // airship: safe cruise speed from propeller thrust against air drag
-        const int effective_engine_w = units::to_watt( total_power( here, fueled, true ) );
-        const double safe_air_mps = std::cbrt( effective_engine_w / coeff_air_drag() );
+    const double thrust = total_aircraft_thrust( here, fueled, true );
+    if( thrust <= 0.0 ) {
+        return 0;
+    }
+    const double safe_air_mps = std::sqrt( thrust / coeff_air_drag() );
+    if( is_airship( here ) ) {
         return std::min( 4501, mps_to_vmiph( safe_air_mps ) );
     }
-    const double max_air_mps = std::sqrt( lift_thrust_of_rotorcraft( here, fueled,
-                                          true ) / coeff_air_drag() );
-    return std::min( 22501, mps_to_vmiph( max_air_mps ) );
+    return std::min( 22501, mps_to_vmiph( safe_air_mps ) );
 }
 
 
@@ -4359,7 +4357,7 @@ int vehicle::safe_water_velocity( map &here, const bool fueled ) const
 
 int vehicle::safe_velocity( map &here, const bool fueled ) const
 {
-    if( is_flying && is_rotorcraft( here ) ) {
+    if( is_flying && is_aircraft( here ) ) {
         return safe_rotor_velocity( here, fueled );
     } else if( is_watercraft() ) {
         return safe_water_velocity( here, fueled );
@@ -4735,11 +4733,24 @@ double vehicle::coeff_air_drag() const
     add_msg_debug( debugmode::DF_VEHICLE_DRAG,
                    "%s: height %3.2fm, width %3.2fm (%d tiles), c_air %3.2f\n", name, height,
                    tile_to_width( width ), width, c_air_drag );
+    if( !balloons.empty() ) {
+        c_air_drag += coeff_balloon_drag();
+    }
     // F_air_drag = c_air_drag * cross_area * 1/2 * air_density * v^2
     // coeff_air_resistance = c_air_drag * cross_area * 1/2 * air_density
     coefficient_air_resistance = std::max( 0.1, c_air_drag * cross_area * 0.5 * air_density );
     coeff_air_dirty = false;
     return coefficient_air_resistance;
+}
+
+double vehicle::coeff_balloon_drag() const
+{
+    // Matches CBN's effective behaviour: CBN computes pow( volume, 2 / 3 ),
+    // where the integer division evaluates the exponent as 0 and leaves a
+    // small constant extra drag.  A true 2/3-power frontal-area term would be
+    // an order of magnitude too strong for the existing drag model, so keep
+    // the same constant as CBN instead of "fixing" the exponent.
+    return 1.0;
 }
 
 double vehicle::coeff_rolling_drag( map &here ) const
@@ -4813,8 +4824,14 @@ double vehicle::lift_thrust_of_rotorcraft( map &here, const bool fuelled, const 
                                           parts[rotor].info().bonus ) * 3.28084;
         rotor_area_in_feet += ( M_PI / 4 ) * std::pow( rotor_diameter_in_feet, 2 );
     }
+    if( rotor_area_in_feet == 0 ) {
+        return 0.0;
+    }
     // take off 15 % due to the imaginary tail rotor power.
     double engine_power_in_hp = 0.00134102 * units::to_watt( total_power( here, fuelled, safe ) );
+    if( engine_power_in_hp <= 0 ) {
+        return 0.0;
+    }
     // lift_thrust in lbthrust
     double lift_thrust = ( 8.8658 * std::pow( engine_power_in_hp / rotor_area_in_feet,
                            -0.3107 ) ) * engine_power_in_hp;
@@ -4823,6 +4840,37 @@ double vehicle::lift_thrust_of_rotorcraft( map &here, const bool fuelled, const 
                    name, lift_thrust, rotor_area_in_feet, engine_power_in_hp, lift_thrust * 4.45 );
     // convert to newtons.
     return lift_thrust * 4.45;
+}
+
+double vehicle::foward_thrust_of_propellers( map &here, const bool fuelled, const bool safe ) const
+{
+    double propeller_area_in_feet = 0.0;
+    for( const int propeller : propellers ) {
+        const vehicle_part &vp = parts[propeller];
+        if( vp.is_broken() || vp.removed || !vp.info().propeller_info ) {
+            continue;
+        }
+        double diameter_in_feet = ( vp.info().propeller_info->propeller_diameter +
+                                    vp.info().bonus ) * 3.28084;
+        propeller_area_in_feet += ( M_PI / 4 ) * std::pow( diameter_in_feet, 2 );
+    }
+    if( propeller_area_in_feet == 0 ) {
+        return 0.0;
+    }
+    // Same thrust-loading model as rotor lift, applied to horizontal propellers.
+    double engine_power_in_hp = 0.00134102 * units::to_watt( total_power( here, fuelled, safe ) );
+    if( engine_power_in_hp <= 0 ) {
+        return 0.0;
+    }
+    double forward_thrust = ( 8.8658 * std::pow( engine_power_in_hp / propeller_area_in_feet,
+                             -0.3107 ) ) * engine_power_in_hp;
+    return forward_thrust * 4.45;
+}
+
+double vehicle::total_aircraft_thrust( map &here, const bool fuelled, const bool safe ) const
+{
+    return lift_thrust_of_rotorcraft( here, fuelled, safe ) +
+           foward_thrust_of_propellers( here, fuelled, safe );
 }
 
 bool vehicle::has_sufficient_rotorlift( map &here ) const
@@ -4870,12 +4918,19 @@ bool vehicle::is_airship( map &here ) const
 
 bool vehicle::is_rotorcraft( map &here ) const
 {
+    // A genuine rotorcraft: rotors provide enough lift to fly.  Lighter-than-air
+    // airships are handled separately by @ref is_airship() so that they do not
+    // inherit helicopter logic (hover fuel, rotor efficiency curves, etc.).
+    return !rotors.empty() && has_sufficient_rotorlift( here );
+}
+
+bool vehicle::is_aircraft( map &here ) const
+{
     // Like CBN, flightworthiness depends only on having enough lift, not on a
     // pilot being seated. An unmanned craft with sufficient lift hovers rather
     // than dropping out of the sky.
-    return ( !rotors.empty() && has_sufficient_rotorlift( here ) ) || is_airship( here );
+    return is_rotorcraft( here ) || is_airship( here );
 }
-
 
 bool vehicle::is_flyable() const
 {
@@ -5049,7 +5104,7 @@ float vehicle::k_traction( map &here, float wheel_traction_area, units::mass mas
         return can_float( here ) ? 1.0f : -1.0f;
     }
     if( is_flying ) {
-        return is_rotorcraft( here ) ? 1.0f : -1.0f;
+        return is_aircraft( here ) ? 1.0f : -1.0f;
     }
     if( is_watercraft() && can_float( here ) ) {
         return 1.0f;
@@ -5304,7 +5359,7 @@ float vehicle::steering_effectiveness( map &here ) const
     }
     if( is_flying ) {
         // I'M IN THE AIR
-        return is_rotorcraft( here ) ? 1.0f : 0.0f;
+        return is_aircraft( here ) ? 1.0f : 0.0f;
     }
     // irksome special case for boats in shallow water
     if( is_watercraft() && can_float( here ) ) {

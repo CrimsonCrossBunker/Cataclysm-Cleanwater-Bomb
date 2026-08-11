@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "calendar.h"
+#include "catalua_platform_content.h"
 #include "character.h"
 #include "condition.h"
 #include "creature.h"
@@ -49,6 +50,11 @@ namespace
 generic_factory<weakpoints> weakpoints_factory( "weakpoint sets" );
 
 } // namespace
+
+generic_factory<weakpoints> &cata::lua_platform::detail::weakpoint_set_registry()
+{
+    return weakpoints_factory;
+}
 
 /** @relates string_id */
 template<>

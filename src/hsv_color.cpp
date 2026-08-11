@@ -13,6 +13,7 @@
 #include <sstream>
 #include <vector>
 
+#include "catalua_platform_content.h"
 #include "debug.h"
 #include "rng.h"
 #include "string_formatter.h"
@@ -24,6 +25,60 @@
 
 static std::unordered_map<RGBColor, std::string> named_colors = {};
 static std::unordered_map<RGBColor, std::string> similar_name_cache = {};
+
+std::vector<cata::lua_platform::detail::named_color_native_definition>
+cata::lua_platform::detail::named_color_registry_snapshot()
+{
+    std::vector<named_color_native_definition> result;
+    result.reserve( named_colors.size() );
+    for( const auto &[color, name] : named_colors ) {
+        result.push_back( { name, color.r, color.g, color.b, color.a } );
+    }
+    return result;
+}
+
+bool cata::lua_platform::detail::named_color_registry_contains( const std::string &name )
+{
+    return std::any_of( named_colors.begin(), named_colors.end(),
+    [&name]( const auto & entry ) {
+        return entry.second == name;
+    } );
+}
+
+bool cata::lua_platform::detail::named_color_registry_color_in_use(
+    const named_color_native_definition &value, const std::string &except_name )
+{
+    const auto found = named_colors.find( RGBColor{
+        value.red, value.green, value.blue, value.alpha
+    } );
+    return found != named_colors.end() && found->second != except_name;
+}
+
+void cata::lua_platform::detail::named_color_registry_set(
+    const named_color_native_definition &value )
+{
+    for( auto it = named_colors.begin(); it != named_colors.end(); ) {
+        if( it->second == value.name ) {
+            it = named_colors.erase( it );
+        } else {
+            ++it;
+        }
+    }
+    named_colors.insert_or_assign(
+        RGBColor{ value.red, value.green, value.blue, value.alpha }, value.name );
+    similar_name_cache.clear();
+}
+
+void cata::lua_platform::detail::named_color_registry_restore(
+    const std::vector<named_color_native_definition> &snapshot )
+{
+    named_colors.clear();
+    for( const named_color_native_definition &value : snapshot ) {
+        named_colors.emplace(
+            RGBColor{ value.red, value.green, value.blue, value.alpha }, value.name );
+    }
+    similar_name_cache.clear();
+}
 
 void RGBColor::load_named_color( const JsonObject &jo, std::string_view )
 {

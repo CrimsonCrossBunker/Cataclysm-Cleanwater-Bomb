@@ -27,6 +27,7 @@
 #include "bionics.h"
 #include "cached_options.h"
 #include "calendar.h"
+#include "catalua_platform.h"
 #include "catalua_ui.h"
 #ifdef TILES
     #include "cata_imgui.h"
@@ -735,6 +736,9 @@ void game::simulate_turn_prefix()
     }
     if constexpr( cata::lua_ui::is_enabled() ) {
         cata::lua_ui::on_turn();
+    }
+    if constexpr( cata::lua_platform::is_enabled() ) {
+        cata::lua_platform::on_turn();
     }
     //used for dimension swapping
     if( swapping_dimensions ) {

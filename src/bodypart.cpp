@@ -10,6 +10,7 @@
 
 #include "body_part_set.h"
 #include "calendar.h"
+#include "catalua_platform_content.h"
 #include "creature.h"
 #include "debug.h"
 #include "enum_conversions.h"
@@ -108,6 +109,45 @@ generic_factory<limb_score> limb_score_factory( "limb score" );
 std::unordered_map<bodypart_str_id, std::vector<bodypart_str_id>> combined_similar_bodyparts;
 
 } // namespace
+
+generic_factory<limb_score> &cata::lua_platform::detail::limb_score_registry()
+{
+    return limb_score_factory;
+}
+
+generic_factory<body_part_type> &cata::lua_platform::detail::body_part_registry()
+{
+    return body_part_factory;
+}
+
+void cata::lua_platform::detail::refresh_body_part_similarity_cache()
+{
+    combined_similar_bodyparts.clear();
+    for( const body_part_type &part : body_part_factory.get_all() ) {
+        if( part.similar_bodypart.has_value() ) {
+            combined_similar_bodyparts[*part.similar_bodypart].emplace_back( part.id );
+            combined_similar_bodyparts[part.id].emplace_back( *part.similar_bodypart );
+        }
+    }
+}
+
+void cata::lua_platform::detail::refresh_body_part_wound_cache()
+{
+    for( body_part_type &part : body_part_factory.get_all_mod() ) {
+        part.potential_wounds.clear();
+    }
+
+    for( body_part_type &part : body_part_factory.get_all_mod() ) {
+        for( const wound_type &wound_def : wound_type::get_all() ) {
+            if( wound_def.allowed_on_bodypart( part.id ) ) {
+                const bp_wounds candidate = {
+                    wound_def.id, wound_def.damage_types, wound_def.damage_required
+                };
+                part.potential_wounds.add( candidate, wound_def.weight );
+            }
+        }
+    }
+}
 
 static body_part legacy_id_to_enum( const std::string &legacy_id )
 {
@@ -532,6 +572,7 @@ void body_part_type::reset()
 void body_part_type::finalize_all()
 {
     body_part_factory.finalize();
+    cata::lua_platform::detail::refresh_body_part_similarity_cache();
 }
 
 void body_part_type::finalize()
@@ -540,6 +581,7 @@ void body_part_type::finalize()
         unarmed_bonus = true;
     }
 
+    potential_wounds.clear();
     for( const wound_type &wd : wound_type::get_all() ) {
         if( wd.allowed_on_bodypart( id ) ) {
             const bp_wounds bpw = { wd.id, wd.damage_types, wd.damage_required };
@@ -1143,6 +1185,7 @@ void bodypart::add_or_worsen_wound( const wound &wd )
 
                 remove_wound( *old_wound );
                 add_wound( new_wound );
+                return;
             }
         }
 

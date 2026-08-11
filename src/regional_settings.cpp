@@ -10,6 +10,7 @@
 #include <utility>
 #include <variant>
 
+#include "catalua_platform_content.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
@@ -56,6 +57,12 @@ generic_factory<forest_biome_mapgen> forest_biome_mapgen_factory( "forest_biome_
 generic_factory<map_extra_collection> map_extra_collection_factory( "map_extra_collection" );
 generic_factory<region_settings> region_settings_factory( "region_settings_new" );
 } // namespace
+
+generic_factory<map_extra_collection> &
+cata::lua_platform::detail::map_extra_collection_registry()
+{
+    return map_extra_collection_factory;
+}
 
 /** OBJ */
 template<>

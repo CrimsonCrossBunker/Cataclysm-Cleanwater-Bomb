@@ -11,6 +11,7 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "character.h"
+#include "catalua_platform_content.h"
 #include "color.h"
 #include "debug.h"
 #include "effect_on_condition.h"
@@ -350,6 +351,32 @@ std::string enum_to_string<ter_furn_flag>( ter_furn_flag data )
 } // namespace io
 
 static std::unordered_map<std::string, connect_group> ter_connects_map;
+
+const connect_group *cata::lua_platform::detail::connect_group_registry_find(
+    const std::string &id )
+{
+    const auto found = ter_connects_map.find( id );
+    return found == ter_connects_map.end() ? nullptr : &found->second;
+}
+
+std::size_t cata::lua_platform::detail::connect_group_registry_size()
+{
+    return ter_connects_map.size();
+}
+
+void cata::lua_platform::detail::connect_group_registry_set( const connect_group &value )
+{
+    connect_group replacement = value;
+    const auto found = ter_connects_map.find( value.id.str() );
+    replacement.index = found == ter_connects_map.end() ?
+                        static_cast<int>( ter_connects_map.size() ) : found->second.index;
+    ter_connects_map[value.id.str()] = std::move( replacement );
+}
+
+void cata::lua_platform::detail::connect_group_registry_erase( const std::string &id )
+{
+    ter_connects_map.erase( id );
+}
 
 /** @relates string_id */
 template<>

@@ -11,6 +11,7 @@ from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DECLARATIONS = Path("data/lua/types/ccb_api_v5.d.lua")
+PLATFORM_DECLARATIONS = Path("data/lua/types/ccb_platform_v1.d.lua")
 
 TABLE_CLASSES = {
     "achievements": "CcbAchievementsApi",
@@ -119,9 +120,22 @@ DECLARED_CLASS = re.compile(
     r"^---@class\s+([A-Za-z_][A-Za-z0-9_]*)",
     re.MULTILINE,
 )
+DECLARED_ALIAS = re.compile(
+    r"^---@alias\s+([A-Za-z_][A-Za-z0-9_]*)",
+    re.MULTILINE,
+)
+DECLARED_GENERIC = re.compile(
+    r"^---@generic\s+([A-Za-z_][A-Za-z0-9_]*)",
+    re.MULTILINE,
+)
+CUSTOM_TYPE_REFERENCE = re.compile(r"\b[A-Z][A-Za-z0-9_]*\b")
 NEW_USERTYPE = re.compile(
     r"new_usertype\s*<[^>]+>\s*\(\s*\"([^\"]+)\"",
     re.DOTALL,
+)
+QUOTED_MEMBER = re.compile(r'"([A-Za-z_][A-Za-z0-9_]*)"\s*,')
+PLATFORM_PROPERTY = re.compile(
+    r'"([A-Za-z_][A-Za-z0-9_]*)"\s*,\s*sol::property\s*\('
 )
 COORDINATE_KIND = re.compile(
     r'\{\s*"([a-z]+_[a-z]+)"\s*,\s*coords::origin::'
@@ -150,10 +164,31 @@ LUA_RESERVED_WORDS = {
     "until",
     "while",
 }
+PLATFORM_PRIVATE_USERTYPE_ALIASES = {
+    "_ModDefinitionNative": "ModDefinition",
+}
+
+
+def platform_public_usertype_name(name: str) -> str | None:
+    if name in PLATFORM_PRIVATE_USERTYPE_ALIASES:
+        return PLATFORM_PRIVATE_USERTYPE_ALIASES[name]
+    return None if name.startswith("_") else name
 
 
 def catalua_sources() -> list[Path]:
-    return sorted((REPOSITORY_ROOT / "src").glob("catalua*.cpp"))
+    # Platform v1 has an independent declaration and version contract.
+    return sorted(
+        path
+        for path in (REPOSITORY_ROOT / "src").glob("catalua*.cpp")
+        if not path.name.startswith("catalua_platform")
+    )
+
+
+def platform_sources() -> list[Path]:
+    return [
+        REPOSITORY_ROOT / "src/catalua_platform.cpp",
+        REPOSITORY_ROOT / "src/catalua_platform_runtime.cpp",
+    ]
 
 
 def source_methods() -> dict[str, set[str]]:
@@ -170,6 +205,176 @@ def source_usertypes() -> set[str]:
     for path in catalua_sources():
         contents = path.read_text(encoding="utf-8", errors="replace")
         result.update(NEW_USERTYPE.findall(contents))
+    return result
+
+
+def platform_source_usertypes() -> set[str]:
+    result: set[str] = set()
+    for path in platform_sources():
+        contents = path.read_text(encoding="utf-8", errors="replace")
+        for native_name in NEW_USERTYPE.findall(contents):
+            if public_name := platform_public_usertype_name(native_name):
+                result.add(public_name)
+    return result
+
+
+def platform_usertype_members() -> dict[str, set[str]]:
+    result: dict[str, set[str]] = defaultdict(set)
+    for path in platform_sources():
+        contents = path.read_text(encoding="utf-8", errors="replace")
+        for match in NEW_USERTYPE.finditer(contents):
+            usertype = platform_public_usertype_name(match.group(1))
+            if usertype is None:
+                continue
+            opening = contents.find("(", match.start())
+            depth = 0
+            quoted = False
+            escaped = False
+            closing = opening
+            for closing in range(opening, len(contents)):
+                character = contents[closing]
+                if quoted:
+                    if escaped:
+                        escaped = False
+                    elif character == "\\":
+                        escaped = True
+                    elif character == '"':
+                        quoted = False
+                    continue
+                if character == '"':
+                    quoted = True
+                elif character == "(":
+                    depth += 1
+                elif character == ")":
+                    depth -= 1
+                    if depth == 0:
+                        break
+            block = contents[match.end():closing]
+            result[usertype].update(QUOTED_MEMBER.findall(block))
+    return result
+
+
+def platform_source_properties() -> set[str]:
+    result: set[str] = set()
+    # ModDefinition remains the only property-bearing bootstrap usertype in
+    # catalua_platform.cpp. Runtime usertypes are checked by their declared
+    # classes and registered method tables below.
+    path = REPOSITORY_ROOT / "src/catalua_platform.cpp"
+    contents = path.read_text(encoding="utf-8", errors="replace")
+    result.update(PLATFORM_PROPERTY.findall(contents))
+    return result
+
+
+PLATFORM_TABLE_CLASSES = {
+    "achievements": "CcbPlatformAchievementsApi",
+    "activities": "CcbPlatformActivitiesApi",
+    "bionics": "CcbPlatformBionicsApi",
+    "content": "CcbPlatformContent",
+    "environment": "CcbPlatformEnvironmentQueries",
+    "inventory": "CcbPlatformInventoryApi",
+    "martial_arts": "CcbPlatformMartialArtsApi",
+    "morale": "CcbPlatformMoraleApi",
+    "mods": "CcbPlatformModQueries",
+    "random": "CcbPlatformRandomApi",
+    "recipes": "CcbPlatformRecipesApi",
+    "runtime_api": "CcbPlatformRuntime",
+    "scope": "CcbPlatformStateScope",
+    "strings": "CcbPlatformStringPredicates",
+    "tasks": "CcbPlatformTasks",
+    "presentation": "CcbPlatformPresentation",
+    "services": "CcbPlatformServices",
+    "wounds": "CcbPlatformWoundsApi",
+}
+
+PLATFORM_INTENTIONALLY_UNDECLARED_TABLES = {
+    "ccb",
+    "lua",
+}
+
+PLATFORM_SERVICE_FIELDS = {
+    "achievements",
+    "activities",
+    "addictions",
+    "bionics",
+    "camps",
+    "characters",
+    "constants",
+    "coords",
+    "crafting",
+    "creatures",
+    "effects",
+    "enums",
+    "factions",
+    "followers",
+    "gameplay",
+    "handles",
+    "hordes",
+    "inventory",
+    "items",
+    "martial_arts",
+    "messages",
+    "missions",
+    "morale",
+    "mutations",
+    "needs",
+    "npcs",
+    "overmap",
+    "proficiencies",
+    "random",
+    "recipes",
+    "relocation",
+    "requirements",
+    "serde",
+    "skills",
+    "sound",
+    "spawns",
+    "spells",
+    "statistics",
+    "targeting",
+    "time",
+    "types",
+    "units",
+    "variables",
+    "vehicles",
+    "vitamins",
+    "weather",
+    "wounds",
+    "world",
+    "zones",
+}
+
+
+def platform_source_methods() -> dict[str, set[str]]:
+    result: dict[str, set[str]] = defaultdict(set)
+    for path in platform_sources():
+        contents = path.read_text(encoding="utf-8", errors="replace")
+        for table, method in SET_FUNCTION.findall(contents):
+            result[table].add(method)
+    unknown = sorted(
+        set(result) - set(PLATFORM_TABLE_CLASSES) -
+        PLATFORM_INTENTIONALLY_UNDECLARED_TABLES
+    )
+    if unknown:
+        raise RuntimeError(
+            "Platform LuaLS checker omits registered API table mappings: "
+            f"{unknown}"
+        )
+    result = defaultdict(
+        set,
+        {
+            table: methods
+            for table, methods in result.items()
+            if table in PLATFORM_TABLE_CLASSES
+        },
+    )
+    # Platform installs this native snapshot layer directly into
+    # `ccb.services`.  The implementation is shared with v5, while the table
+    # membership is an independent Platform contract checked here.
+    shared_services = REPOSITORY_ROOT / "src/catalua_ui_game.cpp"
+    contents = shared_services.read_text(encoding="utf-8", errors="replace")
+    for table, method in SET_FUNCTION.findall(contents):
+        if table == "game":
+            result["services"].add(method)
     return result
 
 
@@ -224,6 +429,164 @@ def class_fields(contents: str, class_name: str) -> dict[str, str]:
         result[field_name] = field_type
         cursor += 1
     return result
+
+
+def class_methods(contents: str, class_name: str) -> list[str]:
+    return [
+        method
+        for declared_class, method in DECLARED_METHOD.findall(contents)
+        if declared_class == class_name
+    ]
+
+
+def declared_type_names(contents: str) -> set[str]:
+    return (
+        set(DECLARED_CLASS.findall(contents)) |
+        set(DECLARED_ALIAS.findall(contents)) |
+        set(DECLARED_GENERIC.findall(contents))
+    )
+
+
+def leading_type_expression(value: str) -> str:
+    """Return the leading LuaLS type, without its prose description."""
+    value = value.strip()
+    depths = {"(": 0, "<": 0, "[": 0, "{": 0}
+    closers = {")": "(", ">": "<", "]": "[", "}": "{"}
+    quote: str | None = None
+    escaped = False
+    for index, character in enumerate(value):
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == quote:
+                quote = None
+            continue
+        if character in {"'", '"'}:
+            quote = character
+            continue
+        if character in depths:
+            depths[character] += 1
+            continue
+        if character in closers:
+            opener = closers[character]
+            depths[opener] = max(0, depths[opener] - 1)
+            continue
+        if not character.isspace() or any(depths.values()):
+            continue
+        previous = value[:index].rstrip()[-1:]
+        following = value[index:].lstrip()[:1]
+        if previous in {":", "|", "&", ","}:
+            continue
+        if following in {"|", "&", "<", "["}:
+            continue
+        return value[:index]
+    return value
+
+
+def split_return_declarations(value: str) -> list[str]:
+    """Split a LuaLS return list without splitting generic arguments."""
+    result: list[str] = []
+    start = 0
+    depths = {"(": 0, "<": 0, "[": 0, "{": 0}
+    closers = {")": "(", ">": "<", "]": "[", "}": "{"}
+    quote: str | None = None
+    escaped = False
+    for index, character in enumerate(value):
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == quote:
+                quote = None
+            continue
+        if character in {"'", '"'}:
+            quote = character
+            continue
+        if character in depths:
+            depths[character] += 1
+            continue
+        if character in closers:
+            opener = closers[character]
+            depths[opener] = max(0, depths[opener] - 1)
+            continue
+        if character == "," and not any(depths.values()):
+            result.append(value[start:index].strip())
+            start = index + 1
+    result.append(value[start:].strip())
+    return [entry for entry in result if entry]
+
+
+def referenced_type_names(contents: str) -> dict[str, set[int]]:
+    """Return custom LuaLS type references and their source lines."""
+    result: dict[str, set[int]] = defaultdict(set)
+    patterns = {
+        "field": re.compile(
+            r"^---@field\s+[A-Za-z_][A-Za-z0-9_]*\??\s+(.+)$"
+        ),
+        "param": re.compile(
+            r"^---@param\s+[A-Za-z_][A-Za-z0-9_]*\??\s+(.+)$"
+        ),
+        "return": re.compile(r"^---@return\s+(.+)$"),
+        "type": re.compile(r"^---@type\s+(.+)$"),
+        "overload": re.compile(r"^---@overload\s+(.+)$"),
+        "alias": re.compile(
+            r"^---@alias\s+[A-Za-z_][A-Za-z0-9_]*(?:\s+(.+))?$"
+        ),
+        "class": re.compile(
+            r"^---@class\s+[A-Za-z_][A-Za-z0-9_]*\s*:\s*(.+)$"
+        ),
+        "generic": re.compile(
+            r"^---@generic\s+[A-Za-z_][A-Za-z0-9_]*\s*:\s*(.+)$"
+        ),
+    }
+    for line_number, line in enumerate(contents.splitlines(), start=1):
+        for kind, pattern in patterns.items():
+            match = pattern.match(line)
+            if match is None or match.group(1) is None:
+                continue
+            raw = match.group(1)
+            if kind == "return":
+                expressions = [
+                    leading_type_expression(entry)
+                    for entry in split_return_declarations(raw)
+                ]
+            elif kind in {"field", "param", "type"}:
+                expressions = [leading_type_expression(raw)]
+            else:
+                expressions = [raw]
+            for expression in expressions:
+                without_literals = re.sub(
+                    r"'(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\"",
+                    "",
+                    expression,
+                )
+                for name in CUSTOM_TYPE_REFERENCE.findall(without_literals):
+                    result[name].add(line_number)
+            break
+    return result
+
+
+def validate_type_references(
+    contents: str,
+    additional_types: set[str] | None = None,
+) -> None:
+    """Reject LuaLS annotations that refer to undeclared custom types."""
+    known = declared_type_names(contents)
+    if additional_types is not None:
+        known.update(additional_types)
+    references = referenced_type_names(contents)
+    missing = sorted(set(references) - known)
+    if missing:
+        details = ", ".join(
+            f"{name} (lines {sorted(references[name])})"
+            for name in missing
+        )
+        raise RuntimeError(
+            f"LuaLS declarations reference undefined types: {details}"
+        )
 
 
 def validate_table_mappings(
@@ -368,7 +731,7 @@ def check(path: Path) -> dict[str, int]:
         raise RuntimeError(
             f"LuaLS declarations omit usertypes: {missing_types}"
         )
-
+    validate_type_references(contents)
     coordinate_fields = set(
         re.findall(
             r"^---@field\s+((?:point|tripoint)_[a-z]+_[a-z]+)\s+fun",
@@ -403,6 +766,101 @@ def check(path: Path) -> dict[str, int]:
     }
 
 
+def check_platform(path: Path = PLATFORM_DECLARATIONS) -> dict[str, int]:
+    contents = path.read_text(encoding="utf-8")
+    if "Lua-first Platform v1" not in contents:
+        raise RuntimeError("LuaLS declaration header is not Platform v1")
+    validate_annotation_contracts(contents)
+    classes = set(DECLARED_CLASS.findall(contents))
+    usertypes = platform_source_usertypes()
+    missing_types = sorted(usertypes - classes)
+    if missing_types:
+        raise RuntimeError(
+            f"Platform LuaLS declarations omit usertypes: {missing_types}"
+        )
+    native_members = platform_usertype_members()
+    for usertype, members in native_members.items():
+        declared = set(class_fields(contents, usertype)) | set(
+            class_methods(contents, usertype)
+        )
+        if members != declared:
+            raise RuntimeError(
+                f"Platform LuaLS members differ from native {usertype}: "
+                f"declared={sorted(declared)}, native={sorted(members)}"
+            )
+    properties = platform_source_properties()
+    declared_properties = set(class_fields(contents, "ModDefinition"))
+    if properties != declared_properties:
+        raise RuntimeError(
+            "Platform LuaLS ModDefinition fields differ from native "
+            f"properties: declared={sorted(declared_properties)}, "
+            f"native={sorted(properties)}"
+        )
+    module_fields = class_fields(contents, "CcbPlatformV1")
+    expected_module_fields = {
+        "platform_version": "1",
+        "content": "CcbPlatformContent",
+        "runtime": "CcbPlatformRuntime",
+        "state": "CcbPlatformState",
+        "tasks": "CcbPlatformTasks",
+        "presentation": "CcbPlatformPresentation",
+        "services": "CcbPlatformServices",
+    }
+    for field, expected_type in expected_module_fields.items():
+        if module_fields.get(field) != expected_type:
+            raise RuntimeError(
+                f"Platform LuaLS module field {field} is "
+                f"{module_fields.get(field) or 'missing'}, expected "
+                f"{expected_type}"
+            )
+    constructor = module_fields.get("ModDefinition", "")
+    if not constructor.startswith("fun("):
+        raise RuntimeError(
+            "Platform LuaLS ModDefinition constructor is missing"
+        )
+    declared_service_fields = set(
+        class_fields(contents, "CcbPlatformServices")
+    )
+    if declared_service_fields != PLATFORM_SERVICE_FIELDS:
+        raise RuntimeError(
+            "Platform LuaLS service fields differ from the installed "
+            f"domain set: declared={sorted(declared_service_fields)}, "
+            f"expected={sorted(PLATFORM_SERVICE_FIELDS)}"
+        )
+    methods = platform_source_methods()
+    if set(methods) != set(PLATFORM_TABLE_CLASSES):
+        raise RuntimeError(
+            "Platform native method tables differ from checker mappings: "
+            f"native={sorted(methods)}, "
+            f"mapped={sorted(PLATFORM_TABLE_CLASSES)}"
+        )
+    for table, native_methods in methods.items():
+        declared = set(
+            class_methods(contents, PLATFORM_TABLE_CLASSES[table])
+        )
+        if native_methods != declared:
+            raise RuntimeError(
+                "Platform LuaLS methods differ for "
+                f"{PLATFORM_TABLE_CLASSES[table]}: "
+                f"declared={sorted(declared)}, native={sorted(native_methods)}"
+            )
+    shared_contents = (
+        REPOSITORY_ROOT / DEFAULT_DECLARATIONS
+    ).read_text(encoding="utf-8")
+    validate_type_references(
+        contents,
+        declared_type_names(shared_contents),
+    )
+    return {
+        "usertypes": len(usertypes),
+        "properties": len(properties),
+        "methods": sum(len(value) for value in methods.values()),
+        "usertype_members": sum(
+            len(value) for value in native_members.values()
+        ),
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -410,12 +868,16 @@ def main() -> None:
     )
     args = parser.parse_args()
     result = check(args.declarations)
+    platform_result = check_platform()
     print(
         "LuaLS declarations cover "
         f"{result['methods']} methods across {result['tables']} tables, "
         f"{result['game_tables']} game API domains, "
         f"{result['usertypes']} usertypes, and "
-        f"{result['coordinate_factories']} coordinate factories."
+        f"{result['coordinate_factories']} coordinate factories; "
+        "Platform v1 covers "
+        f"{platform_result['usertypes']} usertypes and "
+        f"{platform_result['properties']} properties."
     )
 
 

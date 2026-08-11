@@ -690,7 +690,7 @@ static void draw_city_labels( const catacurses::window &w, const tripoint_abs_om
             continue;   // right under the cursor.
         }
 
-        if( !overmap_buffer.seen_more_than( tripoint_abs_omt( city_pos, center.z() ),
+        if( !overmap_buffer.seen_more_than( tripoint_abs_omt( city_pos, 0 ),
                                             om_vision_level::outlines ) ) {
             continue;   // haven't seen it.
         }
@@ -730,7 +730,7 @@ static void draw_camp_labels( const catacurses::window &w, const tripoint_abs_om
             continue;   // right under the cursor.
         }
 
-        if( !overmap_buffer.seen_more_than( tripoint_abs_omt( camp_pos, center.z() ),
+        if( !overmap_buffer.seen_more_than( tripoint_abs_omt( camp_pos, 0 ),
                                             om_vision_level::outlines ) ) {
             continue;   // haven't seen it.
         }
@@ -1187,7 +1187,7 @@ static void draw_ascii( const catacurses::window &w, overmap_draw_data_t &data )
         }
     }
 
-    if( cursor_pos.z() == 0 && uistate.overmap_show_city_labels ) {
+    if( cursor_pos.z() >= 0 && uistate.overmap_show_city_labels ) {
         draw_city_labels( w, cursor_pos );
         draw_camp_labels( w, cursor_pos );
     }
@@ -1967,7 +1967,7 @@ static std::vector<tripoint_abs_omt> get_overmap_path_to( const tripoint_abs_omt
         }
         player_veh = &vp->vehicle();
         // for now we can only handle flyers if already in the air
-        const bool can_fly = player_veh->is_rotorcraft( here ) && player_veh->is_flying_in_air();
+        const bool can_fly = player_veh->is_aircraft( here ) && player_veh->is_flying_in_air();
         const bool can_float = player_veh->can_float( here );
         const bool can_drive = player_veh->valid_wheel_config( here );
         // TODO: check engines/fuel

@@ -316,7 +316,7 @@ vehicle_options read_vehicle_options(
 
 game_handle make_map_item_handle(
     item &entry, const tripoint_abs_ms &position,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     game_handle_locator locator;
@@ -332,7 +332,7 @@ game_handle make_map_item_handle(
 
 game_handle make_vehicle_handle(
     vehicle &entry, const tripoint_abs_ms &position,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     game_handle_locator locator;
@@ -396,7 +396,7 @@ sol::table snapshot_fields(
 sol::table snapshot_items(
     sol::state_view lua, map_stack entries,
     const tripoint_abs_ms &position, const int limit,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const std::size_t total = entries.size();
@@ -438,7 +438,7 @@ sol::table snapshot_items(
 sol::table snapshot_vehicle_at(
     sol::state_view lua, map &here,
     const tripoint_bub_ms &position,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::table result = lua.create_table();
@@ -480,7 +480,7 @@ sol::table snapshot_tile(
     sol::state_view lua, map &here,
     const tripoint_bub_ms &position,
     const tile_options &options,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const tripoint_abs_ms absolute =
@@ -581,7 +581,7 @@ sol::table world_tile(
     sol::this_state lua,
     const script_tripoint_coord &position,
     const sol::optional<sol::table> &requested_options,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     map &here = get_map();
@@ -600,7 +600,7 @@ sol::table world_region(
     sol::this_state lua,
     const script_tripoint_coord &center,
     const sol::optional<sol::table> &requested_options,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     map &here = get_map();
@@ -665,7 +665,7 @@ sol::table world_region(
 sol::table world_vehicles(
     sol::this_state lua,
     const sol::optional<sol::table> &requested_options,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const vehicle_options options =
@@ -978,7 +978,7 @@ sol::table spawn_item(
     const script_tripoint_coord &position,
     const script_game_id &requested,
     const std::int64_t quantity,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
@@ -1057,7 +1057,7 @@ sol::table remove_item(
     sol::this_state lua,
     const script_tripoint_coord &position,
     const game_handle &handle,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
@@ -1105,7 +1105,7 @@ sol::table remove_item(
 
 void install_world_api(
     sol::table &game,
-    std::function<std::size_t()> current_runtime_generation,
+    std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write )

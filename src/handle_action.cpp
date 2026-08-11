@@ -3432,6 +3432,40 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                     }
                 }
 
+                // QQ#183: while auto-moving (auto travel mode or destination
+                // travel), pace to the slowest following NPC so the party stays
+                // together.  If a follower slower than the avatar has fallen
+                // behind, spend the rest of the turn waiting for it to catch up
+                // instead of stepping away again.
+                if( player_character.is_auto_moving() && !player_character.in_vehicle ) {
+                    npc *slowest_follower = nullptr;
+                    int worst_lag = 0;
+                    const int player_speed = player_character.get_speed();
+                    for( npc *guy : g->get_npcs_if( []( const npc & n ) {
+                    return n.is_walking_with() && n.can_follow_player_now();
+                    } ) ) {
+                        if( guy->get_speed() >= player_speed ) {
+                            continue;
+                        }
+                        const int lag = rl_dist( guy->pos_bub(), player_character.pos_bub() );
+                        if( lag > worst_lag ) {
+                            worst_lag = lag;
+                            slowest_follower = guy;
+                        }
+                    }
+                    if( slowest_follower != nullptr ) {
+                        const int threshold =
+                            std::max( slowest_follower->desired_follow_radius() + 1, 4 );
+                        // Only pace while the follower is still on the way; a far-away
+                        // or stuck follower must not stop travel forever.
+                        if( worst_lag > threshold && worst_lag < 20 ) {
+                            player_character.set_moves( 0 );
+                            add_msg( m_info, _( "You slow down to let %s catch up." ),
+                                     slowest_follower->get_name() );
+                        }
+                    }
+                }
+
                 // if we changed move modes this action, refund half the cost of changing move mode
                 // if their move action was an easy movement to represent combining the two actions
                 if( desired_move_mode_cost > 0 ) {
@@ -3483,9 +3517,21 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 // standing on.  pldrive() already selects the remote vehicle
                 // first, so mirror that behavior for vertical movement.
                 if( vehicle *remote_veh = g->remoteveh();
-                    remote_veh && remote_veh->is_rotorcraft( here ) ) {
+                    remote_veh && remote_veh->is_aircraft( here ) ) {
                     pldrive( tripoint_rel_ms::below );
                     break;
+                }
+
+                // While piloting an aircraft, "descend" means fly down rather
+                // than climb a vehicle ladder mounted on the same tile.  Mirror
+                // the ACTION_MOVE_UP ordering: aircraft control wins over the
+                // ladder, and ladder climbing remains available on foot.
+                if( has_vehicle_control( player_character ) ) {
+                    const optional_vpart_position vp = here.veh_at( player_character.pos_bub() );
+                    if( vp && vp->vehicle().is_aircraft( here ) ) {
+                        pldrive( tripoint_rel_ms::below );
+                        break;
+                    }
                 }
 
                 const tripoint_bub_ms pos = player_character.pos_bub();
@@ -3503,14 +3549,6 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                     }
                     vertical_move( ladder_dest->z() - pos.z(), true );
                     break;
-                }
-
-                if( has_vehicle_control( player_character ) ) {
-                    const optional_vpart_position vp = here.veh_at( player_character.pos_bub() );
-                    if( vp && vp->vehicle().is_rotorcraft( here ) ) {
-                        pldrive( tripoint_rel_ms::below );
-                        break;
-                    }
                 }
 
                 if( has_vehicle_ladder ) {
@@ -3570,7 +3608,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             // As with horizontal remote driving, route vertical input to the
             // remote aircraft before considering movement by the operator.
             if( vehicle *remote_veh = g->remoteveh();
-                remote_veh && remote_veh->is_rotorcraft( here ) ) {
+                remote_veh && remote_veh->is_aircraft( here ) ) {
                 pldrive( tripoint_rel_ms::above );
                 break;
             }
@@ -3587,7 +3625,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 vertical_move( 1, u.has_flag( json_flag_PHASE_MOVEMENT ) );
             } else if( has_vehicle_control( player_character ) ) {
                 const optional_vpart_position vp = here.veh_at( player_character.pos_bub() );
-                if( vp && vp->vehicle().is_rotorcraft( here ) ) {
+                if( vp && vp->vehicle().is_aircraft( here ) ) {
                     pldrive( tripoint_rel_ms::above );
                 }
             }

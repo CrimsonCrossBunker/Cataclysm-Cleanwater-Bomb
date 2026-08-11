@@ -1,6 +1,7 @@
 #include "flag.h"
 
 #include "debug.h"
+#include "catalua_platform_content.h"
 #include "generic_factory.h"
 #include "type_id.h"
 
@@ -402,6 +403,11 @@ namespace
 {
 generic_factory<json_flag> json_flags_all( "json_flags" );
 } // namespace
+
+generic_factory<json_flag> &cata::lua_platform::detail::json_flag_registry()
+{
+    return json_flags_all;
+}
 
 /** @relates string_id */
 template<>

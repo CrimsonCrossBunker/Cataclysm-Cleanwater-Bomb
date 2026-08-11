@@ -35,6 +35,7 @@
 #include "catalua_bindings.h"
 #include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
+#include "catalua_platform_runtime.h"
 #include "catalua_ui_actions.h"
 #include "catalua_ui_actions_internal.h"
 #include "catalua_ui_addictions.h"
@@ -457,6 +458,8 @@ class runtime_state : public event_subscriber
         int mapgen_dispatch_depth = 0;
         std::size_t generation = 0;
         std::size_t world_generation = 0;
+        game_handle_runtime_owner_ptr game_handle_owner =
+            make_game_handle_runtime_owner();
         bool accept_actions = false;
         std::optional<std::size_t> current_source;
         std::optional<std::string> current_page;
@@ -466,6 +469,11 @@ class runtime_state : public event_subscriber
         std::uint64_t slow_callback_count = 0;
         std::string last_slow_callback;
 };
+
+game_handle_runtime current_game_handle_runtime( const runtime_state &state )
+{
+    return game_handle_runtime( state.game_handle_owner, state.generation );
+}
 
 struct runtime_diagnostic_record {
     std::uint64_t sequence = 0;
@@ -4252,11 +4260,12 @@ void initialize_state( runtime_state &state )
         return mapgen_limits( state, lua );
     } );
     game["mapgen"] = std::move( mapgen );
+    const auto current_handle_runtime = [&state]() {
+        return current_game_handle_runtime( state );
+    };
     install_game_handle_api(
         state.lua, game,
-    [&state]() {
-        return state.generation;
-    },
+        current_handle_runtime,
     [&state]() {
         return state.world_generation;
     },
@@ -4266,9 +4275,7 @@ void initialize_state( runtime_state &state )
     } );
     install_creature_api(
         game,
-    [&state]() {
-        return state.generation;
-    },
+        current_handle_runtime,
     [&state]() {
         return state.world_generation;
     },
@@ -4282,9 +4289,7 @@ void initialize_state( runtime_state &state )
     } );
     install_effect_api(
         game,
-    [&state]() {
-        return state.generation;
-    },
+        current_handle_runtime,
     [&state]() {
         return state.world_generation;
     },
@@ -4298,9 +4303,7 @@ void initialize_state( runtime_state &state )
     } );
     install_eoc_api(
         game,
-    [&state]() {
-        return state.generation;
-    },
+        current_handle_runtime,
     [&state]() {
         return state.world_generation;
     },
@@ -4318,9 +4321,7 @@ void initialize_state( runtime_state &state )
     } );
     install_bionic_api(
         game,
-    [&state]() {
-        return state.generation;
-    },
+        current_handle_runtime,
     [&state]() {
         return state.world_generation;
     },
@@ -4334,9 +4335,7 @@ void initialize_state( runtime_state &state )
     } );
     install_mutation_api(
         game,
-    [&state]() {
-        return state.generation;
-    },
+        current_handle_runtime,
     [&state]() {
         return state.world_generation;
     },
@@ -4350,9 +4349,7 @@ void initialize_state( runtime_state &state )
     } );
     install_skill_api(
         game,
-    [&state]() {
-        return state.generation;
-    },
+        current_handle_runtime,
     [&state]() {
         return state.world_generation;
     },
@@ -4366,9 +4363,7 @@ void initialize_state( runtime_state &state )
     } );
     install_proficiency_api(
         game,
-    [&state]() {
-        return state.generation;
-    },
+        current_handle_runtime,
     [&state]() {
         return state.world_generation;
     },
@@ -4382,9 +4377,7 @@ void initialize_state( runtime_state &state )
     } );
     install_vitamin_api(
         game,
-    [&state]() {
-        return state.generation;
-    },
+        current_handle_runtime,
     [&state]() {
         return state.world_generation;
     },
@@ -4398,9 +4391,7 @@ void initialize_state( runtime_state &state )
     } );
     install_addiction_api(
         game,
-    [&state]() {
-        return state.generation;
-    },
+        current_handle_runtime,
     [&state]() {
         return state.world_generation;
     },
@@ -4439,9 +4430,7 @@ void initialize_state( runtime_state &state )
     } );
     install_need_api(
         game,
-    [&state]() {
-        return state.generation;
-    },
+        current_handle_runtime,
     [&state]() {
         return state.world_generation;
     },
@@ -4455,9 +4444,7 @@ void initialize_state( runtime_state &state )
     } );
     install_martial_art_api(
         game,
-    [&state]() {
-        return state.generation;
-    },
+        current_handle_runtime,
     [&state]() {
         return state.world_generation;
     },
@@ -4471,9 +4458,7 @@ void initialize_state( runtime_state &state )
     } );
     install_vehicle_api(
         game,
-    [&state]() {
-        return state.generation;
-    },
+        current_handle_runtime,
     [&state]() {
         return state.world_generation;
     },
@@ -4487,9 +4472,7 @@ void initialize_state( runtime_state &state )
     } );
     install_npc_api(
         game,
-    [&state]() {
-        return state.generation;
-    },
+        current_handle_runtime,
     [&state]() {
         return state.world_generation;
     },
@@ -4523,9 +4506,7 @@ void initialize_state( runtime_state &state )
     } );
     install_zone_api(
         state.lua, game,
-    [&state]() {
-        return state.generation;
-    },
+        current_handle_runtime,
     [&state]() {
         return state.world_generation;
     },
@@ -4539,9 +4520,7 @@ void initialize_state( runtime_state &state )
     } );
     install_magic_api(
         game,
-    [&state]() {
-        return state.generation;
-    },
+        current_handle_runtime,
     [&state]() {
         return state.world_generation;
     },
@@ -4555,9 +4534,7 @@ void initialize_state( runtime_state &state )
     } );
     install_mission_api(
         game,
-    [&state]() {
-        return state.generation;
-    },
+        current_handle_runtime,
     [&state]() {
         return state.world_generation;
     },
@@ -4587,9 +4564,7 @@ void initialize_state( runtime_state &state )
     } );
     install_world_api(
         game,
-    [&state]() {
-        return state.generation;
-    },
+        current_handle_runtime,
     [&state]() {
         return state.world_generation;
     },
@@ -4616,9 +4591,7 @@ void initialize_state( runtime_state &state )
     } );
     install_horde_api(
         game,
-    [&state]() {
-        return state.generation;
-    },
+        current_handle_runtime,
     [&state]() {
         return state.world_generation;
     },
@@ -4632,9 +4605,7 @@ void initialize_state( runtime_state &state )
     } );
     install_item_api(
         game,
-    [&state]() {
-        return state.generation;
-    },
+        current_handle_runtime,
     [&state]() {
         return state.world_generation;
     },
@@ -4687,9 +4658,7 @@ void initialize_state( runtime_state &state )
     } );
     install_game_world_service_api(
         game,
-    [&state]() {
-        return state.generation;
-    },
+        current_handle_runtime,
     [&state]() {
         return state.world_generation;
     },
@@ -5291,7 +5260,7 @@ game_handle native_creature_handle(
     }
     return game_handle::from_creature(
                mutable_creature, std::move( locator ),
-               state.generation, state.world_generation );
+               current_game_handle_runtime( state ), state.world_generation );
 }
 
 sol::object native_talker_to_lua(
@@ -5310,7 +5279,7 @@ sol::object native_talker_to_lua(
             mutable_item, {
                 "callback_talker_item",
                 value->uid().get_value(), 0, 0, 0, {}
-            }, state.generation, state.world_generation ) );
+            }, current_game_handle_runtime( state ), state.world_generation ) );
         }
     }
     if( const vehicle *value = talker.get_const_vehicle() ) {
@@ -5322,7 +5291,7 @@ sol::object native_talker_to_lua(
         mutable_vehicle, {
             "callback_talker_vehicle", 0,
             position.x(), position.y(), position.z(), {}
-        }, state.generation, state.world_generation ) );
+        }, current_game_handle_runtime( state ), state.world_generation ) );
     }
 
     sol::table snapshot = state.lua.create_table();
@@ -5377,7 +5346,7 @@ sol::object native_callback_value_to_lua(
             mutable_item, {
                 "callback_item",
                 entry->uid().get_value(), 0, 0, 0, {}
-            }, state.generation, state.world_generation ) );
+            }, current_game_handle_runtime( state ), state.world_generation ) );
         } else if constexpr( std::is_same_v<value_type, native_callback_point> )
         {
             sol::table point = state.lua.create_table();
@@ -5410,7 +5379,7 @@ sol::object native_callback_value_to_lua(
         {
             return sol::make_object(
                        lua, mission_token(
-                           entry.uid, state.generation,
+                           entry.uid, current_game_handle_runtime( state ),
                            state.world_generation ) );
         } else
         {
@@ -6724,19 +6693,30 @@ native_hook_result dispatch_native_hook_result(
     const std::string_view name,
     const native_callback_arguments &arguments )
 {
-    if( !active_state || is_pool_worker_thread() ) {
+    if( is_pool_worker_thread() ) {
         return {};
     }
+    native_hook_result aggregate;
+    if( active_state ) {
+        try {
+            aggregate = dispatch_script_hook(
+            *active_state, name, [&]( const std::size_t ) {
+                return native_callback_payload( *active_state, arguments );
+            } );
+        } catch( const std::exception &exception ) {
+            record_runtime_error(
+                "Lua native hook '" + std::string( name ) + "'",
+                exception.what() );
+        }
+    }
     try {
-        return dispatch_script_hook(
-        *active_state, name, [&]( const std::size_t ) {
-            return native_callback_payload( *active_state, arguments );
-        } );
+        return cata::lua_platform::dispatch_runtime_hook(
+                   name, arguments, aggregate );
     } catch( const std::exception &exception ) {
         record_runtime_error(
-            "Lua native hook '" + std::string( name ) + "'",
+            "Lua-first Platform native hook '" + std::string( name ) + "'",
             exception.what() );
-        return {};
+        return aggregate;
     }
 }
 
@@ -6749,9 +6729,22 @@ bool dispatch_native_hook(
 
 bool has_native_hook( const std::string_view name )
 {
-    return active_state && !is_pool_worker_thread() &&
-           active_state->hook_registry.has_matching(
-               "hook:" + std::string( name ) );
+    return !is_pool_worker_thread() &&
+           ( ( active_state && active_state->hook_registry.has_matching(
+                   "hook:" + std::string( name ) ) ) ||
+             cata::lua_platform::has_runtime_hook( name ) );
+}
+
+bool native_hook_supports_result_field( const std::string_view name,
+                                        const std::string_view field )
+{
+    const script_hook_spec *spec = find_script_hook_spec( name );
+    return spec != nullptr && script_hook_supports_result( *spec, field );
+}
+
+bool native_hook_contract_exists( const std::string_view name )
+{
+    return find_script_hook_spec( name ) != nullptr;
 }
 
 std::vector<std::string> collect_native_mapgen_factory_usages(

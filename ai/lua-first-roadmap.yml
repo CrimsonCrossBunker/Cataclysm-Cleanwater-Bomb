@@ -1,0 +1,305 @@
+schema_version: 1
+kind: lua_first_roadmap
+direction_status: accepted
+platform_version: 1
+authority_path: data/lua/LUA_FIRST_PLATFORM.md
+current_contract: Lua API v5
+target: Pure-Lua authoring for CCB core content and Mods without public JSON or EOC dependencies.
+legacy_inventories:
+  - id: json-object-types
+    path: data/reference/json/ccb_json_object_types.json
+    selector: type
+    entry_count: 190
+  - id: eoc-conditions
+    path: data/reference/json/ccb_eoc_conditions.json
+    selector: key
+    entry_count: 275
+  - id: eoc-effects
+    path: data/reference/json/ccb_eoc_effects.json
+    selector: key
+    entry_count: 310
+status_definitions:
+  milestone: [planned, in_progress, complete, blocked]
+  capability: [absent, legacy_only, partial, available]
+  legacy_dependency: [none, private_adapter, public_legacy]
+milestones:
+  - id: documentation-foundation
+    title: Authoritative design, Agent routing, and checked roadmap
+    status: complete
+    depends_on: []
+    exit_criteria:
+      - The source repository has an authoritative Lua-first architecture document.
+      - The roadmap is schema-checked and routed to contributors and agents.
+      - CCB-Docs has paired Chinese and English explanatory pages.
+    evidence:
+      - data/lua/LUA_FIRST_PLATFORM.md
+      - ai/lua-first-roadmap.yml
+      - data/lua/AGENTS.md
+  - id: zero-config-discovery
+    title: Root main.lua discovery and optional native mod.lua metadata
+    status: complete
+    depends_on: [documentation-foundation]
+    exit_criteria:
+      - A directory containing only main.lua is discoverable as a Mod.
+      - No lua subdirectory, manifest.json, or modinfo.json is required.
+      - Optional mod.lua resolves dependencies before content loading.
+    evidence:
+      - src/catalua_platform.h
+      - src/catalua_platform.cpp
+      - src/mod_manager.cpp
+      - tests/catalua_ui_test.cpp
+      - data/lua/types/ccb_platform_v1.d.lua
+  - id: native-content-transaction
+    title: Pre-finalize native content objects and transactional commit
+    status: in_progress
+    depends_on: [zero-config-discovery]
+    exit_criteria:
+      - Platform content runs before global data finalization.
+      - Exported native references reject stale owners and generations.
+      - Private legacy adapters are inventoried and not publicly callable.
+    evidence:
+      - src/catalua_game_handle.h
+      - src/catalua_game_handle.cpp
+      - src/catalua_platform_runtime.h
+      - src/catalua_platform_runtime.cpp
+      - src/game_io.cpp
+      - tests/catalua_ui_test.cpp
+      - data/lua/types/ccb_platform_v1.d.lua
+  - id: item-recipe-use-slice
+    title: Zero-JSON/EOC item, recipe, and Lua use behaviour
+    status: complete
+    depends_on: [native-content-transaction]
+    exit_criteria:
+      - The example Mod loads with no JSON or EOC files.
+      - The item and recipe preserve stable ids through save/load.
+      - A named Lua handler produces an observable in-game result.
+    evidence:
+      - src/catalua_platform_runtime.cpp
+      - data/lua/templates/complete/main.lua
+      - data/lua/templates/complete/runtime/behaviour.lua
+      - tools/create_lua_mod.py
+      - tests/catalua_ui_test.cpp
+  - id: behaviour-services
+    title: Events, hooks, callbacks, persistent tasks, state, and shared domain services
+    status: in_progress
+    depends_on: [item-recipe-use-slice]
+    exit_criteria:
+      - EOC handler logic is mapped to shared services rather than key-shaped bindings.
+      - Named tasks resume from serializable data after save/load.
+      - Workflows can be authored as Lua libraries over the primitive APIs.
+    evidence:
+      - src/catalua_platform_runtime.cpp
+      - src/do_turn.cpp
+      - src/game.cpp
+      - src/game_io.cpp
+      - data/lua/types/ccb_platform_v1.d.lua
+      - tests/catalua_ui_test.cpp
+  - id: playable-mvp-v0-1
+    title: Playable and mergeable pure-Lua vertical slice v0.1
+    status: complete
+    depends_on: [behaviour-services]
+    exit_criteria:
+      - A bundled Mod with native mod.lua metadata and no JSON, EOC, manifest, or required lua subdirectory is discovered and selected with its dependency.
+      - Its native item, recipe, and named Lua use handler work before a real game save.
+      - Character state, world state, and a named delayed task survive runtime shutdown plus full data reload; gameplay continues and the overdue task runs exactly once.
+      - Lua-enabled and Lua-disabled test builds preserve an actionable Mod-manager result, and the dedicated merge gate is recorded in ai/test-matrix.yml.
+    evidence:
+      - data/mods/Lua_First_Example/mod.lua
+      - data/mods/Lua_First_Example/main.lua
+      - data/mods/Lua_First_Example/content/cleanwater_charm.lua
+      - data/mods/Lua_First_Example/runtime/behaviour.lua
+      - tests/catalua_ui_test.cpp
+      - tests/mod_manager_test.cpp
+      - ai/test-matrix.yml
+  - id: static-domain-coverage
+    title: Complete author-facing static content coverage
+    status: in_progress
+    depends_on: [behaviour-services]
+    exit_criteria:
+      - Every checked JSON/EOC entry has a reviewed replacement disposition.
+      - Every supported domain has native registration, tests, declarations, and documentation.
+      - No available Platform capability publicly requires a legacy parser.
+    evidence:
+      - ai/lua-first-replacement-ledger.yml
+      - ai/lua-first-replacement-ledger.schema.json
+      - tools/agent/generate_lua_first_replacement_ledger.py
+      - tools/agent/check_lua_first_replacement_ledger.py
+      - tools/agent/test_lua_first_replacement_ledger.py
+  - id: core-and-bundled-migration
+    title: Migrate core and bundled content and freeze covered legacy authoring
+    status: in_progress
+    depends_on: [static-domain-coverage]
+    exit_criteria:
+      - Targeted core and bundled content is Lua-authored with stable ids.
+      - Migration tools emit native-object Lua skeletons and explicit TODOs.
+      - New JSON/EOC features are frozen only in domains with complete replacements.
+    evidence:
+      - tools/migrate_lua_first.py
+      - tools/test_migrate_lua_first.py
+      - data/mods/Lua_First_Example/main.lua
+      - data/mods/Lua_First_Example/README.md
+  - id: legacy-removal-window
+    title: Complete deprecation window and allow legacy author-interface removal
+    status: planned
+    depends_on: [core-and-bundled-migration]
+    exit_criteria:
+      - At least two stable releases and at least twelve months have elapsed.
+      - Save migrations and copied-world tests cover retained stable ids.
+      - The compatibility layer can be removed without bundled-content dependencies.
+    evidence: []
+capabilities:
+  - id: mod-discovery
+    phase: discovery
+    status: partial
+    legacy_dependency: none
+    target_surface: Root main.lua with optional native mod.lua metadata
+    evidence:
+      - src/mod_manager.cpp
+      - src/mod_manager.h
+      - tests/catalua_ui_test.cpp
+    next_actions:
+      - The 2026-08-12 playable-MVP gate passed installed bundled-Mod discovery, dependency-aware selection, real data loading, game save, runtime shutdown, full data reload, and continued gameplay; keep it as a regression gate.
+      - The 2026-08-12 no-Lua build gate keeps the pure-Platform example visible with an actionable disabled diagnostic; keep it as a regression gate.
+      - Complete the still-open manual desktop/Android Mod-selector interaction checks without weakening visibility of rejected pure-Platform entries or legacy availability of rejected optional hybrid entries.
+  - id: trusted-standard-library
+    phase: bootstrap
+    status: partial
+    legacy_dependency: none
+    target_surface: Complete Lua 5.4 standard libraries and native package loading
+    evidence:
+      - src/catalua_platform.cpp
+      - src/mod_manager_ui.cpp
+      - tests/catalua_ui_test.cpp
+      - src/lua/lua.h
+    next_actions:
+      - The 2026-08-11 local C++ Platform suite passed the full-library, per-Mod isolation, and candidate rollback coverage; keep these as regression gates.
+      - Complete the still-open desktop and Android first-enable interaction checks for direct Platform selections and newly pulled Platform dependencies.
+  - id: static-native-content
+    phase: content
+    status: partial
+    legacy_dependency: none
+    target_surface: ccb.content with transactional foundational, proficiency, category, ammunition, scent, speed-description, harvest-drop, harvest-list, behavior-tree, monster-attack, effect-type, weakpoint-set, field-type, item-group, sub-body-part, body-part, wound, wound-fix, anatomy, body-graph, monster, morale, disease, monster-flag, species, emission, monster-faction, mutation-type, mutation-category, connect-group, construction, vehicle, mood-face, damage-info presentation, named-color, rotatable-symbol, ASCII-art, limb-score, global hit-range, bash-damage, clothing-modification, overmap-land-use, overmap-vision, overmap-location, profession-group, map-extra-collection, vehicle-group, fault-group, explosion-light, ammunition-effect, addiction-type, character-modifier, start-location, climbing-aid, weather-type, score, global mutation-overlay order, zone-type, speech-pool, end-screen, activity-type, help-topic, snippet-category, playlist, nested-recipe-category, attack-vector, magic-type, movement-mode, item, and recipe definitions
+    evidence:
+      - src/catalua_platform.cpp
+      - src/catalua_platform_runtime.cpp
+      - src/harvest.cpp
+      - src/behavior.cpp
+      - src/behavior_oracle.cpp
+      - src/emit.cpp
+      - src/effect.cpp
+      - src/field_type.cpp
+      - src/weakpoint.cpp
+      - src/bodypart.cpp
+      - src/wound.cpp
+      - src/subbodypart.cpp
+      - src/anatomy.cpp
+      - src/bodygraph.cpp
+      - src/monstergenerator.cpp
+      - src/map_field.cpp
+      - src/game_io.cpp
+      - data/lua/types/ccb_platform_v1.d.lua
+      - tests/catalua_ui_test.cpp
+    next_actions:
+      - The 2026-08-11 local C++ Platform suite passed the written native transaction, rollback, stale-handle, finalization, creature-catalog, and monster-attack policy coverage; focused Wound/WoundFix coverage passed 5 cases and 321 assertions.
+      - The 2026-08-11 unified `[lua]` run passed 190 matching test cases and 2706 assertions, including pre-finalize Monster scaling and adjustment ownership plus idempotent body-part and sub-body-part similarity caches; keep these as regression gates.
+      - Retain bounded dispositions for the documented creature slice; the local gate is evidence for that slice, while field-by-field expansion remains required before full JSON object-type parity.
+      - The bounded concrete `wound` and `wound_fix` extractor now has source-backed conversion tests and emits native builders for finite ranges, typed links, body-part filters, treatment skills/proficiencies, wound sets, and referenced requirements; keep inheritance, implicit indefinite healing, rich translation metadata, and inline requirements partial.
+      - Continue field-complete typed registrar and extractor coverage without exposing JSON-loader or EOC-runner compatibility surfaces.
+  - id: native-object-surface
+    phase: bindings
+    status: partial
+    legacy_dependency: none
+    target_surface: All bindable public members of explicitly exported native types
+    evidence: [src/catalua_bindings_values.cpp, src/catalua_game_handle.h, src/catalua_game_handle.cpp, tests/catalua_ui_test.cpp, data/lua/types/ccb_api_v5.d.lua]
+    next_actions:
+      - Add an export-root inventory and report every unbindable public member.
+      - GameHandle plus MissionToken, HordeEntityToken, LegacyHordeToken, and ZoneToken now reject foreign or expired runtime owners in addition to stale runtime/world generations; token equality retains stable weak owner identity after shutdown, and the inactive state remains distinct from every numeric generation. Extend the same explicit-owner model to remaining borrowed native references.
+  - id: runtime-events-hooks-callbacks
+    phase: runtime
+    status: partial
+    legacy_dependency: none
+    target_surface: Typed events, synchronous hooks, and definition callbacks
+    evidence: [src/catalua_platform_runtime.cpp, src/catalua_ui.cpp, data/lua/types/ccb_platform_v1.d.lua, data/lua/reference/ccb_public_api_v5.json]
+    next_actions:
+      - The 2026-08-11 local C++ Platform suite passed lifecycle, audited semantic event actors and item allowlist, ItemUseContext, missing-handler, decision aggregation, typed-handle, recursion, v5-composition, and runtime-only hot-reload coverage; keep these as regression gates.
+      - The 2026-08-12 bundled-Mod playable gate passed discovery, load, real game save, runtime shutdown, full data reload, and continued item-handler gameplay.
+      - Extend semantic actor-kind coverage beyond the audited events.
+  - id: presentation-primitives
+    phase: runtime
+    status: partial
+    legacy_dependency: none
+    target_surface: Callback-only native notice, confirmation, stable-id choice, and text input primitives
+    evidence: [src/catalua_platform_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/catalua_ui_test.cpp, data/lua/LUA_FIRST_PLATFORM.md]
+    next_actions:
+      - The non-interactive callback boundary coverage passed in the 2026-08-11 local C++ Platform suite; keep it as a regression gate.
+      - Complete the still-open interactive desktop and Android presentation checks.
+      - Add richer composable forms only as domain objects, not popup- or EOC-key-shaped wrappers.
+  - id: persistent-tasks-and-state
+    phase: runtime
+    status: partial
+    legacy_dependency: none
+    target_surface: Named tasks and serializable character/world state
+    evidence: [src/catalua_platform_runtime.cpp, src/catalua_ui_state.cpp, src/do_turn.cpp, src/game_io.cpp, data/lua/templates/complete/runtime/behaviour.lua]
+    next_actions:
+      - The 2026-08-11 local C++ Platform suite passed save/load, overdue, missing-handler, payload-version and migration-chain, orphan-preservation, size-limit, and corruption coverage; keep these as regression gates.
+      - The 2026-08-12 bundled-Mod playable gate passed typed character/world-state and named-task survival through real game saves, runtime shutdown, full data reload, continued gameplay, and one-time overdue execution.
+      - Extend copied-world and stable-id compatibility coverage beyond the bundled example.
+  - id: shared-domain-services
+    phase: runtime
+    status: partial
+    legacy_dependency: none
+    target_surface: Game-domain services shared by Platform and legacy adapters
+    evidence: [src/catalua_platform_runtime.cpp, src/catalua_game_handle.cpp, src/catalua_ui_creatures.cpp, src/catalua_ui_items.cpp, src/catalua_ui_world.cpp, src/catalua_ui_vehicles.cpp, src/catalua_ui_missions.cpp, src/catalua_ui_magic.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/catalua_ui_test.cpp, data/lua/LUA_FIRST_PLATFORM.md, ai/lua-first-replacement-ledger.yml]
+    next_actions:
+      - Review the remaining primitive-available selectors against exact native semantics.
+      - Extend the first exact predicate/effect slice beyond string comparison, isolated probability, contested rolls, active-Mod visibility, dimensions, typed map-environment queries, typed avatar single/any-mutation, martial-art, proficiency, specific/any-bionic, learned-recipe, literal item-presence, and literal movement-mode state, achievement awards, avatar bionic installation/removal, literal one-recipe and category/subcategory recipe changes, presentation-independent martial-art learning/forgetting, bounded literal morale changes, and bounded literal creature-effect changes.
+      - The 2026-08-11 local C++ Platform suite passed the documented semantic-event-actor, per-handler payload-isolation, global-recursion, and Platform-only dialogue-projection slices; expand actor-kind proof beyond audited events before converting other actor-dependent `u_*` or `npc_*` shapes, without publishing EOC alpha/beta aliases.
+      - The local C++ coverage passed the written Character activity snapshot, plain time-based assignment, side-effect-free no-op cancellation, duration boundary, native-actor/handler, EOC-policy, multi-activity, automatic-needs, and non-time rejection policies; selector promotion still requires exact migrator-shape evidence.
+      - Extend the locally verified native-order exact-part wound service only through explicit Lua-native policies; keep the four legacy wound selectors planned because their next-best and limit semantics differ.
+      - Add specialized activity-actor construction, wetness, combat-damage, NPC-navigation, and typed relocation services before promoting their audited selectors.
+      - The local C++ coverage passed the documented singular wielded-item query, force-unarmed composition, semantic item-event routing, and instance-owned flag-change reporting slices; promote only actor and event shapes whose legacy talker kinds are proven.
+      - The 2026-08-11 local C++ Platform suite passed the typed bionic summary, capacity-without-instance, learned-recipe query, one-recipe mutation, and category/subcategory forgetting slice; keep dynamic ids and unproven actor shapes partial.
+      - Implement missing environment, dialogue, specialized activity, and richer presentation primitives before promoting selector-level parity.
+  - id: developer-templates
+    phase: tooling
+    status: partial
+    legacy_dependency: none
+    target_surface: Minimal and complete templates plus create_lua_mod.py
+    evidence: [tools/create_lua_mod.py, tools/test_create_lua_mod.py, data/lua/templates/minimal/main.lua, data/lua/templates/complete/main.lua, data/mods/Lua_First_Example/main.lua]
+    next_actions:
+      - The 2026-08-11 local creator/migrator unit-test run passed all 55 cases (46 extractor plus 9 creator), including scaffold atomic-install, empty-target restoration, concurrent-target preservation, non-overwrite, symlink refusal, Mod-id namespace, zero-JSON coverage, and bounded Wound/WoundFix extraction; keep these as regression gates.
+      - The 2026-08-12 bundled installed-Mod fixture passed discovery, dependency-aware selection, load, save, runtime shutdown, full data reload, and continued gameplay.
+      - Add more small end-to-end examples only when they prove a new native domain rather than duplicating this fixture.
+  - id: migration-extractor
+    phase: migration
+    status: partial
+    legacy_dependency: none
+    target_surface: Deterministic legacy content extraction into native Lua skeletons and TODO reports
+    evidence:
+      - tools/migrate_lua_first.py
+      - tools/test_migrate_lua_first.py
+      - data/lua/LUA_FIRST_PLATFORM.md
+    next_actions:
+      - The 2026-08-11 local creator/migrator unit-test run passed all 55 cases (46 extractor plus 9 creator), including JSONC parsing, native-range partial classification, transactional force rollback, no-overwrite, freshness, no-legacy-output coverage, and bounded Wound/WoundFix extraction; keep these as regression gates.
+      - The local creature-catalog migration fixture passed for monster attacks, effects, weakpoints, fields, item groups, anatomy, body graphs, and monsters; retain bounded classifications until field-by-field parity is proven.
+      - The bounded concrete Wound/WoundFix migration fixtures convert native-builder fields and keep inheritance, implicit indefinite healing, translation metadata, and inline Requirement objects as explicit TODOs without a legacy loader; Platform UTF-8 byte-limit violations, contradictory body-part flags, and proficiency multipliers that become non-positive as native floats now fail closed as explicit TODOs or rejected definitions.
+      - Extend bounded predicate/effect conversion beyond literal string, probability, contested-roll, Mod-visibility, typed avatar mutation/martial-art/proficiency/specific-or-any-bionic/learned-recipe/literal-item-presence/literal-movement-mode state, native Boolean-composition, achievement-award, avatar-bionic add/remove, one-recipe and category/subcategory recipe changes, martial-art learn/forget, exact default-timing morale add/remove, and literal bounded-duration effect add/remove shapes.
+      - 'Local migration coverage confirms that even literal/proven-Character `u_add_wound`, `npc_add_wound`, `u_remove_wound`, and `npc_remove_wound` shapes emit TODOs; keep them planned because legacy handlers may select a next-best body part and legacy add bypasses the per-part limit, while the Lua-native service is exact-part and limit-aware, and do not add a compatibility entry point.'
+      - Keep dynamic bionic/recipe ids, dynamic recipe subcategories, NPC targets, and unproven actor contexts partial until their value and actor semantics have typed source-backed conversion evidence.
+      - Add typed conversions only after each target native registrar exists.
+      - The local migration coverage confirms that the private game_start avatar binding is gated by the checked canonical sender set rather than only the event name; retain that gate while extending actor proof to other contexts.
+  - id: replacement-audit
+    phase: migration
+    status: partial
+    legacy_dependency: none
+    target_surface: Exact JSON/EOC-to-domain replacement ledger
+    evidence:
+      - data/reference/json/ccb_json_object_types.json
+      - data/reference/json/ccb_eoc_conditions.json
+      - data/reference/json/ccb_eoc_effects.json
+      - ai/lua-first-replacement-ledger.yml
+      - tools/agent/check_lua_first_replacement_ledger.py
+    next_actions:
+      - The 2026-08-11 local schema, generator-freshness, uniqueness, and exact-denominator checks passed for all 775 dispositions; keep these as regression gates.
+      - Keep full, bounded, primitive-only, planned, private-adapter, and not-applicable counts distinct; a bounded shape never establishes whole-selector parity.
+      - Review primitive-available selectors for semantic parity and all remaining planned entries domain by domain using the generated ledger summary.

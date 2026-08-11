@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "debug.h"
+#include "catalua_platform_content.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "json.h"
@@ -24,6 +25,16 @@ namespace
 generic_factory<proficiency> proficiency_factory( "proficiency" );
 generic_factory<proficiency_category> proficiency_category_factory( "proficiency category" );
 } // namespace
+
+generic_factory<proficiency_category> &cata::lua_platform::detail::proficiency_category_registry()
+{
+    return proficiency_category_factory;
+}
+
+generic_factory<proficiency> &cata::lua_platform::detail::proficiency_registry()
+{
+    return proficiency_factory;
+}
 
 template<>
 const proficiency &proficiency_id::obj() const

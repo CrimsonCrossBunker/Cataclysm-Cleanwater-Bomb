@@ -321,7 +321,9 @@ static bool get_liquid_target( item &liquid, const item *const source, const int
         menu.text = string_format( pgettext( "liquid", "What to do with the %s?" ), liquid_name );
     }
     std::vector<std::function<void()>> actions;
-    if( player_character.can_consume_as_is( liquid ) && !source_mon && ( source_veh || source_pos ) ) {
+    // Allow consuming freshly crafted liquids (no vehicle/map source), matching CBN;
+    // still exclude liquids obtained from monsters.
+    if( player_character.can_consume_as_is( liquid ) && !source_mon ) {
         menu.addentry( -1, true, 'e', _( "Consume it" ) );
         actions.emplace_back( [&]() {
             target.dest_opt = LD_CONSUME;

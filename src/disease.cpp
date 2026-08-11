@@ -1,5 +1,6 @@
 #include "disease.h"
 
+#include "catalua_platform_content.h"
 #include "debug.h"
 #include "generic_factory.h"
 
@@ -7,6 +8,11 @@ namespace
 {
 generic_factory<disease_type> disease_factory( "disease_type" );
 } // namespace
+
+generic_factory<disease_type> &cata::lua_platform::detail::disease_type_registry()
+{
+    return disease_factory;
+}
 
 template<>
 const disease_type &string_id<disease_type>::obj() const
@@ -65,4 +71,3 @@ void disease_type::check_disease_consistency()
         }
     }
 }
-

@@ -20,6 +20,13 @@ class stats_tracker;
 class stats_tracker_state;
 enum class cata_variant_type : int;
 enum class monotonically : int;
+template<typename T>
+class generic_factory;
+
+namespace cata::lua_platform
+{
+class content_transaction;
+}
 
 using event_fields_type = std::unordered_map<std::string, cata_variant_type>;
 
@@ -118,6 +125,7 @@ class score
         std::vector<std::pair<string_id<score>, mod_id>> src;
         bool was_loaded = false;
     private:
+        friend class cata::lua_platform::content_transaction;
         translation description_;
         string_id<event_statistic> stat_;
 };

@@ -74,6 +74,12 @@ void uilist_impl::draw_controls()
         }
     }
 
+    ImVec2 menu_size = parent.calculated_menu_size;
+    if( parent.force_desired_bounds && parent.desired_bounds.has_value() ) {
+        menu_size = uilist_menu_size_for_available_region( ImGui::GetContentRegionAvail(),
+            parent.extra_space_left, parent.extra_space_right );
+    }
+
     // An invisible table with three columns. Used to create a sidebar effect.
     // Ideally we would use a layout engine for this, but ImGui does not natively support any.
     // TODO: Investigate using Stack Layout (https://github.com/thedmd/imgui/tree/feature/layout-external)
@@ -84,7 +90,7 @@ void uilist_impl::draw_controls()
                            ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_NoPadInnerX | ImGuiTableFlags_NoPadOuterX |
                            ImGuiTableFlags_Hideable ) ) {
         ImGui::TableSetupColumn( "left", ImGuiTableColumnFlags_WidthFixed, parent.extra_space_left );
-        ImGui::TableSetupColumn( "menu", ImGuiTableColumnFlags_WidthFixed, parent.calculated_menu_size.x );
+        ImGui::TableSetupColumn( "menu", ImGuiTableColumnFlags_WidthFixed, menu_size.x );
         ImGui::TableSetupColumn( "right", ImGuiTableColumnFlags_WidthFixed, parent.extra_space_right );
 
         ImGui::TableSetColumnEnabled( 0, parent.extra_space_left < 1.0f ? false : true );
@@ -93,9 +99,16 @@ void uilist_impl::draw_controls()
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex( 1 );
 
+        if( parent.force_desired_bounds && parent.desired_bounds.has_value() ) {
+            // Query this after entering the table cell: it is the exact vertical space left after
+            // window padding, category tabs, and the cell's top padding have been consumed.
+            menu_size.y = uilist_menu_size_for_available_region(
+                              ImGui::GetContentRegionAvail(), 0.0F, 0.0F ).y;
+        }
+
         float entry_height = ImGui::GetTextLineHeightWithSpacing();
         ImGuiStyle &style = ImGui::GetStyle();
-        if( ImGui::BeginChild( "scroll", parent.calculated_menu_size, ImGuiChildFlags_None,
+        if( ImGui::BeginChild( "scroll", menu_size, ImGuiChildFlags_None,
                                ImGuiWindowFlags_NoNavInputs ) ) {
             if( ImGui::BeginTable( "menu items", 3, ImGuiTableFlags_SizingFixedFit ) ) {
                 ImGui::TableSetupColumn( "hotkey", ImGuiTableColumnFlags_WidthFixed,
@@ -763,10 +776,6 @@ void uilist::calc_data()
         calculated_menu_size.x = longest_line_width;
         calculated_label_width = calculated_menu_size.x - calculated_hotkey_width - padding -
                                  calculated_secondary_width - padding - padding;
-    }
-    if( force_desired_bounds && desired_bounds.has_value() ) {
-        calculated_menu_size.x = desired_bounds->w;
-        calculated_menu_size.y = desired_bounds->h;
     }
 }
 

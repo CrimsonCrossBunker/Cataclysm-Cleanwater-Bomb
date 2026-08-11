@@ -43,6 +43,18 @@ struct MOD_INFORMATION {
         /** Directory to load JSON from relative to directory containing modinfo.json */
         cata_path path;
 
+        /** Packaged Mod root, including when the JSON data path points below it. */
+        cata_path mod_root_path;
+
+        /** Lua-first Platform v1 entry resolved inside @ref mod_root_path. */
+        cata_path lua_platform_entry;
+
+        /** Non-zero when this Mod has a Lua-first Platform entry. */
+        int lua_platform_version = 0;
+
+        /** Discovery-time reason the Platform entry cannot run in this build. */
+        std::string lua_platform_error;
+
         /** All authors who have added content to the mod (excluding maintenance changes) */
         std::set<std::string> authors;
 
@@ -56,7 +68,7 @@ struct MOD_INFORMATION {
         std::set<std::string> loading_images;
 
         /** Determines if other loading screens should be used */
-        bool disable_other_loading_screens;
+        bool disable_other_loading_screens = false;
 
         translation description;
         std::string version;
@@ -138,10 +150,10 @@ class mod_manager
          */
         void clear();
         /**
-         * Copy the json files of the listed mods into the
+         * Copy the JSON and Lua files of the listed mods into the
          * given folder (output_base_path)
          * @param mods_to_copy A list (of idents) of mods whose
-         * json data should be copied.
+         * content should be copied.
          * @param output_base_path The folder where to put the copies.
          * The function creates a sub folder for each mod and
          * puts the files there. The original folder structure is
@@ -192,6 +204,8 @@ class mod_manager
          * (@see load_modfile)
          */
         void load_mod_info( const cata_path &info_file_path );
+        /** Discover and merge a root main.lua or optional mod.lua definition. */
+        void load_lua_platform_mod( const cata_path &root );
         /**
          * Load mod info from a json object. Put the loaded modinfo
          * directly into @ref mod_map.
@@ -224,7 +238,8 @@ class mod_ui
         dependency_tree &mm_tree;
 
         void try_add( const mod_id &mod_to_add,
-                      std::vector<mod_id> &active_list );
+                      std::vector<mod_id> &active_list,
+                      bool confirm_trusted_lua = false );
         void try_rem( size_t selection, std::vector<mod_id> &active_list );
         void try_shift( char direction, size_t &selection, std::vector<mod_id> &active_list );
 

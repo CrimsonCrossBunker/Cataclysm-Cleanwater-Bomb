@@ -7,9 +7,11 @@
 #include <memory>
 #include <ostream>
 #include <queue>
+#include <system_error>
 
 #include "builtin_mods.h"
 #include "cached_options.h"
+#include "catalua_platform.h"
 #include "cata_utility.h"
 #include "debug.h"
 #include "dependency_tree.h"
@@ -29,6 +31,19 @@ static const mod_id MOD_INFORMATION_dev_default( "dev:default" );
 static const mod_id MOD_INFORMATION_user_default( "user:default" );
 
 static const std::string MOD_SEARCH_FILE( "modinfo.json" );
+static constexpr std::size_t LUA_PLATFORM_DIAGNOSTIC_LIMIT = 4096;
+
+static std::string bounded_lua_platform_diagnostic( const std::string &reason )
+{
+    std::string result = reason;
+    std::replace( result.begin(), result.end(), '\0', '?' );
+    static constexpr std::string_view suffix = "... [diagnostic truncated]";
+    if( result.size() > LUA_PLATFORM_DIAGNOSTIC_LIMIT ) {
+        result.resize( LUA_PLATFORM_DIAGNOSTIC_LIMIT - suffix.size() );
+        result += std::string( suffix );
+    }
+    return result;
+}
 
 static bool path_is_within( const std::filesystem::path &path,
                             const std::filesystem::path &directory )
@@ -47,6 +62,21 @@ static bool path_is_within( const std::filesystem::path &path,
     return true;
 }
 
+static bool is_manifest_builtin_root( const MOD_INFORMATION &mod )
+{
+    const std::filesystem::path builtin_root =
+        PATH_INFO::moddir().get_unrelative_path().lexically_normal();
+    const cata_path &source_root = mod.mod_root_path.empty() ? mod.path : mod.mod_root_path;
+    const std::filesystem::path source_path = source_root.get_unrelative_path().lexically_normal();
+    if( !path_is_within( source_path, builtin_root ) ) {
+        return false;
+    }
+    const std::string relative_root =
+        source_path.lexically_relative( builtin_root ).generic_u8string();
+    return std::find( builtin_mod_roots.begin(), builtin_mod_roots.end(), relative_root ) !=
+           builtin_mod_roots.end();
+}
+
 bool is_unexpected_builtin_mod( const MOD_INFORMATION &mod )
 {
     if( test_mode || !builtin_mod_manifest_available ||
@@ -57,7 +87,11 @@ bool is_unexpected_builtin_mod( const MOD_INFORMATION &mod )
         builtin_mod_ids.end() ) {
         return false;
     }
-    return path_is_within( mod.path.get_unrelative_path(),
+    if( is_manifest_builtin_root( mod ) ) {
+        return false;
+    }
+    const cata_path &source_root = mod.mod_root_path.empty() ? mod.path : mod.mod_root_path;
+    return path_is_within( source_root.get_unrelative_path(),
                            PATH_INFO::moddir().get_unrelative_path() );
 }
 
@@ -78,9 +112,9 @@ std::string get_mod_error_source( std::string_view src )
         return result;
     }
 
-    const bool is_builtin = std::find( builtin_mod_ids.begin(), builtin_mod_ids.end(),
-                                       mod.ident.str() ) !=
-                            builtin_mod_ids.end();
+    const bool is_builtin =
+        std::find( builtin_mod_ids.begin(), builtin_mod_ids.end(), mod.ident.str() ) !=
+        builtin_mod_ids.end() || is_manifest_builtin_root( mod );
     if( is_builtin ) {
         return result + "\n" + string_format( _( "Game version: %s" ), getVersionString() );
     }
@@ -293,6 +327,221 @@ void mod_manager::load_mods_from( const cata_path &path )
     for( cata_path &mod_file : get_files_from_path( MOD_SEARCH_FILE, path, true ) ) {
         load_mod_info( mod_file );
     }
+    for( const cata_path &root : get_directories( path, false ) ) {
+        if( file_exist( root / "main.lua" ) || file_exist( root / "mod.lua" ) ) {
+            load_lua_platform_mod( root );
+        }
+    }
+}
+
+void mod_manager::load_lua_platform_mod( const cata_path &root )
+{
+    namespace fs = std::filesystem;
+
+    const std::string default_id = root.get_relative_path().filename().u8string();
+    cata::lua_platform::mod_definition definition;
+    const bool has_metadata = file_exist( root / "mod.lua" );
+    std::string platform_error;
+
+    std::vector<MOD_INFORMATION *> legacy_mods;
+    for( auto &known : mod_map ) {
+        const cata_path &known_root = known.second.mod_root_path.empty() ?
+                                      known.second.path : known.second.mod_root_path;
+        if( path_is_within( known_root.get_unrelative_path().lexically_normal(),
+                            root.get_unrelative_path().lexically_normal() ) ) {
+            legacy_mods.push_back( &known.second );
+        }
+    }
+
+    const auto record_rejection = [&]( const std::string & unbounded_reason ) {
+        const std::string reason = bounded_lua_platform_diagnostic( unbounded_reason );
+        DebugLog( D_WARNING, D_MAIN ) << "Rejected Lua-first Mod at " << root << ": " << reason;
+        if( legacy_mods.size() == 1 ) {
+            MOD_INFORMATION &hybrid = *legacy_mods.front();
+            // Keep a legacy hybrid usable when its optional Platform entry is
+            // malformed, while retaining the rejected-entry diagnostic.
+            hybrid.lua_platform_version = 0;
+            hybrid.lua_platform_error = reason;
+            hybrid.lua_platform_entry = cata_path();
+            hybrid.mod_root_path = root;
+            return;
+        }
+        std::string diagnostic_base = default_id.empty() ?
+                                      "lua_platform_candidate" : default_id;
+        std::replace( diagnostic_base.begin(), diagnostic_base.end(), '#', '_' );
+        if( diagnostic_base.empty() ) {
+            diagnostic_base = "lua_platform_candidate";
+        }
+        std::string diagnostic_ident = diagnostic_base;
+        std::size_t suffix = 1;
+        while( mod_map.count( mod_id( diagnostic_ident ) ) > 0 ) {
+            diagnostic_ident = diagnostic_base + "_lua_platform_rejected_" +
+                               std::to_string( suffix++ );
+        }
+        const mod_id diagnostic_id( diagnostic_ident );
+        MOD_INFORMATION diagnostic;
+        diagnostic.ident = diagnostic_id;
+        diagnostic.name_ = no_translation( diagnostic_ident == default_id ? default_id :
+                                           diagnostic_base +
+                                           " (rejected Lua-first candidate)" );
+        const size_t default_category = get_mod_list_categories().size() - 1;
+        diagnostic.category = { static_cast<int>( default_category ),
+                                get_mod_list_categories()[default_category].second
+                              };
+        diagnostic.path = root;
+        diagnostic.mod_root_path = root;
+        diagnostic.lua_platform_entry = root / "main.lua";
+        diagnostic.lua_platform_version = cata::lua_platform::platform_version;
+        diagnostic.lua_platform_error = reason;
+        mod_map.emplace( diagnostic_id, std::move( diagnostic ) );
+    };
+
+    if( !cata::lua_platform::is_enabled() ) {
+        // Keep pure Platform candidates visible but unavailable.  A hybrid's
+        // legacy content remains loadable because record_rejection() retires
+        // only its optional Platform entry.
+        record_rejection( "Lua-first Platform is not enabled in this build" );
+        return;
+    }
+
+    if( has_metadata ) {
+        if( !cata::lua_platform::read_mod_definition( root.get_unrelative_path(), definition,
+                platform_error ) ) {
+            record_rejection( platform_error );
+            return;
+        }
+    }
+
+    // An omitted Platform id inherits the sole legacy id in a hybrid root.
+    // This keeps a transitional Mod zero-configuration even when its packaged
+    // directory name and stable MOD_INFO id differ.
+    const bool use_legacy_id = !definition.id_set && legacy_mods.size() == 1;
+    const std::string ident_string = use_legacy_id ? legacy_mods.front()->ident.str() :
+                                     ( definition.id_set ? definition.id : default_id );
+    if( ident_string.empty() || ident_string.size() > 256 ||
+        ident_string.find( '\0' ) != std::string::npos ) {
+        record_rejection( "Mod id must contain between 1 and 256 bytes" );
+        return;
+    }
+
+    if( definition.name_set &&
+        ( definition.name.empty() || definition.name.size() > 512 ||
+          definition.name.find( '\0' ) != std::string::npos ) ) {
+        record_rejection( "Mod display name must contain between 1 and 512 bytes" );
+        return;
+    }
+    if( definition.version_set &&
+        ( definition.version.empty() || definition.version.size() > 128 ||
+          definition.version.find( '\0' ) != std::string::npos ) ) {
+        record_rejection( "Mod version must contain between 1 and 128 bytes" );
+        return;
+    }
+    if( ident_string.find( '#' ) != std::string::npos ) {
+        record_rejection( "Mod id '" + ident_string +
+                          "' contains illegal '#' character" );
+        return;
+    }
+
+    const mod_id ident( ident_string );
+    std::vector<mod_id> dependencies;
+    dependencies.reserve( definition.dependencies.size() );
+    for( const std::string &dependency_string : definition.dependencies ) {
+        if( dependency_string.empty() || dependency_string.size() > 256 ||
+            dependency_string.find( '#' ) != std::string::npos ||
+            dependency_string.find( '\0' ) != std::string::npos ) {
+            record_rejection( "invalid dependency id '" + dependency_string + "'" );
+            return;
+        }
+        const mod_id dependency( dependency_string );
+        if( dependency == ident ) {
+            record_rejection( "Mod specifies itself as a dependency" );
+            return;
+        }
+        if( std::find( dependencies.begin(), dependencies.end(), dependency ) != dependencies.end() ) {
+            record_rejection( "duplicate dependency id '" + dependency_string + "'" );
+            return;
+        }
+        dependencies.push_back( dependency );
+    }
+
+    const std::string entry_string = definition.entry_set ? definition.entry : "main.lua";
+    const fs::path relative_entry = fs::u8path( entry_string );
+    cata_path entry = root / relative_entry;
+    if( platform_error.empty() ) {
+        if( entry_string.empty() || entry_string.size() > 4096 ||
+            entry_string.find( '\0' ) != std::string::npos || relative_entry.is_absolute() ) {
+            record_rejection( "entry must be a non-empty relative path" );
+            return;
+        }
+
+        std::error_code filesystem_error;
+        const fs::path canonical_root = fs::canonical( root.get_unrelative_path(), filesystem_error );
+        if( filesystem_error ) {
+            record_rejection( "cannot resolve Mod root: " + filesystem_error.message() );
+            return;
+        }
+        const fs::path canonical_entry = fs::canonical( entry.get_unrelative_path(), filesystem_error );
+        if( filesystem_error || !path_is_within( canonical_entry, canonical_root ) ) {
+            record_rejection( "entry escapes the Mod root or cannot be resolved" );
+            return;
+        }
+        if( !fs::is_regular_file( canonical_entry, filesystem_error ) || filesystem_error ) {
+            record_rejection( "entry is not a regular file" );
+            return;
+        }
+    }
+
+    if( legacy_mods.size() > 1 ) {
+        record_rejection( "Mod root contains more than one legacy MOD_INFO" );
+        return;
+    }
+    if( legacy_mods.size() == 1 ) {
+        MOD_INFORMATION &hybrid = *legacy_mods.front();
+        if( hybrid.ident != ident ) {
+            record_rejection( "Platform id '" + ident_string +
+                              "' conflicts with legacy id '" + hybrid.ident.str() + "'" );
+            return;
+        }
+        if( definition.name_set ) {
+            hybrid.name_ = no_translation( definition.name );
+        }
+        if( definition.version_set ) {
+            hybrid.version = definition.version;
+        }
+        if( definition.dependencies_set ) {
+            hybrid.dependencies = std::move( dependencies );
+        }
+        if( definition.core_set ) {
+            hybrid.core = definition.core;
+        }
+        hybrid.lua_platform_entry = std::move( entry );
+        hybrid.mod_root_path = root;
+        hybrid.lua_platform_version = cata::lua_platform::platform_version;
+        hybrid.lua_platform_error = std::move( platform_error );
+        return;
+    }
+
+    if( mod_map.count( ident ) > 0 ) {
+        record_rejection( "another Mod already uses id '" + ident_string + "'" );
+        return;
+    }
+
+    MOD_INFORMATION mod;
+    mod.ident = ident;
+    mod.name_ = no_translation( definition.name_set ? definition.name : ident_string );
+    const size_t default_category = get_mod_list_categories().size() - 1;
+    mod.category = { static_cast<int>( default_category ),
+                     get_mod_list_categories()[default_category].second
+                   };
+    mod.version = definition.version_set ? definition.version : std::string();
+    mod.dependencies = std::move( dependencies );
+    mod.core = definition.core_set && definition.core;
+    mod.path = root;
+    mod.mod_root_path = root;
+    mod.lua_platform_entry = std::move( entry );
+    mod.lua_platform_version = cata::lua_platform::platform_version;
+    mod.lua_platform_error = std::move( platform_error );
+    mod_map.emplace( ident, std::move( mod ) );
 }
 
 void mod_manager::load_modfile( const JsonObject &jo, const cata_path &path )
@@ -343,6 +592,7 @@ void mod_manager::load_modfile( const JsonObject &jo, const cata_path &path )
     modfile.ident = m_ident;
     modfile.name_ = m_name;
     modfile.category = p_cat;
+    modfile.mod_root_path = path;
 
     std::string mod_json_path;
     if( jo.has_member( "path" ) ) {
@@ -405,6 +655,7 @@ bool mod_manager::copy_mod_contents( const t_mod_list &mods_to_copy,
     }
     std::vector<std::string> search_extensions;
     search_extensions.emplace_back( ".json" );
+    search_extensions.emplace_back( ".lua" );
 
     DebugLog( D_INFO, DC_ALL ) << "Copying mod contents into directory: " << output_base_path;
 
@@ -416,12 +667,19 @@ bool mod_manager::copy_mod_contents( const t_mod_list &mods_to_copy,
 
     for( size_t i = 0; i < mods_to_copy.size(); ++i ) {
         const MOD_INFORMATION &mod = *mods_to_copy[i];
+        cata_path mod_base_path = mod.mod_root_path.empty() ? mod.path : mod.mod_root_path;
 
-        // now to get all of the json files inside of the mod and get them ready to copy
+        // Gather both legacy data and Lua-first source files.
         auto input_files = get_files_from_path( ".json", mod.path, true, true );
-        auto input_dirs  = get_directories_with( search_extensions, mod.path, true );
-
-        cata_path mod_base_path = mod.path;
+        std::vector<cata_path> lua_files = get_files_from_path( ".lua", mod_base_path,
+                                           true, true );
+        input_files.insert( input_files.end(), lua_files.begin(), lua_files.end() );
+        std::sort( input_files.begin(), input_files.end(), []( const cata_path & lhs,
+        const cata_path & rhs ) {
+            return lhs.generic_u8string() < rhs.generic_u8string();
+        } );
+        input_files.erase( std::unique( input_files.begin(), input_files.end() ), input_files.end() );
+        auto input_dirs = get_directories_with( search_extensions, mod_base_path, true );
 
         if( input_files.empty() && mod.path.get_relative_path().filename().u8string() == MOD_SEARCH_FILE ) {
             // Self contained mod, all data is inside the modinfo.json file

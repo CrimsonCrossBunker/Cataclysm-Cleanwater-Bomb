@@ -10,6 +10,7 @@
 #include "bodypart.h"
 #include "cata_utility.h"
 #include "catacharset.h"
+#include "catalua_platform_content.h"
 #include "character.h"
 #include "character_attire.h"
 #include "creature.h"
@@ -45,6 +46,11 @@ namespace
 generic_factory<bodygraph> bodygraph_factory( "bodygraph" );
 
 } // namespace
+
+generic_factory<bodygraph> &cata::lua_platform::detail::bodygraph_registry()
+{
+    return bodygraph_factory;
+}
 
 /** @relates string_id */
 template<>

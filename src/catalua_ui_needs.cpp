@@ -27,7 +27,7 @@ constexpr int maximum_stored_kcal = 2000000;
 constexpr std::int64_t maximum_sleep_adjustment_turns = 31622400;
 
 Character *resolve_character(
-    const game_handle &handle, const std::size_t runtime_generation,
+    const game_handle &handle, const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     std::optional<game_handle_error> &error )
 {
@@ -81,7 +81,7 @@ sol::table snapshot_needs(
 
 sol::table get_needs(
     sol::this_state lua, const game_handle &handle,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -155,7 +155,7 @@ need_adjustments read_need_adjustments(
 sol::table set_needs(
     sol::this_state lua, const game_handle &handle,
     const sol::table &requested_adjustments,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const need_adjustments adjustments =
@@ -196,7 +196,7 @@ sol::table set_needs(
 sol::table modify_needs(
     sol::this_state lua, const game_handle &handle,
     const sol::table &requested_deltas,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const need_adjustments deltas =
@@ -237,7 +237,7 @@ sol::table modify_needs(
 sol::table set_calories(
     sol::this_state lua, const game_handle &handle,
     const int requested_kcal,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     if( requested_kcal < 0 ||
@@ -270,7 +270,7 @@ sol::table set_calories(
 sol::table modify_calories(
     sol::this_state lua, const game_handle &handle,
     const int requested_delta, const bool ignore_weariness,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     if( requested_delta < -maximum_need_magnitude ||
@@ -326,7 +326,7 @@ sol::table snapshot_gut_vitamin(
 
 sol::table get_gut_calories(
     sol::this_state lua, const game_handle &handle,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -345,7 +345,7 @@ sol::table get_gut_calories(
 sol::table set_gut_calories(
     sol::this_state lua, const game_handle &handle,
     const int requested_kcal,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     if( requested_kcal < 0 ) {
@@ -373,7 +373,7 @@ sol::table set_gut_calories(
 sol::table modify_gut_calories(
     sol::this_state lua, const game_handle &handle,
     const int requested_delta,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -399,7 +399,7 @@ sol::table modify_gut_calories(
 sol::table get_gut_vitamin(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_vitamin_id( id, "game.needs.get_gut_vitamin" );
@@ -420,7 +420,7 @@ sol::table get_gut_vitamin(
 sol::table set_gut_vitamin(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &id, const int requested_amount,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_vitamin_id( id, "game.needs.set_gut_vitamin" );
@@ -450,7 +450,7 @@ sol::table set_gut_vitamin(
 sol::table modify_gut_vitamin(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &id, const int requested_delta,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_vitamin_id( id, "game.needs.modify_gut_vitamin" );
@@ -527,7 +527,7 @@ sleep_adjustments read_sleep_adjustments(
 sol::table modify_sleep(
     sol::this_state lua, const game_handle &handle,
     const sol::table &requested_adjustments,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const sleep_adjustments adjustments =
@@ -562,7 +562,7 @@ sol::table modify_sleep(
 sol::table reset_sleep(
     sol::this_state lua, const game_handle &handle,
     const std::string &scope,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     if( scope != "daily" && scope != "continuous" &&
@@ -645,7 +645,7 @@ health_adjustments read_health_adjustments(
 sol::table set_health(
     sol::this_state lua, const game_handle &handle,
     const sol::table &requested_adjustments,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const health_adjustments adjustments =
@@ -743,7 +743,7 @@ health_deltas read_health_deltas(
 sol::table modify_health(
     sol::this_state lua, const game_handle &handle,
     const sol::table &requested_deltas,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const health_deltas deltas =
@@ -783,7 +783,7 @@ sol::table modify_health(
 
 void install_need_api(
     sol::table &game,
-    std::function<std::size_t()> current_runtime_generation,
+    std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write )

@@ -3685,6 +3685,23 @@ bool cata_tiles::draw_sprite_at(
         ret = sprite_tex->render_copy_ex( renderer, &destination, 0, nullptr, SDL_FLIP_NONE );
     }
 
+    // Shape-exact gray overlay: blend the sprite's own silhouette over it so
+    // the gray effect never tints neighboring sprites that overflow this tile.
+    if( pending_gray_overlay_ ) {
+        if( const texture *silhouette = tileset_ptr->get_silhouette_tile( sprite_index ) ) {
+            const SDL_Color ov = *pending_gray_overlay_;
+            const std::shared_ptr<SDL_Texture> &tex = silhouette->get_texture_ptr();
+            SetTextureBlendMode( tex, SDL_BLENDMODE_BLEND );
+            SetTextureColorMod( tex, ov.r, ov.g, ov.b );
+            SetTextureAlphaMod( tex, ov.a );
+            silhouette->render_copy_ex( renderer, &destination, render_angle, nullptr,
+                                        render_flip );
+            SetTextureAlphaMod( tex, 255 );
+            SetTextureColorMod( tex, 255, 255, 255 );
+            SetTextureBlendMode( tex, SDL_BLENDMODE_NONE );
+        }
+    }
+
     printErrorIf( ret != 0, "SDL_RenderCopyEx() failed" );
 #if SDL_MAJOR_VERSION >= 3
     // variant_pass unbinds on frame-end flush; nothing to do per-sprite.

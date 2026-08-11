@@ -41,6 +41,11 @@ class talker;
 class const_talker;
 struct construction;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+}
+
 inline const faction_id your_fac( "your_followers" );
 const std::string type_fac_hash_str = "__FAC__";
 
@@ -49,6 +54,7 @@ extern const std::vector<zone_type_id> ignorable_zone_types;
 class zone_type
 {
     private:
+        friend class cata::lua_platform::content_transaction;
         translation name_;
         translation desc_;
         field_type_str_id field_;
@@ -413,6 +419,11 @@ class zone_data
         tripoint_abs_ms cached_shift;
         shared_ptr_fast<zone_options> options;
         bool is_displayed;
+        // Transient object identity for generation-safe native handles.  Copies
+        // and moves of the same logical zone retain the anchor, while a newly
+        // constructed or deserialized zone receives a distinct identity.
+        std::shared_ptr<const void> lifetime_identity =
+            std::make_shared<unsigned char>( 0 ); // NOLINT(cata-serialize)
 
     public:
         zone_data() {
@@ -543,6 +554,9 @@ class zone_data
         }
         bool get_is_personal() const {
             return is_personal;
+        }
+        std::weak_ptr<const void> get_lifetime_identity() const {
+            return lifetime_identity;
         }
         tripoint_abs_ms get_start_point() const {
             if( is_personal ) {

@@ -1426,14 +1426,14 @@ src/version.h: version
 src/version.cpp: src/version.h
 
 BUILTIN_MODS_HEADER := $(ODIR)/builtin_mods_generated.h
-BUILTIN_MODINFO := $(shell find data/mods -type f -name modinfo.json)
+BUILTIN_MOD_SOURCES := $(shell find data/mods -type f \( -name modinfo.json -o -name main.lua -o -name mod.lua \))
 
 .PHONY: check-builtin-mod-manifest
 check-builtin-mod-manifest:
 	mkdir -p $(dir $(BUILTIN_MODS_HEADER))
 	python3 tools/generate_builtin_mods.py --source data/mods --output $(BUILTIN_MODS_HEADER)
 
-$(BUILTIN_MODS_HEADER): tools/generate_builtin_mods.py $(BUILTIN_MODINFO) | check-builtin-mod-manifest
+$(BUILTIN_MODS_HEADER): tools/generate_builtin_mods.py $(BUILTIN_MOD_SOURCES) | check-builtin-mod-manifest
 	@:
 
 $(ODIR)/mod_manager.o: $(BUILTIN_MODS_HEADER)

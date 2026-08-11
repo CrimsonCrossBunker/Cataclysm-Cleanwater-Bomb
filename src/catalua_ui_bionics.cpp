@@ -55,7 +55,7 @@ void require_id_kind( const script_game_id &id, const std::string &kind,
 }
 
 Character *resolve_character(
-    const game_handle &handle, const std::size_t runtime_generation,
+    const game_handle &handle, const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     std::optional<game_handle_error> &error )
 {
@@ -542,7 +542,7 @@ int instance_limit( const sol::optional<int> &requested )
 sol::table list_instances(
     sol::this_state lua, const game_handle &handle,
     const sol::optional<int> &requested_limit,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const int limit = instance_limit( requested_limit );
@@ -594,7 +594,7 @@ std::optional<bionic *> find_instance(
 sol::table get_instance(
     sol::this_state lua, const game_handle &handle,
     const std::uint64_t uid,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -622,7 +622,7 @@ sol::table get_instance(
 sol::table has_instance(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_id_kind(
@@ -644,7 +644,7 @@ sol::table has_instance(
 sol::table install_instance(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_id_kind(
@@ -692,7 +692,7 @@ sol::table install_instance(
 sol::table remove_instance(
     sol::this_state lua, const game_handle &handle,
     const std::uint64_t uid,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -732,7 +732,7 @@ sol::table remove_instance(
 sol::table set_power(
     sol::this_state lua, const game_handle &handle,
     const script_unit_value &requested_power,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const units::energy power = native_energy(
@@ -764,7 +764,7 @@ sol::table set_power(
 sol::table set_activation(
     sol::this_state lua, const game_handle &handle,
     const std::uint64_t uid, const bool active,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -880,7 +880,7 @@ configuration read_configuration( const sol::table &requested )
 sol::table configure_instance(
     sol::this_state lua, const game_handle &handle,
     const std::uint64_t uid, const sol::table &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const configuration options =
@@ -928,7 +928,7 @@ sol::table configure_instance(
 
 void install_bionic_api(
     sol::table &game,
-    std::function<std::size_t()> current_runtime_generation,
+    std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write )

@@ -95,11 +95,11 @@ class horde_entity_token
         horde_entity_token(
             const tripoint_abs_ms &position,
             const horde_entity &entry,
-            const std::size_t runtime_generation,
+            const game_handle_runtime &runtime_generation,
             const std::size_t world_generation )
             : position_( position ),
               monster_( entry.get_type()->id.str() ),
-              runtime_generation_( runtime_generation ),
+              runtime_( runtime_generation ),
               world_generation_( world_generation ),
               identity_( entry.lua_identity() ) {
         }
@@ -116,7 +116,7 @@ class horde_entity_token
         }
 
         std::size_t runtime_generation() const noexcept {
-            return runtime_generation_;
+            return runtime_.generation();
         }
 
         std::size_t world_generation() const noexcept {
@@ -142,12 +142,17 @@ class horde_entity_token
             return identity_;
         }
 
+        bool belongs_to(
+            const game_handle_runtime &runtime ) const noexcept {
+            return runtime_.is_active_match( runtime );
+        }
+
         friend bool operator==(
             const horde_entity_token &lhs,
             const horde_entity_token &rhs ) {
             return lhs.position_ == rhs.position_ &&
                    lhs.monster_ == rhs.monster_ &&
-                   lhs.runtime_generation_ == rhs.runtime_generation_ &&
+                   lhs.runtime_.same_identity( rhs.runtime_ ) &&
                    lhs.world_generation_ == rhs.world_generation_ &&
                    lhs.identity_ == rhs.identity_;
         }
@@ -155,7 +160,7 @@ class horde_entity_token
     private:
         tripoint_abs_ms position_;
         std::string monster_;
-        std::size_t runtime_generation_ = 0;
+        game_handle_runtime runtime_;
         std::size_t world_generation_ = 0;
         std::uint64_t identity_ = 0;
 };
@@ -165,11 +170,11 @@ class legacy_horde_token
     public:
         legacy_horde_token(
             const mongroup &group,
-            const std::size_t runtime_generation,
+            const game_handle_runtime &runtime_generation,
             const std::size_t world_generation )
             : position_( group.abs_pos ),
               group_( group.type.str() ),
-              runtime_generation_( runtime_generation ),
+              runtime_( runtime_generation ),
               world_generation_( world_generation ),
               identity_( group.lua_identity() ) {
         }
@@ -186,7 +191,7 @@ class legacy_horde_token
         }
 
         std::size_t runtime_generation() const noexcept {
-            return runtime_generation_;
+            return runtime_.generation();
         }
 
         std::size_t world_generation() const noexcept {
@@ -212,12 +217,17 @@ class legacy_horde_token
             return identity_;
         }
 
+        bool belongs_to(
+            const game_handle_runtime &runtime ) const noexcept {
+            return runtime_.is_active_match( runtime );
+        }
+
         friend bool operator==(
             const legacy_horde_token &lhs,
             const legacy_horde_token &rhs ) {
             return lhs.position_ == rhs.position_ &&
                    lhs.group_ == rhs.group_ &&
-                   lhs.runtime_generation_ == rhs.runtime_generation_ &&
+                   lhs.runtime_.same_identity( rhs.runtime_ ) &&
                    lhs.world_generation_ == rhs.world_generation_ &&
                    lhs.identity_ == rhs.identity_;
         }
@@ -225,7 +235,7 @@ class legacy_horde_token
     private:
         tripoint_abs_sm position_;
         std::string group_;
-        std::size_t runtime_generation_ = 0;
+        game_handle_runtime runtime_;
         std::size_t world_generation_ = 0;
         std::uint64_t identity_ = 0;
 };
@@ -1066,7 +1076,7 @@ bool group_contains(
 sol::table snapshot_entity(
     sol::state_view lua,
     const entity_match &match,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const horde_entity &entry = *match.entry;
@@ -1113,7 +1123,7 @@ sol::table snapshot_entity(
 sol::table snapshot_legacy_group(
     sol::state_view lua,
     const mongroup &group,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::table result = lua.create_table();
@@ -1201,14 +1211,14 @@ sol::table snapshot_legacy_group(
 
 std::optional<entity_match> resolve_entity_token(
     const horde_entity_token &token,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     std::optional<game_handle_error> &error )
 {
-    if( token.runtime_generation() != runtime_generation ) {
+    if( !token.belongs_to( runtime_generation ) ) {
         error = game_handle_error{
             "stale_runtime",
-            "HordeEntityToken belongs to an inactive Lua runtime generation"
+            "HordeEntityToken belongs to an inactive or different Lua runtime"
         };
         return std::nullopt;
     }
@@ -1260,14 +1270,14 @@ std::optional<entity_match> resolve_entity_token(
 
 mongroup *resolve_legacy_token(
     const legacy_horde_token &token,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     std::optional<game_handle_error> &error )
 {
-    if( token.runtime_generation() != runtime_generation ) {
+    if( !token.belongs_to( runtime_generation ) ) {
         error = game_handle_error{
             "stale_runtime",
-            "LegacyHordeToken belongs to an inactive Lua runtime generation"
+            "LegacyHordeToken belongs to an inactive or different Lua runtime"
         };
         return nullptr;
     }
@@ -1302,7 +1312,7 @@ sol::table list_entities(
     sol::this_state lua,
     const script_tripoint_coord &center,
     const sol::optional<sol::table> &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
@@ -1360,7 +1370,7 @@ sol::table list_legacy_groups(
     sol::this_state lua,
     const script_tripoint_coord &center,
     const sol::optional<sol::table> &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
@@ -1417,7 +1427,7 @@ sol::table list_legacy_groups(
 sol::table get_entity(
     sol::this_state lua,
     const horde_entity_token &token,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -1443,7 +1453,7 @@ sol::table get_entity(
 sol::table get_legacy_group(
     sol::this_state lua,
     const legacy_horde_token &token,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -1470,7 +1480,7 @@ sol::table spawn_entity(
     sol::this_state lua,
     const script_tripoint_coord &position,
     const script_game_id &requested_monster,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
@@ -1562,7 +1572,7 @@ sol::table alert_entity(
     const horde_entity_token &token,
     const script_tripoint_coord &destination,
     const int intensity,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
@@ -1623,7 +1633,7 @@ sol::table alert_entity(
 sol::table remove_entity(
     sol::this_state lua,
     const horde_entity_token &token,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -1795,7 +1805,7 @@ void apply_legacy_settings(
 sol::table spawn_legacy_group(
     sol::this_state lua,
     const sol::table &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
@@ -1882,7 +1892,7 @@ sol::table update_legacy_group(
     sol::this_state lua,
     const legacy_horde_token &token,
     const sol::table &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
@@ -1923,7 +1933,7 @@ sol::table update_legacy_group(
 sol::table remove_legacy_group(
     sol::this_state lua,
     const legacy_horde_token &token,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -2111,7 +2121,7 @@ sol::table horde_limits( sol::this_state lua )
 
 void install_horde_api(
     sol::table &game,
-    std::function<std::size_t()> current_runtime_generation,
+    std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write )

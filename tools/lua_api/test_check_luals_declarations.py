@@ -7,13 +7,28 @@ import unittest
 from pathlib import Path
 
 try:
-    from .check_luals_declarations import check, validate_table_mappings
+    from .check_luals_declarations import (
+        check,
+        check_platform,
+        platform_source_usertypes,
+        validate_table_mappings,
+        validate_type_references,
+    )
 except ImportError:
-    from check_luals_declarations import check, validate_table_mappings
+    from check_luals_declarations import (
+        check,
+        check_platform,
+        platform_source_usertypes,
+        validate_table_mappings,
+        validate_type_references,
+    )
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 DECLARATIONS = REPOSITORY_ROOT / "data/lua/types/ccb_api_v5.d.lua"
+PLATFORM_DECLARATIONS = (
+    REPOSITORY_ROOT / "data/lua/types/ccb_platform_v1.d.lua"
+)
 
 
 class LuaLsDeclarationTest(unittest.TestCase):
@@ -41,9 +56,102 @@ class LuaLsDeclarationTest(unittest.TestCase):
         self.assertEqual(result["usertypes"], 16)
         self.assertEqual(result["coordinate_factories"], 36)
 
+    def test_platform_declarations_cover_the_separate_native_surface(
+        self,
+    ) -> None:
+        self.assertNotIn(
+            "_ModDefinitionNative", platform_source_usertypes()
+        )
+        self.assertIn("ModDefinition", platform_source_usertypes())
+        result = check_platform(PLATFORM_DECLARATIONS)
+        self.assertEqual(result["usertypes"], 85)
+        self.assertEqual(result["properties"], 6)
+        self.assertEqual(result["methods"], 229)
+        self.assertEqual(result["usertype_members"], 303)
+
+        contents = PLATFORM_DECLARATIONS.read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / PLATFORM_DECLARATIONS.name
+            path.write_text(
+                contents.replace(
+                    "---@class ModDefinition\n",
+                    "---@type ModDefinition\n",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "omit usertypes"):
+                check_platform(path)
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / PLATFORM_DECLARATIONS.name
+            path.write_text(
+                contents.replace("---@field core boolean\n", "", 1),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "members differ"):
+                check_platform(path)
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / PLATFORM_DECLARATIONS.name
+            path.write_text(
+                contents.replace(
+                    "---@field achievements CcbPlatformAchievementsApi\n",
+                    "---@field achievements CcbPlatformAchievementsApi\n"
+                    "---@field eocs CcbEocApi\n",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "service fields differ"):
+                check_platform(path)
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / PLATFORM_DECLARATIONS.name
+            path.write_text(
+                contents.replace(
+                    "function CcbPlatformBionicsApi.grant("
+                    "character, id) end\n",
+                    "",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "methods differ"):
+                check_platform(path)
+
     def test_unmapped_registered_table_is_rejected(self) -> None:
         with self.assertRaisesRegex(RuntimeError, "table mappings"):
             validate_table_mappings({"future_native_api": {"read"}})
+
+    def test_undefined_luals_type_reference_is_rejected(self) -> None:
+        contents = """\
+---@class DefinedType
+---@field child MissingType
+local DefinedType = {}
+"""
+        with self.assertRaisesRegex(RuntimeError, "MissingType"):
+            validate_type_references(contents)
+
+    def test_platform_undefined_type_reference_is_rejected(self) -> None:
+        contents = PLATFORM_DECLARATIONS.read_text(encoding="utf-8")
+        old = "---@field environment CcbPlatformEnvironmentQueries\n"
+        self.assertIn(old, contents)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / PLATFORM_DECLARATIONS.name
+            path.write_text(
+                contents.replace(
+                    old,
+                    "---@field environment MissingPlatformType\n",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "MissingPlatformType",
+            ):
+                check_platform(path)
 
     def test_missing_registered_method_is_rejected(self) -> None:
         self.check_modified(

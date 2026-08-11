@@ -425,6 +425,55 @@ class generic_factory
             return result;
         }
 
+        /**
+         * Restore a transaction snapshot without reporting it as a duplicate
+         * definition.  An existing object keeps its concrete registry index;
+         * a missing object is appended as a last-resort recovery path.
+         */
+        T &restore( const T &obj ) {
+            inc_version();
+            const auto iter = map.find( obj.id );
+            if( iter != map.end() ) {
+                T &result = list[iter->second.to_i()];
+                result = obj;
+                result.id.set_cid_version( iter->second.to_i(), version );
+                return result;
+            }
+
+            const int_id<T> cid( list.size() );
+            list.push_back( obj );
+            T &result = list.back();
+            result.id.set_cid_version( cid.to_i(), version );
+            map[result.id] = cid;
+            return result;
+        }
+
+        /**
+         * Remove one concrete object without resetting the complete factory.
+         *
+         * This is primarily useful for transactional native registrars.  It
+         * deliberately does not inspect or mutate deferred JSON or abstract
+         * definitions: callers may only erase an id already present in the
+         * concrete registry.  Cached string_id conversions are invalidated and
+         * rebuilt after the vector compacts.
+         */
+        bool erase( const string_id<T> &id ) {
+            const auto iter = map.find( id );
+            if( iter == map.end() ) {
+                return false;
+            }
+
+            list.erase( list.begin() + iter->second.to_i() );
+            map.clear();
+            inc_version();
+            for( std::size_t index = 0; index < list.size(); ++index ) {
+                const int_id<T> cid( index );
+                list[index].id.set_cid_version( cid.to_i(), version );
+                map[list[index].id] = cid;
+            }
+            return true;
+        }
+
         /** Finalize all entries (derived classes should chain to this method) */
         virtual void finalize() {
             DynamicDataLoader::get_instance().load_deferred( deferred );

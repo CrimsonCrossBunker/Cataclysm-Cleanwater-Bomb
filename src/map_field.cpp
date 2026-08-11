@@ -19,6 +19,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
+#include "catalua_platform_runtime.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -2184,10 +2185,19 @@ void map::emit_field( const tripoint_bub_ms &pos, const emit_id &src, float mul 
     }
 
     dialogue d( get_talker_for( get_avatar() ), nullptr );
-    const float chance = src->chance( d ) * mul;
+    const field_type_id fallback_field = src->field( d );
+    const cata::lua_platform::emission_profile fallback = {
+        fallback_field.id().str(), src->intensity( d ), src->qty( d ), src->chance( d )
+    };
+    const cata::lua_platform::emission_profile profile =
+        cata::lua_platform::invoke_emission_profile_handler(
+            src.str(), pos, fallback ).value_or( fallback );
+    const float chance = profile.chance * mul;
     if( x_in_y( chance, 100 ) ) {
-        const int qty = chance > 100.0f ? roll_remainder( src->qty( d ) * chance / 100.0f ) : src->qty( d );
-        propagate_field( pos, src->field( d ), qty, src->intensity( d ) );
+        const int qty = chance > 100.0f ?
+                        roll_remainder( profile.quantity * chance / 100.0f ) :
+                        profile.quantity;
+        propagate_field( pos, field_type_id( profile.field ), qty, profile.intensity );
     }
 }
 

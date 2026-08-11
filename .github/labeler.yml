@@ -467,7 +467,7 @@ labels:
   - label: "Mods: Cataclysm Delight"
     matcher:
       files:
-        - data/mods/cdda_Delight/**/*
+        - data/mods/cata_Delight/**/*
 
   - label: "Mods: Path of Immortals"
     matcher:

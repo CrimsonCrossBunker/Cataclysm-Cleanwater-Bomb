@@ -189,6 +189,8 @@ void snippet_library::clear_snippets()
     hash_to_id_migration = std::nullopt;
     snippets_by_category.clear();
     snippets_by_id.clear();
+    name_by_id.clear();
+    EOC_by_id.clear();
     // Needed by world creation etc
     reload_names( PATH_INFO::names() );
 }

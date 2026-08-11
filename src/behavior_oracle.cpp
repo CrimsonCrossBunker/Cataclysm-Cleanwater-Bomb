@@ -21,19 +21,33 @@ status_t return_running( const oracle_t *, std::string_view )
 static std::function < status_t( const oracle_t *, std::string_view ) >
 make_function( status_t ( character_oracle_t::* fun )( std::string_view ) const )
 {
-    return static_cast<status_t ( oracle_t::* )( std::string_view ) const>( fun );
+    return [fun]( const oracle_t *oracle, const std::string_view argument ) {
+        const character_oracle_t *character =
+            dynamic_cast<const character_oracle_t *>( oracle );
+        return character == nullptr ? status_t::failure :
+               ( character->*fun )( argument );
+    };
 }
 
 static std::function < status_t( const oracle_t *, std::string_view ) >
 make_function( status_t ( monster_oracle_t::* fun )( std::string_view ) const )
 {
-    return static_cast<status_t ( oracle_t::* )( std::string_view ) const>( fun );
+    return [fun]( const oracle_t *oracle, const std::string_view argument ) {
+        const monster_oracle_t *monster =
+            dynamic_cast<const monster_oracle_t *>( oracle );
+        return monster == nullptr ? status_t::failure :
+               ( monster->*fun )( argument );
+    };
 }
 
 static std::function<float( const oracle_t *, std::string_view )>
 make_score_function( float ( character_oracle_t::* fun )( std::string_view ) const )
 {
-    return static_cast<float ( oracle_t::* )( std::string_view ) const>( fun );
+    return [fun]( const oracle_t *oracle, const std::string_view argument ) {
+        const character_oracle_t *character =
+            dynamic_cast<const character_oracle_t *>( oracle );
+        return character == nullptr ? 0.0f : ( character->*fun )( argument );
+    };
 }
 
 std::unordered_map<std::string, std::function<status_t( const oracle_t *, std::string_view ) >>

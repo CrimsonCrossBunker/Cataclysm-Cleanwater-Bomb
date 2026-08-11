@@ -3,6 +3,7 @@
 #define CATA_SRC_EMIT_H
 
 #include <map>
+#include <optional>
 #include <string>
 
 #include "dialogue_helpers.h"
@@ -10,6 +11,11 @@
 
 class JsonObject;
 struct const_dialogue;
+
+namespace cata::lua_platform
+{
+class content_transaction;
+} // namespace cata::lua_platform
 
 class emit
 {
@@ -28,21 +34,33 @@ class emit
 
         /** Type of field to emit @see emit::is_valid */
         field_type_id field( const_dialogue const &d ) const {
+            if( native_profile_ ) {
+                return native_profile_->field.id();
+            }
             return field_type_id( field_.evaluate( d ) );
         }
 
         /** Intensity of output fields, range [1..maximum_intensity] */
         int intensity( const_dialogue const &d ) const {
+            if( native_profile_ ) {
+                return native_profile_->intensity;
+            }
             return intensity_.evaluate( d );
         }
 
         /** Units of field to generate per turn subject to @ref chance */
         int qty( const_dialogue const &d ) const {
+            if( native_profile_ ) {
+                return native_profile_->quantity;
+            }
             return qty_.evaluate( d );
         }
 
         /** Chance to emit each turn, range [1..100] */
         int chance( const_dialogue const &d ) const {
+            if( native_profile_ ) {
+                return native_profile_->chance;
+            }
             return chance_.evaluate( d );
         }
 
@@ -62,11 +80,21 @@ class emit
         static void reset();
 
     private:
+        struct native_profile {
+            field_type_str_id field;
+            int intensity = 1;
+            int quantity = 1;
+            int chance = 100;
+        };
+
         emit_id id_;
         str_or_var field_;
         dbl_or_var intensity_;
         dbl_or_var qty_;
         dbl_or_var chance_;
+        std::optional<native_profile> native_profile_;
+
+        friend class cata::lua_platform::content_transaction;
 };
 
 #endif // CATA_SRC_EMIT_H

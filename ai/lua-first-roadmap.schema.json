@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crimsoncrossbunker.github.io/schemas/lua-first-roadmap-v1.json",
+  "title": "CCB Lua-first Platform roadmap",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "direction_status",
+    "platform_version",
+    "authority_path",
+    "current_contract",
+    "target",
+    "legacy_inventories",
+    "status_definitions",
+    "milestones",
+    "capabilities"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "kind": { "const": "lua_first_roadmap" },
+    "direction_status": { "enum": [ "proposal", "accepted", "retired" ] },
+    "platform_version": { "type": "integer", "minimum": 1 },
+    "authority_path": { "type": "string", "minLength": 1 },
+    "current_contract": { "type": "string", "minLength": 1 },
+    "target": { "type": "string", "minLength": 1 },
+    "legacy_inventories": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [ "id", "path", "selector", "entry_count" ],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "path": { "type": "string", "minLength": 1 },
+          "selector": { "type": "string", "minLength": 1 },
+          "entry_count": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "status_definitions": {
+      "type": "object",
+      "required": [ "milestone", "capability", "legacy_dependency" ],
+      "properties": {
+        "milestone": { "const": [ "planned", "in_progress", "complete", "blocked" ] },
+        "capability": { "const": [ "absent", "legacy_only", "partial", "available" ] },
+        "legacy_dependency": { "const": [ "none", "private_adapter", "public_legacy" ] }
+      },
+      "additionalProperties": false
+    },
+    "milestones": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [ "id", "title", "status", "depends_on", "exit_criteria", "evidence" ],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "title": { "type": "string", "minLength": 1 },
+          "status": { "enum": [ "planned", "in_progress", "complete", "blocked" ] },
+          "depends_on": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+            "uniqueItems": true
+          },
+          "exit_criteria": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "evidence": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id", "phase", "status", "legacy_dependency", "target_surface",
+          "evidence", "next_actions"
+        ],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "phase": { "type": "string", "minLength": 1 },
+          "status": { "enum": [ "absent", "legacy_only", "partial", "available" ] },
+          "legacy_dependency": { "enum": [ "none", "private_adapter", "public_legacy" ] },
+          "target_surface": { "type": "string", "minLength": 1 },
+          "evidence": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
+          },
+          "next_actions": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
