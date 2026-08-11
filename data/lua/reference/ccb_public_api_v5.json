@@ -19,7 +19,7 @@
     "event_specs": "src/event.h"
   },
   "parity": {
-    "native_inventory_sha256": "f080442ccad201aa1f8ed230be7f83ce6d8b495a7fffd7e04ec5f76ffc27a1b4",
+    "native_inventory_sha256": "933f34c648769f6f3902eab24e90c6211a23573ff7d018d3c2cb1920b5e66a8c",
     "native_inventory_counts": {
       "id_kinds": 132,
       "json_types": 190,
