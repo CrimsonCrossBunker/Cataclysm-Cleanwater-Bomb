@@ -51,6 +51,7 @@
     "name": { "str": "atomic headlamp (covered)", "str_pl": "atomic headlamps (covered)" },
     "description": "A custom-made, reinforced headlamp powered by the magic of nuclear decay, focused for more usable brightness.  The adjustable strap allows it to be comfortably worn on your head or attached to your helmet.  Use it to open the cover and show the light.",
     "flags": [ "LEAK_DAM", "RADIOACTIVE", "STURDY", "OVERSIZE", "BELTED", "PADDED", "ALLOWS_NATURAL_ATTACKS" ],
+    "light": 0,
     "use_action": {
       "type": "transform",
       "msg": "You open the headlamp's cover.",
