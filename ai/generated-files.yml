@@ -80,6 +80,11 @@ entries:
     tracked: true
     generated_by: python3 tools/json_api/generate_contracts.py
     validation_id: json-eoc-contract
+  - id: lua-first-replacement-ledger
+    paths: [ai/lua-first-replacement-ledger.yml]
+    tracked: true
+    generated_by: python3 tools/agent/generate_lua_first_replacement_ledger.py
+    validation_id: agent-context
   - id: shader-artifacts
     paths: [data/shaders/*.spv, data/shaders/*.dxil, data/shaders/*.msl, data/shaders/build-*.stamp]
     tracked: false

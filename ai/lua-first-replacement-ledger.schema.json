@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crimsoncrossbunker.github.io/schemas/lua-first-replacement-ledger-v1.json",
+  "title": "CCB Lua-first replacement ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "kind", "contract", "sources", "summary", "entries"],
+  "properties": {
+    "$schema": { "const": "lua-first-replacement-ledger.schema.json" },
+    "schema_version": { "const": 1 },
+    "kind": { "const": "lua_first_replacement_ledger" },
+    "contract": { "type": "string", "minLength": 1 },
+    "sources": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "path", "selector", "source_fingerprint", "entry_count"],
+        "properties": {
+          "id": { "enum": ["json-object-types", "eoc-conditions", "eoc-effects"] },
+          "path": { "type": "string", "minLength": 1 },
+          "selector": { "enum": ["type", "key"] },
+          "source_fingerprint": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+          "entry_count": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "implemented_unverified", "primitive_available_unverified", "planned", "private_adapter", "reviewed_not_applicable"],
+      "properties": {
+        "total": { "type": "integer", "minimum": 1 },
+        "implemented_unverified": { "type": "integer", "minimum": 0 },
+        "primitive_available_unverified": { "type": "integer", "minimum": 0 },
+        "planned": { "type": "integer", "minimum": 0 },
+        "private_adapter": { "type": "integer", "minimum": 0 },
+        "reviewed_not_applicable": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["inventory", "selector", "target_kind", "target", "status", "legacy_dependency", "evidence"],
+        "properties": {
+          "inventory": { "enum": ["json-object-types", "eoc-conditions", "eoc-effects"] },
+          "selector": { "type": "string", "minLength": 1 },
+          "target_kind": { "enum": ["platform_domain", "shared_service", "migration", "not_applicable"] },
+          "target": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["implemented_unverified", "primitive_available_unverified", "planned", "private_adapter", "reviewed_not_applicable"] },
+          "legacy_dependency": { "enum": ["none", "private_adapter", "public_legacy"] },
+          "evidence": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}
