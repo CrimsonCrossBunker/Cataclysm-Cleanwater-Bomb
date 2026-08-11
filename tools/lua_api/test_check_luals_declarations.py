@@ -7,13 +7,24 @@ import unittest
 from pathlib import Path
 
 try:
-    from .check_luals_declarations import check, validate_table_mappings
+    from .check_luals_declarations import (
+        check,
+        check_platform,
+        validate_table_mappings,
+    )
 except ImportError:
-    from check_luals_declarations import check, validate_table_mappings
+    from check_luals_declarations import (
+        check,
+        check_platform,
+        validate_table_mappings,
+    )
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 DECLARATIONS = REPOSITORY_ROOT / "data/lua/types/ccb_api_v5.d.lua"
+PLATFORM_DECLARATIONS = (
+    REPOSITORY_ROOT / "data/lua/types/ccb_platform_v1.d.lua"
+)
 
 
 class LuaLsDeclarationTest(unittest.TestCase):
@@ -40,6 +51,52 @@ class LuaLsDeclarationTest(unittest.TestCase):
         self.assertEqual(result["game_tables"], 57)
         self.assertEqual(result["usertypes"], 16)
         self.assertEqual(result["coordinate_factories"], 36)
+
+    def test_platform_declarations_cover_the_separate_native_surface(
+        self,
+    ) -> None:
+        result = check_platform(PLATFORM_DECLARATIONS)
+        self.assertEqual(result["usertypes"], 72)
+        self.assertEqual(result["properties"], 17)
+        self.assertEqual(result["methods"], 212)
+        self.assertEqual(result["usertype_members"], 223)
+
+        contents = PLATFORM_DECLARATIONS.read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / PLATFORM_DECLARATIONS.name
+            path.write_text(
+                contents.replace(
+                    "---@class ModDefinition\n",
+                    "---@type ModDefinition\n",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "omit usertypes"):
+                check_platform(path)
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / PLATFORM_DECLARATIONS.name
+            path.write_text(
+                contents.replace("---@field core boolean\n", "", 1),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "members differ"):
+                check_platform(path)
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / PLATFORM_DECLARATIONS.name
+            path.write_text(
+                contents.replace(
+                    "---@field achievements CcbAchievementsApi\n",
+                    "---@field achievements CcbAchievementsApi\n"
+                    "---@field eocs CcbEocApi\n",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "service fields differ"):
+                check_platform(path)
 
     def test_unmapped_registered_table_is_rejected(self) -> None:
         with self.assertRaisesRegex(RuntimeError, "table mappings"):
