@@ -10,6 +10,7 @@
 #include <memory>
 #include <numeric>
 #include <optional>
+#include <set>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -105,6 +106,44 @@ int vehicle_part_base_price( const vehicle &veh, bool practical )
             continue;
         }
         ret += vp.get_base().price_no_contents( practical );
+    }
+    return ret;
+}
+
+std::set<itype_id> vehicle_liquid_engine_fuels()
+{
+    std::set<itype_id> result;
+    for( const vpart_info &vpi : vehicles::parts::get_all() ) {
+        if( !vpi.engine_info ) {
+            continue;
+        }
+        for( const itype_id &fuel_id : vpi.engine_info->fuel_opts ) {
+            if( fuel_id.is_null() || !fuel_id.is_valid() ) {
+                continue;
+            }
+            const item fuel( fuel_id, calendar::turn_zero, 1 );
+            if( fuel.made_of( phase_id::LIQUID ) ) {
+                result.insert( fuel_id );
+            }
+        }
+    }
+    return result;
+}
+
+int vehicle_tank_fuel_price_postapoc( const vehicle &veh )
+{
+    const std::set<itype_id> liquid_engine_fuels = vehicle_liquid_engine_fuels();
+    int ret = 0;
+    for( const vpart_reference &vpr : veh.get_any_parts( vpart_bitflags::VPFLAG_FLUIDTANK ) ) {
+        const vehicle_part &vp = vpr.part();
+        if( vp.has_flag( vp_flag::carried_flag ) || vp.ammo_remaining() <= 0 ) {
+            continue;
+        }
+        const itype_id fuel_id = vp.ammo_current();
+        if( !liquid_engine_fuels.count( fuel_id ) ) {
+            continue;
+        }
+        ret += item( fuel_id, calendar::turn_zero, vp.ammo_remaining() ).price_no_contents( true );
     }
     return ret;
 }
@@ -1146,6 +1185,16 @@ double vehicle_prototype_price_postapoc_eval( const_dialogue const &d, char /* s
     return proto_id->blueprint ? vehicle_part_base_price( *proto_id->blueprint, true ) : 0;
 }
 
+double vehicle_tank_fuel_price_postapoc_eval( const_dialogue const &d, char scope,
+        std::vector<diag_value> const & /* params */, diag_kwargs const & /* kwargs */ )
+{
+    const_talker const *actor = d.const_actor( is_beta( scope ) );
+    if( const vehicle *veh = actor->get_const_vehicle() ) {
+        return vehicle_tank_fuel_price_postapoc( *veh );
+    }
+    return 0;
+}
+
 void pain_ass( double val, dialogue &d, char scope, std::vector<diag_value> const & /* params */,
                diag_kwargs const &kwargs )
 {
@@ -2126,6 +2175,7 @@ std::map<std::string_view, dialogue_func> const dialogue_funcs{
     { "price_postapoc", { "un", 0, price_postapoc_eval } },
     { "vehicle_prototype_price", { "g", 1, vehicle_prototype_price_eval } },
     { "vehicle_prototype_price_postapoc", { "g", 1, vehicle_prototype_price_postapoc_eval } },
+    { "vehicle_tank_fuel_price_postapoc", { "un", 0, vehicle_tank_fuel_price_postapoc_eval } },
     { "school_level", { "un", 1, school_level_eval } },
     { "school_level_adjustment", { "un", 1, school_level_adjustment_eval, school_level_adjustment_ass } },
     { "spellcasting_adjustment", { "u", 1, {}, spellcasting_adjustment_ass, { "mod", "school", "spell", "flag_whitelist", "flag_blacklist" } } },
