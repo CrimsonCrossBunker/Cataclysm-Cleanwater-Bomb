@@ -40,3 +40,21 @@ const SpeechBubble &get_speech( const std::string &label )
 
     return random_entry_ref( speech_type->second );
 }
+
+const std::vector<SpeechBubble> *cata::lua_platform::detail::speech_registry_find(
+    const std::string_view label )
+{
+    const auto found = speech.find( std::string( label ) );
+    return found == speech.end() ? nullptr : &found->second;
+}
+
+void cata::lua_platform::detail::speech_registry_set(
+    const std::string &label, std::vector<SpeechBubble> lines )
+{
+    speech[label] = std::move( lines );
+}
+
+void cata::lua_platform::detail::speech_registry_erase( const std::string_view label )
+{
+    speech.erase( std::string( label ) );
+}

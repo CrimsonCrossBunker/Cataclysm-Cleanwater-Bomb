@@ -41,6 +41,11 @@ class talker;
 class const_talker;
 struct construction;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+}
+
 inline const faction_id your_fac( "your_followers" );
 const std::string type_fac_hash_str = "__FAC__";
 
@@ -49,6 +54,7 @@ extern const std::vector<zone_type_id> ignorable_zone_types;
 class zone_type
 {
     private:
+        friend class cata::lua_platform::content_transaction;
         translation name_;
         translation desc_;
         field_type_str_id field_;

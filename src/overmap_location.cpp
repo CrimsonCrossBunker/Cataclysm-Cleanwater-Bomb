@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include "catalua_platform_content.h"
 #include "debug.h"
 #include "enum_conversions.h"
 #include "flexbuffer_json.h"
@@ -17,6 +18,11 @@ namespace
 generic_factory<overmap_location> locations( "overmap location" );
 
 } // namespace
+
+generic_factory<overmap_location> &cata::lua_platform::detail::overmap_location_registry()
+{
+    return locations;
+}
 
 template<>
 bool string_id<overmap_location>::is_valid() const

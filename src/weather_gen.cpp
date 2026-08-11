@@ -11,6 +11,7 @@
 
 #include "avatar.h"
 #include "cata_utility.h"
+#include "catalua_platform_runtime.h"
 #include "dialogue.h"
 #include "flexbuffer_json.h"
 #include "game_constants.h"
@@ -258,7 +259,13 @@ weather_type_id weather_generator::get_weather_conditions( const w_point &w ) co
             }
         }
 
-        if( required_weather && type->condition( d ) ) {
+        if( !required_weather ) {
+            continue;
+        }
+        const std::optional<bool> lua_condition =
+            cata::lua_platform::invoke_weather_type_handler( type.str(), w );
+        const bool condition_matches = lua_condition ? *lua_condition : type->condition( d );
+        if( condition_matches ) {
             current_conditions = type;
             continue;
         }

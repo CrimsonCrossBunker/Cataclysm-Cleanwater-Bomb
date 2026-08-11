@@ -620,18 +620,54 @@ void sfx::load_playlist( const JsonObject &jsobj )
     }
 
     for( JsonObject playlist : jsobj.get_array( "playlists" ) ) {
-        const std::string playlist_id = playlist.get_string( "id" );
-        music_playlist playlist_to_load;
-        playlist_to_load.shuffle = playlist.get_bool( "shuffle", false );
+        playlist_definition definition;
+        definition.id = playlist.get_string( "id" );
+        definition.shuffle = playlist.get_bool( "shuffle", false );
 
         for( JsonObject entry : playlist.get_array( "files" ) ) {
-            const music_playlist::entry e{ entry.get_string( "file" ),  entry.get_int( "volume" ) };
-            playlist_to_load.entries.push_back( e );
+            definition.entries.push_back( playlist_entry_definition{
+                entry.get_string( "file" ), entry.get_int( "volume" )
+            } );
         }
+        playlist_registry_set( definition );
+    }
+}
 
-        playlists[playlist_id] = std::move( playlist_to_load );
+std::optional<sfx::playlist_definition> sfx::playlist_registry_get(
+    const std::string_view id )
+{
+    const auto found = playlists.find( std::string( id ) );
+    if( found == playlists.end() ) {
+        return std::nullopt;
+    }
+    playlist_definition result;
+    result.id = std::string( id );
+    result.shuffle = found->second.shuffle;
+    for( const music_playlist::entry &entry : found->second.entries ) {
+        result.entries.push_back( playlist_entry_definition{ entry.file, entry.volume } );
+    }
+    return result;
+}
 
-        music::update_music_id_is_empty_flag( playlist_id, true );
+void sfx::playlist_registry_set( const playlist_definition &value )
+{
+    music_playlist native;
+    native.shuffle = value.shuffle;
+    for( const playlist_entry_definition &entry : value.entries ) {
+        native.entries.push_back( music_playlist::entry{ entry.file, entry.volume } );
+    }
+    playlists[value.id] = std::move( native );
+    if( value.id == "mp3" || value.id == "instrument" || value.id == "sound" ||
+        value.id == "title" ) {
+        music::update_music_id_is_empty_flag( value.id, true );
+    }
+}
+
+void sfx::playlist_registry_erase( const std::string_view id )
+{
+    playlists.erase( std::string( id ) );
+    if( id == "mp3" || id == "instrument" || id == "sound" || id == "title" ) {
+        music::update_music_id_is_empty_flag( std::string( id ), false );
     }
 }
 

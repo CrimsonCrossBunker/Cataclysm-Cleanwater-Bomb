@@ -3,10 +3,27 @@
 #include <map>
 #include <utility>
 
+#include "catalua_platform_content.h"
 #include "debug.h"
 #include "generic_factory.h"
 
 static std::map<emit_id, emit> emits_all;
+
+const emit *cata::lua_platform::detail::emission_registry_find( const std::string &id )
+{
+    const auto found = emits_all.find( emit_id( id ) );
+    return found == emits_all.end() ? nullptr : &found->second;
+}
+
+void cata::lua_platform::detail::emission_registry_set( const emit &value )
+{
+    emits_all[value.id()] = value;
+}
+
+void cata::lua_platform::detail::emission_registry_erase( const std::string &id )
+{
+    emits_all.erase( emit_id( id ) );
+}
 
 /** @relates string_id */
 template<>

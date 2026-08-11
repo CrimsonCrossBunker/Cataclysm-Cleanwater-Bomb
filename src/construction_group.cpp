@@ -1,5 +1,6 @@
 #include "construction_group.h"
 
+#include "catalua_platform_content.h"
 #include "generic_factory.h"
 
 namespace
@@ -8,6 +9,12 @@ namespace
 generic_factory<construction_group> all_construction_groups( "construction groups" );
 
 } // namespace
+
+generic_factory<construction_group> &
+cata::lua_platform::detail::construction_group_registry()
+{
+    return all_construction_groups;
+}
 
 /** @relates string_id */
 template<>
