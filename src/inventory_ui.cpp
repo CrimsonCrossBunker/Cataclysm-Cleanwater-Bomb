@@ -14,6 +14,7 @@
 #include "catacharset.h"
 #include "character.h"
 #include "character_attire.h"
+#include "contents_change_handler.h"
 #include "cuboid_rectangle.h"
 #include "debug.h"
 #include "enum_conversions.h"
@@ -3893,6 +3894,14 @@ std::string inventory_selector::action_bound_to_key( char key ) const
     return ctxt.input_to_action( input_event( key, input_event_t::keyboard_char ) );
 }
 
+std::string inventory_selector::key_desc( const std::string &action ) const
+{
+    return ctxt.get_desc( action );
+}
+
+static item_location get_item_to_highlight_after_use( inventory_column &column,
+        item_location const &loc );
+
 item_location inventory_pick_selector::execute()
 {
     shared_ptr_fast<ui_adaptor> ui = create_or_get_ui_adaptor();
@@ -3903,7 +3912,13 @@ item_location inventory_pick_selector::execute()
         ui_manager::redraw();
         const inventory_input input = get_input();
 
-        if( input.entry != nullptr ) {
+        if( input.action == "WIELD" ) {
+            wield_highlighted();
+            continue;
+        } else if( input.action == "WEAR" ) {
+            wear_highlighted();
+            continue;
+        } else if( input.entry != nullptr ) {
             if( drag_enabled && input.action == "CLICK_AND_DRAG" ) {
                 if( input.entry->is_item() ) {
                     dragActive = true;
@@ -3951,6 +3966,97 @@ item_location inventory_pick_selector::execute()
             on_input( input );
         }
     }
+}
+
+void inventory_pick_selector::refresh_after_use( const item_location &it )
+{
+    // Reload the list so the just-used item moves to its new slot, and keep
+    // the selection on the next item after the one that was used.
+    const item_location next_item = get_item_to_highlight_after_use( get_active_column(), it );
+    clear_items();
+    add_character_items( u );
+    if( next_item ) {
+        highlight_one_of( { next_item } );
+    }
+}
+
+bool inventory_pick_selector::wield_highlighted()
+{
+    inventory_entry &selected = get_active_column().get_highlighted();
+    if( !selected.is_item() ) {
+        return false;
+    }
+
+    item_location it = selected.any_item();
+    // Snapshot the name first: wear/wield may replace the item object on
+    // failure (rollback creates a copy), invalidating the location.
+    const std::string item_name = it->display_name();
+    // Pre-check first: the common "can't wield" case is caught without ever
+    // touching the item, so the list stays valid and the reason is specific.
+    const ret_val<void> check = u.can_wield( *it );
+    if( !check.success() ) {
+        popup_getkey( check.c_str() );
+        return false;
+    }
+    // Wield immediately (like the game's w key) so the item state changes
+    // while the menu stays open; an activity would only run after closing it.
+    // The contents change handler matches the item action menu path: sealed
+    // pockets holding the item are unsealed and spill/on-contents handling
+    // runs after the item is taken.
+    contents_change_handler handler;
+    handler.unseal_pocket_containing( it );
+    const bool wielded = u.wield( it );
+    handler.handle_by( u );
+    if( wielded ) {
+        refresh_after_use( it );
+        return true;
+    }
+    // Failed wield after a successful pre-check (e.g. state changed): rebuild
+    // the list so the menu never dereferences dangling locations.
+    refresh_after_use( item_location() );
+    popup_getkey( _( "You can't wield the %s." ), item_name );
+
+    return false;
+}
+
+bool inventory_pick_selector::wear_highlighted()
+{
+    inventory_entry &selected = get_active_column().get_highlighted();
+    if( !selected.is_item() ) {
+        return false;
+    }
+
+    item_location it = selected.any_item();
+    // Snapshot the name first: wear/wield may replace the item object on
+    // failure (rollback creates a copy), invalidating the location.
+    const std::string item_name = it->display_name();
+    // Pre-check first: the common "can't wear" case is caught without ever
+    // touching the item, so the list stays valid and the reason is specific.
+    const ret_val<void> check = u.can_wear( *it );
+    if( !check.success() ) {
+        popup_getkey( check.c_str() );
+        return false;
+    }
+    // Wear immediately (like the game's W key), keeping the menu open.
+    // The contents change handler matches the item action menu path: sealed
+    // pockets holding the item are unsealed and spill/on-contents handling
+    // runs after the item is taken.
+    contents_change_handler handler;
+    handler.unseal_pocket_containing( it );
+    const auto wear_result = u.wear( it );
+    handler.handle_by( u );
+    if( wear_result ) {
+        refresh_after_use( it );
+        return true;
+    }
+    // Failed wear after a successful pre-check (e.g. the interactive prompt
+    // was cancelled): the rollback replaced the item with a copy, which
+    // invalidates every entry location — rebuild the list before the next
+    // redraw so the menu never dereferences dangling locations.
+    refresh_after_use( item_location() );
+    popup_getkey( _( "You can't wear the %s." ), item_name );
+
+    return false;
 }
 
 inventory_selector::header_stats container_inventory_selector::get_raw_stats() const
@@ -4003,9 +4109,7 @@ std::vector<reload_target> get_possible_reload_targets( const item_location &tar
         // wells), not the position in magazines_current().
         const bool multimag = owner->uses_firing_requirements();
         int idx = 0;
-        for( const item_pocket *p : owner->get_pockets( []( const item_pocket & ) {
-        return true;
-    } ) ) {
+        for( const item_pocket *p : owner->get_pockets( pocket_filter ) ) {
             if( p->is_type( pocket_type::MAGAZINE_WELL ) ) {
                 reload_target well;
                 well.target = owner;
@@ -5288,6 +5392,7 @@ std::pair<item_location, bool> unload_selector::execute()
     while( true ) {
         ui_manager::redraw();
         const inventory_input input = get_input();
+
         if( input.entry != nullptr ) {
             if( drag_enabled && input.action == "CLICK_AND_DRAG" ) {
                 if( input.entry->is_item() ) {
