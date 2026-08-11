@@ -141,6 +141,8 @@ static const ter_str_id ter_t_water_dp( "t_water_dp" );
 static const ter_str_id ter_t_water_moving_dp( "t_water_moving_dp" );
 static const ter_str_id ter_t_water_moving_sh( "t_water_moving_sh" );
 static const ter_str_id ter_t_water_sh( "t_water_sh" );
+static const ter_str_id ter_t_pond_water_sh( "t_pond_water_sh" );
+static const ter_str_id ter_t_pond_water_dp( "t_pond_water_dp" );
 
 static const vgroup_id VehicleGroup_crashed_helicopters( "crashed_helicopters" );
 
@@ -656,17 +658,17 @@ static bool mx_pond( map &m, const tripoint_abs_sm &abs_sub )
 
                 switch( lake_type ) {
                     case 1:
-                        m.ter_set( location, ter_t_water_sh );
+                        m.ter_set( location, ter_t_pond_water_sh );
                         break;
                     case 2:
-                        m.ter_set( location, ter_t_water_dp );
+                        m.ter_set( location, ter_t_pond_water_dp );
                         break;
                     case 3:
                         const int neighbors = CellularAutomata::neighbor_count( current, width, height, point( i, j ) );
                         if( neighbors == 8 ) {
-                            m.ter_set( location, ter_t_water_dp );
+                            m.ter_set( location, ter_t_pond_water_dp );
                         } else {
-                            m.ter_set( location, ter_t_water_sh );
+                            m.ter_set( location, ter_t_pond_water_sh );
                         }
                         break;
                 }

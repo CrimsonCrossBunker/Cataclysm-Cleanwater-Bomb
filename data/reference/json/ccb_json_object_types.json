@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:939c256fc667b769da6fa02c29b914a8c6ad0a087944c0923552625adaff7e48",
+    "source_fingerprint": "sha256:4bb41e24840bcd0c2640989f1f229cfe195df2cd590cd8fb85d4abfdfe3af3f7",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6730,
-    "top_level_objects": 94329,
+    "tracked_json_files": 6731,
+    "top_level_objects": 94369,
     "top_level_objects_without_string_type": 1,
     "schema_complete_types": 0
   },
@@ -2467,7 +2467,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 906,
+        "occurrences": 908,
         "examples": [
           {
             "path": "data/json/construction/appliances.json",
@@ -2580,7 +2580,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 522,
+        "occurrences": 524,
         "examples": [
           {
             "path": "data/json/construction_group.json",
@@ -5207,7 +5207,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 9,
+        "occurrences": 10,
         "examples": [
           {
             "path": "data/core/mod_migrations.json",
@@ -5307,7 +5307,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4467
+            "line": 4474
           }
         ],
         "confidence": "lexical_only"
@@ -6231,7 +6231,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4668
+            "line": 4675
           }
         ],
         "confidence": "lexical_only"
@@ -6408,7 +6408,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4431
+            "line": 4438
           }
         ],
         "confidence": "lexical_only"
@@ -8429,7 +8429,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 760,
+        "occurrences": 761,
         "examples": [
           {
             "path": "data/json/recipes/basecamps/components.json",
@@ -9372,7 +9372,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4310
+            "line": 4317
           }
         ],
         "confidence": "lexical_only"
@@ -9761,7 +9761,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1603,
+        "occurrences": 1637,
         "examples": [
           {
             "path": "data/json/furniture_and_terrain/LIXA_furniture_and_terrain.json",
@@ -11004,7 +11004,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4627
+            "line": 4634
           }
         ],
         "confidence": "lexical_only"

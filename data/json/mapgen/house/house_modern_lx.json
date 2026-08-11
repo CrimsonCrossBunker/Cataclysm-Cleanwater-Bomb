@@ -37,7 +37,7 @@
         "&": "t_region_groundcover_urban",
         "j": "t_region_groundcover_urban",
         "_": "t_concrete",
-        "~": "t_water_pool_shallow_outdoors",
+        "~": "t_pool_water_shallow_outdoors",
         "!": { "param": "linoleum_color", "fallback": "t_linoleum_gray" },
         "8": { "param": "linoleum_color", "fallback": "t_linoleum_gray" },
         "t": { "param": "linoleum_color", "fallback": "t_linoleum_gray" },

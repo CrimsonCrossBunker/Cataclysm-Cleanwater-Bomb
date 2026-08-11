@@ -608,6 +608,9 @@ struct map_data_common_t {
         itype_id liquid_source_item_id = itype_id::NULL_ID(); // id of a liquid this tile provides
         double liquid_source_min_temp = 4; // in centigrades, cold water as default value
         std::pair<int, int> liquid_source_count = { 0, 0 }; // charges of liquid, if it's finite source
+        // Terrain this tile turns into when the last of its finite liquid is taken.
+        // Only meaningful for finite sources (liquid_source_count != {0,0}).
+        ter_str_id dries_to = ter_str_id::NULL_ID();
 
         translation description;
 
@@ -707,7 +710,7 @@ struct map_data_common_t {
         virtual bool is_terrain() const;
 
         virtual void load( const JsonObject &jo, const std::string & );
-        virtual void check() const {};
+        virtual void check() const;
 };
 
 /*

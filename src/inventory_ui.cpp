@@ -4104,6 +4104,11 @@ std::vector<reload_target> get_possible_reload_targets( const item_location &tar
 {
     std::vector<reload_target> opts;
 
+    // Keep this outside append_owner: older MSVC versions cannot copy the
+    // inline filter lambda through the outer lambda's generated closure.
+    static const auto pocket_filter = []( const item_pocket & ) {
+        return true;
+    };
     auto append_owner = [&opts]( const item_location & owner ) {
         // pocket_index is the position in contents (stable across empty
         // wells), not the position in magazines_current().

@@ -158,6 +158,24 @@ class submap
             terrain_growth.erase( p );
         }
 
+        bool has_finite_liquid( const point_sm_ms &p ) const {
+            return finite_liquids.find( p ) != finite_liquids.end();
+        }
+
+        int get_finite_liquid( const point_sm_ms &p ) const {
+            const auto it = finite_liquids.find( p );
+            return it == finite_liquids.end() ? 0 : it->second;
+        }
+
+        void set_finite_liquid( const point_sm_ms &p, int charges ) {
+            if( charges > 0 ) {
+                ensure_nonuniform();
+                finite_liquids[p] = charges;
+            } else {
+                finite_liquids.erase( p );
+            }
+        }
+
         ter_id get_ter( const point_sm_ms &p ) const {
             if( is_uniform() ) {
                 return uniform_ter;
@@ -348,6 +366,10 @@ class submap
     private:
         std::map<point_sm_ms, tile_data> ephemeral_data;
         std::map<point_sm_ms, terrain_growth_state> terrain_growth;
+        // Liquid belonging to finite source terrain is map state, not a
+        // ground item.  Keeping it separate prevents item sprites and pickup
+        // rules from leaking through the water surface.
+        std::map<point_sm_ms, int> finite_liquids;
         std::map<point_sm_ms, computer> computers;
         std::unique_ptr<maptile_soa> m;
         ter_id uniform_ter = t_null;

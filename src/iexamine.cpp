@@ -46,6 +46,7 @@
 #include "faction.h"
 #include "field_type.h"
 #include "flag.h"
+#include "finite_water.h"
 #include "flat_set.h" // IWYU pragma: keep
 #include "fungal_effects.h"
 #include "game.h"
@@ -5465,19 +5466,43 @@ void iexamine::part_con( Character &you, tripoint_bub_ms const &examp )
     }
 }
 
-void iexamine::water_source( Character &, const tripoint_bub_ms &examp )
+void iexamine::water_source( Character &you, const tripoint_bub_ms &examp )
 {
-    map &here = get_map();
-    item water = here.liquid_from( examp );
-    liquid_dest_opt liquid_target;
-    liquid_handler::handle_liquid( water, liquid_target, nullptr, 0, &examp );
+    finite_water_source( you, examp );
 }
 
 void iexamine::finite_water_source( Character &, const tripoint_bub_ms &examp )
 {
-    map_stack items = get_map().i_at( examp );
+    map &here = get_map();
+    finite_water::refresh_connected_water( here.get_abs( examp ) );
+    item endless = here.liquid_from( examp );
+    if( !endless.is_null() ) {
+        liquid_dest_opt liquid_target;
+        liquid_handler::handle_liquid( endless, liquid_target, nullptr, 0, &examp );
+        return;
+    }
+
+    item finite = finite_water::finite_liquid_from( here.get_abs( examp ) );
+    if( !finite.is_null() ) {
+        const int before = finite.charges;
+        liquid_dest_opt liquid_target;
+        liquid_handler::handle_liquid( finite, liquid_target, nullptr, 0, &examp );
+        const int transferred = std::max( 0, before - finite.charges );
+        if( transferred > 0 ) {
+            finite_water::withdraw_finite_liquid( here.get_abs( examp ), transferred );
+        }
+        return;
+    }
+
+    // Puddles, toilets, tide pools and water dispensers keep their liquid as
+    // an ordinary map item rather than shared finite-water state.
+    itype_id source_id = here.ter( examp )->liquid_source_item_id;
+    if( source_id.is_null() ) {
+        source_id = here.furn( examp )->liquid_source_item_id;
+    }
+    map_stack items = here.i_at( examp );
     for( item &it : items ) {
-        if( it.made_of( phase_id::LIQUID ) ) {
+        if( it.made_of( phase_id::LIQUID ) && ( source_id.is_null() || it.typeId() == source_id ) ) {
             item_location loc( map_cursor( examp ), &it );
             liquid_handler::handle_liquid( loc );
             break;

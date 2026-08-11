@@ -302,6 +302,7 @@ enum class oter_flags : int {
     lake_shore,
     ocean,
     ocean_shore,
+    stream,
     ravine,
     ravine_edge,
     pp_generate_riot_damage,

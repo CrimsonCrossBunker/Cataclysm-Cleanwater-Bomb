@@ -33,9 +33,9 @@
       "terrain": {
         " ": "t_region_groundcover_urban",
         "s": "t_sidewalk",
-        "w": "t_water_pool_shallow_outdoors",
+        "w": "t_pool_water_shallow_outdoors",
         "#": "t_region_shrub_decorative",
-        "S": "t_water_pool_shallow_outdoors",
+        "S": "t_pool_water_shallow_outdoors",
         "f": "t_region_groundcover_urban"
       },
       "furniture": { "S": "f_statue", "b": "f_bench", "f": "f_region_flower_decorative" },

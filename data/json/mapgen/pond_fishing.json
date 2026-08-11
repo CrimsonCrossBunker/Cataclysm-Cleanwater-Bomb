@@ -56,6 +56,7 @@
       ],
       "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
       "palettes": [ "park_nature_palette" ],
+      "terrain": { "W": "t_pond_water_sh", "w": "t_pond_water_dp" },
       "place_monsters": [
         { "monster": "GROUP_POND_ANIMAL", "x": [ 2, 8 ], "y": [ 4, 9 ], "chance": 20 },
         { "monster": "GROUP_POND_BIRD", "x": [ 8, 9 ], "y": [ 16, 17 ], "chance": 20 },

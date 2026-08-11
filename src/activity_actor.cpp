@@ -2981,6 +2981,24 @@ void spellcasting_activity_actor::finish( player_activity &act, Character &who )
                 return;
             }
 
+            // Components are normally checked when casting starts.  Check
+            // again before consuming them so an interrupted or restored
+            // activity can never cast without materials or reach the item
+            // selection code with no valid choice.
+            if( spell_being_cast.has_components() ) {
+                who.invalidate_crafting_inventory();
+            }
+            if( !spell_being_cast.has_required_components( who ) ) {
+                who.add_msg_if_player( game_message_params{ m_bad, gmf_bypass_cooldown },
+                                       _( "You no longer have the components to cast %s." ),
+                                       spell_being_cast.name() );
+                get_event_bus().send<event_type::spellcasting_finish>( who.getID(), false, sp,
+                        spell_being_cast.spell_class(), spell_being_cast.get_difficulty( who ),
+                        spell_being_cast.energy_cost( who ), spell_being_cast.casting_time( who ),
+                        spell_being_cast.damage( who ) );
+                return;
+            }
+
             if( spell_being_cast.has_flag( spell_flag::VERBAL ) && !who.has_flag( json_flag_SILENT_SPELL ) ) {
                 sounds::sound( who.pos_bub(), who.get_shout_volume() / 2, sounds::sound_t::speech,
                                _( "cast a spell" ),

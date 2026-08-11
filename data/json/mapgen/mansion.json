@@ -83,7 +83,7 @@
         "###++##############++###"
       ],
       "palettes": [ "standard_domestic_palette", "standard_domestic_landscaping_palette" ],
-      "terrain": { "?": "t_water_pool_shallow_outdoors" },
+      "terrain": { "?": "t_pool_water_shallow_outdoors" },
       "items": {
         " ": { "item": "clutter_mansion", "chance": 1 },
         "K": { "item": "crate_cleaning", "chance": 100 },
@@ -223,7 +223,7 @@
       ],
       "palettes": [ "parametrized_carpets_palette", "standard_domestic_palette", "standard_domestic_landscaping_palette" ],
       "terrain": {
-        "?": "t_water_pool_shallow_outdoors",
+        "?": "t_pool_water_shallow_outdoors",
         "~": "t_thconc_floor",
         "&": "t_column",
         "-": { "param": "carpet_color_type", "fallback": "t_carpet_red" }
@@ -363,7 +363,7 @@
         "₸": "t_concrete",
         ")": "t_privacy_fence",
         "]": "t_privacy_fencegate_c",
-        "~": "t_water_pool_outdoors"
+        "~": "t_pool_water_outdoors"
       },
       "furniture": { "&": "f_dive_block" },
       "items": {
@@ -1563,7 +1563,7 @@
         "#..........``..........#"
       ],
       "palettes": [ "standard_domestic_palette", "standard_domestic_landscaping_palette" ],
-      "terrain": { "&": "t_door_glass_c", "~": "t_water_pool_shallow_outdoors" },
+      "terrain": { "&": "t_door_glass_c", "~": "t_pool_water_shallow_outdoors" },
       "furniture": { "@": [ "f_statue", "f_statue", "f_statue", "f_null", "f_null" ] },
       "items": {
         " ": { "item": "clutter_mansion", "chance": 1 },
@@ -2186,7 +2186,7 @@
       ],
       "terrain": {
         "=": { "param": "linoleum_color_bathroom", "fallback": "t_linoleum_gray" },
-        "~": "t_water_pool",
+        "~": "t_pool_water",
         "M": "t_floor",
         "T": "t_floor",
         " ": "t_floor"

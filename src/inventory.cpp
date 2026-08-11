@@ -7,6 +7,7 @@
 #include <iterator>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 
 #include "avatar.h"
@@ -15,6 +16,7 @@
 #include "coordinates.h"
 #include "debug.h"
 #include "enums.h"
+#include "finite_water.h"
 #include "flag.h"
 #include "iexamine.h"
 #include "inventory_ui.h" // auto inventory blocking
@@ -609,6 +611,7 @@ void inventory::form_from_map( map &m, std::vector<tripoint_bub_ms> pts, const C
 {
     items.clear();
     provisioned_pseudo_tools.clear();
+    std::set<tripoint_abs_ms> finite_liquid_tiles_seen;
 
     for( const tripoint_bub_ms &p : pts ) {
         const ter_id &t = m.ter( p );
@@ -687,10 +690,25 @@ void inventory::form_from_map( map &m, std::vector<tripoint_bub_ms> pts, const C
                 fire->charges = 1;
             }
         }
-        // Handle any water from map sources.
-        item water = m.liquid_from( p );
-        if( !water.is_null() ) {
-            add_item( water );
+        // Handle any water from map sources.  Once one finite body has been
+        // added, skip all of its other squares before checking their waterway
+        // connection again.
+        const tripoint_abs_ms abs_p = m.get_abs( p );
+        if( finite_liquid_tiles_seen.count( abs_p ) == 0 ) {
+            item water = m.liquid_from( p );
+            if( water.is_null() ) {
+                std::vector<tripoint_abs_ms> body_tiles;
+                item finite = finite_water::finite_liquid_from( abs_p, &body_tiles );
+                if( !finite.is_null() ) {
+                    finite_liquid_tiles_seen.insert( body_tiles.begin(), body_tiles.end() );
+                    water = std::move( finite );
+                } else {
+                    finite_liquid_tiles_seen.insert( abs_p );
+                }
+            }
+            if( !water.is_null() ) {
+                add_item( water );
+            }
         }
 
         // keg-kludge

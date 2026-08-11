@@ -41,13 +41,13 @@
         "+": "t_chaingate_c",
         "-": "t_chainfence",
         ".": "t_concrete",
-        "O": "t_water_pool",
+        "O": "t_pool_water",
         "T": "t_thconc_floor",
         " ": "t_region_groundcover_urban",
         "d": "t_door_c",
         "s": "t_sidewalk",
         "t": "t_thconc_floor",
-        "w": "t_water_pool"
+        "w": "t_pool_water"
       },
       "furniture": {
         "b": "f_bench",
@@ -158,7 +158,7 @@
         "f": { "param": "linoleum_color", "fallback": "t_linoleum_gray" },
         "r": "t_reinforced_door_glass_c",
         "s": "t_sidewalk",
-        "w": "t_water_pool",
+        "w": "t_pool_water",
         "4": "t_gutter_downspout"
       },
       "furniture": { "b": "f_bench", "&": "f_toilet", "S": "f_sink", "t": "f_trashcan", "{": "f_locker" },
@@ -258,7 +258,7 @@
         "B": "t_thconc_floor",
         "+": [ "t_door_o", "t_door_c" ],
         ".": "t_thconc_floor",
-        "O": "t_water_pool",
+        "O": "t_pool_water",
         "P": { "param": "interior_wall_type", "fallback": "t_wall_w" },
         "S": "t_thconc_floor",
         " ": "t_region_groundcover_urban",
@@ -267,7 +267,7 @@
         "r": "t_reinforced_door_glass_c",
         "s": "t_sidewalk",
         "4": "t_gutter_downspout",
-        "w": "t_water_pool"
+        "w": "t_pool_water"
       },
       "furniture": {
         "B": "f_bench",
@@ -408,7 +408,7 @@
         "s": "t_sidewalk",
         "t": "t_thconc_floor",
         "4": "t_gutter_downspout",
-        "w": "t_water_pool"
+        "w": "t_pool_water"
       },
       "place_monster": [ { "group": "GROUP_MAPGEN_POOL", "x": [ 5, 18 ], "y": [ 5, 18 ], "repeat": [ 2, 6 ] } ],
       "place_signs": [ { "signage": "Women", "x": 9, "y": 19 }, { "signage": "Men", "x": 14, "y": 19 } ]
@@ -493,7 +493,7 @@
         "r": "t_reinforced_door_glass_c",
         "s": "t_sidewalk",
         "t": "t_thconc_floor",
-        "w": "t_water_pool",
+        "w": "t_pool_water",
         "4": "t_gutter_downspout"
       },
       "furniture": {
@@ -595,7 +595,7 @@
         " ______________________ ",
         "                        "
       ],
-      "terrain": { "_": "t_concrete", " ": "t_region_groundcover_urban", "n": "t_concrete", "w": "t_water_pool", "s": "t_sidewalk" },
+      "terrain": { "_": "t_concrete", " ": "t_region_groundcover_urban", "n": "t_concrete", "w": "t_pool_water", "s": "t_sidewalk" },
       "furniture": { "n": "f_dive_block" },
       "place_monster": [ { "group": "GROUP_MAPGEN_POOL", "x": [ 5, 18 ], "y": [ 5, 18 ], "repeat": [ 2, 6 ] } ]
     }
@@ -636,11 +636,11 @@
         "-": "t_chainfence",
         "x": "t_region_groundcover_urban",
         " ": "t_region_groundcover_urban",
-        "W": "t_water_pool",
+        "W": "t_pool_water",
         "c": "t_concrete",
         "s": "t_sidewalk",
         "o": [ "t_chaingate_c", "t_chaingate_o" ],
-        "w": "t_water_pool"
+        "w": "t_pool_water"
       },
       "furniture": { "c": "f_camp_chair", "n": "f_dive_block", "x": "f_region_flower_decorative" },
       "place_monster": [ { "group": "GROUP_MAPGEN_POOL", "x": [ 5, 18 ], "y": [ 5, 18 ], "repeat": [ 2, 6 ] } ]

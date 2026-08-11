@@ -2390,7 +2390,7 @@
         "y   y"
       ],
       "palettes": [ "standard_domestic_palette" ],
-      "terrain": { "=": "t_water_pool", " ": "t_floor_blue", "y": "t_floor_blue" },
+      "terrain": { "=": "t_pool_water", " ": "t_floor_blue", "y": "t_floor_blue" },
       "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
       "furniture": { "y": [ "f_indoor_plant_y", "f_indoor_plant" ] },
       "place_loot": [ { "item": "towel", "x": 0, "y": [ 1, 3 ], "chance": 100, "repeat": [ 1, 2 ] } ]
@@ -3061,7 +3061,7 @@
       ],
       "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
       "palettes": [ "standard_domestic_palette" ],
-      "terrain": { "=": "t_water_pool", "&": "t_door_glass_c", "%": "t_wall_b" },
+      "terrain": { "=": "t_pool_water", "&": "t_door_glass_c", "%": "t_wall_b" },
       "place_loot": [ { "item": "towel", "x": 9, "y": [ 1, 9 ], "chance": 100, "repeat": [ 1, 2 ] } ],
       "nested": { "!": { "chunks": [ [ "null", 70 ], [ "5x5_sauna_E", 10 ], [ "5x5_gym_S", 20 ] ] } }
     }
@@ -3085,7 +3085,7 @@
       ],
       "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
       "palettes": [ "standard_domestic_palette" ],
-      "terrain": { "=": "t_water_pool", "&": "t_door_glass_c", "%": "t_wall_b" },
+      "terrain": { "=": "t_pool_water", "&": "t_door_glass_c", "%": "t_wall_b" },
       "place_loot": [ { "item": "towel", "x": 9, "y": [ 1, 9 ], "chance": 100, "repeat": [ 1, 2 ] } ],
       "nested": { "!": { "chunks": [ [ "null", 70 ], [ "5x5_sauna_S", 10 ], [ "5x5_gym_N", 20 ] ] } }
     }
@@ -3109,7 +3109,7 @@
       ],
       "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
       "palettes": [ "standard_domestic_palette" ],
-      "terrain": { "=": "t_water_pool", "&": "t_door_glass_c", "%": "t_wall_b" },
+      "terrain": { "=": "t_pool_water", "&": "t_door_glass_c", "%": "t_wall_b" },
       "place_loot": [ { "item": "towel", "x": 9, "y": [ 1, 9 ], "chance": 100, "repeat": [ 1, 2 ] } ],
       "nested": { "!": { "chunks": [ [ "null", 70 ], [ "5x5_sauna_S", 10 ], [ "5x5_gym_E", 20 ] ] } }
     }
@@ -3133,7 +3133,7 @@
       ],
       "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ],
       "palettes": [ "standard_domestic_palette" ],
-      "terrain": { "=": "t_water_pool", "&": "t_door_glass_c", "%": "t_wall_b" },
+      "terrain": { "=": "t_pool_water", "&": "t_door_glass_c", "%": "t_wall_b" },
       "place_loot": [ { "item": "towel", "x": 9, "y": [ 1, 9 ], "chance": 100, "repeat": [ 1, 2 ] } ],
       "nested": { "!": { "chunks": [ [ "null", 70 ], [ "5x5_sauna_S", 10 ], [ "5x5_gym_W", 20 ] ] } }
     }

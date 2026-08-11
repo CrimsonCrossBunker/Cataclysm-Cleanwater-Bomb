@@ -40,7 +40,7 @@
       "terrain": {
         "!": "t_region_groundcover_urban",
         "]": "t_region_groundcover_urban",
-        "0": "t_water_pool_shallow_outdoors",
+        "0": "t_pool_water_shallow_outdoors",
         "/": "t_column",
         "Y": { "param": "linoleum_color", "fallback": "t_linoleum_white" }
       },

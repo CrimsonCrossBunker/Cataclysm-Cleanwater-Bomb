@@ -46,7 +46,7 @@
       "v": "t_pavement",
       "V": "t_pavement",
       "w": [ [ "t_window_domestic", 11 ], [ "t_window_open", 2 ], [ "t_curtains", 5 ] ],
-      "9": "t_water_pool",
+      "9": "t_pool_water",
       "+": "t_door_c",
       "G": "t_door_glass_c",
       "=": "t_door_locked",

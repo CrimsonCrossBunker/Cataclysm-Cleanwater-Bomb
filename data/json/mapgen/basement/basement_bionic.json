@@ -31,7 +31,7 @@
         "                        "
       ],
       "palettes": [ "domestic_general_and_variant_palette", "standard_and_variant_domestic_basement_palette" ],
-      "terrain": { "~": "t_water_pool" },
+      "terrain": { "~": "t_pool_water" },
       "furniture": { "}": "f_pinball_machine" },
       "place_loot": [
         { "group": "alcohol", "x": [ 14, 15 ], "y": 12, "chance": 96, "repeat": [ 1, 2 ] },

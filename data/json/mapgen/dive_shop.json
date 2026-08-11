@@ -34,7 +34,7 @@
       "+": "t_door_metal_c",
       ":": "t_wall_glass",
       "*": "t_thconc_y",
-      "~": "t_water_pool",
+      "~": "t_pool_water",
       "<": "t_ladder_up",
       "4": "t_gutter_downspout"
     },

@@ -47,6 +47,7 @@
 #include "field.h"
 #include "field_type.h"
 #include "flag.h"
+#include "finite_water.h"
 #include "fragment_cloud.h"
 #include "fungal_effects.h"
 #include "game.h"
@@ -3206,7 +3207,6 @@ bool map::ter_set( const tripoint_bub_ms &p, const ter_id &new_terrain, bool avo
         // Nothing changed
         return false;
     }
-
     if( !mapgen_in_progress ) {
         // TODO: Consider evaluating whether this is a "meaningful" adjustment instead of just any edit.
         current_submap->player_adjusted_map = true;
@@ -3262,11 +3262,70 @@ bool map::ter_set( const tripoint_bub_ms &p, const ter_id &new_terrain, bool avo
         set_seen_cache_dirty( p );
     }
 
-    if( !new_t.liquid_source_item_id.is_null() &&
-        new_t.liquid_source_count != std::make_pair( 0, 0 ) ) {
-        item water( new_t.liquid_source_item_id, calendar::start_of_cataclysm );
-        water.charges = rng( new_t.liquid_source_count.first, new_t.liquid_source_count.second );
-        add_item( p, water );
+    const bool hidden_finite_source = !new_t.liquid_source_item_id.is_null() &&
+                                      new_t.liquid_source_count != std::make_pair( 0, 0 ) &&
+                                      !new_t.dries_to.is_empty() && !new_t.dries_to.is_null();
+    const bool old_hidden_finite_source = !old_t.liquid_source_item_id.is_null() &&
+                                          old_t.liquid_source_count != std::make_pair( 0, 0 ) &&
+                                          !old_t.dries_to.is_empty() && !old_t.dries_to.is_null();
+    const bool phase_transition = std::find( old_t.phase_targets.begin(), old_t.phase_targets.end(),
+        new_terrain.id() ) != old_t.phase_targets.end();
+    if( old_hidden_finite_source && !hidden_finite_source && !phase_transition ) {
+        // Covering or replacing a finite water surface must not leave hidden
+        // water that can reappear later.  Freezing is the exception: ice
+        // keeps the stored amount for the eventual thaw.
+        current_submap->set_finite_liquid( l, 0 );
+    }
+    if( hidden_finite_source ) {
+        // Finite water surfaces keep their amount as hidden map state.  A
+        // normal ground item would be drawn over the terrain and could be
+        // picked up independently of the connected body of water.
+        cata::colony<item> &items = current_submap->get_items( l );
+        int legacy_charges = 0;
+        for( auto it = items.begin(); it != items.end(); ) {
+            if( it->typeId() == new_t.liquid_source_item_id ) {
+                legacy_charges += std::max( 0, it->charges );
+                it = items.erase( it );
+            } else {
+                ++it;
+            }
+        }
+        if( !current_submap->has_finite_liquid( l ) ) {
+            const int initial = legacy_charges > 0 ?
+                                std::min( legacy_charges, new_t.liquid_source_count.second ) :
+                                rng( new_t.liquid_source_count.first, new_t.liquid_source_count.second );
+            current_submap->set_finite_liquid( l, initial );
+        }
+    } else if( !new_t.liquid_source_item_id.is_null() &&
+               new_t.liquid_source_count != std::make_pair( 0, 0 ) ) {
+        // Only initialize the finite liquid when this tile actually becomes a
+        // finite water surface.  Re-setting the same terrain (or thawing back
+        // to it) must not refill the tile, otherwise partially drained water
+        // would be topped up.  Leftover empty liquid items (charges == 0, e.g.
+        // from a tile that dried out) are dropped here so that re-flooding
+        // starts from a clean item stack.
+        bool has_liquid = false;
+        cata::colony<item> &items = current_submap->get_items( l );
+        for( auto it = items.begin(); it != items.end(); ) {
+            if( it->typeId() == new_t.liquid_source_item_id ) {
+                if( it->charges > 0 ) {
+                    has_liquid = true;
+                    ++it;
+                } else {
+                    it = items.erase( it );
+                }
+            } else {
+                ++it;
+            }
+        }
+        if( !has_liquid ) {
+            item water( new_t.liquid_source_item_id, calendar::start_of_cataclysm );
+            water.charges = rng( new_t.liquid_source_count.first, new_t.liquid_source_count.second );
+            // A terrain's own configured finite liquid must actually exist on the tile.
+            // Bypass the generic rule that rejects liquid items on SWIMMABLE tiles,
+            // otherwise finite water on water surfaces could never be generated.
+            add_item_impl( p, std::move( water ), 1, true );
+        }
     }
 
     invalidate_max_populated_zlev( p.z() );
@@ -6773,6 +6832,12 @@ item &map::add_item( const tripoint_bub_ms &p, item new_item )
 
 item &map::add_item( const tripoint_bub_ms &p, item new_item, int copies )
 {
+    return add_item_impl( p, std::move( new_item ), copies, false );
+}
+
+item &map::add_item_impl( const tripoint_bub_ms &p, item new_item, int copies,
+                          bool allow_liquid_on_swimmable )
+{
     if( item_is_blacklisted( new_item.typeId() ) ) {
         return null_item_reference();
     }
@@ -6798,7 +6863,8 @@ item &map::add_item( const tripoint_bub_ms &p, item new_item, int copies )
         new_item.process( *this, nullptr, p );
     }
 
-    if( new_item.made_of( phase_id::LIQUID ) && has_flag( ter_furn_flag::TFLAG_SWIMMABLE, p ) ) {
+    if( !allow_liquid_on_swimmable &&
+        new_item.made_of( phase_id::LIQUID ) && has_flag( ter_furn_flag::TFLAG_SWIMMABLE, p ) ) {
         return null_item_reference();
     }
 
@@ -6853,10 +6919,21 @@ item &map::add_item( const tripoint_bub_ms &p, item new_item, int copies )
 item map::liquid_from( const tripoint_bub_ms &p ) const
 {
     weather_manager &weather = get_weather();
+    const tripoint_abs_ms abs_p = get_abs( p );
+    const bool managed_source = finite_water::manages_liquid_source( abs_p );
     ter_t source_terrain = ter( p ).obj();
 
-    if( !source_terrain.liquid_source_item_id.is_null() &&
-        source_terrain.liquid_source_count == std::make_pair( 0, 0 ) ) {
+    bool infinite = !source_terrain.liquid_source_item_id.is_null() &&
+                    source_terrain.liquid_source_count == std::make_pair( 0, 0 );
+    if( managed_source ) {
+        const water_source_kind connection = finite_water::check_connection( abs_p, false );
+        infinite = ( connection == water_source_kind::fresh_infinite &&
+                     ( source_terrain.liquid_source_item_id == itype_id( "water" ) ||
+                       source_terrain.liquid_source_item_id == itype_id( "water_clean" ) ) ) ||
+                   ( connection == water_source_kind::salt_infinite &&
+                     source_terrain.liquid_source_item_id == itype_id( "salt_water" ) );
+    }
+    if( infinite ) {
         item ret( source_terrain.liquid_source_item_id, calendar::turn, item::INFINITE_CHARGES );
         ret.set_item_temperature( std::max( weather.get_temperature( p ),
                                             units::from_celsius( source_terrain.liquid_source_min_temp ) ) );
@@ -7736,6 +7813,24 @@ std::list<item> map::use_charges( const std::vector<tripoint_bub_ms> &reachable_
 
     if( bcp ) {
         ret = bcp->use_charges( type, quantity );
+        if( quantity <= 0 ) {
+            return ret;
+        }
+    }
+
+    for( const tripoint_bub_ms &p : reachable_pts ) {
+        item water = finite_water::finite_liquid_from( get_abs( p ) );
+        if( water.typeId() != type || water.charges <= 0 || !filter( water ) ) {
+            continue;
+        }
+        const int requested = std::min( quantity, water.charges );
+        const int withdrawn = finite_water::withdraw_finite_liquid( get_abs( p ), requested );
+        if( withdrawn <= 0 ) {
+            continue;
+        }
+        water.charges = withdrawn;
+        ret.push_back( std::move( water ) );
+        quantity -= withdrawn;
         if( quantity <= 0 ) {
             return ret;
         }

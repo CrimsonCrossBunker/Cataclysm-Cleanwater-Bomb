@@ -192,8 +192,8 @@
       "palettes": [ "miniature_railway_palette" ],
       "place_loot": [ { "group": "cash_register_random", "chance": 100, "x": 19, "y": [ 9, 11 ] } ],
       "terrain": {
-        "~": "t_water_sh",
-        "O": "t_water_dp",
+        "~": "t_pond_water_sh",
+        "O": "t_pond_water_dp",
         "-": "t_dock",
         "1": "t_gates_control_metal",
         "T": "t_region_tree_nut",
