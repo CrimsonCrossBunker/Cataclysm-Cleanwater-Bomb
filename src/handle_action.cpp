@@ -3416,6 +3416,40 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                     }
                 }
 
+                // QQ#183: while auto-moving (auto travel mode or destination
+                // travel), pace to the slowest following NPC so the party stays
+                // together.  If a follower slower than the avatar has fallen
+                // behind, spend the rest of the turn waiting for it to catch up
+                // instead of stepping away again.
+                if( player_character.is_auto_moving() && !player_character.in_vehicle ) {
+                    npc *slowest_follower = nullptr;
+                    int worst_lag = 0;
+                    const int player_speed = player_character.get_speed();
+                    for( npc *guy : g->get_npcs_if( []( const npc & n ) {
+                    return n.is_walking_with() && n.can_follow_player_now();
+                    } ) ) {
+                        if( guy->get_speed() >= player_speed ) {
+                            continue;
+                        }
+                        const int lag = square_dist( guy->pos_bub(), player_character.pos_bub() );
+                        if( lag > worst_lag ) {
+                            worst_lag = lag;
+                            slowest_follower = guy;
+                        }
+                    }
+                    if( slowest_follower != nullptr ) {
+                        const int threshold =
+                            std::max( slowest_follower->desired_follow_radius() + 1, 4 );
+                        // Only pace while the follower is still on the way; a far-away
+                        // or stuck follower must not stop travel forever.
+                        if( worst_lag > threshold && worst_lag < 20 ) {
+                            player_character.set_moves( 0 );
+                            add_msg( m_info, _( "You slow down to let %s catch up." ),
+                                     slowest_follower->get_name() );
+                        }
+                    }
+                }
+
                 // if we changed move modes this action, refund half the cost of changing move mode
                 // if their move action was an easy movement to represent combining the two actions
                 if( desired_move_mode_cost > 0 ) {

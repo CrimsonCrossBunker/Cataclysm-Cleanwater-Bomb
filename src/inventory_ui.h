@@ -691,6 +691,9 @@ class inventory_selector
         /** Get the last filter string set by set_filter or entered by the player. */
         std::string get_filter() const;
 
+        /** Key description for an action registered in this selector's input context. */
+        std::string key_desc( const std::string &action ) const;
+
         enum selector_invlet_type {
             SELECTOR_INVLET_DEFAULT,
             SELECTOR_INVLET_NUMERIC,
@@ -1025,9 +1028,18 @@ class inventory_pick_selector : public inventory_selector
                                           const inventory_selector_preset &preset = default_preset ) :
             inventory_selector( p, preset ) {
             drag_enabled = false;
+            // Same direct-action keys as the pickup (g) interface: wield/wear the
+            // highlighted item without leaving the menu.
+            ctxt.register_action( "WEAR" );
+            ctxt.register_action( "WIELD" );
         }
         bool drag_enabled;
         item_location execute();
+
+    private:
+        bool wield_highlighted();
+        bool wear_highlighted();
+        void refresh_after_use( const item_location &it );
 };
 
 class container_inventory_selector : public inventory_pick_selector
