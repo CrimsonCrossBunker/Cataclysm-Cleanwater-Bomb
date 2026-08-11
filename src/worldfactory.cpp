@@ -2060,7 +2060,7 @@ int worldfactory::show_worldgen_tab_modselection( const catacurses::window &win,
                             break;
                         }
                         const size_t previous_size = active_mod_order.size();
-                        mman_ui->try_add( selected, active_mod_order );
+                        mman_ui->try_add( selected, active_mod_order, true );
                         const auto active_it = std::find( active_mod_order.begin(), active_mod_order.end(), selected );
                         if( active_it != active_mod_order.end() ) {
                             selected_active = static_cast<int>( std::distance( active_mod_order.begin(), active_it ) );
@@ -2510,7 +2510,7 @@ int worldfactory::show_worldgen_tab_modselection( const catacurses::window &win,
             const std::vector<mod_id> &current_tab_mods = all_tabs[iCurrentTab].mods;
             if( active_header == 0 && !current_tab_mods.empty() ) {
                 // try-add
-                mman_ui->try_add( current_tab_mods[cursel[0]], active_mod_order );
+                mman_ui->try_add( current_tab_mods[cursel[0]], active_mod_order, true );
             } else if( active_header == 1 && !active_mod_order.empty() ) {
                 // try-rem
                 mman_ui->try_rem( cursel[1], active_mod_order );

@@ -69,6 +69,7 @@
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "cata_variant.h"
+#include "catalua_platform.h"
 #include "catalua_ui.h"
 #include "catacharset.h"
 #include "character.h"
@@ -517,6 +518,7 @@ game::~game()
     if constexpr( cata::lua_ui::is_enabled() ) {
         cata::lua_ui::shutdown();
     }
+    cata::lua_platform::shutdown();
     // event_bus_ptr about to die; let debug_capture drop its sticky
     // subscribe flag and release the JSONL file. Without this, a later
     // `game` instance would never resubscribe.
@@ -700,6 +702,10 @@ void game::reenter_fullscreen()
 bool game::setup()
 {
     new_game = true;
+    // A full world setup replaces every finalized registry.  Retire the
+    // previous world's Platform states while their world and native content
+    // are still valid, before load_core_data() unloads those registries.
+    cata::lua_platform::shutdown();
     {
         static_popup popup;
         popup.message( "%s", _( "Please wait while the world data loads…\nLoading core data" ) );
@@ -1156,6 +1162,9 @@ bool game::start_game()
         }
     }
 
+    if constexpr( cata::lua_platform::is_enabled() ) {
+        cata::lua_platform::on_world_ready( true );
+    }
     if constexpr( cata::lua_ui::is_enabled() ) {
         cata::lua_ui::on_world_ready(
             cata::lua_ui::world_ready_kind::new_game );

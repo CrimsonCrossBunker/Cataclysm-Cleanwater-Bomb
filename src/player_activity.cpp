@@ -9,6 +9,7 @@
 #include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
+#include "catalua_platform_runtime.h"
 #include "character.h"
 #include "creature.h"
 #include "debug.h"
@@ -279,7 +280,14 @@ void player_activity::do_turn( Character &you )
     const bool travel_activity = id() == ACT_TRAVELLING;
     you.set_activity_level( exertion_level() );
 
-    if( !type->do_turn_EOC.is_null() ) {
+    const bool lua_first_activity = cata::lua_platform::invoke_activity_type_handler(
+                                        type.str(), "do_turn", *this, you );
+    if( !*this ) {
+        activity_handlers::clean_may_activity_occupancy_items_var_if_is_avatar_and_no_activity_now( you );
+        return;
+    }
+
+    if( !lua_first_activity && !type->do_turn_EOC.is_null() ) {
         // if we have an EOC defined in json do that
         dialogue d( get_talker_for( you ), nullptr );
         type->do_turn_EOC->activate_activation_only( d, "player activities" );
@@ -359,21 +367,30 @@ void player_activity::do_turn( Character &you )
     if( *this && moves_left <= 0 ) {
         // Note: For some activities "finish" is a misnomer; that's why we explicitly check if the
         // type is ACT_NULL below.
-        if( !type->completion_EOC.is_null() ) {
+        const bool lua_first_completion = cata::lua_platform::invoke_activity_type_handler(
+                                              type.str(), "completion", *this, you );
+        if( *this && moves_left <= 0 && !lua_first_completion &&
+            !type->completion_EOC.is_null() ) {
             // if we have an EOC defined in json do that
             dialogue d( get_talker_for( you ), nullptr );
             type->completion_EOC->activate_activation_only( d, "player activities" );
         }
-        add_msg_debug( debugmode::DF_ACTIVITY, "Setting activity %s to null for %s, no moves left.",
-                       type.c_str(), you.name );
-        get_event_bus().send<event_type::character_finished_activity>( you.getID(), type, false );
-        g->wait_popup_reset();
-        if( actor ) {
-            actor->finish( *this, you );
-        } else {
-            if( !type->call_finish( this, &you ) ) {
-                // "Finish" is never a misnomer for any activity without a finish function
-                set_to_null();
+        // A Lua completion policy may cancel the activity or extend it by
+        // restoring moves_left.  Only finish the native activity if it still
+        // exists and remains complete after the callback.
+        if( *this && moves_left <= 0 ) {
+            add_msg_debug( debugmode::DF_ACTIVITY,
+                           "Setting activity %s to null for %s, no moves left.",
+                           type.c_str(), you.name );
+            get_event_bus().send<event_type::character_finished_activity>( you.getID(), type, false );
+            g->wait_popup_reset();
+            if( actor ) {
+                actor->finish( *this, you );
+            } else {
+                if( !type->call_finish( this, &you ) ) {
+                    // "Finish" is never a misnomer for any activity without a finish function
+                    set_to_null();
+                }
             }
         }
     }

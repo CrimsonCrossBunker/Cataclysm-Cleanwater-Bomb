@@ -2973,6 +2973,7 @@ void spellcasting_activity_actor::finish( player_activity &act, Character &who )
                 for( effect_on_condition_id failure_eoc : failure_eocs ) {
                     failure_eoc->activate( character_talker );
                 }
+                spell_being_cast.invoke_magic_type_failure( who );
                 get_event_bus().send<event_type::spellcasting_finish>( who.getID(), false, sp,
                         spell_being_cast.spell_class(), spell_being_cast.get_difficulty( who ),
                         spell_being_cast.energy_cost( who ), spell_being_cast.casting_time( who ),

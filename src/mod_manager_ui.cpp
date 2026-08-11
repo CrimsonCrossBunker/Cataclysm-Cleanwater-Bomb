@@ -4,6 +4,7 @@
 #include <exception>
 
 #include "color.h"
+#include "catalua_platform.h"
 #include "debug.h"
 #include "dependency_tree.h"
 #include "output.h"
@@ -22,6 +23,23 @@ std::string mod_ui::get_information( const MOD_INFORMATION *mod )
     }
 
     std::string info;
+
+    if( mod->lua_platform_version != 0 ) {
+        info += colorize(
+                    _( "Lua-first Platform Mod: trusted Lua code may run while Mods are scanned "
+                       "and loaded.  It has full game-process privileges, including file, process, "
+                       "and native-module access." ), c_red ) + "\n";
+        if( mod->lua_platform_error.empty() && !cata::lua_platform::is_enabled() ) {
+            info += colorize( _( "Unavailable: Lua-first Platform is not enabled in this build." ),
+                              c_red ) + "\n";
+        }
+    }
+    if( !mod->lua_platform_error.empty() ) {
+        const std::string prefix = mod->lua_platform_version == 0 ?
+                                   _( "Rejected optional Platform entry; legacy content remains available" ) :
+                                   _( "Unavailable" );
+        info += colorize( prefix + ": " + mod->lua_platform_error, c_red ) + "\n";
+    }
 
     if( !mod->authors.empty() ) {
         info += colorize( n_gettext( "Author", "Authors", mod->authors.size() ),
@@ -91,7 +109,8 @@ std::optional<mod_id> mod_ui::find_mod_conflict( const mod_id &checked_mod,
 }
 
 void mod_ui::try_add( const mod_id &mod_to_add,
-                      std::vector<mod_id> &active_list )
+                      std::vector<mod_id> &active_list,
+                      const bool confirm_trusted_lua )
 {
     if( std::find( active_list.begin(), active_list.end(), mod_to_add ) != active_list.end() ) {
         // The same mod can not be added twice. That makes no sense.
@@ -109,6 +128,10 @@ void mod_ui::try_add( const mod_id &mod_to_add,
     }
 
     const MOD_INFORMATION &mod = *mod_to_add;
+    if( mod.lua_platform_version != 0 && !mod.lua_platform_error.empty() ) {
+        popup( _( "Unable to add %1$s: %2$s" ), mod.name(), mod.lua_platform_error );
+        return;
+    }
     bool errs;
     try {
         dependency_node *checknode = mm_tree.get_node( mod.ident );
@@ -126,6 +149,35 @@ void mod_ui::try_add( const mod_id &mod_to_add,
     }
     // get dependencies of selection in the order that they would appear from the top of the active list
     std::vector<mod_id> dependencies = mm_tree.get_dependencies_of_X_as_strings( mod.ident );
+    for( const mod_id &dependency : dependencies ) {
+        if( dependency->lua_platform_version != 0 &&
+            !dependency->lua_platform_error.empty() ) {
+            popup( _( "Unable to add %1$s because trusted Lua dependency %2$s is unavailable: %3$s" ),
+                   mod.name(), dependency->name(), dependency->lua_platform_error );
+            return;
+        }
+    }
+
+    if( confirm_trusted_lua ) {
+        std::vector<std::string> trusted_names;
+        for( const mod_id &candidate : dependencies ) {
+            if( std::find( active_list.begin(), active_list.end(), candidate ) ==
+                active_list.end() && candidate->lua_platform_version != 0 ) {
+                trusted_names.push_back( candidate->name() );
+            }
+        }
+        if( mod.lua_platform_version != 0 ) {
+            trusted_names.push_back( mod.name() );
+        }
+        if( !trusted_names.empty() &&
+            !query_yn( _( "Enable trusted Lua-first Mod code for:\n\n%s\n\n"
+                          "These Mods run with full game-process privileges and may access "
+                          "files, start processes, or load native modules. Their mod.lua "
+                          "metadata may already have run during installed-Mod discovery. Continue?" ),
+                       enumerate_as_string( trusted_names ) ) ) {
+            return;
+        }
+    }
 
     // check to see if mod is a core, and if so check to see if there is already a core in the mod list
     if( mod.core ) {
