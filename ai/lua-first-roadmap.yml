@@ -37,7 +37,7 @@ milestones:
       - data/lua/AGENTS.md
   - id: zero-config-discovery
     title: Root main.lua discovery and optional native mod.lua metadata
-    status: in_progress
+    status: complete
     depends_on: [documentation-foundation]
     exit_criteria:
       - A directory containing only main.lua is discoverable as a Mod.
@@ -67,7 +67,7 @@ milestones:
       - data/lua/types/ccb_platform_v1.d.lua
   - id: item-recipe-use-slice
     title: Zero-JSON/EOC item, recipe, and Lua use behaviour
-    status: in_progress
+    status: complete
     depends_on: [native-content-transaction]
     exit_criteria:
       - The example Mod loads with no JSON or EOC files.
@@ -94,6 +94,23 @@ milestones:
       - src/game_io.cpp
       - data/lua/types/ccb_platform_v1.d.lua
       - tests/catalua_ui_test.cpp
+  - id: playable-mvp-v0-1
+    title: Playable and mergeable pure-Lua vertical slice v0.1
+    status: complete
+    depends_on: [behaviour-services]
+    exit_criteria:
+      - A bundled Mod with native mod.lua metadata and no JSON, EOC, manifest, or required lua subdirectory is discovered and selected with its dependency.
+      - Its native item, recipe, and named Lua use handler work before a real game save.
+      - Character state, world state, and a named delayed task survive runtime shutdown plus full data reload; gameplay continues and the overdue task runs exactly once.
+      - Lua-enabled and Lua-disabled test builds preserve an actionable Mod-manager result, and the dedicated merge gate is recorded in ai/test-matrix.yml.
+    evidence:
+      - data/mods/Lua_First_Example/mod.lua
+      - data/mods/Lua_First_Example/main.lua
+      - data/mods/Lua_First_Example/content/cleanwater_charm.lua
+      - data/mods/Lua_First_Example/runtime/behaviour.lua
+      - tests/catalua_ui_test.cpp
+      - tests/mod_manager_test.cpp
+      - ai/test-matrix.yml
   - id: static-domain-coverage
     title: Complete author-facing static content coverage
     status: in_progress
@@ -141,8 +158,9 @@ capabilities:
       - src/mod_manager.h
       - tests/catalua_ui_test.cpp
     next_actions:
-      - The 2026-08-11 Lua-enabled local C++ Platform suite passed the written discovery, metadata, path-confinement, hybrid, and rejected-entry coverage; keep these as regression gates.
-      - Complete the still-open no-Lua build variant and desktop/Android Mod-selector interaction checks without weakening visibility of rejected pure-Platform entries or legacy availability of rejected optional hybrid entries.
+      - The 2026-08-12 playable-MVP gate passed installed bundled-Mod discovery, dependency-aware selection, real data loading, game save, runtime shutdown, full data reload, and continued gameplay; keep it as a regression gate.
+      - The 2026-08-12 no-Lua build gate keeps the pure-Platform example visible with an actionable disabled diagnostic; keep it as a regression gate.
+      - Complete the still-open manual desktop/Android Mod-selector interaction checks without weakening visibility of rejected pure-Platform entries or legacy availability of rejected optional hybrid entries.
   - id: trusted-standard-library
     phase: bootstrap
     status: partial
@@ -204,7 +222,8 @@ capabilities:
     evidence: [src/catalua_platform_runtime.cpp, src/catalua_ui.cpp, data/lua/types/ccb_platform_v1.d.lua, data/lua/reference/ccb_public_api_v5.json]
     next_actions:
       - The 2026-08-11 local C++ Platform suite passed lifecycle, audited semantic event actors and item allowlist, ItemUseContext, missing-handler, decision aggregation, typed-handle, recursion, v5-composition, and runtime-only hot-reload coverage; keep these as regression gates.
-      - Extend semantic actor-kind coverage beyond the audited events and exercise the runtime through the still-open installed-Mod discovery, load, save, reload, and gameplay end-to-end gate.
+      - The 2026-08-12 bundled-Mod playable gate passed discovery, load, real game save, runtime shutdown, full data reload, and continued item-handler gameplay.
+      - Extend semantic actor-kind coverage beyond the audited events.
   - id: presentation-primitives
     phase: runtime
     status: partial
@@ -223,7 +242,8 @@ capabilities:
     evidence: [src/catalua_platform_runtime.cpp, src/catalua_ui_state.cpp, src/do_turn.cpp, src/game_io.cpp, data/lua/templates/complete/runtime/behaviour.lua]
     next_actions:
       - The 2026-08-11 local C++ Platform suite passed save/load, overdue, missing-handler, payload-version and migration-chain, orphan-preservation, size-limit, and corruption coverage; keep these as regression gates.
-      - Exercise task and typed-state survival through the still-open installed-Mod discovery, load, save, reload, and gameplay end-to-end gate.
+      - The 2026-08-12 bundled-Mod playable gate passed typed character/world-state and named-task survival through real game saves, runtime shutdown, full data reload, continued gameplay, and one-time overdue execution.
+      - Extend copied-world and stable-id compatibility coverage beyond the bundled example.
   - id: shared-domain-services
     phase: runtime
     status: partial
@@ -248,7 +268,8 @@ capabilities:
     evidence: [tools/create_lua_mod.py, tools/test_create_lua_mod.py, data/lua/templates/minimal/main.lua, data/lua/templates/complete/main.lua, data/mods/Lua_First_Example/main.lua]
     next_actions:
       - The 2026-08-11 local creator/migrator unit-test run passed all 55 cases (46 extractor plus 9 creator), including scaffold atomic-install, empty-target restoration, concurrent-target preservation, non-overwrite, symlink refusal, Mod-id namespace, zero-JSON coverage, and bounded Wound/WoundFix extraction; keep these as regression gates.
-      - Complete the still-open bundled installed-Mod smoke fixture through discovery, load, save, reload, and gameplay.
+      - The 2026-08-12 bundled installed-Mod fixture passed discovery, dependency-aware selection, load, save, runtime shutdown, full data reload, and continued gameplay.
+      - Add more small end-to-end examples only when they prove a new native domain rather than duplicating this fixture.
   - id: migration-extractor
     phase: migration
     status: partial

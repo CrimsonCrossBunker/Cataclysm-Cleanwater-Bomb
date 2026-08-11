@@ -17,8 +17,8 @@ function content.register(ccb)
     local recipe = ccb.content.Recipe {
         id = "lua_first_cleanwater_charm",
         result = "lua_first_cleanwater_charm",
-        category = "CC_MISC",
-        subcategory = "CSC_MISC",
+        category = "CC_OTHER",
+        subcategory = "CSC_OTHER_OTHER",
         skill = "fabrication",
         difficulty = 1,
         duration_moves = 500,

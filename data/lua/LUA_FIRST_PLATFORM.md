@@ -258,6 +258,41 @@ consistency finalization cannot silently leave a partially active Platform
 candidate.  Trusted filesystem, process, and native-module side effects remain
 outside that transaction.
 
+### Playable MVP v0.1 merge gate / 可玩 MVP v0.1 合并门槛
+
+Playable MVP v0.1 is a deliberately narrow vertical slice, not a declaration
+that Platform v1 replaces every JSON type or EOC selector.  It is mergeable
+when one bundled zero-JSON/EOC Mod proves all of the following in the real
+engine paths:
+
+1. root `mod.lua`/`main.lua` discovery and dependency-aware Mod selection;
+2. native item and recipe loading plus an observable named Lua use handler;
+3. `game::save()` persistence for typed character state, typed world state,
+   and a named delayed task;
+4. runtime shutdown followed by full core/Mod data reload, continued item
+   gameplay, restored state, and exactly-once execution of the overdue task;
+5. an actionable catalog entry in a build compiled without Lua, instead of a
+   Mod that appears selectable and fails only while loading a world.
+
+The bundled `data/mods/Lua_First_Example` and the
+`[playable_mvp]` integration test are the executable acceptance fixture.  The
+dedicated test-matrix entries keep both Lua-enabled and Lua-disabled builds as
+merge gates.  Manual desktop/Android selector and interactive presentation
+checks remain separate platform follow-up work; they do not expand this MVP
+into full static-domain or EOC parity.
+
+可玩 MVP v0.1 是刻意收窄的纵向切片，并不表示 Platform v1 已经替代所有 JSON 类型或
+EOC selector。它的合并门槛是：一个内置、零 JSON/EOC 的 Mod 必须通过真实引擎路径完成
+根目录元数据与入口发现、依赖选择、原生物品/配方加载、命名 Lua 使用行为、
+`game::save()`、角色/世界状态与延迟任务持久化；销毁 runtime 并完整重载核心和 Mod 数据
+以后，物品行为和状态必须继续生效，逾期任务只能执行一次。未编译 Lua 的版本也必须在
+Mod 列表中给出明确的不可用诊断，不能让玩家直到加载世界时才失败。
+
+`data/mods/Lua_First_Example` 与 `[playable_mvp]` 集成测试是这套验收标准的可执行样例，
+`ai/test-matrix.yml` 分别记录 Lua-enabled 与 Lua-disabled 门禁。桌面/Android 的人工选择器
+和交互式 presentation 验证仍是独立后续工作，不能据此把 MVP 扩大解释成完整静态领域或
+EOC 等价。
+
 Validation has now started, but it does not make the whole Platform complete.
 On 2026-08-11 the Linux Lua-enabled C++ test program compiled and linked, the
 focused Wound/WoundFix and wound-service gates passed, and the complete
@@ -266,7 +301,16 @@ the bionic-summary and learned-recipe workflow.  The broader `[lua]` filter
 then passed 190 matching test cases with 2706 assertions, including the
 owner-identity, pre-finalize Monster, and body-cache regression coverage.  LuaLS,
 public-contract, coverage, Agent-metadata, and replacement-ledger checks also
-passed.  Interactive desktop/Android presentation checks and field-by-field
+passed.  On 2026-08-12 the new bundled-Mod playable fixture passed 32
+assertions through discovery, dependency-aware selection, native item/recipe
+use, three real game saves, runtime shutdown, full data reload, restored typed
+state, and one-time overdue task execution.  After its test-fixture cleanup was
+made position-safe, the broader `[lua]` gate passed 191 cases and 2738
+assertions.  A fresh build compiled without Lua also linked successfully, and
+its focused Mod-manager fallback passed 13 assertions.  An Android arm64-v8a
+Stable Release with Lua enabled also compiled, linked, and packaged
+successfully; its unsigned APK contained `lib/arm64-v8a/libmain.so`.
+Interactive desktop/Android Mod-selector and presentation checks and field-by-field
 parity for the remaining domains are still open, so only explicitly named
 validated slices may be treated as having crossed their local gate.  The exact
 replacement ledger contains 775 dispositions; its generated summary is the
@@ -558,7 +602,13 @@ Lua-enabled C++ 测试程序，Wound/WoundFix 与伤口 service 的聚焦门禁�
 仿生摘要与已学配方工作流后，完整 `[lua][platform]` 套件以 45 个用例、934 个断言通过；
 随后更广的 `[lua]` 过滤集也以 190 个匹配用例、2706 个断言通过，其中包含 owner identity、
 Monster pre-finalize 与身体缓存回归覆盖。LuaLS、公开契约、覆盖率、Agent
-元数据与替换账本检查同样通过。桌面/Android 交互式 presentation 与其余领域逐字段等价性
+元数据与替换账本检查同样通过。2026-08-12 新增的内置 Mod 可玩闭环以 32 个断言通过，
+真实覆盖发现、依赖选择、原生物品/配方使用、三次 `game::save()`、runtime 销毁、完整数据
+重载、类型化状态恢复与逾期任务单次执行；修正测试夹具的安全角色位置后，更广的 `[lua]`
+门禁以 191 个用例、2738 个断言通过。全新无 Lua 构建也成功链接，其 Mod 管理器降级测试以
+13 个断言通过。启用 Lua 的 Android arm64-v8a Stable Release 也已成功编译、链接并打包；
+生成的未签名 APK 包含 `lib/arm64-v8a/libmain.so`。桌面/Android Mod 选择器与交互式
+presentation 人工验证，以及其余领域逐字段等价性
 仍未完成，因此只有本文明确点名的已验证切片可以视为通过本地门禁。775 项的分类数字以
 生成账本 summary 为准，不在本文手工复制。其余已实现但未验证的静态切片包括 Mod 元数据、
 工具质量、技能显示分类、技能、维生素、JSON

@@ -5,6 +5,7 @@
 #include "catalua_platform.h"
 #include "mod_manager.h"
 #include "path_info.h"
+#include "worldfactory.h"
 
 #include <string>
 #include <vector>
@@ -56,6 +57,20 @@ TEST_CASE( "lua_first_platform_disabled_build_rejects_runtime_sources",
            "[mod_manager][lua][platform]" )
 {
     CHECK_FALSE( cata::lua_platform::is_enabled() );
+
+    REQUIRE( world_generator != nullptr );
+    mod_manager &manager = world_generator->get_mod_manager();
+    manager.refresh_mod_list();
+    const mod_id bundled_example( "Lua_First_Example" );
+    REQUIRE( bundled_example.is_valid() );
+    CHECK( bundled_example->lua_platform_version ==
+           cata::lua_platform::platform_version );
+    CHECK( bundled_example->lua_platform_error.find( "not enabled" ) !=
+           std::string::npos );
+    CHECK( bundled_example->lua_platform_entry.get_unrelative_path() ==
+           PATH_INFO::moddir().get_unrelative_path() /
+           "Lua_First_Example" / "main.lua" );
+
     const std::vector<cata::lua_platform::mod_source> sources = {
         { "disabled_test", "disabled_test", "disabled_test/main.lua" }
     };

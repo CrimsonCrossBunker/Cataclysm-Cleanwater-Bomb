@@ -5090,6 +5090,180 @@ ccb.runtime.on("world_ready", "ready")
     cata::lua_platform::shutdown();
 }
 
+TEST_CASE( "lua_first_bundled_mod_completes_a_playable_save_reload_loop",
+           "[lua][platform][integration][playable_mvp]" )
+{
+    REQUIRE( world_generator != nullptr );
+    REQUIRE( world_generator->active_world != nullptr );
+    REQUIRE( g != nullptr );
+
+    cata::lua_platform::shutdown();
+    mod_manager &manager = world_generator->get_mod_manager();
+    manager.refresh_mod_list();
+    const mod_id example_id( "Lua_First_Example" );
+    REQUIRE( example_id.is_valid() );
+    CHECK( example_id->name() == "Lua-first playable example" );
+    CHECK( example_id->version == "0.1.0" );
+    CHECK( ( example_id->dependencies == std::vector<mod_id> { mod_id( "dda" ) } ) );
+    CHECK( example_id->mod_root_path.get_unrelative_path() ==
+           PATH_INFO::moddir().get_unrelative_path() / "Lua_First_Example" );
+
+    std::vector<mod_id> &active_mods =
+        world_generator->active_world->active_mod_order;
+    const std::vector<mod_id> original_mods = active_mods;
+    std::vector<mod_id> selected_mods = original_mods;
+    mod_ui selector( manager );
+    selector.try_add( example_id, selected_mods, false );
+    CHECK( std::find( selected_mods.begin(), selected_mods.end(), mod_id( "dda" ) ) !=
+           selected_mods.end() );
+    CHECK( std::count( selected_mods.begin(), selected_mods.end(), example_id ) == 1 );
+
+    const auto reset_playable_avatar = []() {
+        get_avatar() = avatar();
+        get_avatar().create( character_type::NOW );
+        get_avatar().setID( g->assign_npc_id(), false );
+        get_avatar().set_save_id( "Lua-first playable MVP" );
+        get_avatar().setpos( get_map(), tripoint_bub_ms( 30, 30, 0 ) );
+    };
+    bool restored_original_mods = false;
+    on_out_of_scope restore_mods( [&]() {
+        if( restored_original_mods ) {
+            return;
+        }
+        try {
+            cata::lua_platform::shutdown();
+            active_mods = original_mods;
+            g->load_core_data();
+            g->load_world_modfiles();
+            reset_playable_avatar();
+        } catch( ... ) {
+            // Preserve the original test failure; this process-level fixture is
+            // reinitialized by the next cata_test invocation.
+        }
+    } );
+    active_mods = selected_mods;
+
+    scoped_calendar_turn turn;
+    const auto load_selected_mods = [&]() {
+        cata::lua_platform::shutdown();
+        g->load_core_data();
+        g->load_world_modfiles();
+        CHECK( ( cata::lua_platform::loaded_mod_ids() ==
+                 std::vector<std::string> { "Lua_First_Example" } ) );
+    };
+    load_selected_mods();
+    reset_playable_avatar();
+
+    scoped_lua_state_file character_sidecar(
+        ( PATH_INFO::player_base_save_path() +
+          ".lua_platform.json" ).get_unrelative_path() );
+    scoped_lua_state_file world_sidecar(
+        ( world_generator->active_world->folder_path() /
+          "lua_platform_world.json" ).get_unrelative_path() );
+    character_sidecar.write( R"json({
+  "version": 1,
+  "scope": "character",
+  "mods": {}
+})json" );
+    world_sidecar.write( R"json({
+  "version": 1,
+  "scope": "world",
+  "mods": {}
+})json" );
+
+    const auto platform_record = []( const std::string &contents ) {
+        JsonObject root = json_loader::from_string( contents ).get_object();
+        root.allow_omitted_members();
+        JsonObject mods = root.get_object( "mods" );
+        mods.allow_omitted_members();
+        JsonObject record = mods.get_object( "Lua_First_Example" );
+        record.allow_omitted_members();
+        return record;
+    };
+    const auto platform_integer = [&platform_record]( const std::string &contents,
+    const std::string &key ) {
+        JsonObject record = platform_record( contents );
+        JsonObject values = record.get_object( "values" );
+        values.allow_omitted_members();
+        JsonObject value = values.get_object( key );
+        value.allow_omitted_members();
+        return value.get_int64( "value" );
+    };
+    const auto platform_boolean = [&platform_record]( const std::string &contents,
+    const std::string &key ) {
+        JsonObject record = platform_record( contents );
+        JsonObject values = record.get_object( "values" );
+        values.allow_omitted_members();
+        JsonObject value = values.get_object( key );
+        value.allow_omitted_members();
+        return value.get_bool( "value" );
+    };
+    const auto platform_task_handlers = [&platform_record]( const std::string &contents ) {
+        JsonObject record = platform_record( contents );
+        JsonArray tasks = record.get_array( "tasks" );
+        std::vector<std::string> handlers;
+        handlers.reserve( tasks.size() );
+        while( tasks.has_more() ) {
+            JsonObject task = tasks.next_object();
+            task.allow_omitted_members();
+            handlers.push_back( task.get_string( "handler" ) );
+        }
+        return handlers;
+    };
+
+    cata::lua_platform::on_world_ready( true );
+    REQUIRE( item_controller->has_template(
+                 itype_id( "lua_first_cleanwater_charm" ) ) );
+    REQUIRE( recipe_id( "lua_first_cleanwater_charm" ).is_valid() );
+
+    avatar &player = get_avatar();
+    item first_charm( itype_id( "lua_first_cleanwater_charm" ) );
+    const std::optional<int> first_use = first_charm.type->invoke(
+            &player, first_charm, &get_map(), player.pos_bub() );
+    REQUIRE( first_use );
+    CHECK( *first_use == 0 );
+
+    REQUIRE( g->save() );
+    CHECK_FALSE( world_generator->active_world->world_saves.empty() );
+    CHECK( platform_integer( character_sidecar.read(), "cleanwater_charm_uses" ) == 1 );
+    CHECK( platform_boolean( world_sidecar.read(),
+                             "cleanwater_example_initialized" ) );
+    const std::vector<std::string> first_tasks =
+        platform_task_handlers( world_sidecar.read() );
+    REQUIRE( first_tasks.size() == 1 );
+    CHECK( first_tasks.front() == "lua_first_example_reminder" );
+
+    load_selected_mods();
+    reset_playable_avatar();
+    cata::lua_platform::on_world_ready( false );
+    REQUIRE( item_controller->has_template(
+                 itype_id( "lua_first_cleanwater_charm" ) ) );
+    REQUIRE( recipe_id( "lua_first_cleanwater_charm" ).is_valid() );
+
+    item restored_charm( itype_id( "lua_first_cleanwater_charm" ) );
+    const std::optional<int> restored_use = restored_charm.type->invoke(
+            &player, restored_charm, &get_map(), player.pos_bub() );
+    REQUIRE( restored_use );
+    CHECK( *restored_use == 0 );
+    REQUIRE( g->save() );
+    CHECK( platform_integer( character_sidecar.read(), "cleanwater_charm_uses" ) == 2 );
+    CHECK( platform_task_handlers( world_sidecar.read() ).size() == 1 );
+
+    calendar::turn += 11_turns;
+    cata::lua_platform::on_turn();
+    REQUIRE( g->save() );
+    CHECK( platform_integer( world_sidecar.read(),
+                             "cleanwater_example_reminders" ) == 1 );
+    CHECK( platform_task_handlers( world_sidecar.read() ).empty() );
+
+    cata::lua_platform::shutdown();
+    active_mods = original_mods;
+    g->load_core_data();
+    g->load_world_modfiles();
+    reset_playable_avatar();
+    restored_original_mods = true;
+}
+
 TEST_CASE( "lua_first_corrupt_duplicate_task_ids_clear_the_scope",
            "[lua][platform][runtime][state]" )
 {
