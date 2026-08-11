@@ -46,7 +46,9 @@ class CreateLuaModTest(unittest.TestCase):
             sentinel.write_text("author owned\n", encoding="utf-8")
             with self.assertRaises(FileExistsError):
                 create_mod(target, "complete")
-            self.assertEqual(sentinel.read_text(encoding="utf-8"), "author owned\n")
+            self.assertEqual(
+                sentinel.read_text(encoding="utf-8"), "author owned\n"
+            )
 
     def test_file_target_is_never_replaced(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -54,7 +56,9 @@ class CreateLuaModTest(unittest.TestCase):
             target.write_text("author owned\n", encoding="utf-8")
             with self.assertRaises(FileExistsError):
                 create_mod(target, "minimal")
-            self.assertEqual(target.read_text(encoding="utf-8"), "author owned\n")
+            self.assertEqual(
+                target.read_text(encoding="utf-8"), "author owned\n"
+            )
 
     def test_symlink_target_is_never_replaced(self):
         with tempfile.TemporaryDirectory() as directory:

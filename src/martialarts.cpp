@@ -75,6 +75,11 @@ generic_factory<ma_buff> ma_buffs( "martial art buff" );
 generic_factory<attack_vector> attack_vector_factory( "attack vector" );
 } // namespace
 
+generic_factory<weapon_category> &cata::lua_platform::detail::weapon_category_registry()
+{
+    return weapon_category_factory;
+}
+
 generic_factory<attack_vector> &cata::lua_platform::detail::attack_vector_registry()
 {
     return attack_vector_factory;

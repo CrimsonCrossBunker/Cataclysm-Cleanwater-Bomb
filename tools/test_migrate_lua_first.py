@@ -10,6 +10,23 @@ import migrate_lua_first
 
 
 class LuaFirstMigrationTest(unittest.TestCase):
+    def test_game_start_avatar_proof_tracks_the_canonical_sender_set(self) -> None:
+        self.assertEqual(
+            migrate_lua_first.game_start_sender_sites(),
+            migrate_lua_first.EXPECTED_GAME_START_SENDER_SITES,
+        )
+        self.assertTrue(migrate_lua_first.game_start_avatar_actor_is_proven())
+
+        with tempfile.TemporaryDirectory() as temporary:
+            with patch.object(
+                migrate_lua_first, "REPOSITORY_ROOT", Path(temporary)
+            ):
+                migrate_lua_first.game_start_sender_sites.cache_clear()
+                self.assertFalse(
+                    migrate_lua_first.game_start_avatar_actor_is_proven()
+                )
+        migrate_lua_first.game_start_sender_sites.cache_clear()
+
     def test_directory_discovery_prunes_build_caches(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -38,6 +55,71 @@ class LuaFirstMigrationTest(unittest.TestCase):
             )
             objects = migrate_lua_first.load_objects([source])
             self.assertEqual([entry.value["id"] for entry in objects], ["kept"])
+
+    def test_mod_info_and_literal_item_shapes_are_audited_as_bounded(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "MOD_INFO",
+                            "id": "bounded_mod",
+                            "name": "Bounded Mod",
+                            "version": "1.2.3",
+                            "dependencies": ["dda"],
+                            "core": False,
+                        },
+                        {
+                            "type": "ITEM",
+                            "id": "bounded_item",
+                            "name": "bounded item",
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "bounded_mod"
+            )
+            metadata = result.files[Path("mod.lua")]
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(result.partial, [])
+            self.assertIn('id = "bounded_mod"', metadata)
+            self.assertIn('name = "Bounded Mod"', metadata)
+            self.assertIn('version = "1.2.3"', metadata)
+            self.assertIn('dependencies = { "dda" }', metadata)
+            self.assertIn("core = false", metadata)
+            self.assertIn("content.Item", main)
+            self.assertIn('id = "bounded_item"', main)
+
+    def test_mod_info_reports_every_field_outside_the_bounded_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "MOD_INFO",
+                        "id": "bounded_mod",
+                        "name": "Bounded Mod",
+                        "authors": ["Legacy Author"],
+                        "description": "Not silently discarded",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "bounded_mod"
+            )
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertIn("MOD_INFO unresolved fields: authors, description", report)
 
     def test_emits_native_lua_and_explicit_todos_without_legacy_calls(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -118,6 +200,1207 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertEqual(len(result.partial), 2)
             self.assertIn("ARMOR subtype", report)
             self.assertIn("inheritance must become", report)
+
+    def test_translates_bounded_eoc_predicates_into_lua_composition(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            predicates = [
+                {"compare_string": ["a", "b", "a"]},
+                {"compare_string_match_all": ["same", "same"]},
+                {"one_in_chance": 3},
+                {"x_in_y_chance": {"x": 1.5, "y": 4.0}},
+                {"roll_contested": 2, "difficulty": 5, "die_size": 8},
+                {"mod_is_loaded": "dda"},
+                {"current_dimension": "default"},
+                {"u_has_trait": "SAMPLE_TRAIT"},
+                {"u_has_any_trait": ["SAMPLE_TRAIT", "TOUGH"]},
+                {"u_has_martial_art": "style_karate"},
+                {"u_using_martial_art": "style_karate"},
+                {"u_has_proficiency": "prof_knapping"},
+                {"u_has_bionics": "bio_earplugs"},
+                {"u_has_item": "water_clean"},
+                {"u_has_move_mode": "walk"},
+                "u_has_activity",
+                {"u_has_activity": "ignored"},
+                {
+                    "compare_string": [
+                        "expected",
+                        {"context_val": "event_value"},
+                        {"u_val": "remembered_value"},
+                    ]
+                },
+                {
+                    "and": [
+                        {"one_in_chance": 2},
+                        {"not": {"mod_is_loaded": "missing_mod"}},
+                    ]
+                },
+            ]
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": f"predicate_{index}",
+                            "required_event": "game_start",
+                            "condition": predicate,
+                            "effect": {"message": f"predicate {index}"},
+                        }
+                        for index, predicate in enumerate(predicates)
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "predicate_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), len(predicates))
+            self.assertEqual(result.partial, [])
+            self.assertIn("services.gameplay.strings.any_equal", main)
+            self.assertIn("services.gameplay.strings.all_equal", main)
+            self.assertIn("services.random.one_in(3)", main)
+            self.assertIn("services.random.probability(1.5, 4)", main)
+            self.assertIn("services.random.contested(2, 5, 8)", main)
+            self.assertIn('services.gameplay.mods.is_loaded("dda")', main)
+            self.assertIn(
+                'services.gameplay.environment.dimension() == "default"',
+                main,
+            )
+            self.assertEqual(main.count("local function service_value"), 1)
+            self.assertIn(
+                'services.types.id("mutation", "SAMPLE_TRAIT")',
+                main,
+            )
+            self.assertIn('services.types.id("mutation", "TOUGH")', main)
+            self.assertIn(
+                'services.types.id("martial_art", "style_karate")',
+                main,
+            )
+            self.assertIn(
+                'services.types.id("proficiency", "prof_knapping")',
+                main,
+            )
+            self.assertIn(
+                'services.types.id("bionic", "bio_earplugs")',
+                main,
+            )
+            self.assertIn("services.mutations.has", main)
+            self.assertIn("services.martial_arts.get", main)
+            self.assertIn("services.proficiencies.get", main)
+            self.assertIn("services.bionics.has", main)
+            self.assertEqual(main.count("local function character_has_item"), 1)
+            self.assertIn("services.inventory.resources", main)
+            self.assertIn('services.types.id("item", item_id)', main)
+            self.assertIn('character_has_item(actor, "water_clean")', main)
+            self.assertIn("services.characters.snapshot(actor)", main)
+            self.assertIn('.movement.id == "walk"', main)
+            self.assertIn("services.activities.snapshot(actor)", main)
+            self.assertIn('tostring((context.data["event_value"]) or "")', main)
+            self.assertIn(
+                'tostring((ccb.state.character.get("remembered_value", "")) or "")',
+                main,
+            )
+            self.assertIn("not (services.gameplay.mods.is_loaded", main)
+            self.assertNotIn("condition needs a native Lua predicate", report)
+
+    def test_translates_bounded_weapon_predicates_for_proven_u_actors(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            cases = [
+                ("game_start", "u_has_weapon"),
+                ("game_start", "u_can_drop_weapon"),
+                (
+                    "game_start",
+                    {"u_has_wielded_with_flag": "SPEAR"},
+                ),
+                ("character_wields_item", "u_has_weapon"),
+                ("character_wears_item", "u_can_drop_weapon"),
+                (
+                    "character_takeoff_item",
+                    {"u_has_wielded_with_flag": "DURABLE_MELEE"},
+                ),
+                (
+                    "character_armor_destroyed",
+                    {"not": "u_has_weapon"},
+                ),
+            ]
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": f"weapon_{index}",
+                            "required_event": event,
+                            "condition": condition,
+                            "effect": {"message": "bounded weapon predicate"},
+                        }
+                        for index, (event, condition) in enumerate(cases)
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "weapon_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), len(cases))
+            self.assertEqual(result.partial, [])
+            self.assertEqual(main.count("local function character_has_weapon"), 1)
+            self.assertEqual(
+                main.count("local function character_can_drop_weapon"), 1
+            )
+            self.assertEqual(
+                main.count("local function character_wields_with_flag"), 1
+            )
+            self.assertIn("services.inventory.wielded(character)", main)
+            self.assertIn("services.martial_arts.current(character)", main)
+            self.assertIn("return not style.force_unarmed", main)
+            self.assertIn('services.types.id("json_flag", "NO_UNWIELD")', main)
+            self.assertIn("services.items.has_flag(wielded, flag)", main)
+            self.assertIn('services.types.id("json_flag", "SPEAR")', main)
+            self.assertIn(
+                'services.types.id("json_flag", "DURABLE_MELEE")', main
+            )
+            self.assertEqual(
+                main.count("local actor = context.actors.character"), 4
+            )
+            self.assertIn("local actor = services.characters.avatar()", main)
+            self.assertNotIn("context.alpha", main)
+            self.assertNotIn("context.beta", main)
+
+    def test_weapon_predicates_without_exact_shape_or_actor_proof_stay_partial(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            cases = [
+                ("character_kills_monster", "u_has_weapon"),
+                ("game_start", "npc_has_weapon"),
+                ("character_wields_item", "npc_can_drop_weapon"),
+                ([], "u_has_weapon"),
+                ("game_start", {"u_has_weapon": True}),
+                (
+                    "game_start",
+                    {
+                        "u_has_wielded_with_flag": {
+                            "context_val": "dynamic_flag"
+                        }
+                    },
+                ),
+                (
+                    "game_start",
+                    {"npc_has_wielded_with_flag": "SPEAR"},
+                ),
+                (
+                    "game_start",
+                    {"u_has_wielded_with_flag": "X" * 257},
+                ),
+            ]
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": f"unsafe_weapon_{index}",
+                            "required_event": event,
+                            "condition": condition,
+                            "effect": {"message": "must remain partial"},
+                        }
+                        for index, (event, condition) in enumerate(cases)
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "weapon_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), len(cases))
+            self.assertNotIn("local function character_has_weapon", main)
+            self.assertNotIn("local function character_can_drop_weapon", main)
+            self.assertNotIn("local function character_wields_with_flag", main)
+            self.assertNotIn("services.inventory.wielded", main)
+            self.assertEqual(
+                report.count("condition needs a native Lua predicate"),
+                len(cases),
+            )
+
+    def test_item_event_npc_flag_effects_use_optional_item_actor_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            cases = [
+                ("character_wields_item", {"npc_set_flag": "FILTHY"}),
+                ("character_wears_item", {"npc_unset_flag": "WET"}),
+                ("character_takeoff_item", {"npc_set_flag": "FIT"}),
+                (
+                    "character_armor_destroyed",
+                    {"npc_unset_flag": "NO_UNWIELD"},
+                ),
+            ]
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": f"item_flag_{index}",
+                            "required_event": event,
+                            "effect": effect,
+                        }
+                        for index, (event, effect) in enumerate(cases)
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "item_flag_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), len(cases))
+            self.assertEqual(result.partial, [])
+            self.assertEqual(
+                main.count("if context.actors.item ~= nil then"), len(cases)
+            )
+            self.assertEqual(
+                main.count("services.items.set_flag("), len(cases)
+            )
+            self.assertIn('services.types.id("json_flag", "FILTHY"), true)', main)
+            self.assertIn('services.types.id("json_flag", "WET"), false)', main)
+            self.assertNotIn("context.alpha", main)
+            self.assertNotIn("context.beta", main)
+
+    def test_unsafe_or_wrong_talker_flag_effects_never_emit_item_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            cases = [
+                ("game_start", {"npc_set_flag": "FILTHY"}),
+                ("character_kills_monster", {"npc_unset_flag": "WET"}),
+                ("character_wields_item", {"u_set_flag": "FILTHY"}),
+                ("character_wears_item", {"u_unset_flag": "WET"}),
+                (
+                    "character_takeoff_item",
+                    {"npc_set_flag": {"context_val": "dynamic_flag"}},
+                ),
+                (
+                    "character_armor_destroyed",
+                    {"npc_unset_flag": "X" * 257},
+                ),
+            ]
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": f"unsafe_item_flag_{index}",
+                            "required_event": event,
+                            "effect": effect,
+                        }
+                        for index, (event, effect) in enumerate(cases)
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "item_flag_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), len(cases))
+            self.assertNotIn("services.items.set_flag", main)
+            self.assertEqual(
+                report.count("effect #0 needs domain-service conversion"),
+                len(cases),
+            )
+
+    def test_literal_character_wound_changes_remain_partial(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "add_avatar_wound",
+                            "required_event": "game_start",
+                            "effect": {
+                                "u_add_wound": "arm_l",
+                                "wound_id": "scratch",
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "remove_avatar_wounds",
+                            "required_event": "game_start",
+                            "effect": {
+                                "u_remove_wound": "arm_l",
+                                "wound_id": ["scratch", "deep_scratch"],
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "add_named_character_wound",
+                            "required_event": "character_wields_item",
+                            "effect": {
+                                "u_add_wound": "hand_r",
+                                "wound_id": "cut",
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "wound_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 3)
+            self.assertNotIn("services.wounds.add", main)
+            self.assertNotIn("services.wounds.remove", main)
+            self.assertIn("local actor = services.characters.avatar()", main)
+            self.assertIn("local actor = context.actors.character", main)
+            self.assertEqual(
+                report.count("effect #0 needs domain-service conversion"),
+                3,
+            )
+            self.assertNotIn("context.alpha", main)
+            self.assertNotIn("context.beta", main)
+            self.assertNotIn("run_eoc", main)
+
+    def test_unproven_or_nonliteral_wound_shapes_remain_partial(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            cases = [
+                (
+                    "game_start",
+                    {"npc_add_wound": "arm_l", "wound_id": "scratch"},
+                ),
+                (
+                    "game_start",
+                    {
+                        "npc_remove_wound": "arm_l",
+                        "wound_id": ["scratch"],
+                    },
+                ),
+                (
+                    "character_kills_monster",
+                    {"u_add_wound": "arm_l", "wound_id": "scratch"},
+                ),
+                (
+                    "game_start",
+                    {
+                        "u_add_wound": {"context_val": "body_part"},
+                        "wound_id": "scratch",
+                    },
+                ),
+                (
+                    "game_start",
+                    {
+                        "u_add_wound": "arm_l",
+                        "wound_id": {"context_val": "wound"},
+                    },
+                ),
+                (
+                    "game_start",
+                    {"u_remove_wound": "arm_l", "wound_id": "scratch"},
+                ),
+                (
+                    "game_start",
+                    {"u_remove_wound": "arm_l", "wound_id": []},
+                ),
+                (
+                    "game_start",
+                    {
+                        "u_remove_wound": "arm_l",
+                        "wound_id": ["scratch", {"context_val": "wound"}],
+                    },
+                ),
+                (
+                    "game_start",
+                    {
+                        "u_add_wound": "arm_l",
+                        "wound_id": "scratch",
+                        "unexpected": True,
+                    },
+                ),
+                (
+                    [],
+                    {"u_add_wound": "arm_l", "wound_id": "scratch"},
+                ),
+            ]
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": f"unsafe_wound_{index}",
+                            "required_event": event,
+                            "effect": effect,
+                        }
+                        for index, (event, effect) in enumerate(cases)
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "wound_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), len(cases))
+            self.assertNotIn("services.wounds.add", main)
+            self.assertNotIn("services.wounds.remove", main)
+            self.assertEqual(
+                report.count("effect #0 needs domain-service conversion"),
+                len(cases),
+            )
+
+    def test_dynamic_or_out_of_contract_random_conditions_stay_partial(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            predicates = [
+                {"one_in_chance": {"context_val": "denominator"}},
+                {
+                    "x_in_y_chance": {
+                        "x": {"context_val": "chance"},
+                        "y": 10,
+                    }
+                },
+                {"x_in_y_chance": {"x": 2, "y": 1}},
+                {
+                    "roll_contested": 2,
+                    "difficulty": 5,
+                    "die_size": {"context_val": "die_size"},
+                },
+                {"roll_contested": 2, "difficulty": 5, "die_size": 0},
+            ]
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": f"unsafe_random_{index}",
+                            "required_event": "game_start",
+                            "condition": predicate,
+                            "effect": {"message": "bounded only"},
+                        }
+                        for index, predicate in enumerate(predicates)
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "predicate_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), len(predicates))
+            self.assertNotIn("services.random.one_in", main)
+            self.assertNotIn("services.random.probability", main)
+            self.assertNotIn("services.random.contested", main)
+            self.assertEqual(
+                report.count("condition needs a native Lua predicate"),
+                len(predicates),
+            )
+
+    def test_translates_bionic_any_and_literal_recipe_knowledge(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "has_any_bionic_or_power",
+                            "required_event": "game_start",
+                            "condition": {"u_has_bionics": "ANY"},
+                            "effect": {"message": "powered"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "knows_recipe",
+                            "required_event": "game_start",
+                            "condition": {
+                                "u_know_recipe": "cudgel_test_no_tools"
+                            },
+                            "effect": {"message": "known"},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "predicate_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(result.partial, [])
+            self.assertEqual(
+                main.count("local function character_has_any_bionic_or_capacity"),
+                1,
+            )
+            self.assertIn("services.bionics.summary(character)", main)
+            self.assertIn(
+                "summary.installed_count > 0 or summary.has_capacity",
+                main,
+            )
+            self.assertIn("services.recipes.knows", main)
+            self.assertIn(
+                'services.types.id("recipe", "cudgel_test_no_tools")',
+                main,
+            )
+            self.assertNotIn("run_eoc", main)
+
+    def test_dynamic_or_unproven_bionic_and_recipe_conditions_stay_partial(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "unproven_any_bionic",
+                            "required_event": "character_kills_monster",
+                            "condition": {"u_has_bionics": "ANY"},
+                            "effect": {"message": "bounded only"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "dynamic_bionic",
+                            "required_event": "game_start",
+                            "condition": {
+                                "u_has_bionics": {"context_val": "bionic_id"}
+                            },
+                            "effect": {"message": "bounded only"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "dynamic_recipe",
+                            "required_event": "game_start",
+                            "condition": {
+                                "u_know_recipe": {"context_val": "recipe_id"}
+                            },
+                            "effect": {"message": "bounded only"},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "predicate_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 3)
+            self.assertNotIn("services.bionics.summary", main)
+            self.assertNotIn("services.recipes.knows", main)
+            self.assertEqual(
+                report.count("condition needs a native Lua predicate"),
+                3,
+            )
+
+    def test_translates_proven_avatar_activity_cancellation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "cancel_activity",
+                        "required_event": "game_start",
+                        "effect": "u_cancel_activity",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "activity_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
+            self.assertIn("local actor = services.characters.avatar()", main)
+            self.assertIn("services.activities.cancel(actor)", main)
+            self.assertNotIn("run_eoc", main)
+
+    def test_item_presence_emits_its_result_helper_when_used_alone(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "has_water",
+                        "required_event": "game_start",
+                        "condition": {"u_has_item": "water_clean"},
+                        "effect": {"message": "water found"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "inventory_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
+            self.assertEqual(main.count("local function service_value"), 1)
+            self.assertEqual(main.count("local function character_has_item"), 1)
+            self.assertIn("resources.has_charges or resources.has_amount", main)
+
+    def test_translates_achievement_awards_without_an_eoc_runner(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "award",
+                        "required_event": "game_start",
+                        "effect": {
+                            "give_achievement": "achievement_reach_string_dimension"
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "achievement_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
+            self.assertIn("services.achievements.complete", main)
+            self.assertIn(
+                'services.types.id("achievement", '
+                '"achievement_reach_string_dimension")',
+                main,
+            )
+            self.assertNotIn("run_eoc", main)
+
+    def test_translates_avatar_bionic_install_without_a_dialogue_actor(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "install_bionic",
+                        "required_event": "game_start",
+                        "effect": {"u_add_bionic": "bio_earplugs"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "bionic_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
+            self.assertIn("services.bionics.grant", main)
+            self.assertIn("local actor = services.characters.avatar()", main)
+            self.assertNotIn("context.alpha", main)
+            self.assertIn(
+                'services.types.id("bionic", "bio_earplugs")',
+                main,
+            )
+            self.assertNotIn("run_eoc", main)
+
+    def test_translates_avatar_bionic_removal_by_type(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "remove_bionic",
+                        "required_event": "game_start",
+                        "effect": {"u_lose_bionic": "bio_earplugs"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "bionic_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
+            self.assertIn("services.bionics.remove_type", main)
+            self.assertIn("local actor = services.characters.avatar()", main)
+            self.assertNotIn("context.alpha", main)
+            self.assertIn(
+                'services.types.id("bionic", "bio_earplugs")',
+                main,
+            )
+            self.assertNotIn("run_eoc", main)
+
+    def test_translates_avatar_recipe_learning_without_a_dialogue_actor(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "learn_recipe",
+                        "required_event": "game_start",
+                        "effect": {"u_learn_recipe": "cudgel_test_no_tools"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "recipe_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
+            self.assertIn("services.recipes.learn", main)
+            self.assertIn("local actor = services.characters.avatar()", main)
+            self.assertNotIn("context.alpha", main)
+            self.assertIn(
+                'services.types.id("recipe", "cudgel_test_no_tools")',
+                main,
+            )
+            self.assertNotIn("run_eoc", main)
+
+    def test_translates_avatar_recipe_and_literal_category_forgetting(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "forget_recipe",
+                            "required_event": "game_start",
+                            "effect": {"u_forget_recipe": "cudgel_test_no_tools"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "forget_category",
+                            "required_event": "game_start",
+                            "effect": {
+                                "u_forget_recipe": "CC_FOOD",
+                                "category": True,
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "forget_subcategory",
+                            "required_event": "game_start",
+                            "effect": {
+                                "u_forget_recipe": "CC_FOOD",
+                                "subcategory": "CSC_FOOD_DRINKS",
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "recipe_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 3)
+            self.assertEqual(result.partial, [])
+            self.assertIn("services.recipes.forget", main)
+            self.assertIn(
+                'services.types.id("recipe", "cudgel_test_no_tools")',
+                main,
+            )
+            self.assertEqual(main.count("services.recipes.forget_category"), 2)
+            self.assertEqual(
+                main.count(
+                    'services.types.id("crafting_category", "CC_FOOD")'
+                ),
+                2,
+            )
+            self.assertIn(
+                '"CSC_FOOD_DRINKS")',
+                main,
+            )
+            self.assertNotIn("run_eoc", main)
+
+    def test_dynamic_recipe_category_forgetting_stays_partial(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "dynamic_category",
+                            "required_event": "game_start",
+                            "effect": {
+                                "u_forget_recipe": {
+                                    "context_val": "category_id"
+                                },
+                                "category": True,
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "dynamic_subcategory",
+                            "required_event": "game_start",
+                            "effect": {
+                                "u_forget_recipe": "CC_FOOD",
+                                "subcategory": {
+                                    "context_val": "subcategory_id"
+                                },
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "recipe_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 2)
+            self.assertNotIn("services.recipes.forget_category", main)
+            self.assertEqual(
+                report.count("effect #0 needs domain-service conversion"),
+                2,
+            )
+
+    def test_translates_avatar_martial_art_learning_and_forgetting(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "learn_style",
+                            "required_event": "game_start",
+                            "effect": {"u_learn_martial_art": "style_karate"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "forget_style",
+                            "required_event": "game_start",
+                            "effect": {"u_forget_martial_art": "style_karate"},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "martial_art_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(result.partial, [])
+            self.assertIn("services.martial_arts.learn", main)
+            self.assertIn("services.martial_arts.forget", main)
+            self.assertIn("local actor = services.characters.avatar()", main)
+            self.assertNotIn("context.alpha", main)
+            self.assertIn(
+                'services.types.id("martial_art", "style_karate")',
+                main,
+            )
+            self.assertNotIn("run_eoc", main)
+
+    def test_translates_bounded_avatar_morale_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "add_morale",
+                            "required_event": "game_start",
+                            "effect": {
+                                "u_add_morale": "morale_feeling_good",
+                                "bonus": 10,
+                                "max_bonus": 50,
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "remove_morale",
+                            "required_event": "game_start",
+                            "effect": {"u_lose_morale": "morale_feeling_good"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "timed_morale",
+                            "required_event": "game_start",
+                            "effect": {
+                                "u_add_morale": "morale_feeling_good",
+                                "bonus": 10,
+                                "max_bonus": 50,
+                                "duration": "2 hours",
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "morale_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(len(result.partial), 1)
+            self.assertIn("services.morale.add", main)
+            self.assertIn("services.morale.remove", main)
+            self.assertIn(
+                'services.types.id("morale", "morale_feeling_good")',
+                main,
+            )
+            self.assertIn("10, 50)", main)
+            self.assertIn(
+                "EOC timed_morale effect #0 needs domain-service conversion",
+                report,
+            )
+            self.assertNotIn("run_eoc", main)
+
+    def test_unsupported_timed_morale_never_emits_a_service_call(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "timed_morale_only",
+                        "required_event": "game_start",
+                        "effect": {
+                            "u_add_morale": "morale_feeling_good",
+                            "bonus": 10,
+                            "max_bonus": 50,
+                            "duration": "2 hours",
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "morale_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertNotIn("services.morale.add", main)
+            self.assertNotIn("services.morale.remove", main)
+            self.assertNotIn("run_eoc", main)
+
+    def test_translates_only_bounded_literal_avatar_effect_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "add_timed_effect",
+                            "required_event": "game_start",
+                            "effect": {
+                                "u_add_effect": "downed",
+                                "duration": 60,
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "add_permanent_effect",
+                            "required_event": "game_start",
+                            "effect": {
+                                "u_add_effect": "incorporeal",
+                                "duration": "PERMANENT",
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "remove_effect",
+                            "required_event": "game_start",
+                            "effect": {"u_lose_effect": "downed"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "zero_duration",
+                            "required_event": "game_start",
+                            "effect": {"u_add_effect": "blind", "duration": 0},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "effect_options",
+                            "required_event": "game_start",
+                            "effect": {
+                                "u_add_effect": "bleed",
+                                "duration": 60,
+                                "intensity": 2,
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "variable_remove_bug_compatibility",
+                            "required_event": "game_start",
+                            "effect": {
+                                "u_lose_effect": {"context_val": "effect_id"}
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "effect_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 3)
+            self.assertEqual(len(result.partial), 3)
+            self.assertIn("services.effects.add", main)
+            self.assertIn("services.effects.remove", main)
+            self.assertIn(
+                'services.types.id("effect", "downed")',
+                main,
+            )
+            self.assertIn('services.time.duration(60, "turn")', main)
+            self.assertIn(
+                'services.time.duration(1, "turn"), { permanent = true }',
+                main,
+            )
+            self.assertIn(
+                "EOC zero_duration effect #0 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC effect_options effect #0 needs domain-service conversion",
+                report,
+            )
+            self.assertIn(
+                "EOC variable_remove_bug_compatibility effect #0 needs "
+                "domain-service conversion",
+                report,
+            )
+            self.assertNotIn("run_eoc", main)
+
+    def test_unsupported_effect_shapes_never_emit_effect_service_calls(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "zero_duration",
+                            "required_event": "game_start",
+                            "effect": {"u_add_effect": "blind", "duration": 0},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "effect_options",
+                            "required_event": "game_start",
+                            "effect": {
+                                "u_add_effect": "bleed",
+                                "duration": 60,
+                                "intensity": 2,
+                            },
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "variable_remove",
+                            "required_event": "game_start",
+                            "effect": {
+                                "u_lose_effect": {"context_val": "effect_id"}
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "effect_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 3)
+            self.assertNotIn("services.effects.add", main)
+            self.assertNotIn("services.effects.remove", main)
+            self.assertNotIn("run_eoc", main)
+
+    def test_keeps_actor_dependent_u_shapes_partial_without_avatar_proof(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "ambiguous_alpha",
+                        "required_event": "character_kills_monster",
+                        "condition": {"u_has_trait": "TOUGH"},
+                        "effect": {
+                            "u_add_effect": "downed",
+                            "duration": 1,
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "actor_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertNotIn("services.mutations.has", main)
+            self.assertNotIn("services.effects.add", main)
+            self.assertIn(
+                "EOC ambiguous_alpha condition needs a native Lua predicate",
+                report,
+            )
+            self.assertIn(
+                "EOC ambiguous_alpha effect #0 needs domain-service conversion",
+                report,
+            )
+            self.assertNotIn("run_eoc", main)
 
     def test_recipe_abstracts_uncraft_and_missing_results_are_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -1006,7 +2289,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
                                 "id": "sample_recipe",
                                 "description": "Craft sample",
                                 "om_terrains": ["ANY"],
-                                }],
+                            }],
                         },
                         {
                             "type": "nested_category",
@@ -1299,8 +2582,8 @@ class LuaFirstMigrationTest(unittest.TestCase):
             )
             self.assertTrue(
                 any(
-                    "monster attack sample_lua_attack" in todo
-                    and "named Lua handler" in todo
+                    "monster attack sample_lua_attack" in todo and
+                    "named Lua handler" in todo
                     for todo in result.todos
                 )
             )
@@ -1401,6 +2684,339 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertEqual(len(result.partial), 1)
             self.assertNotIn("run_eoc", main)
             self.assertNotIn("load_json", main)
+
+    def test_converts_bounded_wound_and_wound_fix_definitions(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "wound",
+                            "id": "lua_laceration",
+                            "name": {
+                                "str": "laceration",
+                                "str_pl": "lacerations",
+                            },
+                            "description": "A deep open cut.",
+                            "pain": [1, 3],
+                            "healing_time": ["1 hour", "2 hours"],
+                            "damage_types": ["cut", "stab"],
+                            "damage_required": [5, 30],
+                            "weight": 2,
+                            "limb_scores": [
+                                {"score": "manip", "value": 0.25}
+                            ],
+                            "limit": 2,
+                            "wound_progression": [
+                                {"id": "lua_deep_laceration", "chance": 20}
+                            ],
+                            "whitelist_bp_with_flag": "LIMB",
+                            "whitelist_body_part_types": ["arm", "hand"],
+                            "blacklist_bp_with_flag": "BIONIC_LIMB",
+                            "blacklist_body_part_types": ["head"],
+                        },
+                        {
+                            "type": "wound_fix",
+                            "id": "lua_suture",
+                            "name": "suture wound",
+                            "description": "Close a laceration.",
+                            "success_msg": "You close the wound.",
+                            "mod_hp": 3,
+                            "time": "5 minutes",
+                            "skills": {"firstaid": 2},
+                            "wounds_removed": ["lua_laceration"],
+                            "wounds_added": ["lua_sutured"],
+                            "proficiencies": [
+                                {
+                                    "proficiency": "prof_wound_care",
+                                    "time_save": 0.75,
+                                    "is_mandatory": True,
+                                }
+                            ],
+                            "requirements": [["wound_care", 2]],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "wound_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(result.partial, [])
+            self.assertEqual(result.todos, [])
+            self.assertIn("content.Wound {", main)
+            self.assertIn('plural_name = "lacerations"', main)
+            self.assertIn("healing_min_turns = 3600", main)
+            self.assertIn('definition:damage_type("cut")', main)
+            self.assertIn('definition:limb_score("manip", 0.25)', main)
+            self.assertIn(
+                'definition:progression("lua_deep_laceration", 20)', main
+            )
+            self.assertIn('definition:require_body_part_type("arm")', main)
+            self.assertIn("content.WoundFix {", main)
+            self.assertIn("duration_turns = 300", main)
+            self.assertIn('definition:skill("firstaid", 2)', main)
+            self.assertIn(
+                'definition:proficiency("prof_wound_care", 0.75, true)',
+                main,
+            )
+            self.assertIn('definition:removes("lua_laceration")', main)
+            self.assertIn('definition:requires("wound_care", 2)', main)
+            self.assertNotIn("load_json", main)
+            self.assertNotIn("run_eoc", main)
+
+    def test_wound_and_fix_accept_exact_platform_utf8_byte_caps(self) -> None:
+        bounded_id = "界" * 85 + "a"
+        bounded_name = "界" * 341 + "a"
+        bounded_description = "界" * 10922 + "ab"
+        self.assertEqual(len(bounded_id.encode("utf-8")), 256)
+        self.assertEqual(len(bounded_name.encode("utf-8")), 1024)
+        self.assertEqual(len(bounded_description.encode("utf-8")), 32768)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "wound",
+                            "id": bounded_id,
+                            "name": bounded_name,
+                            "description": bounded_description,
+                            "healing_time": [1, 1],
+                            "damage_types": ["d" * 256],
+                            "damage_required": [0, 1],
+                            "limb_scores": [
+                                {"score": "l" * 256, "value": 0.5}
+                            ],
+                            "wound_progression": [
+                                {"id": "p" * 256, "chance": 1}
+                            ],
+                            "whitelist_bp_with_flag": "r" * 256,
+                            "blacklist_bp_with_flag": "f" * 256,
+                        },
+                        {
+                            "type": "wound_fix",
+                            "id": "x" * 256,
+                            "name": bounded_name,
+                            "description": bounded_description,
+                            "success_msg": bounded_description,
+                            "skills": {"s" * 256: 1},
+                            "wounds_removed": [bounded_id],
+                            "wounds_added": ["a" * 256],
+                            "proficiencies": [
+                                {
+                                    "proficiency": "q" * 256,
+                                    "time_save": 2 ** -149,
+                                }
+                            ],
+                            "requirements": [["e" * 256, 1]],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "wound_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(result.partial, [])
+            self.assertEqual(result.todos, [])
+            self.assertIn(
+                f'definition:damage_type("{"d" * 256}")', main
+            )
+            self.assertIn(
+                f'definition:proficiency("{"q" * 256}", '
+                f'{migrate_lua_first.lua_number(2 ** -149)}, false)',
+                main,
+            )
+
+    def test_wound_and_fix_reject_overlong_required_fields(self) -> None:
+        valid_wound = {
+            "type": "wound",
+            "id": "valid_wound",
+            "name": "wound",
+            "description": "description",
+            "damage_types": ["bash"],
+            "damage_required": [0, 1],
+        }
+        wound_cases = {
+            "id": {"id": "i" * 257},
+            "multibyte id": {"id": "界" * 86},
+            "name": {"name": "n" * 1025},
+            "description": {"description": "d" * 32769},
+            "damage type": {"damage_types": ["t" * 257]},
+            "unencodable id": {"id": "\ud800"},
+        }
+        for label, replacement in wound_cases.items():
+            with self.subTest(kind="wound", field=label):
+                result = migrate_lua_first.MigrationResult()
+                rendered = migrate_lua_first.render_wound(
+                    migrate_lua_first.SourceObject(
+                        Path("source.json"), 0, valid_wound | replacement
+                    ),
+                    result,
+                )
+                self.assertIsNone(rendered)
+                self.assertEqual(len(result.partial), 1)
+                self.assertEqual(len(result.todos), 1)
+
+        valid_fix = {
+            "type": "wound_fix",
+            "id": "valid_fix",
+            "name": "fix",
+            "description": "description",
+            "wounds_removed": ["valid_wound"],
+        }
+        fix_cases = {
+            "id": {"id": "i" * 257},
+            "name": {"name": "n" * 1025},
+            "description": {"description": "d" * 32769},
+            "removed wound": {"wounds_removed": ["w" * 257]},
+            "unencodable text": {"name": "\ud800"},
+        }
+        for label, replacement in fix_cases.items():
+            with self.subTest(kind="wound fix", field=label):
+                result = migrate_lua_first.MigrationResult()
+                rendered = migrate_lua_first.render_wound_fix(
+                    migrate_lua_first.SourceObject(
+                        Path("source.json"), 0, valid_fix | replacement
+                    ),
+                    result,
+                )
+                self.assertIsNone(rendered)
+                self.assertEqual(len(result.partial), 1)
+                self.assertEqual(len(result.todos), 1)
+
+    def test_wound_optional_values_fail_closed_to_valid_lua(self) -> None:
+        overlong_id = "z" * 257
+        wound_result = migrate_lua_first.MigrationResult()
+        wound = migrate_lua_first.render_wound(
+            migrate_lua_first.SourceObject(
+                Path("source.json"),
+                0,
+                {
+                    "type": "wound",
+                    "id": "bounded_wound",
+                    "name": {"str": "wound", "str_pl": "n" * 1025},
+                    "description": "description",
+                    "damage_types": ["bash"],
+                    "damage_required": [0, 1],
+                    "limb_scores": [
+                        {"score": overlong_id, "value": 0.5},
+                        {"score": "huge_penalty", "value": 10 ** 10000},
+                    ],
+                    "wound_progression": [
+                        {"id": overlong_id, "chance": 1}
+                    ],
+                    "whitelist_bp_with_flag": "SAME_FLAG",
+                    "blacklist_bp_with_flag": "SAME_FLAG",
+                },
+            ),
+            wound_result,
+        )
+        self.assertIsNotNone(wound)
+        assert wound is not None
+        self.assertIn('plural_name = "wound"', wound)
+        self.assertNotIn("required_body_part_flag", wound)
+        self.assertNotIn("forbidden_body_part_flag", wound)
+        self.assertNotIn(overlong_id, wound)
+        self.assertEqual(wound_result.converted, [])
+        self.assertEqual(len(wound_result.partial), 1)
+        self.assertTrue(
+            any("cannot require and forbid" in todo for todo in wound_result.todos)
+        )
+
+        fix_result = migrate_lua_first.MigrationResult()
+        wound_fix = migrate_lua_first.render_wound_fix(
+            migrate_lua_first.SourceObject(
+                Path("source.json"),
+                1,
+                {
+                    "type": "wound_fix",
+                    "id": "bounded_fix",
+                    "name": "fix",
+                    "description": "description",
+                    "success_msg": "m" * 32769,
+                    "skills": {overlong_id: 1},
+                    "wounds_removed": ["bounded_wound"],
+                    "wounds_added": [overlong_id],
+                    "proficiencies": [
+                        {"proficiency": overlong_id, "time_save": 1},
+                        {"proficiency": "underflow", "time_save": 2 ** -150},
+                        {
+                            "proficiency": "overflow",
+                            "time_save": migrate_lua_first.NATIVE_FLOAT_MAX * 2,
+                        },
+                        {"proficiency": "huge", "time_save": 10 ** 10000},
+                        {"proficiency": "small_ok", "time_save": 2 ** -149},
+                    ],
+                    "requirements": [[overlong_id, 1]],
+                },
+            ),
+            fix_result,
+        )
+        self.assertIsNotNone(wound_fix)
+        assert wound_fix is not None
+        self.assertIn('success_message = ""', wound_fix)
+        self.assertNotIn(overlong_id, wound_fix)
+        self.assertNotIn('definition:proficiency("underflow"', wound_fix)
+        self.assertNotIn('definition:proficiency("overflow"', wound_fix)
+        self.assertNotIn('definition:proficiency("huge"', wound_fix)
+        self.assertIn('definition:proficiency("small_ok"', wound_fix)
+        self.assertEqual(fix_result.converted, [])
+        self.assertEqual(len(fix_result.partial), 1)
+
+        self.assertEqual(
+            migrate_lua_first.lua_quote("a\x01\b\f\v\x7f"),
+            '"a\\001\\b\\f\\v\\127"',
+        )
+
+    def test_wound_inheritance_and_inline_requirements_stay_explicit(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "wound",
+                            "id": "inherited_wound",
+                            "copy-from": "base_wound",
+                        },
+                        {
+                            "type": "wound_fix",
+                            "id": "inline_fix",
+                            "name": "patch wound",
+                            "description": "Patch a wound.",
+                            "wounds_removed": ["lua_laceration"],
+                            "requirements": [
+                                {"components": [["rag", 1]]}
+                            ],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "wound_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 2)
+            self.assertIn("wound needs a stable id, text", report)
+            self.assertIn("needs a standalone Requirement", report)
+            self.assertIn("content.WoundFix {", main)
+            self.assertNotIn("content.Wound {", main)
+            self.assertNotIn("load_json", main)
+            self.assertNotIn("run_eoc", main)
 
     def test_check_mode_is_non_mutating_and_detects_stale_output(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

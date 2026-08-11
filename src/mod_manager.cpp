@@ -353,9 +353,9 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
         }
     }
 
-    const auto record_rejection = [&]( const std::string &unbounded_reason ) {
+    const auto record_rejection = [&]( const std::string & unbounded_reason ) {
         const std::string reason = bounded_lua_platform_diagnostic( unbounded_reason );
-        DebugLog( D_ERROR, D_MAIN ) << "Rejected Lua-first Mod at " << root << ": " << reason;
+        DebugLog( D_WARNING, D_MAIN ) << "Rejected Lua-first Mod at " << root << ": " << reason;
         if( legacy_mods.size() == 1 ) {
             MOD_INFORMATION &hybrid = *legacy_mods.front();
             // Keep a legacy hybrid usable when its optional Platform entry is
@@ -386,7 +386,8 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
                                            " (rejected Lua-first candidate)" );
         const size_t default_category = get_mod_list_categories().size() - 1;
         diagnostic.category = { static_cast<int>( default_category ),
-                                get_mod_list_categories()[default_category].second };
+                                get_mod_list_categories()[default_category].second
+                              };
         diagnostic.path = root;
         diagnostic.mod_root_path = root;
         diagnostic.lua_platform_entry = root / "main.lua";
@@ -530,7 +531,8 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
     mod.name_ = no_translation( definition.name_set ? definition.name : ident_string );
     const size_t default_category = get_mod_list_categories().size() - 1;
     mod.category = { static_cast<int>( default_category ),
-                     get_mod_list_categories()[default_category].second };
+                     get_mod_list_categories()[default_category].second
+                   };
     mod.version = definition.version_set ? definition.version : std::string();
     mod.dependencies = std::move( dependencies );
     mod.core = definition.core_set && definition.core;

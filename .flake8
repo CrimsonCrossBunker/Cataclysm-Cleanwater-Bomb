@@ -39,3 +39,7 @@ per-file-ignores =
     tools/agent/test_import_legacy_audits.py:E501
     tools/agent/test_project_metadata.py:E501
     tools/agent/test_repository_governance.py:E501
+    # Lua-first extractor: exact emitted Lua/diagnostic strings and matching
+    # fixture assertions are intentionally readable as single source lines.
+    tools/migrate_lua_first.py:E501
+    tools/test_migrate_lua_first.py:E501

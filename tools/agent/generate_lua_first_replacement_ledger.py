@@ -29,15 +29,22 @@ INVENTORIES = {
 
 CONTROL_FLOW = {
     "and",
+    "get_condition",
     "or",
     "not",
     "if",
     "foreach",
+    "nothing",
+    "run_eoc_selector",
+    "run_eocs",
+    "run_lua",
+    "set_condition",
     "switch",
+    "test_eoc",
     "weighted_list_eocs",
 }
 
-IMPLEMENTED_JSON = {
+BOUNDED_IMPLEMENTED_JSON = {
     "MOD_INFO": {
         "target": "platform.mod-metadata",
         "evidence": [
@@ -45,6 +52,7 @@ IMPLEMENTED_JSON = {
             "src/mod_manager.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
             "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
@@ -54,6 +62,7 @@ IMPLEMENTED_JSON = {
             "src/catalua_platform_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
             "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
@@ -63,6 +72,7 @@ IMPLEMENTED_JSON = {
             "src/catalua_platform_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
             "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
@@ -948,7 +958,33 @@ IMPLEMENTED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
+    "wound": {
+        "target": "content.wounds",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/wound.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "tools/test_migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "wound_fix": {
+        "target": "content.wound-fixes",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/wound.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "tools/test_migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
 }
+
+PLANNED_JSON = {}
 
 NATIVE_PRIMITIVE_DOMAINS = {
     "items",
@@ -977,6 +1013,503 @@ NATIVE_PRIMITIVE_EVIDENCE = [
     "tests/catalua_ui_test.cpp",
     "data/lua/LUA_FIRST_PLATFORM.md",
 ]
+
+BOUNDED_IMPLEMENTED_EOC = {
+    ("eoc-conditions", "compare_string"): "services.gameplay.strings",
+    ("eoc-conditions", "compare_string_match_all"): (
+        "services.gameplay.strings"
+    ),
+    ("eoc-conditions", "current_dimension"): "services.gameplay.environment",
+    ("eoc-conditions", "mod_is_loaded"): "services.gameplay.mods",
+    ("eoc-conditions", "one_in_chance"): "services.random",
+    ("eoc-conditions", "roll_contested"): "services.random",
+    ("eoc-conditions", "u_has_bionics"): "services.bionics",
+    ("eoc-conditions", "u_has_activity"): "services.activities",
+    ("eoc-conditions", "u_can_drop_weapon"): (
+        "services.inventory-and-martial-arts"
+    ),
+    ("eoc-conditions", "u_has_item"): "services.inventory",
+    ("eoc-conditions", "u_has_move_mode"): "services.characters.movement",
+    ("eoc-conditions", "u_has_weapon"): "services.inventory-and-martial-arts",
+    ("eoc-conditions", "u_has_wielded_with_flag"): (
+        "services.inventory-and-items"
+    ),
+    ("eoc-conditions", "u_has_any_trait"): "services.mutations",
+    ("eoc-conditions", "u_has_martial_art"): "services.martial_arts",
+    ("eoc-conditions", "u_has_proficiency"): "services.proficiencies",
+    ("eoc-conditions", "u_has_trait"): "services.mutations",
+    ("eoc-conditions", "u_know_recipe"): "services.recipes",
+    ("eoc-conditions", "u_using_martial_art"): "services.martial_arts",
+    ("eoc-conditions", "x_in_y_chance"): "services.random",
+    ("eoc-effects", "give_achievement"): "services.achievements",
+    ("eoc-effects", "message"): "services.message",
+    ("eoc-effects", "npc_set_flag"): "services.items",
+    ("eoc-effects", "npc_unset_flag"): "services.items",
+    ("eoc-effects", "u_add_bionic"): "services.bionics",
+    ("eoc-effects", "u_cancel_activity"): "services.activities",
+    ("eoc-effects", "u_add_effect"): "services.effects",
+    ("eoc-effects", "u_forget_martial_art"): "services.martial_arts",
+    ("eoc-effects", "u_forget_recipe"): "services.recipes",
+    ("eoc-effects", "u_learn_martial_art"): "services.martial_arts",
+    ("eoc-effects", "u_learn_recipe"): "services.recipes",
+    ("eoc-effects", "u_lose_bionic"): "services.bionics",
+    ("eoc-effects", "u_lose_effect"): "services.effects",
+    ("eoc-effects", "u_add_morale"): "services.morale",
+    ("eoc-effects", "u_lose_morale"): "services.morale",
+}
+
+BOUNDED_IMPLEMENTED_EOC_EVIDENCE = [
+    "src/catalua_platform_runtime.cpp",
+    "data/lua/types/ccb_platform_v1.d.lua",
+    "tests/catalua_ui_test.cpp",
+    "tools/migrate_lua_first.py",
+    "tools/test_migrate_lua_first.py",
+    "data/lua/LUA_FIRST_PLATFORM.md",
+]
+
+BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
+    ("eoc-conditions", "u_can_drop_weapon"): [
+        "src/condition.cpp",
+        "src/melee.cpp",
+        "src/catalua_ui_items.cpp",
+        "src/catalua_ui_martial_arts.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "u_has_bionics"): [
+        "src/condition.cpp",
+        "src/catalua_ui_bionics.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "u_has_activity"): [
+        "src/condition.cpp",
+        "src/player_activity.cpp",
+    ],
+    ("eoc-conditions", "u_has_item"): [
+        "src/condition.cpp",
+        "src/catalua_ui_items.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "u_has_move_mode"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "u_has_weapon"): [
+        "src/condition.cpp",
+        "src/melee.cpp",
+        "src/catalua_ui_items.cpp",
+        "src/catalua_ui_martial_arts.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "u_has_wielded_with_flag"): [
+        "src/condition.cpp",
+        "src/talker_character.cpp",
+        "src/catalua_ui_items.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "u_has_any_trait"): [
+        "src/condition.cpp",
+        "src/catalua_ui_mutations.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "u_has_martial_art"): [
+        "src/condition.cpp",
+        "src/catalua_ui_martial_arts.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "u_using_martial_art"): [
+        "src/condition.cpp",
+        "src/catalua_ui_martial_arts.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "u_has_proficiency"): [
+        "src/condition.cpp",
+        "src/catalua_ui_proficiencies.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "u_has_trait"): [
+        "src/condition.cpp",
+        "src/catalua_ui_mutations.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "u_know_recipe"): [
+        "src/condition.cpp",
+        "src/character_crafting.cpp",
+        "src/catalua_ui_crafting.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "u_add_bionic"): [
+        "src/bionics.cpp",
+        "src/catalua_ui_bionics.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "npc_set_flag"): [
+        "src/effect_on_condition.cpp",
+        "src/event_bus.cpp",
+        "src/npctalk.cpp",
+        "src/catalua_ui_items.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "npc_unset_flag"): [
+        "src/effect_on_condition.cpp",
+        "src/event_bus.cpp",
+        "src/npctalk.cpp",
+        "src/catalua_ui_items.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "u_cancel_activity"): [
+        "src/npctalk.cpp",
+        "src/character.cpp",
+        "src/player_activity.cpp",
+    ],
+    ("eoc-effects", "u_add_effect"): [
+        "src/npctalk.cpp",
+        "src/creature.cpp",
+        "src/catalua_ui_effects.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "u_lose_bionic"): [
+        "src/bionics.cpp",
+        "src/catalua_ui_bionics.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "u_lose_effect"): [
+        "src/npctalk.cpp",
+        "src/creature.cpp",
+        "src/catalua_ui_effects.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "u_learn_recipe"): [
+        "src/character_crafting.cpp",
+        "src/catalua_ui_crafting.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "u_forget_recipe"): [
+        "src/character_crafting.cpp",
+        "src/catalua_ui_crafting.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "u_learn_martial_art"): [
+        "src/character_martial_arts.cpp",
+        "src/catalua_ui_martial_arts.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "u_forget_martial_art"): [
+        "src/character_martial_arts.cpp",
+        "src/catalua_ui_martial_arts.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "u_add_morale"): [
+        "src/npctalk.cpp",
+        "src/talker_character.cpp",
+        "src/character_morale.cpp",
+        "src/morale.cpp",
+        "src/morale_types.cpp",
+    ],
+    ("eoc-effects", "u_lose_morale"): [
+        "src/npctalk.cpp",
+        "src/talker_character.cpp",
+        "src/character_morale.cpp",
+        "src/morale.cpp",
+        "src/morale_types.cpp",
+    ],
+}
+
+EXPLICIT_PRIMITIVE_EOC = {
+    ("eoc-conditions", "follower_present"): "services.followers",
+    ("eoc-conditions", "is_outside"): "services.gameplay.environment",
+    ("eoc-conditions", "line_of_sight"): "services.gameplay.environment",
+    ("eoc-conditions", "npc_can_drop_weapon"): (
+        "services.inventory-and-martial-arts"
+    ),
+    ("eoc-conditions", "npc_has_activity"): "services.activities",
+    ("eoc-conditions", "npc_has_item"): "services.inventory",
+    ("eoc-conditions", "npc_has_move_mode"): "services.characters.movement",
+    ("eoc-conditions", "npc_has_weapon"): (
+        "services.inventory-and-martial-arts"
+    ),
+    ("eoc-conditions", "npc_has_wielded_with_flag"): (
+        "services.inventory-and-items"
+    ),
+    ("eoc-effects", "closest_city"): "services.overmap",
+    ("eoc-effects", "assign_mission"): "services.missions-and-dialogue",
+    ("eoc-effects", "dimension_name"): "services.gameplay.environment",
+    ("eoc-effects", "follow"): "services.followers-and-npcs",
+    ("eoc-effects", "give_aid"): "services.characters-and-effects",
+    ("eoc-effects", "give_equipment"): "services.inventory-and-presentation",
+    ("eoc-effects", "hostile"): "services.npcs",
+    ("eoc-effects", "mirror_coordinates"): "services.coords",
+    ("eoc-effects", "map_spawn_item"): "services.world",
+    ("eoc-effects", "npc_cancel_activity"): "services.activities",
+    ("eoc-effects", "npc_set_fac_relation"): "services.factions",
+    ("eoc-effects", "reveal_route"): "services.overmap",
+    ("eoc-effects", "sample_range"): "services.random",
+    ("eoc-effects", "set_trap"): "services.world-and-coords",
+    ("eoc-effects", "signal_hordes"): "services.hordes",
+    ("eoc-effects", "stop_following"): "services.followers-and-npcs",
+    ("eoc-effects", "stranger_neutral"): "services.npcs",
+    ("eoc-effects", "turn_cost"): "services.characters-and-time",
+    ("eoc-effects", "u_add_faction_trust"): "services.factions",
+    ("eoc-effects", "u_set_flag"): "services.items",
+    ("eoc-effects", "u_set_fac_relation"): "services.factions",
+    ("eoc-effects", "u_spawn_item"): "services.inventory",
+    ("eoc-effects", "u_unset_flag"): "services.items",
+}
+
+EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
+    ("eoc-conditions", "follower_present"): [
+        "src/catalua_ui_game_info.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "npc_can_drop_weapon"): [
+        "src/melee.cpp", "src/catalua_ui_items.cpp",
+        "src/catalua_ui_martial_arts.cpp", "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "npc_has_activity"): [
+        "src/condition.cpp", "src/player_activity.cpp",
+    ],
+    ("eoc-conditions", "npc_has_item"): [
+        "src/condition.cpp", "src/catalua_ui_items.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "npc_has_move_mode"): [
+        "src/condition.cpp", "src/catalua_ui_creatures.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "npc_has_weapon"): [
+        "src/melee.cpp", "src/catalua_ui_items.cpp",
+        "src/catalua_ui_martial_arts.cpp", "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "npc_has_wielded_with_flag"): [
+        "src/talker_character.cpp", "src/catalua_ui_items.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "closest_city"): [
+        "src/catalua_ui_overmap.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "assign_mission"): [
+        "src/npctalk.cpp", "src/catalua_ui_missions.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "follow"): [
+        "src/catalua_ui_game_info.cpp",
+        "src/catalua_ui_npcs.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "give_aid"): [
+        "src/catalua_ui_creatures.cpp",
+        "src/catalua_ui_effects.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "give_equipment"): [
+        "src/catalua_ui_items.cpp",
+        "src/catalua_ui_interaction.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "hostile"): [
+        "src/catalua_ui_npcs.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "map_spawn_item"): [
+        "src/npctalk.cpp", "src/catalua_ui_world.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "npc_cancel_activity"): [
+        "src/npctalk.cpp", "src/character.cpp", "src/player_activity.cpp",
+    ],
+    ("eoc-effects", "npc_set_fac_relation"): [
+        "src/npctalk.cpp",
+        "src/talker_character.cpp",
+        "src/catalua_ui_factions.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "reveal_route"): [
+        "src/catalua_ui_overmap.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "set_trap"): [
+        "src/catalua_ui_world.cpp",
+        "src/catalua_bindings_coords.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "signal_hordes"): [
+        "src/catalua_ui_hordes.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "stop_following"): [
+        "src/catalua_ui_game_info.cpp",
+        "src/catalua_ui_npcs.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "stranger_neutral"): [
+        "src/catalua_ui_npcs.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "turn_cost"): [
+        "src/catalua_ui_creatures.cpp",
+        "src/catalua_ui_time.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "u_add_faction_trust"): [
+        "src/npctalk.cpp",
+        "src/talker_character.cpp",
+        "src/catalua_ui_factions.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "u_set_flag"): [
+        "src/npctalk.cpp", "src/catalua_ui_items.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "u_set_fac_relation"): [
+        "src/npctalk.cpp",
+        "src/talker_character.cpp",
+        "src/catalua_ui_factions.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "u_spawn_item"): [
+        "src/npctalk.cpp", "src/catalua_ui_items.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "u_unset_flag"): [
+        "src/npctalk.cpp", "src/catalua_ui_items.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+}
+
+EXPLICIT_PLANNED_EOC = {
+    ("eoc-conditions", "npc_is_travelling"): "services.character-navigation",
+    ("eoc-conditions", "u_is_travelling"): "services.character-navigation",
+    ("eoc-effects", "goto_location"): "workflows.npc-navigation",
+    ("eoc-effects", "morale_chat_activity"): "workflows.socialize",
+    ("eoc-effects", "npc_activate"): "services.items-and-characters",
+    ("eoc-effects", "npc_add_wet"): "services.wetness",
+    ("eoc-effects", "npc_add_wound"): "services.wounds",
+    ("eoc-effects", "npc_deal_damage"): "services.combat",
+    ("eoc-effects", "npc_pick_bodypart"): "services.body-parts-and-wounds",
+    ("eoc-effects", "npc_remove_wound"): "services.wounds",
+    ("eoc-effects", "npc_assign_activity"): "services.activities",
+    ("eoc-effects", "npc_set_goal"): "services.npc-navigation",
+    ("eoc-effects", "npc_set_guard_pos"): "services.npc-navigation",
+    ("eoc-effects", "npc_set_fault"): "services.items",
+    ("eoc-effects", "npc_set_random_fault_of_type"): "services.items",
+    ("eoc-effects", "set_browsed"): "services.items",
+    ("eoc-effects", "transform_item"): "services.items",
+    ("eoc-effects", "u_activate"): "services.items-and-characters",
+    ("eoc-effects", "u_assign_activity"): "services.activities",
+    ("eoc-effects", "u_add_wet"): "services.wetness",
+    ("eoc-effects", "u_add_wound"): "services.wounds",
+    ("eoc-effects", "u_deal_damage"): "services.combat",
+    ("eoc-effects", "u_pick_bodypart"): "services.body-parts-and-wounds",
+    ("eoc-effects", "u_remove_wound"): "services.wounds",
+    ("eoc-effects", "u_set_goal"): "services.npc-navigation",
+    ("eoc-effects", "u_set_guard_pos"): "services.npc-navigation",
+    ("eoc-effects", "u_set_fault"): "services.items",
+    ("eoc-effects", "u_set_random_fault_of_type"): "services.items",
+    ("eoc-effects", "npc_teleport"): "services.relocation",
+    ("eoc-effects", "revert_activity"): "services.npc-work",
+    ("eoc-effects", "u_teleport"): "services.relocation",
+    ("eoc-effects", "u_travel_to_dimension"): "workflows.dimension-travel",
+}
+
+EXPLICIT_PLANNED_EOC_EXTRA_EVIDENCE = {
+    ("eoc-conditions", "npc_is_travelling"): [
+        "src/condition.cpp", "src/character.h",
+    ],
+    ("eoc-conditions", "u_is_travelling"): [
+        "src/condition.cpp", "src/character.h",
+    ],
+    ("eoc-effects", "goto_location"): ["src/npctalk_funcs.cpp"],
+    ("eoc-effects", "morale_chat_activity"): ["src/npctalk_funcs.cpp"],
+    ("eoc-effects", "npc_activate"): [
+        "src/npctalk.cpp", "src/catalua_ui_items.cpp",
+    ],
+    ("eoc-effects", "u_activate"): [
+        "src/npctalk.cpp", "src/catalua_ui_items.cpp",
+    ],
+    ("eoc-effects", "npc_assign_activity"): [
+        "src/npctalk.cpp", "src/character.cpp",
+    ],
+    ("eoc-effects", "u_assign_activity"): [
+        "src/npctalk.cpp", "src/character.cpp",
+    ],
+    ("eoc-effects", "npc_add_wet"): ["src/weather.cpp", "src/suffer.cpp"],
+    ("eoc-effects", "u_add_wet"): ["src/weather.cpp", "src/suffer.cpp"],
+    ("eoc-effects", "npc_add_wound"): [
+        "src/npctalk.cpp",
+        "src/bodypart.cpp",
+        "src/wound.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "npc_remove_wound"): [
+        "src/npctalk.cpp",
+        "src/bodypart.cpp",
+        "src/wound.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "u_add_wound"): [
+        "src/npctalk.cpp",
+        "src/bodypart.cpp",
+        "src/wound.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "u_remove_wound"): [
+        "src/npctalk.cpp",
+        "src/bodypart.cpp",
+        "src/wound.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "npc_deal_damage"): [
+        "src/creature.cpp", "src/character_health.cpp",
+    ],
+    ("eoc-effects", "u_deal_damage"): [
+        "src/creature.cpp", "src/character_health.cpp",
+    ],
+    ("eoc-effects", "npc_pick_bodypart"): [
+        "src/bodypart.cpp", "src/npctalk.cpp",
+    ],
+    ("eoc-effects", "u_pick_bodypart"): [
+        "src/bodypart.cpp", "src/npctalk.cpp",
+    ],
+    ("eoc-effects", "npc_set_fault"): [
+        "src/npctalk.cpp", "src/catalua_ui_items.cpp",
+    ],
+    ("eoc-effects", "u_set_fault"): [
+        "src/npctalk.cpp", "src/catalua_ui_items.cpp",
+    ],
+    ("eoc-effects", "npc_set_random_fault_of_type"): [
+        "src/npctalk.cpp", "src/catalua_ui_items.cpp",
+    ],
+    ("eoc-effects", "u_set_random_fault_of_type"): [
+        "src/npctalk.cpp", "src/catalua_ui_items.cpp",
+    ],
+    ("eoc-effects", "npc_set_goal"): ["src/npctalk.cpp"],
+    ("eoc-effects", "u_set_goal"): ["src/npctalk.cpp"],
+    ("eoc-effects", "npc_set_guard_pos"): ["src/npctalk.cpp"],
+    ("eoc-effects", "u_set_guard_pos"): ["src/npctalk.cpp"],
+    ("eoc-effects", "npc_teleport"): [
+        "src/npctalk.cpp", "src/catalua_ui_world_services.cpp",
+    ],
+    ("eoc-effects", "u_teleport"): [
+        "src/npctalk.cpp", "src/catalua_ui_world_services.cpp",
+    ],
+    ("eoc-effects", "revert_activity"): ["src/npc.cpp"],
+    ("eoc-effects", "u_travel_to_dimension"): ["src/npctalk.cpp"],
+    ("eoc-effects", "set_browsed"): [
+        "src/npctalk.cpp", "src/catalua_ui_items.cpp",
+    ],
+    ("eoc-effects", "transform_item"): [
+        "src/npctalk.cpp", "src/catalua_ui_items.cpp",
+    ],
+}
 
 
 def service_for(selector: str) -> str:
@@ -1020,18 +1553,31 @@ def legacy_evidence(entry: dict) -> list[str]:
 
 def disposition(inventory: str, selector: str, entry: dict) -> dict:
     if inventory == "json-object-types":
-        if selector in IMPLEMENTED_JSON:
-            implemented = IMPLEMENTED_JSON[selector]
+        if selector in BOUNDED_IMPLEMENTED_JSON:
+            implemented = BOUNDED_IMPLEMENTED_JSON[selector]
             return {
                 "inventory": inventory,
                 "selector": selector,
                 "target_kind": "platform_domain",
                 "target": implemented["target"],
-                "status": "implemented_unverified",
+                "status": "bounded_implemented_unverified",
                 "legacy_dependency": "none",
                 "evidence": implemented["evidence"],
             }
-        if selector in {"EXTERNAL_OPTION", "WORLD_OPTION", "colordef", "test_data"}:
+        if selector in PLANNED_JSON:
+            planned = PLANNED_JSON[selector]
+            return {
+                "inventory": inventory,
+                "selector": selector,
+                "target_kind": "platform_domain",
+                "target": planned["target"],
+                "status": "planned",
+                "legacy_dependency": "public_legacy",
+                "evidence": planned["evidence"],
+            }
+        if selector in {
+            "EXTERNAL_OPTION", "WORLD_OPTION", "colordef", "test_data"
+        }:
             return {
                 "inventory": inventory,
                 "selector": selector,
@@ -1051,6 +1597,54 @@ def disposition(inventory: str, selector: str, entry: dict) -> dict:
             "evidence": legacy_evidence(entry),
         }
 
+    bounded_target = BOUNDED_IMPLEMENTED_EOC.get((inventory, selector))
+    if bounded_target:
+        return {
+            "inventory": inventory,
+            "selector": selector,
+            "target_kind": "shared_service",
+            "target": bounded_target,
+            "status": "bounded_implemented_unverified",
+            "legacy_dependency": "none",
+            "evidence": (
+                BOUNDED_IMPLEMENTED_EOC_EVIDENCE +
+                BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE.get(
+                    (inventory, selector), []
+                )
+            ),
+        }
+    planned_target = EXPLICIT_PLANNED_EOC.get((inventory, selector))
+    if planned_target:
+        return {
+            "inventory": inventory,
+            "selector": selector,
+            "target_kind": "shared_service",
+            "target": planned_target,
+            "status": "planned",
+            "legacy_dependency": "public_legacy",
+            "evidence": (
+                legacy_evidence(entry) +
+                EXPLICIT_PLANNED_EOC_EXTRA_EVIDENCE.get(
+                    (inventory, selector), []
+                )
+            ),
+        }
+    primitive_target = EXPLICIT_PRIMITIVE_EOC.get((inventory, selector))
+    if primitive_target:
+        return {
+            "inventory": inventory,
+            "selector": selector,
+            "target_kind": "shared_service",
+            "target": primitive_target,
+            "status": "primitive_available_unverified",
+            "legacy_dependency": "none",
+            "evidence": (
+                NATIVE_PRIMITIVE_EVIDENCE +
+                EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE.get(
+                    (inventory, selector), []
+                )
+            ),
+        }
     if selector in CONTROL_FLOW:
         return {
             "inventory": inventory,
@@ -1094,7 +1688,9 @@ def build_ledger() -> dict:
                 "id": inventory,
                 "path": str(path.relative_to(ROOT)),
                 "selector": selector_field,
-                "source_fingerprint": document["source"]["source_fingerprint"],
+                "source_fingerprint": document["source"][
+                    "source_fingerprint"
+                ],
                 "entry_count": len(source_entries),
             }
         )
@@ -1107,15 +1703,23 @@ def build_ledger() -> dict:
         "schema_version": 1,
         "kind": "lua_first_replacement_ledger",
         "contract": (
-            "Every checked legacy selector appears exactly once. Planned entries are "
-            "migration work, not shipped Platform APIs. Primitive-available entries "
-            "have native composition building blocks but are not claims of selector-level parity."
+            "Every checked legacy selector appears exactly once. Planned "
+            "entries are migration work, not shipped Platform APIs. Bounded "
+            "entries cover named real shapes without claiming full selector "
+            "parity. "
+            "Primitive-available entries have native composition building "
+            "blocks but are not claims of selector-level parity."
         ),
         "sources": sources,
         "summary": {
             "total": len(entries),
             "implemented_unverified": sum(
-                entry["status"] == "implemented_unverified" for entry in entries
+                entry["status"] == "implemented_unverified"
+                for entry in entries
+            ),
+            "bounded_implemented_unverified": sum(
+                entry["status"] == "bounded_implemented_unverified"
+                for entry in entries
             ),
             "primitive_available_unverified": sum(
                 entry["status"] == "primitive_available_unverified"
@@ -1126,7 +1730,8 @@ def build_ledger() -> dict:
                 entry["status"] == "private_adapter" for entry in entries
             ),
             "reviewed_not_applicable": sum(
-                entry["status"] == "reviewed_not_applicable" for entry in entries
+                entry["status"] == "reviewed_not_applicable"
+                for entry in entries
             ),
         },
         "entries": entries,
@@ -1134,7 +1739,9 @@ def build_ledger() -> dict:
 
 
 def render(ledger: dict) -> str:
-    return yaml.safe_dump(ledger, sort_keys=False, allow_unicode=True, width=100)
+    return yaml.safe_dump(
+        ledger, sort_keys=False, allow_unicode=True, width=100
+    )
 
 
 def main() -> int:
@@ -1143,7 +1750,10 @@ def main() -> int:
     args = parser.parse_args()
     expected = render(build_ledger())
     if args.check:
-        if not OUTPUT.exists() or OUTPUT.read_text(encoding="utf-8") != expected:
+        if (
+            not OUTPUT.exists() or
+            OUTPUT.read_text(encoding="utf-8") != expected
+        ):
             print(f"stale generated ledger: {OUTPUT.relative_to(ROOT)}")
             return 1
         return 0

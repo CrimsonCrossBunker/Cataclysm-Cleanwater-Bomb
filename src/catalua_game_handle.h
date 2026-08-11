@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -41,6 +42,49 @@ struct game_handle_error {
     std::string message;
 };
 
+/**
+ * Opaque lifetime owner for one native-facing Lua runtime.
+ *
+ * The token itself is never registered with Lua.  A GameHandle retains only
+ * a weak reference, so keeping a handle cannot keep its originating runtime
+ * alive.
+ */
+class game_handle_runtime_owner final
+{
+};
+
+using game_handle_runtime_owner_ptr =
+    std::shared_ptr<const game_handle_runtime_owner>;
+
+game_handle_runtime_owner_ptr make_game_handle_runtime_owner();
+
+/** Explicit owner identity and generation for GameHandle validation. */
+class game_handle_runtime
+{
+    public:
+        game_handle_runtime() = default;
+        game_handle_runtime( const game_handle_runtime_owner_ptr &owner,
+                             std::size_t generation );
+
+        std::size_t generation() const noexcept;
+        bool has_live_owner() const noexcept;
+
+        // Compare the complete runtime identity without requiring either
+        // owner to still be alive.  weak_ptr ownership ordering keeps this
+        // stable for copied handles after their runtime has been destroyed.
+        bool same_identity( const game_handle_runtime &other ) const noexcept;
+
+        // True only when both contexts still have a live owner and represent
+        // the same owner plus generation.
+        bool is_active_match( const game_handle_runtime &other ) const noexcept;
+
+    private:
+        friend class game_handle;
+
+        std::weak_ptr<const game_handle_runtime_owner> owner_;
+        std::size_t generation_ = 0;
+};
+
 template<typename T>
 struct native_handle_result {
     T *value = nullptr;
@@ -58,13 +102,16 @@ class game_handle
 
         static game_handle from_creature(
             Creature &value, game_handle_locator locator,
-            std::size_t runtime_generation, std::size_t world_generation );
+            const game_handle_runtime &runtime,
+            std::size_t world_generation );
         static game_handle from_item(
             item &value, game_handle_locator locator,
-            std::size_t runtime_generation, std::size_t world_generation );
+            const game_handle_runtime &runtime,
+            std::size_t world_generation );
         static game_handle from_vehicle(
             vehicle &value, game_handle_locator locator,
-            std::size_t runtime_generation, std::size_t world_generation );
+            const game_handle_runtime &runtime,
+            std::size_t world_generation );
 
         game_handle_kind kind() const noexcept;
         std::string kind_name() const;
@@ -73,21 +120,22 @@ class game_handle
         std::size_t world_generation() const noexcept;
 
         native_handle_result<Creature> resolve_creature(
-            std::size_t current_runtime_generation,
+            const game_handle_runtime &current_runtime,
             std::size_t current_world_generation ) const;
         native_handle_result<item> resolve_item(
-            std::size_t current_runtime_generation,
+            const game_handle_runtime &current_runtime,
             std::size_t current_world_generation ) const;
         native_handle_result<vehicle> resolve_vehicle(
-            std::size_t current_runtime_generation,
+            const game_handle_runtime &current_runtime,
             std::size_t current_world_generation ) const;
         std::optional<game_handle_error> validation_error(
-            std::size_t current_runtime_generation,
+            const game_handle_runtime &current_runtime,
             std::size_t current_world_generation ) const;
 
     private:
         game_handle_kind kind_ = game_handle_kind::none;
         game_handle_locator locator_;
+        std::weak_ptr<const game_handle_runtime_owner> runtime_owner_;
         std::size_t runtime_generation_ = 0;
         std::size_t world_generation_ = 0;
         safe_reference<Creature> creature_;
@@ -104,7 +152,7 @@ sol::table make_game_error_result( sol::state_view lua, const game_handle_error 
 
 void install_game_handle_api(
     sol::state &lua, sol::table &game,
-    std::function<std::size_t()> current_runtime_generation,
+    std::function<game_handle_runtime()> current_runtime,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read );
 

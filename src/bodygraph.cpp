@@ -10,6 +10,7 @@
 #include "bodypart.h"
 #include "cata_utility.h"
 #include "catacharset.h"
+#include "catalua_platform_content.h"
 #include "character.h"
 #include "character_attire.h"
 #include "creature.h"
@@ -733,4 +734,3 @@ std::vector<std::string> get_bodygraph_lines( const Character &u,
     }
     return ret;
 }
-#include "catalua_platform_content.h"

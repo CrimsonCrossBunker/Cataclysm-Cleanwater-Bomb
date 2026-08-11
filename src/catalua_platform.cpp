@@ -107,9 +107,12 @@ mod_source resolve_source( const mod_source &source )
     if( filesystem_error || !fs::is_directory( root, filesystem_error ) || filesystem_error ) {
         throw std::runtime_error( "Cannot resolve Lua-first Mod root for '" + source.id + "'" );
     }
-    const fs::path requested_entry = source.entry.is_absolute() ? source.entry :
-                                     root / source.entry;
-    const fs::path entry = fs::canonical( requested_entry, filesystem_error );
+    fs::path entry = fs::canonical( source.entry, filesystem_error );
+    if( !source.entry.is_absolute() &&
+        ( filesystem_error || !path_is_within( entry, root ) ) ) {
+        filesystem_error.clear();
+        entry = fs::canonical( root / source.entry, filesystem_error );
+    }
     if( filesystem_error || !path_is_within( entry, root ) ) {
         throw std::runtime_error( "Lua-first Mod entry for '" + source.id +
                                   "' escapes its root or cannot be resolved" );
@@ -193,10 +196,7 @@ mod_definition make_mod_definition( const sol::table &values )
 void install_mod_definition( sol::table &ccb )
 {
     ccb.new_usertype<mod_definition>(
-        "ModDefinition",
-        sol::factories( []( const sol::table & values ) {
-            return make_mod_definition( values );
-        } ),
+        "_ModDefinitionNative", sol::no_constructor,
         "id", sol::property(
     []( const mod_definition & definition ) {
         return definition.id;
@@ -245,9 +245,18 @@ void install_mod_definition( sol::table &ccb )
         definition.core = value;
         definition.core_set = true;
     } ) );
+    ccb["_ModDefinitionNative"] = sol::lua_nil;
+    ccb.set_function( "ModDefinition", []( const sol::table & values ) {
+        return make_mod_definition( values );
+    } );
 }
 
-sol::protected_function_result execute_file( sol::state &lua, const fs::path &path )
+struct file_execution_result {
+    int return_count = 0;
+    std::optional<sol::object> first;
+};
+
+file_execution_result execute_file( sol::state &lua, const fs::path &path )
 {
     sol::load_result loaded = lua.load_file( path.string() );
     if( !loaded.valid() ) {
@@ -260,7 +269,14 @@ sol::protected_function_result execute_file( sol::state &lua, const fs::path &pa
         const sol::error error = result;
         throw std::runtime_error( path.string() + ": " + error.what() );
     }
-    return result;
+    file_execution_result snapshot;
+    snapshot.return_count = result.return_count();
+    if( snapshot.return_count > 0 ) {
+        // protected_function_result owns stack slots that cannot safely cross
+        // this helper boundary.  Preserve the first return in the registry.
+        snapshot.first = result.get<sol::object>();
+    }
+    return snapshot;
 }
 
 sol::object require_local_module( sol::state &lua, const fs::path &root,
@@ -286,10 +302,10 @@ sol::object require_local_module( sol::state &lua, const fs::path &root,
     // independent from author-mutated package.path/searchers.
     loaded_modules[module_name] = true;
     try {
-        sol::protected_function_result execution = execute_file( lua, *path );
+        const file_execution_result execution = execute_file( lua, *path );
         sol::object exported = loaded_modules.raw_get<sol::object>( module_name );
-        if( execution.return_count() > 0 && execution.get_type() != sol::type::nil ) {
-            exported = execution.get<sol::object>();
+        if( execution.first && execution.first->get_type() != sol::type::nil ) {
+            exported = *execution.first;
         } else if( !exported.valid() || exported.get_type() == sol::type::nil ) {
             exported = sol::make_object( lua, true );
         }
@@ -328,7 +344,7 @@ void initialize_state( sol::state &lua, const fs::path &requested_root,
     package["path"] = ( root / "?.lua" ).generic_u8string() + ";" +
                       ( root / "?" / "init.lua" ).generic_u8string();
     package["cpath"] = std::string();
-    lua.set_function( "require", [&lua, root]( const std::string &module_name ) {
+    lua.set_function( "require", [&lua, root]( const std::string & module_name ) {
         return require_local_module( lua, root, module_name );
     } );
 }
@@ -373,13 +389,13 @@ bool read_mod_definition( const fs::path &root, mod_definition &result, std::str
                 << path.generic_u8string();
         sol::state lua;
         initialize_state( lua, canonical_root );
-        sol::protected_function_result execution = execute_file( lua, path );
-        if( execution.return_count() != 1 ) {
+        const file_execution_result execution = execute_file( lua, path );
+        if( execution.return_count != 1 ) {
             error = path.generic_u8string() +
                     ": expected exactly one ccb.ModDefinition return value";
             return false;
         }
-        sol::object value = execution.get<sol::object>();
+        const sol::object &value = *execution.first;
         if( !value.is<mod_definition>() ) {
             error = path.generic_u8string() +
                     ": expected a native ccb.ModDefinition return value";

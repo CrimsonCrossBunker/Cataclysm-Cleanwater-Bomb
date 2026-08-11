@@ -18,6 +18,11 @@
 class JsonObject;
 class JsonOut;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+} // namespace cata::lua_platform
+
 enum class bp_type;
 
 struct wound_progress {
@@ -78,6 +83,8 @@ class wound_type
         // list of wounds this wound can lead to
         std::vector<wound_progress> wound_progression;
     private:
+        friend class cata::lua_platform::content_transaction;
+
         translation name_;
         translation description_;
 
@@ -103,12 +110,16 @@ class wound
 
         void serialize( JsonOut &jsout ) const;
         void deserialize( const JsonObject &jsin );
-        // returns the wound healing progress divided by healing time
+        // returns the wound healing progress divided by healing time, clamped to [0, 1]
         float healing_percentage() const;
         // return how much pain this specific wound gives you, reduced depending on how long the wound presented.
         int get_pain() const;
+        // exposes the unadjusted pain assigned when the wound was created
+        int get_base_pain() const;
         // exposes healing_time
         time_duration get_healing_time() const;
+        // exposes the accumulated healing progress
+        time_duration get_healing_progress() const;
         // update the wound healing progress, if it's healed, return true
         bool update_wound( time_duration time_passed );
 
@@ -176,6 +187,8 @@ class wound_fix
     private:
 
         friend class wound;
+        friend class cata::lua_platform::content_transaction;
+        std::vector<std::pair<requirement_id, int>> requirement_refs;
         cata::value_ptr<requirement_data> requirements = cata::make_value<requirement_data>();
 };
 

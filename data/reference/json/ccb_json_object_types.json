@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:3a9fb8e631868a91950ce2c4646bf101b85eb33458cfb5c71f03c58cb0d0bee4",
+    "source_fingerprint": "sha256:939c256fc667b769da6fa02c29b914a8c6ad0a087944c0923552625adaff7e48",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6729,
-    "top_level_objects": 94318,
+    "tracked_json_files": 6730,
+    "top_level_objects": 94329,
     "top_level_objects_without_string_type": 1,
     "schema_complete_types": 0
   },
@@ -3047,7 +3047,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 5518,
+        "occurrences": 5519,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -4676,7 +4676,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 911,
+        "occurrences": 912,
         "examples": [
           {
             "path": "data/json/flags.json",
@@ -5976,7 +5976,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 614,
+        "occurrences": 615,
         "examples": [
           {
             "path": "data/json/recipes/nested.json",
@@ -7431,7 +7431,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 8172,
+        "occurrences": 8177,
         "examples": [
           {
             "path": "data/json/items/armor/jewelry.json",
@@ -8429,7 +8429,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 757,
+        "occurrences": 760,
         "examples": [
           {
             "path": "data/json/recipes/basecamps/components.json",

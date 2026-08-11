@@ -884,19 +884,24 @@ TEST_CASE( "spell_lua_effect_copy_from_inheritance", "[magic][spell][lua]" )
 {
     using namespace cata::lua_ui;
 
-    const auto load_spell = []( const std::string & json ) {
-        spell_type spell;
-        spell.load( json_loader::from_string( json ).get_object(), "dda" );
-        return spell;
+    const auto load_spell = []( spell_type & spell, const std::string & json ) {
+        JsonObject object = json_loader::from_string( json ).get_object();
+        object.get_string( "id" );
+        if( object.has_string( "copy-from" ) ) {
+            object.get_string( "copy-from" );
+        }
+        spell.load( object, "dda" );
     };
 
-    const spell_type base = load_spell( R"json({
+    spell_type base;
+    load_spell( base, R"json({
         "id": "test_lua_base",
         "name": { "str": "base" },
         "description": "base lua spell",
         "effect": "lua",
         "lua": { "handler": "test.lua_base" },
-        "shape": "blast"
+        "shape": "blast",
+        "valid_targets": [ "self" ]
     })json" );
     REQUIRE( base.effect_name == "lua" );
     REQUIRE( base.lua_effect.has_value() );
@@ -906,12 +911,12 @@ TEST_CASE( "spell_lua_effect_copy_from_inheritance", "[magic][spell][lua]" )
     // omit both "effect" and "lua"; it must keep the inherited descriptor.
     spell_type child = base;
     child.was_loaded = true;
-    child.load( json_loader::from_string( R"json({
+    load_spell( child, R"json({
         "id": "test_lua_child",
         "copy-from": "test_lua_base",
         "name": { "str": "child" },
         "description": "child lua spell"
-    })json" ).get_object(), "dda" );
+    })json" );
     CHECK( child.effect_name == "lua" );
     CHECK( child.lua_effect.has_value() );
     CHECK( child.lua_effect->handler == "test.lua_base" );
@@ -919,13 +924,13 @@ TEST_CASE( "spell_lua_effect_copy_from_inheritance", "[magic][spell][lua]" )
     // A child that supplies its own "lua" descriptor replaces the base one.
     spell_type overridden = base;
     overridden.was_loaded = true;
-    overridden.load( json_loader::from_string( R"json({
+    load_spell( overridden, R"json({
         "id": "test_lua_child_override",
         "copy-from": "test_lua_base",
         "name": { "str": "override" },
         "description": "override lua spell",
         "lua": { "handler": "test.lua_override", "args": { "rate": 2 } }
-    })json" ).get_object(), "dda" );
+    })json" );
     CHECK( overridden.lua_effect.has_value() );
     CHECK( overridden.lua_effect->handler == "test.lua_override" );
     CHECK( overridden.lua_effect->args.at( "rate" ) ==
@@ -934,14 +939,13 @@ TEST_CASE( "spell_lua_effect_copy_from_inheritance", "[magic][spell][lua]" )
     // A child that changes "effect" drops the inherited Lua descriptor.
     spell_type reclassified = base;
     reclassified.was_loaded = true;
-    reclassified.load( json_loader::from_string( R"json({
+    load_spell( reclassified, R"json({
         "id": "test_lua_child_other",
         "copy-from": "test_lua_base",
         "name": { "str": "other" },
         "description": "other spell",
         "effect": "attack"
-    })json" ).get_object(), "dda" );
+    })json" );
     CHECK( reclassified.effect_name == "attack" );
     CHECK( !reclassified.lua_effect.has_value() );
 }
-

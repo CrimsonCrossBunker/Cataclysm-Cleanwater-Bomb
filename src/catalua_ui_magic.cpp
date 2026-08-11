@@ -58,7 +58,7 @@ void require_spell_id(
 }
 
 Character *resolve_character(
-    const game_handle &handle, const std::size_t runtime_generation,
+    const game_handle &handle, const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     std::optional<game_handle_error> &error )
 {
@@ -655,7 +655,7 @@ sol::table snapshot_known_spell(
 sol::table list_known(
     sol::this_state lua, const game_handle &handle,
     const sol::optional<sol::table> &requested_options,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const page_options options = read_page_options(
@@ -707,7 +707,7 @@ sol::table list_known(
 sol::table knows_spell(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_spell_id(
@@ -729,7 +729,7 @@ sol::table knows_spell(
 sol::table get_known(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_spell_id(
@@ -761,7 +761,7 @@ sol::table get_known(
 sol::table can_learn_spell(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_spell_id(
@@ -856,7 +856,7 @@ sol::table learn_spell(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
     const sol::optional<sol::table> &requested_options,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_spell_id(
@@ -917,7 +917,7 @@ sol::table learn_spell(
 sol::table forget_spell(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_spell_id(
@@ -962,7 +962,7 @@ sol::table adjust_spell(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id, const int amount,
     const spell_adjustment adjustment,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const std::string api_name =
@@ -1062,7 +1062,7 @@ sol::table mana_snapshot(
 
 sol::table get_mana(
     sol::this_state lua, const game_handle &handle,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -1083,7 +1083,7 @@ sol::table get_mana(
 sol::table change_mana(
     sol::this_state lua, const game_handle &handle,
     const int amount, const bool relative,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const std::string api_name = relative ?
@@ -1126,7 +1126,7 @@ sol::table change_mana(
 sol::table set_casting_ignore(
     sol::this_state lua, const game_handle &handle,
     const bool enabled,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -1152,7 +1152,7 @@ sol::table set_casting_ignore(
 sol::table set_favorite(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id, const bool favorite,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_spell_id(
@@ -1203,7 +1203,7 @@ sol::table queue_cast(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
     const script_tripoint_coord &requested_target,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_spell_id(
@@ -1297,7 +1297,7 @@ sol::table queue_cast(
 
 void install_magic_api(
     sol::table &game,
-    std::function<std::size_t()> current_runtime_generation,
+    std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write )

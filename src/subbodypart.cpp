@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "catalua_platform_content.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "type_id.h"
@@ -116,6 +117,7 @@ void sub_body_part_type::reset()
 void sub_body_part_type::finalize_all()
 {
     sub_body_part_factory.finalize();
+    cata::lua_platform::detail::refresh_sub_body_part_similarity_cache();
 }
 
 void sub_body_part_type::finalize()
@@ -139,4 +141,3 @@ std::vector<sub_bodypart_str_id> sub_body_part_type::get_all_combined_similar_su
 
     return std::vector<sub_bodypart_str_id>();
 }
-#include "catalua_platform_content.h"

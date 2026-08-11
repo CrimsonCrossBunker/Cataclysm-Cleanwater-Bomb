@@ -10,11 +10,13 @@ TODO.
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import math
 import os
 import re
 import shutil
+import struct
 import sys
 import tempfile
 import unicodedata
@@ -84,24 +86,102 @@ NATIVE_INT_MIN = -(1 << 31)
 NATIVE_INT_MAX = (1 << 31) - 1
 NATIVE_INT64_MAX = (1 << 63) - 1
 NATIVE_MASS_GRAMS_MAX = NATIVE_INT64_MAX // 1000
+NATIVE_FLOAT_MAX = float.fromhex("0x1.fffffep+127")
+PLATFORM_ID_MAX_BYTES = 256
+WOUND_NAME_MAX_BYTES = 1024
+WOUND_DESCRIPTION_MAX_BYTES = 32768
+MAX_EFFECT_DURATION_TURNS = 365 * 24 * 60 * 60
 NATIVE_MAX_SKILL = 10
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+EXPECTED_GAME_START_SENDER_SITES = (("src/game.cpp", "send"),)
+# These native item-event contracts always name the legacy alpha/u Character
+# as `actors.character`.  An item talker is optional because ordinary event
+# sends do not carry the positional talker used by send_with_talker().  Keep
+# this allowlist closed so unrelated events and dialogue contexts never gain
+# an inferred legacy actor.
+PROVEN_ITEM_ACTOR_EVENTS = frozenset({
+    "character_wields_item",
+    "character_wears_item",
+    "character_takeoff_item",
+    "character_armor_destroyed",
+})
+
+
+@functools.lru_cache(maxsize=1)
+def game_start_sender_sites() -> tuple[tuple[str, str], ...]:
+    """Find canonical game-start construction sites without entering caches."""
+    sites: list[tuple[str, str]] = []
+    source_root = REPOSITORY_ROOT / "src"
+    for suffix in ("*.cpp", "*.h"):
+        for path in sorted(source_root.glob(suffix)):
+            text = path.read_text(encoding="utf-8")
+            for kind in ("send", "make"):
+                pattern = rf"\b{kind}\s*<\s*event_type::game_start\s*>"
+                sites.extend(
+                    (path.relative_to(REPOSITORY_ROOT).as_posix(), kind)
+                    for _ in re.finditer(pattern, text)
+                )
+    return tuple(sorted(sites))
+
+
+def game_start_avatar_actor_is_proven() -> bool:
+    """Fail closed if the reviewed canonical sender set ever changes."""
+    return game_start_sender_sites() == EXPECTED_GAME_START_SENDER_SITES
 
 
 def lua_quote(value: str) -> str:
-    escaped = (
-        value.replace("\\", "\\\\")
-        .replace("\n", "\\n")
-        .replace("\r", "\\r")
-        .replace("\t", "\\t")
-        .replace('"', '\\"')
-    )
-    return f'"{escaped}"'
+    escapes = {
+        "\\": "\\\\",
+        '"': '\\"',
+        "\a": "\\a",
+        "\b": "\\b",
+        "\f": "\\f",
+        "\n": "\\n",
+        "\r": "\\r",
+        "\t": "\\t",
+        "\v": "\\v",
+    }
+    escaped: list[str] = []
+    for character in value:
+        if character in escapes:
+            escaped.append(escapes[character])
+        elif ord(character) < 32 or ord(character) == 127:
+            escaped.append(f"\\{ord(character):03d}")
+        else:
+            escaped.append(character)
+    return '"' + "".join(escaped) + '"'
 
 
 def lua_number(value: int | float) -> str:
     if isinstance(value, int):
         return str(value)
     return format(value, ".17g")
+
+
+def finite_number_literal(value: Any) -> int | float | None:
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return None
+    try:
+        if math.isfinite(float(value)):
+            return value
+    except (OverflowError, ValueError):
+        pass
+    return None
+
+
+def positive_native_float_literal(value: Any) -> int | float | None:
+    """Return a literal that remains positive after the native float cast."""
+    literal = finite_number_literal(value)
+    if literal is None:
+        return None
+    converted = float(literal)
+    if converted <= 0.0 or converted > NATIVE_FLOAT_MAX:
+        return None
+    try:
+        native = struct.unpack("=f", struct.pack("=f", converted))[0]
+    except (OverflowError, struct.error):
+        return None
+    return literal if math.isfinite(native) and native > 0.0 else None
 
 
 def display_text(value: Any, fallback: str = "") -> str:
@@ -197,10 +277,33 @@ def stable_id(value: dict[str, Any], fallback: str) -> str:
 
 def safe_platform_id(value: Any) -> bool:
     return (
-        isinstance(value, str)
-        and bool(value)
-        and "#" not in value
-        and "\0" not in value
+        isinstance(value, str) and
+        bool(value) and
+        "#" not in value and
+        "\0" not in value
+    )
+
+
+def bounded_utf8_string(
+    value: Any, maximum: int, *, allow_empty: bool = False
+) -> bool:
+    if (
+        not isinstance(value, str) or
+        (not allow_empty and not value) or
+        "\0" in value
+    ):
+        return False
+    try:
+        length = len(value.encode("utf-8"))
+    except UnicodeEncodeError:
+        return False
+    return (allow_empty or length > 0) and length <= maximum
+
+
+def bounded_platform_id(value: Any) -> bool:
+    return (
+        safe_platform_id(value) and
+        bounded_utf8_string(value, PLATFORM_ID_MAX_BYTES)
     )
 
 
@@ -221,6 +324,112 @@ class MigrationResult:
     converted: list[str] = field(default_factory=list)
     partial: list[str] = field(default_factory=list)
     todos: list[str] = field(default_factory=list)
+
+
+def render_mod_definition(
+    source: SourceObject, result: MigrationResult, mod_id: str
+) -> str:
+    value = source.value
+    complete = True
+    raw_id = value.get("id")
+    if (
+        not safe_platform_id(raw_id) or
+        len(raw_id.encode("utf-8")) > 256 or
+        raw_id != mod_id
+    ):
+        complete = False
+        result.todos.append(
+            f"{source.location}: MOD_INFO id {raw_id!r} does not match the resolved Platform id {mod_id!r}"
+        )
+
+    lines = [
+        'local ccb = require("ccb")',
+        "",
+        "return ccb.ModDefinition {",
+        f"    id = {lua_quote(mod_id)},",
+    ]
+
+    if "name" in value:
+        name = value["name"]
+        if (
+            isinstance(name, str) and
+            0 < len(name.encode("utf-8")) <= 512 and
+            "\0" not in name
+        ):
+            lines.append(f"    name = {lua_quote(name)},")
+        else:
+            complete = False
+            result.todos.append(
+                f"{source.location}: MOD_INFO name needs a bounded plain-string conversion"
+            )
+    else:
+        complete = False
+        result.todos.append(
+            f"{source.location}: MOD_INFO without a plain name has different legacy fallback presentation"
+        )
+
+    if "version" in value:
+        version = value["version"]
+        if (
+            isinstance(version, str) and
+            0 < len(version.encode("utf-8")) <= 128 and
+            "\0" not in version
+        ):
+            lines.append(f"    version = {lua_quote(version)},")
+        else:
+            complete = False
+            result.todos.append(
+                f"{source.location}: MOD_INFO version needs a bounded string conversion"
+            )
+
+    if "dependencies" in value:
+        dependencies = value["dependencies"]
+        valid_dependencies = (
+            isinstance(dependencies, list) and
+            len(dependencies) <= 256 and
+            all(
+                safe_platform_id(dependency) and
+                len(dependency.encode("utf-8")) <= 256
+                for dependency in dependencies
+            ) and
+            len(set(dependencies)) == len(dependencies) and
+            mod_id not in dependencies
+        )
+        if valid_dependencies:
+            rendered = ", ".join(lua_quote(value) for value in dependencies)
+            lines.append(f"    dependencies = {{ {rendered} }},")
+        else:
+            complete = False
+            result.todos.append(
+                f"{source.location}: MOD_INFO dependencies need a unique bounded string-array conversion"
+            )
+
+    if "core" in value:
+        core = value["core"]
+        if isinstance(core, bool):
+            lines.append(f"    core = {'true' if core else 'false'},")
+        else:
+            complete = False
+            result.todos.append(
+                f"{source.location}: MOD_INFO core must be a boolean"
+            )
+
+    unresolved = sorted(
+        set(value) - {"type", "id", "name", "version", "dependencies", "core"}
+    )
+    if unresolved:
+        complete = False
+        result.todos.append(
+            f"{source.location}: MOD_INFO unresolved fields: {', '.join(unresolved)}"
+        )
+
+    label = f"{source.location}: MOD_INFO {raw_id or '<invalid id>'}"
+    if complete:
+        result.converted.append(label)
+    else:
+        result.partial.append(label)
+    lines.extend(("}", ""))
+    return "\n".join(lines)
 
 
 def iter_json_files(inputs: Iterable[Path]) -> list[Path]:
@@ -271,14 +480,14 @@ def render_materials(lines: list[str], raw: Any, todos: list[str], location: str
         if isinstance(entry, str) and entry:
             lines.append(f"definition:material({lua_quote(entry)}, 1)")
         elif (
-            isinstance(entry, list)
-            and len(entry) == 2
-            and isinstance(entry[0], str)
-            and bool(entry[0])
-            and isinstance(entry[1], int)
-            and not isinstance(entry[1], bool)
-            and entry[1] > 0
-            and entry[1] <= NATIVE_INT_MAX
+            isinstance(entry, list) and
+            len(entry) == 2 and
+            isinstance(entry[0], str) and
+            bool(entry[0]) and
+            isinstance(entry[1], int) and
+            not isinstance(entry[1], bool) and
+            entry[1] > 0 and
+            entry[1] <= NATIVE_INT_MAX
         ):
             lines.append(f"definition:material({lua_quote(entry[0])}, {entry[1]})")
         else:
@@ -293,13 +502,13 @@ def render_pairs(
         return
     for entry in raw:
         if (
-            isinstance(entry, list)
-            and len(entry) >= 2
-            and isinstance(entry[0], str)
-            and bool(entry[0])
-            and isinstance(entry[1], int)
-            and not isinstance(entry[1], bool)
-            and 0 < entry[1] <= NATIVE_INT_MAX
+            isinstance(entry, list) and
+            len(entry) >= 2 and
+            isinstance(entry[0], str) and
+            bool(entry[0]) and
+            isinstance(entry[1], int) and
+            not isinstance(entry[1], bool) and
+            0 < entry[1] <= NATIVE_INT_MAX
         ):
             lines.append(f"definition:{method}({lua_quote(entry[0])}, {entry[1]})")
         else:
@@ -392,9 +601,9 @@ def render_item(source: SourceObject, result: MigrationResult) -> str | None:
             lines.append(f"definition:volume_ml({volume})")
     price = value.get("price")
     if (
-        isinstance(price, int)
-        and not isinstance(price, bool)
-        and 0 <= price <= NATIVE_INT_MAX
+        isinstance(price, int) and
+        not isinstance(price, bool) and
+        0 <= price <= NATIVE_INT_MAX
     ):
         lines.append(f"definition:price_cents({price})")
     elif "price" in value:
@@ -430,15 +639,15 @@ def requirement_choices(raw: Any, *, tools: bool = False) -> list[tuple[str, int
     result: list[tuple[str, int]] = []
     for entry in raw:
         if (
-            not isinstance(entry, list)
-            or len(entry) < 2
-            or not isinstance(entry[0], str)
-            or not entry[0]
-            or not isinstance(entry[1], int)
-            or isinstance(entry[1], bool)
-            or entry[1] == 0
-            or abs(entry[1]) > NATIVE_INT_MAX
-            or (entry[1] < 0 and not tools)
+            not isinstance(entry, list) or
+            len(entry) < 2 or
+            not isinstance(entry[0], str) or
+            not entry[0] or
+            not isinstance(entry[1], int) or
+            isinstance(entry[1], bool) or
+            entry[1] == 0 or
+            abs(entry[1]) > NATIVE_INT_MAX or
+            (entry[1] < 0 and not tools)
         ):
             return None
         result.append((entry[0], entry[1]))
@@ -506,10 +715,10 @@ def render_recipe(source: SourceObject, result: MigrationResult) -> str | None:
     category = value.get("category", "CC_MISC")
     subcategory = value.get("subcategory", "CSC_MISC")
     if (
-        not isinstance(category, str)
-        or not category
-        or not isinstance(subcategory, str)
-        or not subcategory
+        not isinstance(category, str) or
+        not category or
+        not isinstance(subcategory, str) or
+        not subcategory
     ):
         result.todos.append(
             f"{source.location}: recipe {recipe_id} category ids need review"
@@ -532,9 +741,9 @@ def render_recipe(source: SourceObject, result: MigrationResult) -> str | None:
         )
     difficulty = value.get("difficulty", 0)
     if (
-        isinstance(difficulty, int)
-        and not isinstance(difficulty, bool)
-        and 0 <= difficulty <= NATIVE_MAX_SKILL
+        isinstance(difficulty, int) and
+        not isinstance(difficulty, bool) and
+        0 <= difficulty <= NATIVE_MAX_SKILL
     ):
         lines.append(f"    difficulty = {difficulty},")
     else:
@@ -570,13 +779,13 @@ def render_recipe(source: SourceObject, result: MigrationResult) -> str | None:
     if isinstance(skills, list):
         for entry in skills:
             if (
-                isinstance(entry, list)
-                and len(entry) >= 2
-                and isinstance(entry[0], str)
-                and bool(entry[0])
-                and isinstance(entry[1], int)
-                and not isinstance(entry[1], bool)
-                and 0 <= entry[1] <= NATIVE_MAX_SKILL
+                isinstance(entry, list) and
+                len(entry) >= 2 and
+                isinstance(entry[0], str) and
+                bool(entry[0]) and
+                isinstance(entry[1], int) and
+                not isinstance(entry[1], bool) and
+                0 <= entry[1] <= NATIVE_MAX_SKILL
             ):
                 lines.append(f"definition:requires_skill({lua_quote(entry[0])}, {entry[1]})")
             else:
@@ -589,12 +798,12 @@ def render_recipe(source: SourceObject, result: MigrationResult) -> str | None:
     if isinstance(external, list):
         for entry in external:
             if (
-                isinstance(entry, list)
-                and len(entry) == 2
-                and safe_platform_id(entry[0])
-                and isinstance(entry[1], int)
-                and not isinstance(entry[1], bool)
-                and 0 < entry[1] <= NATIVE_INT_MAX
+                isinstance(entry, list) and
+                len(entry) == 2 and
+                safe_platform_id(entry[0]) and
+                isinstance(entry[1], int) and
+                not isinstance(entry[1], bool) and
+                0 < entry[1] <= NATIVE_INT_MAX
             ):
                 lines.append(
                     f"definition:requirement({lua_quote(entry[0])}, {entry[1]})"
@@ -638,8 +847,8 @@ def finish_catalog(
     unresolved = unresolved_fields(source.value, supported)
     if unresolved:
         result.todos.append(
-            f"{source.location}: {label} {object_id} unresolved fields: "
-            + ", ".join(unresolved)
+            f"{source.location}: {label} {object_id} unresolved fields: " +
+            ", ".join(unresolved)
         )
     status = result.partial if unresolved or len(result.todos) != todo_count else result.converted
     status.append(f"{source.location}: {label} {object_id}")
@@ -694,16 +903,16 @@ def render_requirement(source: SourceObject, result: MigrationResult) -> str | N
             converted: list[tuple[str, int, int]] = []
             for entry in group:
                 if (
-                    isinstance(entry, list)
-                    and 2 <= len(entry) <= 3
-                    and safe_platform_id(entry[0])
-                    and isinstance(entry[1], int)
-                    and not isinstance(entry[1], bool)
-                    and 0 < entry[1] <= NATIVE_INT_MAX
-                    and (len(entry) == 2 or (
-                        isinstance(entry[2], int)
-                        and not isinstance(entry[2], bool)
-                        and 0 < entry[2] <= NATIVE_INT_MAX
+                    isinstance(entry, list) and
+                    2 <= len(entry) <= 3 and
+                    safe_platform_id(entry[0]) and
+                    isinstance(entry[1], int) and
+                    not isinstance(entry[1], bool) and
+                    0 < entry[1] <= NATIVE_INT_MAX and
+                    (len(entry) == 2 or (
+                        isinstance(entry[2], int) and
+                        not isinstance(entry[2], bool) and
+                        0 < entry[2] <= NATIVE_INT_MAX
                     ))
                 ):
                     converted.append((entry[0], entry[1], entry[2] if len(entry) == 3 else 1))
@@ -892,12 +1101,12 @@ def render_speed_description(source: SourceObject, result: MigrationResult) -> s
             )
             descriptions = [display_text(text) for text in description_values]
             if (
-                not isinstance(threshold, (int, float))
-                or isinstance(threshold, bool)
-                or not math.isfinite(threshold)
-                or threshold < 0
-                or not descriptions
-                or any(not text for text in descriptions)
+                not isinstance(threshold, (int, float)) or
+                isinstance(threshold, bool) or
+                not math.isfinite(threshold) or
+                threshold < 0 or
+                not descriptions or
+                any(not text for text in descriptions)
             ):
                 result.todos.append(
                     f"{source.location}: speed description {description_id} value needs review"
@@ -1013,19 +1222,19 @@ def render_harvest(source: SourceObject, result: MigrationResult) -> str | None:
 
     def finite_number(raw: Any) -> bool:
         return (
-            isinstance(raw, (int, float))
-            and not isinstance(raw, bool)
-            and math.isfinite(raw)
-            and abs(raw) <= 3.402823466e38
+            isinstance(raw, (int, float)) and
+            not isinstance(raw, bool) and
+            math.isfinite(raw) and
+            abs(raw) <= 3.402823466e38
         )
 
     def number_pair(raw: Any, default: tuple[float, float], field_name: str) -> tuple[Any, Any]:
         if (
-            isinstance(raw, list)
-            and len(raw) == 2
-            and finite_number(raw[0])
-            and finite_number(raw[1])
-            and raw[0] <= raw[1]
+            isinstance(raw, list) and
+            len(raw) == 2 and
+            finite_number(raw[0]) and
+            finite_number(raw[1]) and
+            raw[0] <= raw[1]
         ):
             return raw[0], raw[1]
         result.todos.append(
@@ -1059,13 +1268,13 @@ def render_harvest(source: SourceObject, result: MigrationResult) -> str | None:
                 "mass_ratio",
                 "flags",
                 "faults",
-            }
-            and not key.startswith("//")
+            } and
+            not key.startswith("//")
         )
         if unresolved_entry:
             result.todos.append(
-                f"{source.location}: harvest {harvest_id} drop {index} unresolved fields: "
-                + ", ".join(unresolved_entry)
+                f"{source.location}: harvest {harvest_id} drop {index} unresolved fields: " +
+                ", ".join(unresolved_entry)
             )
         output = raw_entry.get("drop")
         if not safe_platform_id(output) or output in outputs:
@@ -1082,9 +1291,9 @@ def render_harvest(source: SourceObject, result: MigrationResult) -> str | None:
         )
         maximum = raw_entry.get("max", 1000)
         if (
-            not isinstance(maximum, int)
-            or isinstance(maximum, bool)
-            or not 0 < maximum <= NATIVE_INT_MAX
+            not isinstance(maximum, int) or
+            isinstance(maximum, bool) or
+            not 0 < maximum <= NATIVE_INT_MAX
         ):
             result.todos.append(
                 f"{source.location}: harvest {harvest_id} drop {output} max needs review"
@@ -1165,10 +1374,10 @@ def render_behavior(source: SourceObject, result: MigrationResult) -> str | None
     children: list[str] = []
     if raw_children is not None:
         if (
-            isinstance(raw_children, list)
-            and bool(raw_children)
-            and all(safe_platform_id(child) for child in raw_children)
-            and len(set(raw_children)) == len(raw_children)
+            isinstance(raw_children, list) and
+            bool(raw_children) and
+            all(safe_platform_id(child) for child in raw_children) and
+            len(set(raw_children)) == len(raw_children)
         ):
             children = raw_children
         else:
@@ -1235,17 +1444,17 @@ def render_behavior(source: SourceObject, result: MigrationResult) -> str | None
         )
         if unknown:
             result.todos.append(
-                f"{source.location}: behavior {behavior_id} condition {index} unresolved fields: "
-                + ", ".join(unknown)
+                f"{source.location}: behavior {behavior_id} condition {index} unresolved fields: " +
+                ", ".join(unknown)
             )
         predicate = raw_condition.get("predicate")
         argument = raw_condition.get("argument", "")
         inverted = raw_condition.get("invert_result", False)
         if (
-            not safe_platform_id(predicate)
-            or not isinstance(argument, str)
-            or "\0" in argument
-            or not isinstance(inverted, bool)
+            not safe_platform_id(predicate) or
+            not isinstance(argument, str) or
+            "\0" in argument or
+            not isinstance(inverted, bool)
         ):
             result.todos.append(
                 f"{source.location}: behavior {behavior_id} condition {index} needs review"
@@ -1316,22 +1525,23 @@ def lua_string_table(values: list[str]) -> str:
 
 def finite_number(value: Any, minimum: float | None = None,
                   maximum: float | None = None) -> int | float | None:
-    if not isinstance(value, (int, float)) or isinstance(value, bool) or not math.isfinite(value):
+    literal = finite_number_literal(value)
+    if literal is None:
         return None
-    if minimum is not None and value < minimum:
+    if minimum is not None and literal < minimum:
         return None
-    if maximum is not None and value > maximum:
+    if maximum is not None and literal > maximum:
         return None
-    return value
+    return literal
 
 
 def native_integer(value: Any, minimum: int = NATIVE_INT_MIN,
                    maximum: int = NATIVE_INT_MAX) -> int | None:
     if (
-        not isinstance(value, int)
-        or isinstance(value, bool)
-        or value < minimum
-        or value > maximum
+        not isinstance(value, int) or
+        isinstance(value, bool) or
+        value < minimum or
+        value > maximum
     ):
         return None
     return value
@@ -1385,7 +1595,7 @@ def render_monster_attack(source: SourceObject, result: MigrationResult) -> str 
         "    -- TODO: rewrite the legacy attack actor with native Lua services.",
         "    return false",
         "end, 1)",
-        f"local definition = content.MonsterAttack {{",
+        "local definition = content.MonsterAttack {",
         f"    id = {lua_quote(attack_id)},",
         f"    cooldown = {lua_number(cooldown)},",
         "}",
@@ -1658,8 +1868,8 @@ def render_weakpoint_set(source: SourceObject, result: MigrationResult) -> str |
             )
             if unknown_effect:
                 result.todos.append(
-                    f"{source.location}: weakpoint set {set_id} point {point_id} effect unresolved fields: "
-                    + ", ".join(unknown_effect)
+                    f"{source.location}: weakpoint set {set_id} point {point_id} effect unresolved fields: " +
+                    ", ".join(unknown_effect)
                 )
             lines.extend((
                 f"definition:effect({lua_quote(point_id)}, {{",
@@ -1675,8 +1885,8 @@ def render_weakpoint_set(source: SourceObject, result: MigrationResult) -> str |
         )
         if unknown_point:
             result.todos.append(
-                f"{source.location}: weakpoint set {set_id} point {point_id} unresolved fields: "
-                + ", ".join(unknown_point)
+                f"{source.location}: weakpoint set {set_id} point {point_id} unresolved fields: " +
+                ", ".join(unknown_point)
             )
     if rendered_points == 0:
         lines.extend((
@@ -1923,15 +2133,15 @@ def render_field_type(source: SourceObject, result: MigrationResult) -> str | No
             )
             if unknown_effect:
                 result.todos.append(
-                    f"{source.location}: field type {field_id} intensity {index} effect unresolved fields: "
-                    + ", ".join(unknown_effect)
+                    f"{source.location}: field type {field_id} intensity {index} effect unresolved fields: " +
+                    ", ".join(unknown_effect)
                 )
             lines.extend((f"definition:effect({native_index}, {{", *effect_options, "})"))
         unknown_level = unresolved_fields(level, intensity_supported)
         if unknown_level:
             result.todos.append(
-                f"{source.location}: field type {field_id} intensity {index} unresolved fields: "
-                + ", ".join(unknown_level)
+                f"{source.location}: field type {field_id} intensity {index} unresolved fields: " +
+                ", ".join(unknown_level)
             )
     if rendered_intensities == 0:
         lines.extend((
@@ -2023,17 +2233,17 @@ def render_item_group(source: SourceObject, result: MigrationResult) -> str | No
             unknown.extend(unresolved_fields(raw, allowed))
         probability_int = native_integer(probability, 1, 100 if kind == "collection" else NATIVE_INT_MAX)
         if (
-            not safe_platform_id(entry_id)
-            or probability_int is None
-            or not isinstance(variant, str)
-            or (group and variant)
+            not safe_platform_id(entry_id) or
+            probability_int is None or
+            not isinstance(variant, str) or
+            (group and variant)
         ):
             result.todos.append(f"{source.location}: item group {group_id} entry needs review")
             return
         if unknown:
             result.todos.append(
-                f"{source.location}: item group {group_id} entry unresolved fields: "
-                + ", ".join(unknown)
+                f"{source.location}: item group {group_id} entry unresolved fields: " +
+                ", ".join(unknown)
             )
         if group:
             lines.append(f"definition:group({lua_quote(entry_id)}, {probability_int})")
@@ -2083,10 +2293,10 @@ def damage_entries(value: Any) -> list[tuple[str, int | float, int | float]] | N
         amount = finite_number(raw.get("amount"), 0.0)
         armor_penetration = finite_number(raw.get("armor_penetration", 0), 0.0)
         if (
-            not safe_platform_id(damage_id)
-            or amount is None
-            or armor_penetration is None
-            or unresolved_fields(raw, {"damage_type", "amount", "armor_penetration"})
+            not safe_platform_id(damage_id) or
+            amount is None or
+            armor_penetration is None or
+            unresolved_fields(raw, {"damage_type", "amount", "armor_penetration"})
         ):
             return None
         entries.append((damage_id, amount, armor_penetration))
@@ -2111,11 +2321,11 @@ def render_sub_body_part(source: SourceObject, result: MigrationResult) -> str |
     coverage = native_integer(value.get("max_coverage", 100), 1, 100)
     secondary = value.get("secondary", False)
     if (
-        not plural
-        or not safe_platform_id(opposite)
-        or side not in {"left", "right", "both"}
-        or coverage is None
-        or not isinstance(secondary, bool)
+        not plural or
+        not safe_platform_id(opposite) or
+        side not in {"left", "right", "both"} or
+        coverage is None or
+        not isinstance(secondary, bool)
     ):
         plural, opposite, side, coverage, secondary = name, part_id, "both", 100, False
         result.todos.append(
@@ -2176,6 +2386,423 @@ def render_sub_body_part(source: SourceObject, result: MigrationResult) -> str |
             "type", "id", "name", "name_multiple", "parent", "opposite",
             "side", "secondary", "max_coverage", "locations_under",
             "similar_bodypart", "unarmed_damage",
+        },
+        todo_count,
+    )
+
+
+WOUND_BODY_PART_TYPES = {
+    "head", "torso", "sensor", "mouth", "arm", "hand", "leg", "foot",
+    "wing", "tail", "other",
+}
+
+
+def render_wound(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    wound_id = value.get("id")
+    name = display_text(value.get("name"))
+    description = display_text(value.get("description"))
+    damage_types = string_ids(value.get("damage_types"))
+    damage_required = value.get("damage_required")
+    if (
+        not bounded_platform_id(wound_id) or
+        not bounded_utf8_string(name, WOUND_NAME_MAX_BYTES) or
+        not bounded_utf8_string(description, WOUND_DESCRIPTION_MAX_BYTES) or
+        not damage_types or
+        not all(bounded_platform_id(entry) for entry in damage_types) or
+        len(set(damage_types)) != len(damage_types) or
+        not isinstance(damage_required, list) or
+        len(damage_required) != 2
+    ):
+        wound_label = wound_id if bounded_platform_id(wound_id) else "<invalid id>"
+        result.partial.append(
+            f"{source.location}: wound {wound_label}"
+        )
+        result.todos.append(
+            f"{source.location}: wound needs a stable id, text, distinct damage types, and a two-value damage range within Platform byte bounds"
+        )
+        return None
+    damage_min = native_integer(damage_required[0], 0)
+    damage_max = native_integer(damage_required[1], 0)
+    if damage_min is None or damage_max is None or damage_max < damage_min:
+        result.partial.append(f"{source.location}: wound {wound_id}")
+        result.todos.append(
+            f"{source.location}: wound {wound_id} damage range needs review"
+        )
+        return None
+
+    todo_count = len(result.todos)
+    raw_name = value.get("name")
+    plural_name = name
+    if isinstance(raw_name, dict):
+        raw_plural = raw_name.get("str_pl", name)
+        if bounded_utf8_string(raw_plural, WOUND_NAME_MAX_BYTES):
+            plural_name = raw_plural
+        elif "str_pl" in raw_name:
+            result.todos.append(
+                f"{source.location}: wound {wound_id} plural name needs a bounded text conversion"
+            )
+        if (
+            not isinstance(raw_name.get("str"), str) or
+            not raw_name.get("str") or
+            unresolved_fields(raw_name, {"str", "str_pl"})
+        ):
+            result.todos.append(
+                f"{source.location}: wound {wound_id} name translation metadata needs review"
+            )
+    elif not isinstance(raw_name, str):
+        result.todos.append(
+            f"{source.location}: wound {wound_id} name needs review"
+        )
+    raw_description = value.get("description")
+    if isinstance(raw_description, dict):
+        if (
+            not isinstance(raw_description.get("str"), str) or
+            unresolved_fields(raw_description, {"str"})
+        ):
+            result.todos.append(
+                f"{source.location}: wound {wound_id} description translation metadata needs review"
+            )
+
+    pain = value.get("pain", [0, 0])
+    pain_min: int | None = None
+    pain_max: int | None = None
+    if isinstance(pain, list) and len(pain) == 2:
+        pain_min = native_integer(pain[0], 0)
+        pain_max = native_integer(pain[1], 0)
+    if pain_min is None or pain_max is None or pain_max < pain_min:
+        pain_min, pain_max = 0, 0
+        result.todos.append(
+            f"{source.location}: wound {wound_id} pain range needs review"
+        )
+
+    healing = value.get("healing_time")
+    healing_min: int | None = None
+    healing_max: int | None = None
+    if isinstance(healing, list) and len(healing) == 2:
+        healing_min = parse_turns(healing[0])
+        healing_max = parse_turns(healing[1])
+    if (
+        healing_min is None or healing_max is None or
+        healing_min <= 0 or healing_max < healing_min or
+        healing_max > NATIVE_INT_MAX
+    ):
+        healing_min, healing_max = 1, 1
+        result.todos.append(
+            f"{source.location}: wound {wound_id} healing range needs an explicit finite duration review"
+        )
+
+    weight = native_integer(value.get("weight", 1), 1)
+    limit = native_integer(value.get("limit", 0), 0)
+    if weight is None:
+        weight = 1
+        result.todos.append(
+            f"{source.location}: wound {wound_id} weight needs review"
+        )
+    if limit is None:
+        limit = 0
+        result.todos.append(
+            f"{source.location}: wound {wound_id} per-part limit needs review"
+        )
+
+    lines = [
+        "local definition = content.Wound {",
+        f"    id = {lua_quote(wound_id)},",
+        f"    name = {lua_quote(name)},",
+        f"    plural_name = {lua_quote(plural_name)},",
+        f"    description = {lua_quote(description)},",
+        f"    pain_min = {pain_min},",
+        f"    pain_max = {pain_max},",
+        f"    healing_min_turns = {healing_min},",
+        f"    healing_max_turns = {healing_max},",
+        f"    damage_min = {damage_min},",
+        f"    damage_max = {damage_max},",
+        f"    weight = {weight},",
+        f"    per_part_limit = {limit},",
+    ]
+    body_part_flags: dict[str, str] = {}
+    for source_name, target_name in (
+        ("whitelist_bp_with_flag", "required_body_part_flag"),
+        ("blacklist_bp_with_flag", "forbidden_body_part_flag"),
+    ):
+        if source_name not in value:
+            continue
+        flag = value[source_name]
+        if bounded_platform_id(flag):
+            body_part_flags[target_name] = flag
+        else:
+            result.todos.append(
+                f"{source.location}: wound {wound_id} {source_name} needs review"
+            )
+    if (
+        body_part_flags.get("required_body_part_flag") ==
+        body_part_flags.get("forbidden_body_part_flag") and
+        "required_body_part_flag" in body_part_flags
+    ):
+        body_part_flags.clear()
+        result.todos.append(
+            f"{source.location}: wound {wound_id} cannot require and forbid the same body-part flag"
+        )
+    for target_name in ("required_body_part_flag", "forbidden_body_part_flag"):
+        if target_name in body_part_flags:
+            lines.append(
+                f"    {target_name} = {lua_quote(body_part_flags[target_name])},"
+            )
+    lines.append("}")
+    lines.extend(
+        f"definition:damage_type({lua_quote(damage_type)})"
+        for damage_type in damage_types
+    )
+
+    limb_scores = value.get("limb_scores", [])
+    if not isinstance(limb_scores, list):
+        limb_scores = []
+        result.todos.append(
+            f"{source.location}: wound {wound_id} limb scores need review"
+        )
+    seen_scores: set[str] = set()
+    for entry in limb_scores:
+        score = entry.get("score") if isinstance(entry, dict) else None
+        penalty = finite_number(entry.get("value", 0), 0, 1) if isinstance(entry, dict) else None
+        if (
+            not bounded_platform_id(score) or score in seen_scores or
+            penalty is None or
+            unresolved_fields(entry, {"score", "value"})
+        ):
+            result.todos.append(
+                f"{source.location}: wound {wound_id} limb-score entry needs review"
+            )
+            continue
+        seen_scores.add(score)
+        lines.append(
+            f"definition:limb_score({lua_quote(score)}, {lua_number(penalty)})"
+        )
+
+    progressions = value.get("wound_progression", [])
+    if not isinstance(progressions, list):
+        progressions = []
+        result.todos.append(
+            f"{source.location}: wound {wound_id} progression list needs review"
+        )
+    seen_progressions: set[str] = set()
+    for entry in progressions:
+        target = entry.get("id") if isinstance(entry, dict) else None
+        chance = native_integer(entry.get("chance", 0), 0, 100) if isinstance(entry, dict) else None
+        if (
+            not bounded_platform_id(target) or target == wound_id or
+            target in seen_progressions or chance is None or
+            unresolved_fields(entry, {"id", "chance"})
+        ):
+            result.todos.append(
+                f"{source.location}: wound {wound_id} progression entry needs review"
+            )
+            continue
+        seen_progressions.add(target)
+        lines.append(
+            f"definition:progression({lua_quote(target)}, {chance})"
+        )
+
+    required_types = string_ids(value.get("whitelist_body_part_types", []))
+    forbidden_types = string_ids(value.get("blacklist_body_part_types", []))
+    if (
+        required_types is None or forbidden_types is None or
+        len(set(required_types)) != len(required_types) or
+        len(set(forbidden_types)) != len(forbidden_types) or
+        not set(required_types).issubset(WOUND_BODY_PART_TYPES) or
+        not set(forbidden_types).issubset(WOUND_BODY_PART_TYPES) or
+        set(required_types) & set(forbidden_types)
+    ):
+        required_types, forbidden_types = [], []
+        result.todos.append(
+            f"{source.location}: wound {wound_id} body-part type filters need review"
+        )
+    lines.extend(
+        f"definition:require_body_part_type({lua_quote(kind)})"
+        for kind in required_types
+    )
+    lines.extend(
+        f"definition:forbid_body_part_type({lua_quote(kind)})"
+        for kind in forbidden_types
+    )
+    return finish_catalog(
+        source,
+        result,
+        "wound",
+        wound_id,
+        lines,
+        {
+            "type", "id", "name", "description", "pain", "healing_time",
+            "damage_types", "damage_required", "weight", "limb_scores",
+            "limit", "wound_progression", "whitelist_bp_with_flag",
+            "whitelist_body_part_types", "blacklist_bp_with_flag",
+            "blacklist_body_part_types",
+        },
+        todo_count,
+    )
+
+
+def render_wound_fix(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    fix_id = value.get("id")
+    name = display_text(value.get("name"))
+    description = display_text(value.get("description"))
+    removed = string_ids(value.get("wounds_removed"))
+    if (
+        not bounded_platform_id(fix_id) or
+        not bounded_utf8_string(name, WOUND_NAME_MAX_BYTES) or
+        not bounded_utf8_string(description, WOUND_DESCRIPTION_MAX_BYTES) or
+        not removed or
+        not all(bounded_platform_id(entry) for entry in removed) or
+        len(set(removed)) != len(removed)
+    ):
+        fix_label = fix_id if bounded_platform_id(fix_id) else "<invalid id>"
+        result.partial.append(
+            f"{source.location}: wound fix {fix_label}"
+        )
+        result.todos.append(
+            f"{source.location}: wound fix needs a stable id, text, and distinct removed wounds within Platform byte bounds"
+        )
+        return None
+    todo_count = len(result.todos)
+    added = string_ids(value.get("wounds_added", []))
+    if (
+        added is None or
+        not all(bounded_platform_id(entry) for entry in added) or
+        len(set(added)) != len(added) or
+        set(removed) & set(added)
+    ):
+        added = []
+        result.todos.append(
+            f"{source.location}: wound fix {fix_id} added wounds need review"
+        )
+
+    duration = parse_turns(value.get("time", 0))
+    if duration is None or duration < 0 or duration > NATIVE_INT_MAX // 100:
+        duration = 0
+        result.todos.append(
+            f"{source.location}: wound fix {fix_id} duration needs review"
+        )
+    health_delta = native_integer(value.get("mod_hp", 0))
+    if health_delta is None:
+        health_delta = 0
+        result.todos.append(
+            f"{source.location}: wound fix {fix_id} health delta needs review"
+        )
+    success_message = display_text(value.get("success_msg"), "")
+    if not bounded_utf8_string(
+        success_message, WOUND_DESCRIPTION_MAX_BYTES, allow_empty=True
+    ):
+        success_message = ""
+        result.todos.append(
+            f"{source.location}: wound fix {fix_id} success message needs a bounded text conversion"
+        )
+    for field_name in ("name", "description", "success_msg"):
+        raw = value.get(field_name)
+        if isinstance(raw, dict) and (
+            not isinstance(raw.get("str"), str) or
+            unresolved_fields(raw, {"str"})
+        ):
+            result.todos.append(
+                f"{source.location}: wound fix {fix_id} {field_name} translation metadata needs review"
+            )
+
+    lines = [
+        "local definition = content.WoundFix {",
+        f"    id = {lua_quote(fix_id)},",
+        f"    name = {lua_quote(name)},",
+        f"    description = {lua_quote(description)},",
+        f"    success_message = {lua_quote(success_message)},",
+        f"    duration_turns = {duration},",
+        f"    health_delta = {health_delta},",
+        "}",
+    ]
+
+    skills = value.get("skills", {})
+    if not isinstance(skills, dict):
+        skills = {}
+        result.todos.append(
+            f"{source.location}: wound fix {fix_id} skills need review"
+        )
+    for skill, raw_level in sorted(skills.items(), key=lambda entry: str(entry[0])):
+        level = native_integer(raw_level, 0, NATIVE_MAX_SKILL)
+        if not bounded_platform_id(skill) or level is None:
+            result.todos.append(
+                f"{source.location}: wound fix {fix_id} skill entry needs review"
+            )
+            continue
+        lines.append(f"definition:skill({lua_quote(skill)}, {level})")
+
+    proficiencies = value.get("proficiencies", [])
+    if not isinstance(proficiencies, list):
+        proficiencies = []
+        result.todos.append(
+            f"{source.location}: wound fix {fix_id} proficiencies need review"
+        )
+    seen_proficiencies: set[str] = set()
+    for entry in proficiencies:
+        proficiency = entry.get("proficiency") if isinstance(entry, dict) else None
+        multiplier = positive_native_float_literal(
+            entry.get("time_save", 1)
+        ) if isinstance(entry, dict) else None
+        mandatory = entry.get("is_mandatory", False) if isinstance(entry, dict) else None
+        if (
+            not bounded_platform_id(proficiency) or
+            proficiency in seen_proficiencies or multiplier is None or
+            not isinstance(mandatory, bool) or
+            unresolved_fields(
+                entry, {"proficiency", "time_save", "is_mandatory"}
+            )
+        ):
+            result.todos.append(
+                f"{source.location}: wound fix {fix_id} proficiency entry needs review"
+            )
+            continue
+        seen_proficiencies.add(proficiency)
+        lines.append(
+            "definition:proficiency("
+            f"{lua_quote(proficiency)}, {lua_number(multiplier)}, "
+            f"{'true' if mandatory else 'false'})"
+        )
+
+    lines.extend(f"definition:removes({lua_quote(wound)})" for wound in removed)
+    lines.extend(f"definition:adds({lua_quote(wound)})" for wound in added)
+    requirements = value.get("requirements", [])
+    if not isinstance(requirements, list):
+        requirements = []
+        result.todos.append(
+            f"{source.location}: wound fix {fix_id} requirements need review"
+        )
+    seen_requirements: set[str] = set()
+    for entry in requirements:
+        if (
+            not isinstance(entry, list) or len(entry) != 2 or
+            not bounded_platform_id(entry[0]) or
+            entry[0] in seen_requirements
+        ):
+            result.todos.append(
+                f"{source.location}: wound fix {fix_id} inline, duplicate, or malformed requirement needs a standalone Requirement"
+            )
+            continue
+        count = native_integer(entry[1], 1)
+        if count is None:
+            result.todos.append(
+                f"{source.location}: wound fix {fix_id} requirement multiplier needs review"
+            )
+            continue
+        seen_requirements.add(entry[0])
+        lines.append(
+            f"definition:requires({lua_quote(entry[0])}, {count})"
+        )
+    return finish_catalog(
+        source,
+        result,
+        "wound fix",
+        fix_id,
+        lines,
+        {
+            "type", "id", "name", "description", "success_msg", "mod_hp",
+            "time", "skills", "wounds_removed", "wounds_added",
+            "proficiencies", "requirements",
         },
         todo_count,
     )
@@ -2355,8 +2982,8 @@ def render_body_part(source: SourceObject, result: MigrationResult) -> str | Non
             unknown = unresolved_fields(raw, {"quality", "level", "disable_percent"})
             if unknown:
                 result.todos.append(
-                    f"{source.location}: body part {part_id} quality unresolved fields: "
-                    + ", ".join(unknown)
+                    f"{source.location}: body part {part_id} quality unresolved fields: " +
+                    ", ".join(unknown)
                 )
             lines.append(
                 f"definition:quality({lua_quote(quality_id)}, {level}, {lua_number(disable)})"
@@ -2431,9 +3058,9 @@ def render_body_graph(source: SourceObject, result: MigrationResult) -> str | No
         rows = []
         result.todos.append(f"{source.location}: body graph {graph_id} rows need review")
     if fill_rows is not None and (
-        not isinstance(fill_rows, list)
-        or len(fill_rows) != len(rows)
-        or not all(isinstance(row, str) and row for row in fill_rows)
+        not isinstance(fill_rows, list) or
+        len(fill_rows) != len(rows) or
+        not all(isinstance(row, str) and row for row in fill_rows)
     ):
         fill_rows = None
         result.todos.append(f"{source.location}: body graph {graph_id} fill rows need review")
@@ -2497,8 +3124,8 @@ def render_body_graph(source: SourceObject, result: MigrationResult) -> str | No
         )
         if unknown:
             result.todos.append(
-                f"{source.location}: body graph {graph_id} part {symbol} unresolved fields: "
-                + ", ".join(unknown)
+                f"{source.location}: body graph {graph_id} part {symbol} unresolved fields: " +
+                ", ".join(unknown)
             )
         if not has_target:
             result.todos.append(
@@ -2877,26 +3504,26 @@ def render_disease_type(source: SourceObject, result: MigrationResult) -> str | 
             f"{source.location}: disease type {disease_id} minimum duration needs review"
         )
     if (
-        maximum_duration is None
-        or not minimum_duration <= maximum_duration <= NATIVE_INT_MAX
+        maximum_duration is None or
+        not minimum_duration <= maximum_duration <= NATIVE_INT_MAX
     ):
         maximum_duration = minimum_duration
         result.todos.append(
             f"{source.location}: disease type {disease_id} maximum duration needs review"
         )
     if (
-        not isinstance(minimum_intensity, int)
-        or isinstance(minimum_intensity, bool)
-        or not 0 < minimum_intensity <= NATIVE_INT_MAX
+        not isinstance(minimum_intensity, int) or
+        isinstance(minimum_intensity, bool) or
+        not 0 < minimum_intensity <= NATIVE_INT_MAX
     ):
         minimum_intensity = 1
         result.todos.append(
             f"{source.location}: disease type {disease_id} minimum intensity needs review"
         )
     if (
-        not isinstance(maximum_intensity, int)
-        or isinstance(maximum_intensity, bool)
-        or not minimum_intensity <= maximum_intensity <= NATIVE_INT_MAX
+        not isinstance(maximum_intensity, int) or
+        isinstance(maximum_intensity, bool) or
+        not minimum_intensity <= maximum_intensity <= NATIVE_INT_MAX
     ):
         maximum_intensity = minimum_intensity
         result.todos.append(
@@ -2918,9 +3545,9 @@ def render_disease_type(source: SourceObject, result: MigrationResult) -> str | 
     ]
     threshold = value.get("health_threshold")
     if (
-        isinstance(threshold, int)
-        and not isinstance(threshold, bool)
-        and -NATIVE_INT_MAX - 1 <= threshold <= NATIVE_INT_MAX
+        isinstance(threshold, int) and
+        not isinstance(threshold, bool) and
+        -NATIVE_INT_MAX - 1 <= threshold <= NATIVE_INT_MAX
     ):
         lines.append(f"    health_threshold = {threshold},")
     elif threshold is not None:
@@ -3072,9 +3699,9 @@ def render_emission(source: SourceObject, result: MigrationResult) -> str | None
             continue
         number = value[source_name]
         if (
-            isinstance(number, int)
-            and not isinstance(number, bool)
-            and 1 <= number <= maximum
+            isinstance(number, int) and
+            not isinstance(number, bool) and
+            1 <= number <= maximum
         ):
             lines.append(f"    {target_name} = {number},")
         else:
@@ -3190,10 +3817,10 @@ def render_mutation_category(
             continue
         number = value[source_name]
         valid = (
-            isinstance(number, int)
-            and not isinstance(number, bool)
-            and 0 <= number <= NATIVE_INT_MAX
-            and (source_name != "base_removal_chance" or number <= 100)
+            isinstance(number, int) and
+            not isinstance(number, bool) and
+            0 <= number <= NATIVE_INT_MAX and
+            (source_name != "base_removal_chance" or number <= 100)
         )
         if valid:
             lines.append(f"    {target_name} = {number},")
@@ -3204,10 +3831,10 @@ def render_mutation_category(
     multiplier = value.get("base_removal_cost_mul")
     if multiplier is not None:
         if (
-            isinstance(multiplier, (int, float))
-            and not isinstance(multiplier, bool)
-            and math.isfinite(multiplier)
-            and multiplier >= 0
+            isinstance(multiplier, (int, float)) and
+            not isinstance(multiplier, bool) and
+            math.isfinite(multiplier) and
+            multiplier >= 0
         ):
             lines.append(
                 f"    base_removal_cost_multiplier = {lua_number(multiplier)},"
@@ -3306,9 +3933,9 @@ def render_vehicle_part_location(
         ("list_order", list_order, 5),
     ):
         if (
-            not isinstance(raw, int)
-            or isinstance(raw, bool)
-            or not -NATIVE_INT_MAX - 1 <= raw <= NATIVE_INT_MAX
+            not isinstance(raw, int) or
+            isinstance(raw, bool) or
+            not -NATIVE_INT_MAX - 1 <= raw <= NATIVE_INT_MAX
         ):
             result.todos.append(
                 f"{source.location}: vehicle part location {location_id} {field_name} needs review"
@@ -3359,12 +3986,12 @@ def render_mood_face(source: SourceObject, result: MigrationResult) -> str | Non
             score = entry.get("value") if isinstance(entry, dict) else None
             face = entry.get("face") if isinstance(entry, dict) else None
             if (
-                not isinstance(score, int)
-                or isinstance(score, bool)
-                or not -NATIVE_INT_MAX - 1 <= score <= NATIVE_INT_MAX
-                or score in seen_scores
-                or not isinstance(face, str)
-                or not face
+                not isinstance(score, int) or
+                isinstance(score, bool) or
+                not -NATIVE_INT_MAX - 1 <= score <= NATIVE_INT_MAX or
+                score in seen_scores or
+                not isinstance(face, str) or
+                not face
             ):
                 result.todos.append(
                     f"{source.location}: mood face {face_id} value needs review"
@@ -3434,10 +4061,10 @@ def render_damage_info_order(
         elif raw is None:
             continue
         if (
-            not isinstance(order, int)
-            or isinstance(order, bool)
-            or not -NATIVE_INT_MAX - 1 <= order <= NATIVE_INT_MAX
-            or not isinstance(show_type, bool)
+            not isinstance(order, int) or
+            isinstance(order, bool) or
+            not -NATIVE_INT_MAX - 1 <= order <= NATIVE_INT_MAX or
+            not isinstance(show_type, bool)
         ):
             result.todos.append(
                 f"{source.location}: damage info order {order_id} {source_name} needs review"
@@ -3483,9 +4110,9 @@ def render_vehicle_part_category(
             f"{source.location}: vehicle part category {category_id} labels need review"
         )
     if (
-        not isinstance(priority, int)
-        or isinstance(priority, bool)
-        or not -NATIVE_INT_MAX - 1 <= priority <= NATIVE_INT_MAX
+        not isinstance(priority, int) or
+        isinstance(priority, bool) or
+        not -NATIVE_INT_MAX - 1 <= priority <= NATIVE_INT_MAX
     ):
         priority = 0
         result.todos.append(
@@ -3512,9 +4139,9 @@ def render_vehicle_part_category(
 
 def parse_named_color(value: Any) -> tuple[int, int, int, int] | None:
     if isinstance(value, list) and len(value) in {3, 4} and all(
-        isinstance(channel, int)
-        and not isinstance(channel, bool)
-        and 0 <= channel <= 255
+        isinstance(channel, int) and
+        not isinstance(channel, bool) and
+        0 <= channel <= 255
         for channel in value
     ):
         channels = [*value]
@@ -3572,10 +4199,10 @@ def render_rotatable_symbol(
     value = source.value
     symbols = value.get("tuple")
     if (
-        not isinstance(symbols, list)
-        or len(symbols) not in {2, 4}
-        or not all(isinstance(symbol, str) and len(symbol) == 1 for symbol in symbols)
-        or len(set(symbols)) != len(symbols)
+        not isinstance(symbols, list) or
+        len(symbols) not in {2, 4} or
+        not all(isinstance(symbol, str) and len(symbol) == 1 for symbol in symbols) or
+        len(set(symbols)) != len(symbols)
     ):
         result.partial.append(f"{source.location}: rotatable symbol <invalid tuple>")
         result.todos.append(
@@ -3690,12 +4317,12 @@ def render_hit_range(source: SourceObject, result: MigrationResult) -> str | Non
     todo_count = len(result.todos)
     raw_values = value.get("even_good")
     valid = (
-        isinstance(raw_values, list)
-        and bool(raw_values)
-        and all(
-            isinstance(entry, int)
-            and not isinstance(entry, bool)
-            and 0 <= entry <= NATIVE_INT_MAX
+        isinstance(raw_values, list) and
+        bool(raw_values) and
+        all(
+            isinstance(entry, int) and
+            not isinstance(entry, bool) and
+            0 <= entry <= NATIVE_INT_MAX
             for entry in raw_values
         )
     )
@@ -3745,12 +4372,12 @@ def render_bash_damage_profile(
     else:
         for damage_id, factor in sorted(profile.items(), key=lambda entry: str(entry[0])):
             if (
-                not isinstance(damage_id, str)
-                or not damage_id
-                or not isinstance(factor, (int, float))
-                or isinstance(factor, bool)
-                or not math.isfinite(factor)
-                or factor < 0
+                not isinstance(damage_id, str) or
+                not damage_id or
+                not isinstance(factor, (int, float)) or
+                isinstance(factor, bool) or
+                not math.isfinite(factor) or
+                factor < 0
             ):
                 result.todos.append(
                     f"{source.location}: bash damage profile {profile_id} factor needs review"
@@ -3826,17 +4453,17 @@ def render_clothing_mod(source: SourceObject, result: MigrationResult) -> str | 
             scaling = modifier.get("proportion", [])
             round_up = modifier.get("round_up", False)
             valid = (
-                isinstance(stat, str)
-                and stat in valid_stats
-                and isinstance(amount, (int, float))
-                and not isinstance(amount, bool)
-                and math.isfinite(amount)
-                and isinstance(scaling, list)
-                and len(scaling) <= 2
-                and all(isinstance(entry, str) for entry in scaling)
-                and all(entry in {"thickness", "coverage"} for entry in scaling)
-                and len(set(scaling)) == len(scaling)
-                and isinstance(round_up, bool)
+                isinstance(stat, str) and
+                stat in valid_stats and
+                isinstance(amount, (int, float)) and
+                not isinstance(amount, bool) and
+                math.isfinite(amount) and
+                isinstance(scaling, list) and
+                len(scaling) <= 2 and
+                all(isinstance(entry, str) for entry in scaling) and
+                all(entry in {"thickness", "coverage"} for entry in scaling) and
+                len(set(scaling)) == len(scaling) and
+                isinstance(round_up, bool)
             )
             if not valid:
                 result.todos.append(
@@ -3892,22 +4519,22 @@ def render_overmap_land_use_code(
     name = display_text(value.get("name"), code_id)
     description = display_text(value.get("detailed_definition"), "")
     if (
-        not isinstance(numeric_code, int)
-        or isinstance(numeric_code, bool)
-        or not NATIVE_INT_MIN <= numeric_code <= NATIVE_INT_MAX
-        or not isinstance(symbol, str)
-        or len(symbol) != 1
-        or not isinstance(color, str)
-        or not color
+        not isinstance(numeric_code, int) or
+        isinstance(numeric_code, bool) or
+        not NATIVE_INT_MIN <= numeric_code <= NATIVE_INT_MAX or
+        not isinstance(symbol, str) or
+        len(symbol) != 1 or
+        not isinstance(color, str) or
+        not color
     ):
         result.todos.append(
             f"{source.location}: overmap land-use code {code_id} display values need review"
         )
     safe_code = (
         numeric_code
-        if isinstance(numeric_code, int)
-        and not isinstance(numeric_code, bool)
-        and NATIVE_INT_MIN <= numeric_code <= NATIVE_INT_MAX
+        if isinstance(numeric_code, int) and
+        not isinstance(numeric_code, bool) and
+        NATIVE_INT_MIN <= numeric_code <= NATIVE_INT_MAX
         else 0
     )
     safe_symbol = symbol if isinstance(symbol, str) and len(symbol) == 1 else "?"
@@ -3973,13 +4600,13 @@ def render_overmap_vision(source: SourceObject, result: MigrationResult) -> str 
         color = raw_level.get("color", "black")
         looks_like = raw_level.get("looks_like")
         if (
-            not isinstance(name, str)
-            or not name
-            or not isinstance(symbol, str)
-            or len(symbol) != 1
-            or not isinstance(color, str)
-            or not color
-            or (looks_like is not None and (
+            not isinstance(name, str) or
+            not name or
+            not isinstance(symbol, str) or
+            len(symbol) != 1 or
+            not isinstance(color, str) or
+            not color or
+            (looks_like is not None and (
                 not isinstance(looks_like, str) or not looks_like
             ))
         ):
@@ -4071,10 +4698,10 @@ def render_profession_group(source: SourceObject, result: MigrationResult) -> st
         return None
     professions = value.get("professions")
     if (
-        not isinstance(professions, list)
-        or not professions
-        or any(not isinstance(entry, str) or not entry for entry in professions)
-        or len(set(professions)) != len(professions)
+        not isinstance(professions, list) or
+        not professions or
+        any(not isinstance(entry, str) or not entry for entry in professions) or
+        len(set(professions)) != len(professions)
     ):
         result.partial.append(f"{source.location}: profession group {group_id}")
         result.todos.append(
@@ -4124,9 +4751,9 @@ def render_weighted_catalog(
     if chance:
         raw_chance = value.get("chance", 0)
         if (
-            not isinstance(raw_chance, int)
-            or isinstance(raw_chance, bool)
-            or not 0 <= raw_chance <= 4_294_967_295
+            not isinstance(raw_chance, int) or
+            isinstance(raw_chance, bool) or
+            not 0 <= raw_chance <= 4_294_967_295
         ):
             result.partial.append(f"{source.location}: {label} {group_id}")
             result.todos.append(f"{source.location}: {label} {group_id} chance needs review")
@@ -4152,18 +4779,18 @@ def render_weighted_catalog(
                     f"{source.location}: {label} {group_id} entry has unsupported fields"
                 )
         elif (
-            not object_style
-            and isinstance(raw_entry, list)
-            and len(raw_entry) == 2
+            not object_style and
+            isinstance(raw_entry, list) and
+            len(raw_entry) == 2
         ):
             entry_id, weight = raw_entry
         if (
-            not isinstance(entry_id, str)
-            or not entry_id
-            or entry_id in seen
-            or not isinstance(weight, int)
-            or isinstance(weight, bool)
-            or not 1 <= weight <= NATIVE_INT_MAX
+            not isinstance(entry_id, str) or
+            not entry_id or
+            entry_id in seen or
+            not isinstance(weight, int) or
+            isinstance(weight, bool) or
+            not 1 <= weight <= NATIVE_INT_MAX
         ):
             result.todos.append(
                 f"{source.location}: {label} {group_id} weighted entry needs review"
@@ -4192,10 +4819,10 @@ def render_explosion_light(source: SourceObject, result: MigrationResult) -> str
     def finite(name: str, default: float, *, positive: bool = False) -> float:
         raw = value.get(name, default)
         if (
-            isinstance(raw, (int, float))
-            and not isinstance(raw, bool)
-            and math.isfinite(raw)
-            and (raw > 0 if positive else raw >= 0)
+            isinstance(raw, (int, float)) and
+            not isinstance(raw, bool) and
+            math.isfinite(raw) and
+            (raw > 0 if positive else raw >= 0)
         ):
             return float(raw)
         result.todos.append(
@@ -4205,17 +4832,17 @@ def render_explosion_light(source: SourceObject, result: MigrationResult) -> str
 
     def rgba_stop(raw_color: Any, raw_alpha: Any) -> tuple[int, int, int, int] | None:
         if (
-            isinstance(raw_color, list)
-            and len(raw_color) == 3
-            and all(
-                isinstance(component, int)
-                and not isinstance(component, bool)
-                and 0 <= component <= 255
+            isinstance(raw_color, list) and
+            len(raw_color) == 3 and
+            all(
+                isinstance(component, int) and
+                not isinstance(component, bool) and
+                0 <= component <= 255
                 for component in raw_color
-            )
-            and isinstance(raw_alpha, int)
-            and not isinstance(raw_alpha, bool)
-            and 0 <= raw_alpha <= 255
+            ) and
+            isinstance(raw_alpha, int) and
+            not isinstance(raw_alpha, bool) and
+            0 <= raw_alpha <= 255
         ):
             return raw_color[0], raw_color[1], raw_color[2], raw_alpha
         return None
@@ -4349,9 +4976,9 @@ def render_ammo_effect(source: SourceObject, result: MigrationResult) -> str | N
 
     def native_integer(raw: Any, *, minimum: int = 0, maximum: int = NATIVE_INT_MAX) -> int | None:
         if (
-            isinstance(raw, int)
-            and not isinstance(raw, bool)
-            and minimum <= raw <= maximum
+            isinstance(raw, int) and
+            not isinstance(raw, bool) and
+            minimum <= raw <= maximum
         ):
             return raw
         return None
@@ -4394,15 +5021,15 @@ def render_ammo_effect(source: SourceObject, result: MigrationResult) -> str | N
                 "field_type", "intensity_min", "intensity_max", "chance"
             } | ({"radius", "radius_z", "size", "check_passable"} if burst else set())
             if (
-                minimum is None
-                or maximum is None
-                or maximum < minimum
-                or chance is None
-                or radius is None
-                or height is None
-                or footprint is None
-                or not isinstance(passable, bool)
-                or set(entry) - allowed
+                minimum is None or
+                maximum is None or
+                maximum < minimum or
+                chance is None or
+                radius is None or
+                height is None or
+                footprint is None or
+                not isinstance(passable, bool) or
+                set(entry) - allowed
             ):
                 result.todos.append(
                     f"{source.location}: ammo effect {effect_id} {method} entry needs review"
@@ -4431,12 +5058,12 @@ def render_ammo_effect(source: SourceObject, result: MigrationResult) -> str | N
                 duration = entry.get("duration") if isinstance(entry, dict) else None
                 intensity = native_integer(entry.get("intensity", 1), minimum=1) if isinstance(entry, dict) else None
                 if (
-                    not isinstance(entry, dict)
-                    or not safe_platform_id(entry.get("effect"))
-                    or native_integer(duration, minimum=1) is None
-                    or intensity is None
-                    or not isinstance(entry.get("need_touch_skin", False), bool)
-                    or set(entry) - {"effect", "duration", "intensity", "need_touch_skin"}
+                    not isinstance(entry, dict) or
+                    not safe_platform_id(entry.get("effect")) or
+                    native_integer(duration, minimum=1) is None or
+                    intensity is None or
+                    not isinstance(entry.get("need_touch_skin", False), bool) or
+                    set(entry) - {"effect", "duration", "intensity", "need_touch_skin"}
                 ):
                     result.todos.append(
                         f"{source.location}: ammo effect {effect_id} on-hit entry needs a turn-based duration review"
@@ -4471,22 +5098,22 @@ def render_ammo_effect(source: SourceObject, result: MigrationResult) -> str | N
                 radius = native_integer(entry.get("radius", 1))
                 hits = entry.get("hits_amount", [1, 1])
                 hits_ok = (
-                    isinstance(hits, list)
-                    and len(hits) == 2
-                    and native_integer(hits[0], minimum=1) is not None
-                    and native_integer(hits[1], minimum=hits[0]) is not None
+                    isinstance(hits, list) and
+                    len(hits) == 2 and
+                    native_integer(hits[0], minimum=1) is not None and
+                    native_integer(hits[1], minimum=hits[0]) is not None
                 )
                 if (
-                    not safe_platform_id(entry.get("effect"))
-                    or duration is None
-                    or minimum is None
-                    or maximum is None
-                    or maximum < minimum
-                    or chance is None
-                    or radius is None
-                    or not hits_ok
-                    or not isinstance(entry.get("all_bp", False), bool)
-                    or set(entry) - {"effect", "duration", "intensity_min", "intensity_max", "chance", "radius", "hits_amount", "all_bp"}
+                    not safe_platform_id(entry.get("effect")) or
+                    duration is None or
+                    minimum is None or
+                    maximum is None or
+                    maximum < minimum or
+                    chance is None or
+                    radius is None or
+                    not hits_ok or
+                    not isinstance(entry.get("all_bp", False), bool) or
+                    set(entry) - {"effect", "duration", "intensity_min", "intensity_max", "chance", "radius", "hits_amount", "all_bp"}
                 ):
                     result.todos.append(
                         f"{source.location}: ammo effect {effect_id} area-effect entry needs a turn-based duration review"
@@ -4518,12 +5145,18 @@ def render_ammo_effect(source: SourceObject, result: MigrationResult) -> str | N
             noise = native_integer(raw_explosion.get("max_noise", 90_000_000))
             fire = raw_explosion.get("fire", False)
             light = raw_explosion.get("light_effect", "")
-            numeric = lambda raw: isinstance(raw, (int, float)) and not isinstance(raw, bool) and math.isfinite(raw)
+
+            def numeric(raw: Any) -> bool:
+                return (
+                    isinstance(raw, (int, float)) and
+                    not isinstance(raw, bool) and
+                    math.isfinite(raw)
+                )
             if (
-                not numeric(power) or power < 0
-                or not numeric(factor) or not 0 <= factor <= 1
-                or noise is None or not isinstance(fire, bool)
-                or not isinstance(light, str)
+                not numeric(power) or power < 0 or
+                not numeric(factor) or not 0 <= factor <= 1 or
+                noise is None or not isinstance(fire, bool) or
+                not isinstance(light, str)
             ):
                 result.todos.append(
                     f"{source.location}: ammo effect {effect_id} explosion values need review"
@@ -4545,9 +5178,9 @@ def render_ammo_effect(source: SourceObject, result: MigrationResult) -> str | N
                     recovery = native_integer(shrapnel.get("recovery", 0), maximum=100)
                     drop = shrapnel.get("drop", "null")
                     if (
-                        casing is not None and numeric(fragment) and fragment > 0
-                        and recovery is not None and isinstance(drop, str)
-                        and not set(shrapnel) - {"casing_mass", "fragment_mass", "recovery", "drop"}
+                        casing is not None and numeric(fragment) and fragment > 0 and
+                        recovery is not None and isinstance(drop, str) and
+                        not set(shrapnel) - {"casing_mass", "fragment_mass", "recovery", "drop"}
                     ):
                         lines.extend((
                             "definition:shrapnel {",
@@ -4594,11 +5227,11 @@ def render_ammo_effect(source: SourceObject, result: MigrationResult) -> str | N
                 level = native_integer(entry.get("level", 0)) if isinstance(entry, dict) else None
                 self_target = entry.get("self", False) if isinstance(entry, dict) else None
                 if (
-                    not isinstance(entry, dict)
-                    or not safe_platform_id(entry.get("id"))
-                    or level is None
-                    or not isinstance(self_target, bool)
-                    or set(entry) - {"id", "level", "self"}
+                    not isinstance(entry, dict) or
+                    not safe_platform_id(entry.get("id")) or
+                    level is None or
+                    not isinstance(self_target, bool) or
+                    set(entry) - {"id", "level", "self"}
                 ):
                     result.todos.append(
                         f"{source.location}: ammo effect {effect_id} spell entry needs review"
@@ -4763,8 +5396,8 @@ def render_start_location(source: SourceObject, result: MigrationResult) -> str 
                 match = match_map.get(raw_match) if isinstance(raw_match, str) else None
                 raw_parameters = raw.get("parameters", {})
                 if (
-                    not isinstance(raw_parameters, dict)
-                    or not all(isinstance(key, str) and isinstance(item, str) for key, item in raw_parameters.items())
+                    not isinstance(raw_parameters, dict) or
+                    not all(isinstance(key, str) and isinstance(item, str) for key, item in raw_parameters.items())
                 ):
                     parameters = {}
                     match = None
@@ -4806,9 +5439,9 @@ def render_start_location(source: SourceObject, result: MigrationResult) -> str 
         if raw is None:
             return
         if (
-            isinstance(raw, list) and len(raw) == 2
-            and all(isinstance(item, int) and not isinstance(item, bool) and NATIVE_INT_MIN <= item <= NATIVE_INT_MAX for item in raw)
-            and raw[0] <= raw[1]
+            isinstance(raw, list) and len(raw) == 2 and
+            all(isinstance(item, int) and not isinstance(item, bool) and NATIVE_INT_MIN <= item <= NATIVE_INT_MAX for item in raw) and
+            raw[0] <= raw[1]
         ):
             lines.append(f"definition:{method}({raw[0]}, {raw[1]})")
         else:
@@ -4854,9 +5487,9 @@ def render_climbing_aid(source: SourceObject, result: MigrationResult) -> str | 
     uses = condition.get("uses", 0)
     range_value = condition.get("range", 1)
     if (
-        not isinstance(uses, int) or isinstance(uses, bool) or not 0 <= uses <= NATIVE_INT_MAX
-        or not isinstance(range_value, int) or isinstance(range_value, bool) or not 0 <= range_value <= NATIVE_INT_MAX
-        or set(condition) - {"type", "flag", "uses", "range"}
+        not isinstance(uses, int) or isinstance(uses, bool) or not 0 <= uses <= NATIVE_INT_MAX or
+        not isinstance(range_value, int) or isinstance(range_value, bool) or not 0 <= range_value <= NATIVE_INT_MAX or
+        set(condition) - {"type", "flag", "uses", "range"}
     ):
         result.partial.append(f"{source.location}: climbing aid {aid_id}")
         result.todos.append(f"{source.location}: climbing aid {aid_id} availability limits need review")
@@ -4968,9 +5601,9 @@ def render_weather_type(source: SourceObject, result: MigrationResult) -> str | 
     def integer_option(name: str, default: int) -> int:
         raw = value.get(name, default)
         if (
-            isinstance(raw, int)
-            and not isinstance(raw, bool)
-            and NATIVE_INT_MIN <= raw <= NATIVE_INT_MAX
+            isinstance(raw, int) and
+            not isinstance(raw, bool) and
+            NATIVE_INT_MIN <= raw <= NATIVE_INT_MAX
         ):
             return raw
         result.todos.append(
@@ -4981,10 +5614,10 @@ def render_weather_type(source: SourceObject, result: MigrationResult) -> str | 
     def number_option(name: str, default: float, *, non_negative: bool = False) -> float:
         raw = value.get(name, default)
         if (
-            isinstance(raw, (int, float))
-            and not isinstance(raw, bool)
-            and math.isfinite(raw)
-            and (not non_negative or raw >= 0)
+            isinstance(raw, (int, float)) and
+            not isinstance(raw, bool) and
+            math.isfinite(raw) and
+            (not non_negative or raw >= 0)
         ):
             return float(raw)
         result.todos.append(
@@ -5082,8 +5715,8 @@ def render_weather_type(source: SourceObject, result: MigrationResult) -> str | 
         )
         minimum_duration = 300
     if (
-        maximum_duration is None
-        or not minimum_duration <= maximum_duration <= NATIVE_INT_MAX
+        maximum_duration is None or
+        not minimum_duration <= maximum_duration <= NATIVE_INT_MAX
     ):
         result.todos.append(
             f"{source.location}: weather type {weather_id} maximum duration needs review"
@@ -5094,15 +5727,15 @@ def render_weather_type(source: SourceObject, result: MigrationResult) -> str | 
     animation = value.get("weather_animation")
     if animation is not None:
         if (
-            isinstance(animation, dict)
-            and isinstance(animation.get("factor"), (int, float))
-            and not isinstance(animation.get("factor"), bool)
-            and math.isfinite(animation["factor"])
-            and animation["factor"] >= 0
-            and isinstance(animation.get("color"), str)
-            and bool(animation["color"])
-            and isinstance(animation.get("sym"), str)
-            and len(animation["sym"]) == 1
+            isinstance(animation, dict) and
+            isinstance(animation.get("factor"), (int, float)) and
+            not isinstance(animation.get("factor"), bool) and
+            math.isfinite(animation["factor"]) and
+            animation["factor"] >= 0 and
+            isinstance(animation.get("color"), str) and
+            bool(animation["color"]) and
+            isinstance(animation.get("sym"), str) and
+            len(animation["sym"]) == 1
         ):
             lines.extend((
                 "definition:animation {",
@@ -5156,19 +5789,19 @@ def render_weather_type(source: SourceObject, result: MigrationResult) -> str | 
                 )
             }
             valid = (
-                minimum is not None
-                and maximum is not None
-                and 0 < minimum <= maximum <= NATIVE_INT_MAX
-                and isinstance(intensity, int)
-                and not isinstance(intensity, bool)
-                and 0 < intensity <= NATIVE_INT_MAX
-                and isinstance(body_part, str)
-                and isinstance(environmental, bool)
-                and all(isinstance(item, bool) for item in boolean_fields.values())
-                and all(
-                    isinstance(item, int)
-                    and not isinstance(item, bool)
-                    and 0 <= item <= 100
+                minimum is not None and
+                maximum is not None and
+                0 < minimum <= maximum <= NATIVE_INT_MAX and
+                isinstance(intensity, int) and
+                not isinstance(intensity, bool) and
+                0 < intensity <= NATIVE_INT_MAX and
+                isinstance(body_part, str) and
+                isinstance(environmental, bool) and
+                all(isinstance(item, bool) for item in boolean_fields.values()) and
+                all(
+                    isinstance(item, int) and
+                    not isinstance(item, bool) and
+                    0 <= item <= 100
                     for item in chance_fields.values()
                 )
             )
@@ -5217,10 +5850,10 @@ def render_weather_type(source: SourceObject, result: MigrationResult) -> str | 
     result.todos.append(
         f"{source.location}: weather type {weather_id} legacy condition tree/jmath must be rewritten as named Lua handler {handler_id}"
     )
-    for field in ("debug_cause_eoc", "debug_leave_eoc"):
-        if value.get(field):
+    for field_name in ("debug_cause_eoc", "debug_leave_eoc"):
+        if value.get(field_name):
             result.todos.append(
-                f"{source.location}: weather type {weather_id} {field} must be rewritten as explicit Lua debug behaviour"
+                f"{source.location}: weather type {weather_id} {field_name} must be rewritten as explicit Lua debug behaviour"
             )
     supported = {
         "type", "id", "name", "color", "map_color", "sym", "sun_sym",
@@ -5287,9 +5920,9 @@ def render_end_screen(source: SourceObject, result: MigrationResult) -> str | No
         )
         return None
     if (
-        not isinstance(priority, int)
-        or isinstance(priority, bool)
-        or not NATIVE_INT_MIN <= priority <= NATIVE_INT_MAX
+        not isinstance(priority, int) or
+        isinstance(priority, bool) or
+        not NATIVE_INT_MIN <= priority <= NATIVE_INT_MAX
     ):
         result.partial.append(f"{source.location}: end screen {screen_id}")
         result.todos.append(
@@ -5316,17 +5949,17 @@ def render_end_screen(source: SourceObject, result: MigrationResult) -> str | No
     if isinstance(information, list):
         for index, entry in enumerate(information):
             valid = (
-                isinstance(entry, list)
-                and len(entry) == 2
-                and isinstance(entry[0], list)
-                and len(entry[0]) == 2
-                and all(
-                    isinstance(number, int)
-                    and not isinstance(number, bool)
-                    and NATIVE_INT_MIN <= number <= NATIVE_INT_MAX
+                isinstance(entry, list) and
+                len(entry) == 2 and
+                isinstance(entry[0], list) and
+                len(entry[0]) == 2 and
+                all(
+                    isinstance(number, int) and
+                    not isinstance(number, bool) and
+                    NATIVE_INT_MIN <= number <= NATIVE_INT_MAX
                     for number in entry[0]
-                )
-                and bool(display_text(entry[1]))
+                ) and
+                bool(display_text(entry[1]))
             )
             if not valid:
                 result.todos.append(
@@ -5392,10 +6025,10 @@ def render_activity_type(source: SourceObject, result: MigrationResult) -> str |
     if isinstance(activity_level, str):
         activity_level = levels.get(activity_level)
     if (
-        not isinstance(activity_level, (int, float))
-        or isinstance(activity_level, bool)
-        or not math.isfinite(activity_level)
-        or activity_level <= 0
+        not isinstance(activity_level, (int, float)) or
+        isinstance(activity_level, bool) or
+        not math.isfinite(activity_level) or
+        activity_level <= 0
     ):
         result.partial.append(f"{source.location}: activity type {activity_id}")
         result.todos.append(
@@ -5491,11 +6124,11 @@ def render_help_topic(
     order = value.get("order")
     messages = value.get("messages")
     if (
-        not title
-        or not isinstance(order, int)
-        or isinstance(order, bool)
-        or not isinstance(messages, list)
-        or not messages
+        not title or
+        not isinstance(order, int) or
+        isinstance(order, bool) or
+        not isinstance(messages, list) or
+        not messages
     ):
         result.partial.append(f"{source.location}: help topic <invalid>")
         result.todos.append(
@@ -5581,11 +6214,11 @@ def collect_snippet_category(
         name = display_text(raw.get("name")) if "name" in raw else ""
         weight = raw.get("weight", 1)
         if (
-            not text
-            or not isinstance(weight, int)
-            or isinstance(weight, bool)
-            or weight <= 0
-            or (snippet_id is not None and not safe_platform_id(snippet_id))
+            not text or
+            not isinstance(weight, int) or
+            isinstance(weight, bool) or
+            weight <= 0 or
+            (snippet_id is not None and not safe_platform_id(snippet_id))
         ):
             result.todos.append(
                 f"{source.location}: snippet category {category_id} entry #{index} needs text, id, or weight review"
@@ -5607,8 +6240,8 @@ def collect_snippet_category(
         )
         if unresolved:
             result.todos.append(
-                f"{source.location}: snippet entry unresolved fields: "
-                + ", ".join(unresolved)
+                f"{source.location}: snippet entry unresolved fields: " +
+                ", ".join(unresolved)
             )
         kind = "entry" if isinstance(snippet_id, str) else "text"
         category["entries"].append(
@@ -5619,8 +6252,8 @@ def collect_snippet_category(
     unresolved = unresolved_fields(value, {"type", "category", "text", "override"})
     if unresolved:
         result.todos.append(
-            f"{source.location}: snippet category {category_id} unresolved fields: "
-            + ", ".join(unresolved)
+            f"{source.location}: snippet category {category_id} unresolved fields: " +
+            ", ".join(unresolved)
         )
     target = result.converted if valid_count == len(entries) and len(result.todos) == todo_count else result.partial
     target.append(f"{source.location}: snippet category {category_id}")
@@ -5693,12 +6326,12 @@ def render_playlists(source: SourceObject, result: MigrationResult) -> str | Non
         valid = True
         for track_index, track in enumerate(files):
             if (
-                not isinstance(track, dict)
-                or not isinstance(track.get("file"), str)
-                or not track["file"]
-                or not isinstance(track.get("volume"), int)
-                or isinstance(track.get("volume"), bool)
-                or not 0 <= track["volume"] <= 128
+                not isinstance(track, dict) or
+                not isinstance(track.get("file"), str) or
+                not track["file"] or
+                not isinstance(track.get("volume"), int) or
+                isinstance(track.get("volume"), bool) or
+                not 0 <= track["volume"] <= 128
             ):
                 result.todos.append(
                     f"{source.location}: playlist {playlist_id} track #{track_index} needs review"
@@ -5711,8 +6344,8 @@ def render_playlists(source: SourceObject, result: MigrationResult) -> str | Non
         unresolved = unresolved_fields(raw, {"id", "shuffle", "files"})
         if unresolved:
             result.todos.append(
-                f"{source.location}: playlist {playlist_id} unresolved fields: "
-                + ", ".join(unresolved)
+                f"{source.location}: playlist {playlist_id} unresolved fields: " +
+                ", ".join(unresolved)
             )
             valid = False
         if valid:
@@ -5721,8 +6354,8 @@ def render_playlists(source: SourceObject, result: MigrationResult) -> str | Non
     unresolved = unresolved_fields(value, {"type", "playlists"})
     if unresolved:
         result.todos.append(
-            f"{source.location}: playlist collection unresolved fields: "
-            + ", ".join(unresolved)
+            f"{source.location}: playlist collection unresolved fields: " +
+            ", ".join(unresolved)
         )
     target = result.converted if chunks and len(result.todos) == todo_count else result.partial
     target.append(f"{source.location}: playlist collection")
@@ -5745,12 +6378,12 @@ def render_nested_recipe_category(
         )
         return None
     if (
-        not name
-        or not safe_platform_id(category)
-        or not safe_platform_id(subcategory)
-        or not isinstance(members, list)
-        or not members
-        or not all(safe_platform_id(member) for member in members)
+        not name or
+        not safe_platform_id(category) or
+        not safe_platform_id(subcategory) or
+        not isinstance(members, list) or
+        not members or
+        not all(safe_platform_id(member) for member in members)
     ):
         result.partial.append(
             f"{source.location}: nested recipe category {category_id}"
@@ -5773,10 +6406,10 @@ def render_nested_recipe_category(
     if isinstance(activity, str):
         activity = activity_levels.get(activity)
     if (
-        not isinstance(activity, (int, float))
-        or isinstance(activity, bool)
-        or not math.isfinite(activity)
-        or activity <= 0
+        not isinstance(activity, (int, float)) or
+        isinstance(activity, bool) or
+        not math.isfinite(activity) or
+        activity <= 0
     ):
         result.todos.append(
             f"{source.location}: nested recipe category {category_id} activity level needs review"
@@ -5832,13 +6465,13 @@ def render_overlay_order(source: SourceObject, result: MigrationResult) -> str |
         raw_ids = entry.get("id")
         ids = [raw_ids] if isinstance(raw_ids, str) else raw_ids
         if (
-            not isinstance(order, int)
-            or isinstance(order, bool)
-            or not NATIVE_INT_MIN <= order <= NATIVE_INT_MAX
-            or not isinstance(ids, list)
-            or not ids
-            or not all(safe_platform_id(item) for item in ids)
-            or set(entry) - {"id", "order"}
+            not isinstance(order, int) or
+            isinstance(order, bool) or
+            not NATIVE_INT_MIN <= order <= NATIVE_INT_MAX or
+            not isinstance(ids, list) or
+            not ids or
+            not all(safe_platform_id(item) for item in ids) or
+            set(entry) - {"id", "order"}
         ):
             result.todos.append(
                 f"{source.location}: overlay order entry #{index} needs review"
@@ -5939,9 +6572,9 @@ def render_attack_vector(source: SourceObject, result: MigrationResult) -> str |
     def bounded_integer(name: str, default: int, minimum: int, maximum: int) -> int:
         raw = value.get(name, default)
         if (
-            isinstance(raw, int)
-            and not isinstance(raw, bool)
-            and minimum <= raw <= maximum
+            isinstance(raw, int) and
+            not isinstance(raw, bool) and
+            minimum <= raw <= maximum
         ):
             return raw
         result.todos.append(
@@ -5990,13 +6623,13 @@ def render_attack_vector(source: SourceObject, result: MigrationResult) -> str |
     else:
         for requirement in limb_requirements:
             valid = (
-                isinstance(requirement, list)
-                and len(requirement) == 2
-                and isinstance(requirement[0], str)
-                and requirement[0]
-                and isinstance(requirement[1], int)
-                and not isinstance(requirement[1], bool)
-                and 0 < requirement[1] <= NATIVE_INT_MAX
+                isinstance(requirement, list) and
+                len(requirement) == 2 and
+                isinstance(requirement[0], str) and
+                requirement[0] and
+                isinstance(requirement[1], int) and
+                not isinstance(requirement[1], bool) and
+                0 < requirement[1] <= NATIVE_INT_MAX
             )
             if not valid:
                 result.todos.append(
@@ -6084,10 +6717,10 @@ def render_magic_type(source: SourceObject, result: MigrationResult) -> str | No
     def nonnegative_number(name: str, default: float) -> float:
         raw = value.get(name, default)
         if (
-            isinstance(raw, (int, float))
-            and not isinstance(raw, bool)
-            and math.isfinite(raw)
-            and raw >= 0
+            isinstance(raw, (int, float)) and
+            not isinstance(raw, bool) and
+            math.isfinite(raw) and
+            raw >= 0
         ):
             return float(raw)
         result.todos.append(
@@ -6117,9 +6750,9 @@ def render_magic_type(source: SourceObject, result: MigrationResult) -> str | No
     raw_maximum = value.get("max_book_level")
     if raw_maximum is not None:
         if (
-            isinstance(raw_maximum, int)
-            and not isinstance(raw_maximum, bool)
-            and 0 <= raw_maximum <= NATIVE_INT_MAX
+            isinstance(raw_maximum, int) and
+            not isinstance(raw_maximum, bool) and
+            0 <= raw_maximum <= NATIVE_INT_MAX
         ):
             lines.append(f"    max_book_level = {raw_maximum},")
         else:
@@ -6147,12 +6780,12 @@ def render_magic_type(source: SourceObject, result: MigrationResult) -> str | No
         "casting_xp_formula_id": "definition:casting_experience handler",
         "failure_chance_formula_id": "definition:failure_chance handler",
     }
-    for field, replacement in formula_migrations.items():
-        if field in value:
+    for field_name, replacement in formula_migrations.items():
+        if field_name in value:
             result.todos.append(
-                f"{source.location}: magic type {magic_id} {field} must be rewritten as {replacement}"
+                f"{source.location}: magic type {magic_id} {field_name} must be rewritten as {replacement}"
             )
-            lines.append(f"-- TODO: rewrite {field} as {replacement}.")
+            lines.append(f"-- TODO: rewrite {field_name} as {replacement}.")
     if "failure_eocs" in value:
         result.todos.append(
             f"{source.location}: magic type {magic_id} failure_eocs must be rewritten as a named Lua on_failure handler"
@@ -6208,10 +6841,10 @@ def render_movement_mode(source: SourceObject, result: MigrationResult) -> str |
         if isinstance(raw, str) and raw in activity_levels:
             raw = activity_levels[raw]
         if (
-            isinstance(raw, (int, float))
-            and not isinstance(raw, bool)
-            and math.isfinite(raw)
-            and (raw > 0 if positive else raw >= 0)
+            isinstance(raw, (int, float)) and
+            not isinstance(raw, bool) and
+            math.isfinite(raw) and
+            (raw > 0 if positive else raw >= 0)
         ):
             return float(raw)
         result.todos.append(
@@ -6222,9 +6855,9 @@ def render_movement_mode(source: SourceObject, result: MigrationResult) -> str |
     def native_integer(name: str, default: int, minimum: int) -> int:
         raw = value.get(name, default)
         if (
-            isinstance(raw, int)
-            and not isinstance(raw, bool)
-            and minimum <= raw <= NATIVE_INT_MAX
+            isinstance(raw, int) and
+            not isinstance(raw, bool) and
+            minimum <= raw <= NATIVE_INT_MAX
         ):
             return raw
         result.todos.append(
@@ -6239,17 +6872,17 @@ def render_movement_mode(source: SourceObject, result: MigrationResult) -> str |
     panel_color = value.get("panel_color", "white")
     symbol_color = value.get("symbol_color", "white")
     if (
-        not isinstance(name, str)
-        or not name
-        or kind not in {"prone", "crouching", "walking", "running"}
-        or not isinstance(character, str)
-        or len(character) != 1
-        or not isinstance(panel_symbol, str)
-        or len(panel_symbol) != 1
-        or not isinstance(panel_color, str)
-        or not panel_color
-        or not isinstance(symbol_color, str)
-        or not symbol_color
+        not isinstance(name, str) or
+        not name or
+        kind not in {"prone", "crouching", "walking", "running"} or
+        not isinstance(character, str) or
+        len(character) != 1 or
+        not isinstance(panel_symbol, str) or
+        len(panel_symbol) != 1 or
+        not isinstance(panel_color, str) or
+        not panel_color or
+        not isinstance(symbol_color, str) or
+        not symbol_color
     ):
         result.partial.append(f"{source.location}: movement mode {mode_id}")
         result.todos.append(
@@ -6346,13 +6979,13 @@ def render_tool_quality(source: SourceObject, result: MigrationResult) -> str | 
     if isinstance(usages, list):
         for usage in usages:
             if (
-                isinstance(usage, list)
-                and len(usage) == 2
-                and isinstance(usage[0], int)
-                and not isinstance(usage[0], bool)
-                and 0 <= usage[0] <= NATIVE_INT_MAX
-                and isinstance(usage[1], list)
-                and all(isinstance(text, str) and text for text in usage[1])
+                isinstance(usage, list) and
+                len(usage) == 2 and
+                isinstance(usage[0], int) and
+                not isinstance(usage[0], bool) and
+                0 <= usage[0] <= NATIVE_INT_MAX and
+                isinstance(usage[1], list) and
+                all(isinstance(text, str) and text for text in usage[1])
             ):
                 lines.extend(
                     f"definition:usage({usage[0]}, {lua_quote(text)})"
@@ -6449,11 +7082,11 @@ def render_skill(source: SourceObject, result: MigrationResult) -> str | None:
     if isinstance(companion, list):
         for entry in companion:
             if (
-                isinstance(entry, dict)
-                and safe_platform_id(entry.get("skill"))
-                and isinstance(entry.get("weight"), int)
-                and not isinstance(entry["weight"], bool)
-                and -NATIVE_INT_MAX <= entry["weight"] <= NATIVE_INT_MAX
+                isinstance(entry, dict) and
+                safe_platform_id(entry.get("skill")) and
+                isinstance(entry.get("weight"), int) and
+                not isinstance(entry["weight"], bool) and
+                -NATIVE_INT_MAX <= entry["weight"] <= NATIVE_INT_MAX
             ):
                 lines.append(
                     f"definition:companion_practice({lua_quote(entry['skill'])}, {entry['weight']})"
@@ -6475,11 +7108,11 @@ def render_skill(source: SourceObject, result: MigrationResult) -> str | None:
             continue
         for entry in entries:
             if (
-                isinstance(entry, dict)
-                and isinstance(entry.get("level"), int)
-                and not isinstance(entry["level"], bool)
-                and 0 <= entry["level"] <= NATIVE_MAX_SKILL
-                and display_text(entry.get("description"))
+                isinstance(entry, dict) and
+                isinstance(entry.get("level"), int) and
+                not isinstance(entry["level"], bool) and
+                0 <= entry["level"] <= NATIVE_MAX_SKILL and
+                display_text(entry.get("description"))
             ):
                 description_text = display_text(entry["description"])
                 level_descriptions.setdefault(entry["level"], {})[variant] = description_text
@@ -6597,9 +7230,9 @@ def render_vitamin(source: SourceObject, result: MigrationResult) -> str | None:
         if isinstance(entries, list):
             for entry in entries:
                 if (
-                    isinstance(entry, list)
-                    and len(entry) == 2
-                    and all(isinstance(number, int) and not isinstance(number, bool) and -NATIVE_INT_MAX <= number <= NATIVE_INT_MAX for number in entry)
+                    isinstance(entry, list) and
+                    len(entry) == 2 and
+                    all(isinstance(number, int) and not isinstance(number, bool) and -NATIVE_INT_MAX <= number <= NATIVE_INT_MAX for number in entry)
                 ):
                     lines.append(f"definition:{method}({entry[0]}, {entry[1]})")
                 else:
@@ -6614,12 +7247,12 @@ def render_vitamin(source: SourceObject, result: MigrationResult) -> str | None:
     if isinstance(decays, list):
         for entry in decays:
             if (
-                isinstance(entry, list)
-                and len(entry) == 2
-                and safe_platform_id(entry[0])
-                and isinstance(entry[1], int)
-                and not isinstance(entry[1], bool)
-                and 0 < entry[1] <= NATIVE_INT_MAX
+                isinstance(entry, list) and
+                len(entry) == 2 and
+                safe_platform_id(entry[0]) and
+                isinstance(entry[1], int) and
+                not isinstance(entry[1], bool) and
+                0 < entry[1] <= NATIVE_INT_MAX
             ):
                 lines.append(f"definition:decays_into({lua_quote(entry[0])}, {entry[1]})")
             else:
@@ -7196,28 +7829,580 @@ def render_weapon_category(source: SourceObject, result: MigrationResult) -> str
     )
 
 
+def lua_scalar_literal(value: Any) -> str | None:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, str):
+        return lua_quote(value)
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float) and math.isfinite(value):
+        return lua_number(value)
+    return None
+
+
+def render_eoc_value_expression(value: Any, missing_default: str) -> str | None:
+    literal = lua_scalar_literal(value)
+    if literal is not None:
+        return literal
+    if not isinstance(value, dict) or len(value) != 1:
+        return None
+    key, name = next(iter(value.items()))
+    if (
+        key not in {"context_val", "u_val"} or
+        not isinstance(name, str) or
+        not name or len(name) > 1024 or "\0" in name
+    ):
+        return None
+    quoted = lua_quote(name)
+    if key == "context_val":
+        return f"context.data[{quoted}]"
+    return f"ccb.state.character.get({quoted}, {missing_default})"
+
+
+def render_eoc_string_expression(value: Any) -> str | None:
+    if isinstance(value, str):
+        return lua_quote(value)
+    if isinstance(value, bool) or not isinstance(value, dict):
+        return None
+    rendered = render_eoc_value_expression(value, lua_quote(""))
+    return None if rendered is None else f"tostring(({rendered}) or {lua_quote('')})"
+
+
+def render_eoc_numeric_expression(value: Any, missing_default: str) -> str | None:
+    if isinstance(value, bool) or isinstance(value, str):
+        return None
+    if isinstance(value, (int, float)):
+        return lua_scalar_literal(value)
+    rendered = render_eoc_value_expression(value, missing_default)
+    return None if rendered is None else f"tonumber(({rendered}) or {missing_default})"
+
+
+def render_eoc_condition_expression(
+    condition: Any, avatar_actor_proven: bool = False,
+    weapon_actor_proven: bool = False,
+) -> str | None:
+    """Translate bounded legacy predicates into ordinary Lua composition."""
+    if condition is None:
+        return "true"
+    if isinstance(condition, bool):
+        return "true" if condition else "false"
+    if isinstance(condition, str):
+        if avatar_actor_proven and condition == "u_has_activity":
+            return "service_value(services.activities.snapshot(actor)).active"
+        if weapon_actor_proven and condition == "u_has_weapon":
+            return "character_has_weapon(actor)"
+        if weapon_actor_proven and condition == "u_can_drop_weapon":
+            return "character_can_drop_weapon(actor)"
+        return None
+    if not isinstance(condition, dict):
+        return None
+
+    if (
+        avatar_actor_proven and
+        set(condition) == {"u_has_activity"} and
+        isinstance(condition.get("u_has_activity"), str)
+    ):
+        return "service_value(services.activities.snapshot(actor)).active"
+
+    if set(condition) in ({"and"}, {"or"}):
+        operator = "and" if "and" in condition else "or"
+        entries = condition[operator]
+        if not isinstance(entries, list) or not entries:
+            return None
+        rendered = [
+            render_eoc_condition_expression(
+                entry, avatar_actor_proven, weapon_actor_proven
+            )
+            for entry in entries
+        ]
+        if any(entry is None for entry in rendered):
+            return None
+        return f" {operator} ".join(f"({entry})" for entry in rendered)
+    if set(condition) == {"not"}:
+        rendered = render_eoc_condition_expression(
+            condition["not"], avatar_actor_proven, weapon_actor_proven
+        )
+        return None if rendered is None else f"not ({rendered})"
+
+    for key, function_name, minimum in (
+        ("compare_string", "any_equal", 2),
+        ("compare_string_match_all", "all_equal", 1),
+    ):
+        if set(condition) == {key}:
+            values = condition[key]
+            if not isinstance(values, list) or len(values) < minimum:
+                return None
+            rendered = [
+                render_eoc_string_expression(value)
+                for value in values
+            ]
+            if any(value is None for value in rendered):
+                return None
+            rendered_values = ", ".join(rendered)
+            return (
+                f"services.gameplay.strings.{function_name}"
+                f"({{{rendered_values}}})"
+            )
+
+    if set(condition) == {"one_in_chance"}:
+        value = finite_number_literal(condition["one_in_chance"])
+        if value is None or value < -1000000000 or value > 1000000000:
+            return None
+        return f"services.random.one_in({lua_number(value)})"
+
+    if set(condition) == {"x_in_y_chance"}:
+        chance = condition["x_in_y_chance"]
+        if not isinstance(chance, dict) or set(chance) != {"x", "y"}:
+            return None
+        numerator = finite_number_literal(chance["x"])
+        denominator = finite_number_literal(chance["y"])
+        if (
+            numerator is None or denominator is None or
+            denominator <= 0 or numerator < 0 or numerator > denominator
+        ):
+            return None
+        return (
+            "services.random.probability("
+            f"{lua_number(numerator)}, {lua_number(denominator)})"
+        )
+
+    if set(condition) <= {"roll_contested", "difficulty", "die_size"} and {
+        "roll_contested", "difficulty"
+    } <= set(condition):
+        check = finite_number_literal(condition["roll_contested"])
+        difficulty = finite_number_literal(condition["difficulty"])
+        raw_die_size = condition.get("die_size", 10)
+        die_size = (
+            raw_die_size
+            if isinstance(raw_die_size, int) and
+            not isinstance(raw_die_size, bool)
+            else None
+        )
+        if (
+            check is None or difficulty is None or die_size is None or
+            die_size <= 0 or die_size > 1000000000
+        ):
+            return None
+        return (
+            "services.random.contested("
+            f"{lua_number(check)}, {lua_number(difficulty)}, {die_size})"
+        )
+
+    if set(condition) == {"mod_is_loaded"} and isinstance(
+        condition["mod_is_loaded"], str
+    ):
+        return (
+            "services.gameplay.mods.is_loaded("
+            f"{lua_quote(condition['mod_is_loaded'])})"
+        )
+    if set(condition) == {"current_dimension"} and isinstance(
+        condition["current_dimension"], str
+    ):
+        return (
+            "services.gameplay.environment.dimension() == "
+            f"{lua_quote(condition['current_dimension'])}"
+        )
+    if (
+        avatar_actor_proven and
+        set(condition) == {"u_has_trait"} and
+        safe_platform_id(condition.get("u_has_trait"))
+    ):
+        return (
+            "service_value(services.mutations.has("
+            "actor, "
+            "services.types.id(\"mutation\", "
+            f"{lua_quote(condition['u_has_trait'])})))"
+        )
+    if avatar_actor_proven and set(condition) == {"u_has_any_trait"}:
+        traits = condition.get("u_has_any_trait")
+        if (
+            not isinstance(traits, list) or
+            not traits or
+            not all(safe_platform_id(trait) for trait in traits)
+        ):
+            return None
+        queries = [
+            "service_value(services.mutations.has("
+            "actor, "
+            "services.types.id(\"mutation\", "
+            f"{lua_quote(trait)})))"
+            for trait in traits
+        ]
+        return " or ".join(f"({query})" for query in queries)
+    if (
+        avatar_actor_proven and
+        set(condition) == {"u_has_martial_art"} and
+        safe_platform_id(condition.get("u_has_martial_art"))
+    ):
+        return (
+            "service_value(services.martial_arts.get("
+            "actor, "
+            "services.types.id(\"martial_art\", "
+            f"{lua_quote(condition['u_has_martial_art'])}))).known"
+        )
+    if (
+        avatar_actor_proven and
+        set(condition) == {"u_using_martial_art"} and
+        safe_platform_id(condition.get("u_using_martial_art"))
+    ):
+        return (
+            "service_value(services.martial_arts.get("
+            "actor, "
+            "services.types.id(\"martial_art\", "
+            f"{lua_quote(condition['u_using_martial_art'])}))).selected"
+        )
+    if (
+        avatar_actor_proven and
+        set(condition) == {"u_has_proficiency"} and
+        safe_platform_id(condition.get("u_has_proficiency"))
+    ):
+        return (
+            "service_value(services.proficiencies.get("
+            "actor, "
+            "services.types.id(\"proficiency\", "
+            f"{lua_quote(condition['u_has_proficiency'])}))).known"
+        )
+    if (
+        avatar_actor_proven and
+        set(condition) == {"u_know_recipe"} and
+        safe_platform_id(condition.get("u_know_recipe"))
+    ):
+        return (
+            "service_value(services.recipes.knows("
+            "actor, "
+            "services.types.id(\"recipe\", "
+            f"{lua_quote(condition['u_know_recipe'])})))"
+        )
+    if (
+        avatar_actor_proven and
+        set(condition) == {"u_has_bionics"} and
+        safe_platform_id(condition.get("u_has_bionics"))
+    ):
+        if condition["u_has_bionics"] == "ANY":
+            return "character_has_any_bionic_or_capacity(actor)"
+        return (
+            "service_value(services.bionics.has("
+            "actor, "
+            "services.types.id(\"bionic\", "
+            f"{lua_quote(condition['u_has_bionics'])})))"
+        )
+    if (
+        avatar_actor_proven and
+        set(condition) == {"u_has_item"} and
+        safe_platform_id(condition.get("u_has_item"))
+    ):
+        return (
+            "character_has_item(actor, "
+            f"{lua_quote(condition['u_has_item'])})"
+        )
+    if (
+        avatar_actor_proven and
+        set(condition) == {"u_has_move_mode"} and
+        safe_platform_id(condition.get("u_has_move_mode"))
+    ):
+        return (
+            "service_value(services.characters.snapshot(actor))"
+            ".movement.id == "
+            f"{lua_quote(condition['u_has_move_mode'])}"
+        )
+    if (
+        weapon_actor_proven and
+        set(condition) == {"u_has_wielded_with_flag"} and
+        safe_platform_id(condition.get("u_has_wielded_with_flag")) and
+        len(condition["u_has_wielded_with_flag"].encode("utf-8")) <= 256
+    ):
+        return (
+            "character_wields_with_flag(actor, "
+            "services.types.id(\"json_flag\", "
+            f"{lua_quote(condition['u_has_wielded_with_flag'])}))"
+        )
+    return None
+
+
 def render_eoc(source: SourceObject, result: MigrationResult) -> str:
     value = source.value
     eoc_id = stable_id(value, f"anonymous_{source.index}")
     stable_handler = isinstance(value.get("id"), str) and bool(value["id"])
     handler_id = f"migrated.{eoc_id}"
+    required_event = value.get("required_event")
+    avatar_actor_proven = (
+        required_event == "game_start" and
+        game_start_avatar_actor_is_proven()
+    )
+    item_event_character_actor_proven = (
+        isinstance(required_event, str) and
+        required_event in PROVEN_ITEM_ACTOR_EVENTS
+    )
+    character_actor_proven = (
+        avatar_actor_proven or item_event_character_actor_proven
+    )
+    weapon_actor_proven = character_actor_proven
     lines = [
         f"-- Extracted from {source.location}; review every TODO before enabling.",
         f"runtime.handler({lua_quote(handler_id)}, function(context)",
     ]
+    if avatar_actor_proven:
+        lines.append("    local actor = services.characters.avatar()")
+    elif item_event_character_actor_proven:
+        lines.append("    local actor = context.actors.character")
+    raw_condition = value.get("condition", True)
+    condition_expression = render_eoc_condition_expression(
+        raw_condition, avatar_actor_proven, weapon_actor_proven
+    )
+    condition_converted = condition_expression is not None
+    if condition_expression is None:
+        lines.append("    -- TODO: translate the legacy condition into a Lua predicate.")
+        result.todos.append(
+            f"{source.location}: EOC {eoc_id} condition needs a native Lua predicate"
+        )
+    elif condition_expression != "true":
+        lines.append(f"    if not ({condition_expression}) then")
+        lines.append("        return")
+        lines.append("    end")
     effects = value.get("effect", [])
-    if isinstance(effects, dict):
+    if isinstance(effects, (dict, str)):
         effects = [effects]
     converted_effect = False
     all_effects_converted = True
     if isinstance(effects, list):
         for effect_index, effect in enumerate(effects):
-            if (
-                isinstance(effect, dict)
-                and set(effect) == {"message"}
-                and isinstance(effect.get("message"), str)
+            if avatar_actor_proven and effect == "u_cancel_activity":
+                lines.append("    services.activities.cancel(actor)")
+                converted_effect = True
+            elif (
+                isinstance(effect, dict) and
+                set(effect) == {"message"} and
+                isinstance(effect.get("message"), str)
             ):
                 lines.append(f"    services.message({lua_quote(effect['message'])})")
+                converted_effect = True
+            elif (
+                isinstance(effect, dict) and
+                set(effect) == {"give_achievement"} and
+                safe_platform_id(effect.get("give_achievement"))
+            ):
+                lines.append("    services.achievements.complete(")
+                lines.append(
+                    "        services.types.id(\"achievement\", "
+                    f"{lua_quote(effect['give_achievement'])}))"
+                )
+                converted_effect = True
+            elif (
+                avatar_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"u_add_bionic"} and
+                safe_platform_id(effect.get("u_add_bionic"))
+            ):
+                lines.append("    services.bionics.grant(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"bionic\", "
+                    f"{lua_quote(effect['u_add_bionic'])}))"
+                )
+                converted_effect = True
+            elif (
+                avatar_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"u_lose_bionic"} and
+                safe_platform_id(effect.get("u_lose_bionic"))
+            ):
+                lines.append("    services.bionics.remove_type(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"bionic\", "
+                    f"{lua_quote(effect['u_lose_bionic'])}))"
+                )
+                converted_effect = True
+            elif (
+                avatar_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"u_learn_recipe"} and
+                safe_platform_id(effect.get("u_learn_recipe"))
+            ):
+                lines.append("    services.recipes.learn(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"recipe\", "
+                    f"{lua_quote(effect['u_learn_recipe'])}))"
+                )
+                converted_effect = True
+            elif (
+                avatar_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) in (
+                    {"u_forget_recipe", "category"},
+                    {"u_forget_recipe", "subcategory"},
+                    {"u_forget_recipe", "category", "subcategory"},
+                ) and
+                safe_platform_id(effect.get("u_forget_recipe")) and
+                (
+                    effect.get("category") is True or
+                    "subcategory" in effect
+                ) and
+                (
+                    "subcategory" not in effect or
+                    safe_platform_id(effect.get("subcategory"))
+                )
+            ):
+                lines.append("    services.recipes.forget_category(")
+                lines.append("        actor,")
+                category_suffix = "," if "subcategory" in effect else ")"
+                lines.append(
+                    "        services.types.id(\"crafting_category\", "
+                    f"{lua_quote(effect['u_forget_recipe'])}){category_suffix}"
+                )
+                if "subcategory" in effect:
+                    lines.append(
+                        f"        {lua_quote(effect['subcategory'])})"
+                    )
+                converted_effect = True
+            elif (
+                avatar_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"u_forget_recipe"} and
+                safe_platform_id(effect.get("u_forget_recipe"))
+            ):
+                lines.append("    services.recipes.forget(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"recipe\", "
+                    f"{lua_quote(effect['u_forget_recipe'])}))"
+                )
+                converted_effect = True
+            elif (
+                avatar_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"u_learn_martial_art"} and
+                safe_platform_id(effect.get("u_learn_martial_art"))
+            ):
+                lines.append("    services.martial_arts.learn(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"martial_art\", "
+                    f"{lua_quote(effect['u_learn_martial_art'])}))"
+                )
+                converted_effect = True
+            elif (
+                avatar_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"u_forget_martial_art"} and
+                safe_platform_id(effect.get("u_forget_martial_art"))
+            ):
+                lines.append("    services.martial_arts.forget(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"martial_art\", "
+                    f"{lua_quote(effect['u_forget_martial_art'])}))"
+                )
+                converted_effect = True
+            elif (
+                avatar_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"u_add_effect", "duration"} and
+                safe_platform_id(effect.get("u_add_effect")) and
+                (
+                    effect.get("duration") == "PERMANENT" or
+                    (
+                        isinstance(effect.get("duration"), int) and
+                        not isinstance(effect.get("duration"), bool) and
+                        1 <= effect["duration"] <= MAX_EFFECT_DURATION_TURNS
+                    )
+                )
+            ):
+                permanent = effect["duration"] == "PERMANENT"
+                duration = 1 if permanent else effect["duration"]
+                lines.append("    services.effects.add(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"effect\", "
+                    f"{lua_quote(effect['u_add_effect'])}),"
+                )
+                suffix = ", { permanent = true })" if permanent else ")"
+                lines.append(
+                    "        services.time.duration("
+                    f"{duration}, \"turn\"){suffix}"
+                )
+                converted_effect = True
+            elif (
+                avatar_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"u_lose_effect"} and
+                safe_platform_id(effect.get("u_lose_effect"))
+            ):
+                lines.append("    services.effects.remove(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"effect\", "
+                    f"{lua_quote(effect['u_lose_effect'])}))"
+                )
+                converted_effect = True
+            elif (
+                avatar_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"u_add_morale", "bonus", "max_bonus"} and
+                safe_platform_id(effect.get("u_add_morale")) and
+                isinstance(effect.get("bonus"), int) and
+                not isinstance(effect.get("bonus"), bool) and
+                NATIVE_INT_MIN <= effect["bonus"] <= NATIVE_INT_MAX and
+                isinstance(effect.get("max_bonus"), int) and
+                not isinstance(effect.get("max_bonus"), bool) and
+                NATIVE_INT_MIN <= effect["max_bonus"] <= NATIVE_INT_MAX
+            ):
+                lines.append("    services.morale.add(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"morale\", "
+                    f"{lua_quote(effect['u_add_morale'])}),"
+                )
+                lines.append(
+                    f"        {effect['bonus']}, {effect['max_bonus']})"
+                )
+                converted_effect = True
+            elif (
+                avatar_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"u_lose_morale"} and
+                safe_platform_id(effect.get("u_lose_morale"))
+            ):
+                lines.append("    services.morale.remove(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"morale\", "
+                    f"{lua_quote(effect['u_lose_morale'])}))"
+                )
+                converted_effect = True
+            elif (
+                item_event_character_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"npc_set_flag"} and
+                safe_platform_id(effect.get("npc_set_flag")) and
+                len(effect["npc_set_flag"].encode("utf-8")) <= 256
+            ):
+                lines.append("    if context.actors.item ~= nil then")
+                lines.append("        services.items.set_flag(")
+                lines.append("            context.actors.item,")
+                lines.append(
+                    "            services.types.id(\"json_flag\", "
+                    f"{lua_quote(effect['npc_set_flag'])}), true)"
+                )
+                lines.append("    end")
+                converted_effect = True
+            elif (
+                item_event_character_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"npc_unset_flag"} and
+                safe_platform_id(effect.get("npc_unset_flag")) and
+                len(effect["npc_unset_flag"].encode("utf-8")) <= 256
+            ):
+                lines.append("    if context.actors.item ~= nil then")
+                lines.append("        services.items.set_flag(")
+                lines.append("            context.actors.item,")
+                lines.append(
+                    "            services.types.id(\"json_flag\", "
+                    f"{lua_quote(effect['npc_unset_flag'])}), false)"
+                )
+                lines.append("    end")
                 converted_effect = True
             else:
                 lines.append("    -- TODO: translate one legacy effect into domain-service calls.")
@@ -7232,7 +8417,6 @@ def render_eoc(source: SourceObject, result: MigrationResult) -> str:
         )
         all_effects_converted = False
     lines.extend(("end)", ""))
-    required_event = value.get("required_event")
     has_trigger = isinstance(required_event, str) and bool(required_event)
     if has_trigger:
         lines.append(f"runtime.on({lua_quote('game:' + required_event)}, {lua_quote(handler_id)})")
@@ -7244,10 +8428,6 @@ def render_eoc(source: SourceObject, result: MigrationResult) -> str:
     unresolved = sorted(
         set(value) - {"type", "id", "eoc_type", "required_event", "effect", "condition"}
     )
-    if value.get("condition") not in (None, True):
-        result.todos.append(
-            f"{source.location}: EOC {eoc_id} condition needs a native Lua predicate"
-        )
     if not stable_handler:
         result.todos.append(
             f"{source.location}: EOC {eoc_id} needs a stable handler id"
@@ -7257,12 +8437,12 @@ def render_eoc(source: SourceObject, result: MigrationResult) -> str:
             f"{source.location}: EOC {eoc_id} unresolved fields: {', '.join(unresolved)}"
         )
     if (
-        stable_handler
-        and converted_effect
-        and all_effects_converted
-        and has_trigger
-        and value.get("condition") in (None, True)
-        and not unresolved
+        stable_handler and
+        converted_effect and
+        all_effects_converted and
+        has_trigger and
+        condition_converted and
+        not unresolved
     ):
         result.converted.append(f"{source.location}: EOC {eoc_id}")
     else:
@@ -7326,7 +8506,9 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
         "effect_type": [],
         "item_group": [],
         "sub_body_part": [],
+        "wound": [],
         "body_part": [],
+        "wound_fix": [],
         "anatomy": [],
         "body_graph": [],
         "field_type": [],
@@ -7387,11 +8569,19 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
     behaviour_chunks: list[str] = []
     speech_pools: dict[str, list[tuple[str, int]]] = {}
     snippet_categories: dict[str, dict[str, Any]] = {}
-    metadata: dict[str, Any] | None = None
+    metadata: SourceObject | None = None
     for source in objects:
         kind = source.value.get("type")
         if kind == "MOD_INFO" and metadata is None:
-            metadata = source.value
+            metadata = source
+        elif kind == "MOD_INFO":
+            metadata_id = stable_id(source.value, "<invalid id>")
+            result.partial.append(
+                f"{source.location}: MOD_INFO {metadata_id}"
+            )
+            result.todos.append(
+                f"{source.location}: additional MOD_INFO cannot be represented by one Platform ModDefinition"
+            )
         elif kind in ITEM_TYPES:
             rendered = render_item(source, result)
             if rendered:
@@ -7498,8 +8688,16 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
             rendered = render_sub_body_part(source, result)
             if rendered:
                 catalog_chunks[kind].append(rendered)
+        elif kind == "wound":
+            rendered = render_wound(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
         elif kind == "body_part":
             rendered = render_body_part(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "wound_fix":
+            rendered = render_wound_fix(source, result)
             if rendered:
                 catalog_chunks[kind].append(rendered)
         elif kind == "anatomy":
@@ -7712,13 +8910,13 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
             sound = display_text(value.get("sound"))
             volume = value.get("volume")
             valid = (
-                isinstance(speakers, list)
-                and bool(speakers)
-                and all(safe_platform_id(speaker) for speaker in speakers)
-                and bool(sound)
-                and isinstance(volume, int)
-                and not isinstance(volume, bool)
-                and NATIVE_INT_MIN <= volume <= NATIVE_INT_MAX
+                isinstance(speakers, list) and
+                bool(speakers) and
+                all(safe_platform_id(speaker) for speaker in speakers) and
+                bool(sound) and
+                isinstance(volume, int) and
+                not isinstance(volume, bool) and
+                NATIVE_INT_MIN <= volume <= NATIVE_INT_MAX
             )
             unresolved = unresolved_fields(
                 value, {"type", "speaker", "sound", "volume"}
@@ -7728,8 +8926,8 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
                     speech_pools.setdefault(speaker, []).append((sound, volume))
             if unresolved:
                 result.todos.append(
-                    f"{source.location}: speech unresolved fields: "
-                    + ", ".join(unresolved)
+                    f"{source.location}: speech unresolved fields: " +
+                    ", ".join(unresolved)
                 )
             if valid and not unresolved:
                 result.converted.append(f"{source.location}: speech line")
@@ -7809,7 +9007,7 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
         catalog_chunks["speech"].append("\n".join(lines))
 
     for category_id, category in snippet_categories.items():
-        rendered = render_collected_snippet_category( category_id, category )
+        rendered = render_collected_snippet_category(category_id, category)
         if rendered:
             catalog_chunks["snippet"].append(rendered)
 
@@ -7820,6 +9018,109 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
         "local runtime = ccb.runtime",
         "local services = ccb.services",
     ]
+    needs_character_has_item = any(
+        "character_has_item(" in chunk for chunk in behaviour_chunks
+    )
+    needs_character_has_weapon = any(
+        "character_has_weapon(" in chunk for chunk in behaviour_chunks
+    )
+    needs_character_has_any_bionic_or_capacity = any(
+        "character_has_any_bionic_or_capacity(" in chunk
+        for chunk in behaviour_chunks
+    )
+    needs_character_can_drop_weapon = any(
+        "character_can_drop_weapon(" in chunk for chunk in behaviour_chunks
+    )
+    needs_character_wields_with_flag = any(
+        "character_wields_with_flag(" in chunk for chunk in behaviour_chunks
+    )
+    needs_character_weapon_helpers = (
+        needs_character_has_weapon or
+        needs_character_can_drop_weapon or
+        needs_character_wields_with_flag
+    )
+    if (
+        needs_character_has_item or
+        needs_character_has_any_bionic_or_capacity or
+        needs_character_weapon_helpers or
+        any("service_value(" in chunk for chunk in behaviour_chunks)
+    ):
+        main.extend(
+            (
+                "",
+                "local function service_value(result)",
+                "    if not result.ok then",
+                "        error(result.error.message)",
+                "    end",
+                "    return result.value",
+                "end",
+            )
+        )
+    if needs_character_has_any_bionic_or_capacity:
+        main.extend(
+            (
+                "",
+                "local function character_has_any_bionic_or_capacity(character)",
+                "    local summary = service_value(services.bionics.summary(character))",
+                "    return summary.installed_count > 0 or summary.has_capacity",
+                "end",
+            )
+        )
+    if needs_character_has_weapon:
+        main.extend(
+            (
+                "",
+                "local function character_has_weapon(character)",
+                "    local wielded = service_value(services.inventory.wielded(character))",
+                "    if wielded == nil then",
+                "        return false",
+                "    end",
+                "    local style = service_value(services.martial_arts.current(character))",
+                "    return not style.force_unarmed",
+                "end",
+            )
+        )
+    if needs_character_can_drop_weapon:
+        main.extend(
+            (
+                "",
+                "local function character_can_drop_weapon(character)",
+                "    local wielded = service_value(services.inventory.wielded(character))",
+                "    if wielded == nil then",
+                "        return false",
+                "    end",
+                "    local style = service_value(services.martial_arts.current(character))",
+                "    if style.force_unarmed then",
+                "        return false",
+                "    end",
+                "    local no_unwield = service_value(services.items.has_flag(",
+                "        wielded, services.types.id(\"json_flag\", \"NO_UNWIELD\")))",
+                "    return not no_unwield",
+                "end",
+            )
+        )
+    if needs_character_wields_with_flag:
+        main.extend(
+            (
+                "",
+                "local function character_wields_with_flag(character, flag)",
+                "    local wielded = service_value(services.inventory.wielded(character))",
+                "    return wielded ~= nil and service_value(",
+                "        services.items.has_flag(wielded, flag))",
+                "end",
+            )
+        )
+    if needs_character_has_item:
+        main.extend(
+            (
+                "",
+                "local function character_has_item(character, item_id)",
+                "    local resources = service_value(services.inventory.resources(",
+                "        character, services.types.id(\"item\", item_id), 1))",
+                "    return resources.has_charges or resources.has_amount",
+                "end",
+            )
+        )
     catalog_labels = {
         "ascii_art": "Native ASCII-art definitions",
         "json_flag": "Native JSON-flag definitions",
@@ -7845,7 +9146,9 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
         "effect_type": "Native effect types",
         "item_group": "Native composable item groups",
         "sub_body_part": "Native sub-body-part definitions",
+        "wound": "Native wound definitions",
         "body_part": "Native body-part definitions",
+        "wound_fix": "Native wound-fix definitions",
         "anatomy": "Native anatomy definitions",
         "body_graph": "Native body-graph definitions",
         "field_type": "Native field types",
@@ -7914,26 +9217,8 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
     result.files[Path("main.lua")] = "\n".join(main)
 
     if metadata is not None:
-        dependencies = metadata.get("dependencies", [])
-        if not isinstance(dependencies, list):
-            dependencies = []
-        dependency_values = ", ".join(
-            lua_quote(value) for value in dependencies if isinstance(value, str)
-        )
-        name = display_text(metadata.get("name"), mod_id)
-        version = str(metadata.get("version", "0.1.0-migrating"))
-        result.files[Path("mod.lua")] = "\n".join(
-            (
-                'local ccb = require("ccb")',
-                "",
-                "return ccb.ModDefinition {",
-                f"    id = {lua_quote(mod_id)},",
-                f"    name = {lua_quote(name)},",
-                f"    version = {lua_quote(version)},",
-                f"    dependencies = {{ {dependency_values} }},",
-                "}",
-                "",
-            )
+        result.files[Path("mod.lua")] = render_mod_definition(
+            metadata, result, mod_id
         )
     result.files[Path("MIGRATION_REPORT.md")] = render_report(result, mod_id)
     return result

@@ -314,7 +314,7 @@ sol::table get_definition(
 }
 
 Character *resolve_character(
-    const game_handle &handle, const std::size_t runtime_generation,
+    const game_handle &handle, const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     std::optional<game_handle_error> &error )
 {
@@ -445,7 +445,7 @@ std::vector<const proficiency *> character_definitions(
 sol::table list_states(
     sol::this_state lua, const game_handle &handle,
     const sol::optional<sol::table> &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const state_list_options options =
@@ -486,7 +486,7 @@ sol::table list_states(
 sol::table get_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_proficiency_id(
@@ -550,7 +550,7 @@ sol::table grant_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
     const sol::optional<sol::table> &requested_options,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_proficiency_id(
@@ -593,7 +593,7 @@ sol::table grant_state(
 sol::table remove_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_proficiency_id(
@@ -631,7 +631,7 @@ sol::table practice_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
     const script_time_duration &requested_amount,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_proficiency_id(
@@ -672,7 +672,7 @@ sol::table set_progress_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
     const script_time_duration &requested_progress,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_proficiency_id(
@@ -724,7 +724,7 @@ sol::table set_progress_state(
 
 void install_proficiency_api(
     sol::table &game,
-    std::function<std::size_t()> current_runtime_generation,
+    std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write )

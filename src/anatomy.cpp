@@ -6,6 +6,7 @@
 #include <unordered_set>
 
 #include "ballistics.h"
+#include "catalua_platform_content.h"
 #include "character.h"
 #include "creature.h"
 #include "debug.h"
@@ -368,4 +369,3 @@ bodypart_id anatomy::select_body_part_projectile_attack( const double range_min,
     // And now, select the right body part
     return graph.select( range_min, range_max, value );
 }
-#include "catalua_platform_content.h"

@@ -83,7 +83,7 @@ const mtype_special_attack *cata::lua_platform::detail::monster_attack_registry_
 void cata::lua_platform::detail::monster_attack_registry_set(
     const mtype_special_attack &value )
 {
-    MonsterGenerator::generator().attack_map[value->id] = value;
+    MonsterGenerator::generator().attack_map.insert_or_assign( value->id, value );
 }
 
 void cata::lua_platform::detail::monster_attack_registry_erase( const std::string &id )
@@ -521,8 +521,13 @@ void MonsterGenerator::finalize_mtypes()
     }
 }
 
-void MonsterGenerator::finalize_lua_first_mtype( mtype &mon )
+void MonsterGenerator::finalize_lua_first_mtype_if_ready( mtype &mon,
+        const bool data_is_finalized )
 {
+    if( !data_is_finalized ) {
+        return;
+    }
+
     mon.flags.clear();
     for( const mon_flag_str_id &flag : mon.pre_flags_ ) {
         mon.flags.emplace( flag );

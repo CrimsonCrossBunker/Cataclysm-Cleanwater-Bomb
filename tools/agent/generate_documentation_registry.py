@@ -39,6 +39,8 @@ AGENT_METADATA = {
     "ai/documentation-registry.yml",
     "ai/docs-impact.yml",
     "ai/generated-files.yml",
+    "ai/lua-first-replacement-ledger.schema.json",
+    "ai/lua-first-replacement-ledger.yml",
     "ai/lua-first-roadmap.schema.json",
     "ai/lua-first-roadmap.yml",
     "ai/project-map.yml",
@@ -53,6 +55,7 @@ API_CONTRACTS = {
     "data/lua/reference/ccb_public_api_v5.schema.json",
     "data/lua/reference/ccb_public_api_v5_coverage.schema.json",
     "data/lua/types/ccb_api_v5.d.lua",
+    "data/lua/types/ccb_platform_v1.d.lua",
     "tools/json_api/contract-inventory.schema.json",
 }
 ARCHITECTURE_CONTRACTS = {
@@ -124,6 +127,8 @@ def generated_by(path: str) -> str | None:
         return "python3 tools/agent/generate_documentation_registry.py"
     if path == "ai/agent-benchmark-baseline.json":
         return "python3 tools/agent/benchmark_context_pack.py"
+    if path == "ai/lua-first-replacement-ledger.yml":
+        return "python3 tools/agent/generate_lua_first_replacement_ledger.py"
     if path in {
         "doc/migration/contributor-anomalies.yml",
         "doc/migration/markdown-inventory.yml",
@@ -182,6 +187,11 @@ def classify(path: str, legacy: dict[str, dict]) -> dict:
         status = "active"
         authority = "api_contract"
         source_of_truth = True
+    elif path.startswith("data/lua/templates/") and path.endswith(".md"):
+        category = "maintained_document"
+        status = "active"
+        authority = "explanatory"
+        source_of_truth = False
     elif generator:
         category = "generated_document"
         status = "generated"

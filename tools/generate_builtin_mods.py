@@ -116,9 +116,9 @@ def find_mod_roots(source: Path) -> set[str]:
         if not child.is_dir():
             continue
         if (
-            (child / "main.lua").is_file()
-            or (child / "mod.lua").is_file()
-            or any(child.rglob("modinfo.json"))
+            (child / "main.lua").is_file() or
+            (child / "mod.lua").is_file() or
+            any(child.rglob("modinfo.json"))
         ):
             result.add(child.relative_to(source).as_posix())
     return result

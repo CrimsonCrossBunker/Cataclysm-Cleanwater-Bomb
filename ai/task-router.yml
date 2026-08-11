@@ -59,7 +59,7 @@ entries:
       - CCB Lua v5 is a CCB contract and is not inferred from CBN or CDDA APIs.
   - id: lua-first-platform
     keywords: [Lua-first, Platform v1, pure Lua, main.lua, mod.lua, zero-config, JSON replacement, EOC replacement, 纯 Lua, 零配置, 替代 JSON, 替代 EOC]
-    paths: [data/lua/LUA_FIRST_PLATFORM.md, ai/lua-first-roadmap.yml, ai/lua-first-roadmap.schema.json, data/lua/, tools/lua_api/, src/]
+    paths: [data/lua/LUA_FIRST_PLATFORM.md, ai/lua-first-roadmap.yml, ai/lua-first-roadmap.schema.json, ai/lua-first-replacement-ledger.yml, ai/lua-first-replacement-ledger.schema.json, data/lua/, data/mods/Lua_First_Example/, tools/lua_api/, tools/agent/*lua_first*, tools/create_lua_mod.py, tools/migrate_lua_first.py, src/]
     project_ids: [lua-first-platform, lua-api, engine, developer-tools]
     documentation_ids: [architecture.lua-first-platform, architecture.lua-first-roadmap, architecture.lua-first-glossary]
     source_symbols: []

@@ -177,7 +177,7 @@ inventory_query_options read_inventory_options(
 }
 
 Character *resolve_character(
-    const game_handle &handle, const std::size_t runtime_generation,
+    const game_handle &handle, const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     std::optional<game_handle_error> &error )
 {
@@ -329,7 +329,7 @@ std::vector<inventory_item_entry> collect_inventory(
 
 game_handle make_item_handle(
     Character &character, const inventory_item_entry &entry,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const tripoint_abs_ms position = character.pos_abs();
@@ -348,7 +348,7 @@ game_handle make_item_handle(
 sol::table inventory_entry_to_lua(
     sol::state_view lua, Character &character,
     const inventory_item_entry &entry,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::table result = lua.create_table();
@@ -370,7 +370,7 @@ sol::table inventory_entry_to_lua(
 sol::table list_inventory(
     sol::this_state lua, const game_handle &character_handle,
     const sol::optional<sol::table> &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const inventory_query_options options =
@@ -427,7 +427,7 @@ sol::table list_inventory(
 sol::table find_inventory_item(
     sol::this_state lua, const game_handle &character_handle,
     const std::int64_t uid,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     if( uid <= 0 ) {
@@ -753,7 +753,7 @@ sol::table snapshot_item(
 sol::table item_snapshot_result(
     sol::this_state lua, const game_handle &handle,
     const sol::optional<int> &requested_relation_limit,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const int relation_limit =
@@ -917,7 +917,7 @@ sol::table snapshot_pocket(
 sol::table item_pockets_result(
     sol::this_state lua, const game_handle &handle,
     const sol::optional<sol::table> &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const pocket_query_options options =
@@ -1110,7 +1110,7 @@ void collect_item_contents(
 game_handle make_contained_item_handle(
     const game_handle &root,
     const contained_item_entry &entry,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     game_handle_locator locator = root.locator();
@@ -1126,7 +1126,7 @@ game_handle make_contained_item_handle(
 sol::table contained_item_to_lua(
     sol::state_view lua, const game_handle &root,
     const contained_item_entry &entry,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::table result = lua.create_table();
@@ -1148,7 +1148,7 @@ sol::table contained_item_to_lua(
 sol::table item_contents_result(
     sol::this_state lua, const game_handle &handle,
     const sol::optional<sol::table> &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const contents_query_options options =
@@ -1298,7 +1298,7 @@ sol::table mutable_item_state(
 sol::table update_item(
     sol::this_state lua, const game_handle &handle,
     const sol::table &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -1380,7 +1380,7 @@ sol::table item_var_to_lua(
 sol::table get_item_var(
     sol::this_state lua, const game_handle &handle,
     const std::string &key,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     validate_item_var_key( key, "game.items.get_var" );
@@ -1457,7 +1457,7 @@ void set_item_var_value(
 sol::table set_item_var(
     sol::this_state lua, const game_handle &handle,
     const std::string &key, const sol::object &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     validate_item_var_key( key, "game.items.set_var" );
@@ -1490,7 +1490,7 @@ sol::table set_item_var(
 sol::table erase_item_var(
     sol::this_state lua, const game_handle &handle,
     const std::string &key,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     validate_item_var_key( key, "game.items.erase_var" );
@@ -1514,7 +1514,7 @@ sol::table erase_item_var(
 sol::table item_has_flag(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &flag,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_id_kind(
@@ -1536,7 +1536,7 @@ sol::table item_has_flag(
 sol::table set_item_flag(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &flag, const bool enabled,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_id_kind(
@@ -1553,8 +1553,8 @@ sol::table set_item_flag(
     sol::table value = state.create_table();
     value["effective_before"] =
         resolved.value->has_flag( native );
-    value["own_before"] =
-        resolved.value->has_own_flag( native );
+    const bool own_before = resolved.value->has_own_flag( native );
+    value["own_before"] = own_before;
     if( enabled ) {
         resolved.value->set_flag( native );
     } else {
@@ -1562,8 +1562,9 @@ sol::table set_item_flag(
     }
     value["effective_after"] =
         resolved.value->has_flag( native );
-    value["own_after"] =
-        resolved.value->has_own_flag( native );
+    const bool own_after = resolved.value->has_own_flag( native );
+    value["own_after"] = own_after;
+    value["changed"] = own_before != own_after;
     return make_game_value_result(
                state, sol::make_object(
                    state, std::move( value ) ) );
@@ -1572,7 +1573,7 @@ sol::table set_item_flag(
 sol::table item_has_technique(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &technique,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_id_kind(
@@ -1595,7 +1596,7 @@ sol::table item_has_technique(
 sol::table set_item_technique(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &technique, const bool enabled,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_id_kind(
@@ -1659,7 +1660,7 @@ inventory_give_options read_inventory_give_options(
 
 sol::table character_item_to_lua(
     sol::state_view lua, Character &character, item &entry,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const std::vector<item *> parents =
@@ -1703,7 +1704,7 @@ sol::table character_item_to_lua(
 bool resolve_owned_item(
     const game_handle &character_handle,
     const game_handle &item_handle,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     Character *&character, item *&entry,
     std::optional<game_handle_error> &error )
@@ -1735,7 +1736,7 @@ bool resolve_owned_item(
 sol::table inventory_resources(
     sol::this_state lua, const game_handle &character_handle,
     const script_game_id &type, const std::int64_t quantity,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_id_kind(
@@ -1783,7 +1784,7 @@ sol::table give_inventory_items(
     sol::this_state lua, const game_handle &character_handle,
     const script_game_id &type, const std::int64_t quantity,
     const sol::optional<sol::table> &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_id_kind(
@@ -1860,7 +1861,7 @@ sol::table remove_inventory_item(
     sol::this_state lua, const game_handle &character_handle,
     const game_handle &item_handle,
     const sol::optional<std::int64_t> &requested_quantity,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -1964,7 +1965,7 @@ sol::table remove_inventory_item(
 sol::table wield_inventory_item(
     sol::this_state lua, const game_handle &character_handle,
     const game_handle &item_handle,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -2030,7 +2031,7 @@ sol::table wield_inventory_item(
 sol::table wear_inventory_item(
     sol::this_state lua, const game_handle &character_handle,
     const game_handle &item_handle,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -2122,7 +2123,7 @@ sol::table wear_inventory_item(
 
 sol::table stash_wielded_item(
     sol::this_state lua, const game_handle &character_handle,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -2194,7 +2195,7 @@ sol::table stash_wielded_item(
 
 void install_item_api(
     sol::table &game,
-    std::function<std::size_t()> current_runtime_generation,
+    std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write )

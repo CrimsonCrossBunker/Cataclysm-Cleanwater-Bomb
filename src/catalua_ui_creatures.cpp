@@ -136,7 +136,7 @@ game_handle_locator creature_locator( Creature &creature )
 }
 
 game_handle make_creature_handle(
-    Creature &creature, const std::size_t runtime_generation,
+    Creature &creature, const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     return game_handle::from_creature(
@@ -196,7 +196,7 @@ sol::table snapshot_creature(
 
 sol::table creature_snapshot_result(
     sol::this_state lua, const game_handle &handle,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -212,7 +212,7 @@ sol::table creature_snapshot_result(
 
 sol::table nearby_creatures(
     sol::this_state lua, const sol::optional<sol::table> &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const creature_query_options options = read_query_options( requested );
@@ -280,7 +280,7 @@ sol::table nearby_creatures(
 
 sol::table creature_at(
     sol::this_state lua, const script_tripoint_coord &position,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     if( position.native_origin() != coords::origin::abs ||
@@ -306,7 +306,7 @@ sol::table creature_at(
 }
 
 const Character *character_from_handle(
-    const game_handle &handle, const std::size_t runtime_generation,
+    const game_handle &handle, const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     std::optional<game_handle_error> &error )
 {
@@ -327,7 +327,7 @@ const Character *character_from_handle(
 }
 
 Character *mutable_character_from_handle(
-    const game_handle &handle, const std::size_t runtime_generation,
+    const game_handle &handle, const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     std::optional<game_handle_error> &error )
 {
@@ -469,7 +469,7 @@ sol::table character_mutable_state(
 sol::table adjust_character(
     sol::this_state lua, const game_handle &handle,
     const sol::table &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const character_adjustments adjustments =
@@ -525,7 +525,7 @@ sol::table adjust_character(
 sol::table heal_character(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &body_part, const int amount,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     if( amount <= 0 || amount > maximum_character_healing ) {
@@ -561,7 +561,7 @@ sol::table heal_character(
 sol::table set_character_movement_mode(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_mode,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     require_id_kind(
@@ -759,7 +759,7 @@ sol::table snapshot_character(
 sol::table character_snapshot_result(
     sol::this_state lua, const game_handle &handle,
     const sol::optional<int> &requested_body_part_limit,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -779,7 +779,7 @@ sol::table character_snapshot_result(
 
 sol::table character_by_id(
     sol::this_state lua, const std::int64_t id,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
@@ -808,7 +808,7 @@ sol::table character_by_id(
 
 sol::table nearby_characters(
     sol::this_state lua, const sol::optional<sol::table> &requested,
-    const std::size_t runtime_generation,
+    const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
     const creature_query_options options = read_query_options( requested );
@@ -871,7 +871,7 @@ sol::table nearby_characters(
 
 void install_creature_api(
     sol::table &game,
-    std::function<std::size_t()> current_runtime_generation,
+    std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write )
