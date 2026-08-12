@@ -2019,6 +2019,10 @@
     "type": "json_flag"
   },
   {
+    "id": "REBREATHER_INTERNAL",
+    "type": "json_flag"
+  },
+  {
     "id": "RECHARGE",
     "type": "json_flag"
   },
