@@ -378,6 +378,7 @@ Character flags can be `trait_id`, `json_flag_id` or `flag_id`.  Some of these a
 - ```BLIND``` Makes you blind.
 - ```BLOCK_HUGE_ATTACKS``` Size limitations on blocking are ignored
 - ```BLOCK_SUPERNATURAL_HEALING``` Blocks supernatural healing effects, like magical healing spells, from taking effect.  This flag does not block EoC-based healing like using the u_hp() effect.
+- ```CARDIO_MIN_GUARANTE``` If this flag is set, the character's cardiofit will be at least three times the base value (i.e., 3000).
 - ```BULLET_IMMUNE``` You are immune to bullet damage.
 - ```CANNIBAL``` Butcher humans, eat foods with the `CANNIBALISM` and `STRICT_HUMANITARIANISM` flags without a morale penalty.
 - ```CANNOT_ATTACK``` A creature with this flag cannot attack (includes spellcasting).

@@ -169,6 +169,7 @@ static const json_character_flag json_flag_BIONIC_FAULTY( "BIONIC_FAULTY" );
 static const json_character_flag json_flag_BIONIC_LIMB( "BIONIC_LIMB" );
 static const json_character_flag json_flag_BIONIC_SHOCKPROOF( "BIONIC_SHOCKPROOF" );
 static const json_character_flag json_flag_BLIND( "BLIND" );
+static const json_character_flag json_flag_CARDIO_MIN_GUARANTE( "CARDIO_MIN_GUARANTE" );
 static const json_character_flag json_flag_CANNIBAL( "CANNIBAL" );
 static const json_character_flag json_flag_CANNOT_GAIN_WEARINESS( "CANNOT_GAIN_WEARINESS" );
 static const json_character_flag json_flag_CANNOT_TAKE_DAMAGE( "CANNOT_TAKE_DAMAGE" );
@@ -2464,7 +2465,7 @@ int Character::get_cardiofit() const
     // Modify cardio accumulator by our cardio mods.
     const int cardio_fitness = static_cast<int>( cardio_base * cardio_modifier );
 
-    if( has_bionic( bio_synlungs ) ) {
+    if( has_flag( json_flag_CARDIO_MIN_GUARANTE ) ) {
         // If you have synthetic lung bionics, your cardioaccuracy will have a minimum guaranteed value.
         if( cardio_fitness < 3 * get_cardio_acc_base() ) {
             return 3 * get_cardio_acc_base();
