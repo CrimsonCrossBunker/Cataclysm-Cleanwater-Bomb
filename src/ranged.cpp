@@ -4133,7 +4133,20 @@ void target_ui::recalc_aim_turning_penalty()
         const double new_range = rl_dist_exact( src, dst );
         const double max_range = std::max( 1.0, std::max( old_range, new_range ) );
         const double displacement_ratio = clamp( displacement / max_range, 0.0, 1.0 );
-        const double directional_factor = 0.1 + 0.9 * angle_ratio;
+
+        const point_rel_ms aim_vec = curr_recoil_pos.xy() - src.xy();
+        const point_rel_ms move_vec = dst.xy() - curr_recoil_pos.xy();
+        const double aim_length = std::hypot( aim_vec.x(), aim_vec.y() );
+        const double move_length = std::hypot( move_vec.x(), move_vec.y() );
+        double lateral_ratio = 1.0;
+        if( aim_length > 0.0 && move_length > 0.0 ) {
+            const double dot_product = static_cast<double>( aim_vec.x() * move_vec.x() +
+                                       aim_vec.y() * move_vec.y() );
+            const double cos_theta = clamp( dot_product / ( aim_length * move_length ),
+                                            -1.0, 1.0 );
+            lateral_ratio = std::sqrt( std::max( 0.0, 1.0 - cos_theta * cos_theta ) );
+        }
+        const double directional_factor = 0.1 + 0.9 * lateral_ratio;
         const double displacement_penalty =
             displacement_ratio * ( MAX_RECOIL - curr_recoil ) * 0.25 * directional_factor;
 
