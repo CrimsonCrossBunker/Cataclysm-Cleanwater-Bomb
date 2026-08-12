@@ -2318,7 +2318,7 @@ static std::vector<aim_type_prediction> calculate_ranged_chances(
         } else {
             prediction.moves = predict_recoil( you, weapon, target, ui.get_sight_dispersion(), aim_type,
                                                start_recoil ).moves + time_to_attack( you, *weapon.type )
-                               + RAS_time( you, load_loc );
+                               + RAS_time( you, load_loc ) + action_time( you, *weapon.type );
         }
 
         // if the default method is "behind" the selected; e.g. you are in immediate
@@ -4128,15 +4128,27 @@ void target_ui::recalc_aim_turning_penalty()
         const double angle_ratio = clamp( to_degrees( angle ) / 180.0, 0.0, 1.0 );
         const double angle_penalty = to_degrees( angle ) * recoil_per_degree;
 
-        // A target moving along the same line may cause little or no angular
-        // change, but the previous aim point is still stale.  Keep this as a
-        // smaller contribution than the angle penalty and normalize it by
-        // range so that the same displacement is less significant at range.
         const double displacement = last_aim_pos ? rl_dist_exact( *last_aim_pos, dst ) : 0.0;
-        const double target_range = std::max( 1.0, static_cast<double>( dist_fn( dst ) ) );
-        const double displacement_ratio = clamp( displacement / target_range, 0.0, 1.0 );
+        const double old_range = last_aim_pos ? rl_dist_exact( src, *last_aim_pos ) : 0.0;
+        const double new_range = rl_dist_exact( src, dst );
+        const double max_range = std::max( 1.0, std::max( old_range, new_range ) );
+        const double displacement_ratio = clamp( displacement / max_range, 0.0, 1.0 );
+
+        const point_rel_ms aim_vec = curr_recoil_pos.xy() - src.xy();
+        const point_rel_ms move_vec = dst.xy() - curr_recoil_pos.xy();
+        const double aim_length = std::hypot( aim_vec.x(), aim_vec.y() );
+        const double move_length = std::hypot( move_vec.x(), move_vec.y() );
+        double lateral_ratio = 1.0;
+        if( aim_length > 0.0 && move_length > 0.0 ) {
+            const double dot_product = static_cast<double>( aim_vec.x() * move_vec.x() +
+                                       aim_vec.y() * move_vec.y() );
+            const double cos_theta = clamp( dot_product / ( aim_length * move_length ),
+                                            -1.0, 1.0 );
+            lateral_ratio = std::sqrt( std::max( 0.0, 1.0 - cos_theta * cos_theta ) );
+        }
+        const double directional_factor = 0.1 + 0.9 * lateral_ratio;
         const double displacement_penalty =
-            displacement_ratio * ( MAX_RECOIL - curr_recoil ) * 0.25;
+            displacement_ratio * ( MAX_RECOIL - curr_recoil ) * 0.25 * directional_factor;
 
         const double raw_predicted_recoil = curr_recoil + angle_penalty + displacement_penalty;
         const double reset_factor = 0.5 + 0.4 * angle_ratio;
