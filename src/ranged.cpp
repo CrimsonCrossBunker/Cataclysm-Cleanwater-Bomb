@@ -2318,7 +2318,7 @@ static std::vector<aim_type_prediction> calculate_ranged_chances(
         } else {
             prediction.moves = predict_recoil( you, weapon, target, ui.get_sight_dispersion(), aim_type,
                                                start_recoil ).moves + time_to_attack( you, *weapon.type )
-                               + RAS_time( you, load_loc );
+                               + RAS_time( you, load_loc ) + action_time( you, *weapon.type );
         }
 
         // if the default method is "behind" the selected; e.g. you are in immediate
