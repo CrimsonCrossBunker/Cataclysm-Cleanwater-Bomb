@@ -1255,7 +1255,7 @@ TEST_CASE( "lua_first_foundational_catalogs_are_native_and_transactional",
     const std::size_t previous_movement_mode_count = move_modes_by_speed().size();
     REQUIRE( base_mutation_overlay_ordering.count(
                  "ccb_platform_test_overlay" ) == 0 );
-    test_mod.write( "main.lua", R"lua(
+    std::string catalog_source = R"lua(
 local ccb = require("ccb")
 
 ccb.runtime.handler("ccb_platform_test_damage_hit", function(payload)
@@ -1600,7 +1600,8 @@ local art = ccb.content.AsciiArt {
 art:line("native Lua")
 art:line("content art")
 ccb.content.add(art)
-
+)lua";
+    catalog_source += R"lua(
 local end_screen = ccb.content.EndScreen {
     id = "ccb_platform_test_end_screen",
     picture = "ccb_platform_test_art",
@@ -1999,7 +2000,8 @@ local recipe_group = ccb.content.RecipeGroup {
 recipe_group:recipe("ccb_platform_catalog_recipe", "Craft Platform catalog item")
 recipe_group:terrain("ccb_platform_catalog_recipe", "ANY", "TYPE")
 ccb.content.add(recipe_group)
-)lua" );
+)lua";
+    test_mod.write( "main.lua", catalog_source );
 
     std::string error;
     REQUIRE( cata::lua_platform::prepare_mods(
