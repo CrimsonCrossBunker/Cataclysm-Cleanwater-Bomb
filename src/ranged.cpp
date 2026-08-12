@@ -4128,15 +4128,14 @@ void target_ui::recalc_aim_turning_penalty()
         const double angle_ratio = clamp( to_degrees( angle ) / 180.0, 0.0, 1.0 );
         const double angle_penalty = to_degrees( angle ) * recoil_per_degree;
 
-        // A target moving along the same line may cause little or no angular
-        // change, but the previous aim point is still stale.  Keep this as a
-        // smaller contribution than the angle penalty and normalize it by
-        // range so that the same displacement is less significant at range.
         const double displacement = last_aim_pos ? rl_dist_exact( *last_aim_pos, dst ) : 0.0;
-        const double target_range = std::max( 1.0, static_cast<double>( dist_fn( dst ) ) );
-        const double displacement_ratio = clamp( displacement / target_range, 0.0, 1.0 );
+        const double old_range = last_aim_pos ? rl_dist_exact( src, *last_aim_pos ) : 0.0;
+        const double new_range = rl_dist_exact( src, dst );
+        const double max_range = std::max( 1.0, std::max( old_range, new_range ) );
+        const double displacement_ratio = clamp( displacement / max_range, 0.0, 1.0 );
+        const double directional_factor = 0.1 + 0.9 * angle_ratio;
         const double displacement_penalty =
-            displacement_ratio * ( MAX_RECOIL - curr_recoil ) * 0.25;
+            displacement_ratio * ( MAX_RECOIL - curr_recoil ) * 0.25 * directional_factor;
 
         const double raw_predicted_recoil = curr_recoil + angle_penalty + displacement_penalty;
         const double reset_factor = 0.5 + 0.4 * angle_ratio;
