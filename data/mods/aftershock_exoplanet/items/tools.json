@@ -364,6 +364,7 @@
     "looks_like": "pot",
     "symbol": ")",
     "color": "light_green",
+    "qualities": [ [ "COOK", 3 ], [ "BOIL", 2 ], [ "CONTAIN", 1 ], [ "CHEM", 1 ], [ "HOTPLATE", 1 ] ],
     "use_action": [ "HOTPLATE" ],
     "flags": [ "ALLOWS_REMOTE_USE" ]
   },
