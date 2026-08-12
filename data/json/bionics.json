@@ -1337,7 +1337,8 @@
     "canceled_mutations": [ "GOODCARDIO", "BADCARDIO", "GOODCARDIO2", "PERSISTENCE_HUNTER", "PERSISTENCE_HUNTER2", "ASTHMA" ],
     "enchantments": [
       { "condition": "ALWAYS", "values": [ { "value": "MOD_HEALTH", "add": -1 }, { "value": "MOD_HEALTH_CAP", "add": -10 } ] }
-    ]
+    ],
+    "active_flags": [ "CARDIO_MIN_GUARANTE" ]
   },
   {
     "id": "bio_targeting",
