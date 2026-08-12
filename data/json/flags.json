@@ -1488,6 +1488,10 @@
     "type": "json_flag"
   },
   {
+    "id": "CARDIO_MIN_GUARANTE",
+    "type": "json_flag"
+  },
+  {
     "id": "CARNIVORE_OK",
     "type": "json_flag"
   },
