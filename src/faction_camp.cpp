@@ -5629,15 +5629,16 @@ item basecamp::make_fake_food( const nutrients &to_use ) const
     return food_item;
 }
 
-static time_point rot_time( const item &it, item *const container )
+static time_point rot_time( const item &it, item *const container,
+                            const float base_spoil_multiplier )
 {
     if( !it.goes_bad() ) {
         return calendar::turn_zero;
     }
-    float spoil_mod = 1.0f;
+    float spoil_mod = base_spoil_multiplier;
     if( container ) {
         if( item_pocket *const pocket = container->contained_where( it ) ) {
-            spoil_mod = pocket->spoil_multiplier();
+            spoil_mod = std::min( spoil_mod, pocket->spoil_multiplier() );
         }
     }
     // Container seals and prevents any spoilage.
@@ -5699,7 +5700,7 @@ static void add_consumed_nutrients( std::map<time_point, nutrients> &into, time_
 // Checks the contents of the item for nutrients, and removes ones with nutrients
 // nutrients gained from this item and it's contents are the value of the ret_val
 static ret_val<std::map<time_point, nutrients>> nutrients_from( item &it, item *const container,
-        bool distribute_vitamins )
+        bool distribute_vitamins, const float base_spoil_multiplier = 1.0f )
 {
     // nutrients consumed and when they will rot
     std::map<time_point, nutrients> consumed;
@@ -5710,7 +5711,8 @@ static ret_val<std::map<time_point, nutrients>> nutrients_from( item &it, item *
             if( from_item.has_value() ) {
                 // we perform a magic act here and remove the item that's preserving it while keeping it preserved
                 to_remove.push_back( content );
-                add_consumed_nutrients( consumed, rot_time( *content, container ), *from_item );
+                const time_point rot = rot_time( *content, container, base_spoil_multiplier );
+                add_consumed_nutrients( consumed, rot, *from_item );
                 return VisitResponse::SKIP;
             }
             return VisitResponse::NEXT;
@@ -5729,7 +5731,7 @@ static ret_val<std::map<time_point, nutrients>> nutrients_from( item &it, item *
     if( !from_this.has_value() ) {
         return ret_val<std::map<time_point, nutrients>>::make_failure( consumed );
     }
-    add_consumed_nutrients( consumed, rot_time( it, container ), *from_this );
+    add_consumed_nutrients( consumed, rot_time( it, container, base_spoil_multiplier ), *from_this );
     return ret_val<std::map<time_point, nutrients>>::make_success( consumed );
 }
 
