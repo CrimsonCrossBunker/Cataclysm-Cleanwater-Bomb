@@ -1180,8 +1180,16 @@ bool has_items_to_sort( Character &you, const tripoint_abs_ms &src,
         }
 
         item *it = it_pair.first;
+        float spoil_multiplier = 1.0f;
+        if( it_pair.second ) {
+            const std::optional<vpart_reference> ovp =
+                cargo_part_from_index( get_map().get_bub( src ), *it_pair.second );
+            if( ovp ) {
+                spoil_multiplier = ovp->info().cargo_spoil_multiplier / 100.0f;
+            }
+        }
         const zone_type_id dest_zone_type_id = mgr.get_near_zone_type_for_item( *it, abspos,
-                                               MAX_VIEW_DISTANCE, fac_id );
+                                               MAX_VIEW_DISTANCE, fac_id, spoil_multiplier );
 
         if( dest_zone_type_id == zone_type_id::NULL_ID() ) {
             continue;
