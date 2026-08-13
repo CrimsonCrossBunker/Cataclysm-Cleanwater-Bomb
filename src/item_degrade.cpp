@@ -509,7 +509,7 @@ void item::randomize_rot()
     }
 }
 
-int item::spoilage_sort_order() const
+int item::spoilage_sort_order( const float base_spoil_multiplier ) const
 {
     int bottom = std::numeric_limits<int>::max();
 
@@ -517,11 +517,11 @@ int item::spoilage_sort_order() const
     time_duration min_spoil_time = calendar::INDEFINITELY_LONG_DURATION;
     visit_items( [&]( item * const node, item * const parent ) {
         if( node && node->goes_bad() ) {
-            float spoil_multiplier = 1.0f;
+            float spoil_multiplier = base_spoil_multiplier;
             if( parent ) {
                 const item_pocket *const parent_pocket = parent->contained_where( *node );
                 if( parent_pocket ) {
-                    spoil_multiplier = parent_pocket->spoil_multiplier();
+                    spoil_multiplier = std::min( spoil_multiplier, parent_pocket->spoil_multiplier() );
                 }
             }
             if( spoil_multiplier > 0.0f ) {
