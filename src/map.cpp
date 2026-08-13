@@ -7534,7 +7534,8 @@ void map::process_items_in_vehicle( vehicle &cur_veh, submap &current_submap )
         bool in_tank = pt.info().has_flag( VPFLAG_FLUIDTANK );
         if( !process_map_items( *this, items, active_item_ref.item_ref, active_item_ref.parent,
                                 item_loc, it_insulation, flag,
-                                active_item_ref.spoil_multiplier(), in_tank || active_item_ref.has_watertight_container() ) ) {
+                                active_item_ref.spoil_multiplier() * pt.info().cargo_spoil_multiplier / 100.0f,
+                                in_tank || active_item_ref.has_watertight_container() ) ) {
             // If the item was NOT destroyed, we can skip the remainder,
             // which handles fallout from the vehicle being damaged.
             continue;
