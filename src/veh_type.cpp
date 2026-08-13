@@ -837,6 +837,11 @@ void vpart_info::check() const
         debugmsg( "vehicle part '%s' uses reserved character %c", id.str(), vehicles::variant_separator );
     }
 
+    if( has_flag( VPFLAG_FLUIDTANK ) && cargo_spoil_multiplier > 100 ) {
+        debugmsg( "vehicle part '%s' is a FLUIDTANK, cargo_spoil_multiplier above 100 has no effect",
+                  id.str() );
+    }
+
     for( const auto&[vid, vv] : variants ) {
         for( size_t i = 0; i < vv.symbols.size(); i++ ) {
             if( ( mk_wcwidth( vv.symbols[i] ) != 1 ) ||
