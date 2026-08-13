@@ -4353,8 +4353,7 @@ static int get_comestible_order( Character &you, const item_location &loc,
         }
     } else if( time == 0_turns ) {
         return 4;
-    } else if( loc.has_parent() &&
-               loc.parent_pocket()->spoil_multiplier() == 0.0f ) {
+    } else if( loc.spoil_multiplier() == 0.0f ) {
         return 3;
     } else {
         return 2;
