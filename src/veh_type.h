@@ -532,6 +532,9 @@ class vpart_info
         /** cargo weight modifier (percentage) */
         int cargo_weight_modifier = 100;
 
+        /** spoilage rate modifier for items stored in this part (percentage) */
+        int cargo_spoil_multiplier = 100;
+
         /*Comfort data for sleeping in vehicles*/
         int comfort = 0;
         units::temperature_delta floor_bedding_warmth = 0_C_delta;
