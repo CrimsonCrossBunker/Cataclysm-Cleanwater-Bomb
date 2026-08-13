@@ -5784,9 +5784,10 @@ bool basecamp::distribute_food( bool player_command )
         }
         if( const std::optional<vpart_reference> ovp = here.veh_at( p_food_stock ).cargo() ) {
             vehicle_stack items = ovp->items();
+            const float cargo_spoil = ovp->info().cargo_spoil_multiplier / 100.0f;
             for( auto iter = items.begin(); iter != items.end(); ) {
                 ret_val<std::map<time_point, nutrients>> ret = nutrients_from( *iter, nullptr,
-                                                      distribute_vitamins );
+                                                      distribute_vitamins, cargo_spoil );
                 if( ret.success() ) {
                     iter = items.erase( iter );
                 } else {
