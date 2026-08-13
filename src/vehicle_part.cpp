@@ -547,7 +547,7 @@ void vehicle_part::process_contents( map &here, const tripoint_bub_ms &pos, cons
     } else if( enabled && info().has_flag( VPFLAG_HEATED_TANK ) ) {
         flag = temperature_flag::HEATER;
     }
-    base.process( here, nullptr, pos, 1, flag );
+    base.process( here, nullptr, pos, 1, flag, info().cargo_spoil_multiplier / 100.0f );
 }
 
 bool vehicle_part::fill_with( item &liquid, int qty )
