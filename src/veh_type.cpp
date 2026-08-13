@@ -1070,12 +1070,22 @@ int vpart_info::format_description( std::string &msg, const nc_color &format_col
             append_desc( json_flag::get( flagid ).info() );
         }
     }
-    if( cargo_spoil_multiplier != 100 ) {
-        if( cargo_spoil_multiplier != 0 ) {
-            append_desc( string_format( _( "Stored items spoil at %d%% their original rate." ),
-                                        cargo_spoil_multiplier ) );
-        } else {
-            append_desc( _( "Stored items won't spoil." ) );
+    if( has_flag( VPFLAG_FLUIDTANK ) || cargo_spoil_multiplier != 100 ) {
+        float spoil_multiplier = cargo_spoil_multiplier / 100.0f;
+        if( has_flag( VPFLAG_FLUIDTANK ) ) {
+            class::item base( base_item );
+            for( item_pocket *const pocket : base.get_container_pockets() ) {
+                spoil_multiplier = std::min( spoil_multiplier, pocket->spoil_multiplier() );
+            }
+        }
+        if( spoil_multiplier != 1.0f ) {
+            if( spoil_multiplier != 0.0f ) {
+                const int percent = static_cast<int>( std::lround( spoil_multiplier * 100 ) );
+                append_desc( string_format( _( "Stored items spoil at %d%% their original rate." ),
+                                            percent ) );
+            } else {
+                append_desc( _( "Stored items won't spoil." ) );
+            }
         }
     }
     if( has_flag( "TURRET" ) ) {
