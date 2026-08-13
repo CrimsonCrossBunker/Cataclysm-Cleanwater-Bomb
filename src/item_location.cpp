@@ -1415,13 +1415,12 @@ float item_location::spoil_multiplier() const
     item_location parent = *this;
     while( parent.has_parent() ) {
         if( item_pocket *const pocket = parent.parent_pocket() ) {
-            multiplier = std::min( multiplier, pocket->spoil_multiplier() );
+            multiplier *= pocket->spoil_multiplier();
         }
         parent = parent.parent_item();
     }
     if( const vehicle_cursor *const cur = parent.veh_cursor() ) {
-        multiplier = std::min( multiplier,
-                               cur->veh.part( cur->part ).info().cargo_spoil_multiplier / 100.0f );
+        multiplier *= cur->veh.part( cur->part ).info().cargo_spoil_multiplier / 100.0f;
     }
     return multiplier;
 }
