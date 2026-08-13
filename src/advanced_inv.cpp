@@ -652,8 +652,10 @@ struct advanced_inv_sorter {
             }
             break;
             case SORTBY_SPOILAGE: {
-                const int order1 = d1.items.front()->spoilage_sort_order( d1.items.front().spoil_multiplier() );
-                const int order2 = d2.items.front()->spoilage_sort_order( d2.items.front().spoil_multiplier() );
+                const float mult1 = d1.items.front().spoil_multiplier();
+                const float mult2 = d2.items.front().spoil_multiplier();
+                const int order1 = d1.items.front()->spoilage_sort_order( mult1 );
+                const int order2 = d2.items.front()->spoilage_sort_order( mult2 );
                 if( order1 != order2 ) {
                     return order1 < order2;
                 }
