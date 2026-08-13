@@ -919,6 +919,7 @@ bool route_to_destination( Character &you, player_activity &act,
 bool sort_skip_item( Character &you, const item *it,
                      const std::vector<item_location> &other_activity_items,
                      bool ignore_favorite, const tripoint_abs_ms &src,
+                     const float base_spoil_multiplier,
                      bool *spillable_skipped )
 {
     const zone_manager &mgr = zone_manager::get_manager();
@@ -962,7 +963,7 @@ bool sort_skip_item( Character &you, const item *it,
 
     const faction_id fac_id = _fac_id( you );
     const zone_type_id zt_id = mgr.get_near_zone_type_for_item( *it, you.pos_abs(),
-                               MAX_VIEW_DISTANCE, fac_id );
+                               MAX_VIEW_DISTANCE, fac_id, base_spoil_multiplier );
     // Skip items already at their destination regardless of whether the zone
     // is bound to terrain or vehicle cargo. Delivery tries cargo first, so
     // items often land in vehicle storage even at terrain-bound zones (e.g.,
