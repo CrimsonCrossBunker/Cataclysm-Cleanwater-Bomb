@@ -15199,7 +15199,7 @@ void zone_sort_activity_actor::deliver_picked_items( Character &you,
             // determines the fallback chain: vehicle-only zones skip
             // ground, everything else tries cargo then ground.
             const zone_type_id drop_zt = mgr.get_near_zone_type_for_item( **iter,
-                                         drop_dest, 0, fac_id );
+                                         drop_dest, 0, fac_id, iter->spoil_multiplier() );
             const bool vehicle_only = drop_zt != zone_type_id::NULL_ID() &&
                                       mgr.has_vehicle( drop_zt, drop_dest, fac_id ) &&
                                       !mgr.has_terrain( drop_zt, drop_dest, fac_id );
