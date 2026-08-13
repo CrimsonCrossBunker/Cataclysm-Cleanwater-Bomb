@@ -1409,6 +1409,23 @@ const vehicle_cursor *item_location::veh_cursor() const
     return ptr->veh_cursor();
 }
 
+float item_location::spoil_multiplier() const
+{
+    float multiplier = 1.0f;
+    item_location parent = *this;
+    while( parent.has_parent() ) {
+        if( item_pocket *const pocket = parent.parent_pocket() ) {
+            multiplier = std::min( multiplier, pocket->spoil_multiplier() );
+        }
+        parent = parent.parent_item();
+    }
+    if( const vehicle_cursor *const cur = parent.veh_cursor() ) {
+        multiplier = std::min( multiplier,
+                               cur->veh.part( cur->part ).info().cargo_spoil_multiplier / 100.0f );
+    }
+    return multiplier;
+}
+
 bool item_location::held_by( Character const &who ) const
 {
     return carrier() == &who;
