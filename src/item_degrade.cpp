@@ -521,7 +521,8 @@ int item::spoilage_sort_order( const float base_spoil_multiplier ) const
             if( parent ) {
                 const item_pocket *const parent_pocket = parent->contained_where( *node );
                 if( parent_pocket ) {
-                    spoil_multiplier = std::min( spoil_multiplier, parent_pocket->spoil_multiplier() );
+                    spoil_multiplier = std::min( spoil_multiplier,
+                                                 parent_pocket->spoil_multiplier() );
                 }
             }
             if( spoil_multiplier > 0.0f ) {
