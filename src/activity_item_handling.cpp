@@ -1213,7 +1213,8 @@ bool has_items_to_sort( Character &you, const tripoint_abs_ms &src,
         }
 
         if( sort_skip_item( you, it, other_activity_items,
-                            zone_unload_options.ignore_favorite, src, spillable_skipped ) ) {
+                            zone_unload_options.ignore_favorite, src, spoil_multiplier,
+                            spillable_skipped ) ) {
             continue;
         }
 
