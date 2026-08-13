@@ -1070,6 +1070,14 @@ int vpart_info::format_description( std::string &msg, const nc_color &format_col
             append_desc( json_flag::get( flagid ).info() );
         }
     }
+    if( cargo_spoil_multiplier != 100 ) {
+        if( cargo_spoil_multiplier != 0 ) {
+            append_desc( string_format( _( "Stored items spoil at %d%% their original rate." ),
+                                        cargo_spoil_multiplier ) );
+        } else {
+            append_desc( _( "Stored items won't spoil." ) );
+        }
+    }
     if( has_flag( "TURRET" ) ) {
         class::item base( base_item );
         if( base.ammo_required() && !base.ammo_remaining( ) ) {
