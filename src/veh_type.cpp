@@ -277,6 +277,7 @@ void vpart_info::load( const JsonObject &jo, const std::string_view src )
         light_color.b = jarr.get_int( 2 ) / 255.0f;
     }
     optional( jo, was_loaded, "cargo_weight_modifier", cargo_weight_modifier, 100 );
+    optional( jo, was_loaded, "cargo_spoil_multiplier", cargo_spoil_multiplier, 100 );
     optional( jo, was_loaded, "categories", categories, string_reader{} );
     optional( jo, was_loaded, "flags", flags, string_reader{} );
     optional( jo, was_loaded, "description", description );
