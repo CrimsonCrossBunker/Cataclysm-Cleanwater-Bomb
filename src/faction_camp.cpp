@@ -5638,7 +5638,7 @@ static time_point rot_time( const item &it, item *const container,
     float spoil_mod = base_spoil_multiplier;
     if( container ) {
         if( item_pocket *const pocket = container->contained_where( it ) ) {
-            spoil_mod = std::min( spoil_mod, pocket->spoil_multiplier() );
+            spoil_mod *= pocket->spoil_multiplier();
         }
     }
     // Container seals and prevents any spoilage.
