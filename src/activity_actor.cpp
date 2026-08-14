@@ -15199,7 +15199,7 @@ void zone_sort_activity_actor::deliver_picked_items( Character &you,
             // determines the fallback chain: vehicle-only zones skip
             // ground, everything else tries cargo then ground.
             const zone_type_id drop_zt = mgr.get_near_zone_type_for_item( **iter,
-                                         drop_dest, 0, fac_id );
+                                         drop_dest, 0, fac_id, iter->spoil_multiplier() );
             const bool vehicle_only = drop_zt != zone_type_id::NULL_ID() &&
                                       mgr.has_vehicle( drop_zt, drop_dest, fac_id ) &&
                                       !mgr.has_terrain( drop_zt, drop_dest, fac_id );
@@ -15616,13 +15616,22 @@ void zone_sort_activity_actor::stage_do( player_activity &act, Character &you )
             continue;
         }
 
+        float spoil_multiplier = 1.0f;
+        if( it->second ) {
+            if( const std::optional<vpart_reference> ovp =
+                    zone_sorting::cargo_part_from_index( src_bub, *it->second ) ) {
+                spoil_multiplier = ovp->info().cargo_spoil_multiplier / 100.0f;
+            }
+        }
+
         if( zone_sorting::sort_skip_item( you, it->first, other_activity_items,
-                                          mgr.has( zone_type_LOOT_IGNORE_FAVORITES, src, fac_id ), src ) ) {
+                                          mgr.has( zone_type_LOOT_IGNORE_FAVORITES, src, fac_id ),
+                                          src, spoil_multiplier ) ) {
             continue;
         }
 
         const zone_type_id zt_id = mgr.get_near_zone_type_for_item( thisitem, abspos,
-                                   MAX_VIEW_DISTANCE, fac_id );
+                                   MAX_VIEW_DISTANCE, fac_id, spoil_multiplier );
 
         std::unordered_set<tripoint_abs_ms> dest_set =
             mgr.get_near( zt_id, abspos, MAX_VIEW_DISTANCE, &thisitem, fac_id );

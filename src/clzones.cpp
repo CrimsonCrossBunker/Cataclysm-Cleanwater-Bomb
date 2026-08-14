@@ -1404,7 +1404,8 @@ std::optional<tripoint_abs_ms> zone_manager::get_nearest( const zone_type_id &ty
 }
 
 zone_type_id zone_manager::get_near_zone_type_for_item( const item &it,
-        const tripoint_abs_ms &where, int range, const faction_id &fac ) const
+        const tripoint_abs_ms &where, int range, const faction_id &fac,
+        const float base_spoil_multiplier ) const
 {
     const item_category &cat = it.get_category_of_contents();
 
@@ -1450,16 +1451,18 @@ zone_type_id zone_manager::get_near_zone_type_for_item( const item &it,
         bool perishable = false;
         // Look for food, and whether any contents which will spoil if left out.
         // Food crafts and food without comestible, like MREs, will fall down to LOOT_FOOD.
-        it.visit_items( [&it_food, &perishable]( const item * node, const item * parent ) {
+        it.visit_items( [&it_food, &perishable, base_spoil_multiplier](
+                        const item * node, const item * parent ) {
             if( node && node->is_food() ) {
                 it_food = node;
 
                 if( node->goes_bad() ) {
-                    float spoil_multiplier = 1.0f;
+                    float spoil_multiplier = base_spoil_multiplier;
                     if( parent ) {
                         const item_pocket *parent_pocket = parent->contained_where( *node );
                         if( parent_pocket ) {
-                            spoil_multiplier = parent_pocket->spoil_multiplier();
+                            spoil_multiplier = std::min( spoil_multiplier,
+                                                         parent_pocket->spoil_multiplier() );
                         }
                     }
                     if( spoil_multiplier > 0.0f ) {

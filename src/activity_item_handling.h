@@ -80,6 +80,7 @@ bool route_to_destination( Character &you, player_activity &act,
 bool sort_skip_item( Character &you, const item *it,
                      const std::vector<item_location> &other_activity_items,
                      bool ignore_favorite, const tripoint_abs_ms &src,
+                     float base_spoil_multiplier = 1.0f,
                      bool *spillable_skipped = nullptr );
 
 /**

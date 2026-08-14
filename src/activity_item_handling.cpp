@@ -919,6 +919,7 @@ bool route_to_destination( Character &you, player_activity &act,
 bool sort_skip_item( Character &you, const item *it,
                      const std::vector<item_location> &other_activity_items,
                      bool ignore_favorite, const tripoint_abs_ms &src,
+                     const float base_spoil_multiplier,
                      bool *spillable_skipped )
 {
     const zone_manager &mgr = zone_manager::get_manager();
@@ -962,7 +963,7 @@ bool sort_skip_item( Character &you, const item *it,
 
     const faction_id fac_id = _fac_id( you );
     const zone_type_id zt_id = mgr.get_near_zone_type_for_item( *it, you.pos_abs(),
-                               MAX_VIEW_DISTANCE, fac_id );
+                               MAX_VIEW_DISTANCE, fac_id, base_spoil_multiplier );
     // Skip items already at their destination regardless of whether the zone
     // is bound to terrain or vehicle cargo. Delivery tries cargo first, so
     // items often land in vehicle storage even at terrain-bound zones (e.g.,
@@ -1179,8 +1180,16 @@ bool has_items_to_sort( Character &you, const tripoint_abs_ms &src,
         }
 
         item *it = it_pair.first;
+        float spoil_multiplier = 1.0f;
+        if( it_pair.second ) {
+            const std::optional<vpart_reference> ovp =
+                cargo_part_from_index( get_map().get_bub( src ), *it_pair.second );
+            if( ovp ) {
+                spoil_multiplier = ovp->info().cargo_spoil_multiplier / 100.0f;
+            }
+        }
         const zone_type_id dest_zone_type_id = mgr.get_near_zone_type_for_item( *it, abspos,
-                                               MAX_VIEW_DISTANCE, fac_id );
+                                               MAX_VIEW_DISTANCE, fac_id, spoil_multiplier );
 
         if( dest_zone_type_id == zone_type_id::NULL_ID() ) {
             continue;
@@ -1204,7 +1213,8 @@ bool has_items_to_sort( Character &you, const tripoint_abs_ms &src,
         }
 
         if( sort_skip_item( you, it, other_activity_items,
-                            zone_unload_options.ignore_favorite, src, spillable_skipped ) ) {
+                            zone_unload_options.ignore_favorite, src, spoil_multiplier,
+                            spillable_skipped ) ) {
             continue;
         }
 
@@ -4353,8 +4363,7 @@ static int get_comestible_order( Character &you, const item_location &loc,
         }
     } else if( time == 0_turns ) {
         return 4;
-    } else if( loc.has_parent() &&
-               loc.parent_pocket()->spoil_multiplier() == 0.0f ) {
+    } else if( loc.spoil_multiplier() == 0.0f ) {
         return 3;
     } else {
         return 2;

@@ -121,6 +121,10 @@ class item_location
         /** returns the vehicle whose inventory contains this item, nullptr if none **/
         const vehicle_cursor *veh_cursor() const;
 
+        /** effective spoilage multiplier of the storage this item sits in, combining all
+         *  parent pockets and the vehicle part it may be stored in */
+        float spoil_multiplier() const;
+
         /** returns true if the item is in the inventory of the given character **/
         bool held_by( Character const &who ) const;
 

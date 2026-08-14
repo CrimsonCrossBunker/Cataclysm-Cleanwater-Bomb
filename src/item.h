@@ -1242,7 +1242,8 @@ class item : public visitable
          * Get minimum time for this item or any of its contents to rot, ignoring
          * fridge. If this item is a container, its spoil multiplier is taken into
          * account, but the spoil multiplier of the parent container of this item,
-         * if any, is not.
+         * if any, is not.  \p base_spoil_multiplier is additionally combined,
+         * e.g. the spoil multiplier of the vehicle part storing this item.
          *
          * If this item does not rot and none of its contents rot either, the function
          * returns INT_MAX - N,
@@ -1253,7 +1254,7 @@ class item : public visitable
          * 1 for other comestibles,
          * 0 otherwise.
          */
-        int spoilage_sort_order() const;
+        int spoilage_sort_order( float base_spoil_multiplier = 1.0f ) const;
 
         /** an item is fresh if it is capable of rotting but still has a long shelf life remaining */
         bool is_fresh() const {

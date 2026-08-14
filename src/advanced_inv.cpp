@@ -651,11 +651,16 @@ struct advanced_inv_sorter {
                 }
             }
             break;
-            case SORTBY_SPOILAGE:
-                if( d1.items.front()->spoilage_sort_order() != d2.items.front()->spoilage_sort_order() ) {
-                    return d1.items.front()->spoilage_sort_order() < d2.items.front()->spoilage_sort_order();
+            case SORTBY_SPOILAGE: {
+                const float mult1 = d1.items.front().spoil_multiplier();
+                const float mult2 = d2.items.front().spoil_multiplier();
+                const int order1 = d1.items.front()->spoilage_sort_order( mult1 );
+                const int order2 = d2.items.front()->spoilage_sort_order( mult2 );
+                if( order1 != order2 ) {
+                    return order1 < order2;
                 }
-                break;
+            }
+            break;
             case SORTBY_PRICE:
                 if( d1.items.front()->price( true ) != d2.items.front()->price( true ) ) {
                     return d1.items.front()->price( true ) > d2.items.front()->price( true );

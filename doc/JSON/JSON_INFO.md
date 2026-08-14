@@ -2907,6 +2907,10 @@ Unless specified as optional, the following fields are mandatory for parts with 
 ```jsonc
 "size": "400 L",              // for parts with "CARGO" flag the capacity in liters
 "cargo_weight_modifier": 33,  // (Optional, default = 100) Multiplies cargo weight by this percentage.
+"cargo_spoil_multiplier": 50, // (Optional, default = 100) Multiplies the spoilage rate of items
+                              // stored in this part by this percentage.  0 preserves indefinitely.
+                              // Also applies to the contents of FLUIDTANK parts, which only
+                              // accept values in the 0-100 range.
 ```
 
 #### The following optional fields are specific to ENGINEs.

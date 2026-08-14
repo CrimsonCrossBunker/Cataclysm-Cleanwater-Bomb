@@ -277,6 +277,7 @@ void vpart_info::load( const JsonObject &jo, const std::string_view src )
         light_color.b = jarr.get_int( 2 ) / 255.0f;
     }
     optional( jo, was_loaded, "cargo_weight_modifier", cargo_weight_modifier, 100 );
+    optional( jo, was_loaded, "cargo_spoil_multiplier", cargo_spoil_multiplier, 100 );
     optional( jo, was_loaded, "categories", categories, string_reader{} );
     optional( jo, was_loaded, "flags", flags, string_reader{} );
     optional( jo, was_loaded, "description", description );
@@ -836,6 +837,11 @@ void vpart_info::check() const
         debugmsg( "vehicle part '%s' uses reserved character %c", id.str(), vehicles::variant_separator );
     }
 
+    if( has_flag( VPFLAG_FLUIDTANK ) && cargo_spoil_multiplier > 100 ) {
+        debugmsg( "vehicle part '%s' is a FLUIDTANK, cargo_spoil_multiplier above 100 has no effect",
+                  id.str() );
+    }
+
     for( const auto&[vid, vv] : variants ) {
         for( size_t i = 0; i < vv.symbols.size(); i++ ) {
             if( ( mk_wcwidth( vv.symbols[i] ) != 1 ) ||
@@ -1067,6 +1073,24 @@ int vpart_info::format_description( std::string &msg, const nc_color &format_col
             append_desc( string_format( json_flag::get( flagid ).info(), units::to_watt( epower ) ) );
         } else {
             append_desc( json_flag::get( flagid ).info() );
+        }
+    }
+    if( has_flag( VPFLAG_FLUIDTANK ) || cargo_spoil_multiplier != 100 ) {
+        float spoil_multiplier = cargo_spoil_multiplier / 100.0f;
+        if( has_flag( VPFLAG_FLUIDTANK ) ) {
+            class::item base( base_item );
+            for( item_pocket *const pocket : base.get_container_pockets() ) {
+                spoil_multiplier = std::min( spoil_multiplier, pocket->spoil_multiplier() );
+            }
+        }
+        if( spoil_multiplier != 1.0f ) {
+            if( spoil_multiplier != 0.0f ) {
+                const int percent = static_cast<int>( std::lround( spoil_multiplier * 100 ) );
+                append_desc( string_format( _( "Stored items spoil at %d%% their original rate." ),
+                                            percent ) );
+            } else {
+                append_desc( _( "Stored items won't spoil." ) );
+            }
         }
     }
     if( has_flag( "TURRET" ) ) {
