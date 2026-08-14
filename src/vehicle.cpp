@@ -4863,7 +4863,7 @@ double vehicle::foward_thrust_of_propellers( map &here, const bool fuelled, cons
         return 0.0;
     }
     double forward_thrust = ( 8.8658 * std::pow( engine_power_in_hp / propeller_area_in_feet,
-                             -0.3107 ) ) * engine_power_in_hp;
+                              -0.3107 ) ) * engine_power_in_hp;
     return forward_thrust * 4.45;
 }
 

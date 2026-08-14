@@ -2187,7 +2187,7 @@ activity_reason_info multi_mine_activity_actor::multi_activity_can_do( Character
     std::vector<item *> mining_inv = you.items_with( [&you, is_wall_mining]( const item & itm ) {
         return ( itm.has_flag( flag_DIG_TOOL ) && !itm.type->can_use( "JACKHAMMER" ) ) ||
                ( itm.type->can_use( "JACKHAMMER" ) && itm.ammo_sufficient( &you ) &&
-               ( !is_wall_mining || itm.has_flag( flag_MULTI_DRILL ) ) );
+                 ( !is_wall_mining || itm.has_flag( flag_MULTI_DRILL ) ) );
     } );
     if( mining_inv.empty() ) {
         return activity_reason_info::fail( do_activity_reason::NEEDS_MINING );
@@ -3453,9 +3453,9 @@ static bool mine_activity( Character &you, const tripoint_bub_ms &src_loc )
     // If we don't then our iteration will preferentially select the (powered) jackhammer and always fail in subsequent calls to dig_tool(). Very troublesome!
     const bool is_wall_mining = here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_WALL, src_loc );
     std::vector<item *> mining_inv = you.items_with( [&you, is_wall_mining]( const item & itm ) {
-        return ( itm.has_flag( flag_DIG_TOOL ) && !itm.type->can_use( "JACKHAMMER" ) ) || 
+        return ( itm.has_flag( flag_DIG_TOOL ) && !itm.type->can_use( "JACKHAMMER" ) ) ||
                ( itm.type->can_use( "JACKHAMMER" ) && itm.ammo_sufficient( &you ) &&
-               ( !is_wall_mining || itm.has_flag( flag_MULTI_DRILL ) ) );
+                 ( !is_wall_mining || itm.has_flag( flag_MULTI_DRILL ) ) );
     } );
     // All other failure conditions are handled in subsequent calls to dig_tool() with specific messaging for the player. This is just an early short circuit.
     if( mining_inv.empty() ) {

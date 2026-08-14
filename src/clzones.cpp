@@ -1452,7 +1452,7 @@ zone_type_id zone_manager::get_near_zone_type_for_item( const item &it,
         // Look for food, and whether any contents which will spoil if left out.
         // Food crafts and food without comestible, like MREs, will fall down to LOOT_FOOD.
         it.visit_items( [&it_food, &perishable, base_spoil_multiplier](
-                        const item * node, const item * parent ) {
+        const item * node, const item * parent ) {
             if( node && node->is_food() ) {
                 it_food = node;
 

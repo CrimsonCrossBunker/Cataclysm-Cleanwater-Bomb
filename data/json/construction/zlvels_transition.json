@@ -43,10 +43,7 @@
       [ { "id": "HAMMER", "level": 2 } ],
       [ { "id": "DIG", "level": 2 } ]
     ],
-    "tools": [
-      [ [ "pickaxe_list", 1, "LIST" ], [ "jackhammering_standard_2_5", 7, "LIST" ] ],
-      [ [ "tool_rope_long", 1, "LIST" ] ]
-    ],
+    "tools": [ [ [ "pickaxe_list", 1, "LIST" ], [ "jackhammering_standard_2_5", 7, "LIST" ] ], [ [ "tool_rope_long", 1, "LIST" ] ] ],
     "components": [ [ [ "2x4", 18 ] ], [ [ "wood_beam", 2 ] ], [ [ "nails", 90, "LIST" ], [ "nuts_bolts", 90 ] ] ],
     "byproducts": [ { "group": "digging_soil_loam_50L", "count": 40 } ],
     "activity_level": "EXTRA_EXERCISE",
@@ -108,10 +105,7 @@
       [ { "id": "HAMMER", "level": 2 } ],
       [ { "id": "DIG", "level": 2 } ]
     ],
-    "tools": [
-      [ [ "pickaxe_list", 1, "LIST" ], [ "jackhammering_standard_2_5", 8, "LIST" ] ],
-      [ [ "tool_rope_long", 1, "LIST" ] ]
-    ],
+    "tools": [ [ [ "pickaxe_list", 1, "LIST" ], [ "jackhammering_standard_2_5", 8, "LIST" ] ], [ [ "tool_rope_long", 1, "LIST" ] ] ],
     "components": [ [ [ "2x4", 18 ] ], [ [ "wood_beam", 2 ] ], [ [ "nails", 90, "LIST" ], [ "nuts_bolts", 90 ] ] ],
     "byproducts": [ { "group": "mining_rock" } ],
     "activity_level": "EXTRA_EXERCISE",

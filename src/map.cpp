@@ -3269,7 +3269,7 @@ bool map::ter_set( const tripoint_bub_ms &p, const ter_id &new_terrain, bool avo
                                           old_t.liquid_source_count != std::make_pair( 0, 0 ) &&
                                           !old_t.dries_to.is_empty() && !old_t.dries_to.is_null();
     const bool phase_transition = std::find( old_t.phase_targets.begin(), old_t.phase_targets.end(),
-        new_terrain.id() ) != old_t.phase_targets.end();
+                                  new_terrain.id() ) != old_t.phase_targets.end();
     if( old_hidden_finite_source && !hidden_finite_source && !phase_transition ) {
         // Covering or replacing a finite water surface must not leave hidden
         // water that can reappear later.  Freezing is the exception: ice

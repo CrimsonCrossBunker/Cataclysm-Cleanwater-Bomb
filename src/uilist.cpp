@@ -77,7 +77,7 @@ void uilist_impl::draw_controls()
     ImVec2 menu_size = parent.calculated_menu_size;
     if( parent.force_desired_bounds && parent.desired_bounds.has_value() ) {
         menu_size = uilist_menu_size_for_available_region( ImGui::GetContentRegionAvail(),
-            parent.extra_space_left, parent.extra_space_right );
+                    parent.extra_space_left, parent.extra_space_right );
     }
 
     // An invisible table with three columns. Used to create a sidebar effect.

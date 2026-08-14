@@ -1,17 +1,10 @@
 [
-    {
-        "//":"进入存档自动给予效果",
-        "type": "effect_on_condition",
-        "id": "begin_status_enhancement",
-       
-        "eoc_type": "EVENT",
-        "required_event":"game_begin",
-    
-        "effect":
-        [
-            { "u_add_effect": "skill_status_buff", "duration": "PERMANENT" }
-        ]
-    
-    }
-    
+  {
+    "//": "进入存档自动给予效果",
+    "type": "effect_on_condition",
+    "id": "begin_status_enhancement",
+    "eoc_type": "EVENT",
+    "required_event": "game_begin",
+    "effect": [ { "u_add_effect": "skill_status_buff", "duration": "PERMANENT" } ]
+  }
 ]

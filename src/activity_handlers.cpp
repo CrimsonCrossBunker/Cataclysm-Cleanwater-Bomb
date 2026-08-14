@@ -129,7 +129,7 @@ void activity_handlers::fill_liquid_do_turn( player_activity *act, Character *yo
                 break;
             case liquid_source_type::FINITE_MAP:
                 liquid = finite_water::finite_liquid_from( act_ref.coords.at( 0 ),
-                    &finite_body_tiles );
+                         &finite_body_tiles );
                 if( liquid.is_null() ) {
                     act_ref.set_to_null();
                     return;
