@@ -6545,7 +6545,7 @@ bool npc::drink_from_water_source( const tripoint_bub_ms &water_pos )
         const item shared = finite_water::finite_liquid_from( here.get_abs( water_pos ) );
         if( !shared.is_null() ) {
             withdrawn = finite_water::withdraw_finite_liquid( here.get_abs( water_pos ),
-                wanted_charges );
+                        wanted_charges );
         } else if( t.liquid_source_count != std::make_pair( 0, 0 ) ) {
             int remaining = wanted_charges;
             here.use_charges( { water_pos }, t.liquid_source_item_id, remaining,

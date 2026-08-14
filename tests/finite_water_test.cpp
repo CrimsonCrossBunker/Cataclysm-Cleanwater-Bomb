@@ -202,16 +202,22 @@ TEST_CASE( "finite_water_other_closed_liquids_are_finite", "[finite_water]" )
     const tripoint_bub_ms center = here.get_bub( setup_finite_water_test() );
     const std::vector<std::tuple<ter_str_id, ter_str_id, itype_id, int>> cases = {
         { ter_water_murky, ter_murky_bottom_dry, itype_water_murky, 400 },
-        { ter_water_sh_murky_underground, ter_murky_bottom_dry_underground,
-          itype_water_murky, 400 },
+        {
+            ter_water_sh_murky_underground, ter_murky_bottom_dry_underground,
+            itype_water_murky, 400
+        },
         { ter_sewage, ter_sewage_bottom_dry, itype_water_sewage, 400 },
         { ter_water_hot, ter_hot_spring_bottom_dry, itype_water_murky, 400 },
         { ter_water_sh_flood, ter_flood_bottom_dry, itype_water, 400 },
         { ter_nl_water_pool, ter_nl_pool_bottom_dry, itype_salt_water, 1600 },
-        { ter_interstice_mutagen_sh, ter_interstice_bottom_dry_sh,
-          itype_mutagen_interstice, 400 },
-        { ter_interstice_mutagen_pool, ter_interstice_pool_bottom_dry,
-          itype_mutagen_interstice, 400 }
+        {
+            ter_interstice_mutagen_sh, ter_interstice_bottom_dry_sh,
+            itype_mutagen_interstice, 400
+        },
+        {
+            ter_interstice_mutagen_pool, ter_interstice_pool_bottom_dry,
+            itype_mutagen_interstice, 400
+        }
     };
 
     int index = 0;
@@ -475,7 +481,7 @@ TEST_CASE( "finite_water_natural_source_classification", "[finite_water]" )
            water_source_kind::salt_infinite );
 
     const tripoint_bub_ms legacy_channel = center + tripoint::north * omt_width +
-                                       tripoint::west * omt_width;
+                                           tripoint::west * omt_width;
     set_omt_ter( here.get_abs( legacy_channel ), oter_field );
     here.ter_set( legacy_channel, ter_water_moving_sh );
     CHECK( finite_water::check_connection( here.get_abs( legacy_channel + tripoint::east ), true ) ==
@@ -484,7 +490,7 @@ TEST_CASE( "finite_water_natural_source_classification", "[finite_water]" )
     // A legacy swimming-pool tile remains finite even when its overmap tile
     // happens to be labeled as a river; the label cannot make it infinite.
     const tripoint_bub_ms legacy_pool = center + tripoint::south * omt_width +
-                                         tripoint::east * omt_width;
+                                        tripoint::east * omt_width;
     set_omt_ter( here.get_abs( legacy_pool ), oter_river );
     here.ter_set( legacy_pool, ter_water_pool );
     CHECK( finite_water::check_connection( here.get_abs( legacy_pool + tripoint::north ), true ) ==

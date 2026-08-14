@@ -926,7 +926,7 @@ void set_channel_flow_state( map &here, const std::vector<tripoint_abs_ms> &tile
 }
 
 int pour_into_finite_water_impl( const tripoint_abs_ms &p, item &liquid,
-                                const itype_id &liquid_id );
+                                 const itype_id &liquid_id );
 
 } // namespace
 
@@ -1085,7 +1085,7 @@ namespace
 {
 
 int pour_into_finite_water_impl( const tripoint_abs_ms &p, item &liquid,
-                                const itype_id &liquid_id )
+                                 const itype_id &liquid_id )
 {
     map &here = get_map();
     if( canonical_liquid_id( liquid.typeId() ) != canonical_liquid_id( liquid_id ) ) {

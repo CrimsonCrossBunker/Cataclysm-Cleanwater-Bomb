@@ -3636,7 +3636,7 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
             const lit_level ll = overmap_buffer.is_explored( omp ) ? lit_level::LOW : lit_level::LIT;
             if( drilled ) {
                 const Uint8 blend_alpha = static_cast<Uint8>( std::min(
-                                             192, 20 * ( ground_z_offset + 1 ) ) );
+                                              192, 20 * ( ground_z_offset + 1 ) ) );
                 pending_gray_overlay_ = SDL_Color{ 255, 255, 255, blend_alpha };
             }
             // light level is now used for choosing between grayscale filter and normal lit tiles.
