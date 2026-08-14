@@ -1132,10 +1132,7 @@
     "batch_time_factors": [ 90, 4 ],
     "autolearn": true,
     "qualities": [ { "id": "HAMMER", "level": 1 } ],
-    "tools": [
-      [ [ "fire", -1 ], [ "hotplate", 2 ] ],
-      [ [ "metalworking_tongs", -1 ], [ "metalworking_tongs_bronze", -1 ] ]
-    ],
+    "tools": [ [ [ "fire", -1 ], [ "hotplate", 2 ] ], [ [ "metalworking_tongs", -1 ], [ "metalworking_tongs_bronze", -1 ] ] ],
     "components": [ [ [ "hc_steel_chunk", 1 ], [ "chunk_cast_iron", 1 ] ] ],
     "//": "Primitive finery process: heat high-carbon steel or cast iron in an oxidizing fire and hammer it to burn off excess carbon, yielding standard steel."
   },
@@ -1152,10 +1149,7 @@
     "batch_time_factors": [ 90, 4 ],
     "autolearn": true,
     "qualities": [ { "id": "HAMMER", "level": 1 } ],
-    "tools": [
-      [ [ "fire", -1 ], [ "hotplate", 2 ] ],
-      [ [ "metalworking_tongs", -1 ], [ "metalworking_tongs_bronze", -1 ] ]
-    ],
+    "tools": [ [ [ "fire", -1 ], [ "hotplate", 2 ] ], [ [ "metalworking_tongs", -1 ], [ "metalworking_tongs_bronze", -1 ] ] ],
     "components": [ [ [ "budget_steel_chunk", 2 ] ] ],
     "//": "Primitive bloomery-style refining: heat and hammer budget steel chunks to drive out slag and impurities, yielding standard steel."
   },

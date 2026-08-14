@@ -13,7 +13,7 @@
     "weight": "500 g",
     "volume": "450 ml",
     "to_hit": -1,
-    "qualities": [ [ "HAMMER", 1 ], ["HOTPLATE", 1] ],
+    "qualities": [ [ "HAMMER", 1 ], [ "HOTPLATE", 1 ] ],
     "flags": [ "ALLOWS_REMOTE_USE", "FIRE", "NO_UNLOAD" ],
     "charges_per_use": 1,
     "sub": "hotplate",
