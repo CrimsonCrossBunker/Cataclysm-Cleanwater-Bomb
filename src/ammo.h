@@ -4,6 +4,8 @@
 
 #include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "translation.h"
 #include "type_id.h"
@@ -13,12 +15,18 @@ class JsonObject;
 namespace cata::lua_platform
 {
 class content_transaction;
+namespace detail
+{
+std::vector<std::pair<ammotype, ammunition_type>> ammunition_type_registry_snapshot();
+} // namespace detail
 } // namespace cata::lua_platform
 
 class ammunition_type
 {
         friend class DynamicDataLoader;
         friend class cata::lua_platform::content_transaction;
+        friend std::vector<std::pair<ammotype, ammunition_type>>
+        cata::lua_platform::detail::ammunition_type_registry_snapshot();
         template<typename T> friend class string_id;
     public:
         ammunition_type();

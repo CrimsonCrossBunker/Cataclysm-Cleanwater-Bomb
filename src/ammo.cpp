@@ -1,8 +1,10 @@
 #include "ammo.h"
 
+#include <algorithm>
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "debug.h"
 #include "flexbuffer_json.h"
@@ -52,6 +54,22 @@ const ammunition_type &string_id<ammunition_type>::obj() const
     debugmsg( "Tried to get invalid ammunition: %s", c_str() );
     static const ammunition_type null_ammunition;
     return null_ammunition;
+}
+
+std::vector<std::pair<ammotype, ammunition_type>>
+cata::lua_platform::detail::ammunition_type_registry_snapshot()
+{
+    std::vector<std::pair<ammotype, ammunition_type>> result;
+    const ammunition_type::registry_type &registry = ammunition_type::registry();
+    result.reserve( registry.size() );
+    for( const auto &[id, value] : registry ) {
+        result.emplace_back( id, value );
+    }
+    std::sort( result.begin(), result.end(),
+    []( const auto &left, const auto &right ) {
+        return left.first.str() < right.first.str();
+    } );
+    return result;
 }
 
 void ammunition_type::reset()
