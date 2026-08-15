@@ -4,29 +4,32 @@ kind: lua_first_replacement_ledger
 contract: Every checked legacy selector appears exactly once. Planned entries are migration work, not
   shipped Platform APIs. Bounded entries cover named real shapes without claiming full selector parity.
   Primitive-available entries have native composition building blocks but are not claims of selector-level
-  parity.
+  parity. Verified entries additionally pass the migrated-core semantic parity gate in tests/catalua_ui_test.cpp
+  field-for-field against the legacy JSON-loaded objects.
 sources:
 - id: json-object-types
   path: data/reference/json/ccb_json_object_types.json
   selector: type
-  source_fingerprint: sha256:4bb41e24840bcd0c2640989f1f229cfe195df2cd590cd8fb85d4abfdfe3af3f7
+  source_fingerprint: sha256:2d3e47e4ca7b885ebbc9d026bba2675ef2b21576197f1581944491cce55af675
   entry_count: 190
 - id: eoc-conditions
   path: data/reference/json/ccb_eoc_conditions.json
   selector: key
-  source_fingerprint: sha256:4bb41e24840bcd0c2640989f1f229cfe195df2cd590cd8fb85d4abfdfe3af3f7
+  source_fingerprint: sha256:2d3e47e4ca7b885ebbc9d026bba2675ef2b21576197f1581944491cce55af675
   entry_count: 275
 - id: eoc-effects
   path: data/reference/json/ccb_eoc_effects.json
   selector: key
-  source_fingerprint: sha256:4bb41e24840bcd0c2640989f1f229cfe195df2cd590cd8fb85d4abfdfe3af3f7
+  source_fingerprint: sha256:2d3e47e4ca7b885ebbc9d026bba2675ef2b21576197f1581944491cce55af675
   entry_count: 310
 summary:
   total: 775
-  implemented_unverified: 0
-  bounded_implemented_unverified: 119
-  primitive_available_unverified: 440
-  planned: 198
+  implemented_verified: 53
+  implemented_unverified: 14
+  bounded_implemented_verified: 14
+  bounded_implemented_unverified: 244
+  primitive_available_unverified: 299
+  planned: 133
   private_adapter: 0
   reviewed_not_applicable: 18
 entries:
@@ -41,11 +44,20 @@ entries:
 - inventory: eoc-conditions
   selector: at_safe_space
   target_kind: shared_service
-  target: services.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: services.overmap-safety-and-characters
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - conditional_fun::f_at_safe_space
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_creatures.cpp
+  - src/catalua_ui_overmap.cpp
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-conditions
   selector: compare_string
   target_kind: shared_service
@@ -122,11 +134,19 @@ entries:
 - inventory: eoc-conditions
   selector: has_alpha
   target_kind: shared_service
-  target: services.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: services.dialogue-projection
+  status: primitive_available_unverified
+  legacy_dependency: none
   evidence:
-  - conditional_fun::f_has_alpha
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_game_handle.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui.cpp
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
 - inventory: eoc-conditions
   selector: has_ammo
   target_kind: shared_service
@@ -151,11 +171,19 @@ entries:
 - inventory: eoc-conditions
   selector: has_beta
   target_kind: shared_service
-  target: services.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: services.dialogue-projection
+  status: primitive_available_unverified
+  legacy_dependency: none
   evidence:
-  - conditional_fun::f_has_beta
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_game_handle.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui.cpp
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
 - inventory: eoc-conditions
   selector: has_many_assigned_missions
   target_kind: shared_service
@@ -187,34 +215,67 @@ entries:
 - inventory: eoc-conditions
   selector: has_pickup_list
   target_kind: shared_service
-  target: services.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: services.npcs.ai-rules
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - conditional_fun::f_has_pickup_list
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_npcs.cpp
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-conditions
   selector: has_reason
   target_kind: shared_service
-  target: services.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: services.dialogue-projection
+  status: primitive_available_unverified
+  legacy_dependency: none
   evidence:
-  - conditional_fun::f_has_reason
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_game_handle.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui.cpp
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
 - inventory: eoc-conditions
   selector: is_by_radio
   target_kind: shared_service
-  target: services.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: services.dialogue-projection
+  status: primitive_available_unverified
+  legacy_dependency: none
   evidence:
-  - conditional_fun::f_is_by_radio
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_game_handle.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui.cpp
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
 - inventory: eoc-conditions
   selector: is_day
   target_kind: shared_service
-  target: services.time-weather
-  status: primitive_available_unverified
+  target: services.gameplay.environment
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/calendar.cpp
+  - src/calendar.h
 - inventory: eoc-conditions
   selector: is_outside
   target_kind: shared_service
@@ -230,25 +291,53 @@ entries:
 - inventory: eoc-conditions
   selector: is_rotten
   target_kind: shared_service
-  target: services.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: services.items
+  status: primitive_available_unverified
+  legacy_dependency: none
   evidence:
-  - conditional_fun::f_is_rotten
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_game_handle.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_items.cpp
+  - src/item.h
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-conditions
   selector: is_season
   target_kind: shared_service
-  target: services.time-weather
-  status: primitive_available_unverified
+  target: services.time
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/calendar.cpp
+  - src/catalua_ui_game.cpp
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-conditions
   selector: is_weather
   target_kind: shared_service
-  target: services.time-weather
-  status: primitive_available_unverified
+  target: services.weather
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_weather.cpp
+  - src/catalua_bindings_values.cpp
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-conditions
   selector: line_of_sight
   target_kind: shared_service
@@ -264,52 +353,108 @@ entries:
 - inventory: eoc-conditions
   selector: map_field_id
   target_kind: shared_service
-  target: services.map
-  status: primitive_available_unverified
+  target: services.gameplay.environment
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_platform_runtime.cpp
 - inventory: eoc-conditions
   selector: map_furniture_id
   target_kind: shared_service
-  target: services.map
-  status: primitive_available_unverified
+  target: services.gameplay.environment
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_platform_runtime.cpp
 - inventory: eoc-conditions
   selector: map_furniture_with_flag
   target_kind: shared_service
-  target: services.map
-  status: primitive_available_unverified
+  target: services.gameplay.environment
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_platform_runtime.cpp
 - inventory: eoc-conditions
   selector: map_in_city
   target_kind: shared_service
-  target: services.map
-  status: primitive_available_unverified
+  target: services.overmap
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_overmap.cpp
 - inventory: eoc-conditions
   selector: map_is_outside
   target_kind: shared_service
-  target: services.map
-  status: primitive_available_unverified
+  target: services.gameplay.environment
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_platform_runtime.cpp
 - inventory: eoc-conditions
   selector: map_terrain_id
   target_kind: shared_service
-  target: services.map
-  status: primitive_available_unverified
+  target: services.gameplay.environment
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_platform_runtime.cpp
 - inventory: eoc-conditions
   selector: map_terrain_with_flag
   target_kind: shared_service
-  target: services.map
-  status: primitive_available_unverified
+  target: services.gameplay.environment
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_platform_runtime.cpp
 - inventory: eoc-conditions
   selector: math
   target_kind: shared_service
@@ -376,10 +521,20 @@ entries:
 - inventory: eoc-conditions
   selector: npc_aim_rule
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.npcs
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_npcs.cpp
+  - src/npc.h
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-conditions
   selector: npc_allies
   target_kind: shared_service
@@ -404,10 +559,16 @@ entries:
 - inventory: eoc-conditions
   selector: npc_at_safe_space
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.overmap-safety-and-characters
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: npc_available
   target_kind: shared_service
@@ -419,9 +580,17 @@ entries:
   selector: npc_bodytype
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker_character.cpp
 - inventory: eoc-conditions
   selector: npc_can_drop_weapon
   target_kind: shared_service
@@ -442,16 +611,32 @@ entries:
   selector: npc_can_float
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
 - inventory: eoc-conditions
   selector: npc_can_fly
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
 - inventory: eoc-conditions
   selector: npc_can_see
   target_kind: shared_service
@@ -476,17 +661,37 @@ entries:
 - inventory: eoc-conditions
   selector: npc_cbm_recharge_rule
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.npcs
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_npcs.cpp
+  - src/npc.h
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-conditions
   selector: npc_cbm_reserve_rule
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.npcs
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_npcs.cpp
+  - src/npc.h
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-conditions
   selector: npc_controlling_vehicle
   target_kind: shared_service
@@ -504,24 +709,48 @@ entries:
 - inventory: eoc-conditions
   selector: npc_engagement_rule
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.npcs
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_npcs.cpp
+  - src/npc.h
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-conditions
   selector: npc_exists
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: npc_female
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_creatures.cpp
 - inventory: eoc-conditions
   selector: npc_following
   target_kind: shared_service
@@ -532,10 +761,16 @@ entries:
 - inventory: eoc-conditions
   selector: npc_friend
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.npcs
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: npc_has_activity
   target_kind: shared_service
@@ -560,10 +795,16 @@ entries:
 - inventory: eoc-conditions
   selector: npc_has_any_trait
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.mutations
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: npc_has_assigned_camp
   target_kind: shared_service
@@ -581,24 +822,45 @@ entries:
 - inventory: eoc-conditions
   selector: npc_has_bionics
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.bionics
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: npc_has_class
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_npcs.cpp
+  - src/talker_npc.cpp
 - inventory: eoc-conditions
   selector: npc_has_dexterity
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: npc_has_effect
   target_kind: shared_service
@@ -610,16 +872,30 @@ entries:
   selector: npc_has_flag
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_creatures.cpp
 - inventory: eoc-conditions
   selector: npc_has_intelligence
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: npc_has_item
   target_kind: shared_service
@@ -673,10 +949,16 @@ entries:
 - inventory: eoc-conditions
   selector: npc_has_martial_art
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.martial_arts
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: npc_has_move_mode
   target_kind: shared_service
@@ -703,9 +985,17 @@ entries:
   selector: npc_has_part_flag
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
 - inventory: eoc-conditions
   selector: npc_has_part_temp
   target_kind: shared_service
@@ -717,30 +1007,58 @@ entries:
   selector: npc_has_perception
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: npc_has_pickup_list
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.npcs.ai-rules
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_npcs.cpp
 - inventory: eoc-conditions
   selector: npc_has_profession
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_creatures.cpp
 - inventory: eoc-conditions
   selector: npc_has_proficiency
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.proficiencies
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: npc_has_software
   target_kind: shared_service
@@ -766,16 +1084,28 @@ entries:
   selector: npc_has_strength
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: npc_has_trait
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.mutations
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: npc_has_visible_trait
   target_kind: shared_service
@@ -845,10 +1175,16 @@ entries:
 - inventory: eoc-conditions
   selector: npc_hostile
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.npcs
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: npc_is_alive
   target_kind: shared_service
@@ -860,9 +1196,15 @@ entries:
   selector: npc_is_avatar
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: npc_is_avatar_passenger
   target_kind: shared_service
@@ -874,16 +1216,30 @@ entries:
   selector: npc_is_character
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_creatures.cpp
 - inventory: eoc-conditions
   selector: npc_is_deaf
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: npc_is_driven
   target_kind: shared_service
@@ -895,37 +1251,78 @@ entries:
   selector: npc_is_falling
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
+  - src/talker_vehicle.cpp
 - inventory: eoc-conditions
   selector: npc_is_floating
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
+  - src/talker_vehicle.cpp
 - inventory: eoc-conditions
   selector: npc_is_flying
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
+  - src/talker_vehicle.cpp
 - inventory: eoc-conditions
   selector: npc_is_furniture
   target_kind: shared_service
-  target: services.map
-  status: primitive_available_unverified
+  target: services.characters
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: npc_is_in_field
   target_kind: shared_service
-  target: services.map
-  status: primitive_available_unverified
+  target: services.gameplay.environment
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_platform_runtime.cpp
 - inventory: eoc-conditions
   selector: npc_is_in_vehicle
   target_kind: shared_service
@@ -936,38 +1333,74 @@ entries:
 - inventory: eoc-conditions
   selector: npc_is_item
   target_kind: shared_service
-  target: services.items
-  status: primitive_available_unverified
+  target: services.characters
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: npc_is_monster
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: npc_is_npc
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_npcs.cpp
 - inventory: eoc-conditions
   selector: npc_is_on_furniture
   target_kind: shared_service
-  target: services.map
-  status: primitive_available_unverified
+  target: services.gameplay.environment
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_platform_runtime.cpp
 - inventory: eoc-conditions
   selector: npc_is_on_furniture_with_flag
   target_kind: shared_service
-  target: services.map
-  status: primitive_available_unverified
+  target: services.gameplay.environment
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_platform_runtime.cpp
 - inventory: eoc-conditions
   selector: npc_is_on_rails
   target_kind: shared_service
@@ -978,24 +1411,48 @@ entries:
 - inventory: eoc-conditions
   selector: npc_is_on_terrain
   target_kind: shared_service
-  target: services.map
-  status: primitive_available_unverified
+  target: services.gameplay.environment
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_platform_runtime.cpp
 - inventory: eoc-conditions
   selector: npc_is_on_terrain_with_flag
   target_kind: shared_service
-  target: services.map
-  status: primitive_available_unverified
+  target: services.gameplay.environment
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_platform_runtime.cpp
 - inventory: eoc-conditions
   selector: npc_is_outside
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.gameplay.environment
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_platform_runtime.cpp
 - inventory: eoc-conditions
   selector: npc_is_remote_controlled
   target_kind: shared_service
@@ -1014,32 +1471,65 @@ entries:
   selector: npc_is_sinking
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
+  - src/talker_vehicle.cpp
 - inventory: eoc-conditions
   selector: npc_is_skidding
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
+  - src/talker_vehicle.cpp
 - inventory: eoc-conditions
   selector: npc_is_trait_purifiable
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.mutations
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker_character.cpp
+  - src/catalua_ui_mutations.cpp
 - inventory: eoc-conditions
   selector: npc_is_travelling
   target_kind: shared_service
   target: services.character-navigation
-  status: planned
-  legacy_dependency: public_legacy
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - conditional_fun::f_npc_is_travelling
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
   - src/condition.cpp
+  - src/catalua_ui_creatures.cpp
   - src/character.h
 - inventory: eoc-conditions
   selector: npc_is_underwater
@@ -1051,31 +1541,59 @@ entries:
 - inventory: eoc-conditions
   selector: npc_is_vehicle
   target_kind: shared_service
-  target: services.vehicles
-  status: primitive_available_unverified
+  target: services.characters
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: npc_is_warm
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: npc_is_wearing
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.inventory
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_items.cpp
 - inventory: eoc-conditions
   selector: npc_male
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_creatures.cpp
 - inventory: eoc-conditions
   selector: npc_mission_complete
   target_kind: shared_service
@@ -1115,9 +1633,18 @@ entries:
   selector: npc_need
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_creatures.cpp
+  - src/character.h
 - inventory: eoc-conditions
   selector: npc_override
   target_kind: shared_service
@@ -1191,10 +1718,16 @@ entries:
 - inventory: eoc-conditions
   selector: npc_using_martial_art
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.martial_arts
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: npc_vehicle_owned_by_avatar
   target_kind: shared_service
@@ -1233,18 +1766,35 @@ entries:
 - inventory: eoc-conditions
   selector: player_see_npc
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.creatures.perception
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_creatures.cpp
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-conditions
   selector: player_see_u
   target_kind: shared_service
-  target: services.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: services.creatures.perception
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - conditional_fun::f_player_see
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_creatures.cpp
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-conditions
   selector: roll_contested
   target_kind: shared_service
@@ -1270,9 +1820,18 @@ entries:
   selector: u_aim_rule
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
+  - src/talker_npc.cpp
 - inventory: eoc-conditions
   selector: u_are_owed
   target_kind: shared_service
@@ -1290,24 +1849,50 @@ entries:
 - inventory: eoc-conditions
   selector: u_at_safe_space
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.overmap-safety-and-characters
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_creatures.cpp
+  - src/catalua_ui_overmap.cpp
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-conditions
   selector: u_available
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/effect.h
 - inventory: eoc-conditions
   selector: u_bodytype
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker_character.cpp
 - inventory: eoc-conditions
   selector: u_can_drop_weapon
   target_kind: shared_service
@@ -1330,16 +1915,32 @@ entries:
   selector: u_can_float
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
 - inventory: eoc-conditions
   selector: u_can_fly
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
 - inventory: eoc-conditions
   selector: u_can_see
   target_kind: shared_service
@@ -1365,65 +1966,130 @@ entries:
   selector: u_cbm_recharge_rule
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
+  - src/talker_npc.cpp
 - inventory: eoc-conditions
   selector: u_cbm_reserve_rule
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
+  - src/talker_npc.cpp
 - inventory: eoc-conditions
   selector: u_controlling_vehicle
   target_kind: shared_service
-  target: services.vehicles
-  status: primitive_available_unverified
+  target: services.characters
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_driving
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_engagement_rule
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
+  - src/talker_npc.cpp
 - inventory: eoc-conditions
   selector: u_exists
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_female
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_following
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
 - inventory: eoc-conditions
   selector: u_friend
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_has_activity
   target_kind: shared_service
@@ -1466,9 +2132,17 @@ entries:
   selector: u_has_available_mission
   target_kind: shared_service
   target: services.missions
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
 - inventory: eoc-conditions
   selector: u_has_bionics
   target_kind: shared_service
@@ -1488,31 +2162,63 @@ entries:
 - inventory: eoc-conditions
   selector: u_has_camp
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.camps
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_camps.cpp
 - inventory: eoc-conditions
   selector: u_has_cash
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_creatures.cpp
+  - src/character.h
 - inventory: eoc-conditions
   selector: u_has_class
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
+  - src/talker_npc.cpp
 - inventory: eoc-conditions
   selector: u_has_dexterity
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_has_effect
   target_kind: shared_service
@@ -1531,16 +2237,32 @@ entries:
   selector: u_has_flag
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_creatures.cpp
+  - src/character.h
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-conditions
   selector: u_has_intelligence
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_has_item
   target_kind: shared_service
@@ -1589,9 +2311,17 @@ entries:
   selector: u_has_many_available_missions
   target_kind: shared_service
   target: services.missions
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
 - inventory: eoc-conditions
   selector: u_has_martial_art
   target_kind: shared_service
@@ -1612,9 +2342,17 @@ entries:
   selector: u_has_mission
   target_kind: shared_service
   target: services.missions
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_missions.cpp
 - inventory: eoc-conditions
   selector: u_has_move_mode
   target_kind: shared_service
@@ -1635,16 +2373,32 @@ entries:
   selector: u_has_no_available_mission
   target_kind: shared_service
   target: services.missions
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
 - inventory: eoc-conditions
   selector: u_has_part_flag
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
 - inventory: eoc-conditions
   selector: u_has_part_temp
   target_kind: shared_service
@@ -1656,23 +2410,49 @@ entries:
   selector: u_has_perception
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_has_pickup_list
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.npcs.ai-rules
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_npcs.cpp
+  - src/npctalk.cpp
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-conditions
   selector: u_has_profession
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_creatures.cpp
+  - src/profession.h
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-conditions
   selector: u_has_proficiency
   target_kind: shared_service
@@ -1714,9 +2494,15 @@ entries:
   selector: u_has_strength
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_has_trait
   target_kind: shared_service
@@ -1807,200 +2593,400 @@ entries:
   selector: u_hostile
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_is_alive
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_is_avatar
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_is_avatar_passenger
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_is_character
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_creatures.cpp
 - inventory: eoc-conditions
   selector: u_is_deaf
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_is_driven
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_is_falling
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
+  - src/talker_vehicle.cpp
 - inventory: eoc-conditions
   selector: u_is_floating
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
+  - src/talker_vehicle.cpp
 - inventory: eoc-conditions
   selector: u_is_flying
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
+  - src/talker_vehicle.cpp
 - inventory: eoc-conditions
   selector: u_is_furniture
   target_kind: shared_service
-  target: services.map
-  status: primitive_available_unverified
+  target: services.characters
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_is_in_field
   target_kind: shared_service
-  target: services.map
-  status: primitive_available_unverified
+  target: services.gameplay.environment
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_platform_runtime.cpp
 - inventory: eoc-conditions
   selector: u_is_in_vehicle
   target_kind: shared_service
-  target: services.vehicles
-  status: primitive_available_unverified
+  target: services.characters
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_is_item
   target_kind: shared_service
-  target: services.items
-  status: primitive_available_unverified
+  target: services.characters
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_is_monster
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_is_npc
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_is_on_furniture
   target_kind: shared_service
-  target: services.map
-  status: primitive_available_unverified
+  target: services.gameplay.environment
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_platform_runtime.cpp
 - inventory: eoc-conditions
   selector: u_is_on_furniture_with_flag
   target_kind: shared_service
-  target: services.map
-  status: primitive_available_unverified
+  target: services.gameplay.environment
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_platform_runtime.cpp
 - inventory: eoc-conditions
   selector: u_is_on_rails
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_is_on_terrain
   target_kind: shared_service
-  target: services.map
-  status: primitive_available_unverified
+  target: services.gameplay.environment
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_platform_runtime.cpp
 - inventory: eoc-conditions
   selector: u_is_on_terrain_with_flag
   target_kind: shared_service
-  target: services.map
-  status: primitive_available_unverified
+  target: services.gameplay.environment
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_platform_runtime.cpp
 - inventory: eoc-conditions
   selector: u_is_outside
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.gameplay.environment
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_creatures.cpp
 - inventory: eoc-conditions
   selector: u_is_remote_controlled
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_is_riding
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_is_sinking
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
+  - src/talker_vehicle.cpp
 - inventory: eoc-conditions
   selector: u_is_skidding
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
+  - src/talker_vehicle.cpp
 - inventory: eoc-conditions
   selector: u_is_trait_purifiable
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.mutations
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker_character.cpp
+  - src/catalua_ui_mutations.cpp
 - inventory: eoc-conditions
   selector: u_is_travelling
   target_kind: shared_service
   target: services.character-navigation
-  status: planned
-  legacy_dependency: public_legacy
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - conditional_fun::f_npc_is_travelling
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
   - src/condition.cpp
+  - src/catalua_ui_creatures.cpp
   - src/character.h
 - inventory: eoc-conditions
   selector: u_is_underwater
@@ -2012,24 +2998,45 @@ entries:
 - inventory: eoc-conditions
   selector: u_is_vehicle
   target_kind: shared_service
-  target: services.vehicles
-  status: primitive_available_unverified
+  target: services.characters
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_is_warm
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-conditions
   selector: u_is_wearing
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.inventory
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/character.h
 - inventory: eoc-conditions
   selector: u_know_recipe
   target_kind: shared_service
@@ -2051,37 +3058,77 @@ entries:
   selector: u_male
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_creatures.cpp
 - inventory: eoc-conditions
   selector: u_mission_complete
   target_kind: shared_service
   target: services.missions
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
 - inventory: eoc-conditions
   selector: u_mission_failed
   target_kind: shared_service
   target: services.missions
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
 - inventory: eoc-conditions
   selector: u_mission_goal
   target_kind: shared_service
   target: services.missions
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
 - inventory: eoc-conditions
   selector: u_mission_incomplete
   target_kind: shared_service
   target: services.missions
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
 - inventory: eoc-conditions
   selector: u_monsters_in_direction
   target_kind: shared_service
@@ -2100,9 +3147,18 @@ entries:
   selector: u_need
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_ui_creatures.cpp
+  - src/character.h
 - inventory: eoc-conditions
   selector: u_override
   target_kind: shared_service
@@ -2121,16 +3177,34 @@ entries:
   selector: u_rule
   target_kind: shared_service
   target: services.characters
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/talker.h
+  - src/talker_npc.cpp
 - inventory: eoc-conditions
   selector: u_safe_mode_trigger
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.gameplay.environment
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/condition.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/avatar.h
 - inventory: eoc-conditions
   selector: u_see_npc
   target_kind: shared_service
@@ -2961,38 +4035,72 @@ entries:
 - inventory: eoc-effects
   selector: npc_activate_trait
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.mutations
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/npctalk.cpp
+  - src/talker_character.cpp
+  - src/catalua_ui_mutations.cpp
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-effects
   selector: npc_add_bionic
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.bionics
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-effects
   selector: npc_add_effect
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.effects
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-effects
   selector: npc_add_morale
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.morale
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-effects
   selector: npc_add_trait
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.mutations
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-effects
   selector: npc_add_var
   target_kind: shared_service
@@ -3004,36 +4112,50 @@ entries:
   selector: npc_add_wet
   target_kind: shared_service
   target: services.wetness
-  status: planned
-  legacy_dependency: public_legacy
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - talk_effect_fun::f_add_wet
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/npctalk.cpp
   - src/weather.cpp
-  - src/suffer.cpp
+  - src/catalua_ui_creatures.cpp
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-effects
   selector: npc_add_wound
   target_kind: shared_service
   target: services.wounds
-  status: planned
-  legacy_dependency: public_legacy
+  status: primitive_available_unverified
+  legacy_dependency: none
   evidence:
-  - talk_effect_fun::f_add_wound
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_game_handle.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - data/lua/LUA_FIRST_PLATFORM.md
   - src/npctalk.cpp
-  - src/bodypart.cpp
-  - src/wound.cpp
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
-  - data/lua/LUA_FIRST_PLATFORM.md
+  - tests/catalua_ui_test.cpp
 - inventory: eoc-effects
   selector: npc_assign_activity
   target_kind: shared_service
   target: services.activities
-  status: planned
-  legacy_dependency: public_legacy
+  status: primitive_available_unverified
+  legacy_dependency: none
   evidence:
-  - talk_effect_fun::f_assign_activity
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_game_handle.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - data/lua/LUA_FIRST_PLATFORM.md
   - src/npctalk.cpp
-  - src/character.cpp
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
 - inventory: eoc-effects
   selector: npc_attack
   target_kind: shared_service
@@ -3059,17 +4181,18 @@ entries:
   selector: npc_cancel_activity
   target_kind: shared_service
   target: services.activities
-  status: primitive_available_unverified
+  status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
-  - src/catalua_game_handle.cpp
   - data/lua/types/ccb_platform_v1.d.lua
   - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
   - data/lua/LUA_FIRST_PLATFORM.md
   - src/npctalk.cpp
-  - src/character.cpp
-  - src/player_activity.cpp
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
 - inventory: eoc-effects
   selector: npc_cast_spell
   target_kind: shared_service
@@ -3115,10 +4238,20 @@ entries:
 - inventory: eoc-effects
   selector: npc_deactivate_trait
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.mutations
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/npctalk.cpp
+  - src/talker_character.cpp
+  - src/catalua_ui_mutations.cpp
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-effects
   selector: npc_deal_damage
   target_kind: shared_service
@@ -3160,17 +4293,29 @@ entries:
 - inventory: eoc-effects
   selector: npc_forget_martial_art
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.martial_arts
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-effects
   selector: npc_forget_recipe
   target_kind: shared_service
-  target: services.crafting
-  status: primitive_available_unverified
+  target: services.recipes
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-effects
   selector: npc_gets_item
   target_kind: shared_service
@@ -3195,17 +4340,29 @@ entries:
 - inventory: eoc-effects
   selector: npc_learn_martial_art
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.martial_arts
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-effects
   selector: npc_learn_recipe
   target_kind: shared_service
-  target: services.crafting
-  status: primitive_available_unverified
+  target: services.recipes
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-effects
   selector: npc_level_spell_class
   target_kind: shared_service
@@ -3223,10 +4380,16 @@ entries:
 - inventory: eoc-effects
   selector: npc_lose_bionic
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.bionics
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-effects
   selector: npc_lose_category
   target_kind: shared_service
@@ -3244,24 +4407,46 @@ entries:
 - inventory: eoc-effects
   selector: npc_lose_morale
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.morale
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-effects
   selector: npc_lose_trait
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.mutations
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-effects
   selector: npc_lose_var
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.variables
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/npctalk.cpp
+  - src/condition.cpp
+  - src/catalua_ui_eocs.cpp
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-effects
   selector: npc_make_radio_representative
   target_kind: shared_service
@@ -3293,10 +4478,17 @@ entries:
 - inventory: eoc-effects
   selector: npc_message
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.message
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/npctalk.cpp
 - inventory: eoc-effects
   selector: npc_mutate
   target_kind: shared_service
@@ -3381,16 +4573,18 @@ entries:
   selector: npc_remove_wound
   target_kind: shared_service
   target: services.wounds
-  status: planned
-  legacy_dependency: public_legacy
+  status: primitive_available_unverified
+  legacy_dependency: none
   evidence:
-  - talk_effect_fun::f_remove_wound
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_game_handle.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - data/lua/LUA_FIRST_PLATFORM.md
   - src/npctalk.cpp
-  - src/bodypart.cpp
-  - src/wound.cpp
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
-  - data/lua/LUA_FIRST_PLATFORM.md
+  - tests/catalua_ui_test.cpp
 - inventory: eoc-effects
   selector: npc_roll_remainder
   target_kind: shared_service
@@ -4086,10 +5280,20 @@ entries:
 - inventory: eoc-effects
   selector: u_activate_trait
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.mutations
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/npctalk.cpp
+  - src/talker_character.cpp
+  - src/catalua_ui_mutations.cpp
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-effects
   selector: u_add_bionic
   target_kind: shared_service
@@ -4160,10 +5364,16 @@ entries:
 - inventory: eoc-effects
   selector: u_add_trait
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.mutations
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-effects
   selector: u_add_var
   target_kind: shared_service
@@ -4175,36 +5385,50 @@ entries:
   selector: u_add_wet
   target_kind: shared_service
   target: services.wetness
-  status: planned
-  legacy_dependency: public_legacy
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - talk_effect_fun::f_add_wet
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/npctalk.cpp
   - src/weather.cpp
-  - src/suffer.cpp
+  - src/catalua_ui_creatures.cpp
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-effects
   selector: u_add_wound
   target_kind: shared_service
   target: services.wounds
-  status: planned
-  legacy_dependency: public_legacy
+  status: primitive_available_unverified
+  legacy_dependency: none
   evidence:
-  - talk_effect_fun::f_add_wound
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_game_handle.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - data/lua/LUA_FIRST_PLATFORM.md
   - src/npctalk.cpp
-  - src/bodypart.cpp
-  - src/wound.cpp
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
-  - data/lua/LUA_FIRST_PLATFORM.md
+  - tests/catalua_ui_test.cpp
 - inventory: eoc-effects
   selector: u_assign_activity
   target_kind: shared_service
   target: services.activities
-  status: planned
-  legacy_dependency: public_legacy
+  status: primitive_available_unverified
+  legacy_dependency: none
   evidence:
-  - talk_effect_fun::f_assign_activity
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_game_handle.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - data/lua/LUA_FIRST_PLATFORM.md
   - src/npctalk.cpp
-  - src/character.cpp
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
 - inventory: eoc-effects
   selector: u_attack
   target_kind: shared_service
@@ -4287,10 +5511,20 @@ entries:
 - inventory: eoc-effects
   selector: u_deactivate_trait
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.mutations
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/npctalk.cpp
+  - src/talker_character.cpp
+  - src/catalua_ui_mutations.cpp
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-effects
   selector: u_deal_damage
   target_kind: shared_service
@@ -4475,17 +5709,33 @@ entries:
 - inventory: eoc-effects
   selector: u_lose_trait
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.mutations
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: eoc-effects
   selector: u_lose_var
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.variables
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/npctalk.cpp
+  - src/condition.cpp
+  - src/catalua_ui_eocs.cpp
+  - data/lua/types/ccb_api_v5.d.lua
 - inventory: eoc-effects
   selector: u_make_radio_representative
   target_kind: shared_service
@@ -4517,10 +5767,17 @@ entries:
 - inventory: eoc-effects
   selector: u_message
   target_kind: shared_service
-  target: services.characters
-  status: primitive_available_unverified
+  target: services.message
+  status: bounded_implemented_unverified
   legacy_dependency: none
-  evidence: *id001
+  evidence:
+  - src/catalua_platform_runtime.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - tools/test_migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
+  - src/npctalk.cpp
 - inventory: eoc-effects
   selector: u_mutate
   target_kind: shared_service
@@ -4605,16 +5862,18 @@ entries:
   selector: u_remove_wound
   target_kind: shared_service
   target: services.wounds
-  status: planned
-  legacy_dependency: public_legacy
+  status: primitive_available_unverified
+  legacy_dependency: none
   evidence:
-  - talk_effect_fun::f_remove_wound
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_game_handle.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - data/lua/LUA_FIRST_PLATFORM.md
   - src/npctalk.cpp
-  - src/bodypart.cpp
-  - src/wound.cpp
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
-  - data/lua/LUA_FIRST_PLATFORM.md
+  - tests/catalua_ui_test.cpp
 - inventory: eoc-effects
   selector: u_roll_remainder
   target_kind: shared_service
@@ -4877,16 +6136,24 @@ entries:
 - inventory: json-object-types
   selector: ITEM_BLACKLIST
   target_kind: platform_domain
-  target: content.items
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.blacklists
+  status: implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_platform_content.h
+  - src/item_factory.cpp
+  - src/scenario.cpp
+  - src/savegame_json.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: ITEM_CATEGORY
   target_kind: platform_domain
   target: content.item-categories
-  status: bounded_implemented_unverified
+  status: bounded_implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -4899,7 +6166,7 @@ entries:
   selector: LOOT_ZONE
   target_kind: platform_domain
   target: content.zone-types
-  status: bounded_implemented_unverified
+  status: bounded_implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -4946,11 +6213,17 @@ entries:
 - inventory: json-object-types
   selector: MONSTER_BLACKLIST
   target_kind: platform_domain
-  target: content.creatures
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.blacklists
+  status: implemented_verified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/mongroup.cpp
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: MONSTER_FACTION
   target_kind: platform_domain
@@ -4967,24 +6240,38 @@ entries:
 - inventory: json-object-types
   selector: MONSTER_WHITELIST
   target_kind: platform_domain
-  target: content.creatures
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.blacklists
+  status: implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/mongroup.cpp
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: SCENARIO_BLACKLIST
   target_kind: platform_domain
-  target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.blacklists
+  status: implemented_verified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_platform_content.h
+  - src/item_factory.cpp
+  - src/scenario.cpp
+  - src/savegame_json.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: SPECIES
   target_kind: platform_domain
   target: content.species
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5004,11 +6291,18 @@ entries:
 - inventory: json-object-types
   selector: TRAIT_BLACKLIST
   target_kind: platform_domain
-  target: content.mutations
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.blacklists
+  status: implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/mutation_data.cpp
+  - src/mongroup.cpp
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: TRAIT_MIGRATION
   target_kind: platform_domain
@@ -5029,15 +6323,22 @@ entries:
   selector: achievement
   target_kind: platform_domain
   target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/achievement.cpp
+  - src/achievement.h
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: activity_type
   target_kind: platform_domain
   target: content.activity-types
-  status: bounded_implemented_unverified
+  status: implemented_unverified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5078,7 +6379,7 @@ entries:
   selector: ammunition_type
   target_kind: platform_domain
   target: content.ammunition-types
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5091,7 +6392,7 @@ entries:
   selector: anatomy
   target_kind: platform_domain
   target: content.anatomies
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5117,7 +6418,7 @@ entries:
   selector: attack_vector
   target_kind: platform_domain
   target: content.attack-vectors
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5130,7 +6431,7 @@ entries:
   selector: bash_damage_profile
   target_kind: platform_domain
   target: content.bash-damage-profiles
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5164,11 +6465,16 @@ entries:
 - inventory: json-object-types
   selector: bionic_migration
   target_kind: platform_domain
-  target: content.bionics
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.migrations
+  status: implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: body_graph
   target_kind: platform_domain
@@ -5198,11 +6504,16 @@ entries:
 - inventory: json-object-types
   selector: butchery_requirement
   target_kind: platform_domain
-  target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.butchery-requirements
+  status: implemented_verified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/butchery_requirements.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: camp_migration
   target_kind: platform_domain
@@ -5227,11 +6538,19 @@ entries:
 - inventory: json-object-types
   selector: charge_removal_blacklist
   target_kind: platform_domain
-  target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.blacklists
+  status: implemented_verified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_platform_content.h
+  - src/item_factory.cpp
+  - src/scenario.cpp
+  - src/savegame_json.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: city
   target_kind: platform_domain
@@ -5265,7 +6584,7 @@ entries:
   selector: clothing_mod
   target_kind: platform_domain
   target: content.clothing-modifications
-  status: bounded_implemented_unverified
+  status: bounded_implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5286,15 +6605,22 @@ entries:
   selector: conduct
   target_kind: platform_domain
   target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/achievement.cpp
+  - src/achievement.h
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: connect_group
   target_kind: platform_domain
   target: content.connect-groups
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5306,16 +6632,23 @@ entries:
 - inventory: json-object-types
   selector: construction
   target_kind: platform_domain
-  target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.map
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/construction.cpp
+  - src/construction.h
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: construction_category
   target_kind: platform_domain
   target: content.construction-categories
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5328,7 +6661,7 @@ entries:
   selector: construction_group
   target_kind: platform_domain
   target: content.construction-groups
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5341,7 +6674,7 @@ entries:
   selector: damage_info_order
   target_kind: platform_domain
   target: content.damage-info-presentation
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5354,7 +6687,7 @@ entries:
   selector: damage_type
   target_kind: platform_domain
   target: content.damage-types
-  status: bounded_implemented_unverified
+  status: bounded_implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5383,7 +6716,7 @@ entries:
   selector: disease_type
   target_kind: platform_domain
   target: content.disease-types
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5396,18 +6729,30 @@ entries:
   selector: dream
   target_kind: platform_domain
   target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  status: implemented_verified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/mutation_data.cpp
+  - src/mutation.h
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: effect_migration
   target_kind: platform_domain
-  target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.migrations
+  status: implemented_verified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: effect_on_condition
   target_kind: platform_domain
@@ -5433,7 +6778,7 @@ entries:
   selector: emit
   target_kind: platform_domain
   target: content.emissions
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5484,7 +6829,7 @@ entries:
   selector: explosion_light
   target_kind: platform_domain
   target: content.explosion-lights
-  status: bounded_implemented_unverified
+  status: bounded_implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5512,24 +6857,38 @@ entries:
 - inventory: json-object-types
   selector: fault
   target_kind: platform_domain
-  target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.faults
+  status: bounded_implemented_verified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/fault.cpp
+  - src/fault.h
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: fault_fix
   target_kind: platform_domain
   target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/fault.cpp
+  - src/fault.h
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: fault_group
   target_kind: platform_domain
   target: content.fault-groups
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5555,11 +6914,16 @@ entries:
 - inventory: json-object-types
   selector: field_type_migration
   target_kind: platform_domain
-  target: content.map
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.migrations
+  status: implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: forest_biome_component
   target_kind: platform_domain
@@ -5580,18 +6944,31 @@ entries:
   selector: furniture
   target_kind: platform_domain
   target: content.map
-  status: planned
-  legacy_dependency: public_legacy
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/mapdata.cpp
+  - src/mapdata.h
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: gate
   target_kind: platform_domain
-  target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.map
+  status: implemented_verified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/gates.cpp
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: harvest
   target_kind: platform_domain
@@ -5609,7 +6986,7 @@ entries:
   selector: harvest_drop_type
   target_kind: platform_domain
   target: content.harvest-drop-types
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5622,7 +6999,7 @@ entries:
   selector: help
   target_kind: platform_domain
   target: content.help-topics
-  status: bounded_implemented_unverified
+  status: implemented_unverified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5635,7 +7012,7 @@ entries:
   selector: hit_range
   target_kind: platform_domain
   target: content.hit-range
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5647,11 +7024,16 @@ entries:
 - inventory: json-object-types
   selector: item_action
   target_kind: platform_domain
-  target: content.items
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.item-actions
+  status: implemented_verified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/item_action.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: item_group
   target_kind: platform_domain
@@ -5678,7 +7060,7 @@ entries:
   selector: json_flag
   target_kind: platform_domain
   target: content.flags
-  status: bounded_implemented_unverified
+  status: bounded_implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5691,7 +7073,7 @@ entries:
   selector: limb_score
   target_kind: platform_domain
   target: content.limb-scores
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5704,7 +7086,7 @@ entries:
   selector: magic_type
   target_kind: platform_domain
   target: content.magic-types
-  status: bounded_implemented_unverified
+  status: implemented_unverified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5719,10 +7101,17 @@ entries:
   selector: map_extra
   target_kind: platform_domain
   target: content.map
-  status: planned
-  legacy_dependency: public_legacy
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/map_extras.cpp
+  - src/map_extras.h
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: map_extra_collection
   target_kind: platform_domain
@@ -5747,11 +7136,17 @@ entries:
 - inventory: json-object-types
   selector: martial_art
   target_kind: platform_domain
-  target: content.skills
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.martial-arts
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/martialarts.cpp
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: material
   target_kind: platform_domain
@@ -5792,11 +7187,17 @@ entries:
 - inventory: json-object-types
   selector: monster_adjustment
   target_kind: platform_domain
-  target: content.creatures
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.monsters
+  status: implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/monstergenerator.cpp
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: monster_attack
   target_kind: platform_domain
@@ -5814,7 +7215,7 @@ entries:
   selector: monster_flag
   target_kind: platform_domain
   target: content.monster-flags
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5826,16 +7227,21 @@ entries:
 - inventory: json-object-types
   selector: monstergroup
   target_kind: platform_domain
-  target: content.creatures
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.monster-groups
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/mongroup.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: mood_face
   target_kind: platform_domain
   target: content.mood-faces
-  status: bounded_implemented_unverified
+  status: bounded_implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5848,7 +7254,7 @@ entries:
   selector: morale_type
   target_kind: platform_domain
   target: content.morale-types
-  status: bounded_implemented_unverified
+  status: bounded_implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5861,7 +7267,7 @@ entries:
   selector: movement_mode
   target_kind: platform_domain
   target: content.movement-modes
-  status: bounded_implemented_unverified
+  status: bounded_implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5882,7 +7288,7 @@ entries:
   selector: mutation_category
   target_kind: platform_domain
   target: content.mutation-categories
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5908,7 +7314,7 @@ entries:
   selector: named_color
   target_kind: platform_domain
   target: content.named-colors
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5966,16 +7372,21 @@ entries:
 - inventory: json-object-types
   selector: oter_id_migration
   target_kind: platform_domain
-  target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.migrations
+  status: implemented_verified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: oter_vision
   target_kind: platform_domain
   target: content.overmap-vision
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -5988,7 +7399,7 @@ entries:
   selector: overlay_order
   target_kind: platform_domain
   target: content.overlay-order
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -6000,16 +7411,21 @@ entries:
 - inventory: json-object-types
   selector: overmap_connection
   target_kind: platform_domain
-  target: content.map
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.overmap-connections
+  status: implemented_verified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/overmap_connection.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: overmap_land_use_code
   target_kind: platform_domain
   target: content.overmap-land-use-codes
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -6042,11 +7458,16 @@ entries:
 - inventory: json-object-types
   selector: overmap_special_migration
   target_kind: platform_domain
-  target: content.map
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.migrations
+  status: implemented_verified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: overmap_terrain
   target_kind: platform_domain
@@ -6067,7 +7488,7 @@ entries:
   selector: playlist
   target_kind: platform_domain
   target: content.playlists
-  status: bounded_implemented_unverified
+  status: implemented_unverified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -6088,11 +7509,16 @@ entries:
 - inventory: json-object-types
   selector: practice
   target_kind: platform_domain
-  target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.recipes
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/recipe_dictionary.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: profession
   target_kind: platform_domain
@@ -6104,16 +7530,22 @@ entries:
 - inventory: json-object-types
   selector: profession_blacklist
   target_kind: platform_domain
-  target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.blacklists
+  status: implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_platform_content.h
+  - src/profession.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: profession_group
   target_kind: platform_domain
   target: content.profession-groups
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -6147,7 +7579,7 @@ entries:
   selector: proficiency_category
   target_kind: platform_domain
   target: content.proficiency-categories
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -6159,11 +7591,16 @@ entries:
 - inventory: json-object-types
   selector: proficiency_migration
   target_kind: platform_domain
-  target: content.skills
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.migrations
+  status: implemented_verified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: recipe
   target_kind: platform_domain
@@ -6180,7 +7617,7 @@ entries:
   selector: recipe_category
   target_kind: platform_domain
   target: content.recipe-categories
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -6193,7 +7630,7 @@ entries:
   selector: recipe_group
   target_kind: platform_domain
   target: content.recipe-groups
-  status: bounded_implemented_unverified
+  status: bounded_implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -6331,7 +7768,7 @@ entries:
   selector: rotatable_symbol
   target_kind: platform_domain
   target: content.rotatable-symbols
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -6343,16 +7780,21 @@ entries:
 - inventory: json-object-types
   selector: scenario
   target_kind: platform_domain
-  target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.scenarios
+  status: bounded_implemented_verified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/scenario.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: scent_type
   target_kind: platform_domain
   target: content.scent-types
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -6377,32 +7819,53 @@ entries:
 - inventory: json-object-types
   selector: shopkeeper_blacklist
   target_kind: platform_domain
-  target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.shopkeeper-rules
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/shop_cons_rate.cpp
+  - src/shop_cons_rate.h
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: shopkeeper_consumption_rates
   target_kind: platform_domain
-  target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.shopkeeper-rules
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/shop_cons_rate.cpp
+  - src/shop_cons_rate.h
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: shopkeeper_whitelist
   target_kind: platform_domain
-  target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.shopkeeper-rules
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/shop_cons_rate.cpp
+  - src/shop_cons_rate.h
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: skill
   target_kind: platform_domain
   target: content.skills
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -6415,7 +7878,7 @@ entries:
   selector: skill_display_type
   target_kind: platform_domain
   target: content.skill-display-categories
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -6441,24 +7904,38 @@ entries:
 - inventory: json-object-types
   selector: sound_effect
   target_kind: platform_domain
-  target: content.audio
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.sound-effects
+  status: implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/sdlsound.cpp
+  - src/sounds.cpp
+  - src/sounds.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: sound_effect_preload
   target_kind: platform_domain
-  target: content.audio
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.sound-effects
+  status: implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/sdlsound.cpp
+  - src/sounds.cpp
+  - src/sounds.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: speech
   target_kind: platform_domain
   target: content.speech-pools
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -6471,7 +7948,7 @@ entries:
   selector: speed_description
   target_kind: platform_domain
   target: content.speed-descriptions
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -6492,7 +7969,7 @@ entries:
   selector: start_location
   target_kind: platform_domain
   target: content.start-locations
-  status: bounded_implemented_unverified
+  status: bounded_implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -6505,7 +7982,7 @@ entries:
   selector: sub_body_part
   target_kind: platform_domain
   target: content.sub-body-parts
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -6525,27 +8002,46 @@ entries:
 - inventory: json-object-types
   selector: technique
   target_kind: platform_domain
-  target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.martial-arts
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/martialarts.cpp
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: temperature_removal_blacklist
   target_kind: platform_domain
-  target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.blacklists
+  status: implemented_verified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_platform_content.h
+  - src/item_factory.cpp
+  - src/scenario.cpp
+  - src/savegame_json.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: ter_furn_migration
   target_kind: platform_domain
-  target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.migrations
+  status: implemented_verified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: ter_furn_transform
   target_kind: platform_domain
@@ -6558,10 +8054,17 @@ entries:
   selector: terrain
   target_kind: platform_domain
   target: content.map
-  status: planned
-  legacy_dependency: public_legacy
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/mapdata.cpp
+  - src/mapdata.h
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: test_data
   target_kind: not_applicable
@@ -6574,7 +8077,7 @@ entries:
   selector: tool_quality
   target_kind: platform_domain
   target: content.tool-qualities
-  status: bounded_implemented_unverified
+  status: bounded_implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -6586,43 +8089,72 @@ entries:
 - inventory: json-object-types
   selector: trait_group
   target_kind: platform_domain
-  target: content.mutations
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.trait-groups
+  status: implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/mutation_data.cpp
+  - src/trait_group.h
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: trap
   target_kind: platform_domain
-  target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.map
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/trap.cpp
+  - src/trap.h
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: trap_migration
   target_kind: platform_domain
-  target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.migrations
+  status: implemented_verified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: uncraft
   target_kind: platform_domain
-  target: content.crafting
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.recipes
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/recipe_dictionary.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: var_migration
   target_kind: platform_domain
-  target: content.state-and-values
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.migrations
+  status: implemented_verified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: vehicle
   target_kind: platform_domain
@@ -6634,16 +8166,21 @@ entries:
 - inventory: json-object-types
   selector: vehicle_color_palette
   target_kind: platform_domain
-  target: content.vehicles
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.vehicle-color-palettes
+  status: implemented_verified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/vehicle_palette.cpp
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: vehicle_group
   target_kind: platform_domain
   target: content.vehicle-groups
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -6664,7 +8201,7 @@ entries:
   selector: vehicle_part_category
   target_kind: platform_domain
   target: content.vehicle-part-categories
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -6677,7 +8214,7 @@ entries:
   selector: vehicle_part_location
   target_kind: platform_domain
   target: content.vehicle-part-locations
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -6689,11 +8226,16 @@ entries:
 - inventory: json-object-types
   selector: vehicle_part_migration
   target_kind: platform_domain
-  target: content.vehicles
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.migrations
+  status: implemented_verified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: vehicle_placement
   target_kind: platform_domain
@@ -6740,7 +8282,7 @@ entries:
   selector: weapon_category
   target_kind: platform_domain
   target: content.weapon-categories
-  status: bounded_implemented_unverified
+  status: implemented_verified
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
@@ -6753,10 +8295,17 @@ entries:
   selector: weather_generator
   target_kind: platform_domain
   target: content.time-weather
-  status: planned
-  legacy_dependency: public_legacy
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
-  - src/init.cpp
+  - src/catalua_platform_runtime.cpp
+  - src/weather_gen.cpp
+  - src/weather_gen.h
+  - src/catalua_platform_content.h
+  - data/lua/types/ccb_platform_v1.d.lua
+  - tests/catalua_ui_test.cpp
+  - tools/migrate_lua_first.py
+  - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: weather_type
   target_kind: platform_domain

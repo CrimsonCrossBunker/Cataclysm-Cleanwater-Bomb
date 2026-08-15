@@ -30,10 +30,12 @@
     "summary": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["total", "implemented_unverified", "bounded_implemented_unverified", "primitive_available_unverified", "planned", "private_adapter", "reviewed_not_applicable"],
+      "required": ["total", "implemented_verified", "implemented_unverified", "bounded_implemented_verified", "bounded_implemented_unverified", "primitive_available_unverified", "planned", "private_adapter", "reviewed_not_applicable"],
       "properties": {
         "total": { "type": "integer", "minimum": 1 },
+        "implemented_verified": { "type": "integer", "minimum": 0 },
         "implemented_unverified": { "type": "integer", "minimum": 0 },
+        "bounded_implemented_verified": { "type": "integer", "minimum": 0 },
         "bounded_implemented_unverified": { "type": "integer", "minimum": 0 },
         "primitive_available_unverified": { "type": "integer", "minimum": 0 },
         "planned": { "type": "integer", "minimum": 0 },
@@ -53,7 +55,7 @@
           "selector": { "type": "string", "minLength": 1 },
           "target_kind": { "enum": ["platform_domain", "shared_service", "migration", "not_applicable"] },
           "target": { "type": "string", "minLength": 1 },
-          "status": { "enum": ["implemented_unverified", "bounded_implemented_unverified", "primitive_available_unverified", "planned", "private_adapter", "reviewed_not_applicable"] },
+          "status": { "enum": ["implemented_verified", "implemented_unverified", "bounded_implemented_verified", "bounded_implemented_unverified", "primitive_available_unverified", "planned", "private_adapter", "reviewed_not_applicable"] },
           "legacy_dependency": { "enum": ["none", "private_adapter", "public_legacy"] },
           "evidence": { "type": "array", "items": { "type": "string" } }
         }
