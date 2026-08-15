@@ -1,5 +1,7 @@
 #include "construction.h"
 
+#include "catalua_platform_content.h"
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -237,6 +239,11 @@ namespace
 {
 generic_factory<construction> construction_factory( "construction" );
 } // namespace
+
+generic_factory<construction> &cata::lua_platform::detail::construction_registry()
+{
+    return construction_factory;
+}
 
 template<>
 const construction &string_id<construction>::obj() const
