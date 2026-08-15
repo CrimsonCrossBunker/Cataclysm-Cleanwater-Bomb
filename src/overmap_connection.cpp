@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include "cata_assert.h"
+#include "catalua_platform_content.h"
 #include "debug.h"
 #include "generic_factory.h"
 #include "overmap_location.h"
@@ -16,6 +17,12 @@ namespace
 generic_factory<overmap_connection> connections( "overmap connection" );
 
 } // namespace
+
+generic_factory<overmap_connection> &
+cata::lua_platform::detail::overmap_connection_registry()
+{
+    return connections;
+}
 
 static const std::unordered_map<std::string, overmap_connection::subtype::flag>
 connection_subtype_flag_map = {

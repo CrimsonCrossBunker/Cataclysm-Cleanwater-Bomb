@@ -1,3 +1,5 @@
+#include "catalua_platform_content.h"
+
 #include "omdata.h" // IWYU pragma: associated
 #include "overmap.h" // IWYU pragma: associated
 
@@ -38,6 +40,24 @@ generic_factory<overmap_special> specials( "overmap special" );
 generic_factory<overmap_special_migration> migrations( "overmap special migration" );
 
 } // namespace
+
+generic_factory<overmap_special_migration> &
+cata::lua_platform::detail::overmap_special_migration_registry()
+{
+    return migrations;
+}
+
+std::vector<std::pair<std::string, std::string>>
+cata::lua_platform::detail::overmap_special_migration_snapshot()
+{
+    std::vector<std::pair<std::string, std::string>> result;
+    result.reserve( migrations.size() );
+    for( const overmap_special_migration &migration : migrations.get_all() ) {
+        result.emplace_back( migration.id.str(), migration.new_id.str() );
+    }
+    std::sort( result.begin(), result.end() );
+    return result;
+}
 
 template<>
 const overmap_special &overmap_special_id::obj() const
