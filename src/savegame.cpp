@@ -1,3 +1,5 @@
+#include "catalua_platform_content.h"
+
 #include "game.h" // IWYU pragma: associated
 
 #include <algorithm>
@@ -1985,6 +1987,33 @@ void global_variables::load_migrations( const JsonObject &jo, std::string_view )
                            ? jo.get_string( "to" )
                            : "NULL_VALUE";
     get_globals().migrations.emplace( from, to );
+}
+
+void cata::lua_platform::detail::insert_platform_var_migration(
+    const platform_migration_data &value )
+{
+    get_globals().migrations.emplace(
+        value.from_id, value.to_id.empty() ? "NULL_VALUE" : value.to_id );
+}
+
+void cata::lua_platform::detail::erase_platform_var_migration(
+    const platform_migration_data &value )
+{
+    get_globals().migrations.erase( value.from_id );
+}
+
+std::vector<std::pair<std::string, std::string>>
+cata::lua_platform::detail::var_migration_snapshot()
+{
+    std::vector<std::pair<std::string, std::string>> result;
+    const std::map<std::string, std::string> &migrations =
+        get_globals().migrations;
+    result.reserve( migrations.size() );
+    for( const auto &[from_id, to_id] : migrations ) {
+        result.emplace_back( from_id, to_id );
+    }
+    std::sort( result.begin(), result.end() );
+    return result;
 }
 
 void timed_event_manager::serialize_all( JsonOut &jsout )
