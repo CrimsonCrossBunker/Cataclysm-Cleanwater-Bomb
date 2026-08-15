@@ -1705,7 +1705,10 @@ void avatar::talk_to( std::unique_ptr<talker> talk_with, bool radio_contact,
     const cata::lua_ui::native_hook_result start_hook =
         cata::lua_ui::dispatch_native_dialogue_hook(
             "on_dialogue_start", *d.actor( false ),
-            *d.actor( true ), d.topic_stack.back().id );
+            *d.actor( true ), d.topic_stack.back().id,
+            std::nullopt, d.by_radio,
+            d.reason.empty() ? std::nullopt :
+            std::optional<std::string_view>( d.reason ) );
     if( start_hook.result &&
         *start_hook.result != d.topic_stack.back().id ) {
         d.add_topic( *start_hook.result );
@@ -1726,7 +1729,10 @@ void avatar::talk_to( std::unique_ptr<talker> talk_with, bool radio_contact,
         const cata::lua_ui::native_hook_result option_hook =
             cata::lua_ui::dispatch_native_dialogue_hook(
                 "on_dialogue_option", *d.actor( false ),
-                *d.actor( true ), last_topic, next.id );
+                *d.actor( true ), last_topic, next.id,
+                d.by_radio,
+                d.reason.empty() ? std::nullopt :
+                std::optional<std::string_view>( d.reason ) );
         if( option_hook.result &&
             *option_hook.result != next.id ) {
             next = talk_topic( *option_hook.result );
@@ -1746,7 +1752,10 @@ void avatar::talk_to( std::unique_ptr<talker> talk_with, bool radio_contact,
     } while( !d.done );
     cata::lua_ui::dispatch_native_dialogue_hook(
         "on_dialogue_end", *d.actor( false ),
-        *d.actor( true ), last_topic );
+        *d.actor( true ), last_topic, std::nullopt,
+        d.by_radio,
+        d.reason.empty() ? std::nullopt :
+        std::optional<std::string_view>( d.reason ) );
     dialogue_remote_name.clear();
 
     if( activity.id() == ACT_AIM && !has_weapon() ) {
