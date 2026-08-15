@@ -48,6 +48,17 @@ const std::vector<SpeechBubble> *cata::lua_platform::detail::speech_registry_fin
     return found == speech.end() ? nullptr : &found->second;
 }
 
+std::vector<std::pair<std::string, std::vector<SpeechBubble>>>
+cata::lua_platform::detail::speech_registry_snapshot()
+{
+    std::vector<std::pair<std::string, std::vector<SpeechBubble>>> result;
+    result.reserve( speech.size() );
+    for( const auto &[label, lines] : speech ) {
+        result.emplace_back( label, lines );
+    }
+    return result;
+}
+
 void cata::lua_platform::detail::speech_registry_set(
     const std::string &label, std::vector<SpeechBubble> lines )
 {
