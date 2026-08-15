@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "avatar.h"
+#include "auto_pickup.h"
 #include "catalua_bindings_coords.h"
 #include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
@@ -312,6 +313,40 @@ sol::table snapshot_opinion(
     result["anger"] = opinion.anger;
     result["owed"] = opinion.owed;
     result["sold"] = opinion.sold;
+    return result;
+}
+
+template<typename Mapping, typename Value>
+std::string reverse_string_lookup( const Mapping &mapping, const Value &value )
+{
+    for( const auto &entry : mapping ) {
+        if( entry.second == value ) {
+            return entry.first;
+        }
+    }
+    return std::string();
+}
+
+sol::table snapshot_ai_rules( sol::state_view lua, const npc &entry )
+{
+    const npc_follower_rules &rules = entry.rules;
+    sol::table result = lua.create_table();
+    result["aim"] = reverse_string_lookup( aim_rule_strs, rules.aim );
+    result["engagement"] =
+        reverse_string_lookup( combat_engagement_strs, rules.engagement );
+    result["cbm_recharge"] =
+        reverse_string_lookup( cbm_recharge_strs, rules.cbm_recharge );
+    result["cbm_reserve"] =
+        reverse_string_lookup( cbm_reserve_strs, rules.cbm_reserve );
+    sol::table allies = lua.create_table();
+    std::size_t index = 0;
+    for( const auto &rule_entry : ally_rule_strs ) {
+        if( rules.has_flag( rule_entry.second.rule ) ) {
+            allies[++index] = rule_entry.first;
+        }
+    }
+    result["allies"] = std::move( allies );
+    result["pickup_whitelist"] = !rules.pickup_whitelist->empty();
     return result;
 }
 
@@ -868,6 +903,23 @@ void install_npc_api(
                    lua_state, handle, deltas,
                    current_runtime_generation(),
                    current_world_generation() );
+    } );
+    npcs.set_function(
+        "ai_rules",
+        [current_runtime_generation, current_world_generation, require_read](
+    sol::this_state lua_state, const game_handle & handle ) {
+        require_read();
+        std::optional<game_handle_error> error;
+        const npc *entry = resolve_npc(
+                               handle, current_runtime_generation(),
+                               current_world_generation(), error );
+        if( entry == nullptr ) {
+            return make_game_error_result( lua_state, *error );
+        }
+        sol::state_view state( lua_state );
+        return make_game_value_result(
+                   state, sol::make_object(
+                       state, snapshot_ai_rules( state, *entry ) ) );
     } );
     game["npcs"] = std::move( npcs );
 }
