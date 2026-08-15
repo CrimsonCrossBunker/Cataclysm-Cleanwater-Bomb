@@ -56,28 +56,26 @@ bool cata::lua_platform::detail::recipe_group_exists( const std::string_view id 
     return recipe_groups_data.is_valid( group_id( std::string( id ) ) );
 }
 
-std::optional<cata::lua_platform::detail::recipe_group_native_definition>
-cata::lua_platform::detail::recipe_group_get( const std::string_view id )
+namespace
 {
-    const group_id key{ std::string( id ) };
-    if( !recipe_groups_data.is_valid( key ) ) {
-        return std::nullopt;
-    }
-    const recipe_group_data &source = recipe_groups_data.obj( key );
-    recipe_group_native_definition result;
+
+cata::lua_platform::detail::recipe_group_native_definition convert_recipe_group(
+    const recipe_group_data &source )
+{
+    cata::lua_platform::detail::recipe_group_native_definition result;
     result.id = source.id.str();
     result.building_type = source.building_type;
     for( const auto &[source_id, source_mod] : source.src ) {
         result.sources.emplace_back( source_id.str(), source_mod );
     }
     for( const auto &[recipe_key, description] : source.recipes ) {
-        recipe_group_recipe_definition recipe_entry;
+        cata::lua_platform::detail::recipe_group_recipe_definition recipe_entry;
         recipe_entry.id = recipe_key.str();
         recipe_entry.description = description;
         const auto terrain_entries = source.om_terrains.find( recipe_key );
         if( terrain_entries != source.om_terrains.end() ) {
             for( const omt_types_parameters &terrain : terrain_entries->second ) {
-                recipe_group_terrain_definition terrain_entry;
+                cata::lua_platform::detail::recipe_group_terrain_definition terrain_entry;
                 terrain_entry.overmap_terrain = terrain.omt;
                 terrain_entry.match_type = io::enum_to_string( terrain.omt_type );
                 for( const auto &[parameter, values] : terrain.parameters ) {
@@ -88,6 +86,33 @@ cata::lua_platform::detail::recipe_group_get( const std::string_view id )
         }
         result.recipes.push_back( std::move( recipe_entry ) );
     }
+    return result;
+}
+
+} // namespace
+
+std::optional<cata::lua_platform::detail::recipe_group_native_definition>
+cata::lua_platform::detail::recipe_group_get( const std::string_view id )
+{
+    const group_id key{ std::string( id ) };
+    if( !recipe_groups_data.is_valid( key ) ) {
+        return std::nullopt;
+    }
+    return convert_recipe_group( recipe_groups_data.obj( key ) );
+}
+
+std::vector<cata::lua_platform::detail::recipe_group_native_definition>
+cata::lua_platform::detail::recipe_group_snapshot()
+{
+    std::vector<cata::lua_platform::detail::recipe_group_native_definition> result;
+    for( const recipe_group_data &value : recipe_groups_data.get_all() ) {
+        result.emplace_back( convert_recipe_group( value ) );
+    }
+    std::sort( result.begin(), result.end(),
+    []( const cata::lua_platform::detail::recipe_group_native_definition &left,
+        const cata::lua_platform::detail::recipe_group_native_definition &right ) {
+        return left.id < right.id;
+    } );
     return result;
 }
 
