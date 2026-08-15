@@ -690,7 +690,7 @@
         "namespace": "ccb",
         "source": {
           "path": "src/catalua_platform_runtime.cpp",
-          "line": 23532
+          "line": 23534
         },
         "direct_roots": [
           "ItemUseContext"
@@ -702,7 +702,7 @@
         "namespace": "ccb",
         "source": {
           "path": "src/catalua_platform_runtime.cpp",
-          "line": 8012
+          "line": 8014
         },
         "direct_roots": [
           "AchievementDefinition",
@@ -873,7 +873,7 @@
         "namespace": "global",
         "source": {
           "path": "src/catalua_ui_missions.cpp",
-          "line": 1223
+          "line": 1243
         },
         "direct_roots": [
           "MissionToken"
@@ -988,7 +988,7 @@
         "callee": "platform_v1.content_transaction.install_lua_api",
         "source": {
           "path": "src/catalua_platform_runtime.cpp",
-          "line": 23535
+          "line": 23537
         },
         "surfaces": [
           "platform_v1"
@@ -999,7 +999,7 @@
         "callee": "shared.install_value_type_api",
         "source": {
           "path": "src/catalua_platform_runtime.cpp",
-          "line": 23885
+          "line": 23887
         },
         "surfaces": [
           "platform_v1"
@@ -1010,7 +1010,7 @@
         "callee": "shared.install_game_handle_api",
         "source": {
           "path": "src/catalua_platform_runtime.cpp",
-          "line": 23887
+          "line": 23889
         },
         "surfaces": [
           "platform_v1"
@@ -1021,7 +1021,7 @@
         "callee": "shared.install_mission_api",
         "source": {
           "path": "src/catalua_platform_runtime.cpp",
-          "line": 24515
+          "line": 24517
         },
         "surfaces": [
           "platform_v1"
@@ -1032,7 +1032,7 @@
         "callee": "shared.install_horde_api",
         "source": {
           "path": "src/catalua_platform_runtime.cpp",
-          "line": 24517
+          "line": 24519
         },
         "surfaces": [
           "platform_v1"
@@ -1043,7 +1043,7 @@
         "callee": "shared.install_zone_api",
         "source": {
           "path": "src/catalua_platform_runtime.cpp",
-          "line": 24559
+          "line": 24587
         },
         "surfaces": [
           "platform_v1"
@@ -1083,7 +1083,7 @@
       "registration_name": "AchievementDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8545,
+        "line": 8547,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -1124,7 +1124,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8548
+                "line": 8550
               }
             ]
           },
@@ -1141,7 +1141,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8547
+                "line": 8549
               }
             ]
           },
@@ -1158,7 +1158,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5808
+                "line": 5810
               }
             ]
           },
@@ -1175,7 +1175,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5809
+                "line": 5811
               }
             ]
           }
@@ -1189,7 +1189,7 @@
       "registration_name": "ActivityTypeDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8461,
+        "line": 8463,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -1230,7 +1230,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8463
+                "line": 8465
               }
             ]
           },
@@ -1247,7 +1247,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8464
+                "line": 8466
               }
             ]
           },
@@ -1264,7 +1264,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5178
+                "line": 5180
               }
             ]
           },
@@ -1281,7 +1281,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5179
+                "line": 5181
               }
             ]
           },
@@ -1298,7 +1298,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8466
+                "line": 8468
               }
             ]
           },
@@ -1315,7 +1315,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8465
+                "line": 8467
               }
             ]
           }
@@ -1329,7 +1329,7 @@
       "registration_name": "AddictionTypeDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8411,
+        "line": 8413,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -1370,7 +1370,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8413
+                "line": 8415
               }
             ]
           },
@@ -1387,7 +1387,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4873
+                "line": 4875
               }
             ]
           },
@@ -1404,7 +1404,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4874
+                "line": 4876
               }
             ]
           },
@@ -1421,7 +1421,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8414
+                "line": 8416
               }
             ]
           }
@@ -1435,7 +1435,7 @@
       "registration_name": "AmmoEffectDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8396,
+        "line": 8398,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -1476,7 +1476,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8402
+                "line": 8404
               }
             ]
           },
@@ -1493,7 +1493,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8409
+                "line": 8411
               }
             ]
           },
@@ -1510,7 +1510,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8406
+                "line": 8408
               }
             ]
           },
@@ -1527,7 +1527,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8403
+                "line": 8405
               }
             ]
           },
@@ -1544,7 +1544,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8399
+                "line": 8401
               }
             ]
           },
@@ -1561,7 +1561,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8405
+                "line": 8407
               }
             ]
           },
@@ -1578,7 +1578,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8407
+                "line": 8409
               }
             ]
           },
@@ -1595,7 +1595,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8398
+                "line": 8400
               }
             ]
           },
@@ -1612,7 +1612,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8410
+                "line": 8412
               }
             ]
           },
@@ -1629,7 +1629,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4741
+                "line": 4743
               }
             ]
           },
@@ -1646,7 +1646,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4742
+                "line": 4744
               }
             ]
           },
@@ -1663,7 +1663,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8401
+                "line": 8403
               }
             ]
           },
@@ -1680,7 +1680,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8404
+                "line": 8406
               }
             ]
           },
@@ -1697,7 +1697,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8408
+                "line": 8410
               }
             ]
           },
@@ -1714,7 +1714,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8400
+                "line": 8402
               }
             ]
           }
@@ -1728,7 +1728,7 @@
       "registration_name": "AmmunitionTypeDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8063,
+        "line": 8065,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -1769,7 +1769,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8065
+                "line": 8067
               }
             ]
           },
@@ -1786,7 +1786,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5883
+                "line": 5885
               }
             ]
           },
@@ -1803,7 +1803,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5884
+                "line": 5886
               }
             ]
           }
@@ -1817,7 +1817,7 @@
       "registration_name": "AnatomyDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8252,
+        "line": 8254,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -1858,7 +1858,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8254
+                "line": 8256
               }
             ]
           },
@@ -1875,7 +1875,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3775
+                "line": 3777
               }
             ]
           },
@@ -1892,7 +1892,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3776
+                "line": 3778
               }
             ]
           },
@@ -1909,7 +1909,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8255
+                "line": 8257
               }
             ]
           }
@@ -1923,7 +1923,7 @@
       "registration_name": "AsciiArtDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8341,
+        "line": 8343,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -1964,7 +1964,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8343
+                "line": 8345
               }
             ]
           },
@@ -1981,7 +1981,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8344
+                "line": 8346
               }
             ]
           },
@@ -1998,7 +1998,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4410
+                "line": 4412
               }
             ]
           },
@@ -2015,7 +2015,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4411
+                "line": 4413
               }
             ]
           }
@@ -2029,7 +2029,7 @@
       "registration_name": "AttackVectorDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8484,
+        "line": 8486,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -2070,7 +2070,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8488
+                "line": 8490
               }
             ]
           },
@@ -2087,7 +2087,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8491
+                "line": 8493
               }
             ]
           },
@@ -2104,7 +2104,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8486
+                "line": 8488
               }
             ]
           },
@@ -2121,7 +2121,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8487
+                "line": 8489
               }
             ]
           },
@@ -2138,7 +2138,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5827
+                "line": 5829
               }
             ]
           },
@@ -2155,7 +2155,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5828
+                "line": 5830
               }
             ]
           },
@@ -2172,7 +2172,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8490
+                "line": 8492
               }
             ]
           },
@@ -2189,7 +2189,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8489
+                "line": 8491
               }
             ]
           }
@@ -2203,7 +2203,7 @@
       "registration_name": "BashDamageProfileDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8351,
+        "line": 8353,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -2244,7 +2244,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8354
+                "line": 8356
               }
             ]
           },
@@ -2261,7 +2261,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8353
+                "line": 8355
               }
             ]
           },
@@ -2278,7 +2278,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4449
+                "line": 4451
               }
             ]
           },
@@ -2295,7 +2295,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4450
+                "line": 4452
               }
             ]
           }
@@ -2309,7 +2309,7 @@
       "registration_name": "BehaviorDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8175,
+        "line": 8177,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -2350,7 +2350,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8178
+                "line": 8180
               }
             ]
           },
@@ -2367,7 +2367,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8177
+                "line": 8179
               }
             ]
           },
@@ -2384,7 +2384,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3202
+                "line": 3204
               }
             ]
           },
@@ -2401,7 +2401,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3203
+                "line": 3205
               }
             ]
           },
@@ -2418,7 +2418,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8181
+                "line": 8183
               }
             ]
           },
@@ -2435,7 +2435,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8182
+                "line": 8184
               }
             ]
           },
@@ -2452,7 +2452,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8179
+                "line": 8181
               }
             ]
           },
@@ -2469,7 +2469,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8180
+                "line": 8182
               }
             ]
           }
@@ -2483,7 +2483,7 @@
       "registration_name": "BlacklistDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8549,
+        "line": 8551,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -2524,7 +2524,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8551
+                "line": 8553
               }
             ]
           },
@@ -2541,7 +2541,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5632
+                "line": 5634
               }
             ]
           },
@@ -2558,7 +2558,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5633
+                "line": 5635
               }
             ]
           }
@@ -2572,7 +2572,7 @@
       "registration_name": "BodyGraphDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8256,
+        "line": 8258,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -2613,7 +2613,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8258
+                "line": 8260
               }
             ]
           },
@@ -2630,7 +2630,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3795
+                "line": 3797
               }
             ]
           },
@@ -2647,7 +2647,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3796
+                "line": 3798
               }
             ]
           },
@@ -2664,7 +2664,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8260
+                "line": 8262
               }
             ]
           },
@@ -2681,7 +2681,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8259
+                "line": 8261
               }
             ]
           }
@@ -2695,7 +2695,7 @@
       "registration_name": "BodyPartDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8234,
+        "line": 8236,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -2736,7 +2736,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8239
+                "line": 8241
               }
             ]
           },
@@ -2753,7 +2753,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8241
+                "line": 8243
               }
             ]
           },
@@ -2770,7 +2770,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8236
+                "line": 8238
               }
             ]
           },
@@ -2787,7 +2787,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8242
+                "line": 8244
               }
             ]
           },
@@ -2804,7 +2804,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8238
+                "line": 8240
               }
             ]
           },
@@ -2821,7 +2821,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3507
+                "line": 3509
               }
             ]
           },
@@ -2838,7 +2838,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3508
+                "line": 3510
               }
             ]
           },
@@ -2855,7 +2855,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8243
+                "line": 8245
               }
             ]
           },
@@ -2872,7 +2872,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8237
+                "line": 8239
               }
             ]
           },
@@ -2889,7 +2889,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8240
+                "line": 8242
               }
             ]
           }
@@ -2903,7 +2903,7 @@
       "registration_name": "ButcheryRequirementDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8131,
+        "line": 8133,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -2944,7 +2944,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8133
+                "line": 8135
               }
             ]
           },
@@ -2961,7 +2961,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2855
+                "line": 2857
               }
             ]
           },
@@ -2978,7 +2978,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2856
+                "line": 2858
               }
             ]
           },
@@ -2995,7 +2995,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8134
+                "line": 8136
               }
             ]
           }
@@ -3009,7 +3009,7 @@
       "registration_name": "CharacterModifierDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8415,
+        "line": 8417,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -3050,7 +3050,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8418
+                "line": 8420
               }
             ]
           },
@@ -3067,7 +3067,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8417
+                "line": 8419
               }
             ]
           },
@@ -3084,7 +3084,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4889
+                "line": 4891
               }
             ]
           },
@@ -3101,7 +3101,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4890
+                "line": 4892
               }
             ]
           }
@@ -3115,7 +3115,7 @@
       "registration_name": "ClimbingAidDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8427,
+        "line": 8429,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -3156,7 +3156,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8430
+                "line": 8432
               }
             ]
           },
@@ -3173,7 +3173,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8432
+                "line": 8434
               }
             ]
           },
@@ -3190,7 +3190,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8433
+                "line": 8435
               }
             ]
           },
@@ -3207,7 +3207,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8431
+                "line": 8433
               }
             ]
           },
@@ -3224,7 +3224,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8429
+                "line": 8431
               }
             ]
           },
@@ -3241,7 +3241,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4973
+                "line": 4975
               }
             ]
           },
@@ -3258,7 +3258,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4974
+                "line": 4976
               }
             ]
           }
@@ -3272,7 +3272,7 @@
       "registration_name": "ClothingModDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8355,
+        "line": 8357,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -3313,7 +3313,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8357
+                "line": 8359
               }
             ]
           },
@@ -3330,7 +3330,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8358
+                "line": 8360
               }
             ]
           },
@@ -3347,7 +3347,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4469
+                "line": 4471
               }
             ]
           },
@@ -3364,7 +3364,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4470
+                "line": 4472
               }
             ]
           }
@@ -3378,7 +3378,7 @@
       "registration_name": "ConnectGroupDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8309,
+        "line": 8311,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -3419,7 +3419,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8311
+                "line": 8313
               }
             ]
           },
@@ -3436,7 +3436,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4276
+                "line": 4278
               }
             ]
           },
@@ -3453,7 +3453,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4277
+                "line": 4279
               }
             ]
           }
@@ -3467,7 +3467,7 @@
       "registration_name": "ConstructionCategoryDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8315,
+        "line": 8317,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -3508,7 +3508,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8317
+                "line": 8319
               }
             ]
           },
@@ -3525,7 +3525,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4296
+                "line": 4298
               }
             ]
           },
@@ -3542,7 +3542,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4297
+                "line": 4299
               }
             ]
           }
@@ -3556,7 +3556,7 @@
       "registration_name": "ConstructionDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8510,
+        "line": 8512,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -3597,7 +3597,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8512
+                "line": 8514
               }
             ]
           },
@@ -3614,7 +3614,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5428
+                "line": 5430
               }
             ]
           },
@@ -3631,7 +3631,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5429
+                "line": 5431
               }
             ]
           },
@@ -3648,7 +3648,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8517
+                "line": 8519
               }
             ]
           },
@@ -3665,7 +3665,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8516
+                "line": 8518
               }
             ]
           },
@@ -3682,7 +3682,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8515
+                "line": 8517
               }
             ]
           },
@@ -3699,7 +3699,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8513
+                "line": 8515
               }
             ]
           },
@@ -3716,7 +3716,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8514
+                "line": 8516
               }
             ]
           }
@@ -3730,7 +3730,7 @@
       "registration_name": "ConstructionGroupDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8318,
+        "line": 8320,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -3771,7 +3771,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8320
+                "line": 8322
               }
             ]
           },
@@ -3788,7 +3788,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4306
+                "line": 4308
               }
             ]
           },
@@ -3805,7 +3805,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4307
+                "line": 4309
               }
             ]
           }
@@ -3819,7 +3819,7 @@
       "registration_name": "DamageInfoOrderDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8328,
+        "line": 8330,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -3860,7 +3860,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8330
+                "line": 8332
               }
             ]
           },
@@ -3877,7 +3877,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4347
+                "line": 4349
               }
             ]
           },
@@ -3894,7 +3894,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4348
+                "line": 4350
               }
             ]
           },
@@ -3911,7 +3911,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8331
+                "line": 8333
               }
             ]
           }
@@ -3925,7 +3925,7 @@
       "registration_name": "DamageTypeDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8045,
+        "line": 8047,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -3966,7 +3966,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8048
+                "line": 8050
               }
             ]
           },
@@ -3983,7 +3983,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8047
+                "line": 8049
               }
             ]
           },
@@ -4000,7 +4000,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8049
+                "line": 8051
               }
             ]
           },
@@ -4017,7 +4017,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8050
+                "line": 8052
               }
             ]
           },
@@ -4034,7 +4034,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2616
+                "line": 2618
               }
             ]
           },
@@ -4051,7 +4051,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2617
+                "line": 2619
               }
             ]
           },
@@ -4068,7 +4068,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8052
+                "line": 8054
               }
             ]
           },
@@ -4085,7 +4085,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8051
+                "line": 8053
               }
             ]
           }
@@ -4099,7 +4099,7 @@
       "registration_name": "DiseaseTypeDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8284,
+        "line": 8286,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -4140,7 +4140,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8287
+                "line": 8289
               }
             ]
           },
@@ -4157,7 +4157,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8286
+                "line": 8288
               }
             ]
           },
@@ -4174,7 +4174,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4148
+                "line": 4150
               }
             ]
           },
@@ -4191,7 +4191,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4149
+                "line": 4151
               }
             ]
           }
@@ -4205,7 +4205,7 @@
       "registration_name": "DreamDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8542,
+        "line": 8544,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -4246,7 +4246,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8544
+                "line": 8546
               }
             ]
           },
@@ -4263,7 +4263,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5618
+                "line": 5620
               }
             ]
           },
@@ -4280,7 +4280,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5619
+                "line": 5621
               }
             ]
           }
@@ -4294,7 +4294,7 @@
       "registration_name": "EffectTypeDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8187,
+        "line": 8189,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -4335,7 +4335,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8199
+                "line": 8201
               }
             ]
           },
@@ -4352,7 +4352,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8191
+                "line": 8193
               }
             ]
           },
@@ -4369,7 +4369,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8193
+                "line": 8195
               }
             ]
           },
@@ -4386,7 +4386,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8189
+                "line": 8191
               }
             ]
           },
@@ -4403,7 +4403,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8195
+                "line": 8197
               }
             ]
           },
@@ -4420,7 +4420,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8194
+                "line": 8196
               }
             ]
           },
@@ -4437,7 +4437,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8190
+                "line": 8192
               }
             ]
           },
@@ -4454,7 +4454,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3269
+                "line": 3271
               }
             ]
           },
@@ -4471,7 +4471,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3270
+                "line": 3272
               }
             ]
           },
@@ -4488,7 +4488,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8192
+                "line": 8194
               }
             ]
           },
@@ -4505,7 +4505,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8198
+                "line": 8200
               }
             ]
           },
@@ -4522,7 +4522,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8197
+                "line": 8199
               }
             ]
           },
@@ -4539,7 +4539,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8196
+                "line": 8198
               }
             ]
           }
@@ -4553,7 +4553,7 @@
       "registration_name": "EmissionDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8298,
+        "line": 8300,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -4594,7 +4594,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8300
+                "line": 8302
               }
             ]
           },
@@ -4611,7 +4611,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4223
+                "line": 4225
               }
             ]
           },
@@ -4628,7 +4628,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4224
+                "line": 4226
               }
             ]
           },
@@ -4645,7 +4645,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8301
+                "line": 8303
               }
             ]
           }
@@ -4659,7 +4659,7 @@
       "registration_name": "EndScreenDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8456,
+        "line": 8458,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -4700,7 +4700,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8460
+                "line": 8462
               }
             ]
           },
@@ -4717,7 +4717,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8458
+                "line": 8460
               }
             ]
           },
@@ -4734,7 +4734,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8459
+                "line": 8461
               }
             ]
           },
@@ -4751,7 +4751,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5148
+                "line": 5150
               }
             ]
           },
@@ -4768,7 +4768,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5149
+                "line": 5151
               }
             ]
           }
@@ -4782,7 +4782,7 @@
       "registration_name": "ExplosionLightDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8388,
+        "line": 8390,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -4823,7 +4823,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8393
+                "line": 8395
               }
             ]
           },
@@ -4840,7 +4840,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8390
+                "line": 8392
               }
             ]
           },
@@ -4857,7 +4857,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4660
+                "line": 4662
               }
             ]
           },
@@ -4874,7 +4874,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4661
+                "line": 4663
               }
             ]
           },
@@ -4891,7 +4891,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8394
+                "line": 8396
               }
             ]
           },
@@ -4908,7 +4908,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8395
+                "line": 8397
               }
             ]
           },
@@ -4925,7 +4925,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8391
+                "line": 8393
               }
             ]
           },
@@ -4942,7 +4942,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8392
+                "line": 8394
               }
             ]
           }
@@ -4956,7 +4956,7 @@
       "registration_name": "FaultDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8530,
+        "line": 8532,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -4997,7 +4997,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8534
+                "line": 8536
               }
             ]
           },
@@ -5014,7 +5014,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8535
+                "line": 8537
               }
             ]
           },
@@ -5031,7 +5031,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8533
+                "line": 8535
               }
             ]
           },
@@ -5048,7 +5048,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8532
+                "line": 8534
               }
             ]
           },
@@ -5065,7 +5065,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5543
+                "line": 5545
               }
             ]
           },
@@ -5082,7 +5082,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5544
+                "line": 5546
               }
             ]
           }
@@ -5096,7 +5096,7 @@
       "registration_name": "FaultFixDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8536,
+        "line": 8538,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -5137,7 +5137,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8541
+                "line": 8543
               }
             ]
           },
@@ -5154,7 +5154,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8538
+                "line": 8540
               }
             ]
           },
@@ -5171,7 +5171,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5580
+                "line": 5582
               }
             ]
           },
@@ -5188,7 +5188,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5581
+                "line": 5583
               }
             ]
           },
@@ -5205,7 +5205,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8540
+                "line": 8542
               }
             ]
           },
@@ -5222,7 +5222,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8539
+                "line": 8541
               }
             ]
           }
@@ -5236,7 +5236,7 @@
       "registration_name": "FaultGroupDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8384,
+        "line": 8386,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -5277,7 +5277,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8387
+                "line": 8389
               }
             ]
           },
@@ -5294,7 +5294,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8386
+                "line": 8388
               }
             ]
           },
@@ -5311,7 +5311,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4640
+                "line": 4642
               }
             ]
           },
@@ -5328,7 +5328,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4641
+                "line": 4643
               }
             ]
           }
@@ -5342,7 +5342,7 @@
       "registration_name": "FieldTypeDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8209,
+        "line": 8211,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -5383,7 +5383,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8215
+                "line": 8217
               }
             ]
           },
@@ -5400,7 +5400,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8213
+                "line": 8215
               }
             ]
           },
@@ -5417,7 +5417,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8211
+                "line": 8213
               }
             ]
           },
@@ -5434,7 +5434,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8214
+                "line": 8216
               }
             ]
           },
@@ -5451,7 +5451,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8212
+                "line": 8214
               }
             ]
           },
@@ -5468,7 +5468,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4061
+                "line": 4063
               }
             ]
           },
@@ -5485,7 +5485,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4062
+                "line": 4064
               }
             ]
           }
@@ -5499,7 +5499,7 @@
       "registration_name": "FurnitureDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8518,
+        "line": 8520,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -5540,7 +5540,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8521
+                "line": 8523
               }
             ]
           },
@@ -5557,7 +5557,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8520
+                "line": 8522
               }
             ]
           },
@@ -5574,7 +5574,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5486
+                "line": 5488
               }
             ]
           },
@@ -5591,7 +5591,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5487
+                "line": 5489
               }
             ]
           }
@@ -6118,7 +6118,7 @@
       "registration_name": "GateDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8526,
+        "line": 8528,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -6159,7 +6159,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8528
+                "line": 8530
               }
             ]
           },
@@ -6176,7 +6176,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5524
+                "line": 5526
               }
             ]
           },
@@ -6193,7 +6193,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5525
+                "line": 5527
               }
             ]
           },
@@ -6210,7 +6210,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8529
+                "line": 8531
               }
             ]
           }
@@ -6224,7 +6224,7 @@
       "registration_name": "HarvestDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8169,
+        "line": 8171,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -6265,7 +6265,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8172
+                "line": 8174
               }
             ]
           },
@@ -6282,7 +6282,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8171
+                "line": 8173
               }
             ]
           },
@@ -6299,7 +6299,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8174
+                "line": 8176
               }
             ]
           },
@@ -6316,7 +6316,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8173
+                "line": 8175
               }
             ]
           },
@@ -6333,7 +6333,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3134
+                "line": 3136
               }
             ]
           },
@@ -6350,7 +6350,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3135
+                "line": 3137
               }
             ]
           }
@@ -6364,7 +6364,7 @@
       "registration_name": "HarvestDropTypeDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8165,
+        "line": 8167,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -6405,7 +6405,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8167
+                "line": 8169
               }
             ]
           },
@@ -6422,7 +6422,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3115
+                "line": 3117
               }
             ]
           },
@@ -6439,7 +6439,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3116
+                "line": 3118
               }
             ]
           },
@@ -6456,7 +6456,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8168
+                "line": 8170
               }
             ]
           }
@@ -6470,7 +6470,7 @@
       "registration_name": "HelpTopicDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8467,
+        "line": 8469,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -6511,7 +6511,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8469
+                "line": 8471
               }
             ]
           },
@@ -6528,7 +6528,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5216
+                "line": 5218
               }
             ]
           },
@@ -6545,7 +6545,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5217
+                "line": 5219
               }
             ]
           },
@@ -6562,7 +6562,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8470
+                "line": 8472
               }
             ]
           }
@@ -6576,7 +6576,7 @@
       "registration_name": "HitRangeDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8348,
+        "line": 8350,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -6617,7 +6617,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8350
+                "line": 8352
               }
             ]
           },
@@ -6634,7 +6634,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4439
+                "line": 4441
               }
             ]
           },
@@ -6651,7 +6651,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4440
+                "line": 4442
               }
             ]
           }
@@ -6866,7 +6866,7 @@
       "registration_name": "ItemActionDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8135,
+        "line": 8137,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -6907,7 +6907,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8137
+                "line": 8139
               }
             ]
           },
@@ -6924,7 +6924,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2884
+                "line": 2886
               }
             ]
           },
@@ -6941,7 +6941,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2885
+                "line": 2887
               }
             ]
           }
@@ -6955,7 +6955,7 @@
       "registration_name": "ItemCategoryDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8066,
+        "line": 8068,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -6996,7 +6996,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8068
+                "line": 8070
               }
             ]
           },
@@ -7013,7 +7013,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5893
+                "line": 5895
               }
             ]
           },
@@ -7030,7 +7030,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5894
+                "line": 5896
               }
             ]
           },
@@ -7047,7 +7047,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8069
+                "line": 8071
               }
             ]
           }
@@ -7061,7 +7061,7 @@
       "registration_name": "ItemDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8086,
+        "line": 8088,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -7102,7 +7102,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8094
+                "line": 8096
               }
             ]
           },
@@ -7119,7 +7119,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8088
+                "line": 8090
               }
             ]
           },
@@ -7136,7 +7136,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8089
+                "line": 8091
               }
             ]
           },
@@ -7153,7 +7153,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8092
+                "line": 8094
               }
             ]
           },
@@ -7170,7 +7170,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 1954
+                "line": 1956
               }
             ]
           },
@@ -7187,7 +7187,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 1955
+                "line": 1957
               }
             ]
           },
@@ -7204,7 +7204,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8095
+                "line": 8097
               }
             ]
           },
@@ -7221,7 +7221,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8091
+                "line": 8093
               }
             ]
           },
@@ -7238,7 +7238,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8093
+                "line": 8095
               }
             ]
           },
@@ -7255,7 +7255,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8090
+                "line": 8092
               }
             ]
           }
@@ -7269,7 +7269,7 @@
       "registration_name": "ItemGroupDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8216,
+        "line": 8218,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -7310,7 +7310,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8220
+                "line": 8222
               }
             ]
           },
@@ -7327,7 +7327,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8218
+                "line": 8220
               }
             ]
           },
@@ -7344,7 +7344,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8219
+                "line": 8221
               }
             ]
           },
@@ -7361,7 +7361,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4028
+                "line": 4030
               }
             ]
           },
@@ -7378,7 +7378,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4029
+                "line": 4031
               }
             ]
           }
@@ -7392,7 +7392,7 @@
       "registration_name": "ItemUseContext",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 23537,
+        "line": 23539,
         "installer": "platform_v1.install_runtime_api",
         "namespace": "ccb"
       },
@@ -7436,7 +7436,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 23542
+                "line": 23544
               }
             ]
           },
@@ -7454,7 +7454,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 23545
+                "line": 23547
               }
             ]
           },
@@ -7471,7 +7471,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 23543
+                "line": 23545
               }
             ]
           },
@@ -7488,7 +7488,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 23541
+                "line": 23543
               }
             ]
           },
@@ -7505,7 +7505,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 23539
+                "line": 23541
               }
             ]
           },
@@ -7522,7 +7522,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 6565
+                "line": 6567
               }
             ]
           },
@@ -7539,7 +7539,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 6568
+                "line": 6570
               }
             ]
           },
@@ -7556,7 +7556,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 6556
+                "line": 6558
               }
             ]
           },
@@ -7573,7 +7573,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 6555
+                "line": 6557
               }
             ]
           },
@@ -7590,7 +7590,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 6563
+                "line": 6565
               }
             ]
           },
@@ -7607,7 +7607,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 6558
+                "line": 6560
               }
             ]
           },
@@ -7624,7 +7624,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 6557
+                "line": 6559
               }
             ]
           },
@@ -7641,7 +7641,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 6567
+                "line": 6569
               }
             ]
           },
@@ -7658,7 +7658,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 6568
+                "line": 6570
               }
             ]
           },
@@ -7675,7 +7675,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 6564
+                "line": 6566
               }
             ]
           },
@@ -7692,7 +7692,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 23540
+                "line": 23542
               }
             ]
           },
@@ -7709,7 +7709,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 23544
+                "line": 23546
               }
             ]
           }
@@ -7723,7 +7723,7 @@
       "registration_name": "JsonFlagDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8041,
+        "line": 8043,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -7764,7 +7764,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8044
+                "line": 8046
               }
             ]
           },
@@ -7781,7 +7781,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8043
+                "line": 8045
               }
             ]
           },
@@ -7798,7 +7798,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2494
+                "line": 2496
               }
             ]
           },
@@ -7815,7 +7815,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2495
+                "line": 2497
               }
             ]
           }
@@ -8030,7 +8030,7 @@
       "registration_name": "LimbScoreDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8345,
+        "line": 8347,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -8071,7 +8071,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8347
+                "line": 8349
               }
             ]
           },
@@ -8088,7 +8088,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4429
+                "line": 4431
               }
             ]
           },
@@ -8105,7 +8105,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4430
+                "line": 4432
               }
             ]
           }
@@ -8119,7 +8119,7 @@
       "registration_name": "MagicTypeDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8575,
+        "line": 8577,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -8160,7 +8160,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8578
+                "line": 8580
               }
             ]
           },
@@ -8177,7 +8177,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8580
+                "line": 8582
               }
             ]
           },
@@ -8194,7 +8194,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8581
+                "line": 8583
               }
             ]
           },
@@ -8211,7 +8211,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8582
+                "line": 8584
               }
             ]
           },
@@ -8228,7 +8228,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8583
+                "line": 8585
               }
             ]
           },
@@ -8245,7 +8245,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8577
+                "line": 8579
               }
             ]
           },
@@ -8262,7 +8262,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2672
+                "line": 2674
               }
             ]
           },
@@ -8279,7 +8279,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2673
+                "line": 2675
               }
             ]
           },
@@ -8296,7 +8296,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8584
+                "line": 8586
               }
             ]
           },
@@ -8313,7 +8313,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8579
+                "line": 8581
               }
             ]
           }
@@ -8327,7 +8327,7 @@
       "registration_name": "MapExtraCollectionDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8376,
+        "line": 8378,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -8368,7 +8368,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8379
+                "line": 8381
               }
             ]
           },
@@ -8385,7 +8385,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8378
+                "line": 8380
               }
             ]
           },
@@ -8402,7 +8402,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4600
+                "line": 4602
               }
             ]
           },
@@ -8419,7 +8419,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4601
+                "line": 4603
               }
             ]
           }
@@ -8433,7 +8433,7 @@
       "registration_name": "MapExtraDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8552,
+        "line": 8554,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -8474,7 +8474,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8555
+                "line": 8557
               }
             ]
           },
@@ -8491,7 +8491,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8554
+                "line": 8556
               }
             ]
           },
@@ -8508,7 +8508,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5709
+                "line": 5711
               }
             ]
           },
@@ -8525,7 +8525,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5710
+                "line": 5712
               }
             ]
           }
@@ -8539,7 +8539,7 @@
       "registration_name": "MartialArtDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8498,
+        "line": 8500,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -8580,7 +8580,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8501
+                "line": 8503
               }
             ]
           },
@@ -8597,7 +8597,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8500
+                "line": 8502
               }
             ]
           },
@@ -8614,7 +8614,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5350
+                "line": 5352
               }
             ]
           },
@@ -8631,7 +8631,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5351
+                "line": 5353
               }
             ]
           },
@@ -8648,7 +8648,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8502
+                "line": 8504
               }
             ]
           },
@@ -8665,7 +8665,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8503
+                "line": 8505
               }
             ]
           },
@@ -8682,7 +8682,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8504
+                "line": 8506
               }
             ]
           }
@@ -8696,7 +8696,7 @@
       "registration_name": "MaterialDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8053,
+        "line": 8055,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -8737,7 +8737,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8059
+                "line": 8061
               }
             ]
           },
@@ -8754,7 +8754,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8060
+                "line": 8062
               }
             ]
           },
@@ -8771,7 +8771,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8058
+                "line": 8060
               }
             ]
           },
@@ -8788,7 +8788,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8061
+                "line": 8063
               }
             ]
           },
@@ -8805,7 +8805,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8062
+                "line": 8064
               }
             ]
           },
@@ -8822,7 +8822,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8055
+                "line": 8057
               }
             ]
           },
@@ -8839,7 +8839,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2513
+                "line": 2515
               }
             ]
           },
@@ -8856,7 +8856,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2514
+                "line": 2516
               }
             ]
           },
@@ -8873,7 +8873,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8056
+                "line": 8058
               }
             ]
           },
@@ -8890,7 +8890,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8057
+                "line": 8059
               }
             ]
           }
@@ -8904,7 +8904,7 @@
       "registration_name": "MigrationDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8563,
+        "line": 8565,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -8945,7 +8945,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5758
+                "line": 5760
               }
             ]
           },
@@ -8962,7 +8962,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5759
+                "line": 5761
               }
             ]
           }
@@ -8976,7 +8976,7 @@
       "registration_name": "MissionToken",
       "registration": {
         "path": "src/catalua_ui_missions.cpp",
-        "line": 1231,
+        "line": 1251,
         "installer": "shared.install_mission_api",
         "namespace": "global"
       },
@@ -9027,7 +9027,7 @@
             "evidence": [
               {
                 "path": "src/catalua_ui_missions.cpp",
-                "line": 1250
+                "line": 1270
               }
             ]
           },
@@ -9044,7 +9044,7 @@
             "evidence": [
               {
                 "path": "src/catalua_ui_missions.cpp",
-                "line": 1248
+                "line": 1268
               }
             ]
           },
@@ -9059,7 +9059,7 @@
             "evidence": [
               {
                 "path": "src/catalua_ui_missions.cpp",
-                "line": 1240
+                "line": 1260
               }
             ]
           },
@@ -9112,7 +9112,7 @@
             "evidence": [
               {
                 "path": "src/catalua_ui_missions.cpp",
-                "line": 1234
+                "line": 1254
               }
             ]
           },
@@ -9129,7 +9129,7 @@
             "evidence": [
               {
                 "path": "src/catalua_ui_missions.cpp",
-                "line": 1233
+                "line": 1253
               }
             ]
           },
@@ -9146,7 +9146,7 @@
             "evidence": [
               {
                 "path": "src/catalua_ui_missions.cpp",
-                "line": 1237
+                "line": 1257
               }
             ]
           }
@@ -9386,7 +9386,7 @@
       "registration_name": "MonsterAdjustmentDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8573,
+        "line": 8575,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -9427,7 +9427,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5763
+                "line": 5765
               }
             ]
           },
@@ -9444,7 +9444,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5764
+                "line": 5766
               }
             ]
           }
@@ -9458,7 +9458,7 @@
       "registration_name": "MonsterAttackDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8183,
+        "line": 8185,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -9499,7 +9499,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8185
+                "line": 8187
               }
             ]
           },
@@ -9516,7 +9516,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3343
+                "line": 3345
               }
             ]
           },
@@ -9533,7 +9533,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3344
+                "line": 3346
               }
             ]
           },
@@ -9550,7 +9550,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8186
+                "line": 8188
               }
             ]
           }
@@ -9564,7 +9564,7 @@
       "registration_name": "MonsterDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8261,
+        "line": 8263,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -9605,7 +9605,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8278
+                "line": 8280
               }
             ]
           },
@@ -9622,7 +9622,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8268
+                "line": 8270
               }
             ]
           },
@@ -9639,7 +9639,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8270
+                "line": 8272
               }
             ]
           },
@@ -9656,7 +9656,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8266
+                "line": 8268
               }
             ]
           },
@@ -9673,7 +9673,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8272
+                "line": 8274
               }
             ]
           },
@@ -9690,7 +9690,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8279
+                "line": 8281
               }
             ]
           },
@@ -9707,7 +9707,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8267
+                "line": 8269
               }
             ]
           },
@@ -9724,7 +9724,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8277
+                "line": 8279
               }
             ]
           },
@@ -9741,7 +9741,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8263
+                "line": 8265
               }
             ]
           },
@@ -9758,7 +9758,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8275
+                "line": 8277
               }
             ]
           },
@@ -9775,7 +9775,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8264
+                "line": 8266
               }
             ]
           },
@@ -9792,7 +9792,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8269
+                "line": 8271
               }
             ]
           },
@@ -9809,7 +9809,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3869
+                "line": 3871
               }
             ]
           },
@@ -9826,7 +9826,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3870
+                "line": 3872
               }
             ]
           },
@@ -9843,7 +9843,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8280
+                "line": 8282
               }
             ]
           },
@@ -9860,7 +9860,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8276
+                "line": 8278
               }
             ]
           },
@@ -9877,7 +9877,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8265
+                "line": 8267
               }
             ]
           },
@@ -9894,7 +9894,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8273
+                "line": 8275
               }
             ]
           },
@@ -9911,7 +9911,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8274
+                "line": 8276
               }
             ]
           },
@@ -9928,7 +9928,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8271
+                "line": 8273
               }
             ]
           }
@@ -9942,7 +9942,7 @@
       "registration_name": "MonsterFactionDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8302,
+        "line": 8304,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -9983,7 +9983,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8305
+                "line": 8307
               }
             ]
           },
@@ -10000,7 +10000,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8304
+                "line": 8306
               }
             ]
           },
@@ -10017,7 +10017,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4242
+                "line": 4244
               }
             ]
           },
@@ -10034,7 +10034,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4243
+                "line": 4245
               }
             ]
           }
@@ -10048,7 +10048,7 @@
       "registration_name": "MonsterFlagDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8288,
+        "line": 8290,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -10089,7 +10089,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8290
+                "line": 8292
               }
             ]
           },
@@ -10106,7 +10106,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4167
+                "line": 4169
               }
             ]
           },
@@ -10123,7 +10123,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4168
+                "line": 4170
               }
             ]
           }
@@ -10137,7 +10137,7 @@
       "registration_name": "MonsterGroupDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8152,
+        "line": 8154,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -10178,7 +10178,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8156
+                "line": 8158
               }
             ]
           },
@@ -10195,7 +10195,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8154
+                "line": 8156
               }
             ]
           },
@@ -10212,7 +10212,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8155
+                "line": 8157
               }
             ]
           },
@@ -10229,7 +10229,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3012
+                "line": 3014
               }
             ]
           },
@@ -10246,7 +10246,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3013
+                "line": 3015
               }
             ]
           }
@@ -10260,7 +10260,7 @@
       "registration_name": "MoodFaceDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8324,
+        "line": 8326,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -10301,7 +10301,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8326
+                "line": 8328
               }
             ]
           },
@@ -10318,7 +10318,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4326
+                "line": 4328
               }
             ]
           },
@@ -10335,7 +10335,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4327
+                "line": 4329
               }
             ]
           },
@@ -10352,7 +10352,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8327
+                "line": 8329
               }
             ]
           }
@@ -10366,7 +10366,7 @@
       "registration_name": "MoraleTypeDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8281,
+        "line": 8283,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -10407,7 +10407,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8283
+                "line": 8285
               }
             ]
           },
@@ -10424,7 +10424,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4138
+                "line": 4140
               }
             ]
           },
@@ -10441,7 +10441,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4139
+                "line": 4141
               }
             ]
           }
@@ -10455,7 +10455,7 @@
       "registration_name": "MovementModeDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8585,
+        "line": 8587,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -10496,7 +10496,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8587
+                "line": 8589
               }
             ]
           },
@@ -10513,7 +10513,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8588
+                "line": 8590
               }
             ]
           },
@@ -10530,7 +10530,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2747
+                "line": 2749
               }
             ]
           },
@@ -10547,7 +10547,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2748
+                "line": 2750
               }
             ]
           }
@@ -10561,7 +10561,7 @@
       "registration_name": "MutationCategoryDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8312,
+        "line": 8314,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -10602,7 +10602,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8314
+                "line": 8316
               }
             ]
           },
@@ -10619,7 +10619,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4286
+                "line": 4288
               }
             ]
           },
@@ -10636,7 +10636,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4287
+                "line": 4289
               }
             ]
           }
@@ -10650,7 +10650,7 @@
       "registration_name": "MutationTypeDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8306,
+        "line": 8308,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -10691,7 +10691,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8308
+                "line": 8310
               }
             ]
           },
@@ -10708,7 +10708,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4266
+                "line": 4268
               }
             ]
           },
@@ -10725,7 +10725,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4267
+                "line": 4269
               }
             ]
           }
@@ -10739,7 +10739,7 @@
       "registration_name": "NamedColorDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8335,
+        "line": 8337,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -10780,7 +10780,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8337
+                "line": 8339
               }
             ]
           },
@@ -10797,7 +10797,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4390
+                "line": 4392
               }
             ]
           },
@@ -10814,7 +10814,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4391
+                "line": 4393
               }
             ]
           }
@@ -10828,7 +10828,7 @@
       "registration_name": "NestedRecipeCategoryDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8107,
+        "line": 8109,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -10869,7 +10869,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8109
+                "line": 8111
               }
             ]
           },
@@ -10886,7 +10886,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2156
+                "line": 2158
               }
             ]
           },
@@ -10903,7 +10903,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2157
+                "line": 2159
               }
             ]
           },
@@ -10920,7 +10920,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8110
+                "line": 8112
               }
             ]
           }
@@ -10934,7 +10934,7 @@
       "registration_name": "OverlayOrderDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8445,
+        "line": 8447,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -10975,7 +10975,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8447
+                "line": 8449
               }
             ]
           },
@@ -10992,7 +10992,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8448
+                "line": 8450
               }
             ]
           },
@@ -11009,7 +11009,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5099
+                "line": 5101
               }
             ]
           },
@@ -11026,7 +11026,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5100
+                "line": 5102
               }
             ]
           }
@@ -11040,7 +11040,7 @@
       "registration_name": "OvermapConnectionDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8157,
+        "line": 8159,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -11081,7 +11081,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8159
+                "line": 8161
               }
             ]
           },
@@ -11098,7 +11098,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3044
+                "line": 3046
               }
             ]
           },
@@ -11115,7 +11115,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3045
+                "line": 3047
               }
             ]
           },
@@ -11132,7 +11132,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8160
+                "line": 8162
               }
             ]
           }
@@ -11146,7 +11146,7 @@
       "registration_name": "OvermapLandUseCodeDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8359,
+        "line": 8361,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -11187,7 +11187,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8361
+                "line": 8363
               }
             ]
           },
@@ -11204,7 +11204,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4508
+                "line": 4510
               }
             ]
           },
@@ -11221,7 +11221,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4509
+                "line": 4511
               }
             ]
           }
@@ -11235,7 +11235,7 @@
       "registration_name": "OvermapLocationDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8367,
+        "line": 8369,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -11276,7 +11276,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8369
+                "line": 8371
               }
             ]
           },
@@ -11293,7 +11293,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4553
+                "line": 4555
               }
             ]
           },
@@ -11310,7 +11310,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4554
+                "line": 4556
               }
             ]
           },
@@ -11327,7 +11327,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8370
+                "line": 8372
               }
             ]
           },
@@ -11344,7 +11344,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8371
+                "line": 8373
               }
             ]
           }
@@ -11358,7 +11358,7 @@
       "registration_name": "OvermapVisionDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8362,
+        "line": 8364,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -11399,7 +11399,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8365
+                "line": 8367
               }
             ]
           },
@@ -11416,7 +11416,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8366
+                "line": 8368
               }
             ]
           },
@@ -11433,7 +11433,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8364
+                "line": 8366
               }
             ]
           },
@@ -11450,7 +11450,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4518
+                "line": 4520
               }
             ]
           },
@@ -11467,7 +11467,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4519
+                "line": 4521
               }
             ]
           }
@@ -11481,7 +11481,7 @@
       "registration_name": "PlaylistDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8476,
+        "line": 8478,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -11522,7 +11522,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8478
+                "line": 8480
               }
             ]
           },
@@ -11539,7 +11539,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5273
+                "line": 5275
               }
             ]
           },
@@ -11556,7 +11556,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5274
+                "line": 5276
               }
             ]
           },
@@ -11573,7 +11573,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8479
+                "line": 8481
               }
             ]
           }
@@ -12106,7 +12106,7 @@
       "registration_name": "ProfessionGroupDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8372,
+        "line": 8374,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -12147,7 +12147,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8374
+                "line": 8376
               }
             ]
           },
@@ -12164,7 +12164,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4581
+                "line": 4583
               }
             ]
           },
@@ -12181,7 +12181,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4582
+                "line": 4584
               }
             ]
           },
@@ -12198,7 +12198,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8375
+                "line": 8377
               }
             ]
           }
@@ -12212,7 +12212,7 @@
       "registration_name": "ProficiencyCategoryDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8074,
+        "line": 8076,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -12253,7 +12253,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8076
+                "line": 8078
               }
             ]
           },
@@ -12270,7 +12270,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5944
+                "line": 5946
               }
             ]
           },
@@ -12287,7 +12287,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5945
+                "line": 5947
               }
             ]
           }
@@ -12301,7 +12301,7 @@
       "registration_name": "ProficiencyDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8077,
+        "line": 8079,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -12342,7 +12342,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8081
+                "line": 8083
               }
             ]
           },
@@ -12359,7 +12359,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8079
+                "line": 8081
               }
             ]
           },
@@ -12376,7 +12376,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5954
+                "line": 5956
               }
             ]
           },
@@ -12393,7 +12393,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5955
+                "line": 5957
               }
             ]
           },
@@ -12410,7 +12410,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8080
+                "line": 8082
               }
             ]
           }
@@ -12424,7 +12424,7 @@
       "registration_name": "RecipeCategoryDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8070,
+        "line": 8072,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -12465,7 +12465,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8072
+                "line": 8074
               }
             ]
           },
@@ -12482,7 +12482,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5925
+                "line": 5927
               }
             ]
           },
@@ -12499,7 +12499,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5926
+                "line": 5928
               }
             ]
           },
@@ -12516,7 +12516,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8073
+                "line": 8075
               }
             ]
           }
@@ -12530,7 +12530,7 @@
       "registration_name": "RecipeDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8096,
+        "line": 8098,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -12571,7 +12571,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8100
+                "line": 8102
               }
             ]
           },
@@ -12588,7 +12588,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8101
+                "line": 8103
               }
             ]
           },
@@ -12605,7 +12605,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8099
+                "line": 8101
               }
             ]
           },
@@ -12622,7 +12622,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8098
+                "line": 8100
               }
             ]
           },
@@ -12639,7 +12639,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2030
+                "line": 2032
               }
             ]
           },
@@ -12656,7 +12656,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2031
+                "line": 2033
               }
             ]
           },
@@ -12673,7 +12673,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8106
+                "line": 8108
               }
             ]
           },
@@ -12690,7 +12690,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8105
+                "line": 8107
               }
             ]
           },
@@ -12707,7 +12707,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8102
+                "line": 8104
               }
             ]
           },
@@ -12724,7 +12724,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8104
+                "line": 8106
               }
             ]
           },
@@ -12741,7 +12741,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8103
+                "line": 8105
               }
             ]
           }
@@ -12755,7 +12755,7 @@
       "registration_name": "RecipeGroupDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8121,
+        "line": 8123,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -12796,7 +12796,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8123
+                "line": 8125
               }
             ]
           },
@@ -12813,7 +12813,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2773
+                "line": 2775
               }
             ]
           },
@@ -12830,7 +12830,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2774
+                "line": 2776
               }
             ]
           },
@@ -12847,7 +12847,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8124
+                "line": 8126
               }
             ]
           },
@@ -12864,7 +12864,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8125
+                "line": 8127
               }
             ]
           },
@@ -12881,7 +12881,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8126
+                "line": 8128
               }
             ]
           }
@@ -12895,7 +12895,7 @@
       "registration_name": "RequirementDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8111,
+        "line": 8113,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -12936,7 +12936,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8114
+                "line": 8116
               }
             ]
           },
@@ -12953,7 +12953,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8115
+                "line": 8117
               }
             ]
           },
@@ -12970,7 +12970,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8113
+                "line": 8115
               }
             ]
           },
@@ -12987,7 +12987,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2175
+                "line": 2177
               }
             ]
           },
@@ -13004,7 +13004,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2176
+                "line": 2178
               }
             ]
           },
@@ -13021,7 +13021,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8119
+                "line": 8121
               }
             ]
           },
@@ -13038,7 +13038,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8120
+                "line": 8122
               }
             ]
           },
@@ -13055,7 +13055,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8116
+                "line": 8118
               }
             ]
           },
@@ -13072,7 +13072,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8118
+                "line": 8120
               }
             ]
           },
@@ -13089,7 +13089,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8117
+                "line": 8119
               }
             ]
           }
@@ -13103,7 +13103,7 @@
       "registration_name": "RotatableSymbolDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8338,
+        "line": 8340,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -13144,7 +13144,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8340
+                "line": 8342
               }
             ]
           },
@@ -13161,7 +13161,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4400
+                "line": 4402
               }
             ]
           },
@@ -13178,7 +13178,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4401
+                "line": 4403
               }
             ]
           }
@@ -13192,7 +13192,7 @@
       "registration_name": "ScenarioDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8138,
+        "line": 8140,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -13233,7 +13233,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8143
+                "line": 8145
               }
             ]
           },
@@ -13250,7 +13250,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8146
+                "line": 8148
               }
             ]
           },
@@ -13267,7 +13267,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8145
+                "line": 8147
               }
             ]
           },
@@ -13284,7 +13284,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8144
+                "line": 8146
               }
             ]
           },
@@ -13301,7 +13301,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8140
+                "line": 8142
               }
             ]
           },
@@ -13318,7 +13318,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8141
+                "line": 8143
               }
             ]
           },
@@ -13335,7 +13335,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2894
+                "line": 2896
               }
             ]
           },
@@ -13352,7 +13352,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2895
+                "line": 2897
               }
             ]
           },
@@ -13369,7 +13369,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8142
+                "line": 8144
               }
             ]
           },
@@ -13386,7 +13386,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8147
+                "line": 8149
               }
             ]
           }
@@ -13400,7 +13400,7 @@
       "registration_name": "ScentTypeDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8127,
+        "line": 8129,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -13441,7 +13441,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8129
+                "line": 8131
               }
             ]
           },
@@ -13458,7 +13458,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2836
+                "line": 2838
               }
             ]
           },
@@ -13475,7 +13475,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2837
+                "line": 2839
               }
             ]
           },
@@ -13492,7 +13492,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8130
+                "line": 8132
               }
             ]
           }
@@ -13506,7 +13506,7 @@
       "registration_name": "ScoreDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8442,
+        "line": 8444,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -13547,7 +13547,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8444
+                "line": 8446
               }
             ]
           },
@@ -13564,7 +13564,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5089
+                "line": 5091
               }
             ]
           },
@@ -13581,7 +13581,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5090
+                "line": 5092
               }
             ]
           }
@@ -15504,7 +15504,7 @@
       "registration_name": "ShopkeeperDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8565,
+        "line": 8567,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -15545,7 +15545,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8568
+                "line": 8570
               }
             ]
           },
@@ -15562,7 +15562,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8567
+                "line": 8569
               }
             ]
           },
@@ -15579,7 +15579,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5788
+                "line": 5790
               }
             ]
           },
@@ -15596,7 +15596,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5789
+                "line": 5791
               }
             ]
           }
@@ -15610,7 +15610,7 @@
       "registration_name": "SkillDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8022,
+        "line": 8024,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -15651,7 +15651,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8031
+                "line": 8033
               }
             ]
           },
@@ -15668,7 +15668,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8026
+                "line": 8028
               }
             ]
           },
@@ -15685,7 +15685,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8032
+                "line": 8034
               }
             ]
           },
@@ -15702,7 +15702,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8024
+                "line": 8026
               }
             ]
           },
@@ -15719,7 +15719,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8027
+                "line": 8029
               }
             ]
           },
@@ -15736,7 +15736,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8028
+                "line": 8030
               }
             ]
           },
@@ -15753,7 +15753,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2330
+                "line": 2332
               }
             ]
           },
@@ -15770,7 +15770,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2331
+                "line": 2333
               }
             ]
           },
@@ -15787,7 +15787,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8029
+                "line": 8031
               }
             ]
           },
@@ -15804,7 +15804,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8030
+                "line": 8032
               }
             ]
           },
@@ -15821,7 +15821,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8025
+                "line": 8027
               }
             ]
           }
@@ -15835,7 +15835,7 @@
       "registration_name": "SkillDisplayDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8019,
+        "line": 8021,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -15876,7 +15876,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8021
+                "line": 8023
               }
             ]
           },
@@ -15893,7 +15893,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2320
+                "line": 2322
               }
             ]
           },
@@ -15910,7 +15910,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2321
+                "line": 2323
               }
             ]
           }
@@ -15924,7 +15924,7 @@
       "registration_name": "SnippetCategoryDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8471,
+        "line": 8473,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -15965,7 +15965,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8475
+                "line": 8477
               }
             ]
           },
@@ -15982,7 +15982,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8473
+                "line": 8475
               }
             ]
           },
@@ -15999,7 +15999,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5235
+                "line": 5237
               }
             ]
           },
@@ -16016,7 +16016,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5236
+                "line": 5238
               }
             ]
           },
@@ -16033,7 +16033,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8474
+                "line": 8476
               }
             ]
           }
@@ -16047,7 +16047,7 @@
       "registration_name": "SoundEffectDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8480,
+        "line": 8482,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -16088,7 +16088,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8483
+                "line": 8485
               }
             ]
           },
@@ -16105,7 +16105,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8482
+                "line": 8484
               }
             ]
           },
@@ -16122,7 +16122,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5293
+                "line": 5295
               }
             ]
           },
@@ -16139,7 +16139,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5294
+                "line": 5296
               }
             ]
           }
@@ -16153,7 +16153,7 @@
       "registration_name": "SpeciesDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8291,
+        "line": 8293,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -16194,7 +16194,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8295
+                "line": 8297
               }
             ]
           },
@@ -16211,7 +16211,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8296
+                "line": 8298
               }
             ]
           },
@@ -16228,7 +16228,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8294
+                "line": 8296
               }
             ]
           },
@@ -16245,7 +16245,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8293
+                "line": 8295
               }
             ]
           },
@@ -16262,7 +16262,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4177
+                "line": 4179
               }
             ]
           },
@@ -16279,7 +16279,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4178
+                "line": 4180
               }
             ]
           },
@@ -16296,7 +16296,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8297
+                "line": 8299
               }
             ]
           }
@@ -16310,7 +16310,7 @@
       "registration_name": "SpeechPoolDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8452,
+        "line": 8454,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -16351,7 +16351,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8454
+                "line": 8456
               }
             ]
           },
@@ -16368,7 +16368,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8455
+                "line": 8457
               }
             ]
           },
@@ -16385,7 +16385,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5128
+                "line": 5130
               }
             ]
           },
@@ -16402,7 +16402,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5129
+                "line": 5131
               }
             ]
           }
@@ -16416,7 +16416,7 @@
       "registration_name": "SpeedDescriptionDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8161,
+        "line": 8163,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -16457,7 +16457,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8163
+                "line": 8165
               }
             ]
           },
@@ -16474,7 +16474,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3082
+                "line": 3084
               }
             ]
           },
@@ -16491,7 +16491,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3083
+                "line": 3085
               }
             ]
           },
@@ -16508,7 +16508,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8164
+                "line": 8166
               }
             ]
           }
@@ -16522,7 +16522,7 @@
       "registration_name": "StartLocationDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8419,
+        "line": 8421,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -16563,7 +16563,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8425
+                "line": 8427
               }
             ]
           },
@@ -16580,7 +16580,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8424
+                "line": 8426
               }
             ]
           },
@@ -16597,7 +16597,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8423
+                "line": 8425
               }
             ]
           },
@@ -16614,7 +16614,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8421
+                "line": 8423
               }
             ]
           },
@@ -16631,7 +16631,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4905
+                "line": 4907
               }
             ]
           },
@@ -16648,7 +16648,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4906
+                "line": 4908
               }
             ]
           },
@@ -16665,7 +16665,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8422
+                "line": 8424
               }
             ]
           },
@@ -16682,7 +16682,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8426
+                "line": 8428
               }
             ]
           }
@@ -16696,7 +16696,7 @@
       "registration_name": "SubBodyPartDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8221,
+        "line": 8223,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -16737,7 +16737,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8223
+                "line": 8225
               }
             ]
           },
@@ -16754,7 +16754,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8224
+                "line": 8226
               }
             ]
           },
@@ -16771,7 +16771,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3478
+                "line": 3480
               }
             ]
           },
@@ -16788,7 +16788,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3479
+                "line": 3481
               }
             ]
           },
@@ -16805,7 +16805,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8225
+                "line": 8227
               }
             ]
           }
@@ -16819,7 +16819,7 @@
       "registration_name": "TechniqueDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8492,
+        "line": 8494,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -16860,7 +16860,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8496
+                "line": 8498
               }
             ]
           },
@@ -16877,7 +16877,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8495
+                "line": 8497
               }
             ]
           },
@@ -16894,7 +16894,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8494
+                "line": 8496
               }
             ]
           },
@@ -16911,7 +16911,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5312
+                "line": 5314
               }
             ]
           },
@@ -16928,7 +16928,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5313
+                "line": 5315
               }
             ]
           },
@@ -16945,7 +16945,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8497
+                "line": 8499
               }
             ]
           }
@@ -16959,7 +16959,7 @@
       "registration_name": "TerrainDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8522,
+        "line": 8524,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -17000,7 +17000,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8525
+                "line": 8527
               }
             ]
           },
@@ -17017,7 +17017,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8524
+                "line": 8526
               }
             ]
           },
@@ -17034,7 +17034,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5505
+                "line": 5507
               }
             ]
           },
@@ -17051,7 +17051,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5506
+                "line": 5508
               }
             ]
           }
@@ -17734,7 +17734,7 @@
       "registration_name": "ToolQualityDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8015,
+        "line": 8017,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -17775,7 +17775,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8017
+                "line": 8019
               }
             ]
           },
@@ -17792,7 +17792,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2300
+                "line": 2302
               }
             ]
           },
@@ -17809,7 +17809,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2301
+                "line": 2303
               }
             ]
           },
@@ -17826,7 +17826,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8018
+                "line": 8020
               }
             ]
           }
@@ -17840,7 +17840,7 @@
       "registration_name": "TraitGroupDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8569,
+        "line": 8571,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -17881,7 +17881,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8571
+                "line": 8573
               }
             ]
           },
@@ -17898,7 +17898,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5768
+                "line": 5770
               }
             ]
           },
@@ -17915,7 +17915,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5769
+                "line": 5771
               }
             ]
           },
@@ -17932,7 +17932,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8572
+                "line": 8574
               }
             ]
           }
@@ -17946,7 +17946,7 @@
       "registration_name": "TrapDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8505,
+        "line": 8507,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -17987,7 +17987,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8509
+                "line": 8511
               }
             ]
           },
@@ -18004,7 +18004,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8508
+                "line": 8510
               }
             ]
           },
@@ -18021,7 +18021,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8507
+                "line": 8509
               }
             ]
           },
@@ -18038,7 +18038,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5397
+                "line": 5399
               }
             ]
           },
@@ -18055,7 +18055,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5398
+                "line": 5400
               }
             ]
           }
@@ -18953,7 +18953,7 @@
       "registration_name": "VehicleColorPaletteDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8148,
+        "line": 8150,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -18994,7 +18994,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8151
+                "line": 8153
               }
             ]
           },
@@ -19011,7 +19011,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8150
+                "line": 8152
               }
             ]
           },
@@ -19028,7 +19028,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2967
+                "line": 2969
               }
             ]
           },
@@ -19045,7 +19045,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2968
+                "line": 2970
               }
             ]
           }
@@ -19059,7 +19059,7 @@
       "registration_name": "VehicleGroupDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8380,
+        "line": 8382,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -19100,7 +19100,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8382
+                "line": 8384
               }
             ]
           },
@@ -19117,7 +19117,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4620
+                "line": 4622
               }
             ]
           },
@@ -19134,7 +19134,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4621
+                "line": 4623
               }
             ]
           },
@@ -19151,7 +19151,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8383
+                "line": 8385
               }
             ]
           }
@@ -19165,7 +19165,7 @@
       "registration_name": "VehiclePartCategoryDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8332,
+        "line": 8334,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -19206,7 +19206,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8334
+                "line": 8336
               }
             ]
           },
@@ -19223,7 +19223,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4380
+                "line": 4382
               }
             ]
           },
@@ -19240,7 +19240,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4381
+                "line": 4383
               }
             ]
           }
@@ -19254,7 +19254,7 @@
       "registration_name": "VehiclePartLocationDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8321,
+        "line": 8323,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -19295,7 +19295,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8323
+                "line": 8325
               }
             ]
           },
@@ -19312,7 +19312,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4316
+                "line": 4318
               }
             ]
           },
@@ -19329,7 +19329,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 4317
+                "line": 4319
               }
             ]
           }
@@ -19343,7 +19343,7 @@
       "registration_name": "VitaminDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8033,
+        "line": 8035,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -19384,7 +19384,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8039
+                "line": 8041
               }
             ]
           },
@@ -19401,7 +19401,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8037
+                "line": 8039
               }
             ]
           },
@@ -19418,7 +19418,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8038
+                "line": 8040
               }
             ]
           },
@@ -19435,7 +19435,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8040
+                "line": 8042
               }
             ]
           },
@@ -19452,7 +19452,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8035
+                "line": 8037
               }
             ]
           },
@@ -19469,7 +19469,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2436
+                "line": 2438
               }
             ]
           },
@@ -19486,7 +19486,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 2437
+                "line": 2439
               }
             ]
           },
@@ -19503,7 +19503,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8036
+                "line": 8038
               }
             ]
           }
@@ -19517,7 +19517,7 @@
       "registration_name": "WeakpointSetDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8200,
+        "line": 8202,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -19558,7 +19558,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8204
+                "line": 8206
               }
             ]
           },
@@ -19575,7 +19575,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8205
+                "line": 8207
               }
             ]
           },
@@ -19592,7 +19592,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8207
+                "line": 8209
               }
             ]
           },
@@ -19609,7 +19609,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8206
+                "line": 8208
               }
             ]
           },
@@ -19626,7 +19626,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8208
+                "line": 8210
               }
             ]
           },
@@ -19643,7 +19643,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8202
+                "line": 8204
               }
             ]
           },
@@ -19660,7 +19660,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3364
+                "line": 3366
               }
             ]
           },
@@ -19677,7 +19677,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3365
+                "line": 3367
               }
             ]
           },
@@ -19694,7 +19694,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8203
+                "line": 8205
               }
             ]
           }
@@ -19708,7 +19708,7 @@
       "registration_name": "WeaponCategoryDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8082,
+        "line": 8084,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -19749,7 +19749,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8084
+                "line": 8086
               }
             ]
           },
@@ -19766,7 +19766,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5983
+                "line": 5985
               }
             ]
           },
@@ -19783,7 +19783,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5984
+                "line": 5986
               }
             ]
           },
@@ -19800,7 +19800,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8085
+                "line": 8087
               }
             ]
           }
@@ -19814,7 +19814,7 @@
       "registration_name": "WeatherGeneratorDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8556,
+        "line": 8558,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -19855,7 +19855,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8559
+                "line": 8561
               }
             ]
           },
@@ -19872,7 +19872,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8558
+                "line": 8560
               }
             ]
           },
@@ -19889,7 +19889,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5728
+                "line": 5730
               }
             ]
           },
@@ -19906,7 +19906,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5729
+                "line": 5731
               }
             ]
           },
@@ -19923,7 +19923,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8561
+                "line": 8563
               }
             ]
           }
@@ -19937,7 +19937,7 @@
       "registration_name": "WeatherTypeDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8434,
+        "line": 8436,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -19978,7 +19978,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8438
+                "line": 8440
               }
             ]
           },
@@ -19995,7 +19995,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8441
+                "line": 8443
               }
             ]
           },
@@ -20012,7 +20012,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8437
+                "line": 8439
               }
             ]
           },
@@ -20029,7 +20029,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8436
+                "line": 8438
               }
             ]
           },
@@ -20046,7 +20046,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5025
+                "line": 5027
               }
             ]
           },
@@ -20063,7 +20063,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5026
+                "line": 5028
               }
             ]
           },
@@ -20080,7 +20080,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8440
+                "line": 8442
               }
             ]
           },
@@ -20097,7 +20097,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8439
+                "line": 8441
               }
             ]
           }
@@ -20111,7 +20111,7 @@
       "registration_name": "WoundDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8226,
+        "line": 8228,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -20152,7 +20152,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8229
+                "line": 8231
               }
             ]
           },
@@ -20169,7 +20169,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8233
+                "line": 8235
               }
             ]
           },
@@ -20186,7 +20186,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8228
+                "line": 8230
               }
             ]
           },
@@ -20203,7 +20203,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8230
+                "line": 8232
               }
             ]
           },
@@ -20220,7 +20220,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3591
+                "line": 3593
               }
             ]
           },
@@ -20237,7 +20237,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3592
+                "line": 3594
               }
             ]
           },
@@ -20254,7 +20254,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8231
+                "line": 8233
               }
             ]
           },
@@ -20271,7 +20271,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8232
+                "line": 8234
               }
             ]
           }
@@ -20285,7 +20285,7 @@
       "registration_name": "WoundFixDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8244,
+        "line": 8246,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -20326,7 +20326,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8250
+                "line": 8252
               }
             ]
           },
@@ -20343,7 +20343,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8246
+                "line": 8248
               }
             ]
           },
@@ -20360,7 +20360,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3685
+                "line": 3687
               }
             ]
           },
@@ -20377,7 +20377,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 3686
+                "line": 3688
               }
             ]
           },
@@ -20394,7 +20394,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8248
+                "line": 8250
               }
             ]
           },
@@ -20411,7 +20411,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8249
+                "line": 8251
               }
             ]
           },
@@ -20428,7 +20428,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8251
+                "line": 8253
               }
             ]
           },
@@ -20445,7 +20445,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8247
+                "line": 8249
               }
             ]
           }
@@ -20730,7 +20730,7 @@
       "registration_name": "ZoneTypeDefinition",
       "registration": {
         "path": "src/catalua_platform_runtime.cpp",
-        "line": 8449,
+        "line": 8451,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -20771,7 +20771,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 8451
+                "line": 8453
               }
             ]
           },
@@ -20788,7 +20788,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5118
+                "line": 5120
               }
             ]
           },
@@ -20805,7 +20805,7 @@
             "evidence": [
               {
                 "path": "src/catalua_platform_runtime.cpp",
-                "line": 5119
+                "line": 5121
               }
             ]
           }
