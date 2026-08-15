@@ -1,5 +1,9 @@
 #include "item_category.h"
 
+#include <algorithm>
+#include <utility>
+#include <vector>
+
 #include "catalua_platform_content.h"
 #include "generic_factory.h"
 #include "item.h"
@@ -12,6 +16,37 @@ generic_factory<item_category> item_category_factory( "item_category" );
 generic_factory<item_category> &cata::lua_platform::detail::item_category_registry()
 {
     return item_category_factory;
+}
+
+std::vector<cata::lua_platform::detail::item_category_snapshot_entry>
+cata::lua_platform::detail::item_category_snapshot()
+{
+    std::vector<item_category_snapshot_entry> result;
+    for( const item_category &value : item_category_factory.get_all() ) {
+        item_category_snapshot_entry entry;
+        entry.id = value.id.str();
+        entry.header = value.name_header();
+        entry.noun = value.name_noun( 1 );
+        entry.sort_rank = value.sort_rank();
+        entry.zone = value.zone_.has_value() ? value.zone_.value().str() : std::string();
+        for( const zone_priority_data &rule : value.zone_priority_ ) {
+            item_category_snapshot_entry::priority_rule converted;
+            converted.zone = rule.id.str();
+            converted.filthy = rule.filthy;
+            for( const flag_id &flag : rule.flags ) {
+                converted.flags.emplace_back( flag.str() );
+            }
+            entry.priority_zones.emplace_back( std::move( converted ) );
+        }
+        entry.spawn_rate = value.get_spawn_rate();
+        result.emplace_back( std::move( entry ) );
+    }
+    std::sort( result.begin(), result.end(),
+    []( const item_category_snapshot_entry &left,
+        const item_category_snapshot_entry &right ) {
+        return left.id < right.id;
+    } );
+    return result;
 }
 
 template<>
