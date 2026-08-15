@@ -44,7 +44,894 @@ CONTROL_FLOW = {
     "weighted_list_eocs",
 }
 
+# Selectors whose Migrated_Core catalog passes the semantic parity gate in
+# tests/catalua_ui_test.cpp field-for-field against the legacy JSON-loaded
+# objects.  Promotions ride the base IMPLEMENTED_JSON / BOUNDED_IMPLEMENTED_JSON
+# target and evidence and only flip the disposition suffix.
+IMPLEMENTED_VERIFIED = frozenset({
+    "ammunition_type",
+    "anatomy",
+    "attack_vector",
+    "bash_damage_profile",
+    "butchery_requirement",
+    "charge_removal_blacklist",
+    "connect_group",
+    "construction_category",
+    "construction_group",
+    "damage_info_order",
+    "disease_type",
+    "dream",
+    "effect_migration",
+    "emit",
+    "fault_group",
+    "harvest_drop_type",
+    "hit_range",
+    "item_action",
+    "limb_score",
+    "MONSTER_BLACKLIST",
+    "monster_flag",
+    "mutation_category",
+    "named_color",
+    "oter_id_migration",
+    "oter_vision",
+    "overlay_order",
+    "overmap_connection",
+    "overmap_land_use_code",
+    "overmap_special_migration",
+    "profession_group",
+    "proficiency_category",
+    "proficiency_migration",
+    "recipe_category",
+    "rotatable_symbol",
+    "SCENARIO_BLACKLIST",
+    "scent_type",
+    "skill",
+    "skill_display_type",
+    "SPECIES",
+    "speech",
+    "speed_description",
+    "sub_body_part",
+    "temperature_removal_blacklist",
+    "gate",
+    "ter_furn_migration",
+    "trap_migration",
+    "var_migration",
+    "vehicle_color_palette",
+    "vehicle_group",
+    "vehicle_part_category",
+    "vehicle_part_location",
+    "vehicle_part_migration",
+    "weapon_category",
+})
+BOUNDED_IMPLEMENTED_VERIFIED = frozenset({
+    "clothing_mod",
+    "damage_type",
+    "explosion_light",
+    "fault",
+    "ITEM_CATEGORY",
+    "json_flag",
+    "LOOT_ZONE",
+    "mood_face",
+    "morale_type",
+    "movement_mode",
+    "recipe_group",
+    "scenario",
+    "start_location",
+    "tool_quality",
+})
+
+IMPLEMENTED_JSON = {
+    "monster_adjustment": {
+        "target": "content.monsters",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/monstergenerator.cpp",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "trait_group": {
+        "target": "content.trait-groups",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/mutation_data.cpp",
+            "src/trait_group.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "profession_blacklist": {
+        "target": "content.blacklists",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/catalua_platform_content.h",
+            "src/profession.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "ITEM_BLACKLIST": {
+        "target": "content.blacklists",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/catalua_platform_content.h",
+            "src/item_factory.cpp",
+            "src/scenario.cpp",
+            "src/savegame_json.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "SCENARIO_BLACKLIST": {
+        "target": "content.blacklists",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/catalua_platform_content.h",
+            "src/item_factory.cpp",
+            "src/scenario.cpp",
+            "src/savegame_json.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "charge_removal_blacklist": {
+        "target": "content.blacklists",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/catalua_platform_content.h",
+            "src/item_factory.cpp",
+            "src/scenario.cpp",
+            "src/savegame_json.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "temperature_removal_blacklist": {
+        "target": "content.blacklists",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/catalua_platform_content.h",
+            "src/item_factory.cpp",
+            "src/scenario.cpp",
+            "src/savegame_json.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "bionic_migration": {
+        "target": "content.migrations",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "effect_migration": {
+        "target": "content.migrations",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "field_type_migration": {
+        "target": "content.migrations",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "oter_id_migration": {
+        "target": "content.migrations",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "overmap_special_migration": {
+        "target": "content.migrations",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "proficiency_migration": {
+        "target": "content.migrations",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "ter_furn_migration": {
+        "target": "content.migrations",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "trap_migration": {
+        "target": "content.migrations",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "var_migration": {
+        "target": "content.migrations",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "vehicle_part_migration": {
+        "target": "content.migrations",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "speech": {
+        "target": "content.speech-pools",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/speech.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "connect_group": {
+        "target": "content.connect-groups",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/mapdata.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "construction_category": {
+        "target": "content.construction-categories",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/construction_category.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "construction_group": {
+        "target": "content.construction-groups",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/construction_group.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "fault_group": {
+        "target": "content.fault-groups",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/fault.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "monster_flag": {
+        "target": "content.monster-flags",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/monstergenerator.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "vehicle_group": {
+        "target": "content.vehicle-groups",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/vehicle_group.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "activity_type": {
+        "target": "content.activity-types",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/activity_type.cpp",
+            "src/player_activity.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "anatomy": {
+        "target": "content.anatomies",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/anatomy.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "butchery_requirement": {
+        "target": "content.butchery-requirements",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/butchery_requirements.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "item_action": {
+        "target": "content.item-actions",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/item_action.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "vehicle_color_palette": {
+        "target": "content.vehicle-color-palettes",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/vehicle_palette.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "overmap_connection": {
+        "target": "content.overmap-connections",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/overmap_connection.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "attack_vector": {
+        "target": "content.attack-vectors",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/martialarts.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "bash_damage_profile": {
+        "target": "content.bash-damage-profiles",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/map_accessories.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "damage_info_order": {
+        "target": "content.damage-info-presentation",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/damage.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "help": {
+        "target": "content.help-topics",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/help.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "mutation_category": {
+        "target": "content.mutation-categories",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/mutation_data.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "oter_vision": {
+        "target": "content.overmap-vision",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/overmap_terrain.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "overmap_land_use_code": {
+        "target": "content.overmap-land-use-codes",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/overmap_terrain.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "rotatable_symbol": {
+        "target": "content.rotatable-symbols",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/rotatable_symbols.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "vehicle_part_category": {
+        "target": "content.vehicle-part-categories",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/veh_type.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "vehicle_part_location": {
+        "target": "content.vehicle-part-locations",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/vehicle_part_location.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "SPECIES": {
+        "target": "content.species",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/monstergenerator.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "emit": {
+        "target": "content.emissions",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/emit.cpp",
+            "src/map_field.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "magic_type": {
+        "target": "content.magic-types",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/magic_type.cpp",
+            "src/magic.cpp",
+            "src/activity_actor.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "playlist": {
+        "target": "content.playlists",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/sdlsound.cpp",
+            "src/sounds.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "named_color": {
+        "target": "content.named-colors",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/hsv_color.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "speed_description": {
+        "target": "content.speed-descriptions",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/speed_description.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "overlay_order": {
+        "target": "content.overlay-order",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/overlay_ordering.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "profession_group": {
+        "target": "content.profession-groups",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/profession_group.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "ammunition_type": {
+        "target": "content.ammunition-types",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/ammo.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "disease_type": {
+        "target": "content.disease-types",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/disease.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "harvest_drop_type": {
+        "target": "content.harvest-drop-types",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/harvest.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "hit_range": {
+        "target": "content.hit-range",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/creature.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "limb_score": {
+        "target": "content.limb-scores",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/bodypart.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "skill": {
+        "target": "content.skills",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/skill.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "sub_body_part": {
+        "target": "content.sub-body-parts",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/subbodypart.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "weapon_category": {
+        "target": "content.weapon-categories",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/martialarts.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "recipe_category": {
+        "target": "content.recipe-categories",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/crafting_gui.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "proficiency_category": {
+        "target": "content.proficiency-categories",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/proficiency.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "skill_display_type": {
+        "target": "content.skill-display-categories",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/skill.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "scent_type": {
+        "target": "content.scent-types",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/scent_map.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "sound_effect": {
+        "target": "content.sound-effects",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/sdlsound.cpp",
+            "src/sounds.cpp",
+            "src/sounds.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "sound_effect_preload": {
+        "target": "content.sound-effects",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/sdlsound.cpp",
+            "src/sounds.cpp",
+            "src/sounds.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "gate": {
+        "target": "content.map",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/gates.cpp",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "dream": {
+        "target": "content.gameplay",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/mutation_data.cpp",
+            "src/mutation.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "TRAIT_BLACKLIST": {
+        "target": "content.blacklists",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/mutation_data.cpp",
+            "src/mongroup.cpp",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "MONSTER_BLACKLIST": {
+        "target": "content.blacklists",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/mongroup.cpp",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "MONSTER_WHITELIST": {
+        "target": "content.blacklists",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/mongroup.cpp",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+}
+
 BOUNDED_IMPLEMENTED_JSON = {
+    "shopkeeper_blacklist": {
+        "target": "content.shopkeeper-rules",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/shop_cons_rate.cpp",
+            "src/shop_cons_rate.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "shopkeeper_whitelist": {
+        "target": "content.shopkeeper-rules",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/shop_cons_rate.cpp",
+            "src/shop_cons_rate.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "shopkeeper_consumption_rates": {
+        "target": "content.shopkeeper-rules",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/shop_cons_rate.cpp",
+            "src/shop_cons_rate.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
     "MOD_INFO": {
         "target": "platform.mod-metadata",
         "evidence": [
@@ -76,6 +963,28 @@ BOUNDED_IMPLEMENTED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
+    "practice": {
+        "target": "content.recipes",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/recipe_dictionary.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "uncraft": {
+        "target": "content.recipes",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/recipe_dictionary.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
     "tool_quality": {
         "target": "content.tool-qualities",
         "evidence": [
@@ -87,22 +996,154 @@ BOUNDED_IMPLEMENTED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
-    "skill_display_type": {
-        "target": "content.skill-display-categories",
+    "technique": {
+        "target": "content.martial-arts",
         "evidence": [
             "src/catalua_platform_runtime.cpp",
-            "src/skill.cpp",
+            "src/martialarts.cpp",
+            "src/catalua_platform_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
             "tests/catalua_ui_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
-    "skill": {
-        "target": "content.skills",
+    "martial_art": {
+        "target": "content.martial-arts",
         "evidence": [
             "src/catalua_platform_runtime.cpp",
-            "src/skill.cpp",
+            "src/martialarts.cpp",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "trap": {
+        "target": "content.map",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/trap.cpp",
+            "src/trap.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "construction": {
+        "target": "content.map",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/construction.cpp",
+            "src/construction.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "furniture": {
+        "target": "content.map",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/mapdata.cpp",
+            "src/mapdata.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "terrain": {
+        "target": "content.map",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/mapdata.cpp",
+            "src/mapdata.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "fault": {
+        "target": "content.faults",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/fault.cpp",
+            "src/fault.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "fault_fix": {
+        "target": "content.gameplay",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/fault.cpp",
+            "src/fault.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "achievement": {
+        "target": "content.gameplay",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/achievement.cpp",
+            "src/achievement.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "conduct": {
+        "target": "content.gameplay",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/achievement.cpp",
+            "src/achievement.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "map_extra": {
+        "target": "content.map",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/map_extras.cpp",
+            "src/map_extras.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "weather_generator": {
+        "target": "content.time-weather",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/weather_gen.cpp",
+            "src/weather_gen.h",
+            "src/catalua_platform_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
             "tests/catalua_ui_test.cpp",
             "tools/migrate_lua_first.py",
@@ -153,17 +1194,6 @@ BOUNDED_IMPLEMENTED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
-    "ammunition_type": {
-        "target": "content.ammunition-types",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/ammo.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
     "ITEM_CATEGORY": {
         "target": "content.item-categories",
         "evidence": [
@@ -175,44 +1205,11 @@ BOUNDED_IMPLEMENTED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
-    "recipe_category": {
-        "target": "content.recipe-categories",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/crafting_gui.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "proficiency_category": {
-        "target": "content.proficiency-categories",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/proficiency.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
     "proficiency": {
         "target": "content.proficiencies",
         "evidence": [
             "src/catalua_platform_runtime.cpp",
             "src/proficiency.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "weapon_category": {
-        "target": "content.weapon-categories",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/martialarts.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
             "tests/catalua_ui_test.cpp",
             "tools/migrate_lua_first.py",
@@ -235,39 +1232,6 @@ BOUNDED_IMPLEMENTED_JSON = {
         "evidence": [
             "src/catalua_platform_runtime.cpp",
             "src/recipe_groups.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "scent_type": {
-        "target": "content.scent-types",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/scent_map.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "speed_description": {
-        "target": "content.speed-descriptions",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/speed_description.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "harvest_drop_type": {
-        "target": "content.harvest-drop-types",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/harvest.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
             "tests/catalua_ui_test.cpp",
             "tools/migrate_lua_first.py",
@@ -354,33 +1318,11 @@ BOUNDED_IMPLEMENTED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
-    "sub_body_part": {
-        "target": "content.sub-body-parts",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/subbodypart.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
     "body_part": {
         "target": "content.body-parts",
         "evidence": [
             "src/catalua_platform_runtime.cpp",
             "src/bodypart.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "anatomy": {
-        "target": "content.anatomies",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/anatomy.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
             "tests/catalua_ui_test.cpp",
             "tools/migrate_lua_first.py",
@@ -421,51 +1363,6 @@ BOUNDED_IMPLEMENTED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
-    "disease_type": {
-        "target": "content.disease-types",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/disease.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "monster_flag": {
-        "target": "content.monster-flags",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/monstergenerator.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "SPECIES": {
-        "target": "content.species",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/monstergenerator.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "emit": {
-        "target": "content.emissions",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/emit.cpp",
-            "src/map_field.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
     "MONSTER_FACTION": {
         "target": "content.monster-factions",
         "evidence": [
@@ -488,110 +1385,11 @@ BOUNDED_IMPLEMENTED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
-    "connect_group": {
-        "target": "content.connect-groups",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/mapdata.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "mutation_category": {
-        "target": "content.mutation-categories",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/mutation_data.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "construction_category": {
-        "target": "content.construction-categories",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/construction_category.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "construction_group": {
-        "target": "content.construction-groups",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/construction_group.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "vehicle_part_location": {
-        "target": "content.vehicle-part-locations",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/vehicle_part_location.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
     "mood_face": {
         "target": "content.mood-faces",
         "evidence": [
             "src/catalua_platform_runtime.cpp",
             "src/mood_face.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "damage_info_order": {
-        "target": "content.damage-info-presentation",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/damage.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "vehicle_part_category": {
-        "target": "content.vehicle-part-categories",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/veh_type.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "named_color": {
-        "target": "content.named-colors",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/hsv_color.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "rotatable_symbol": {
-        "target": "content.rotatable-symbols",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/rotatable_symbols.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
             "tests/catalua_ui_test.cpp",
             "tools/migrate_lua_first.py",
@@ -609,66 +1407,11 @@ BOUNDED_IMPLEMENTED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
-    "limb_score": {
-        "target": "content.limb-scores",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/bodypart.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "hit_range": {
-        "target": "content.hit-range",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/creature.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "bash_damage_profile": {
-        "target": "content.bash-damage-profiles",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/map_accessories.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
     "clothing_mod": {
         "target": "content.clothing-modifications",
         "evidence": [
             "src/catalua_platform_runtime.cpp",
             "src/clothing_mod.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "overmap_land_use_code": {
-        "target": "content.overmap-land-use-codes",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/overmap_terrain.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "oter_vision": {
-        "target": "content.overmap-vision",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/overmap_terrain.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
             "tests/catalua_ui_test.cpp",
             "tools/migrate_lua_first.py",
@@ -686,44 +1429,11 @@ BOUNDED_IMPLEMENTED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
-    "profession_group": {
-        "target": "content.profession-groups",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/profession_group.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
     "map_extra_collection": {
         "target": "content.map-extra-collections",
         "evidence": [
             "src/catalua_platform_runtime.cpp",
             "src/regional_settings.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "vehicle_group": {
-        "target": "content.vehicle-groups",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/vehicle_group.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "fault_group": {
-        "target": "content.fault-groups",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/fault.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
             "tests/catalua_ui_test.cpp",
             "tools/migrate_lua_first.py",
@@ -820,17 +1530,6 @@ BOUNDED_IMPLEMENTED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
-    "overlay_order": {
-        "target": "content.overlay-order",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/overlay_ordering.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
     "LOOT_ZONE": {
         "target": "content.zone-types",
         "evidence": [
@@ -842,45 +1541,11 @@ BOUNDED_IMPLEMENTED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
-    "speech": {
-        "target": "content.speech-pools",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/speech.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
     "end_screen": {
         "target": "content.end-screens",
         "evidence": [
             "src/catalua_platform_runtime.cpp",
             "src/end_screen.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "activity_type": {
-        "target": "content.activity-types",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/activity_type.cpp",
-            "src/player_activity.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "help": {
-        "target": "content.help-topics",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/help.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
             "tests/catalua_ui_test.cpp",
             "tools/migrate_lua_first.py",
@@ -899,18 +1564,6 @@ BOUNDED_IMPLEMENTED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
-    "playlist": {
-        "target": "content.playlists",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/sdlsound.cpp",
-            "src/sounds.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
     "nested_category": {
         "target": "content.nested-recipe-categories",
         "evidence": [
@@ -923,35 +1576,33 @@ BOUNDED_IMPLEMENTED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
-    "attack_vector": {
-        "target": "content.attack-vectors",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/martialarts.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "magic_type": {
-        "target": "content.magic-types",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/magic_type.cpp",
-            "src/magic.cpp",
-            "src/activity_actor.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
     "movement_mode": {
         "target": "content.movement-modes",
         "evidence": [
             "src/catalua_platform_runtime.cpp",
             "src/move_mode.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "scenario": {
+        "target": "content.scenarios",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/scenario.cpp",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "monstergroup": {
+        "target": "content.monster-groups",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/mongroup.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
             "tests/catalua_ui_test.cpp",
             "tools/migrate_lua_first.py",
@@ -1015,11 +1666,25 @@ NATIVE_PRIMITIVE_EVIDENCE = [
 ]
 
 BOUNDED_IMPLEMENTED_EOC = {
+    ("eoc-conditions", "at_safe_space"): (
+        "services.overmap-safety-and-characters"
+    ),    ("eoc-effects", "npc_add_wet"): "services.wetness",
+    ("eoc-effects", "npc_cancel_activity"): "services.activities",
+    ("eoc-conditions", "npc_is_travelling"): "services.character-navigation",
+    ("eoc-conditions", "has_pickup_list"): "services.npcs.ai-rules",
+    ("eoc-conditions", "player_see_npc"): "services.creatures.perception",
+
     ("eoc-conditions", "compare_string"): "services.gameplay.strings",
     ("eoc-conditions", "compare_string_match_all"): (
         "services.gameplay.strings"
     ),
     ("eoc-conditions", "current_dimension"): "services.gameplay.environment",
+    ("eoc-conditions", "is_day"): "services.gameplay.environment",
+    ("eoc-conditions", "is_season"): "services.time",
+    ("eoc-conditions", "is_weather"): "services.weather",
+    ("eoc-conditions", "map_furniture_with_flag"): (
+        "services.gameplay.environment"
+    ),
     ("eoc-conditions", "mod_is_loaded"): "services.gameplay.mods",
     ("eoc-conditions", "one_in_chance"): "services.random",
     ("eoc-conditions", "roll_contested"): "services.random",
@@ -1029,6 +1694,7 @@ BOUNDED_IMPLEMENTED_EOC = {
         "services.inventory-and-martial-arts"
     ),
     ("eoc-conditions", "u_has_item"): "services.inventory",
+    ("eoc-conditions", "u_is_wearing"): "services.inventory",
     ("eoc-conditions", "u_has_move_mode"): "services.characters.movement",
     ("eoc-conditions", "u_has_weapon"): "services.inventory-and-martial-arts",
     ("eoc-conditions", "u_has_wielded_with_flag"): (
@@ -1037,25 +1703,177 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-conditions", "u_has_any_trait"): "services.mutations",
     ("eoc-conditions", "u_has_martial_art"): "services.martial_arts",
     ("eoc-conditions", "u_has_proficiency"): "services.proficiencies",
+    ("eoc-conditions", "u_has_profession"): "services.characters",
     ("eoc-conditions", "u_has_trait"): "services.mutations",
     ("eoc-conditions", "u_know_recipe"): "services.recipes",
     ("eoc-conditions", "u_using_martial_art"): "services.martial_arts",
+    ("eoc-conditions", "npc_has_trait"): "services.mutations",
+    ("eoc-conditions", "npc_has_any_trait"): "services.mutations",
+    ("eoc-conditions", "npc_has_martial_art"): "services.martial_arts",
+    ("eoc-conditions", "npc_using_martial_art"): "services.martial_arts",
+    ("eoc-conditions", "npc_has_proficiency"): "services.proficiencies",
+    ("eoc-conditions", "npc_has_bionics"): "services.bionics",
     ("eoc-conditions", "x_in_y_chance"): "services.random",
+    ("eoc-conditions", "player_see_u"): "services.creatures.perception",
+    ("eoc-conditions", "u_at_safe_space"): (
+        "services.overmap-safety-and-characters"
+    ),
+    ("eoc-conditions", "npc_at_safe_space"): (
+        "services.overmap-safety-and-characters"
+    ),
+    ("eoc-conditions", "u_has_pickup_list"): "services.npcs.ai-rules",
+    ("eoc-conditions", "u_is_travelling"): "services.character-navigation",
+    ("eoc-conditions", "u_has_strength"): "services.characters",
+    ("eoc-conditions", "npc_has_strength"): "services.characters",
+    ("eoc-conditions", "u_has_dexterity"): "services.characters",
+    ("eoc-conditions", "npc_has_dexterity"): "services.characters",
+    ("eoc-conditions", "u_has_intelligence"): "services.characters",
+    ("eoc-conditions", "npc_has_intelligence"): "services.characters",
+    ("eoc-conditions", "u_has_perception"): "services.characters",
+    ("eoc-conditions", "npc_has_perception"): "services.characters",
+    ("eoc-conditions", "u_is_warm"): "services.characters",
+    ("eoc-conditions", "npc_is_warm"): "services.characters",
+    ("eoc-conditions", "u_is_deaf"): "services.characters",
+    ("eoc-conditions", "npc_is_deaf"): "services.characters",
+    ("eoc-conditions", "u_is_alive"): "services.characters",
+    ("eoc-conditions", "u_is_avatar"): "services.characters",
+    ("eoc-conditions", "u_female"): "services.characters",
+    ("eoc-conditions", "u_has_cash"): "services.characters",
+    ("eoc-conditions", "u_has_flag"): "services.characters",
+    ("eoc-conditions", "u_has_camp"): "services.camps",
+    ("eoc-conditions", "u_has_mission"): "services.missions",
+    ("eoc-conditions", "map_terrain_id"): "services.gameplay.environment",
+    ("eoc-conditions", "map_furniture_id"): "services.gameplay.environment",
+    ("eoc-conditions", "map_field_id"): "services.gameplay.environment",
+    ("eoc-conditions", "map_terrain_with_flag"): "services.gameplay.environment",
+    ("eoc-conditions", "map_in_city"): "services.overmap",
+    ("eoc-conditions", "map_is_outside"): "services.gameplay.environment",
+    ("eoc-conditions", "u_is_on_terrain"): "services.gameplay.environment",
+    ("eoc-conditions", "npc_is_on_terrain"): "services.gameplay.environment",
+    ("eoc-conditions", "u_is_on_furniture"): "services.gameplay.environment",
+    ("eoc-conditions", "npc_is_on_furniture"): "services.gameplay.environment",
+    ("eoc-conditions", "u_is_in_field"): "services.gameplay.environment",
+    ("eoc-conditions", "npc_is_in_field"): "services.gameplay.environment",
+    ("eoc-conditions", "u_is_on_terrain_with_flag"): "services.gameplay.environment",
+    ("eoc-conditions", "npc_is_on_terrain_with_flag"): "services.gameplay.environment",
+    ("eoc-conditions", "u_is_on_furniture_with_flag"): "services.gameplay.environment",
+    ("eoc-conditions", "npc_is_on_furniture_with_flag"): "services.gameplay.environment",
+    ("eoc-conditions", "u_is_falling"): "services.characters",
+    ("eoc-conditions", "npc_is_falling"): "services.characters",
+    ("eoc-conditions", "u_is_floating"): "services.characters",
+    ("eoc-conditions", "npc_is_floating"): "services.characters",
+    ("eoc-conditions", "u_is_flying"): "services.characters",
+    ("eoc-conditions", "npc_is_flying"): "services.characters",
+    ("eoc-conditions", "u_is_sinking"): "services.characters",
+    ("eoc-conditions", "npc_is_sinking"): "services.characters",
+    ("eoc-conditions", "u_is_skidding"): "services.characters",
+    ("eoc-conditions", "npc_is_skidding"): "services.characters",
+    ("eoc-conditions", "u_need"): "services.characters",
+    ("eoc-conditions", "npc_need"): "services.characters",
+    ("eoc-conditions", "u_mission_complete"): "services.missions",
+    ("eoc-conditions", "u_mission_failed"): "services.missions",
+    ("eoc-conditions", "u_mission_goal"): "services.missions",
+    ("eoc-conditions", "u_mission_incomplete"): "services.missions",
+    ("eoc-conditions", "u_has_available_mission"): "services.missions",
+    ("eoc-conditions", "u_has_many_available_missions"): "services.missions",
+    ("eoc-conditions", "u_has_no_available_mission"): "services.missions",
+    ("eoc-conditions", "u_aim_rule"): "services.characters",
+    ("eoc-conditions", "u_engagement_rule"): "services.characters",
+    ("eoc-conditions", "u_cbm_recharge_rule"): "services.characters",
+    ("eoc-conditions", "u_cbm_reserve_rule"): "services.characters",
+    ("eoc-conditions", "u_bodytype"): "services.characters",
+    ("eoc-conditions", "npc_bodytype"): "services.characters",
+    ("eoc-conditions", "u_can_float"): "services.characters",
+    ("eoc-conditions", "npc_can_float"): "services.characters",
+    ("eoc-conditions", "u_can_fly"): "services.characters",
+    ("eoc-conditions", "npc_can_fly"): "services.characters",
+    ("eoc-conditions", "u_following"): "services.characters",
+    ("eoc-conditions", "u_is_trait_purifiable"): "services.mutations",
+    ("eoc-conditions", "npc_is_trait_purifiable"): "services.mutations",
+    ("eoc-conditions", "u_available"): "services.characters",
+    ("eoc-conditions", "u_rule"): "services.characters",
+    ("eoc-conditions", "u_safe_mode_trigger"): "services.gameplay.environment",
+    ("eoc-conditions", "u_has_part_flag"): "services.characters",
+    ("eoc-conditions", "npc_has_part_flag"): "services.characters",
+    ("eoc-conditions", "u_has_class"): "services.characters",
+    ("eoc-conditions", "npc_has_profession"): "services.characters",
+    ("eoc-conditions", "npc_has_flag"): "services.characters",
+    ("eoc-conditions", "npc_is_wearing"): "services.inventory",
+    ("eoc-conditions", "npc_has_pickup_list"): "services.npcs.ai-rules",
+    ("eoc-conditions", "npc_has_class"): "services.characters",
+    ("eoc-conditions", "u_is_outside"): "services.gameplay.environment",
+    ("eoc-conditions", "npc_is_outside"): "services.gameplay.environment",
+    ("eoc-conditions", "u_male"): "services.characters",
+    ("eoc-conditions", "npc_male"): "services.characters",
+    ("eoc-conditions", "npc_female"): "services.characters",
+    ("eoc-conditions", "u_is_character"): "services.characters",
+    ("eoc-conditions", "npc_is_character"): "services.characters",
+    ("eoc-conditions", "npc_is_npc"): "services.characters",
+    ("eoc-conditions", "npc_aim_rule"): "services.npcs",
+    ("eoc-conditions", "npc_engagement_rule"): "services.npcs",
+    ("eoc-conditions", "npc_cbm_reserve_rule"): "services.npcs",
+    ("eoc-conditions", "npc_cbm_recharge_rule"): "services.npcs",
+    ("eoc-conditions", "u_is_npc"): "services.characters",
+    ("eoc-conditions", "npc_is_avatar"): "services.characters",
+    ("eoc-conditions", "u_is_monster"): "services.characters",
+    ("eoc-conditions", "npc_is_monster"): "services.characters",
+    ("eoc-conditions", "u_is_item"): "services.characters",
+    ("eoc-conditions", "npc_is_item"): "services.characters",
+    ("eoc-conditions", "u_is_furniture"): "services.characters",
+    ("eoc-conditions", "npc_is_furniture"): "services.characters",
+    ("eoc-conditions", "u_is_vehicle"): "services.characters",
+    ("eoc-conditions", "npc_is_vehicle"): "services.characters",
+    ("eoc-conditions", "u_exists"): "services.characters",
+    ("eoc-conditions", "npc_exists"): "services.characters",
+    ("eoc-conditions", "npc_hostile"): "services.npcs",
+    ("eoc-conditions", "npc_friend"): "services.npcs",
+    ("eoc-conditions", "u_hostile"): "services.characters",
+    ("eoc-conditions", "u_friend"): "services.characters",
+    ("eoc-conditions", "u_is_in_vehicle"): "services.characters",
+    ("eoc-conditions", "u_controlling_vehicle"): "services.characters",
+    ("eoc-conditions", "u_driving"): "services.characters",
+    ("eoc-conditions", "u_is_riding"): "services.characters",
+    ("eoc-conditions", "u_is_avatar_passenger"): "services.characters",
+    ("eoc-conditions", "u_is_driven"): "services.characters",
+    ("eoc-conditions", "u_is_remote_controlled"): "services.characters",
+    ("eoc-conditions", "u_is_on_rails"): "services.characters",
     ("eoc-effects", "give_achievement"): "services.achievements",
     ("eoc-effects", "message"): "services.message",
     ("eoc-effects", "npc_set_flag"): "services.items",
     ("eoc-effects", "npc_unset_flag"): "services.items",
     ("eoc-effects", "u_add_bionic"): "services.bionics",
+    ("eoc-effects", "npc_add_bionic"): "services.bionics",
     ("eoc-effects", "u_cancel_activity"): "services.activities",
     ("eoc-effects", "u_add_effect"): "services.effects",
+    ("eoc-effects", "npc_add_effect"): "services.effects",
+    ("eoc-effects", "u_add_trait"): "services.mutations",
+    ("eoc-effects", "npc_add_trait"): "services.mutations",
+    ("eoc-effects", "u_lose_trait"): "services.mutations",
+    ("eoc-effects", "npc_lose_trait"): "services.mutations",
+    ("eoc-effects", "u_add_wet"): "services.wetness",
     ("eoc-effects", "u_forget_martial_art"): "services.martial_arts",
+    ("eoc-effects", "npc_forget_martial_art"): "services.martial_arts",
     ("eoc-effects", "u_forget_recipe"): "services.recipes",
+    ("eoc-effects", "npc_forget_recipe"): "services.recipes",
     ("eoc-effects", "u_learn_martial_art"): "services.martial_arts",
+    ("eoc-effects", "npc_learn_martial_art"): "services.martial_arts",
     ("eoc-effects", "u_learn_recipe"): "services.recipes",
+    ("eoc-effects", "npc_learn_recipe"): "services.recipes",
     ("eoc-effects", "u_lose_bionic"): "services.bionics",
+    ("eoc-effects", "npc_lose_bionic"): "services.bionics",
     ("eoc-effects", "u_lose_effect"): "services.effects",
     ("eoc-effects", "u_add_morale"): "services.morale",
+    ("eoc-effects", "npc_add_morale"): "services.morale",
     ("eoc-effects", "u_lose_morale"): "services.morale",
+    ("eoc-effects", "npc_lose_morale"): "services.morale",
+    ("eoc-effects", "u_lose_var"): "services.variables",
+    ("eoc-effects", "npc_lose_var"): "services.variables",
+    ("eoc-effects", "u_message"): "services.message",
+    ("eoc-effects", "npc_message"): "services.message",
+    ("eoc-effects", "u_activate_trait"): "services.mutations",
+    ("eoc-effects", "u_deactivate_trait"): "services.mutations",
+    ("eoc-effects", "npc_activate_trait"): "services.mutations",
+    ("eoc-effects", "npc_deactivate_trait"): "services.mutations",
 }
 
 BOUNDED_IMPLEMENTED_EOC_EVIDENCE = [
@@ -1068,6 +1886,403 @@ BOUNDED_IMPLEMENTED_EOC_EVIDENCE = [
 ]
 
 BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
+    ("eoc-conditions", "u_has_cash"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "src/character.h",
+    ],
+    ("eoc-conditions", "u_has_camp"): [
+        "src/condition.cpp",
+        "src/catalua_ui_camps.cpp",
+    ],
+    ("eoc-conditions", "u_has_mission"): [
+        "src/condition.cpp",
+        "src/catalua_ui_missions.cpp",
+    ],
+    ("eoc-conditions", "u_has_profession"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "src/profession.h",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "u_has_flag"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "src/character.h",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "u_is_outside"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+    ],
+    ("eoc-conditions", "map_furniture_with_flag"): [
+        "src/condition.cpp",
+        "src/catalua_platform_runtime.cpp",
+    ],
+    ("eoc-conditions", "map_terrain_id"): [
+        "src/condition.cpp",
+        "src/catalua_platform_runtime.cpp",
+    ],
+    ("eoc-conditions", "map_furniture_id"): [
+        "src/condition.cpp",
+        "src/catalua_platform_runtime.cpp",
+    ],
+    ("eoc-conditions", "map_field_id"): [
+        "src/condition.cpp",
+        "src/catalua_platform_runtime.cpp",
+    ],
+    ("eoc-conditions", "map_terrain_with_flag"): [
+        "src/condition.cpp",
+        "src/catalua_platform_runtime.cpp",
+    ],
+    ("eoc-conditions", "map_in_city"): [
+        "src/condition.cpp",
+        "src/catalua_ui_overmap.cpp",
+    ],
+    ("eoc-conditions", "map_is_outside"): [
+        "src/condition.cpp",
+        "src/catalua_platform_runtime.cpp",
+    ],
+    ("eoc-conditions", "u_is_on_terrain"): [
+        "src/condition.cpp",
+        "src/catalua_platform_runtime.cpp",
+    ],
+    ("eoc-conditions", "npc_is_on_terrain"): [
+        "src/condition.cpp",
+        "src/catalua_platform_runtime.cpp",
+    ],
+    ("eoc-conditions", "u_is_on_furniture"): [
+        "src/condition.cpp",
+        "src/catalua_platform_runtime.cpp",
+    ],
+    ("eoc-conditions", "npc_is_on_furniture"): [
+        "src/condition.cpp",
+        "src/catalua_platform_runtime.cpp",
+    ],
+    ("eoc-conditions", "u_is_in_field"): [
+        "src/condition.cpp",
+        "src/catalua_platform_runtime.cpp",
+    ],
+    ("eoc-conditions", "npc_is_in_field"): [
+        "src/condition.cpp",
+        "src/catalua_platform_runtime.cpp",
+    ],
+    ("eoc-conditions", "u_is_on_terrain_with_flag"): [
+        "src/condition.cpp",
+        "src/catalua_platform_runtime.cpp",
+    ],
+    ("eoc-conditions", "npc_is_on_terrain_with_flag"): [
+        "src/condition.cpp",
+        "src/catalua_platform_runtime.cpp",
+    ],
+    ("eoc-conditions", "u_is_on_furniture_with_flag"): [
+        "src/condition.cpp",
+        "src/catalua_platform_runtime.cpp",
+    ],
+    ("eoc-conditions", "npc_is_on_furniture_with_flag"): [
+        "src/condition.cpp",
+        "src/catalua_platform_runtime.cpp",
+    ],
+    ("eoc-conditions", "u_is_falling"): [
+        "src/condition.cpp",
+        "src/talker.h",
+        "src/talker_vehicle.cpp",
+    ],
+    ("eoc-conditions", "npc_is_falling"): [
+        "src/condition.cpp",
+        "src/talker.h",
+        "src/talker_vehicle.cpp",
+    ],
+    ("eoc-conditions", "u_is_floating"): [
+        "src/condition.cpp",
+        "src/talker.h",
+        "src/talker_vehicle.cpp",
+    ],
+    ("eoc-conditions", "npc_is_floating"): [
+        "src/condition.cpp",
+        "src/talker.h",
+        "src/talker_vehicle.cpp",
+    ],
+    ("eoc-conditions", "u_is_flying"): [
+        "src/condition.cpp",
+        "src/talker.h",
+        "src/talker_vehicle.cpp",
+    ],
+    ("eoc-conditions", "npc_is_flying"): [
+        "src/condition.cpp",
+        "src/talker.h",
+        "src/talker_vehicle.cpp",
+    ],
+    ("eoc-conditions", "u_is_sinking"): [
+        "src/condition.cpp",
+        "src/talker.h",
+        "src/talker_vehicle.cpp",
+    ],
+    ("eoc-conditions", "npc_is_sinking"): [
+        "src/condition.cpp",
+        "src/talker.h",
+        "src/talker_vehicle.cpp",
+    ],
+    ("eoc-conditions", "u_is_skidding"): [
+        "src/condition.cpp",
+        "src/talker.h",
+        "src/talker_vehicle.cpp",
+    ],
+    ("eoc-conditions", "npc_is_skidding"): [
+        "src/condition.cpp",
+        "src/talker.h",
+        "src/talker_vehicle.cpp",
+    ],
+    ("eoc-conditions", "u_need"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "src/character.h",
+    ],
+    ("eoc-conditions", "npc_need"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "src/character.h",
+    ],
+    ("eoc-conditions", "u_mission_complete"): [
+        "src/condition.cpp",
+        "src/talker.h",
+    ],
+    ("eoc-conditions", "u_mission_failed"): [
+        "src/condition.cpp",
+        "src/talker.h",
+    ],
+    ("eoc-conditions", "u_mission_goal"): [
+        "src/condition.cpp",
+        "src/talker.h",
+    ],
+    ("eoc-conditions", "u_mission_incomplete"): [
+        "src/condition.cpp",
+        "src/talker.h",
+    ],
+    ("eoc-conditions", "u_has_available_mission"): [
+        "src/condition.cpp",
+        "src/talker.h",
+    ],
+    ("eoc-conditions", "u_has_many_available_missions"): [
+        "src/condition.cpp",
+        "src/talker.h",
+    ],
+    ("eoc-conditions", "u_has_no_available_mission"): [
+        "src/condition.cpp",
+        "src/talker.h",
+    ],
+    ("eoc-conditions", "u_aim_rule"): [
+        "src/condition.cpp",
+        "src/talker.h",
+        "src/talker_npc.cpp",
+    ],
+    ("eoc-conditions", "u_engagement_rule"): [
+        "src/condition.cpp",
+        "src/talker.h",
+        "src/talker_npc.cpp",
+    ],
+    ("eoc-conditions", "u_cbm_recharge_rule"): [
+        "src/condition.cpp",
+        "src/talker.h",
+        "src/talker_npc.cpp",
+    ],
+    ("eoc-conditions", "u_cbm_reserve_rule"): [
+        "src/condition.cpp",
+        "src/talker.h",
+        "src/talker_npc.cpp",
+    ],
+    ("eoc-conditions", "u_bodytype"): [
+        "src/condition.cpp",
+        "src/talker_character.cpp",
+    ],
+    ("eoc-conditions", "npc_bodytype"): [
+        "src/condition.cpp",
+        "src/talker_character.cpp",
+    ],
+    ("eoc-conditions", "u_can_float"): [
+        "src/condition.cpp",
+        "src/talker.h",
+    ],
+    ("eoc-conditions", "npc_can_float"): [
+        "src/condition.cpp",
+        "src/talker.h",
+    ],
+    ("eoc-conditions", "u_can_fly"): [
+        "src/condition.cpp",
+        "src/talker.h",
+    ],
+    ("eoc-conditions", "npc_can_fly"): [
+        "src/condition.cpp",
+        "src/talker.h",
+    ],
+    ("eoc-conditions", "u_following"): [
+        "src/condition.cpp",
+        "src/talker.h",
+    ],
+    ("eoc-conditions", "u_is_trait_purifiable"): [
+        "src/condition.cpp",
+        "src/talker_character.cpp",
+        "src/catalua_ui_mutations.cpp",
+    ],
+    ("eoc-conditions", "npc_is_trait_purifiable"): [
+        "src/condition.cpp",
+        "src/talker_character.cpp",
+        "src/catalua_ui_mutations.cpp",
+    ],
+    ("eoc-conditions", "u_available"): [
+        "src/condition.cpp",
+        "src/effect.h",
+    ],
+    ("eoc-conditions", "u_rule"): [
+        "src/condition.cpp",
+        "src/talker.h",
+        "src/talker_npc.cpp",
+    ],
+    ("eoc-conditions", "u_safe_mode_trigger"): [
+        "src/condition.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "src/avatar.h",
+    ],
+    ("eoc-conditions", "u_has_part_flag"): [
+        "src/condition.cpp",
+        "src/talker.h",
+    ],
+    ("eoc-conditions", "npc_has_part_flag"): [
+        "src/condition.cpp",
+        "src/talker.h",
+    ],
+    ("eoc-conditions", "u_has_class"): [
+        "src/condition.cpp",
+        "src/talker.h",
+        "src/talker_npc.cpp",
+    ],
+    ("eoc-conditions", "npc_has_profession"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+    ],
+    ("eoc-conditions", "npc_has_flag"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+    ],
+    ("eoc-conditions", "npc_is_wearing"): [
+        "src/condition.cpp",
+        "src/catalua_ui_items.cpp",
+    ],
+    ("eoc-conditions", "npc_has_pickup_list"): [
+        "src/condition.cpp",
+        "src/catalua_ui_npcs.cpp",
+    ],
+    ("eoc-conditions", "npc_has_class"): [
+        "src/condition.cpp",
+        "src/catalua_ui_npcs.cpp",
+        "src/talker_npc.cpp",
+    ],
+    ("eoc-conditions", "is_outside"): [
+        "src/condition.cpp",
+        "src/catalua_platform_runtime.cpp",
+    ],
+    ("eoc-conditions", "npc_is_outside"): [
+        "src/condition.cpp",
+        "src/catalua_platform_runtime.cpp",
+    ],
+    ("eoc-conditions", "u_male"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+    ],
+    ("eoc-conditions", "npc_male"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+    ],
+    ("eoc-conditions", "npc_female"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+    ],
+    ("eoc-conditions", "u_is_character"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+    ],
+    ("eoc-conditions", "npc_is_character"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+    ],
+    ("eoc-conditions", "npc_is_npc"): [
+        "src/condition.cpp",
+        "src/catalua_ui_npcs.cpp",
+    ],
+    ("eoc-conditions", "npc_aim_rule"): [
+        "src/condition.cpp",
+        "src/catalua_ui_npcs.cpp",
+        "src/npc.h",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "npc_engagement_rule"): [
+        "src/condition.cpp",
+        "src/catalua_ui_npcs.cpp",
+        "src/npc.h",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "npc_cbm_reserve_rule"): [
+        "src/condition.cpp",
+        "src/catalua_ui_npcs.cpp",
+        "src/npc.h",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "npc_cbm_recharge_rule"): [
+        "src/condition.cpp",
+        "src/catalua_ui_npcs.cpp",
+        "src/npc.h",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "npc_is_travelling"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "src/character.h",
+    ],
+    ("eoc-conditions", "at_safe_space"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "src/catalua_ui_overmap.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "has_pickup_list"): [
+        "src/condition.cpp",
+        "src/catalua_ui_npcs.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "player_see_npc"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "npc_add_wet"): [
+        "src/npctalk.cpp",
+        "src/weather.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "npc_cancel_activity"): [
+        "src/npctalk.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+    ],
+    ("eoc-conditions", "is_day"): [
+        "src/condition.cpp",
+        "src/calendar.cpp",
+        "src/calendar.h",
+    ],
+    ("eoc-conditions", "is_season"): [
+        "src/condition.cpp",
+        "src/calendar.cpp",
+        "src/catalua_ui_game.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "is_weather"): [
+        "src/condition.cpp",
+        "src/catalua_ui_weather.cpp",
+        "src/catalua_bindings_values.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+
     ("eoc-conditions", "u_can_drop_weapon"): [
         "src/condition.cpp",
         "src/melee.cpp",
@@ -1080,6 +2295,28 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/catalua_ui_bionics.cpp",
         "data/lua/types/ccb_api_v5.d.lua",
     ],
+    ("eoc-conditions", "player_see_u"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "u_at_safe_space"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "src/catalua_ui_overmap.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "u_has_pickup_list"): [
+        "src/condition.cpp",
+        "src/catalua_ui_npcs.cpp",
+        "src/npctalk.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "u_is_travelling"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "src/character.h",
+    ],
     ("eoc-conditions", "u_has_activity"): [
         "src/condition.cpp",
         "src/player_activity.cpp",
@@ -1088,6 +2325,11 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/condition.cpp",
         "src/catalua_ui_items.cpp",
         "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "u_is_wearing"): [
+        "src/condition.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "src/character.h",
     ],
     ("eoc-conditions", "u_has_move_mode"): [
         "src/condition.cpp",
@@ -1194,6 +2436,12 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/catalua_ui_martial_arts.cpp",
         "data/lua/types/ccb_api_v5.d.lua",
     ],
+    ("eoc-effects", "u_add_wet"): [
+        "src/npctalk.cpp",
+        "src/weather.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
     ("eoc-effects", "u_forget_martial_art"): [
         "src/character_martial_arts.cpp",
         "src/catalua_ui_martial_arts.cpp",
@@ -1213,11 +2461,58 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/morale.cpp",
         "src/morale_types.cpp",
     ],
+    ("eoc-effects", "u_lose_var"): [
+        "src/npctalk.cpp",
+        "src/condition.cpp",
+        "src/catalua_ui_eocs.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "npc_lose_var"): [
+        "src/npctalk.cpp",
+        "src/condition.cpp",
+        "src/catalua_ui_eocs.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "u_message"): [
+        "src/npctalk.cpp",
+    ],
+    ("eoc-effects", "npc_message"): [
+        "src/npctalk.cpp",
+    ],
+    ("eoc-effects", "u_activate_trait"): [
+        "src/npctalk.cpp",
+        "src/talker_character.cpp",
+        "src/catalua_ui_mutations.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "u_deactivate_trait"): [
+        "src/npctalk.cpp",
+        "src/talker_character.cpp",
+        "src/catalua_ui_mutations.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "npc_activate_trait"): [
+        "src/npctalk.cpp",
+        "src/talker_character.cpp",
+        "src/catalua_ui_mutations.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "npc_deactivate_trait"): [
+        "src/npctalk.cpp",
+        "src/talker_character.cpp",
+        "src/catalua_ui_mutations.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
 }
 
 EXPLICIT_PRIMITIVE_EOC = {
     ("eoc-conditions", "follower_present"): "services.followers",
+    ("eoc-conditions", "has_alpha"): "services.dialogue-projection",
+    ("eoc-conditions", "has_beta"): "services.dialogue-projection",
+    ("eoc-conditions", "has_reason"): "services.dialogue-projection",
+    ("eoc-conditions", "is_by_radio"): "services.dialogue-projection",
     ("eoc-conditions", "is_outside"): "services.gameplay.environment",
+    ("eoc-conditions", "is_rotten"): "services.items",
     ("eoc-conditions", "line_of_sight"): "services.gameplay.environment",
     ("eoc-conditions", "npc_can_drop_weapon"): (
         "services.inventory-and-martial-arts"
@@ -1240,7 +2535,9 @@ EXPLICIT_PRIMITIVE_EOC = {
     ("eoc-effects", "hostile"): "services.npcs",
     ("eoc-effects", "mirror_coordinates"): "services.coords",
     ("eoc-effects", "map_spawn_item"): "services.world",
-    ("eoc-effects", "npc_cancel_activity"): "services.activities",
+    ("eoc-effects", "npc_add_wound"): "services.wounds",
+    ("eoc-effects", "npc_assign_activity"): "services.activities",
+    ("eoc-effects", "npc_remove_wound"): "services.wounds",
     ("eoc-effects", "npc_set_fac_relation"): "services.factions",
     ("eoc-effects", "reveal_route"): "services.overmap",
     ("eoc-effects", "sample_range"): "services.random",
@@ -1250,6 +2547,9 @@ EXPLICIT_PRIMITIVE_EOC = {
     ("eoc-effects", "stranger_neutral"): "services.npcs",
     ("eoc-effects", "turn_cost"): "services.characters-and-time",
     ("eoc-effects", "u_add_faction_trust"): "services.factions",
+    ("eoc-effects", "u_add_wound"): "services.wounds",
+    ("eoc-effects", "u_assign_activity"): "services.activities",
+    ("eoc-effects", "u_remove_wound"): "services.wounds",
     ("eoc-effects", "u_set_flag"): "services.items",
     ("eoc-effects", "u_set_fac_relation"): "services.factions",
     ("eoc-effects", "u_spawn_item"): "services.inventory",
@@ -1257,8 +2557,105 @@ EXPLICIT_PRIMITIVE_EOC = {
 }
 
 EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
+    ("eoc-effects", "npc_add_wet"): [
+        "src/npctalk.cpp",
+        "src/weather.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "npc_add_wound"): [
+        "src/npctalk.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tests/catalua_ui_test.cpp",
+    ],
+    ("eoc-effects", "npc_remove_wound"): [
+        "src/npctalk.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tests/catalua_ui_test.cpp",
+    ],
+    ("eoc-effects", "u_add_wound"): [
+        "src/npctalk.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tests/catalua_ui_test.cpp",
+    ],
+    ("eoc-effects", "u_remove_wound"): [
+        "src/npctalk.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tests/catalua_ui_test.cpp",
+    ],
+    ("eoc-effects", "npc_assign_activity"): [
+        "src/npctalk.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+    ],
+    ("eoc-effects", "u_assign_activity"): [
+        "src/npctalk.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+    ],
+    ("eoc-conditions", "at_safe_space"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "src/catalua_ui_overmap.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "npc_at_safe_space"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "src/catalua_ui_overmap.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
     ("eoc-conditions", "follower_present"): [
         "src/catalua_ui_game_info.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "has_alpha"): [
+        "src/condition.cpp",
+        "src/catalua_ui.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+    ],
+    ("eoc-conditions", "has_beta"): [
+        "src/condition.cpp",
+        "src/catalua_ui.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+    ],
+    ("eoc-conditions", "has_pickup_list"): [
+        "src/condition.cpp",
+        "src/catalua_ui_npcs.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "has_reason"): [
+        "src/condition.cpp",
+        "src/catalua_ui.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+    ],
+    ("eoc-conditions", "is_by_radio"): [
+        "src/condition.cpp",
+        "src/catalua_ui.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+    ],
+    ("eoc-conditions", "is_rotten"): [
+        "src/condition.cpp",
+        "src/catalua_ui_items.cpp",
+        "src/item.h",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "npc_is_travelling"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "src/character.h",
+    ],
+    ("eoc-conditions", "player_see_npc"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
         "data/lua/types/ccb_api_v5.d.lua",
     ],
     ("eoc-conditions", "npc_can_drop_weapon"): [
@@ -1378,17 +2775,11 @@ EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
 }
 
 EXPLICIT_PLANNED_EOC = {
-    ("eoc-conditions", "npc_is_travelling"): "services.character-navigation",
-    ("eoc-conditions", "u_is_travelling"): "services.character-navigation",
     ("eoc-effects", "goto_location"): "workflows.npc-navigation",
     ("eoc-effects", "morale_chat_activity"): "workflows.socialize",
     ("eoc-effects", "npc_activate"): "services.items-and-characters",
-    ("eoc-effects", "npc_add_wet"): "services.wetness",
-    ("eoc-effects", "npc_add_wound"): "services.wounds",
     ("eoc-effects", "npc_deal_damage"): "services.combat",
     ("eoc-effects", "npc_pick_bodypart"): "services.body-parts-and-wounds",
-    ("eoc-effects", "npc_remove_wound"): "services.wounds",
-    ("eoc-effects", "npc_assign_activity"): "services.activities",
     ("eoc-effects", "npc_set_goal"): "services.npc-navigation",
     ("eoc-effects", "npc_set_guard_pos"): "services.npc-navigation",
     ("eoc-effects", "npc_set_fault"): "services.items",
@@ -1396,12 +2787,8 @@ EXPLICIT_PLANNED_EOC = {
     ("eoc-effects", "set_browsed"): "services.items",
     ("eoc-effects", "transform_item"): "services.items",
     ("eoc-effects", "u_activate"): "services.items-and-characters",
-    ("eoc-effects", "u_assign_activity"): "services.activities",
-    ("eoc-effects", "u_add_wet"): "services.wetness",
-    ("eoc-effects", "u_add_wound"): "services.wounds",
     ("eoc-effects", "u_deal_damage"): "services.combat",
     ("eoc-effects", "u_pick_bodypart"): "services.body-parts-and-wounds",
-    ("eoc-effects", "u_remove_wound"): "services.wounds",
     ("eoc-effects", "u_set_goal"): "services.npc-navigation",
     ("eoc-effects", "u_set_guard_pos"): "services.npc-navigation",
     ("eoc-effects", "u_set_fault"): "services.items",
@@ -1413,12 +2800,6 @@ EXPLICIT_PLANNED_EOC = {
 }
 
 EXPLICIT_PLANNED_EOC_EXTRA_EVIDENCE = {
-    ("eoc-conditions", "npc_is_travelling"): [
-        "src/condition.cpp", "src/character.h",
-    ],
-    ("eoc-conditions", "u_is_travelling"): [
-        "src/condition.cpp", "src/character.h",
-    ],
     ("eoc-effects", "goto_location"): ["src/npctalk_funcs.cpp"],
     ("eoc-effects", "morale_chat_activity"): ["src/npctalk_funcs.cpp"],
     ("eoc-effects", "npc_activate"): [
@@ -1553,14 +2934,34 @@ def legacy_evidence(entry: dict) -> list[str]:
 
 def disposition(inventory: str, selector: str, entry: dict) -> dict:
     if inventory == "json-object-types":
-        if selector in BOUNDED_IMPLEMENTED_JSON:
-            implemented = BOUNDED_IMPLEMENTED_JSON[selector]
+        if selector in IMPLEMENTED_JSON:
+            implemented = IMPLEMENTED_JSON[selector]
+            status = (
+                "implemented_verified" if selector in IMPLEMENTED_VERIFIED
+                else "implemented_unverified"
+            )
             return {
                 "inventory": inventory,
                 "selector": selector,
                 "target_kind": "platform_domain",
                 "target": implemented["target"],
-                "status": "bounded_implemented_unverified",
+                "status": status,
+                "legacy_dependency": "none",
+                "evidence": implemented["evidence"],
+            }
+        if selector in BOUNDED_IMPLEMENTED_JSON:
+            implemented = BOUNDED_IMPLEMENTED_JSON[selector]
+            status = (
+                "bounded_implemented_verified"
+                if selector in BOUNDED_IMPLEMENTED_VERIFIED
+                else "bounded_implemented_unverified"
+            )
+            return {
+                "inventory": inventory,
+                "selector": selector,
+                "target_kind": "platform_domain",
+                "target": implemented["target"],
+                "status": status,
                 "legacy_dependency": "none",
                 "evidence": implemented["evidence"],
             }
@@ -1708,13 +3109,24 @@ def build_ledger() -> dict:
             "entries cover named real shapes without claiming full selector "
             "parity. "
             "Primitive-available entries have native composition building "
-            "blocks but are not claims of selector-level parity."
+            "blocks but are not claims of selector-level parity. "
+            "Verified entries additionally pass the migrated-core semantic "
+            "parity gate in tests/catalua_ui_test.cpp field-for-field "
+            "against the legacy JSON-loaded objects."
         ),
         "sources": sources,
         "summary": {
             "total": len(entries),
+            "implemented_verified": sum(
+                entry["status"] == "implemented_verified"
+                for entry in entries
+            ),
             "implemented_unverified": sum(
                 entry["status"] == "implemented_unverified"
+                for entry in entries
+            ),
+            "bounded_implemented_verified": sum(
+                entry["status"] == "bounded_implemented_verified"
                 for entry in entries
             ),
             "bounded_implemented_unverified": sum(
