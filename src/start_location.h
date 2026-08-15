@@ -26,6 +26,28 @@ template<typename T> class generic_factory;
 namespace cata::lua_platform
 {
 class content_transaction;
+namespace detail
+{
+struct start_location_snapshot_entry {
+    std::string id;
+    std::string name;
+    struct target {
+        std::string overmap_terrain;
+        std::string match_type;
+        std::vector<std::pair<std::string, std::string>> parameters;
+    };
+    std::vector<target> targets;
+    std::vector<std::string> flags;
+    int city_size_min = 0;
+    int city_size_max = 0;
+    int city_distance_min = 0;
+    int city_distance_max = 0;
+    int z_min = 0;
+    int z_max = 0;
+    mod_id owner;
+};
+std::vector<start_location_snapshot_entry> start_location_snapshot();
+} // namespace detail
 }
 
 struct start_location_placement_constraints {
@@ -48,6 +70,8 @@ class start_location
         start_location_id id;
         std::vector<std::pair<start_location_id, mod_id>> src;
         bool was_loaded = false;
+        friend std::vector<cata::lua_platform::detail::start_location_snapshot_entry>
+        cata::lua_platform::detail::start_location_snapshot();
         void load( const JsonObject &jo, std::string_view src );
         void finalize();
         void check() const;

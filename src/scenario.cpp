@@ -1,3 +1,5 @@
+#include "catalua_platform_content.h"
+
 #include "scenario.h"
 
 #include <algorithm>
@@ -26,6 +28,11 @@ namespace
 generic_factory<scenario> all_scenarios( "scenario" );
 } // namespace
 
+generic_factory<scenario> &cata::lua_platform::detail::scenario_registry()
+{
+    return all_scenarios;
+}
+
 /** @relates string_id */
 template<>
 const scenario &string_id<scenario>::obj() const
@@ -41,6 +48,54 @@ bool string_id<scenario>::is_valid() const
 }
 
 static scen_blacklist sc_blacklist;
+
+scen_blacklist cata::lua_platform::detail::scenario_blacklist_snapshot()
+{
+    return sc_blacklist;
+}
+
+std::vector<cata::lua_platform::detail::scenario_snapshot_entry>
+cata::lua_platform::detail::scenario_registry_snapshot()
+{
+    std::vector<scenario_snapshot_entry> result;
+    for( const scenario &value : all_scenarios.get_all() ) {
+        scenario_snapshot_entry entry;
+        entry.id = value.id.str();
+        entry.name = value.gender_appropriate_name( true );
+        entry.description = value.description( true );
+        entry.start_name = value.start_name();
+        entry.points = value.point_cost();
+        entry.blacklist = value.blacklist;
+        entry.extra_professions = value.extra_professions;
+        for( const profession_id &profession : value.professions ) {
+            entry.professions.emplace_back( profession.str() );
+        }
+        for( const trait_id &trait : value._allowed_traits ) {
+            entry.allowed_traits.emplace_back( trait.str() );
+        }
+        for( const trait_id &trait : value._forced_traits ) {
+            entry.forced_traits.emplace_back( trait.str() );
+        }
+        for( const trait_id &trait : value._forbidden_traits ) {
+            entry.forbidden_traits.emplace_back( trait.str() );
+        }
+        for( const start_location_id &location : value._allowed_locs ) {
+            entry.locations.emplace_back( location.str() );
+        }
+        entry.flags.assign( value.flags.begin(), value.flags.end() );
+        entry.requirement = value._requirement.has_value() ?
+                            value._requirement.value().str() : std::string();
+        entry.hard_requirement = value.hard_requirement;
+        entry.reveal_locale = value.reveal_locale;
+        entry.distance_initial_visibility = value.distance_initial_visibility;
+        result.emplace_back( std::move( entry ) );
+    }
+    std::sort( result.begin(), result.end(),
+    []( const scenario_snapshot_entry &left, const scenario_snapshot_entry &right ) {
+        return left.id < right.id;
+    } );
+    return result;
+}
 
 scenario::scenario()
 // NOLINTNEXTLINE(cata-static-string_id-constants)
@@ -380,6 +435,23 @@ void scen_blacklist::load( const JsonObject &jo, std::string_view )
 
     for( const std::string line : jo.get_array( "scenarios" ) ) {
         scenarios.emplace( line );
+    }
+}
+
+void cata::lua_platform::detail::insert_platform_scenario_blacklist(
+    const platform_blacklist_data &value )
+{
+    sc_blacklist.whitelist = value.whitelist;
+    for( const std::string &entry : value.entries ) {
+        sc_blacklist.scenarios.emplace( entry );
+    }
+}
+
+void cata::lua_platform::detail::erase_platform_scenario_blacklist(
+    const platform_blacklist_data &value )
+{
+    for( const std::string &entry : value.entries ) {
+        sc_blacklist.scenarios.erase( string_id<scenario>( entry ) );
     }
 }
 

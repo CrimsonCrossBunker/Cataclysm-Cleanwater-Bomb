@@ -21,12 +21,46 @@ class profession;
 template<typename T>
 class generic_factory;
 
+struct scen_blacklist;
+
+namespace cata::lua_platform
+{
+class content_transaction;
+namespace detail
+{
+scen_blacklist scenario_blacklist_snapshot();
+struct scenario_snapshot_entry {
+    std::string id;
+    std::string name;
+    std::string description;
+    std::string start_name;
+    int points = 0;
+    bool blacklist = false;
+    bool extra_professions = false;
+    std::vector<std::string> professions;
+    std::vector<std::string> allowed_traits;
+    std::vector<std::string> forced_traits;
+    std::vector<std::string> forbidden_traits;
+    std::vector<std::string> locations;
+    std::vector<std::string> flags;
+    std::string requirement;
+    bool hard_requirement = false;
+    bool reveal_locale = true;
+    int distance_initial_visibility = 0;
+};
+std::vector<scenario_snapshot_entry> scenario_registry_snapshot();
+} // namespace detail
+} // namespace cata::lua_platform
+
 class scenario
 {
     private:
         friend class string_id<scenario>;
         friend class generic_factory<scenario>;
         friend struct mod_tracker;
+        friend class cata::lua_platform::content_transaction;
+        friend std::vector<cata::lua_platform::detail::scenario_snapshot_entry>
+        cata::lua_platform::detail::scenario_registry_snapshot();
         string_id<scenario> id;
         bool was_loaded = false;
         translation _name_male;
