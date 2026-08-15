@@ -50,7 +50,7 @@ ITEM_TYPES = {
     "ARTIFACT",
 }
 EOC_TYPES = {"effect_on_condition"}
-RECIPE_TYPES = {"recipe", "uncraft"}
+RECIPE_TYPES = {"recipe", "uncraft", "practice"}
 COMMON_ITEM_FIELDS = {
     "type",
     "id",
@@ -91,6 +91,7 @@ PLATFORM_ID_MAX_BYTES = 256
 WOUND_NAME_MAX_BYTES = 1024
 WOUND_DESCRIPTION_MAX_BYTES = 32768
 MAX_EFFECT_DURATION_TURNS = 365 * 24 * 60 * 60
+NATIVE_MAX_EFFECT_INTENSITY = 1000
 NATIVE_MAX_SKILL = 10
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_GAME_START_SENDER_SITES = (("src/game.cpp", "send"),)
@@ -104,6 +105,12 @@ PROVEN_ITEM_ACTOR_EVENTS = frozenset({
     "character_wears_item",
     "character_takeoff_item",
     "character_armor_destroyed",
+})
+
+EMIT_REPLACE_CONTENT = False
+
+PROVEN_NPC_ACTOR_EVENTS = frozenset({
+    "npc_becomes_hostile",
 })
 
 
@@ -127,6 +134,15 @@ def game_start_sender_sites() -> tuple[tuple[str, str], ...]:
 def game_start_avatar_actor_is_proven() -> bool:
     """Fail closed if the reviewed canonical sender set ever changes."""
     return game_start_sender_sites() == EXPECTED_GAME_START_SENDER_SITES
+
+
+def lua_boolean(value: bool) -> str:
+    return "true" if value else "false"
+
+
+def content_submit_expression() -> str:
+    return "content.replace(definition)" if EMIT_REPLACE_CONTENT else \
+        "content.add(definition)"
 
 
 def lua_quote(value: str) -> str:
@@ -227,8 +243,26 @@ def parse_moves(value: Any) -> int | None:
     )
 
 
-def parse_turns(value: Any) -> int | None:
+def parse_seconds(value: Any) -> int | None:
     return parse_integral_unit(
+        value,
+        {
+            "s": 1,
+            "sec": 1,
+            "second": 1,
+            "seconds": 1,
+            "m": 60,
+            "min": 60,
+            "minute": 60,
+            "minutes": 60,
+            "h": 3600,
+            "hour": 3600,
+            "hours": 3600,
+        },
+    )
+
+
+def parse_turns(value: Any) -> int | None:    return parse_integral_unit(
         value,
         {
             "turn": 1,
@@ -629,7 +663,7 @@ def render_item(source: SourceObject, result: MigrationResult) -> str | None:
             )
     else:
         result.converted.append(f"{source.location}: item {item_id}")
-    lines.extend(("content.add(definition)", ""))
+    lines.extend((content_submit_expression(), ""))
     return "\n".join(lines)
 
 
@@ -708,10 +742,8 @@ def render_recipe(source: SourceObject, result: MigrationResult) -> str | None:
         return None
     if value.get("type") == "uncraft":
         result.todos.append(
-            f"{source.location}: uncraft {recipe_id} requires a native disassembly registrar"
+            f"{source.location}: uncraft {recipe_id} native disassembly registration is bounded"
         )
-        result.partial.append(f"{source.location}: uncraft {recipe_id}")
-        return None
     category = value.get("category", "CC_MISC")
     subcategory = value.get("subcategory", "CSC_MISC")
     if (
@@ -732,6 +764,15 @@ def render_recipe(source: SourceObject, result: MigrationResult) -> str | None:
         f"    category = {lua_quote(category)},",
         f"    subcategory = {lua_quote(subcategory)},",
     ]
+    if value.get("type") == "practice":
+        lines.append("    practice = true,")
+        for member in ("practice_data", "book_learn", "proficiencies"):
+            if member in value:
+                result.todos.append(
+                    f"{source.location}: practice {recipe_id} {member} needs review"
+                )
+    elif value.get("type") == "uncraft":
+        lines.append("    uncraft = true,")
     skill = value.get("skill_used")
     if isinstance(skill, str) and skill:
         lines.append(f"    skill = {lua_quote(skill)},")
@@ -825,7 +866,7 @@ def render_recipe(source: SourceObject, result: MigrationResult) -> str | None:
             )
     else:
         result.converted.append(f"{source.location}: recipe {recipe_id}")
-    lines.extend(("content.add(definition)", ""))
+    lines.extend((content_submit_expression(), ""))
     return "\n".join(lines)
 
 
@@ -852,7 +893,7 @@ def finish_catalog(
         )
     status = result.partial if unresolved or len(result.todos) != todo_count else result.converted
     status.append(f"{source.location}: {label} {object_id}")
-    lines.extend(("content.add(definition)", ""))
+    lines.extend((content_submit_expression(), ""))
     return "\n".join(lines)
 
 
@@ -1034,6 +1075,444 @@ def render_recipe_group(source: SourceObject, result: MigrationResult) -> str | 
     )
 
 
+def render_scenario(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    scenario_id = value.get("id")
+    if not safe_platform_id(scenario_id):
+        result.partial.append(f"{source.location}: scenario <invalid id>")
+        result.todos.append(f"{source.location}: scenario needs a stable native id")
+        return None
+    todo_count = len(result.todos)
+    name = display_text(value.get("name"), scenario_id)
+    description = display_text(value.get("description"), "")
+    start_name = display_text(value.get("start_name"), "")
+
+    def integer_option(field: str, default: int) -> int:
+        raw = value.get(field, default)
+        if (
+            isinstance(raw, int) and
+            not isinstance(raw, bool) and
+            NATIVE_INT_MIN <= raw <= NATIVE_INT_MAX
+        ):
+            return raw
+        result.todos.append(
+            f"{source.location}: scenario {scenario_id} {field} needs review"
+        )
+        return default
+
+    def boolean_option(field: str, default: bool) -> bool:
+        raw = value.get(field, default)
+        if isinstance(raw, bool):
+            return raw
+        result.todos.append(
+            f"{source.location}: scenario {scenario_id} {field} needs review"
+        )
+        return default
+
+    lines = [
+        "local definition = content.Scenario {",
+        f"    id = {lua_quote(scenario_id)},",
+        f"    name = {lua_quote(name)},",
+        f"    description = {lua_quote(description)},",
+        f"    start_name = {lua_quote(start_name)},",
+        f"    points = {integer_option('points', 0)},",
+        f"    blacklist = {'true' if boolean_option('blacklist', False) else 'false'},",
+        "    extra_professions = "
+        f"{'true' if boolean_option('add_professions', False) else 'false'},",
+        f"    reveal_locale = {'true' if boolean_option('reveal_locale', True) else 'false'},",
+        "    distance_initial_visibility = "
+        f"{integer_option('distance_initial_visibility', 15)},",
+        "}",
+    ]
+
+    def render_id_list(field: str, method: str) -> None:
+        raw = value.get(field, [])
+        if not isinstance(raw, list) or any(
+            not isinstance(entry, str) or not entry for entry in raw
+        ):
+            result.todos.append(
+                f"{source.location}: scenario {scenario_id} {field} needs review"
+            )
+            return
+        for entry in raw:
+            lines.append(f"definition:{method}({lua_quote(entry)})")
+
+    render_id_list("allowed_locs", "location")
+    render_id_list("professions", "profession")
+    render_id_list("traits", "allowed_trait")
+    render_id_list("forced_traits", "forced_trait")
+    render_id_list("forbidden_traits", "forbidden_trait")
+    render_id_list("flags", "flag")
+    requirement = value.get("requirement")
+    if requirement is None:
+        pass
+    elif isinstance(requirement, str) and requirement:
+        lines.append(f"definition:requirement({lua_quote(requirement)})")
+    else:
+        result.todos.append(
+            f"{source.location}: scenario {scenario_id} requirement needs review"
+        )
+    return finish_catalog(
+        source,
+        result,
+        "scenario",
+        scenario_id,
+        lines,
+        {
+            "type", "id", "name", "description", "start_name", "points",
+            "blacklist", "add_professions", "reveal_locale",
+            "distance_initial_visibility", "allowed_locs", "professions",
+            "traits", "forced_traits", "forbidden_traits", "flags",
+            "requirement",
+        },
+        todo_count,
+    )
+
+
+def render_vehicle_color_palette(
+    source: SourceObject, result: MigrationResult
+) -> str | None:
+    value = source.value
+    palette_id = value.get("id")
+    if not safe_platform_id(palette_id):
+        result.partial.append(f"{source.location}: vehicle color palette <invalid id>")
+        result.todos.append(
+            f"{source.location}: vehicle color palette needs a stable native id"
+        )
+        return None
+    todo_count = len(result.todos)
+    lines = [
+        "local definition = content.VehicleColorPalette {",
+        f"    id = {lua_quote(palette_id)},",
+        "}",
+    ]
+    raw_groups = value.get("palette")
+    if isinstance(raw_groups, list) and raw_groups:
+        for raw_group in raw_groups:
+            if not isinstance(raw_group, dict):
+                result.todos.append(
+                    f"{source.location}: vehicle color palette {palette_id} "
+                    "group needs review"
+                )
+                continue
+            fuzzy_ids = raw_group.get("fuzzy_ids", [])
+            raw_colors = raw_group.get("colors", [])
+            if not isinstance(fuzzy_ids, list) or not fuzzy_ids or any(
+                not isinstance(entry, str) or not entry for entry in fuzzy_ids
+            ) or not isinstance(raw_colors, list) or not raw_colors or any(
+                not isinstance(entry, dict) or
+                not isinstance(entry.get("color"), str) or
+                not entry.get("color") or
+                not isinstance(entry.get("weight"), int) or
+                isinstance(entry.get("weight"), bool) or
+                entry.get("weight", 0) <= 0
+                for entry in raw_colors
+            ):
+                result.todos.append(
+                    f"{source.location}: vehicle color palette {palette_id} "
+                    "group needs review"
+                )
+                continue
+            lines.append(
+                "definition:group("
+                + "{ " + ", ".join(
+                    lua_quote(entry) for entry in fuzzy_ids
+                ) + " }, {"
+            )
+            for entry in raw_colors:
+                lines.append(
+                    "    { "
+                    f"{lua_quote(entry['color'])}, {entry['weight']} }},"
+                )
+            lines[-1] = lines[-1][:-1]
+            lines.append("})")
+    else:
+        result.todos.append(
+            f"{source.location}: vehicle color palette {palette_id} "
+            "palette needs review"
+        )
+    return finish_catalog(
+        source,
+        result,
+        "vehicle color palette",
+        palette_id,
+        lines,
+        {"type", "id", "palette", "//"},
+        todo_count,
+    )
+
+
+def render_overmap_connection(
+    source: SourceObject, result: MigrationResult
+) -> str | None:
+    value = source.value
+    connection_id = value.get("id")
+    if not safe_platform_id(connection_id):
+        result.partial.append(f"{source.location}: overmap connection <invalid id>")
+        result.todos.append(
+            f"{source.location}: overmap connection needs a stable native id"
+        )
+        return None
+    todo_count = len(result.todos)
+    lines = [
+        "local definition = content.OvermapConnection {",
+        f"    id = {lua_quote(connection_id)},",
+        "}",
+    ]
+    raw_subtypes = value.get("subtypes")
+    if isinstance(raw_subtypes, list) and raw_subtypes:
+        for raw_subtype in raw_subtypes:
+            if not isinstance(raw_subtype, dict):
+                result.todos.append(
+                    f"{source.location}: overmap connection {connection_id} "
+                    "subtype needs review"
+                )
+                continue
+            terrain = raw_subtype.get("terrain")
+            basic_cost = raw_subtype.get("basic_cost", 0)
+            locations = raw_subtype.get("locations", [])
+            raw_flags = raw_subtype.get("flags", [])
+            flags_valid = (
+                isinstance(raw_flags, list) and
+                all(
+                    isinstance(flag, str) and
+                    flag in {"ORTHOGONAL", "PERPENDICULAR_CROSSING"}
+                    for flag in raw_flags
+                )
+            )
+            if not isinstance(terrain, str) or not terrain or \
+                    not isinstance(basic_cost, int) or \
+                    isinstance(basic_cost, bool) or \
+                    not 0 <= basic_cost <= NATIVE_INT_MAX or \
+                    not isinstance(locations, list) or \
+                    any(
+                        not isinstance(location, str) or not location
+                        for location in locations
+                    ) or not flags_valid or any(
+                        field in raw_subtype
+                        for field in set(raw_subtype) -
+                        {"terrain", "basic_cost", "locations", "flags"}
+                    ):
+                result.todos.append(
+                    f"{source.location}: overmap connection {connection_id} "
+                    "subtype needs review"
+                )
+                continue
+            lines.append(
+                f"definition:subtype({lua_quote(terrain)}, {basic_cost}, "
+                + "{ " + ", ".join(
+                    lua_quote(location) for location in locations
+                ) + " }, "
+                + f"{'true' if 'ORTHOGONAL' in raw_flags else 'false'}, "
+                + f"{'true' if 'PERPENDICULAR_CROSSING' in raw_flags else 'false'})"
+            )
+    else:
+        result.todos.append(
+            f"{source.location}: overmap connection {connection_id} "
+            "subtypes need review"
+        )
+    return finish_catalog(
+        source,
+        result,
+        "overmap connection",
+        connection_id,
+        lines,
+        {"type", "id", "subtypes", "//"},
+        todo_count,
+    )
+
+
+def render_monster_group(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    group_id = value.get("id")
+    if not safe_platform_id(group_id):
+        result.partial.append(f"{source.location}: monster group <invalid id>")
+        result.todos.append(f"{source.location}: monster group needs a stable native id")
+        return None
+    todo_count = len(result.todos)
+    lines = [
+        "local definition = content.MonsterGroup {",
+        f"    id = {lua_quote(group_id)},",
+    ]
+    default_monster = value.get("default")
+    if default_monster is None:
+        pass
+    elif isinstance(default_monster, str) and default_monster:
+        lines.append(f"    default_monster = {lua_quote(default_monster)},")
+    else:
+        result.todos.append(
+            f"{source.location}: monster group {group_id} default needs review"
+        )
+    is_animal = value.get("is_animal")
+    if is_animal is None:
+        pass
+    elif isinstance(is_animal, bool):
+        lines.append(f"    is_animal = {'true' if is_animal else 'false'},")
+    else:
+        result.todos.append(
+            f"{source.location}: monster group {group_id} is_animal needs review"
+        )
+    lines.append("}")
+    raw_monsters = value.get("monsters")
+    if isinstance(raw_monsters, list) and raw_monsters:
+        for raw_entry in raw_monsters:
+            if not isinstance(raw_entry, dict):
+                result.todos.append(
+                    f"{source.location}: monster group {group_id} entry needs review"
+                )
+                continue
+            entry_id = raw_entry.get("monster", raw_entry.get("group"))
+            if not isinstance(entry_id, str) or not entry_id:
+                result.todos.append(
+                    f"{source.location}: monster group {group_id} entry needs review"
+                )
+                continue
+            weight = raw_entry.get("weight", raw_entry.get("freq", 1))
+            cost = raw_entry.get("cost_multiplier", 1)
+            raw_pack = raw_entry.get("pack_size", [1, 1])
+            pack_valid = (
+                isinstance(raw_pack, list) and len(raw_pack) == 2 and
+                all(
+                    isinstance(part, int) and not isinstance(part, bool) and
+                    1 <= part <= NATIVE_INT_MAX
+                    for part in raw_pack
+                ) and raw_pack[0] <= raw_pack[1]
+            )
+            if any(
+                field in raw_entry
+                for field in ("starts", "ends", "conditions", "event", "spawn_data")
+            ) or not (
+                isinstance(weight, int) and not isinstance(weight, bool) and
+                weight >= 1
+            ) or not (
+                isinstance(cost, int) and not isinstance(cost, bool) and
+                cost >= 0
+            ) or not pack_valid:
+                result.todos.append(
+                    f"{source.location}: monster group {group_id} entry "
+                    f"{entry_id} needs review"
+                )
+                continue
+            method = "monster" if "monster" in raw_entry else "group"
+            lines.append(
+                f"definition:{method}({lua_quote(entry_id)}, "
+                f"{weight}, {cost}, {raw_pack[0]}, {raw_pack[1]})"
+            )
+    else:
+        result.todos.append(
+            f"{source.location}: monster group {group_id} monsters need review"
+        )
+    return finish_catalog(
+        source,
+        result,
+        "monster group",
+        group_id,
+        lines,
+        {
+            "type", "id", "default", "is_animal", "monsters", "//", "//2",
+        },
+        todo_count,
+    )
+
+
+def render_item_action(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    action_id = value.get("id")
+    if not safe_platform_id(action_id):
+        result.partial.append(f"{source.location}: item action <invalid id>")
+        result.todos.append(f"{source.location}: item action needs a stable id")
+        return None
+    todo_count = len(result.todos)
+    name = display_text(value.get("name"), action_id)
+    lines = [
+        "local definition = content.ItemAction {",
+        f"    id = {lua_quote(action_id)},",
+        f"    name = {lua_quote(name)},",
+        "}",
+    ]
+    return finish_catalog(
+        source,
+        result,
+        "item action",
+        action_id,
+        lines,
+        {"type", "id", "name", "//"},
+        todo_count,
+    )
+
+
+def render_butchery_requirement(
+    source: SourceObject, result: MigrationResult
+) -> str | None:
+    value = source.value
+    requirement_id = value.get("id")
+    if not safe_platform_id(requirement_id):
+        result.partial.append(f"{source.location}: butchery requirement <invalid id>")
+        result.todos.append(
+            f"{source.location}: butchery requirement needs a stable native id"
+        )
+        return None
+    todo_count = len(result.todos)
+    size_names = ("TINY", "SMALL", "MEDIUM", "LARGE", "HUGE")
+    butcher_names = (
+        "BLEED", "QUICK", "FULL", "FIELD_DRESS", "SKIN", "QUARTER",
+        "DISMEMBER", "DISSECT",
+    )
+    lines = [
+        "local definition = content.ButcheryRequirement {",
+        f"    id = {lua_quote(requirement_id)},",
+        "}",
+    ]
+    raw_rows = value.get("requirements")
+    if isinstance(raw_rows, dict):
+        for raw_speed, raw_sizes in raw_rows.items():
+            try:
+                speed = float(raw_speed)
+            except (TypeError, ValueError):
+                speed = float("nan")
+            if not math.isfinite(speed) or speed < 0 or \
+                    not isinstance(raw_sizes, list) or \
+                    len(raw_sizes) != len(size_names):
+                valid = False
+                result.todos.append(
+                    f"{source.location}: butchery requirement {requirement_id} "
+                    f"speed row {raw_speed!r} needs review"
+                )
+                continue
+            for size_index, raw_size in enumerate(raw_sizes):
+                if not isinstance(raw_size, dict) or any(
+                    name not in raw_size or
+                    not isinstance(raw_size[name], str) or
+                    not raw_size[name]
+                    for name in butcher_names
+                ):
+                    result.todos.append(
+                        f"{source.location}: butchery requirement {requirement_id} "
+                        f"size row {size_names[size_index]} needs review"
+                    )
+                    continue
+                for name in butcher_names:
+                    lines.append(
+                        "definition:requirement("
+                        f"{lua_number(speed)}, {lua_quote(size_names[size_index])}, "
+                        f"{lua_quote(name)}, {lua_quote(raw_size[name])})"
+                    )
+    else:
+        result.todos.append(
+            f"{source.location}: butchery requirement {requirement_id} "
+            "requirements need review"
+        )
+    return finish_catalog(
+        source,
+        result,
+        "butchery requirement",
+        requirement_id,
+        lines,
+        {"type", "id", "requirements"},
+        todo_count,
+    )
+
+
 def render_scent_type(source: SourceObject, result: MigrationResult) -> str | None:
     value = source.value
     scent_id = value.get("id")
@@ -1065,6 +1544,1811 @@ def render_scent_type(source: SourceObject, result: MigrationResult) -> str | No
         {"type", "id", "receptive_species"},
         todo_count,
     )
+
+
+def render_technique(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    technique_id = value.get("id")
+    if not safe_platform_id(technique_id):
+        result.partial.append(f"{source.location}: technique <invalid id>")
+        result.todos.append(
+            f"{source.location}: technique needs a stable native id"
+        )
+        return None
+    todo_count = len(result.todos)
+    if "copy-from" in value:
+        result.todos.append(
+            f"{source.location}: technique {technique_id} inheritance must become a Lua constructor/composition function"
+        )
+    name = value.get("name")
+    if not isinstance(name, str) or not name:
+        result.todos.append(
+            f"{source.location}: technique {technique_id} name needs review"
+        )
+        name = technique_id
+    lines = [
+        "local definition = content.Technique {",
+        f"    id = {lua_quote(technique_id)},",
+        f"    name = {lua_quote(name)},",
+    ]
+    description = value.get("description")
+    if isinstance(description, str) and description:
+        lines.append(f"    description = {lua_quote(description)},")
+    messages = value.get("messages")
+    if isinstance(messages, list) and len(messages) >= 2 and all(
+        isinstance(entry, str) for entry in messages[:2]
+    ):
+        lines.append(f"    avatar_message = {lua_quote(messages[0])},")
+        lines.append(f"    npc_message = {lua_quote(messages[1])},")
+    elif "messages" in value:
+        result.todos.append(
+            f"{source.location}: technique {technique_id} messages need review"
+        )
+    bool_fields = (
+        "crit_tec", "crit_ok", "wall_adjacent", "reach_tec", "reach_ok",
+        "needs_ammo", "defensive", "disarms", "take_weapon", "side_switch",
+        "dummy", "dodge_counter", "block_counter", "miss_recovery",
+        "grab_break", "knockback_follow",
+    )
+    for field in bool_fields:
+        entry = value.get(field)
+        if isinstance(entry, bool):
+            lines.append(
+                f"    {field} = {lua_boolean(entry)},"
+            )
+        elif field in value:
+            result.todos.append(
+                f"{source.location}: technique {technique_id} {field} needs review"
+            )
+    int_fields = (
+        ("weighting", 1, 0, None),
+        ("repeat_min", 1, 1, None),
+        ("repeat_max", 1, 1, None),
+        ("down_dur", 0, 0, None),
+        ("stun_dur", 0, 0, None),
+        ("knockback_dist", 0, 0, None),
+    )
+    for field, default, minimum, _ in int_fields:
+        entry = value.get(field, default)
+        if isinstance(entry, int) and not isinstance(entry, bool) and \
+                minimum <= entry <= NATIVE_INT_MAX:
+            lines.append(f"    {field} = {entry},")
+        else:
+            lines.append(f"    {field} = {default},")
+            result.todos.append(
+                f"{source.location}: technique {technique_id} {field} needs review"
+            )
+    spread = value.get("knockback_spread", 0)
+    if isinstance(spread, (int, float)) and not isinstance(spread, bool) and \
+            spread >= 0:
+        lines.append(f"    knockback_spread = {spread},")
+    else:
+        lines.append("    knockback_spread = 0,")
+        result.todos.append(
+            f"{source.location}: technique {technique_id} knockback_spread needs review"
+        )
+    aoe = value.get("aoe")
+    if isinstance(aoe, str):
+        lines.append(f"    aoe = {lua_quote(aoe)},")
+    for field in ("unarmed_allowed", "melee_allowed", "strictly_unarmed"):
+        entry = value.get(field)
+        if isinstance(entry, bool):
+            lines.append(f"    {field} = {lua_boolean(entry)},")
+        elif field in value:
+            result.todos.append(
+                f"{source.location}: technique {technique_id} {field} needs review"
+            )
+    lines.append("}")
+    flags = value.get("flags")
+    if isinstance(flags, list) and all(
+        isinstance(entry, str) and entry for entry in flags
+    ):
+        for flag in flags:
+            lines.append(f"definition:flag({lua_quote(flag)})")
+    elif "flags" in value:
+        result.todos.append(
+            f"{source.location}: technique {technique_id} flags need review"
+        )
+    vectors = value.get("attack_vectors")
+    if isinstance(vectors, list) and all(
+        isinstance(entry, str) and entry for entry in vectors
+    ):
+        for vector in vectors:
+            lines.append(f"definition:attack_vector({lua_quote(vector)})")
+    elif "attack_vectors" in value:
+        result.todos.append(
+            f"{source.location}: technique {technique_id} attack vectors need review"
+        )
+    skills = value.get("skill_requirements")
+    if isinstance(skills, list) and all(
+        isinstance(entry, dict) and isinstance(entry.get("name"), str) and
+        isinstance(entry.get("level"), int) and
+        not isinstance(entry.get("level"), bool)
+        for entry in skills
+    ):
+        for entry in skills:
+            lines.append(
+                f"definition:requires_skill({lua_quote(entry['name'])}, "
+                f"{entry['level']})"
+            )
+    elif "skill_requirements" in value:
+        result.todos.append(
+            f"{source.location}: technique {technique_id} skill requirements need review"
+        )
+    for member in ("tech_effects", "eocs", "condition", "bonuses",
+                   "weighting_skill", "req_buffs", "forbidden_buffs"):
+        if member in value:
+            result.todos.append(
+                f"{source.location}: technique {technique_id} {member} needs review"
+            )
+    status = (
+        result.partial if len(result.todos) != todo_count else result.converted
+    )
+    status.append(f"{source.location}: technique {technique_id}")
+    lines.extend((content_submit_expression(), ""))
+    return "\n".join(lines)
+
+
+def render_martial_art(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    art_id = value.get("id")
+    if not safe_platform_id(art_id):
+        result.partial.append(f"{source.location}: martial art <invalid id>")
+        result.todos.append(
+            f"{source.location}: martial art needs a stable native id"
+        )
+        return None
+    todo_count = len(result.todos)
+    if "copy-from" in value:
+        result.todos.append(
+            f"{source.location}: martial art {art_id} inheritance must become a Lua constructor/composition function"
+        )
+    name = value.get("name")
+    if isinstance(name, dict):
+        name = name.get("str")
+    if not isinstance(name, str) or not name:
+        result.todos.append(
+            f"{source.location}: martial art {art_id} name needs review"
+        )
+        name = art_id
+    lines = [
+        "local definition = content.MartialArt {",
+        f"    id = {lua_quote(art_id)},",
+        f"    name = {lua_quote(name)},",
+    ]
+    description = value.get("description")
+    if isinstance(description, str) and description:
+        lines.append(f"    description = {lua_quote(description)},")
+    initiate = value.get("initiate")
+    if isinstance(initiate, list) and len(initiate) >= 2 and all(
+        isinstance(entry, str) for entry in initiate[:2]
+    ):
+        lines.append(f"    initiate_avatar = {lua_quote(initiate[0])},")
+        lines.append(f"    initiate_npc = {lua_quote(initiate[1])},")
+    elif "initiate" in value:
+        result.todos.append(
+            f"{source.location}: martial art {art_id} initiate messages need review"
+        )
+    int_fields = (
+        ("priority", 0), ("learn_difficulty", 0),
+        ("arm_block", 0), ("leg_block", 0),
+    )
+    for field, default in int_fields:
+        entry = value.get(field, default)
+        if isinstance(entry, int) and not isinstance(entry, bool) and \
+                NATIVE_INT_MIN <= entry <= NATIVE_INT_MAX:
+            lines.append(f"    {field} = {entry},")
+        else:
+            lines.append(f"    {field} = {default},")
+            result.todos.append(
+                f"{source.location}: martial art {art_id} {field} needs review"
+            )
+    primary = value.get("primary_skill")
+    if isinstance(primary, str) and primary:
+        lines.append(f"    primary_skill = {lua_quote(primary)},")
+    bool_fields = (
+        "teachable", "arm_block_with_bio_armor_arms",
+        "leg_block_with_bio_armor_legs", "strictly_unarmed", "strictly_melee",
+        "allow_all_weapons", "force_unarmed", "prevent_weapon_blocking",
+    )
+    for field in bool_fields:
+        entry = value.get(field)
+        if isinstance(entry, bool):
+            lines.append(f"    {field} = {lua_boolean(entry)},")
+        elif field in value:
+            result.todos.append(
+                f"{source.location}: martial art {art_id} {field} needs review"
+            )
+    lines.append("}")
+    autolearn = value.get("autolearn")
+    if isinstance(autolearn, list) and all(
+        isinstance(entry, list) and len(entry) == 2 and
+        isinstance(entry[0], str) and isinstance(entry[1], int) and
+        not isinstance(entry[1], bool)
+        for entry in autolearn
+    ):
+        for entry in autolearn:
+            lines.append(
+                f"definition:autolearn({lua_quote(entry[0])}, {entry[1]})"
+            )
+    elif "autolearn" in value:
+        result.todos.append(
+            f"{source.location}: martial art {art_id} autolearn needs review"
+        )
+    techniques = value.get("techniques")
+    if isinstance(techniques, list) and all(
+        isinstance(entry, str) and entry for entry in techniques
+    ):
+        for entry in techniques:
+            lines.append(f"definition:technique({lua_quote(entry)})")
+    elif "techniques" in value:
+        result.todos.append(
+            f"{source.location}: martial art {art_id} techniques need review"
+        )
+    weapons = value.get("weapons")
+    if isinstance(weapons, list) and all(
+        isinstance(entry, str) and entry for entry in weapons
+    ):
+        for entry in weapons:
+            lines.append(f"definition:weapon({lua_quote(entry)})")
+    elif "weapons" in value:
+        result.todos.append(
+            f"{source.location}: martial art {art_id} weapons need review"
+        )
+    categories = value.get("weapon_categories")
+    if isinstance(categories, list) and all(
+        isinstance(entry, str) and entry for entry in categories
+    ):
+        for entry in categories:
+            lines.append(f"definition:weapon_category({lua_quote(entry)})")
+    elif "weapon_categories" in value:
+        result.todos.append(
+            f"{source.location}: martial art {art_id} weapon categories need review"
+        )
+    for member in (
+        "static_buffs", "onmove_buffs", "onpause_buffs", "onhit_buffs",
+        "onattack_buffs", "ondodge_buffs", "onblock_buffs", "ongethit_buffs",
+        "onmiss_buffs", "oncrit_buffs", "onkill_buffs", "static_eocs",
+        "onmove_eocs", "onpause_eocs", "onhit_eocs", "onattack_eocs",
+        "ondodge_eocs", "onblock_eocs", "ongethit_eocs", "onmiss_eocs",
+        "oncrit_eocs", "onkill_eocs", "weapon_damage",
+    ):
+        if member in value:
+            result.todos.append(
+                f"{source.location}: martial art {art_id} {member} needs review"
+            )
+    status = (
+        result.partial if len(result.todos) != todo_count else result.converted
+    )
+    status.append(f"{source.location}: martial art {art_id}")
+    lines.extend((content_submit_expression(), ""))
+    return "\n".join(lines)
+
+
+def render_trap(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    trap_id = value.get("id")
+    if not safe_platform_id(trap_id):
+        result.partial.append(f"{source.location}: trap <invalid id>")
+        result.todos.append(
+            f"{source.location}: trap needs a stable native id"
+        )
+        return None
+    todo_count = len(result.todos)
+    name = value.get("name")
+    if isinstance(name, dict):
+        name = name.get("str")
+    if not isinstance(name, str) or not name:
+        result.todos.append(f"{source.location}: trap {trap_id} name needs review")
+        name = trap_id
+    color = value.get("color")
+    if not isinstance(color, str) or not color:
+        result.todos.append(f"{source.location}: trap {trap_id} color needs review")
+        color = "white"
+    symbol = value.get("symbol")
+    if not isinstance(symbol, str) or len(symbol) != 1:
+        result.todos.append(f"{source.location}: trap {trap_id} symbol needs review")
+        symbol = "^"
+    action = value.get("action")
+    if not isinstance(action, str) or not action:
+        result.todos.append(f"{source.location}: trap {trap_id} action needs review")
+        action = "none"
+    lines = [
+        "local definition = content.Trap {",
+        f"    id = {lua_quote(trap_id)},",
+        f"    name = {lua_quote(name)},",
+        f"    color = {lua_quote(color)},",
+        f"    symbol = {lua_quote(symbol)},",
+        f"    action = {lua_quote(action)},",
+    ]
+    int_fields = (
+        ("visibility", 1), ("avoidance", 0), ("difficulty", 0),
+        ("trap_radius", 0), ("funnel_radius", 0), ("comfort", 0),
+        ("trigger_weight_grams", 500), ("sound_threshold_min", 0),
+        ("sound_threshold_max", 0),
+    )
+    for field, default in int_fields:
+        entry = value.get(field, default)
+        if isinstance(entry, int) and not isinstance(entry, bool) and \
+                entry >= 0:
+            lines.append(f"    {field} = {entry},")
+        else:
+            lines.append(f"    {field} = {default},")
+            result.todos.append(
+                f"{source.location}: trap {trap_id} {field} needs review"
+            )
+    for field in ("benign", "always_invisible"):
+        entry = value.get(field)
+        if isinstance(entry, bool):
+            lines.append(f"    {field} = {lua_boolean(entry)},")
+        elif field in value:
+            result.todos.append(
+                f"{source.location}: trap {trap_id} {field} needs review"
+            )
+    memorials = [value.get("memorial_male"), value.get("memorial_female")]
+    if all(isinstance(entry, str) and entry for entry in memorials):
+        lines.append(f"    memorial_male = {lua_quote(memorials[0])},")
+        lines.append(f"    memorial_female = {lua_quote(memorials[1])},")
+    elif any(entry is not None for entry in memorials):
+        result.todos.append(
+            f"{source.location}: trap {trap_id} memorial messages need review"
+        )
+    if isinstance(value.get("trigger_message_u"), str):
+        lines.append(
+            f"    trigger_message_u = {lua_quote(value['trigger_message_u'])},"
+        )
+    if isinstance(value.get("trigger_message_npc"), str):
+        lines.append(
+            f"    trigger_message_npc = {lua_quote(value['trigger_message_npc'])},"
+        )
+    lines.append("}")
+    flags = value.get("flags")
+    if isinstance(flags, list) and all(
+        isinstance(entry, str) and entry for entry in flags
+    ):
+        for flag in flags:
+            lines.append(f"definition:flag({lua_quote(flag)})")
+    elif "flags" in value:
+        result.todos.append(f"{source.location}: trap {trap_id} flags need review")
+    drops = value.get("drops")
+    if isinstance(drops, list):
+        for drop in drops:
+            if isinstance(drop, dict) and isinstance(drop.get("item"), str):
+                quantity = drop.get("quantity", 1)
+                charges = drop.get("charges", 1)
+                if isinstance(quantity, int) and not isinstance(quantity, bool) \
+                        and quantity > 0 and isinstance(charges, int) and \
+                        not isinstance(charges, bool) and charges > 0:
+                    lines.append(
+                        f"definition:drop({lua_quote(drop['item'])}, "
+                        f"{quantity}, {charges})"
+                    )
+                    continue
+            result.todos.append(
+                f"{source.location}: trap {trap_id} drops need review"
+            )
+    elif "drops" in value:
+        result.todos.append(f"{source.location}: trap {trap_id} drops need review")
+    for member in ("spell_data", "eocs", "vehicle_data", "map_regen",
+                   "floor_bedding_warmth"):
+        if member in value:
+            result.todos.append(
+                f"{source.location}: trap {trap_id} {member} needs review"
+            )
+    status = (
+        result.partial if len(result.todos) != todo_count else result.converted
+    )
+    status.append(f"{source.location}: trap {trap_id}")
+    lines.extend((content_submit_expression(), ""))
+    return "\n".join(lines)
+
+
+def render_construction(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    construction_id = value.get("id")
+    if not safe_platform_id(construction_id):
+        result.partial.append(f"{source.location}: construction <invalid id>")
+        result.todos.append(
+            f"{source.location}: construction needs a stable native id"
+        )
+        return None
+    todo_count = len(result.todos)
+    if "copy-from" in value:
+        result.todos.append(
+            f"{source.location}: construction {construction_id} inheritance must become a Lua constructor/composition function"
+        )
+    group = value.get("group")
+    if not isinstance(group, str) or not group:
+        result.todos.append(
+            f"{source.location}: construction {construction_id} group needs review"
+        )
+        group = "dig_channel"
+    category = value.get("category", "OTHER")
+    if not isinstance(category, str) or not category:
+        result.todos.append(
+            f"{source.location}: construction {construction_id} category needs review"
+        )
+        category = "OTHER"
+    lines = [
+        "local definition = content.Construction {",
+        f"    id = {lua_quote(construction_id)},",
+        f"    group = {lua_quote(group)},",
+        f"    category = {lua_quote(category)},",
+    ]
+    duration = parse_moves(value.get("time", 0))
+    if duration is None or duration < 0:
+        duration = 0
+        result.todos.append(
+            f"{source.location}: construction {construction_id} time needs unit review"
+        )
+    lines.append(f"    duration_moves = {duration},")
+    activity = value.get("activity_level")
+    if isinstance(activity, str):
+        # legacy activity level names map to native multipliers; keep partial
+        result.todos.append(
+            f"{source.location}: construction {construction_id} activity_level needs review"
+        )
+        activity = 1.0
+    if isinstance(activity, (int, float)) and not isinstance(activity, bool) \
+            and activity >= 0:
+        lines.append(f"    activity_level = {activity},")
+    if isinstance(value.get("pre_note"), str) and value["pre_note"]:
+        lines.append(f"    pre_note = {lua_quote(value['pre_note'])},")
+    post_terrain = value.get("post_terrain")
+    if isinstance(post_terrain, str) and post_terrain:
+        lines.append(f"    post_terrain = {lua_quote(post_terrain)},")
+    elif "post_terrain" in value:
+        result.todos.append(
+            f"{source.location}: construction {construction_id} post_terrain needs review"
+        )
+    lines.append("}")
+    skills = value.get("required_skills")
+    if isinstance(skills, dict):
+        for skill, level in skills.items():
+            if isinstance(skill, str) and isinstance(level, int) and \
+                    not isinstance(level, bool) and level >= 0:
+                lines.append(
+                    f"definition:requires_skill({lua_quote(skill)}, {level})"
+                )
+            else:
+                result.todos.append(
+                    f"{source.location}: construction {construction_id} required skills need review"
+                )
+                break
+    elif "required_skills" in value:
+        result.todos.append(
+            f"{source.location}: construction {construction_id} required skills need review"
+        )
+    legacy_skill = value.get("skill")
+    legacy_difficulty = value.get("difficulty")
+    if "required_skills" not in value and isinstance(legacy_skill, str) and \
+            isinstance(legacy_difficulty, int) and \
+            not isinstance(legacy_difficulty, bool) and legacy_difficulty >= 0:
+        lines.append(
+            f"definition:requires_skill({lua_quote(legacy_skill)}, {legacy_difficulty})"
+        )
+    elif "required_skills" not in value and ("skill" in value or "difficulty" in value):
+        result.todos.append(
+            f"{source.location}: construction {construction_id} legacy skill needs review"
+        )
+    using = value.get("using")
+    if isinstance(using, str) and using:
+        lines.append(f"definition:using_requirement({lua_quote(using)}, 1)")
+    elif isinstance(using, list) and all(
+        isinstance(entry, list) and len(entry) == 2 and
+        isinstance(entry[0], str) and isinstance(entry[1], int) and
+        not isinstance(entry[1], bool) and entry[1] > 0
+        for entry in using
+    ):
+        for entry in using:
+            lines.append(
+                f"definition:using_requirement({lua_quote(entry[0])}, {entry[1]})"
+            )
+    elif "using" in value:
+        result.todos.append(
+            f"{source.location}: construction {construction_id} using requirements need review"
+        )
+    pre_terrain = value.get("pre_terrain")
+    if isinstance(pre_terrain, str):
+        lines.append(f"definition:pre_terrain({lua_quote(pre_terrain)})")
+    elif isinstance(pre_terrain, list) and all(
+        isinstance(entry, str) and entry for entry in pre_terrain
+    ):
+        for entry in pre_terrain:
+            lines.append(f"definition:pre_terrain({lua_quote(entry)})")
+    elif "pre_terrain" in value:
+        result.todos.append(
+            f"{source.location}: construction {construction_id} pre_terrain needs review"
+        )
+    pre_flags = value.get("pre_flags")
+    if isinstance(pre_flags, list):
+        for flag in pre_flags:
+            if isinstance(flag, str) and flag:
+                lines.append(f"definition:pre_flag({lua_quote(flag)}, false)")
+                continue
+            if isinstance(flag, dict) and isinstance(flag.get("flag"), str) and \
+                    isinstance(flag.get("force_terrain"), bool):
+                lines.append(
+                    f"definition:pre_flag({lua_quote(flag['flag'])}, "
+                    f"{lua_boolean(flag['force_terrain'])})"
+                )
+                continue
+            result.todos.append(
+                f"{source.location}: construction {construction_id} pre_flags need review"
+            )
+            break
+    elif "pre_flags" in value:
+        result.todos.append(
+            f"{source.location}: construction {construction_id} pre_flags need review"
+        )
+    post_flags = value.get("post_flags")
+    if isinstance(post_flags, list) and all(
+        isinstance(entry, str) and entry for entry in post_flags
+    ):
+        for entry in post_flags:
+            lines.append(f"definition:post_flag({lua_quote(entry)})")
+    elif "post_flags" in value:
+        result.todos.append(
+            f"{source.location}: construction {construction_id} post_flags need review"
+        )
+    for member in ("components", "tools", "qualities", "byproducts",
+                   "pre_special", "post_special", "dark_craftable",
+                   "vehicle_start", "on_display", "deconstruct_recipe"):
+        if member in value:
+            result.todos.append(
+                f"{source.location}: construction {construction_id} {member} needs review"
+            )
+    status = (
+        result.partial if len(result.todos) != todo_count else result.converted
+    )
+    status.append(f"{source.location}: construction {construction_id}")
+    lines.extend((content_submit_expression(), ""))
+    return "\n".join(lines)
+
+
+def render_furniture(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    furniture_id = value.get("id")
+    if not safe_platform_id(furniture_id):
+        result.partial.append(f"{source.location}: furniture <invalid id>")
+        result.todos.append(
+            f"{source.location}: furniture needs a stable native id"
+        )
+        return None
+    todo_count = len(result.todos)
+    if "copy-from" in value:
+        result.todos.append(
+            f"{source.location}: furniture {furniture_id} inheritance must become a Lua constructor/composition function"
+        )
+    name = value.get("name")
+    if isinstance(name, dict):
+        name = name.get("str")
+    if not isinstance(name, str) or not name:
+        result.todos.append(f"{source.location}: furniture {furniture_id} name needs review")
+        name = furniture_id
+    description = value.get("description")
+    if not isinstance(description, str):
+        description = ""
+        if "description" in value:
+            result.todos.append(
+                f"{source.location}: furniture {furniture_id} description needs review"
+            )
+    color = value.get("color")
+    if not isinstance(color, str) or not color:
+        result.todos.append(f"{source.location}: furniture {furniture_id} color needs review")
+        color = "white"
+    symbol = value.get("symbol")
+    if not isinstance(symbol, str) or len(symbol) != 1:
+        result.todos.append(f"{source.location}: furniture {furniture_id} symbol needs review")
+        symbol = "#"
+    lines = [
+        "local definition = content.Furniture {",
+        f"    id = {lua_quote(furniture_id)},",
+        f"    name = {lua_quote(name)},",
+        f"    color = {lua_quote(color)},",
+        f"    symbol = {lua_quote(symbol)},",
+    ]
+    if description:
+        lines.append(f"    description = {lua_quote(description)},")
+    int_fields = (
+        ("move_cost_mod", 0), ("required_str", 0), ("light_emitted", 0),
+        ("comfort", 0), ("max_volume_ml", 0), ("mass_grams", 0),
+        ("keg_capacity_ml", 0),
+    )
+    for field, default in int_fields:
+        entry = value.get(field, default)
+        if isinstance(entry, int) and not isinstance(entry, bool) and \
+                entry >= 0:
+            lines.append(f"    {field} = {entry},")
+        else:
+            lines.append(f"    {field} = {default},")
+            result.todos.append(
+                f"{source.location}: furniture {furniture_id} {field} needs review"
+            )
+    transparent = value.get("transparent")
+    if isinstance(transparent, bool):
+        lines.append(f"    transparent = {lua_boolean(transparent)},")
+    elif "transparent" in value:
+        result.todos.append(
+            f"{source.location}: furniture {furniture_id} transparent needs review"
+        )
+    for field in ("open", "close", "lockpick_result", "crafting_pseudo_item",
+                  "deployed_item"):
+        entry = value.get(field)
+        if isinstance(entry, str) and entry:
+            lines.append(f"    {field} = {lua_quote(entry)},")
+        elif field in value:
+            result.todos.append(
+                f"{source.location}: furniture {furniture_id} {field} needs review"
+            )
+    lines.append("}")
+    flags = value.get("flags")
+    if isinstance(flags, list) and all(
+        isinstance(entry, str) and entry for entry in flags
+    ):
+        for flag in flags:
+            lines.append(f"definition:flag({lua_quote(flag)})")
+    elif "flags" in value:
+        result.todos.append(
+            f"{source.location}: furniture {furniture_id} flags need review"
+        )
+    for member in ("bash", "deconstruct", "workbench", "examine_action",
+                   "plant_data", "oxytorch", "boltcut", "hacksaw", "prying",
+                   "emissions", "harvest_by_season", "bonus_fire_warmth_feet",
+                   "coverage", "curtain_transform", "looks_like",
+                   "surgery_skill_multiplier"):
+        if member in value:
+            result.todos.append(
+                f"{source.location}: furniture {furniture_id} {member} needs review"
+            )
+    status = (
+        result.partial if len(result.todos) != todo_count else result.converted
+    )
+    status.append(f"{source.location}: furniture {furniture_id}")
+    lines.extend((content_submit_expression(), ""))
+    return "\n".join(lines)
+
+
+def render_terrain(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    terrain_id = value.get("id")
+    if not safe_platform_id(terrain_id):
+        result.partial.append(f"{source.location}: terrain <invalid id>")
+        result.todos.append(
+            f"{source.location}: terrain needs a stable native id"
+        )
+        return None
+    todo_count = len(result.todos)
+    if "copy-from" in value:
+        result.todos.append(
+            f"{source.location}: terrain {terrain_id} inheritance must become a Lua constructor/composition function"
+        )
+    name = value.get("name")
+    if isinstance(name, dict):
+        name = name.get("str")
+    if not isinstance(name, str) or not name:
+        result.todos.append(f"{source.location}: terrain {terrain_id} name needs review")
+        name = terrain_id
+    description = value.get("description")
+    if not isinstance(description, str):
+        description = ""
+        if "description" in value:
+            result.todos.append(
+                f"{source.location}: terrain {terrain_id} description needs review"
+            )
+    color = value.get("color")
+    if not isinstance(color, str) or not color:
+        result.todos.append(f"{source.location}: terrain {terrain_id} color needs review")
+        color = "white"
+    symbol = value.get("symbol")
+    if not isinstance(symbol, str) or len(symbol) != 1:
+        result.todos.append(f"{source.location}: terrain {terrain_id} symbol needs review")
+        symbol = "."
+    lines = [
+        "local definition = content.Terrain {",
+        f"    id = {lua_quote(terrain_id)},",
+        f"    name = {lua_quote(name)},",
+        f"    color = {lua_quote(color)},",
+        f"    symbol = {lua_quote(symbol)},",
+    ]
+    if description:
+        lines.append(f"    description = {lua_quote(description)},")
+    int_fields = (
+        ("move_cost", 0), ("light_emitted", 0), ("comfort", 0),
+        ("max_volume_ml", 0), ("heat_radiation", 0),
+    )
+    for field, default in int_fields:
+        entry = value.get(field, default)
+        if isinstance(entry, int) and not isinstance(entry, bool) and \
+                entry >= 0:
+            lines.append(f"    {field} = {entry},")
+        else:
+            lines.append(f"    {field} = {default},")
+            result.todos.append(
+                f"{source.location}: terrain {terrain_id} {field} needs review"
+            )
+    transparent = value.get("transparent")
+    if isinstance(transparent, bool):
+        lines.append(f"    transparent = {lua_boolean(transparent)},")
+    elif "transparent" in value:
+        result.todos.append(
+            f"{source.location}: terrain {terrain_id} transparent needs review"
+        )
+    for field in ("open", "close", "transforms_into", "roof",
+                  "lockpick_result", "trap"):
+        entry = value.get(field)
+        if isinstance(entry, str) and entry:
+            lines.append(f"    {field} = {lua_quote(entry)},")
+        elif field in value:
+            result.todos.append(
+                f"{source.location}: terrain {terrain_id} {field} needs review"
+            )
+    lines.append("}")
+    flags = value.get("flags")
+    if isinstance(flags, list) and all(
+        isinstance(entry, str) and entry for entry in flags
+    ):
+        for flag in flags:
+            lines.append(f"definition:flag({lua_quote(flag)})")
+    elif "flags" in value:
+        result.todos.append(
+            f"{source.location}: terrain {terrain_id} flags need review"
+        )
+    for member in ("bash", "deconstruct", "examine_action", "emissions",
+                   "harvest_by_season", "coverage", "curtain_transform",
+                   "looks_like", "connects_to", "connect_groups",
+                   "rotate_to", "phase_targets", "road_cost_multiplier",
+                   "signpost_items", "smoke_field_intensity"):
+        if member in value:
+            result.todos.append(
+                f"{source.location}: terrain {terrain_id} {member} needs review"
+            )
+    status = (
+        result.partial if len(result.todos) != todo_count else result.converted
+    )
+    status.append(f"{source.location}: terrain {terrain_id}")
+    lines.extend((content_submit_expression(), ""))
+    return "\n".join(lines)
+
+
+def render_gate(
+    source: SourceObject,
+    result: MigrationResult,
+    *,
+    inheritance_corpus: dict[str, dict[str, Any]] | None = None,
+) -> str | None:
+    value = source.value
+    if "copy-from" in value:
+        if inheritance_corpus is None:
+            result.partial.append(
+                f"{source.location}: gate {value.get('id') or '<invalid id>'}"
+            )
+            result.todos.append(
+                f"{source.location}: gate inheritance needs the migration corpus"
+            )
+            return None
+        resolved, todos = resolve_copy_from(
+            value,
+            inheritance_corpus,
+            label=f"gate {value.get('id') or '<invalid id>'}",
+            location=source.location,
+        )
+        for todo in todos:
+            result.todos.append(todo)
+        if todos:
+            result.partial.append(
+                f"{source.location}: gate {value.get('id') or '<invalid id>'}"
+            )
+            return None
+        value = resolved
+        source = SourceObject(source.path, source.index, resolved)
+    gate_id = value.get("id")
+    if not safe_platform_id(gate_id):
+        result.partial.append(f"{source.location}: gate <invalid id>")
+        result.todos.append(
+            f"{source.location}: gate needs a stable native id"
+        )
+        return None
+    todo_count = len(result.todos)
+    door = value.get("door")
+    floor = value.get("floor")
+    if not isinstance(door, str) or not door or not isinstance(floor, str) \
+            or not floor:
+        result.todos.append(
+            f"{source.location}: gate {gate_id} door/floor need review"
+        )
+        door = door if isinstance(door, str) and door else "t_door_o"
+        floor = floor if isinstance(floor, str) and floor else "t_floor"
+    lines = [
+        "local definition = content.Gate {",
+        f"    id = {lua_quote(gate_id)},",
+        f"    door = {lua_quote(door)},",
+        f"    floor = {lua_quote(floor)},",
+    ]
+    for field in ("moves", "bashing_damage"):
+        entry = value.get(field, 0)
+        if isinstance(entry, int) and not isinstance(entry, bool) and \
+                entry >= 0:
+            lines.append(f"    {field} = {entry},")
+        else:
+            lines.append(f"    {field} = 0,")
+            result.todos.append(
+                f"{source.location}: gate {gate_id} {field} needs review"
+            )
+    messages = value.get("messages")
+    if isinstance(messages, dict):
+        for key, field in (("pull", "pull_message"), ("open", "open_message"),
+                           ("close", "close_message"), ("fail", "fail_message")):
+            entry = messages.get(key)
+            if isinstance(entry, str) and entry:
+                lines.append(f"    {field} = {lua_quote(entry)},")
+            elif key in messages:
+                result.todos.append(
+                    f"{source.location}: gate {gate_id} {key} message needs review"
+                )
+    elif "messages" in value:
+        result.todos.append(
+            f"{source.location}: gate {gate_id} messages need review"
+        )
+    lines.append("}")
+    walls = value.get("walls")
+    if isinstance(walls, list) and all(
+        isinstance(entry, str) and entry for entry in walls
+    ):
+        for wall in walls:
+            lines.append(f"definition:wall({lua_quote(wall)})")
+    else:
+        result.todos.append(
+            f"{source.location}: gate {gate_id} walls need review"
+        )
+    status = (
+        result.partial if len(result.todos) != todo_count else result.converted
+    )
+    status.append(f"{source.location}: gate {gate_id}")
+    lines.extend((content_submit_expression(), ""))
+    return "\n".join(lines)
+
+
+def render_fault(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    fault_id = value.get("id")
+    if not safe_platform_id(fault_id):
+        result.partial.append(f"{source.location}: fault <invalid id>")
+        result.todos.append(
+            f"{source.location}: fault needs a stable native id"
+        )
+        return None
+    todo_count = len(result.todos)
+    name = value.get("name")
+    if isinstance(name, dict):
+        name = name.get("str")
+    if not isinstance(name, str) or not name:
+        result.todos.append(f"{source.location}: fault {fault_id} name needs review")
+        name = fault_id
+    # Legacy faults default to an empty fault_type, never "generic".
+    fault_type = value.get("fault_type", "")
+    if not isinstance(fault_type, str):
+        result.todos.append(f"{source.location}: fault {fault_id} fault_type needs review")
+        fault_type = ""
+    lines = [
+        "local definition = content.Fault {",
+        f"    id = {lua_quote(fault_id)},",
+        f"    fault_type = {lua_quote(fault_type)},",
+        f"    name = {lua_quote(name)},",
+    ]
+    for field in ("description", "item_prefix", "item_suffix", "message",
+                  "color"):
+        entry = value.get(field)
+        if isinstance(entry, str) and entry:
+            lines.append(f"    {field} = {lua_quote(entry)},")
+        elif field in value:
+            result.todos.append(
+                f"{source.location}: fault {fault_id} {field} needs review"
+            )
+    for source_field, field, default in (
+        ("degradation_mod", "degradation_mod", 0),
+        ("instant_damage", "instant_damage", 0),
+        # Legacy defaults to no vehicle move penalty.
+        ("vehicle_move_penalty_mod", "vehicle_move_penalty_mod", 0),
+        # Legacy JSON names the encumbrance fields differently.
+        ("encumbrance_add", "encumbrance_mod_flat", 0),
+    ):
+        entry = value.get(source_field, default)
+        if isinstance(entry, int) and not isinstance(entry, bool):
+            lines.append(f"    {field} = {entry},")
+        else:
+            lines.append(f"    {field} = {default},")
+            result.todos.append(
+                f"{source.location}: fault {fault_id} {source_field} needs review"
+            )
+    for source_field, field, default in (
+        ("price_modifier", "price_modifier", 1.0),
+        ("contact_area_mod", "contact_area_mod", 1.0),
+        ("rolling_resistance_mod", "rolling_resistance_mod", 1.0),
+        ("encumbrance_mult", "encumbrance_mod_mult", 1.0),
+    ):
+        entry = value.get(source_field, default)
+        if isinstance(entry, (int, float)) and not isinstance(entry, bool) and \
+                entry >= 0:
+            lines.append(f"    {field} = {entry},")
+        else:
+            lines.append(f"    {field} = {default},")
+            result.todos.append(
+                f"{source.location}: fault {fault_id} {source_field} needs review"
+            )
+    degradation = value.get("affected_by_degradation")
+    if isinstance(degradation, bool):
+        lines.append(f"    affected_by_degradation = {lua_boolean(degradation)},")
+    elif "affected_by_degradation" in value:
+        result.todos.append(
+            f"{source.location}: fault {fault_id} affected_by_degradation needs review"
+        )
+    lines.append("}")
+    flags = value.get("flags")
+    if isinstance(flags, list) and all(
+        isinstance(entry, str) and entry for entry in flags
+    ):
+        for flag in flags:
+            lines.append(f"definition:flag({lua_quote(flag)})")
+    elif "flags" in value:
+        result.todos.append(f"{source.location}: fault {fault_id} flags need review")
+    for member, method in (("block_faults", "block_fault"), ("fixes", "fix")):
+        entries = value.get(member)
+        if isinstance(entries, list) and all(
+            isinstance(entry, str) and entry for entry in entries
+        ):
+            for entry in entries:
+                lines.append(f"definition:{method}({lua_quote(entry)})")
+        elif member in value:
+            result.todos.append(
+                f"{source.location}: fault {fault_id} {member} needs review"
+            )
+    for member in ("melee_damage_mod", "armor_mod"):
+        if member in value:
+            result.todos.append(
+                f"{source.location}: fault {fault_id} {member} needs review"
+            )
+    status = (
+        result.partial if len(result.todos) != todo_count else result.converted
+    )
+    status.append(f"{source.location}: fault {fault_id}")
+    lines.extend((content_submit_expression(), ""))
+    return "\n".join(lines)
+
+
+def render_fault_fix(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    fix_id = value.get("id")
+    if not safe_platform_id(fix_id):
+        result.partial.append(f"{source.location}: fault fix <invalid id>")
+        result.todos.append(
+            f"{source.location}: fault fix needs a stable native id"
+        )
+        return None
+    todo_count = len(result.todos)
+    name = value.get("name")
+    if isinstance(name, dict):
+        name = name.get("str")
+    if not isinstance(name, str) or not name:
+        result.todos.append(f"{source.location}: fault fix {fix_id} name needs review")
+        name = fix_id
+    lines = [
+        "local definition = content.FaultFix {",
+        f"    id = {lua_quote(fix_id)},",
+        f"    name = {lua_quote(name)},",
+    ]
+    if isinstance(value.get("success_msg"), str) and value["success_msg"]:
+        lines.append(f"    success_msg = {lua_quote(value['success_msg'])},")
+    elif "success_msg" in value:
+        result.todos.append(
+            f"{source.location}: fault fix {fix_id} success message needs review"
+        )
+    time_entry = value.get("time")
+    if isinstance(time_entry, str):
+        seconds = parse_seconds(time_entry)
+        if seconds is None:
+            seconds = 0
+            result.todos.append(
+                f"{source.location}: fault fix {fix_id} time needs unit review"
+            )
+    else:
+        seconds = 0
+        if "time" in value:
+            result.todos.append(
+                f"{source.location}: fault fix {fix_id} time needs unit review"
+            )
+    lines.append(f"    time_seconds = {seconds},")
+    for field, default in (("mod_damage", 0), ("mod_degradation", 0)):
+        entry = value.get(field, default)
+        if isinstance(entry, int) and not isinstance(entry, bool):
+            lines.append(f"    {field} = {entry},")
+        else:
+            lines.append(f"    {field} = {default},")
+            result.todos.append(
+                f"{source.location}: fault fix {fix_id} {field} needs review"
+            )
+    lines.append("}")
+    skills = value.get("skills")
+    if isinstance(skills, dict):
+        valid = True
+        for skill, level in skills.items():
+            if not isinstance(skill, str) or not isinstance(level, int) or \
+                    isinstance(level, bool) or level < 0:
+                valid = False
+                break
+        if valid:
+            for skill, level in skills.items():
+                lines.append(
+                    f"definition:requires_skill({lua_quote(skill)}, {level})"
+                )
+        else:
+            result.todos.append(
+                f"{source.location}: fault fix {fix_id} skills need review"
+            )
+    elif isinstance(skills, list) and all(
+        isinstance(entry, list) and len(entry) == 2 and
+        isinstance(entry[0], str) and isinstance(entry[1], int) and
+        not isinstance(entry[1], bool)
+        for entry in skills
+    ):
+        for entry in skills:
+            lines.append(
+                f"definition:requires_skill({lua_quote(entry[0])}, {entry[1]})"
+            )
+    elif "skills" in value:
+        result.todos.append(
+            f"{source.location}: fault fix {fix_id} skills need review"
+        )
+    for member, method in (("faults_removed", "removes_fault"),
+                           ("faults_added", "adds_fault")):
+        entries = value.get(member)
+        if isinstance(entries, list) and all(
+            isinstance(entry, str) and entry for entry in entries
+        ):
+            for entry in entries:
+                lines.append(f"definition:{method}({lua_quote(entry)})")
+        elif member in value:
+            result.todos.append(
+                f"{source.location}: fault fix {fix_id} {member} needs review"
+            )
+    for member in ("set_variables", "adjust_variables_multiply",
+                   "requirements", "using", "time_save_profs",
+                   "time_save_flags"):
+        if member in value:
+            result.todos.append(
+                f"{source.location}: fault fix {fix_id} {member} needs review"
+            )
+    status = (
+        result.partial if len(result.todos) != todo_count else result.converted
+    )
+    status.append(f"{source.location}: fault fix {fix_id}")
+    lines.extend((content_submit_expression(), ""))
+    return "\n".join(lines)
+
+
+def render_dream(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    todo_count = len(result.todos)
+    category = value.get("category")
+    if not isinstance(category, str) or not category:
+        result.todos.append(
+            f"{source.location}: dream category needs review"
+        )
+        category = "NONE"
+    strength = value.get("strength", 0)
+    if not isinstance(strength, int) or isinstance(strength, bool) or \
+            strength < 0:
+        strength = 0
+        result.todos.append(
+            f"{source.location}: dream strength needs review"
+        )
+    lines = [
+        "local definition = content.Dream {",
+        f"    category = {lua_quote(category)},",
+        f"    strength = {strength},",
+        "}",
+    ]
+    messages = value.get("messages")
+    if isinstance(messages, list) and all(
+        isinstance(entry, str) and entry for entry in messages
+    ):
+        for message in messages:
+            lines.append(f"definition:message({lua_quote(message)})")
+    else:
+        result.todos.append(
+            f"{source.location}: dream messages need review"
+        )
+    status = (
+        result.partial if len(result.todos) != todo_count else result.converted
+    )
+    status.append(f"{source.location}: dream {category}")
+    lines.extend((content_submit_expression(), ""))
+    return "\n".join(lines)
+
+
+def render_achievement(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    achievement_id = value.get("id")
+    if not safe_platform_id(achievement_id):
+        result.partial.append(f"{source.location}: achievement <invalid id>")
+        result.todos.append(
+            f"{source.location}: achievement needs a stable native id"
+        )
+        return None
+    todo_count = len(result.todos)
+    name = value.get("name")
+    if isinstance(name, dict):
+        name = name.get("str")
+    if not isinstance(name, str) or not name:
+        result.todos.append(
+            f"{source.location}: achievement {achievement_id} name needs review"
+        )
+        name = achievement_id
+    is_conduct = value.get("type") == "conduct"
+    constructor = "Conduct" if is_conduct else "Achievement"
+    lines = [
+        f"local definition = content.{constructor} {{",
+        f"    id = {lua_quote(achievement_id)},",
+        f"    name = {lua_quote(name)},",
+    ]
+    description = value.get("description")
+    if isinstance(description, str) and description:
+        lines.append(f"    description = {lua_quote(description)},")
+    elif "description" in value:
+        result.todos.append(
+            f"{source.location}: achievement {achievement_id} description needs review"
+        )
+    lines.append("}")
+    hidden_by = value.get("hidden_by")
+    if isinstance(hidden_by, list) and all(
+        isinstance(entry, str) and entry for entry in hidden_by
+    ):
+        for entry in hidden_by:
+            lines.append(f"definition:hidden_by({lua_quote(entry)})")
+    elif "hidden_by" in value:
+        result.todos.append(
+            f"{source.location}: achievement {achievement_id} hidden_by needs review"
+        )
+    for member in ("requirements", "time_constraint", "conduct_group",
+                   "completion", "event_statistic"):
+        if member in value:
+            result.todos.append(
+                f"{source.location}: achievement {achievement_id} {member} needs review"
+            )
+    status = (
+        result.partial if len(result.todos) != todo_count else result.converted
+    )
+    status.append(f"{source.location}: achievement {achievement_id}")
+    lines.extend((content_submit_expression(), ""))
+    return "\n".join(lines)
+
+
+def render_blacklist(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    kind = {
+        "ITEM_BLACKLIST": "item",
+        "TRAIT_BLACKLIST": "trait",
+        "MONSTER_BLACKLIST": "monster",
+        "MONSTER_WHITELIST": "monster",
+        "SCENARIO_BLACKLIST": "scenario",
+        "profession_blacklist": "profession",
+        "charge_removal_blacklist": "charge_removal",
+        "temperature_removal_blacklist": "temperature_removal",
+    }.get(value.get("type", ""))
+    if kind is None:
+        result.todos.append(
+            f"{source.location}: blacklist type needs review"
+        )
+        return None
+    if kind not in ("item", "trait", "monster", "scenario", "profession",
+                    "charge_removal", "temperature_removal"):
+        result.partial.append(
+            f"{source.location}: blacklist kind '{kind}' needs a native registrar"
+        )
+        result.todos.append(
+            f"{source.location}: blacklist kind '{kind}' needs a native registrar"
+        )
+        return None
+    todo_count = len(result.todos)
+    # Blacklists are append-style registries: the native registrar forbids
+    # edit/replace operations, so these definitions always submit through
+    # content.add even in --replace mode.
+    blacklist_submit = "content.add(definition)"
+    whitelist = value.get("type") == "MONSTER_WHITELIST" or bool(
+        value.get("whitelist")
+    )
+    if kind == "trait":
+        entries_key = "traits"
+    elif kind == "monster":
+        entries_key = "monsters"
+    elif kind in ("charge_removal", "temperature_removal"):
+        entries_key = "list"
+    elif kind == "profession":
+        entries_key = "professions"
+    elif kind == "scenario":
+        entries_key = "scenarios"
+    else:
+        entries_key = "items"
+    entries = value.get(entries_key, value.get("items", []))
+    # An empty blacklist is a deliberate legacy value (e.g. the core
+    # MONSTER_BLACKLIST starts with no entries) and must render as a
+    # zero-entry definition, not as a review TODO.
+    if not isinstance(entries, list):
+        result.todos.append(
+            f"{source.location}: blacklist entries need review"
+        )
+        return None
+    lines = [
+        "local definition = content.Blacklist {",
+        f"    kind = {lua_quote(kind)},",
+        f"    whitelist = {lua_boolean(whitelist)},",
+        "}",
+    ]
+    for entry in entries:
+        if isinstance(entry, str) and entry:
+            lines.append(f"definition:entry({lua_quote(entry)})")
+        else:
+            result.todos.append(
+                f"{source.location}: blacklist entry needs review"
+            )
+            break
+    status = (
+        result.partial if len(result.todos) != todo_count else result.converted
+    )
+    status.append(f"{source.location}: blacklist {kind}")
+    lines.extend((blacklist_submit, ""))
+    return "\n".join(lines)
+
+
+def render_map_extra(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    extra_id = value.get("id")
+    if not safe_platform_id(extra_id):
+        result.partial.append(f"{source.location}: map extra <invalid id>")
+        result.todos.append(
+            f"{source.location}: map extra needs a stable native id"
+        )
+        return None
+    todo_count = len(result.todos)
+    name = value.get("name")
+    if isinstance(name, dict):
+        name = name.get("str")
+    if not isinstance(name, str) or not name:
+        result.todos.append(
+            f"{source.location}: map extra {extra_id} name needs review"
+        )
+        name = extra_id
+    lines = [
+        "local definition = content.MapExtra {",
+        f"    id = {lua_quote(extra_id)},",
+        f"    name = {lua_quote(name)},",
+    ]
+    description = value.get("description")
+    if isinstance(description, str) and description:
+        lines.append(f"    description = {lua_quote(description)},")
+    generator = value.get("generator")
+    if isinstance(generator, dict):
+        generator_id = generator.get("generator_id")
+        if isinstance(generator_id, str) and generator_id:
+            lines.append(f"    generator_id = {lua_quote(generator_id)},")
+        else:
+            result.todos.append(
+                f"{source.location}: map extra {extra_id} generator needs review"
+            )
+    elif "generator" in value:
+        result.todos.append(
+            f"{source.location}: map extra {extra_id} generator needs review"
+        )
+    symbol = value.get("sym")
+    if isinstance(symbol, str) and symbol:
+        lines.append(f"    symbol = {lua_quote(symbol)},")
+    elif "sym" in value:
+        result.todos.append(
+            f"{source.location}: map extra {extra_id} symbol needs review"
+        )
+    color = value.get("color")
+    if isinstance(color, str) and color:
+        lines.append(f"    color = {lua_quote(color)},")
+    elif "color" in value:
+        result.todos.append(
+            f"{source.location}: map extra {extra_id} color needs review"
+        )
+    lines.append("}")
+    flags = value.get("flags")
+    if isinstance(flags, list) and all(
+        isinstance(entry, str) and entry for entry in flags
+    ):
+        for flag in flags:
+            lines.append(f"definition:flag({lua_quote(flag)})")
+    elif "flags" in value:
+        result.todos.append(
+            f"{source.location}: map extra {extra_id} flags need review"
+        )
+    for member in ("min_max_zlevel", "autonote_visibility"):
+        if member in value:
+            result.todos.append(
+                f"{source.location}: map extra {extra_id} {member} needs review"
+            )
+    status = (
+        result.partial if len(result.todos) != todo_count else result.converted
+    )
+    status.append(f"{source.location}: map extra {extra_id}")
+    lines.extend((content_submit_expression(), ""))
+    return "\n".join(lines)
+
+
+def render_weather_generator(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    generator_id = value.get("id")
+    if not safe_platform_id(generator_id):
+        result.partial.append(
+            f"{source.location}: weather generator <invalid id>"
+        )
+        result.todos.append(
+            f"{source.location}: weather generator needs a stable native id"
+        )
+        return None
+    todo_count = len(result.todos)
+    lines = [
+        "local definition = content.WeatherGenerator {",
+        f"    id = {lua_quote(generator_id)},",
+    ]
+    for field, default in (
+        ("base_temperature", 0.0), ("base_humidity", 0.0),
+        ("base_pressure", 0.0), ("base_wind", 0.0),
+    ):
+        entry = value.get(field, default)
+        if isinstance(entry, (int, float)) and not isinstance(entry, bool):
+            lines.append(f"    {field} = {entry},")
+        else:
+            lines.append(f"    {field} = {default},")
+            result.todos.append(
+                f"{source.location}: weather generator {generator_id} {field} needs review"
+            )
+    for field in (
+        "base_wind_distrib_peaks", "summer_temp_manual_mod",
+        "spring_temp_manual_mod", "autumn_temp_manual_mod",
+        "winter_temp_manual_mod", "spring_humidity_manual_mod",
+        "summer_humidity_manual_mod", "autumn_humidity_manual_mod",
+        "winter_humidity_manual_mod",
+    ):
+        entry = value.get(field, 0)
+        if isinstance(entry, int) and not isinstance(entry, bool):
+            lines.append(f"    {field} = {entry},")
+        elif field in value:
+            result.todos.append(
+                f"{source.location}: weather generator {generator_id} {field} needs review"
+            )
+    lines.append("}")
+    for member, method in (("weather_black_list", "blacklisted_weather"),
+                           ("weather_white_list", "whitelisted_weather")):
+        entries = value.get(member)
+        if isinstance(entries, list) and all(
+            isinstance(entry, str) and entry for entry in entries
+        ):
+            for entry in entries:
+                lines.append(f"definition:{method}({lua_quote(entry)})")
+        elif member in value:
+            result.todos.append(
+                f"{source.location}: weather generator {generator_id} {member} needs review"
+            )
+    for member in ("weather_types", "initial_weather"):
+        if member in value:
+            result.todos.append(
+                f"{source.location}: weather generator {generator_id} {member} needs review"
+            )
+    status = (
+        result.partial if len(result.todos) != todo_count else result.converted
+    )
+    status.append(f"{source.location}: weather generator {generator_id}")
+    lines.extend((content_submit_expression(), ""))
+    return "\n".join(lines)
+
+
+def render_migration(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    kind_map = {
+        "bionic_migration": "bionic",
+        "effect_migration": "effect",
+        "field_type_migration": "field_type",
+        "oter_id_migration": "oter",
+        "overmap_special_migration": "overmap_special",
+        "proficiency_migration": "proficiency",
+        "ter_furn_migration": "terrain",
+        "trap_migration": "trap",
+        "var_migration": "var",
+        "vehicle_part_migration": "vehicle_part",
+    }
+    kind = kind_map.get(value.get("type", ""))
+    if kind is None:
+        result.partial.append(f"{source.location}: migration type needs review")
+        result.todos.append(
+            f"{source.location}: migration type needs a native registrar"
+        )
+        return None
+    todo_count = len(result.todos)
+    # Migrations are append-style registries: the native registrar forbids
+    # edit/replace operations, and its apply overwrites by from id, so these
+    # definitions always submit through content.add even in --replace mode.
+    migration_submit = "content.add(definition)"
+    if kind == "terrain" or kind == "furniture":
+        from_field = "from_ter" if kind == "terrain" else "from_furn"
+        from_id = value.get(from_field)
+        to_id = value.get("to_ter") if kind == "terrain" else value.get("to_furn")
+        if kind == "terrain" and not isinstance(from_id, str):
+            kind = "furniture"
+            from_field = "from_furn"
+            from_id = value.get(from_field)
+            to_id = value.get("to_furn")
+        if not isinstance(from_id, str) or not from_id:
+            result.todos.append(
+                f"{source.location}: migration from id needs review"
+            )
+            from_id = ""
+        if not isinstance(to_id, str) or not to_id:
+            result.todos.append(
+                f"{source.location}: migration to id needs review"
+            )
+            to_id = ""
+    elif kind == "oter":
+        pairs = value.get("oter_ids")
+        if isinstance(pairs, dict) and pairs:
+            lines = []
+            for from_id, to_id in pairs.items():
+                if not isinstance(from_id, str) or not isinstance(to_id, str):
+                    result.todos.append(
+                        f"{source.location}: migration oter_ids entry needs review"
+                    )
+                    continue
+                # Each pair is wrapped in its own do/end block: a single
+                # oter_ids object expands to hundreds of definitions and must
+                # not exhaust the 200-local Lua limit.
+                lines.extend(
+                    (
+                        "do",
+                        "local definition = content.Migration {",
+                        f"    kind = {lua_quote(kind)},",
+                        f"    from = {lua_quote(from_id)},",
+                        f"    to = {lua_quote(to_id)},",
+                        "}",
+                        migration_submit,
+                        "end",
+                        "",
+                    )
+                )
+            status = (
+                result.partial if len(result.todos) != todo_count
+                else result.converted
+            )
+            status.append(f"{source.location}: migration {kind}")
+            return "\n".join(lines)
+        result.partial.append(
+            f"{source.location}: migration oter_ids needs review"
+        )
+        result.todos.append(
+            f"{source.location}: migration oter_ids needs review"
+        )
+        return None
+    elif kind == "overmap_special":
+        from_id = value.get("id")
+        to_id = value.get("new_id", "")
+    elif kind == "trap":
+        from_id = value.get("from_trap")
+        to_id = value.get("to_trap")
+    elif kind == "field_type":
+        from_id = value.get("from_field_type")
+        to_id = value.get("to_field_type")
+    else:
+        from_id = value.get("from")
+        to_id = value.get("to", "")
+    if not isinstance(from_id, str) or not from_id:
+        result.todos.append(f"{source.location}: migration from id needs review")
+        from_id = ""
+    if not isinstance(to_id, str):
+        result.todos.append(f"{source.location}: migration to id needs review")
+        to_id = ""
+    # do/end wrapper keeps every definition from counting against the
+    # 200-local limit in a file with hundreds of migration pairs.
+    lines = [
+        "do",
+        "local definition = content.Migration {",
+        f"    kind = {lua_quote(kind)},",
+        f"    from = {lua_quote(from_id)},",
+        f"    to = {lua_quote(to_id)},",
+        "}",
+        migration_submit,
+        "end",
+        "",
+    ]
+    status = (
+        result.partial if len(result.todos) != todo_count else result.converted
+    )
+    status.append(f"{source.location}: migration {kind}")
+    return "\n".join(lines)
+
+
+def render_shopkeeper(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    rule_id = value.get("id")
+    if not safe_platform_id(rule_id):
+        result.partial.append(f"{source.location}: shopkeeper rule <invalid id>")
+        result.todos.append(
+            f"{source.location}: shopkeeper rule needs a stable native id"
+        )
+        return None
+    todo_count = len(result.todos)
+    kind = value.get("type")
+    builder = {
+        "shopkeeper_blacklist": "ShopkeeperBlacklist",
+        "shopkeeper_whitelist": "ShopkeeperWhitelist",
+        "shopkeeper_consumption_rates": "ShopkeeperConsumptionRates",
+    }[kind]
+    lines = [
+        f"local definition = content.{builder} {{",
+        f"    id = {lua_quote(rule_id)},",
+    ]
+    if kind == "shopkeeper_consumption_rates":
+        default_rate = value.get("default_rate", 0)
+        if isinstance(default_rate, int) and not isinstance(default_rate, bool):
+            lines.append(f"    default_rate = {default_rate},")
+        else:
+            lines.append("    default_rate = 0,")
+            result.todos.append(
+                f"{source.location}: shopkeeper rule {rule_id} default_rate needs review"
+            )
+    elif kind == "shopkeeper_whitelist" and isinstance(value.get("message"), str):
+        lines.append(f"    message = {lua_quote(value['message'])},")
+    lines.append("}")
+    entries = value.get("entries")
+    if isinstance(entries, list) and entries:
+        for entry in entries:
+            if not isinstance(entry, dict):
+                result.todos.append(
+                    f"{source.location}: shopkeeper rule {rule_id} entry needs review"
+                )
+                continue
+            if "condition" in entry:
+                result.todos.append(
+                    f"{source.location}: shopkeeper rule {rule_id} entry condition needs review"
+                )
+            if "rate" in entry:
+                result.todos.append(
+                    f"{source.location}: shopkeeper rule {rule_id} entry rate needs review"
+                )
+            item = entry.get("item", "")
+            category = entry.get("category", "")
+            item_group = entry.get("group", "")
+            message = entry.get("message", "")
+            fields = (item, category, item_group, message)
+            if not all(isinstance(field, str) for field in fields):
+                result.todos.append(
+                    f"{source.location}: shopkeeper rule {rule_id} entry fields need review"
+                )
+                continue
+            lines.append(
+                f"definition:entry({lua_quote(item)}, {lua_quote(category)}, "
+                f"{lua_quote(item_group)}, {lua_quote(message)})"
+            )
+    elif "entries" in value:
+        result.todos.append(
+            f"{source.location}: shopkeeper rule {rule_id} entries need review"
+        )
+    status = (
+        result.partial if len(result.todos) != todo_count else result.converted
+    )
+    status.append(f"{source.location}: shopkeeper rule {rule_id}")
+    lines.extend((content_submit_expression(), ""))
+    return "\n".join(lines)
+
+
+def render_monster_adjustment(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    todo_count = len(result.todos)
+    species = value.get("species")
+    if not isinstance(species, str) or not species:
+        result.partial.append(
+            f"{source.location}: monster adjustment species needs review"
+        )
+        result.todos.append(
+            f"{source.location}: monster adjustment species needs review"
+        )
+        return None
+    lines = [
+        "local definition = content.MonsterAdjustment {",
+        f"    species = {lua_quote(species)},",
+    ]
+    stat_entry = value.get("stat")
+    if isinstance(stat_entry, dict):
+        stat_name = stat_entry.get("name")
+        stat_adjust = stat_entry.get("modifier", 1.0)
+        if isinstance(stat_name, str) and isinstance(stat_adjust, (int, float)) and \
+                not isinstance(stat_adjust, bool):
+            lines.append(f"    stat = {lua_quote(stat_name)},")
+            lines.append(f"    stat_adjust = {stat_adjust},")
+        else:
+            result.todos.append(
+                f"{source.location}: monster adjustment stat needs review"
+            )
+    elif "stat" in value:
+        result.todos.append(
+            f"{source.location}: monster adjustment stat needs review"
+        )
+    flag_entry = value.get("flag")
+    if isinstance(flag_entry, dict):
+        flag_name = flag_entry.get("name")
+        flag_val = flag_entry.get("value", False)
+        if isinstance(flag_name, str) and isinstance(flag_val, bool):
+            lines.append(f"    flag = {lua_quote(flag_name)},")
+            lines.append(f"    flag_val = {lua_boolean(flag_val)},")
+        else:
+            result.todos.append(
+                f"{source.location}: monster adjustment flag needs review"
+            )
+    elif "flag" in value:
+        result.todos.append(
+            f"{source.location}: monster adjustment flag needs review"
+        )
+    special = value.get("special")
+    if isinstance(special, str) and special:
+        lines.append(f"    special = {lua_quote(special)},")
+    elif "special" in value:
+        result.todos.append(
+            f"{source.location}: monster adjustment special needs review"
+        )
+    lines.append("}")
+    status = (
+        result.partial if len(result.todos) != todo_count else result.converted
+    )
+    status.append(f"{source.location}: monster adjustment {species}")
+    lines.extend((content_submit_expression(), ""))
+    return "\n".join(lines)
+
+
+def render_sound_effect(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    sound_id = value.get("id")
+    if not safe_platform_id(sound_id):
+        result.partial.append(f"{source.location}: sound effect <invalid id>")
+        result.todos.append(
+            f"{source.location}: sound effect needs a stable native id"
+        )
+        return None
+    todo_count = len(result.todos)
+    variants = value.get("variant", "default")
+    if isinstance(variants, str):
+        variants = [variants]
+    if not isinstance(variants, list) or not variants or not all(
+        safe_platform_id(entry) for entry in variants
+    ):
+        result.todos.append(
+            f"{source.location}: sound effect {sound_id} variants need review"
+        )
+        variants = ["default"]
+    files = value.get("files")
+    if not isinstance(files, list) or not all(
+        isinstance(entry, str) and entry for entry in files
+    ):
+        result.todos.append(
+            f"{source.location}: sound effect {sound_id} files need review"
+        )
+        files = []
+    volume = value.get("volume", 100)
+    if not isinstance(volume, int) or isinstance(volume, bool):
+        result.todos.append(
+            f"{source.location}: sound effect {sound_id} volume needs review"
+        )
+        volume = 100
+    season = value.get("season", "")
+    if not isinstance(season, str):
+        result.todos.append(
+            f"{source.location}: sound effect {sound_id} season needs review"
+        )
+        season = ""
+    indoors = value.get("is_indoors")
+    night = value.get("is_night")
+    if indoors is not None and not isinstance(indoors, bool):
+        result.todos.append(
+            f"{source.location}: sound effect {sound_id} is_indoors needs review"
+        )
+        indoors = None
+    if night is not None and not isinstance(night, bool):
+        result.todos.append(
+            f"{source.location}: sound effect {sound_id} is_night needs review"
+        )
+        night = None
+    lines: list[str] = []
+    for variant in variants:
+        lines.extend(
+            (
+                "local definition = content.SoundEffect {",
+                f"    id = {lua_quote(sound_id)},",
+                f"    variant = {lua_quote(variant)},",
+            )
+        )
+        if season:
+            lines.append(f"    season = {lua_quote(season)},")
+        if indoors is not None:
+            lines.append(f"    is_indoors = {lua_boolean(indoors)},")
+        if night is not None:
+            lines.append(f"    is_night = {lua_boolean(night)},")
+        lines.append(f"    volume = {volume},")
+        lines.append("}")
+        for file in files:
+            lines.append(f"definition:file({lua_quote(file)})")
+        lines.extend((content_submit_expression(), ""))
+    status = (
+        result.partial if len(result.todos) != todo_count else result.converted
+    )
+    status.append(f"{source.location}: sound effect {sound_id}")
+    return "\n".join(lines)
+
+
+def render_sound_effect_preload(
+    source: SourceObject, result: MigrationResult
+) -> str | None:
+    value = source.value
+    entries = value.get("preload")
+    if not isinstance(entries, list) or not entries:
+        result.partial.append(
+            f"{source.location}: sound effect preload list needs review"
+        )
+        result.todos.append(
+            f"{source.location}: sound effect preload list needs review"
+        )
+        return None
+    todo_count = len(result.todos)
+    lines: list[str] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            result.todos.append(
+                f"{source.location}: sound effect preload entry needs review"
+            )
+            continue
+        preload_id = entry.get("id")
+        if not safe_platform_id(preload_id):
+            result.todos.append(
+                f"{source.location}: sound effect preload needs a stable native id"
+            )
+            continue
+        variants = entry.get("variant", "default")
+        if isinstance(variants, str):
+            variants = [variants]
+        if not isinstance(variants, list) or not variants or not all(
+            safe_platform_id(variant) for variant in variants
+        ):
+            result.todos.append(
+                f"{source.location}: sound effect preload {preload_id} variants need review"
+            )
+            variants = ["default"]
+        season = entry.get("season", "")
+        if not isinstance(season, str):
+            season = ""
+        indoors = entry.get("is_indoors")
+        night = entry.get("is_night")
+        if indoors is not None and not isinstance(indoors, bool):
+            indoors = None
+        if night is not None and not isinstance(night, bool):
+            night = None
+        for variant in variants:
+            lines.extend(
+                (
+                    "local preload = content.SoundEffectPreload {",
+                    f"    id = {lua_quote(preload_id)},",
+                    f"    variant = {lua_quote(variant)},",
+                )
+            )
+            if season:
+                lines.append(f"    season = {lua_quote(season)},")
+            if indoors is not None:
+                lines.append(f"    is_indoors = {lua_boolean(indoors)},")
+            if night is not None:
+                lines.append(f"    is_night = {lua_boolean(night)},")
+            lines.extend(("}", "content.add(preload)", ""))
+    status = (
+        result.partial if len(result.todos) != todo_count else result.converted
+    )
+    status.append(f"{source.location}: sound effect preload")
+    return "\n".join(lines)
 
 
 def render_speed_description(source: SourceObject, result: MigrationResult) -> str | None:
@@ -2303,8 +4587,118 @@ def damage_entries(value: Any) -> list[tuple[str, int | float, int | float]] | N
     return entries
 
 
-def render_sub_body_part(source: SourceObject, result: MigrationResult) -> str | None:
+def resolve_copy_from(
+    value: dict[str, Any],
+    corpus: dict[str, dict[str, Any]],
+    *,
+    label: str,
+    location: str,
+    locations_self_default: bool = False,
+) -> tuple[dict[str, Any], list[str]]:
+    """Resolve a shallow copy-from chain against a same-type corpus.
+
+    Mirrors the legacy generic-factory inheritance semantics: the child starts
+    as a copy of the parent's effective object (defaults applied during the
+    parent's own load), then the child's own fields override; dict-valued
+    members merge one level deep (the legacy gate messages object inherits
+    per key).  ``opposite`` is never inherited, matching the sub-body-part
+    loader's explicit self default.  Missing parents, non-string ids, and
+    cycles fail closed as explicit TODOs.
+    """
+    chain: list[dict[str, Any]] = []
+    current = value
+    seen: set[str] = set()
+    todos: list[str] = []
+    while isinstance(current, dict) and "copy-from" in current:
+        parent_id = current.get("copy-from")
+        if not isinstance(parent_id, str) or not parent_id:
+            todos.append(f"{location}: {label} copy-from id needs review")
+            break
+        if parent_id in seen:
+            todos.append(
+                f"{location}: {label} copy-from chain is cyclic at '{parent_id}'"
+            )
+            break
+        seen.add(parent_id)
+        parent = corpus.get(parent_id)
+        if parent is None:
+            todos.append(
+                f"{location}: {label} copy-from parent '{parent_id}' is not in the migration corpus"
+            )
+            break
+        chain.append(parent)
+        current = parent
+    merged: dict[str, Any] = {}
+    for parent in reversed(chain):
+        effective = dict(parent)
+        if locations_self_default:
+            # The parent's own load applied the locations_under default
+            # before the child could inherit it.
+            effective.setdefault("locations_under", [effective.get("id")])
+        for key, item in effective.items():
+            if key in ("id", "type", "copy-from", "abstract", "opposite", "extend"):
+                continue
+            merged[key] = item
+    for key, item in value.items():
+        if key in ("copy-from", "abstract", "opposite", "extend"):
+            continue
+        if isinstance(item, dict) and isinstance(merged.get(key), dict):
+            combined = dict(merged[key])
+            combined.update(item)
+            merged[key] = combined
+        else:
+            merged[key] = item
+    # Legacy "extend" unions arrays and shallow-merges dicts into the
+    # inherited value (sloc_house_boarded extends sloc_house's flags).
+    extend = value.get("extend")
+    if isinstance(extend, dict):
+        for key, item in extend.items():
+            if isinstance(item, list) and isinstance(merged.get(key), list):
+                merged[key] = list(merged[key]) + list(item)
+            elif isinstance(item, dict) and isinstance(merged.get(key), dict):
+                combined = dict(merged[key])
+                combined.update(item)
+                merged[key] = combined
+            else:
+                merged[key] = item
+    return merged, todos
+
+
+def render_sub_body_part(
+    source: SourceObject,
+    result: MigrationResult,
+    *,
+    inheritance_corpus: dict[str, dict[str, Any]] | None = None,
+) -> str | None:
     value = source.value
+    if "copy-from" in value:
+        if inheritance_corpus is None:
+            result.partial.append(
+                f"{source.location}: sub body part {value.get('id') or '<invalid id>'}"
+            )
+            result.todos.append(
+                f"{source.location}: sub body part inheritance needs the migration corpus"
+            )
+            return None
+        resolved, todos = resolve_copy_from(
+            value,
+            inheritance_corpus,
+            label=f"sub body part {value.get('id') or '<invalid id>'}",
+            location=source.location,
+            locations_self_default=True,
+        )
+        for todo in todos:
+            result.todos.append(todo)
+        if todos:
+            result.partial.append(
+                f"{source.location}: sub body part {value.get('id') or '<invalid id>'}"
+            )
+            return None
+        # Swap in the resolved value so the remaining checks and the
+        # finish_catalog unknown-key audit see the merged entry, not the
+        # original copy-from shape.
+        value = resolved
+        source = SourceObject(source.path, source.index, resolved)
     part_id = value.get("id")
     parent = value.get("parent")
     name = display_text(value.get("name"))
@@ -2315,19 +4709,39 @@ def render_sub_body_part(source: SourceObject, result: MigrationResult) -> str |
         )
         return None
     todo_count = len(result.todos)
-    plural = display_text(value.get("name_multiple"), name)
+    # Legacy stores an empty plural name when name_multiple is absent; the
+    # singular name is never a fallback.
+    plural = display_text(value.get("name_multiple"))
     opposite = value.get("opposite", part_id)
-    side = value.get("side", "both")
-    coverage = native_integer(value.get("max_coverage", 100), 1, 100)
-    secondary = value.get("secondary", False)
+    raw_side = value.get("side", "both")
     if (
-        not plural or
+        isinstance(raw_side, int) and
+        not isinstance(raw_side, bool) and
+        0 <= raw_side <= 2
+    ):
+        # Legacy side enum io: 0 = both, 1 = left, 2 = right.
+        side = ("both", "left", "right")[raw_side]
+    elif isinstance(raw_side, str) and raw_side in {"left", "right", "both"}:
+        side = raw_side
+    else:
+        side = "both"
+    coverage = native_integer(value.get("max_coverage", 0), 0, 100)
+    secondary = value.get("secondary", False)
+    side_valid = (
+        (
+            isinstance(raw_side, int) and
+            not isinstance(raw_side, bool) and
+            0 <= raw_side <= 2
+        ) or
+        (isinstance(raw_side, str) and raw_side in {"left", "right", "both"})
+    )
+    if (
         not safe_platform_id(opposite) or
-        side not in {"left", "right", "both"} or
+        not side_valid or
         coverage is None or
         not isinstance(secondary, bool)
     ):
-        plural, opposite, side, coverage, secondary = name, part_id, "both", 100, False
+        plural, opposite, side, coverage, secondary = "", part_id, "both", 0, False
         result.todos.append(
             f"{source.location}: sub body part {part_id} presentation or links need review"
         )
@@ -3781,9 +6195,22 @@ def render_mutation_category(
         )
         return None
     todo_count = len(result.todos)
-    name = display_text(value.get("name"), category_id)
-    mutagen_message = display_text(value.get("mutagen_message"))
-    if not name or not mutagen_message:
+    name_value = value.get("name")
+    name = display_text(name_value, category_id)
+    mutagen_value = value.get("mutagen_message")
+    mutagen_message = display_text(mutagen_value)
+    # An explicit empty mutagen_message (e.g. MYCUS) is a deliberate legacy
+    # value and must render as an empty string, not as a review TODO.  A
+    # non-string presentation that renders empty is still a real loss.
+    presentation_incomplete = (
+        not name or
+        (
+            not mutagen_message and
+            mutagen_value is not None and
+            not isinstance(mutagen_value, str)
+        )
+    )
+    if presentation_incomplete:
         result.todos.append(
             f"{source.location}: mutation category {category_id} presentation needs review"
         )
@@ -3964,8 +6391,37 @@ def render_vehicle_part_location(
     )
 
 
-def render_mood_face(source: SourceObject, result: MigrationResult) -> str | None:
+def render_mood_face(
+    source: SourceObject,
+    result: MigrationResult,
+    *,
+    inheritance_corpus: dict[str, dict[str, Any]] | None = None,
+) -> str | None:
     value = source.value
+    if "copy-from" in value:
+        if inheritance_corpus is None:
+            result.partial.append(
+                f"{source.location}: mood face {value.get('id') or '<invalid id>'}"
+            )
+            result.todos.append(
+                f"{source.location}: mood face inheritance needs the migration corpus"
+            )
+            return None
+        resolved, todos = resolve_copy_from(
+            value,
+            inheritance_corpus,
+            label=f"mood face {value.get('id') or '<invalid id>'}",
+            location=source.location,
+        )
+        for todo in todos:
+            result.todos.append(todo)
+        if todos:
+            result.partial.append(
+                f"{source.location}: mood face {value.get('id') or '<invalid id>'}"
+            )
+            return None
+        value = resolved
+        source = SourceObject(source.path, source.index, resolved)
     face_id = value.get("id")
     if not safe_platform_id(face_id):
         result.partial.append(f"{source.location}: mood face <invalid id>")
@@ -4506,7 +6962,10 @@ def render_overmap_land_use_code(
 ) -> str | None:
     value = source.value
     code_id = value.get("id")
-    if not safe_platform_id(code_id):
+    # The legacy null land-use entry (the "no land use" code) uses an empty
+    # string id and is a real registry object, not an authoring mistake.
+    legacy_null_id = code_id == ""
+    if not safe_platform_id(code_id) and not legacy_null_id:
         result.partial.append(f"{source.location}: overmap land-use code <invalid id>")
         result.todos.append(
             f"{source.location}: overmap land-use code needs a stable non-null id"
@@ -4738,6 +7197,7 @@ def render_weighted_catalog(
     method: str,
     object_style: bool = False,
     chance: bool = False,
+    allow_duplicates: bool = False,
 ) -> str | None:
     value = source.value
     group_id = value.get("id")
@@ -4787,7 +7247,7 @@ def render_weighted_catalog(
         if (
             not isinstance(entry_id, str) or
             not entry_id or
-            entry_id in seen or
+            ( not allow_duplicates and entry_id in seen ) or
             not isinstance(weight, int) or
             isinstance(weight, bool) or
             not 1 <= weight <= NATIVE_INT_MAX
@@ -5360,8 +7820,37 @@ def render_character_modifier(source: SourceObject, result: MigrationResult) -> 
     )
 
 
-def render_start_location(source: SourceObject, result: MigrationResult) -> str | None:
+def render_start_location(
+    source: SourceObject,
+    result: MigrationResult,
+    *,
+    inheritance_corpus: dict[str, dict[str, Any]] | None = None,
+) -> str | None:
     value = source.value
+    if "copy-from" in value:
+        if inheritance_corpus is None:
+            result.partial.append(
+                f"{source.location}: start location {value.get('id') or '<invalid id>'}"
+            )
+            result.todos.append(
+                f"{source.location}: start location inheritance needs the migration corpus"
+            )
+            return None
+        resolved, todos = resolve_copy_from(
+            value,
+            inheritance_corpus,
+            label=f"start location {value.get('id') or '<invalid id>'}",
+            location=source.location,
+        )
+        for todo in todos:
+            result.todos.append(todo)
+        if todos:
+            result.partial.append(
+                f"{source.location}: start location {value.get('id') or '<invalid id>'}"
+            )
+            return None
+        value = resolved
+        source = SourceObject(source.path, source.index, resolved)
     location_id = value.get("id")
     if not safe_platform_id(location_id):
         result.partial.append(f"{source.location}: start location <invalid id>")
@@ -5423,9 +7912,11 @@ def render_start_location(source: SourceObject, result: MigrationResult) -> str 
                 )
                 lines.append("    },")
             lines.append("})")
-    else:
+    elif "terrain" in value:
+        # A present but malformed terrain member is a review item; an absent
+        # member is a deliberate legacy value (an empty target set).
         result.todos.append(f"{source.location}: start location {location_id} terrain list needs review")
-    if converted_targets == 0:
+    if "terrain" in value and converted_targets == 0:
         result.partial.append(f"{source.location}: start location {location_id}")
         return None
     flags = value.get("flags", [])
@@ -5438,12 +7929,17 @@ def render_start_location(source: SourceObject, result: MigrationResult) -> str 
         raw = value.get(field)
         if raw is None:
             return
+        # Legacy numeric_interval::deserialize normalizes a pair whose max
+        # is below the min and negative (sloc_road's [10, -1]) by clamping
+        # the max to the native integer maximum; replicate that here.
         if (
             isinstance(raw, list) and len(raw) == 2 and
-            all(isinstance(item, int) and not isinstance(item, bool) and NATIVE_INT_MIN <= item <= NATIVE_INT_MAX for item in raw) and
-            raw[0] <= raw[1]
+            all(isinstance(item, int) and not isinstance(item, bool) and NATIVE_INT_MIN <= item <= NATIVE_INT_MAX for item in raw)
         ):
-            lines.append(f"definition:{method}({raw[0]}, {raw[1]})")
+            minimum, maximum = raw
+            if maximum < minimum and maximum < 0:
+                maximum = NATIVE_INT_MAX
+            lines.append(f"definition:{method}({minimum}, {maximum})")
         else:
             result.todos.append(f"{source.location}: start location {location_id} {field} needs review")
 
@@ -6349,7 +8845,7 @@ def render_playlists(source: SourceObject, result: MigrationResult) -> str | Non
             )
             valid = False
         if valid:
-            lines.extend(("content.add(definition)", ""))
+            lines.extend((content_submit_expression(), ""))
             chunks.append("\n".join(lines))
     unresolved = unresolved_fields(value, {"type", "playlists"})
     if unresolved:
@@ -7080,21 +9576,32 @@ def render_skill(source: SourceObject, result: MigrationResult) -> str | None:
         result.todos.append(f"{source.location}: skill {skill_id} tags need review")
     companion = value.get("companion_skill_practice", [])
     if isinstance(companion, list):
+        # Legacy load uses unordered_map::emplace, so a duplicate practice
+        # key keeps its first weight; later duplicates are dropped, not
+        # review items.
+        seen_practices: set[str] = set()
         for entry in companion:
-            if (
+            practice_skill = entry.get("skill")
+            # An empty skill string is a deliberate legacy value meaning the
+            # skill practices itself; it must render as an empty-string id.
+            if not (
                 isinstance(entry, dict) and
-                safe_platform_id(entry.get("skill")) and
+                isinstance(practice_skill, str) and
+                (practice_skill == "" or safe_platform_id(practice_skill)) and
                 isinstance(entry.get("weight"), int) and
                 not isinstance(entry["weight"], bool) and
                 -NATIVE_INT_MAX <= entry["weight"] <= NATIVE_INT_MAX
             ):
-                lines.append(
-                    f"definition:companion_practice({lua_quote(entry['skill'])}, {entry['weight']})"
-                )
-            else:
                 result.todos.append(
                     f"{source.location}: skill {skill_id} companion practice needs review"
                 )
+                continue
+            if practice_skill in seen_practices:
+                continue
+            seen_practices.add(practice_skill)
+            lines.append(
+                f"definition:companion_practice({lua_quote(practice_skill)}, {entry['weight']})"
+            )
     level_descriptions: dict[int, dict[str, str]] = {}
     for field_name, variant in (
         ("level_descriptions_theory", "theory"),
@@ -7121,11 +9628,22 @@ def render_skill(source: SourceObject, result: MigrationResult) -> str | None:
                     f"{source.location}: skill {skill_id} level description needs review"
                 )
     for level, descriptions in sorted(level_descriptions.items()):
-        theory = descriptions.get("theory", descriptions.get("practice", ""))
-        practice = descriptions.get("practice", theory)
-        lines.append(
-            f"definition:level_description({level}, {lua_quote(theory)}, {lua_quote(practice)})"
-        )
+        theory = descriptions.get("theory")
+        practice = descriptions.get("practice")
+        if theory is not None and practice is not None:
+            lines.append(
+                f"definition:level_description({level}, {lua_quote(theory)}, {lua_quote(practice)})"
+            )
+        elif theory is not None:
+            lines.append(
+                f"definition:level_description({level}, {lua_quote(theory)})"
+            )
+        else:
+            # Practice-only levels must not invent a theory text: the legacy
+            # maps are independent and the native builder mirrors that.
+            lines.append(
+                f"definition:level_description_practice({level}, {lua_quote(practice)})"
+            )
     timing = value.get("time_to_attack")
     if isinstance(timing, dict):
         minimum = timing.get("min_time", 50)
@@ -7594,11 +10112,26 @@ def render_item_category(source: SourceObject, result: MigrationResult) -> str |
     if not isinstance(spawn_rate, (int, float)) or isinstance(spawn_rate, bool) or spawn_rate < 0:
         spawn_rate = 1.0
         result.todos.append(f"{source.location}: item category {category_id} spawn rate needs review")
+    raw_header = value.get("name_header")
+    if isinstance(raw_header, dict):
+        header = raw_header.get("str", raw_header.get("str_sp", ""))
+    else:
+        header = raw_header
+    if not isinstance(header, str) or not header:
+        header = category_id
+    # name_noun is a plural translation in legacy data (the "str_sp" form).
+    raw_noun = value.get("name_noun")
+    if isinstance(raw_noun, dict):
+        noun = raw_noun.get("str_sp", raw_noun.get("str", ""))
+    else:
+        noun = raw_noun
+    if not isinstance(noun, str) or not noun:
+        noun = category_id
     lines = [
         "local definition = content.ItemCategory {",
         f"    id = {lua_quote(category_id)},",
-        f"    header = {lua_quote(display_text(value.get('name_header'), category_id))},",
-        f"    noun = {lua_quote(display_text(value.get('name_noun'), category_id))},",
+        f"    header = {lua_quote(header)},",
+        f"    noun = {lua_quote(noun)},",
         f"    sort_rank = {sort_rank},",
         f"    spawn_rate = {spawn_rate!r},",
     ]
@@ -7881,19 +10414,134 @@ def render_eoc_numeric_expression(value: Any, missing_default: str) -> str | Non
 def render_eoc_condition_expression(
     condition: Any, avatar_actor_proven: bool = False,
     weapon_actor_proven: bool = False,
+    npc_actor_proven: bool = False,
 ) -> str | None:
     """Translate bounded legacy predicates into ordinary Lua composition."""
+    character_actor_proven = avatar_actor_proven or weapon_actor_proven or \
+        npc_actor_proven
     if condition is None:
         return "true"
     if isinstance(condition, bool):
         return "true" if condition else "false"
     if isinstance(condition, str):
+        if condition == "is_day":
+            return "not services.gameplay.environment.is_night()"
+        if condition == "u_has_camp":
+            return "service_value(services.camps.player_has_camp())"
         if avatar_actor_proven and condition == "u_has_activity":
+            return "service_value(services.activities.snapshot(actor)).active"
+        if npc_actor_proven and condition == "npc_has_activity":
             return "service_value(services.activities.snapshot(actor)).active"
         if weapon_actor_proven and condition == "u_has_weapon":
             return "character_has_weapon(actor)"
+        if npc_actor_proven and condition == "npc_has_weapon":
+            return "character_has_weapon(actor)"
         if weapon_actor_proven and condition == "u_can_drop_weapon":
             return "character_can_drop_weapon(actor)"
+        if npc_actor_proven and condition == "npc_can_drop_weapon":
+            return "character_can_drop_weapon(actor)"
+        if character_actor_proven and condition == "u_is_travelling":
+            return "character_travel_has_path(actor)"
+        if npc_actor_proven and condition == "npc_is_travelling":
+            return "character_travel_has_path(actor)"
+        if character_actor_proven and condition == "u_at_safe_space":
+            return "character_at_safe_space(actor)"
+        if npc_actor_proven and condition == "at_safe_space":
+            return "character_at_safe_space(actor)"
+        if npc_actor_proven and condition == "npc_at_safe_space":
+            return "character_at_safe_space(actor)"
+        if character_actor_proven and condition == "u_has_pickup_list":
+            return "character_has_pickup_whitelist(actor)"
+        if npc_actor_proven and condition == "has_pickup_list":
+            return "character_has_pickup_whitelist(actor)"
+        if npc_actor_proven and condition == "npc_has_pickup_list":
+            return "character_has_pickup_whitelist(actor)"
+        if weapon_actor_proven and condition == "player_see_u":
+            return ("service_value(services.creatures.can_see("
+                    "services.creatures.avatar(), actor))")
+        if npc_actor_proven and condition == "player_see_npc":
+            return ("service_value(services.creatures.can_see("
+                    "services.creatures.avatar(), actor))")
+        if avatar_actor_proven and condition == "u_is_warm":
+            return ("service_value(services.characters.snapshot(actor))"
+                    ".creature.warm")
+        if npc_actor_proven and condition == "npc_is_warm":
+            return ("service_value(services.characters.snapshot(actor))"
+                    ".creature.warm")
+        if avatar_actor_proven and condition == "u_is_deaf":
+            return ("service_value(services.characters.snapshot(actor))"
+                    ".senses.deaf")
+        if npc_actor_proven and condition == "npc_is_deaf":
+            return ("service_value(services.characters.snapshot(actor))"
+                    ".senses.deaf")
+        if avatar_actor_proven and condition == "u_is_alive":
+            return "true"
+        if avatar_actor_proven and condition == "u_is_avatar":
+            return "true"
+        if avatar_actor_proven and condition == "u_male":
+            return ("service_value(services.characters.snapshot(actor))"
+                    ".male")
+        if npc_actor_proven and condition == "npc_male":
+            return ("service_value(services.characters.snapshot(actor))"
+                    ".male")
+        if npc_actor_proven and condition == "npc_female":
+            return ("not service_value(services.characters.snapshot(actor))"
+                    ".male")
+        if avatar_actor_proven and condition == "u_is_character":
+            return "true"
+        if npc_actor_proven and condition == "npc_is_character":
+            return "true"
+        if npc_actor_proven and condition == "npc_is_npc":
+            return "true"
+        if avatar_actor_proven and condition == "u_female":
+            return ("not service_value(services.characters.snapshot(actor))"
+                    ".male")
+        if avatar_actor_proven and condition == "u_is_outside":
+            return (
+                "services.gameplay.environment.is_outside("
+                "service_value(services.characters.snapshot(actor))"
+                ".creature.position)"
+            )
+        if npc_actor_proven and condition == "npc_is_outside":
+            return (
+                "services.gameplay.environment.is_outside("
+                "service_value(services.characters.snapshot(actor))"
+                ".creature.position)"
+            )
+        if avatar_actor_proven and condition in (
+            "u_is_npc", "u_is_monster", "u_is_item", "u_is_furniture",
+            "u_is_vehicle", "u_hostile", "u_is_in_vehicle",
+            "u_controlling_vehicle", "u_driving", "u_is_riding",
+            "u_is_avatar_passenger", "u_is_driven", "u_is_remote_controlled",
+            "u_is_on_rails", "u_is_falling", "u_is_floating", "u_is_flying",
+            "u_is_sinking", "u_is_skidding", "u_can_float", "u_can_fly",
+            "u_following",
+        ):
+            return "false"
+        if avatar_actor_proven and condition in (
+            "u_exists", "has_alpha", "u_friend", "u_available",
+        ):
+            return "true"
+        if npc_actor_proven and condition in (
+            "npc_is_avatar", "npc_is_monster", "npc_is_item",
+            "npc_is_furniture", "npc_is_vehicle", "npc_friend",
+            "npc_is_falling", "npc_is_floating", "npc_is_flying",
+            "npc_is_sinking", "npc_is_skidding", "npc_can_float", "npc_can_fly",
+        ):
+            return "false"
+        if npc_actor_proven and condition in (
+            "npc_exists", "npc_hostile",
+        ):
+            return "true"
+        if avatar_actor_proven and condition in (
+            "u_mission_complete", "u_mission_failed", "u_mission_incomplete",
+            "u_has_available_mission", "u_has_many_available_missions",
+        ):
+            # The avatar talker exposes no selected/available mission, so the
+            # legacy handlers resolve to their null defaults under game_start.
+            return "false"
+        if avatar_actor_proven and condition == "u_has_no_available_mission":
+            return "true"
         return None
     if not isinstance(condition, dict):
         return None
@@ -7912,7 +10560,8 @@ def render_eoc_condition_expression(
             return None
         rendered = [
             render_eoc_condition_expression(
-                entry, avatar_actor_proven, weapon_actor_proven
+                entry, avatar_actor_proven, weapon_actor_proven,
+                npc_actor_proven
             )
             for entry in entries
         ]
@@ -7921,7 +10570,8 @@ def render_eoc_condition_expression(
         return f" {operator} ".join(f"({entry})" for entry in rendered)
     if set(condition) == {"not"}:
         rendered = render_eoc_condition_expression(
-            condition["not"], avatar_actor_proven, weapon_actor_proven
+            condition["not"], avatar_actor_proven, weapon_actor_proven,
+            npc_actor_proven
         )
         return None if rendered is None else f"not ({rendered})"
 
@@ -8003,6 +10653,275 @@ def render_eoc_condition_expression(
             "services.gameplay.environment.dimension() == "
             f"{lua_quote(condition['current_dimension'])}"
         )
+    if set(condition) == {"is_season"} and isinstance(
+        condition["is_season"], str
+    ):
+        return (
+            "services.time_snapshot().season_id == "
+            f"{lua_quote(condition['is_season'])}"
+        )
+    if (
+        set(condition) == {"is_weather"} and
+        isinstance(condition.get("is_weather"), str) and
+        safe_platform_id(condition.get("is_weather"))
+    ):
+        return (
+            "services.weather.current().weather.value == "
+            f"{lua_quote(condition['is_weather'])}"
+        )
+    if (
+        set(condition) == {"map_furniture_with_flag", "loc"} and
+        bounded_utf8_string(condition.get("map_furniture_with_flag"), 256) and
+        isinstance(condition.get("loc"), dict) and
+        set(condition["loc"]) == {"context_val"} and
+        isinstance(condition["loc"].get("context_val"), str)
+    ):
+        loc_expression = render_eoc_value_expression(
+            condition["loc"], lua_quote(""))
+        if loc_expression is not None:
+            return (
+                "services.gameplay.environment.furniture_has_flag("
+                f"{loc_expression}, "
+                f"{lua_quote(condition['map_furniture_with_flag'])})"
+            )
+    if (
+        set(condition) == {"map_terrain_with_flag", "loc"} and
+        bounded_utf8_string(condition.get("map_terrain_with_flag"), 256) and
+        isinstance(condition.get("loc"), dict) and
+        set(condition["loc"]) == {"context_val"} and
+        isinstance(condition["loc"].get("context_val"), str)
+    ):
+        loc_expression = render_eoc_value_expression(
+            condition["loc"], lua_quote(""))
+        if loc_expression is not None:
+            return (
+                "services.gameplay.environment.terrain_has_flag("
+                f"{loc_expression}, "
+                f"{lua_quote(condition['map_terrain_with_flag'])})"
+            )
+    for condition_key, native_call in (
+        ("map_in_city", "services.overmap.is_in_city"),
+        ("map_is_outside", "services.gameplay.environment.is_indoor_tile"),
+        ("is_outside", "services.gameplay.environment.is_outside"),
+    ):
+        if (
+            set(condition) == {condition_key} and
+            isinstance(condition.get(condition_key), dict) and
+            set(condition[condition_key]) == {"context_val"} and
+            isinstance(condition[condition_key].get("context_val"), str)
+        ):
+            loc_expression = render_eoc_value_expression(
+                condition[condition_key], lua_quote(""))
+            if loc_expression is not None:
+                return f"{native_call}({loc_expression})"
+    for condition_key, native_call in (
+        ("map_terrain_id", "terrain_id"),
+        ("map_furniture_id", "furniture_id"),
+        ("map_field_id", "field_exists"),
+    ):
+        if (
+            set(condition) == {condition_key, "loc"} and
+            bounded_utf8_string(condition.get(condition_key), 256) and
+            safe_platform_id(condition.get(condition_key)) and
+            isinstance(condition.get("loc"), dict) and
+            set(condition["loc"]) == {"context_val"} and
+            isinstance(condition["loc"].get("context_val"), str)
+        ):
+            loc_expression = render_eoc_value_expression(
+                condition["loc"], lua_quote(""))
+            if loc_expression is not None:
+                if native_call == "field_exists":
+                    return (
+                        "services.gameplay.environment.field_exists("
+                        f"{loc_expression}, "
+                        f"{lua_quote(condition[condition_key])})"
+                    )
+                return (
+                    f"services.gameplay.environment.{native_call}("
+                    f"{loc_expression}) == "
+                    f"{lua_quote(condition[condition_key])}"
+                )
+    for condition_key, native_call, is_field in (
+        ("u_is_on_terrain", "terrain_id", False),
+        ("npc_is_on_terrain", "terrain_id", False),
+        ("u_is_on_furniture", "furniture_id", False),
+        ("npc_is_on_furniture", "furniture_id", False),
+        ("u_is_in_field", "field_exists", True),
+        ("npc_is_in_field", "field_exists", True),
+        ("u_is_on_terrain_with_flag", "terrain_has_flag", True),
+        ("npc_is_on_terrain_with_flag", "terrain_has_flag", True),
+        ("u_is_on_furniture_with_flag", "furniture_has_flag", True),
+        ("npc_is_on_furniture_with_flag", "furniture_has_flag", True),
+    ):
+        actor_proven = (
+            avatar_actor_proven if condition_key.startswith("u_") else
+            npc_actor_proven
+        )
+        if (
+            actor_proven and
+            set(condition) == {condition_key} and
+            bounded_utf8_string(condition.get(condition_key), 256) and
+            safe_platform_id(condition.get(condition_key))
+        ):
+            position = (
+                "service_value(services.characters.snapshot(actor))"
+                ".creature.position"
+            )
+            return (
+                f"services.gameplay.environment.{native_call}("
+                f"{position}, "
+                f"{lua_quote(condition[condition_key])})"
+                if is_field else
+                f"services.gameplay.environment.{native_call}("
+                f"{position}) == {lua_quote(condition[condition_key])}"
+            )
+    if (
+        set(condition) == {"u_has_mission"} and
+        isinstance(condition.get("u_has_mission"), str) and
+        safe_platform_id(condition.get("u_has_mission"))
+    ):
+        return (
+            "service_value(services.missions.avatar_has_active("
+            "services.types.id(\"mission\", "
+            f"{lua_quote(condition['u_has_mission'])})))"
+        )
+    if (
+        set(condition) == {"u_safe_mode_trigger"} and
+        isinstance(condition.get("u_safe_mode_trigger"), str) and
+        condition["u_safe_mode_trigger"] in (
+            "N", "NE", "E", "SE", "S", "SW", "W", "NW"
+        )
+    ):
+        # The handler reads the global avatar's safe-mode visibility and no
+        # talker, so the conversion is context-free.
+        return (
+            "services.gameplay.environment.safe_mode_dangerous("
+            f"{lua_quote(condition['u_safe_mode_trigger'])})"
+        )
+    if (
+        avatar_actor_proven and
+        set(condition) == {"u_mission_goal"} and
+        isinstance(condition.get("u_mission_goal"), str)
+    ):
+        # The avatar talker has no selected mission, so the legacy handler
+        # compares a null mission regardless of the goal value.
+        return "false"
+    for rule_key in (
+        "u_aim_rule", "u_engagement_rule",
+        "u_cbm_recharge_rule", "u_cbm_reserve_rule", "u_rule",
+    ):
+        if (
+            avatar_actor_proven and
+            set(condition) == {rule_key} and
+            isinstance(condition.get(rule_key), str)
+        ):
+            # Only the NPC talker overrides has_ai_rule; the avatar's base
+            # const_talker implementation returns false for every rule.
+            return "false"
+    for bodytype_key, actor_proven in (
+        ("u_bodytype", avatar_actor_proven),
+        ("npc_bodytype", npc_actor_proven),
+    ):
+        if (
+            actor_proven and
+            set(condition) == {bodytype_key} and
+            isinstance(condition.get(bodytype_key), str)
+        ):
+            # talker_character_const::bodytype hardcodes every Character as
+            # "human" (the TODO for limby characters is unreachable today).
+            return (
+                "true" if condition[bodytype_key] == "human" else "false"
+            )
+    for purifiable_key, actor_proven in (
+        ("u_is_trait_purifiable", avatar_actor_proven),
+        ("npc_is_trait_purifiable", npc_actor_proven),
+    ):
+        if (
+            actor_proven and
+            set(condition) == {purifiable_key} and
+            safe_platform_id(condition.get(purifiable_key))
+        ):
+            return (
+                "services.mutations.definition("
+                "services.types.id(\"mutation\", "
+                f"{lua_quote(condition[purifiable_key])}))"
+                ".availability.purifiable"
+            )
+    for part_flag_key, actor_proven in (
+        ("u_has_part_flag", avatar_actor_proven),
+        ("npc_has_part_flag", npc_actor_proven),
+    ):
+        if (
+            actor_proven and
+            set(condition) <= {part_flag_key, "enabled"} and
+            isinstance(condition.get(part_flag_key), str) and
+            (
+                "enabled" not in condition or
+                isinstance(condition.get("enabled"), bool)
+            )
+        ):
+            # The base const_talker::has_part_flag returns false and no
+            # Character/NPC talker overrides it, so the predicate is dead
+            # for every proven actor regardless of the flag or enabled value.
+            return "false"
+    if (
+        avatar_actor_proven and
+        set(condition) == {"u_has_class"} and
+        isinstance(condition.get("u_has_class"), str)
+    ):
+        # talker_character_const never overrides is_myclass, so the base
+        # talker returns false for the avatar regardless of the class id.
+        return "false"
+    if (
+        npc_actor_proven and
+        set(condition) == {"npc_has_class"} and
+        safe_platform_id(condition.get("npc_has_class"))
+    ):
+        return (
+            "service_value(services.npcs.get(actor)).class.value == "
+            f"{lua_quote(condition['npc_has_class'])}"
+        )
+    sleepiness_levels = {
+        "TIRED": 191,
+        "DEAD_TIRED": 383,
+        "EXHAUSTED": 575,
+        "MASSIVE_SLEEPINESS": 1000,
+    }
+    for need_key, actor_proven in (
+        ("u_need", avatar_actor_proven),
+        ("npc_need", npc_actor_proven),
+    ):
+        if (
+            actor_proven and
+            isinstance(condition, dict) and
+            set(condition) <= {need_key, "amount", "level"} and
+            condition.get(need_key) in ("hunger", "thirst", "sleepiness")
+        ):
+            if (
+                set(condition) == {need_key, "amount"} and
+                isinstance(condition.get("amount"), int) and
+                not isinstance(condition.get("amount"), bool) and
+                NATIVE_INT_MIN <= condition["amount"] <= NATIVE_INT_MAX
+            ):
+                return (
+                    "service_value(services.characters.snapshot(actor))"
+                    f".needs.{condition[need_key]} > {condition['amount']}"
+                )
+            if (
+                set(condition) == {need_key, "level"} and
+                condition.get(need_key) == "sleepiness" and
+                condition.get("level") in sleepiness_levels
+            ):
+                return (
+                    "service_value(services.characters.snapshot(actor))"
+                    f".needs.sleepiness > "
+                    f"{sleepiness_levels[condition['level']]}"
+                )
+            if set(condition) == {need_key}:
+                return (
+                    "service_value(services.characters.snapshot(actor))"
+                    f".needs.{condition[need_key]} > 0"
+                )
     if (
         avatar_actor_proven and
         set(condition) == {"u_has_trait"} and
@@ -8063,6 +10982,67 @@ def render_eoc_condition_expression(
             "services.types.id(\"proficiency\", "
             f"{lua_quote(condition['u_has_proficiency'])}))).known"
         )
+    for npc_key, u_key in (
+        ("npc_has_trait", "u_has_trait"),
+        ("npc_has_martial_art", "u_has_martial_art"),
+        ("npc_using_martial_art", "u_using_martial_art"),
+        ("npc_has_proficiency", "u_has_proficiency"),
+    ):
+        if (
+            npc_actor_proven and
+            set(condition) == {npc_key} and
+            safe_platform_id(condition.get(npc_key))
+        ):
+            native_surface, native_kind, field = {
+                "u_has_trait": (
+                    "services.mutations.has", "mutation", ""),
+                "u_has_martial_art": (
+                    "services.martial_arts.get", "martial_art", ".known"),
+                "u_using_martial_art": (
+                    "services.martial_arts.get", "martial_art", ".selected"),
+                "u_has_proficiency": (
+                    "services.proficiencies.get", "proficiency", ".known"),
+            }[u_key]
+            return (
+                f"service_value({native_surface}("
+                "actor, "
+                f"services.types.id(\"{native_kind}\", "
+                f"{lua_quote(condition[npc_key])}))){field}"
+            )
+    if npc_actor_proven and set(condition) == {"npc_has_any_trait"}:
+        traits = condition.get("npc_has_any_trait")
+        if (
+            not isinstance(traits, list) or
+            not traits or
+            not all(safe_platform_id(trait) for trait in traits)
+        ):
+            return None
+        queries = [
+            "service_value(services.mutations.has("
+            "actor, "
+            "services.types.id(\"mutation\", "
+            f"{lua_quote(trait)})))"
+            for trait in traits
+        ]
+        return " or ".join(f"({query})" for query in queries)
+    if (
+        avatar_actor_proven and
+        set(condition) == {"u_has_profession"} and
+        safe_platform_id(condition.get("u_has_profession"))
+    ):
+        return (
+            "character_has_profession(actor, "
+            f"{lua_quote(condition['u_has_profession'])})"
+        )
+    if (
+        npc_actor_proven and
+        set(condition) == {"npc_has_profession"} and
+        safe_platform_id(condition.get("npc_has_profession"))
+    ):
+        return (
+            "character_has_profession(actor, "
+            f"{lua_quote(condition['npc_has_profession'])})"
+        )
     if (
         avatar_actor_proven and
         set(condition) == {"u_know_recipe"} and
@@ -8088,6 +11068,61 @@ def render_eoc_condition_expression(
             f"{lua_quote(condition['u_has_bionics'])})))"
         )
     if (
+        npc_actor_proven and
+        set(condition) == {"npc_has_bionics"} and
+        safe_platform_id(condition.get("npc_has_bionics"))
+    ):
+        if condition["npc_has_bionics"] == "ANY":
+            return "character_has_any_bionic_or_capacity(actor)"
+        return (
+            "service_value(services.bionics.has("
+            "actor, "
+            "services.types.id(\"bionic\", "
+            f"{lua_quote(condition['npc_has_bionics'])})))"
+        )
+    if (
+        weapon_actor_proven and
+        not npc_actor_proven and
+        set(condition) == {"u_has_flag"} and
+        safe_platform_id(condition.get("u_has_flag"))
+    ):
+        return (
+            "service_value(services.characters.has_flag("
+            "actor, "
+            "services.types.id(\"json_flag\", "
+            f"{lua_quote(condition['u_has_flag'])})))"
+        )
+    if (
+        npc_actor_proven and
+        set(condition) == {"npc_has_flag"} and
+        safe_platform_id(condition.get("npc_has_flag"))
+    ):
+        return (
+            "service_value(services.characters.has_flag("
+            "actor, "
+            "services.types.id(\"json_flag\", "
+            f"{lua_quote(condition['npc_has_flag'])})))"
+        )
+    if (
+        weapon_actor_proven and
+        not npc_actor_proven and
+        set(condition) == {"u_is_wearing"} and
+        safe_platform_id(condition.get("u_is_wearing"))
+    ):
+        return (
+            "character_is_wearing(actor, "
+            f"{lua_quote(condition['u_is_wearing'])})"
+        )
+    if (
+        npc_actor_proven and
+        set(condition) == {"npc_is_wearing"} and
+        safe_platform_id(condition.get("npc_is_wearing"))
+    ):
+        return (
+            "character_is_wearing(actor, "
+            f"{lua_quote(condition['npc_is_wearing'])})"
+        )
+    if (
         avatar_actor_proven and
         set(condition) == {"u_has_item"} and
         safe_platform_id(condition.get("u_has_item"))
@@ -8095,6 +11130,15 @@ def render_eoc_condition_expression(
         return (
             "character_has_item(actor, "
             f"{lua_quote(condition['u_has_item'])})"
+        )
+    if (
+        npc_actor_proven and
+        set(condition) == {"npc_has_item"} and
+        safe_platform_id(condition.get("npc_has_item"))
+    ):
+        return (
+            "character_has_item(actor, "
+            f"{lua_quote(condition['npc_has_item'])})"
         )
     if (
         avatar_actor_proven and
@@ -8107,6 +11151,16 @@ def render_eoc_condition_expression(
             f"{lua_quote(condition['u_has_move_mode'])}"
         )
     if (
+        npc_actor_proven and
+        set(condition) == {"npc_has_move_mode"} and
+        safe_platform_id(condition.get("npc_has_move_mode"))
+    ):
+        return (
+            "service_value(services.characters.snapshot(actor))"
+            ".movement.id == "
+            f"{lua_quote(condition['npc_has_move_mode'])}"
+        )
+    if (
         weapon_actor_proven and
         set(condition) == {"u_has_wielded_with_flag"} and
         safe_platform_id(condition.get("u_has_wielded_with_flag")) and
@@ -8117,6 +11171,62 @@ def render_eoc_condition_expression(
             "services.types.id(\"json_flag\", "
             f"{lua_quote(condition['u_has_wielded_with_flag'])}))"
         )
+    if (
+        avatar_actor_proven and
+        set(condition) == {"u_has_cash"} and
+        isinstance(condition.get("u_has_cash"), int) and
+        not isinstance(condition.get("u_has_cash"), bool) and
+        NATIVE_INT_MIN <= condition["u_has_cash"] <= NATIVE_INT_MAX
+    ):
+        return (
+            "service_value(services.characters.snapshot(actor))"
+            f".cash >= {condition['u_has_cash']}"
+        )
+    for condition_key, stat_field in (
+        ("u_has_strength", "strength"),
+        ("u_has_dexterity", "dexterity"),
+        ("u_has_intelligence", "intelligence"),
+        ("u_has_perception", "perception"),
+    ):
+        if (
+            avatar_actor_proven and
+            set(condition) == {condition_key} and
+            isinstance(condition.get(condition_key), int) and
+            not isinstance(condition.get(condition_key), bool) and
+            NATIVE_INT_MIN <= condition[condition_key] <= NATIVE_INT_MAX
+        ):
+            return (
+                "service_value(services.characters.snapshot(actor))"
+                f".stats.{stat_field} >= {condition[condition_key]}"
+            )
+        npc_key = "npc" + condition_key[1:]
+        if (
+            npc_actor_proven and
+            set(condition) == {npc_key} and
+            isinstance(condition.get(npc_key), int) and
+            not isinstance(condition.get(npc_key), bool) and
+            NATIVE_INT_MIN <= condition[npc_key] <= NATIVE_INT_MAX
+        ):
+            return (
+                "service_value(services.characters.snapshot(actor))"
+                f".stats.{stat_field} >= {condition[npc_key]}"
+            )
+    for rule_key, field_name, valid_values in (
+        ("npc_aim_rule", "aim", {"AIM_WHEN_CONVENIENT", "AIM_SPRAY", "AIM_PRECISE", "AIM_STRICTLY_PRECISE"}),
+        ("npc_engagement_rule", "engagement", {"ENGAGE_NONE", "ENGAGE_CLOSE", "ENGAGE_WEAK", "ENGAGE_HIT", "ENGAGE_ALL", "ENGAGE_FREE_FIRE", "ENGAGE_NO_MOVE"}),
+        ("npc_cbm_reserve_rule", "cbm_reserve", {"CBM_RESERVE_ALL", "CBM_RESERVE_MOST", "CBM_RESERVE_SOME", "CBM_RESERVE_LITTLE", "CBM_RESERVE_NONE"}),
+        ("npc_cbm_recharge_rule", "cbm_recharge", {"CBM_RECHARGE_ALL", "CBM_RECHARGE_MOST", "CBM_RECHARGE_SOME", "CBM_RECHARGE_LITTLE", "CBM_RECHARGE_NONE"}),
+    ):
+        if (
+            npc_actor_proven and
+            set(condition) == {rule_key} and
+            isinstance(condition.get(rule_key), str) and
+            condition[rule_key] in valid_values
+        ):
+            return (
+                f"service_value(services.npcs.ai_rules(actor)).{field_name} == "
+                f"{lua_quote(condition[rule_key])}"
+            )
     return None
 
 
@@ -8134,8 +11244,14 @@ def render_eoc(source: SourceObject, result: MigrationResult) -> str:
         isinstance(required_event, str) and
         required_event in PROVEN_ITEM_ACTOR_EVENTS
     )
+    npc_event_character_actor_proven = (
+        isinstance(required_event, str) and
+        required_event in PROVEN_NPC_ACTOR_EVENTS
+    )
+    npc_actor_proven = npc_event_character_actor_proven
     character_actor_proven = (
-        avatar_actor_proven or item_event_character_actor_proven
+        avatar_actor_proven or item_event_character_actor_proven or
+        npc_event_character_actor_proven
     )
     weapon_actor_proven = character_actor_proven
     lines = [
@@ -8146,9 +11262,12 @@ def render_eoc(source: SourceObject, result: MigrationResult) -> str:
         lines.append("    local actor = services.characters.avatar()")
     elif item_event_character_actor_proven:
         lines.append("    local actor = context.actors.character")
+    elif npc_event_character_actor_proven:
+        lines.append("    local actor = context.actors.npc")
     raw_condition = value.get("condition", True)
     condition_expression = render_eoc_condition_expression(
-        raw_condition, avatar_actor_proven, weapon_actor_proven
+        raw_condition, avatar_actor_proven, weapon_actor_proven,
+        npc_event_character_actor_proven
     )
     condition_converted = condition_expression is not None
     if condition_expression is None:
@@ -8170,12 +11289,57 @@ def render_eoc(source: SourceObject, result: MigrationResult) -> str:
             if avatar_actor_proven and effect == "u_cancel_activity":
                 lines.append("    services.activities.cancel(actor)")
                 converted_effect = True
+            elif npc_event_character_actor_proven and \
+                    effect == "npc_cancel_activity":
+                lines.append("    services.activities.cancel(actor)")
+                converted_effect = True
+            elif (
+                avatar_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"u_lose_var"} and
+                bounded_utf8_string(effect.get("u_lose_var"), 256)
+            ):
+                lines.append(
+                    "    services.variables.remove(actor, "
+                    f"{lua_quote(effect['u_lose_var'])})"
+                )
+                converted_effect = True
+            elif (
+                npc_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"npc_lose_var"} and
+                bounded_utf8_string(effect.get("npc_lose_var"), 256)
+            ):
+                lines.append(
+                    "    services.variables.remove(actor, "
+                    f"{lua_quote(effect['npc_lose_var'])})"
+                )
+                converted_effect = True
             elif (
                 isinstance(effect, dict) and
                 set(effect) == {"message"} and
                 isinstance(effect.get("message"), str)
             ):
                 lines.append(f"    services.message({lua_quote(effect['message'])})")
+                converted_effect = True
+            elif (
+                avatar_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"u_message"} and
+                isinstance(effect.get("u_message"), str)
+            ):
+                # The avatar target is the player, so the u_ spelling is the
+                # same player message as the bare `message` effect.
+                lines.append(f"    services.message({lua_quote(effect['u_message'])})")
+                converted_effect = True
+            elif (
+                npc_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"npc_message"} and
+                isinstance(effect.get("npc_message"), str)
+            ):
+                # The legacy handler returns early for an NPC target, so the
+                # effect is a deliberate no-op under npc_becomes_hostile.
                 converted_effect = True
             elif (
                 isinstance(effect, dict) and
@@ -8297,9 +11461,88 @@ def render_eoc(source: SourceObject, result: MigrationResult) -> str:
                 )
                 converted_effect = True
             elif (
+                npc_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"npc_add_bionic"} and
+                safe_platform_id(effect.get("npc_add_bionic"))
+            ):
+                lines.append("    services.bionics.grant(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"bionic\", "
+                    f"{lua_quote(effect['npc_add_bionic'])}))"
+                )
+                converted_effect = True
+            elif (
+                npc_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"npc_lose_bionic"} and
+                safe_platform_id(effect.get("npc_lose_bionic"))
+            ):
+                lines.append("    services.bionics.remove_type(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"bionic\", "
+                    f"{lua_quote(effect['npc_lose_bionic'])}))"
+                )
+                converted_effect = True
+            elif (
+                npc_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"npc_learn_recipe"} and
+                safe_platform_id(effect.get("npc_learn_recipe"))
+            ):
+                lines.append("    services.recipes.learn(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"recipe\", "
+                    f"{lua_quote(effect['npc_learn_recipe'])}))"
+                )
+                converted_effect = True
+            elif (
+                npc_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"npc_forget_recipe"} and
+                safe_platform_id(effect.get("npc_forget_recipe"))
+            ):
+                lines.append("    services.recipes.forget(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"recipe\", "
+                    f"{lua_quote(effect['npc_forget_recipe'])}))"
+                )
+                converted_effect = True
+            elif (
+                npc_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"npc_learn_martial_art"} and
+                safe_platform_id(effect.get("npc_learn_martial_art"))
+            ):
+                lines.append("    services.martial_arts.learn(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"martial_art\", "
+                    f"{lua_quote(effect['npc_learn_martial_art'])}))"
+                )
+                converted_effect = True
+            elif (
+                npc_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"npc_forget_martial_art"} and
+                safe_platform_id(effect.get("npc_forget_martial_art"))
+            ):
+                lines.append("    services.martial_arts.forget(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"martial_art\", "
+                    f"{lua_quote(effect['npc_forget_martial_art'])}))"
+                )
+                converted_effect = True
+            elif (
                 avatar_actor_proven and
                 isinstance(effect, dict) and
-                set(effect) == {"u_add_effect", "duration"} and
+                set(effect) <= {"u_add_effect", "duration", "intensity"} and
+                {"u_add_effect", "duration"} <= set(effect) and
                 safe_platform_id(effect.get("u_add_effect")) and
                 (
                     effect.get("duration") == "PERMANENT" or
@@ -8308,20 +11551,241 @@ def render_eoc(source: SourceObject, result: MigrationResult) -> str:
                         not isinstance(effect.get("duration"), bool) and
                         1 <= effect["duration"] <= MAX_EFFECT_DURATION_TURNS
                     )
+                ) and
+                (
+                    "intensity" not in effect or
+                    (
+                        isinstance(effect.get("intensity"), int) and
+                        not isinstance(effect.get("intensity"), bool) and
+                        0 <= effect["intensity"] <= NATIVE_MAX_EFFECT_INTENSITY
+                    )
                 )
             ):
                 permanent = effect["duration"] == "PERMANENT"
                 duration = 1 if permanent else effect["duration"]
+                intensity = effect.get("intensity", 0)
                 lines.append("    services.effects.add(")
                 lines.append("        actor,")
                 lines.append(
                     "        services.types.id(\"effect\", "
                     f"{lua_quote(effect['u_add_effect'])}),"
                 )
-                suffix = ", { permanent = true })" if permanent else ")"
+                if permanent and intensity:
+                    lines.append(
+                        "        services.time.duration("
+                        f"{duration}, \"turn\"),"
+                        f" {{ permanent = true, intensity = {intensity} }})"
+                    )
+                elif permanent:
+                    lines.append(
+                        "        services.time.duration("
+                        f"{duration}, \"turn\"), {{ permanent = true }})"
+                    )
+                elif intensity:
+                    lines.append(
+                        "        services.time.duration("
+                        f"{duration}, \"turn\"), {{ intensity = {intensity} }})"
+                    )
+                else:
+                    lines.append(
+                        "        services.time.duration("
+                        f"{duration}, \"turn\"))"
+                    )
+                converted_effect = True
+            elif (
+                npc_event_character_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) <= {"npc_add_effect", "duration", "intensity"} and
+                {"npc_add_effect", "duration"} <= set(effect) and
+                safe_platform_id(effect.get("npc_add_effect")) and
+                (
+                    effect.get("duration") == "PERMANENT" or
+                    (
+                        isinstance(effect.get("duration"), int) and
+                        not isinstance(effect.get("duration"), bool) and
+                        1 <= effect["duration"] <= MAX_EFFECT_DURATION_TURNS
+                    )
+                ) and
+                (
+                    "intensity" not in effect or
+                    (
+                        isinstance(effect.get("intensity"), int) and
+                        not isinstance(effect.get("intensity"), bool) and
+                        0 <= effect["intensity"] <= NATIVE_MAX_EFFECT_INTENSITY
+                    )
+                )
+            ):
+                permanent = effect["duration"] == "PERMANENT"
+                duration = 1 if permanent else effect["duration"]
+                intensity = effect.get("intensity", 0)
+                lines.append("    services.effects.add(")
+                lines.append("        actor,")
                 lines.append(
-                    "        services.time.duration("
-                    f"{duration}, \"turn\"){suffix}"
+                    "        services.types.id(\"effect\", "
+                    f"{lua_quote(effect['npc_add_effect'])}),"
+                )
+                if permanent and intensity:
+                    lines.append(
+                        "        services.time.duration("
+                        f"{duration}, \"turn\"),"
+                        f" {{ permanent = true, intensity = {intensity} }})"
+                    )
+                elif permanent:
+                    lines.append(
+                        "        services.time.duration("
+                        f"{duration}, \"turn\"), {{ permanent = true }})"
+                    )
+                elif intensity:
+                    lines.append(
+                        "        services.time.duration("
+                        f"{duration}, \"turn\"), {{ intensity = {intensity} }})"
+                    )
+                else:
+                    lines.append(
+                        "        services.time.duration("
+                        f"{duration}, \"turn\"))"
+                    )
+                converted_effect = True
+            elif (
+                avatar_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"u_activate_trait"} and
+                safe_platform_id(effect.get("u_activate_trait"))
+            ):
+                lines.append("    services.mutations.set_active(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"mutation\", "
+                    f"{lua_quote(effect['u_activate_trait'])}),"
+                )
+                lines.append("        true)")
+                converted_effect = True
+            elif (
+                avatar_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"u_deactivate_trait"} and
+                safe_platform_id(effect.get("u_deactivate_trait"))
+            ):
+                lines.append("    services.mutations.set_active(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"mutation\", "
+                    f"{lua_quote(effect['u_deactivate_trait'])}),"
+                )
+                lines.append("        false)")
+                converted_effect = True
+            elif (
+                npc_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"npc_activate_trait"} and
+                safe_platform_id(effect.get("npc_activate_trait"))
+            ):
+                lines.append("    services.mutations.set_active(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"mutation\", "
+                    f"{lua_quote(effect['npc_activate_trait'])}),"
+                )
+                lines.append("        true)")
+                converted_effect = True
+            elif (
+                npc_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"npc_deactivate_trait"} and
+                safe_platform_id(effect.get("npc_deactivate_trait"))
+            ):
+                lines.append("    services.mutations.set_active(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"mutation\", "
+                    f"{lua_quote(effect['npc_deactivate_trait'])}),"
+                )
+                lines.append("        false)")
+                converted_effect = True
+            elif (
+                avatar_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) <= {"u_add_trait", "variant"} and
+                "u_add_trait" in effect and
+                safe_platform_id(effect.get("u_add_trait")) and
+                (
+                    "variant" not in effect or
+                    (
+                        isinstance(effect.get("variant"), str) and
+                        bool(effect["variant"])
+                    )
+                )
+            ):
+                lines.append("    services.mutations.grant(")
+                lines.append("        actor,")
+                if "variant" in effect:
+                    lines.append(
+                        "        services.types.id(\"mutation\", "
+                        f"{lua_quote(effect['u_add_trait'])}),"
+                    )
+                    lines.append(
+                        f"        {lua_quote(effect['variant'])})"
+                    )
+                else:
+                    lines.append(
+                        "        services.types.id(\"mutation\", "
+                        f"{lua_quote(effect['u_add_trait'])}))"
+                    )
+                converted_effect = True
+            elif (
+                npc_event_character_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) <= {"npc_add_trait", "variant"} and
+                "npc_add_trait" in effect and
+                safe_platform_id(effect.get("npc_add_trait")) and
+                (
+                    "variant" not in effect or
+                    (
+                        isinstance(effect.get("variant"), str) and
+                        bool(effect["variant"])
+                    )
+                )
+            ):
+                lines.append("    services.mutations.grant(")
+                lines.append("        actor,")
+                if "variant" in effect:
+                    lines.append(
+                        "        services.types.id(\"mutation\", "
+                        f"{lua_quote(effect['npc_add_trait'])}),"
+                    )
+                    lines.append(
+                        f"        {lua_quote(effect['variant'])})"
+                    )
+                else:
+                    lines.append(
+                        "        services.types.id(\"mutation\", "
+                        f"{lua_quote(effect['npc_add_trait'])}))"
+                    )
+                converted_effect = True
+            elif (
+                avatar_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"u_lose_trait"} and
+                safe_platform_id(effect.get("u_lose_trait"))
+            ):
+                lines.append("    services.mutations.remove(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"mutation\", "
+                    f"{lua_quote(effect['u_lose_trait'])}))"
+                )
+                converted_effect = True
+            elif (
+                npc_event_character_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"npc_lose_trait"} and
+                safe_platform_id(effect.get("npc_lose_trait"))
+            ):
+                lines.append("    services.mutations.remove(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"mutation\", "
+                    f"{lua_quote(effect['npc_lose_trait'])}))"
                 )
                 converted_effect = True
             elif (
@@ -8335,6 +11799,32 @@ def render_eoc(source: SourceObject, result: MigrationResult) -> str:
                 lines.append(
                     "        services.types.id(\"effect\", "
                     f"{lua_quote(effect['u_lose_effect'])}))"
+                )
+                converted_effect = True
+            elif (
+                avatar_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"u_add_wet"} and
+                isinstance(effect.get("u_add_wet"), int) and
+                not isinstance(effect.get("u_add_wet"), bool) and
+                -1000000 <= effect["u_add_wet"] <= 1000000
+            ):
+                lines.append(
+                    f"    services.characters.add_wet(actor, "
+                    f"{effect['u_add_wet']})"
+                )
+                converted_effect = True
+            elif (
+                npc_event_character_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"npc_add_wet"} and
+                isinstance(effect.get("npc_add_wet"), int) and
+                not isinstance(effect.get("npc_add_wet"), bool) and
+                -1000000 <= effect["npc_add_wet"] <= 1000000
+            ):
+                lines.append(
+                    f"    services.characters.add_wet(actor, "
+                    f"{effect['npc_add_wet']})"
                 )
                 converted_effect = True
             elif (
@@ -8370,6 +11860,41 @@ def render_eoc(source: SourceObject, result: MigrationResult) -> str:
                 lines.append(
                     "        services.types.id(\"morale\", "
                     f"{lua_quote(effect['u_lose_morale'])}))"
+                )
+                converted_effect = True
+            elif (
+                npc_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"npc_add_morale", "bonus", "max_bonus"} and
+                safe_platform_id(effect.get("npc_add_morale")) and
+                isinstance(effect.get("bonus"), int) and
+                not isinstance(effect.get("bonus"), bool) and
+                NATIVE_INT_MIN <= effect["bonus"] <= NATIVE_INT_MAX and
+                isinstance(effect.get("max_bonus"), int) and
+                not isinstance(effect.get("max_bonus"), bool) and
+                NATIVE_INT_MIN <= effect["max_bonus"] <= NATIVE_INT_MAX
+            ):
+                lines.append("    services.morale.add(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"morale\", "
+                    f"{lua_quote(effect['npc_add_morale'])}),"
+                )
+                lines.append(
+                    f"        {effect['bonus']}, {effect['max_bonus']})"
+                )
+                converted_effect = True
+            elif (
+                npc_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"npc_lose_morale"} and
+                safe_platform_id(effect.get("npc_lose_morale"))
+            ):
+                lines.append("    services.morale.remove(")
+                lines.append("        actor,")
+                lines.append(
+                    "        services.types.id(\"morale\", "
+                    f"{lua_quote(effect['npc_lose_morale'])}))"
                 )
                 converted_effect = True
             elif (
@@ -8479,7 +12004,8 @@ def render_report(result: MigrationResult, mod_id: str) -> str:
     return "\n".join(lines)
 
 
-def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
+def migrate(objects: list[SourceObject], mod_id: str,
+            exclude_types: frozenset[str] = frozenset()) -> MigrationResult:
     result = MigrationResult()
     catalog_chunks: dict[str, list[str]] = {
         "ascii_art": [],
@@ -8499,7 +12025,15 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
         "recipe_category": [],
         "ammunition_type": [],
         "scent_type": [],
+        "butchery_requirement": [],
+        "item_action": [],
+        "scenario": [],
+        "vehicle_color_palette": [],
+        "monstergroup": [],
+        "overmap_connection": [],
         "speed_description": [],
+        "sound_effect": [],
+        "sound_effect_preload": [],
         "harvest_drop_type": [],
         "harvest": [],
         "behavior": [],
@@ -8557,6 +12091,43 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
         "playlist": [],
         "nested_category": [],
         "attack_vector": [],
+        "technique": [],
+        "martial_art": [],
+        "trap": [],
+        "construction": [],
+        "furniture": [],
+        "terrain": [],
+        "gate": [],
+        "fault": [],
+        "fault_fix": [],
+        "dream": [],
+        "achievement": [],
+        "conduct": [],
+        "ITEM_BLACKLIST": [],
+        "TRAIT_BLACKLIST": [],
+        "MONSTER_BLACKLIST": [],
+        "MONSTER_WHITELIST": [],
+        "SCENARIO_BLACKLIST": [],
+        "profession_blacklist": [],
+        "charge_removal_blacklist": [],
+        "temperature_removal_blacklist": [],
+        "map_extra": [],
+        "weather_generator": [],
+        "bionic_migration": [],
+        "effect_migration": [],
+        "field_type_migration": [],
+        "oter_id_migration": [],
+        "overmap_special_migration": [],
+        "proficiency_migration": [],
+        "ter_furn_migration": [],
+        "trap_migration": [],
+        "var_migration": [],
+        "vehicle_part_migration": [],
+        "trait_group": [],
+        "monster_adjustment": [],
+        "shopkeeper_blacklist": [],
+        "shopkeeper_whitelist": [],
+        "shopkeeper_consumption_rates": [],
         "magic_type": [],
         "movement_mode": [],
         "named_color": [],
@@ -8570,8 +12141,22 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
     speech_pools: dict[str, list[tuple[str, int]]] = {}
     snippet_categories: dict[str, dict[str, Any]] = {}
     metadata: SourceObject | None = None
+    # Copy-from corpora for the domains with legacy inheritance: parents may
+    # live in files whose other types are excluded from this run, so each
+    # corpus is built from every loaded object of that type before filtering.
+    inheritance_corpora: dict[str, dict[str, dict[str, Any]]] = {}
     for source in objects:
         kind = source.value.get("type")
+        if kind in exclude_types:
+            continue
+        if kind in ("sub_body_part", "gate", "mood_face", "start_location"):
+            entry_id = source.value.get("id")
+            if isinstance(entry_id, str) and entry_id:
+                inheritance_corpora.setdefault(kind, {})[entry_id] = source.value
+    for source in objects:
+        kind = source.value.get("type")
+        if kind in exclude_types:
+            continue
         if kind == "MOD_INFO" and metadata is None:
             metadata = source
         elif kind == "MOD_INFO":
@@ -8660,8 +12245,40 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
             rendered = render_scent_type(source, result)
             if rendered:
                 catalog_chunks[kind].append(rendered)
+        elif kind == "butchery_requirement":
+            rendered = render_butchery_requirement(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "item_action":
+            rendered = render_item_action(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "scenario":
+            rendered = render_scenario(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "vehicle_color_palette":
+            rendered = render_vehicle_color_palette(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "monstergroup":
+            rendered = render_monster_group(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "overmap_connection":
+            rendered = render_overmap_connection(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
         elif kind == "speed_description":
             rendered = render_speed_description(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "sound_effect":
+            rendered = render_sound_effect(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "sound_effect_preload":
+            rendered = render_sound_effect_preload(source, result)
             if rendered:
                 catalog_chunks[kind].append(rendered)
         elif kind == "harvest_drop_type":
@@ -8685,7 +12302,10 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
             if rendered:
                 catalog_chunks[kind].append(rendered)
         elif kind == "sub_body_part":
-            rendered = render_sub_body_part(source, result)
+            rendered = render_sub_body_part(
+                source, result,
+                inheritance_corpus=inheritance_corpora.get("sub_body_part"),
+            )
             if rendered:
                 catalog_chunks[kind].append(rendered)
         elif kind == "wound":
@@ -8737,7 +12357,10 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
             if rendered:
                 catalog_chunks[kind].append(rendered)
         elif kind == "mood_face":
-            rendered = render_mood_face(source, result)
+            rendered = render_mood_face(
+                source, result,
+                inheritance_corpus=inheritance_corpora.get("mood_face"),
+            )
             if rendered:
                 catalog_chunks[kind].append(rendered)
         elif kind == "limb_score":
@@ -8844,6 +12467,7 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
                 label="vehicle group",
                 source_field="vehicles",
                 method="vehicle",
+                allow_duplicates=True,
             )
             if rendered:
                 catalog_chunks[kind].append(rendered)
@@ -8856,6 +12480,7 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
                 source_field="group",
                 method="fault",
                 object_style=True,
+                allow_duplicates=True,
             )
             if rendered:
                 catalog_chunks[kind].append(rendered)
@@ -8876,7 +12501,10 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
             if rendered:
                 catalog_chunks[kind].append(rendered)
         elif kind == "start_location":
-            rendered = render_start_location(source, result)
+            rendered = render_start_location(
+                source, result,
+                inheritance_corpus=inheritance_corpora.get("start_location"),
+            )
             if rendered:
                 catalog_chunks[kind].append(rendered)
         elif kind == "climbing_aid":
@@ -8963,6 +12591,96 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
             rendered = render_attack_vector(source, result)
             if rendered:
                 catalog_chunks[kind].append(rendered)
+        elif kind == "technique":
+            rendered = render_technique(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "martial_art":
+            rendered = render_martial_art(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "trap":
+            rendered = render_trap(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "construction":
+            rendered = render_construction(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "furniture":
+            rendered = render_furniture(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "terrain":
+            rendered = render_terrain(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "gate":
+            rendered = render_gate(
+                source, result,
+                inheritance_corpus=inheritance_corpora.get("gate"),
+            )
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "fault":
+            rendered = render_fault(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "fault_fix":
+            rendered = render_fault_fix(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "dream":
+            rendered = render_dream(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind in ("achievement", "conduct"):
+            rendered = render_achievement(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind in ("ITEM_BLACKLIST", "TRAIT_BLACKLIST", "MONSTER_BLACKLIST",
+                      "MONSTER_WHITELIST", "SCENARIO_BLACKLIST",
+                      "profession_blacklist", "charge_removal_blacklist",
+                      "temperature_removal_blacklist"):
+            rendered = render_blacklist(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "map_extra":
+            rendered = render_map_extra(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "weather_generator":
+            rendered = render_weather_generator(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "monster_adjustment":
+            rendered = render_monster_adjustment(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "trait_group":
+            rendered = render_weighted_catalog(
+                source,
+                result,
+                builder="TraitGroup",
+                label="trait group",
+                source_field="traits",
+                method="trait",
+            )
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind in ("shopkeeper_blacklist", "shopkeeper_whitelist",
+                      "shopkeeper_consumption_rates"):
+            rendered = render_shopkeeper(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind in ("bionic_migration", "effect_migration",
+                      "field_type_migration", "oter_id_migration",
+                      "overmap_special_migration", "proficiency_migration",
+                      "ter_furn_migration", "trap_migration",
+                      "var_migration", "vehicle_part_migration"):
+            rendered = render_migration(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
         elif kind == "magic_type":
             rendered = render_magic_type(source, result)
             if rendered:
@@ -9003,7 +12721,7 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
             f"definition:line({lua_quote(sound)}, {volume})"
             for sound, volume in speech_pools[speaker]
         )
-        lines.extend(("content.add(definition)", ""))
+        lines.extend((content_submit_expression(), ""))
         catalog_chunks["speech"].append("\n".join(lines))
 
     for category_id, category in snippet_categories.items():
@@ -9021,6 +12739,9 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
     needs_character_has_item = any(
         "character_has_item(" in chunk for chunk in behaviour_chunks
     )
+    needs_character_is_wearing = any(
+        "character_is_wearing(" in chunk for chunk in behaviour_chunks
+    )
     needs_character_has_weapon = any(
         "character_has_weapon(" in chunk for chunk in behaviour_chunks
     )
@@ -9034,6 +12755,18 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
     needs_character_wields_with_flag = any(
         "character_wields_with_flag(" in chunk for chunk in behaviour_chunks
     )
+    needs_character_travel_has_path = any(
+        "character_travel_has_path(" in chunk for chunk in behaviour_chunks
+    )
+    needs_character_at_safe_space = any(
+        "character_at_safe_space(" in chunk for chunk in behaviour_chunks
+    )
+    needs_character_has_pickup_whitelist = any(
+        "character_has_pickup_whitelist(" in chunk for chunk in behaviour_chunks
+    )
+    needs_character_has_profession = any(
+        "character_has_profession(" in chunk for chunk in behaviour_chunks
+    )
     needs_character_weapon_helpers = (
         needs_character_has_weapon or
         needs_character_can_drop_weapon or
@@ -9041,8 +12774,10 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
     )
     if (
         needs_character_has_item or
+        needs_character_is_wearing or
         needs_character_has_any_bionic_or_capacity or
         needs_character_weapon_helpers or
+        needs_character_has_profession or
         any("service_value(" in chunk for chunk in behaviour_chunks)
     ):
         main.extend(
@@ -9121,12 +12856,76 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
                 "end",
             )
         )
+    if needs_character_is_wearing:
+        main.extend(
+            (
+                "",
+                "local function character_is_wearing(character, item_id)",
+                "    return service_value(services.inventory.is_wearing(",
+                "        character, services.types.id(\"item\", item_id)))",
+                "end",
+            )
+        )
+    if needs_character_travel_has_path:
+        main.extend(
+            (
+                "",
+                "local function character_travel_has_path(character)",
+                "    local snapshot = service_value(services.characters.snapshot(character))",
+                "    return snapshot.travel.has_path",
+                "end",
+            )
+        )
+    if needs_character_at_safe_space:
+        main.extend(
+            (
+                "",
+                "local function character_at_safe_space(character)",
+                "    local snapshot = service_value(services.characters.snapshot(character))",
+                "    local position = services.coords.project_to(",
+                "        snapshot.creature.position, \"omt\")",
+                "    return services.overmap.is_safe(position) and",
+                "        service_value(services.characters.is_safe(character))",
+                "end",
+            )
+        )
+    if needs_character_has_pickup_whitelist:
+        main.extend(
+            (
+                "",
+                "local function character_has_pickup_whitelist(character)",
+                "    local rules = services.npcs.ai_rules(character)",
+                "    if not rules.ok then",
+                "        return false",
+                "    end",
+                "    return rules.value.pickup_whitelist",
+                "end",
+            )
+        )
+    if needs_character_has_profession:
+        main.extend(
+            (
+                "",
+                "local function character_has_profession(character, profession_id)",
+                "    return service_value(services.characters.has_profession(",
+                "        character, profession_id))",
+                "end",
+            )
+        )
     catalog_labels = {
         "ascii_art": "Native ASCII-art definitions",
         "json_flag": "Native JSON-flag definitions",
         "tool_quality": "Native tool-quality definitions",
+        "butchery_requirement": "Native butchery-requirement definitions",
+        "item_action": "Native item-action definitions",
+        "scenario": "Native scenario definitions",
+        "vehicle_color_palette": "Native vehicle color palettes",
+        "monstergroup": "Native monster groups",
+        "overmap_connection": "Native overmap connections",
         "skill_display_type": "Native skill display categories",
         "skill": "Native skill definitions",
+        "sound_effect": "Native ambient sound-effect definitions",
+        "sound_effect_preload": "Native ambient sound-effect preloads",
         "vitamin": "Native vitamin definitions",
         "damage_type": "Native damage-type definitions",
         "bash_damage_profile": "Native bash-damage profiles",
@@ -9197,6 +12996,43 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
         "playlist": "Native soundpack playlists",
         "nested_category": "Native composable nested recipe categories",
         "attack_vector": "Native attack vectors",
+        "technique": "Native martial-arts techniques",
+        "martial_art": "Native martial-art styles",
+        "trap": "Native trap definitions",
+        "construction": "Native construction definitions",
+        "furniture": "Native furniture definitions",
+        "terrain": "Native terrain definitions",
+        "gate": "Native gate definitions",
+        "fault": "Native fault definitions",
+        "fault_fix": "Native fault-fix definitions",
+        "dream": "Native dream definitions",
+        "achievement": "Native achievement definitions",
+        "conduct": "Native conduct definitions",
+        "ITEM_BLACKLIST": "Native item blacklists",
+        "TRAIT_BLACKLIST": "Native trait blacklists",
+        "MONSTER_BLACKLIST": "Native monster blacklists",
+        "MONSTER_WHITELIST": "Native monster whitelists",
+        "SCENARIO_BLACKLIST": "Native scenario blacklists",
+        "profession_blacklist": "Native profession blacklists",
+        "charge_removal_blacklist": "Native charge-removal blacklists",
+        "temperature_removal_blacklist": "Native temperature-removal blacklists",
+        "map_extra": "Native map extras",
+        "weather_generator": "Native weather generators",
+        "bionic_migration": "Native bionic migrations",
+        "effect_migration": "Native effect migrations",
+        "field_type_migration": "Native field-type migrations",
+        "oter_id_migration": "Native overmap-terrain migrations",
+        "overmap_special_migration": "Native overmap-special migrations",
+        "proficiency_migration": "Native proficiency migrations",
+        "ter_furn_migration": "Native terrain and furniture migrations",
+        "trap_migration": "Native trap migrations",
+        "var_migration": "Native variable migrations",
+        "vehicle_part_migration": "Native vehicle-part migrations",
+        "trait_group": "Native trait groups",
+        "monster_adjustment": "Native monster adjustments",
+        "shopkeeper_blacklist": "Native shopkeeper blacklists",
+        "shopkeeper_whitelist": "Native shopkeeper whitelists",
+        "shopkeeper_consumption_rates": "Native shopkeeper consumption rates",
         "magic_type": "Native magic types and named Lua policies",
         "movement_mode": "Native composable movement modes",
         "named_color": "Native named colors",
@@ -9206,7 +13042,10 @@ def migrate(objects: list[SourceObject], mod_id: str) -> MigrationResult:
     }
     for kind, chunks in catalog_chunks.items():
         if chunks:
-            main.extend(("", f"-- {catalog_labels[kind]}", *chunks))
+            wrapped = []
+            for chunk in chunks:
+                wrapped.extend(("do", chunk.rstrip(), "end"))
+            main.extend(("", f"-- {catalog_labels[kind]}", *wrapped))
     if item_chunks:
         main.extend(("", '-- Native item definitions', *item_chunks))
     if recipe_chunks:
@@ -9360,6 +13199,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--mod-id")
     parser.add_argument("--force", action="store_true")
     parser.add_argument(
+        "--replace", action="store_true",
+        help="emit content.replace instead of content.add for migrated ids",
+    )
+    parser.add_argument(
+        "--exclude-types",
+        help="comma-separated JSON object types to skip entirely: entries of "
+             "these types render no output and produce no partials or TODOs",
+    )
+    parser.add_argument(
         "--check", action="store_true",
         help="compare deterministic output without writing files",
     )
@@ -9367,7 +13215,14 @@ def main(argv: list[str] | None = None) -> int:
     try:
         objects = load_objects(args.inputs)
         mod_id = normalized_mod_id(args.mod_id, objects)
-        result = migrate(objects, mod_id)
+        global EMIT_REPLACE_CONTENT
+        EMIT_REPLACE_CONTENT = args.replace
+        excluded = frozenset(
+            token.strip()
+            for token in (args.exclude_types or "").split(",")
+            if token.strip()
+        )
+        result = migrate(objects, mod_id, exclude_types=excluded)
         if not write_result(result, args.output, args.force, args.check):
             return 1
     except (OSError, ValueError) as error:
