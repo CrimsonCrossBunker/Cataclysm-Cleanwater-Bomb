@@ -42,6 +42,21 @@ void cata::lua_platform::detail::vehicle_group_registry_erase( const std::string
     vgroups.erase( vgroup_id( id ) );
 }
 
+std::vector<std::pair<std::string, int>>
+cata::lua_platform::detail::vehicle_group_weighted_entries( const vgroup_id &id )
+{
+    std::vector<std::pair<std::string, int>> result;
+    const auto found = vgroups.find( id );
+    if( found == vgroups.end() ) {
+        return result;
+    }
+    result.reserve( found->second.vehicles.size() );
+    for( const std::pair<vproto_id, int> &entry : found->second.vehicles ) {
+        result.emplace_back( entry.first.str(), entry.second );
+    }
+    return result;
+}
+
 /** @relates string_id */
 template<>
 const VehicleGroup &string_id<VehicleGroup>::obj() const

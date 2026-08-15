@@ -16,6 +16,18 @@
 #include "weighted_list.h"
 
 class JsonObject;
+class VehiclePalette;
+
+namespace cata::lua_platform
+{
+class content_transaction;
+namespace detail
+{
+const VehiclePalette *vehicle_color_palette_registry_find( const vpalette_id &id );
+void vehicle_color_palette_registry_set( const VehiclePalette &value );
+void vehicle_color_palette_registry_erase( const vpalette_id &id );
+} // namespace detail
+} // namespace cata::lua_platform
 
 /**
  * Random vehicle color palette. Ported from Cataclysm: Bright Nights.
@@ -45,6 +57,13 @@ class VehiclePalette
         std::vector<std::optional<RGBColor>> pick_colors() const;
 
     private:
+        friend class cata::lua_platform::content_transaction;
+        friend const VehiclePalette *cata::lua_platform::detail::vehicle_color_palette_registry_find(
+            const vpalette_id &id );
+        friend void cata::lua_platform::detail::vehicle_color_palette_registry_set(
+            const VehiclePalette &value );
+        friend void cata::lua_platform::detail::vehicle_color_palette_registry_erase(
+            const vpalette_id &id );
         vpalette_id id;
         std::vector<weighted_int_list<std::string>> colors;
         std::map<std::string, int> fuzzy_color_match;

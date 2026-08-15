@@ -1738,6 +1738,12 @@ const vpart_category *cata::lua_platform::detail::vehicle_part_category_registry
     return found == vpart_categories_all.end() ? nullptr : &*found;
 }
 
+int cata::lua_platform::detail::vehicle_part_category_priority(
+    const vpart_category &category )
+{
+    return category.priority_;
+}
+
 void cata::lua_platform::detail::vehicle_part_category_registry_set(
     const vpart_category &value )
 {
@@ -1800,6 +1806,32 @@ void vpart_migration::load( const JsonObject &jo )
     optional( jo, false, "variant", migration.variant );
     optional( jo, false, "add_veh_tools", migration.add_veh_tools );
     vpart_migrations.emplace( migration.part_id_old, migration );
+}
+
+void cata::lua_platform::detail::insert_platform_vpart_migration(
+    const platform_migration_data &value )
+{
+    vpart_migration migration;
+    migration.part_id_old = vpart_id( value.from_id );
+    migration.part_id_new = vpart_id( value.to_id );
+    vpart_migrations.emplace( migration.part_id_old, migration );
+}
+
+void cata::lua_platform::detail::erase_platform_vpart_migration(
+    const platform_migration_data &value )
+{
+    vpart_migrations.erase( vpart_id( value.from_id ) );
+}
+
+std::vector<std::pair<std::string, std::string>>
+cata::lua_platform::detail::vehicle_part_migration_snapshot()
+{
+    std::vector<std::pair<std::string, std::string>> result;
+    result.reserve( vpart_migrations.size() );
+    for( const auto &[from_id, migration] : vpart_migrations ) {
+        result.emplace_back( from_id.str(), migration.part_id_new.str() );
+    }
+    return result;
 }
 
 void vpart_migration::reset()
