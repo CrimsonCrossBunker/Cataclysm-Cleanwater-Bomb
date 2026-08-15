@@ -29,6 +29,19 @@ class stats_tracker;
 struct achievement_requirement;
 template <typename E> struct enum_traits;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+namespace detail
+{
+struct platform_achievement_data;
+void insert_platform_achievement( const platform_achievement_data & );
+void erase_platform_achievement( const std::string &id );
+void finalize_platform_achievements();
+bool platform_achievement_is_valid( const std::string &id );
+} // namespace detail
+} // namespace cata::lua_platform
+
 enum class achievement_comparison : int {
     equal,
     less_equal,
@@ -58,6 +71,9 @@ class achievement
 {
     public:
         achievement() = default;
+        friend class cata::lua_platform::content_transaction;
+        friend void cata::lua_platform::detail::insert_platform_achievement(
+            const cata::lua_platform::detail::platform_achievement_data & );
 
         void load( const JsonObject &, std::string_view );
         void finalize();
