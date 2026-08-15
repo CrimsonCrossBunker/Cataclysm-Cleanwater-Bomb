@@ -310,36 +310,59 @@ assertions.  A fresh build compiled without Lua also linked successfully, and
 its focused Mod-manager fallback passed 13 assertions.  An Android arm64-v8a
 Stable Release with Lua enabled also compiled, linked, and packaged
 successfully; its unsigned APK contained `lib/arm64-v8a/libmain.so`.
-Interactive desktop/Android Mod-selector and presentation checks and field-by-field
-parity for the remaining domains are still open, so only explicitly named
-validated slices may be treated as having crossed their local gate.  The exact
-replacement ledger contains 775 dispositions; its generated summary is the
-authoritative count.  The remaining implemented-but-unverified static slice covers
-Mod metadata, tool qualities, skill display categories, skills, vitamins,
-JSON flags, damage types, materials, proficiency categories, proficiencies,
-weapon categories, item categories, recipe categories, ammunition types,
-reusable requirements, recipe groups, scent types, speed descriptions,
-harvest-drop types, harvest lists, behavior trees, monster attacks, effect
-types, weakpoint sets, field types, item groups, sub-body parts, body parts,
-anatomies, body graphs, monsters, morale types, disease types, monster flags,
-mutation types, monster species, field emissions, monster factions, construction categories,
-mutation categories, terrain/furniture connection groups, construction groups,
-vehicle-part locations,
-vehicle-part categories, mood-face tables, damage-info presentation orders,
-named colors, rotatable-symbol groups, ASCII-art definitions, limb-score
-definitions, the global hit-range configuration, bash-damage profiles,
-clothing modifications, overmap land-use codes, overmap-vision profiles,
-overmap-location predicates, profession groups, weighted map-extra
-collections, vehicle groups, fault groups, explosion-light recipes, ammunition-effect recipes,
-addiction types, character modifiers, start locations, climbing aids,
-weather types, scores, the global mutation-overlay order, zone types, speech pools, end screens, nested recipe categories, attack vectors, magic types,
-movement modes, items, and
-recipes.  The hit range is deliberately a replace-only singleton because it
-configures one engine-wide table rather than an id-addressed catalog.  Clothing
-modifiers use composable scaling dimensions rather than exposing the legacy
-object shape.  Attack vectors rebuild anatomical substitutions from authored
-limbs and contact surfaces, making repeated finalization idempotent.  This
-remains far short of complete static-domain coverage.
+Interactive desktop/Android Mod-selector and presentation checks are still
+open, so only explicitly named validated slices may be treated as having
+crossed their local gate.
+
+The 2026-08-13/14 batches expanded the migrated-core vertical slice.
+`data/mods/Migrated_Core/` is now a generated zero-JSON/EOC fixture covering 87
+domains and 4286 fully translated entries with 0 partial skeletons and 0
+TODOs.  Its per-process semantic parity gate snapshots each legacy JSON-loaded
+registry before apply and compares the migrated native replacements
+field-for-field inside the same cycle; the current run reaches 40700
+assertions, and a catalog is promoted only on that whole-registry evidence.
+The harness has repeatedly caught real semantic gaps before promotion — the
+bash-damage finalize fill-in, fault-fix reverse-link re-derivation,
+sub-body-part copy-from inheritance, start-location interval clamping, and
+several empty-src registry insertion segfaults — so a verified catalog means
+its comparison actually ran.  The creator/migrator unit suite passes all 86
+cases.  A clean 2026-08-14 rebuild of the Lua-enabled test binary then ran the
+complete `[lua]` filter end to end: 214 cases and 43653 assertions, all
+passing, including the migrated-core parity gate.  The `landed_technique`
+combat-hook failure recorded by earlier stash-based runs does not reproduce
+in the clean build, so the recorded current gate is green.
+
+The exact replacement ledger contains 775 dispositions; its generated summary
+is the authoritative count.  At the 2026-08-14 regeneration the split is 53
+implemented_verified, 14 bounded_implemented_verified, 14
+implemented_unverified, 113 bounded_implemented_unverified, 430
+primitive_available_unverified, 133 planned, 0 private_adapter, and 18
+reviewed_not_applicable.  The whole-selector verified catalogs are anatomy,
+attack vectors, bash-damage profiles, butchery requirements, connect groups,
+construction categories and groups, damage-info ordering, disease types,
+dreams, field emissions, fault groups, gates, harvest-drop types, the global
+hit-range configuration, item actions, limb scores, monster flags, mutation
+categories, named colors, overmap connections, overmap land-use codes,
+overmap-vision profiles, the global mutation-overlay order, profession groups,
+proficiency categories, recipe categories, rotatable symbols, scent types,
+skills, skill-display types, monster species, speech pools, speed
+descriptions, sub-body parts, vehicle color palettes, vehicle groups,
+vehicle-part categories and locations, weapon categories, ammunition types,
+and the checked migration and blacklist catalogs.  Bounded verified selectors
+whose exercised shapes have whole-registry parity are item categories, loot
+zones, clothing modifications, damage types, explosion lights, faults, JSON
+flags, mood faces, morale types, movement modes, recipe groups, scenarios,
+start locations, and tool qualities.  The implemented-but-unverified slice
+still covers activity types, help topics, magic types, monster adjustment,
+playlists, sound effects and preloads, trait groups, the remaining blacklists,
+and the not-yet-sliced migration kinds.  This remains far short of complete
+static-domain coverage: 430 selectors still expose only composable native
+primitives, 133 remain planned, and field-level parity work continues.  The
+hit range is deliberately a replace-only singleton because it configures one
+engine-wide table rather than an id-addressed catalog.  Clothing modifiers use
+composable scaling dimensions rather than exposing the legacy object shape.
+Attack vectors rebuild anatomical substitutions from authored limbs and
+contact surfaces, making repeated finalization idempotent.
 
 Overmap-vision profiles use an ordered Lua sequence of `appearance` and
 `blend_adjacent` operations.  The sequence directly expresses vague,
@@ -608,21 +631,38 @@ Monster pre-finalize 与身体缓存回归覆盖。LuaLS、公开契约、覆盖
 门禁以 191 个用例、2738 个断言通过。全新无 Lua 构建也成功链接，其 Mod 管理器降级测试以
 13 个断言通过。启用 Lua 的 Android arm64-v8a Stable Release 也已成功编译、链接并打包；
 生成的未签名 APK 包含 `lib/arm64-v8a/libmain.so`。桌面/Android Mod 选择器与交互式
-presentation 人工验证，以及其余领域逐字段等价性
-仍未完成，因此只有本文明确点名的已验证切片可以视为通过本地门禁。775 项的分类数字以
-生成账本 summary 为准，不在本文手工复制。其余已实现但未验证的静态切片包括 Mod 元数据、
-工具质量、技能显示分类、技能、维生素、JSON
-flag、伤害类型、材质、熟练度分类、熟练度、武器分类、物品分类、配方分类、弹药
-类型、可复用制作需求、配方组、气味类型、速度描述、采收掉落类型、采收表、行为树、
-怪物攻击、效果类型、弱点集、场类型、物品组、子身体部位、身体部位、解剖、身体图、
-怪物、士气类型、疾病类型、怪物 flag、怪物物种、怪物阵营、突变类型、突变分类、
-地形/家具连接组、建造分类、建造组、载具部件位置、
-物品与配方；它仍远未
-达到静态内容全面覆盖。当前切片还包括载具部件分类、心情表情表、伤害信息显示顺序、
-命名颜色、可旋转符号组、ASCII 图、肢体评分和全局命中距离配置。命中距离配置刻意只
-允许显式 `replace`：它是一张引擎全局表，不是假装拥有普通对象 ID 的目录。当前切片还
-包括 bash 伤害配置、服装改造和大地图土地用途；服装数值使用可组合的厚度/覆盖率缩放
-维度，而不是公开旧 JSON 对象形状。大地图视野配置使用有序的 `appearance` 与
+presentation 人工验证仍未完成，因此只有本文明确点名的已验证切片可以视为通过本地门禁。
+775 项的分类数字以生成账本 summary 为准，不在本文手工复制。
+
+2026-08-13/14 的批次继续扩大已迁移核心纵向切片：生成的
+`data/mods/Migrated_Core/` 夹具现在覆盖 87 个领域、4286 个完整转换条目，0 个部分
+骨架、0 个 TODO。其单进程语义 parity 门禁会在 apply 前快照每个旧 JSON 注册表，并在
+同一周期内对迁移后的原生替代定义做逐字段比较；当前运行达到 40700 个断言，目录只有
+拿到全注册表证据才会晋级。门禁在晋级前多次抓到真实语义缺口——bash 伤害配置的
+finalize 补全、故障修复反向链接重推导、子身体部位 copy-from 继承、起始位置区间夹取，
+以及多处空 src 向量注册插入导致的段错误——因此“已验证”只意味着比较真的跑过。
+creator/migrator 单元套件 86 个用例全部通过。2026-08-14 干净重编译的 Lua-enabled
+测试二进制随后完整跑过 `[lua]` 过滤集：214 个用例、43653 个断言全部通过，包含
+migrated-core parity 门禁；早前基于 stash 的构建记录的 `landed_technique` 战斗
+Hook 失败在干净构建中不再复现，当前记录的门禁为全绿。
+
+账本当前（2026-08-14 重新生成）的分布为 53 项 implemented_verified、14 项
+bounded_implemented_verified、14 项 implemented_unverified、113 项
+bounded_implemented_unverified、430 项 primitive_available_unverified、133 项
+planned 与 18 项 reviewed_not_applicable。完整 selector 已验证的目录包括解剖、攻击
+向量、bash 伤害配置、屠宰需求、连接组、建造分类与建造组、伤害信息显示顺序、疾病类型、
+梦境、字段排放、故障组、大门、采收掉落类型、全局命中距离配置、物品动作、肢体评分、
+怪物 flag、突变分类、命名颜色、大地图连接、大地图土地用途、大地图视野配置、突变覆盖
+显示顺序、职业组、熟练度分类、配方分类、可旋转符号、气味类型、技能、技能显示分类、
+怪物物种、语音池、速度描述、子身体部位、载具调色板、载具组、载具部件分类与位置、
+武器分类、弹药类型，以及受检的迁移与黑名单目录。已验证有界形状的 selector 包括物品
+分类、战利品区域、服装改造、伤害类型、爆炸光效、故障、JSON flag、心情表情、士气类型、
+移动模式、配方组、场景、起始位置与工具质量。已实现但未验证的切片仍覆盖活动类型、
+帮助主题、魔法类型、怪物 adjustment、播放列表、环境音效与预加载、特质组、其余黑名单
+与尚未切片的迁移类型。它仍远未达到静态内容全面覆盖：430 个 selector 仍只暴露可组合
+原生原语，133 个仍处于 planned，逐字段等价工作仍在继续。命中距离配置刻意只允许显式
+`replace`：它是一张引擎全局表，不是假装拥有普通对象 ID 的目录。服装数值使用可组合的
+厚度/覆盖率缩放维度，而不是公开旧 JSON 对象形状。大地图视野配置使用有序的 `appearance` 与
 `blend_adjacent` 组合序列，直接表示模糊、轮廓和细节三个阶段，不公开旧 `levels` 对象
 形状。攻击向量也已纳入原生构造器；相似肢体和接触面每次
 都从作者输入重建，因此重复 finalize 不会不断追加派生项。魔法类型也已纳入：能量来源、
@@ -758,7 +798,38 @@ content layers: `ToolQuality`, `SkillDisplay`, `Skill`, `Vitamin`, `JsonFlag`,
 `DamageInfoOrder`, `NamedColor`, `RotatableSymbol`, `OvermapLocation`,
 `ProfessionGroup`, `MapExtraCollection`, `VehicleGroup`, `FaultGroup`,
 `ExplosionLight`, `AmmoEffect`, `AddictionType`, `CharacterModifier`,
-`StartLocation`, `ClimbingAid`, `WeatherType`, and `Score`.
+`StartLocation`, `ClimbingAid`, `WeatherType`, `Score`, `ButcheryRequirement`, `ItemAction`, `Scenario`, `VehicleColorPalette`, `MonsterGroup`, `OvermapConnection`,
+`OverlayOrder`, `ZoneType`, `SpeechPool`, `EndScreen`, `ActivityType`,
+`HelpTopic`, `SnippetCategory`, `Playlist`, `NestedRecipeCategory`,
+`SoundEffect`, `SoundEffectPreload`, `Technique`, `MartialArt`, `Trap`,
+`Construction`, `Furniture`, `Terrain`, `Gate`, `Fault`, `FaultFix`, `Dream`,
+`Achievement`, `Conduct`, `Blacklist`, `MapExtra`, `WeatherGenerator`,
+`Migration`, `ShopkeeperBlacklist`, `ShopkeeperWhitelist`, and
+`ShopkeeperConsumptionRates`.
+The `OvermapConnection` builder stages id plus `subtype(terrain, basic_cost,
+locations, orthogonal, perpendicular_crossing)` entries, mirroring the legacy
+`overmap_connection` table (empty location lists are legal).
+The `MonsterGroup` builder is bounded: it stages id, an optional default monster
+(highest-frequency fallback), an `is_animal` switch, and `monster`/`group`
+entries with weight, cost multiplier, and pack bounds; legacy gated shapes
+(starts/ends/conditions/event/spawn_data) remain explicit migration TODOs.
+The `VehicleColorPalette` builder stages a stable id plus `group(fuzzy_ids,
+colors)` entries: fuzzy part-id prefixes map to a positional weighted color
+group, mirroring the legacy `vehicle_color_palette` table.
+The `Scenario` builder is bounded: it stages id, name, description, start name,
+points, blacklist/extra-profession switches, reveal-locale and visibility
+distance, plus `location`/`profession`/`allowed_trait`/`forced_trait`/
+`forbidden_trait`/`flag`/`requirement` entries; legacy fields without a native
+shape (eoc, missions, map_extra, calendar overrides, vehicles, surround
+groups) remain explicit migration TODOs.
+The `ItemAction` builder takes a stable id and an optional display name
+(defaults to the id) and feeds the engine's item-action registry directly,
+mirroring the legacy `item_action` entries.
+The `ButcheryRequirement` builder takes a stable id and per-row
+`requirement(speed, size, butcher, requirement_id)` entries: speed is a finite
+non-negative bonus, size is one of `TINY`/`SMALL`/`MEDIUM`/`LARGE`/`HUGE`,
+and butcher is one of `BLEED`/`QUICK`/`FULL`/`FIELD_DRESS`/`SKIN`/`QUARTER`/
+`DISMEMBER`/`DISSECT`, mirroring the legacy `butchery_requirement` table shape.
 The transaction also owns reusable `Requirement` graphs and lets recipes
 compose them by id and multiplier without reparsing legacy data.  Native
 `RecipeGroup` definitions organize those recipes for camp/building workflows.
@@ -878,8 +949,13 @@ JSON flag、伤害类型、材质、熟练度分类、熟练度、武器分类�
 弱点集、场类型、物品组、子身体部位、身体部位、解剖、身体图、怪物、士气类型、
 伤口、伤口修复、疾病类型、怪物 flag、怪物物种、字段排放、怪物阵营、突变类型、突变分类、地形/家具连接组、
 建造分类、建造组、载具部件位置、载具部件分类、心情表情表、伤害信息显示顺序、
-命名颜色、可旋转符号组，以及可由配方按 id 和倍数组合的
-`Requirement` 需求图，以及供营地/建筑流程
+命名颜色、可旋转符号组、大地图位置、职业组、地图额外集合、载具组、故障组、
+爆炸光效、弹药效果、成瘾类型、角色修正器、起始位置、攀爬辅助、天气类型、分数、
+屠宰需求、物品动作、场景、载具调色板、怪物组、大地图连接、突变覆盖顺序、区域类型、
+语音池、结束画面、活动类型、帮助主题、Snippet 分类、播放列表、嵌套配方分类、
+环境音效与预加载、武术技巧、武术风格、陷阱、建造、家具、地形、大门、故障修复、
+梦境、成就、操守、黑名单、地图附加物、天气生成器、迁移与三类商人规则，以及可由
+配方按 id 和倍数组合的 `Requirement` 需求图，以及供营地/建筑流程
 组织配方的 `RecipeGroup`。它们先于物品/配方
 应用，因此同一候选中声明的质量、flag、
 材质、伤害类型与维生素可被后续对象引用；所有目录都进入 add/replace/edit、finalize 后
@@ -982,10 +1058,16 @@ Dialogue hooks use Platform-native semantic fields rather than EOC positional
 talkers.  `on_dialogue_start` receives `avatar`, `interlocutor`, and
 `initial_topic`; `on_dialogue_option` receives `avatar`, `interlocutor`,
 `current_topic`, and `selected_topic`; `on_dialogue_end` receives `avatar`,
-`interlocutor`, and `last_topic`.  Platform never publishes `alpha`/`beta`
-aliases.  The existing Lua API v5 dispatcher keeps its own compatibility
-payload unchanged and runs before Platform, so its candidate result is visible
-through `payload.results` without becoming Platform's authoring vocabulary.
+`interlocutor`, and `last_topic`.  All three payloads add `by_radio` only when
+the dialogue actually runs over radio contact and `reason` only when the
+dialogue was opened with a non-empty reason string, so ordinary Lua `if
+payload.by_radio` / `if payload.reason` expressions replace the legacy
+`is_by_radio` and `has_reason` conditions.  Participant presence is the
+payload's own `avatar` / `interlocutor` fields instead of `has_alpha` /
+`has_beta`.  Platform never publishes `alpha`/`beta` aliases.  The existing
+Lua API v5 dispatcher keeps its own compatibility payload unchanged and runs
+before Platform, so its candidate result is visible through
+`payload.results` without becoming Platform's authoring vocabulary.
 
 `ccb.runtime.hook` 将命名 handler 接到受检的同步 Hook 目录；payload 中的活对象只以
 代次绑定 handle 或快照跨界。只有 Hook 契约声明过的否决、文本、替换值或菜单结果才会
@@ -996,10 +1078,358 @@ through `payload.results` without becoming Platform's authoring vocabulary.
 对话 Hook 使用 Platform 自己的语义字段，不沿用 EOC 的位置式 talker：
 `on_dialogue_start` 得到 `avatar`、`interlocutor`、`initial_topic`；
 `on_dialogue_option` 得到 `avatar`、`interlocutor`、`current_topic`、`selected_topic`；
-`on_dialogue_end` 得到 `avatar`、`interlocutor`、`last_topic`。Platform 不发布
+`on_dialogue_end` 得到 `avatar`、`interlocutor`、`last_topic`。三个 payload 都仅在
+对话确实通过无线电进行时携带 `by_radio`、仅在对话以非空原因打开时携带 `reason`，
+因此普通 Lua 的 `if payload.by_radio` / `if payload.reason` 表达式直接取代 legacy 的
+`is_by_radio` 与 `has_reason` 条件；参与者存在性由 payload 自身的 `avatar` /
+`interlocutor` 字段表达，取代 `has_alpha` / `has_beta`。Platform 不发布
 `alpha`/`beta` 别名。现有 Lua API v5 dispatcher 为兼容仍保留自己的旧 payload，并先于
 Platform 运行；它产生的候选结果只通过 `payload.results` 进入 Platform，不会成为新的
 作者词汇。
+
+Dialogue predicate queries are ordinary bounded snapshots over the same
+domain services instead of per-key condition functions.  A character
+snapshot's `travel.has_path` reports whether the character currently follows
+an overmap travel path (legacy `u_is_travelling` / `npc_is_travelling`).
+`services.npcs.ai_rules(handle)` returns a structured snapshot of `aim`,
+`engagement`, `cbm_recharge`, `cbm_reserve`, the enabled `allies` string list,
+and a `pickup_whitelist` boolean; the legacy `u_has_pickup_list` shape is the
+plain Lua expression `rules.pickup_whitelist`, and non-NPC handles fail with
+`wrong_subtype` exactly like legacy non-NPC talkers returning false.
+`services.creatures.can_see(observer, target)` evaluates native perception
+rules for any observer creature, covering `player_see_u` with the avatar as
+observer without a player-only spelling.  `services.characters.is_safe(handle)`
+reports the native danger assessment for NPCs and is always true for other
+characters, and `services.overmap.is_safe(position)` exposes the native
+overmap safety rule; their conjunction is the legacy `u_at_safe_space`.
+`services.items.snapshot(handle).rotten` is the bounded projection of the
+legacy `is_rotten` item-talker condition.  The migrator emits these service
+expressions, composed with plain Lua helpers, instead of a condition-table
+DSL.
+
+对话条件查询同样走领域 service 的普通有界快照，而不是逐键条件函数。角色快照的
+`travel.has_path` 报告角色当前是否沿 overmap 旅行路径移动（取代 legacy 的
+`u_is_travelling` / `npc_is_travelling`）。`services.npcs.ai_rules(handle)` 返回
+`aim`、`engagement`、`cbm_recharge`、`cbm_reserve`、启用的 `allies` 字符串列表与
+`pickup_whitelist` 布尔的结构化快照；legacy `u_has_pickup_list` 形状即普通 Lua 表达式
+`rules.pickup_whitelist`，非 NPC handle 以 `wrong_subtype` 失败，与 legacy 非 NPC
+talker 返回 false 的语义一致。`services.creatures.can_see(observer, target)` 对任意
+观察者按原生感知规则求值，以 avatar 作观察者即覆盖 `player_see_u`，无需玩家专属拼写。
+`services.characters.is_safe(handle)` 返回 NPC 的原生危险评估、其他角色恒为 true；
+`services.overmap.is_safe(position)` 暴露原生 overmap 安全规则，二者合取即 legacy 的
+`u_at_safe_space`。`services.items.snapshot(handle).rotten` 是 legacy `is_rotten`
+物品 talker 条件的有界投影。迁移器输出的是这些 service 表达式与普通 Lua helper 的
+组合，而不是条件表 DSL。
+
+Ambient sound content uses the same transactional native definition model as
+every other catalog: `ccb.content.SoundEffect` stages an `id` plus optional
+`variant`, `season`, `is_indoors`, `is_night` filters and a shared `volume`,
+then `:file(relative_path)` appends relative soundpack paths; a definition
+with no files is invalid as an effect.  `ccb.content.SoundEffectPreload`
+stages the same key without files and only preloads the variant.  Both commit
+through the shared `sfx` service during finalization and roll back by erasing
+the exact keys they added; they never depend on the JSON sound loader.  The
+migrator expands each legacy `sound_effect` entry into one native definition
+per variant and each `sound_effect_preload` entry into one native preload.
+
+环境音效内容与其他目录一样走事务式原生定义模型：`ccb.content.SoundEffect` 暂存
+`id` 以及可选的 `variant`、`season`、`is_indoors`、`is_night` 过滤与共享 `volume`，
+再用 `:file(relative_path)` 追加相对于当前声音包的相对路径；没有任何文件的定义
+不能作为 effect。`ccb.content.SoundEffectPreload` 暂存同样的键（不含文件），只预加载
+该 variant。两者都在 finalize 时通过共享的 `sfx` service 提交，并在回滚时精确擦除
+自己添加的键；它们不依赖 JSON 声音加载器。迁移器把每个 legacy `sound_effect` 条目
+展开为每个 variant 一个原生定义，把每个 `sound_effect_preload` 条目展开为一个原生
+预加载。
+
+`ccb.content.Recipe` also stages practice and disassembly content through the
+same transactional recipe model.  A recipe with `practice = true` registers a
+practice recipe; native `practice_data`, `book_learn`, and `proficiencies`
+progression stays author-owned Lua behaviour and the migrator reports those
+members as explicit TODOs.  A recipe with `uncraft = true` registers into the
+native disassembly dictionary under the legacy-compatible key derived from
+`result`, so `services.recipes` and engine lookups such as
+`recipe_dictionary::get_uncraft` resolve it without a legacy loader.  Rollback
+restores both dictionaries exactly.
+
+`ccb.content.Recipe` 同样通过事务式配方模型承载 practice 与拆解内容。带
+`practice = true` 的配方注册为练习配方；原生 `practice_data`、`book_learn` 与
+`proficiencies` 进阶数据由作者的 Lua 行为自行表达，迁移器把它们列为显式 TODO。
+带 `uncraft = true` 的配方以 `result` 派生的 legacy 兼容键注册进原生拆解字典，`services.recipes` 与引擎查询（如 `recipe_dictionary::get_uncraft`）都能在不经过
+legacy 加载器的情况下解析它。回滚会精确恢复两个字典。
+
+`services.characters.add_wet(handle, amount)` exposes the shared native
+drenching operation as a validated write: the legacy `u_add_wet` shape is the
+plain service call with a bounded integer delta, and the same rain-immunity,
+feather, rainproof-clothing, and warmth filters apply as in the engine's own
+weather drenching.  The migrator converts proven avatar `u_add_wet` effects
+and keeps unproven `npc_add_wet` shapes partial until an NPC actor context is
+established.
+
+`services.characters.add_wet(handle, amount)` 把共享的原生淋湿操作暴露为受检的写
+服务：legacy `u_add_wet` 形状就是带上界整数增量的普通服务调用，雨水免疫、羽毛、
+防雨衣物与保暖过滤等引擎原生淋湿规则照常生效。迁移器转换已证明 avatar 的
+`u_add_wet` effect，未证明的 `npc_add_wet` 形状保持 partial，直到 NPC actor
+上下文成立。
+
+`ccb.content.Technique` stages martial-arts techniques through the same
+transactional model: `id`, `name`, optional messages, the boolean delivery and
+counter flags, weighting, repeat/stun/down/knockback ranges, and the `aoe`
+shape are plain options, while `:flag`, `:attack_vector`, and
+`:requires_skill` append bounded requirements.  Finalization inserts a native
+`ma_technique` into the shared martial-arts registry with
+`unarmed_allowed`/`melee_allowed`/`strictly_unarmed` requirements and the
+listed skill minimums; rollback restores or erases the exact ids.  Legacy
+`tech_effects`, inline `eocs`, dialogue `condition`, and `bonuses` remain
+author-owned Lua behaviour and the migrator reports them as explicit TODOs
+instead of duplicating their key-shaped tables.
+
+`ccb.content.Technique` 通过同样的事务模型暂存武术技巧：`id`、`name`、可选消息、
+布尔施放与反击标志、weighting、repeat/stun/down/knockback 数值范围与 `aoe` 形状
+都是普通 options，`:flag`、`:attack_vector` 与 `:requires_skill` 追加有界需求。
+Finalize 时把原生 `ma_technique` 插入共享武术注册表，并带上
+`unarmed_allowed`/`melee_allowed`/`strictly_unarmed` 需求与所列技能下限；回滚会
+精确恢复或擦除对应 id。legacy `tech_effects`、内联 `eocs`、对话 `condition` 与
+`bonuses` 保持作者自有的 Lua 行为，迁移器将其列为显式 TODO，而不是逐键复制它们
+的表格形状。
+
+`ccb.content.MartialArt` stages styles through the same transactional model:
+`id`, `name`, optional initiate messages, `priority`, `primary_skill`,
+`learn_difficulty`, `teachable`, arm/leg block effectiveness, and the
+weapon-policy booleans are plain options, while `:autolearn(skill, level)`,
+`:technique(id)`, `:weapon(id)`, and `:weapon_category(id)` append bounded
+membership.  Finalization inserts a native `martialart` into the shared
+martial-arts registry; rollback restores or erases the exact ids.  Legacy
+inline buffs and inline EOC arrays stay author-owned Lua behaviour and the
+migrator reports them as explicit TODOs instead of duplicating their
+key-shaped tables.
+
+`ccb.content.MartialArt` 通过同样的事务模型暂存武术风格：`id`、`name`、可选
+起手消息、`priority`、`primary_skill`、`learn_difficulty`、`teachable`、手臂/腿部
+格挡效果与武器策略布尔都是普通 options，`:autolearn(skill, level)`、
+`:technique(id)`、`:weapon(id)` 与 `:weapon_category(id)` 追加有界成员关系。
+Finalize 时把原生 `martialart` 插入共享武术注册表；回滚精确恢复或擦除对应 id。
+legacy 内联 buff 与内联 EOC 数组保持作者自有的 Lua 行为，迁移器将其列为显式
+TODO，而不是逐键复制它们的表格形状。
+
+`ccb.content.Trap` stages map traps through the same transactional model:
+`id`, `name`, `color`, `symbol`, `action`, spotting/dodge/disarm difficulties,
+optional memorial and trigger messages, and the benign/invisible/radius
+scalars are plain options, while `:flag(id)` and `:drop(item, quantity,
+charges)` append bounded membership and disassembly components.  Finalization
+inserts a native `trap` into the shared trap registry; rollback restores or
+erases the exact ids.  Legacy `spell_data`, inline `eocs`, `vehicle_data`, and
+`map_regen` stay author-owned Lua behaviour and the migrator reports them as
+explicit TODOs.
+
+`ccb.content.Trap` 通过同样的事务模型暂存地图陷阱：`id`、`name`、`color`、
+`symbol`、`action`、发现/闪避/拆除难度、可选纪念与触发消息，以及
+benign/invisible/radius 等标量都是普通 options，`:flag(id)` 与
+`:drop(item, quantity, charges)` 追加有界成员与拆解组件。Finalize 时把原生
+`trap` 插入共享陷阱注册表；回滚精确恢复或擦除对应 id。legacy `spell_data`、
+内联 `eocs`、`vehicle_data` 与 `map_regen` 保持作者自有的 Lua 行为，迁移器将其
+列为显式 TODO。
+
+`ccb.content.Construction` stages constructions through the same transactional
+model: `id`, `group`, `category`, `pre_note`, `post_terrain`,
+`duration_moves`, and `activity_level` are plain options, while
+`:requires_skill(skill, level)`, `:using_requirement(id, multiplier)`,
+`:pre_terrain(id)`, `:pre_flag(flag, force)`, and `:post_flag(flag)` append
+bounded requirements.  Inline requirements become a native `ccb.content.
+Requirement` staged by the same Mod and referenced through
+`:using_requirement` instead of a hidden inline loader.  Finalization inserts a
+native `construction` into the shared registry; rollback restores or erases
+the exact ids.  Legacy inline `byproducts`, `pre_special`/`post_special`
+callbacks, and `dark_craftable` stay author-owned Lua behaviour and the
+migrator reports them as explicit TODOs.
+
+`ccb.content.Construction` 通过同样的事务模型暂存建造：`id`、`group`、
+`category`、`pre_note`、`post_terrain`、`duration_moves` 与 `activity_level`
+都是普通 options，`:requires_skill(skill, level)`、
+`:using_requirement(id, multiplier)`、`:pre_terrain(id)`、
+`:pre_flag(flag, force)` 与 `:post_flag(flag)` 追加有界需求。内联需求改为同
+Mod 暂存的 `ccb.content.Requirement` 并通过 `:using_requirement` 引用，而不是
+隐藏的内联加载器。Finalize 时把原生 `construction` 插入共享注册表；回滚精确
+恢复或擦除对应 id。legacy 内联 `byproducts`、`pre_special`/`post_special`
+回调与 `dark_craftable` 保持作者自有的 Lua 行为，迁移器将其列为显式 TODO。
+
+`ccb.content.Furniture` stages map furniture through the same transactional
+model: `id`, `name`, `description`, `color`, `symbol`, move-cost and required
+strength, `light_emitted`, `comfort`, `max_volume_ml`, `mass_grams`,
+`keg_capacity_ml`, `transparent`, open/close/lockpick transformations,
+`crafting_pseudo_item`, and `deployed_item` are plain options, while
+`:flag(id)` appends bounded furniture flags.  Finalization inserts a native
+`furn_t` into the shared furniture registry; rollback restores or erases the
+exact ids.  Legacy `bash`, `deconstruct`, `workbench`, plant data, examine
+actions, and emissions stay author-owned Lua behaviour and the migrator
+reports them as explicit TODOs.
+
+`ccb.content.Furniture` 通过同样的事务模型暂存地图家具：`id`、`name`、
+`description`、`color`、`symbol`、移动代价与所需力量、`light_emitted`、
+`comfort`、`max_volume_ml`、`mass_grams`、`keg_capacity_ml`、`transparent`、
+开关与撬锁变换、`crafting_pseudo_item` 与 `deployed_item` 都是普通 options，
+`:flag(id)` 追加有界家具标志。Finalize 时把原生 `furn_t` 插入共享家具注册表；
+回滚精确恢复或擦除对应 id。legacy `bash`、`deconstruct`、`workbench`、植物
+数据、examine 动作与排放保持作者自有的 Lua 行为，迁移器将其列为显式 TODO。
+
+`ccb.content.Terrain` stages map terrain through the same transactional model:
+`id`, `name`, `description`, `color`, `symbol`, `move_cost`, `light_emitted`,
+`comfort`, `max_volume_ml`, `heat_radiation`, `transparent`,
+open/close/transform/roof/lockpick terrain references, and an embedded `trap`
+are plain options, while `:flag(id)` appends bounded terrain flags.
+Finalization inserts a native `ter_t` into the shared terrain registry;
+rollback restores or erases the exact ids.  Legacy `bash`, `deconstruct`,
+examine actions, phase targets, connection groups, and emissions stay
+author-owned Lua behaviour and the migrator reports them as explicit TODOs.
+
+`ccb.content.Terrain` 通过同样的事务模型暂存地图地形：`id`、`name`、
+`description`、`color`、`symbol`、`move_cost`、`light_emitted`、`comfort`、
+`max_volume_ml`、`heat_radiation`、`transparent`、开关/变换/屋顶/撬锁地形引用
+与内嵌 `trap` 都是普通 options，`:flag(id)` 追加有界地形标志。Finalize 时把
+原生 `ter_t` 插入共享地形注册表；回滚精确恢复或擦除对应 id。legacy `bash`、
+`deconstruct`、examine 动作、相变目标、连接组与排放保持作者自有的 Lua 行为，
+迁移器将其列为显式 TODO。
+
+`ccb.content.Gate` stages gates through the same transactional model: `id`,
+`door`, `floor`, optional pull/open/close/fail messages, `moves`, and
+`bashing_damage` are plain options, while `:wall(terrain_id)` appends the wall
+sections.  Finalization inserts a native `gate_data` into the shared gate
+registry; rollback restores or erases the exact ids.  The gate model has no
+legacy-only sub-shapes, so the migrator converts every well-formed shape
+without key-shaped TODOs.
+
+`ccb.content.Gate` 通过同样的事务模型暂存大门：`id`、`door`、`floor`、可选
+拉/开/关/失败消息、`moves` 与 `bashing_damage` 都是普通 options，
+`:wall(terrain_id)` 追加墙体段。Finalize 时把原生 `gate_data` 插入共享大门
+注册表；回滚精确恢复或擦除对应 id。大门模型没有 legacy 专属子形状，迁移器可
+转换所有良构形状而无需逐键 TODO。
+
+`ccb.content.Fault` and `ccb.content.FaultFix` stage item faults and their
+repairs through the same transactional model.  Fault options cover `id`,
+`fault_type`, `name`, optional messages and name affixes, price/damage and
+encumbrance modifiers, and the degradation flag, while `:flag(id)`,
+`:block_fault(id)`, and `:fix(id)` append bounded relationships.  Fault-fix
+options cover `id`, `name`, `success_msg`, `time_seconds`, and damage and
+degradation modifiers, while `:requires_skill(skill, level)`,
+`:removes_fault(id)`, and `:adds_fault(id)` append bounded requirements.
+Finalization inserts native `fault` and `fault_fix` objects into the shared
+fault registries; rollback restores or erases the exact ids.  Legacy inline
+`requirements`, `set_variables`, melee and armor modifiers stay author-owned
+Lua behaviour and the migrator reports them as explicit TODOs.
+
+`ccb.content.Fault` 与 `ccb.content.FaultFix` 通过同样的事务模型暂存物品故障
+及其维修。Fault options 覆盖 `id`、`fault_type`、`name`、可选消息与名称前后缀、
+价格/伤害与累赘修正以及退化标志，`:flag(id)`、`:block_fault(id)` 与
+`:fix(id)` 追加有界关系。Fault-fix options 覆盖 `id`、`name`、`success_msg`、
+`time_seconds` 与伤害和退化修正，`:requires_skill(skill, level)`、
+`:removes_fault(id)` 与 `:adds_fault(id)` 追加有界需求。Finalize 时把原生
+`fault` 与 `fault_fix` 对象插入共享故障注册表；回滚精确恢复或擦除对应 id。
+legacy 内联 `requirements`、`set_variables`、近战与护甲修正保持作者自有的
+Lua 行为，迁移器将其列为显式 TODO。
+
+`ccb.content.Dream` stages dreams through the same transactional model with
+`category`, `strength`, and `:message(text)` entries.  Dreams are id-less
+append-only engine data, so finalization appends native `dream` objects to the
+shared dream list and rollback truncates back to the pre-commit count.
+
+`ccb.content.Dream` 通过同样的事务模型暂存梦境：`category`、`strength` 与
+`:message(text)` 条目。梦境是无 id 的纯追加引擎数据，因此 finalize 时把原生
+`dream` 对象追加进共享梦境列表，回滚时截断回提交前的数量。
+
+`ccb.content.Achievement` and `ccb.content.Conduct` stage achievements through
+the same transactional model: `id`, `name`, `description`, and the
+`:hidden_by(id)` relationships are plain options, while `Conduct` simply
+pre-sets the native conduct flag.  Because native achievements own a
+cpp-private requirement type, insertion, erasure, and finalization go through
+bounded helpers in the engine translation unit.  Legacy `requirements`,
+`time_constraint`, and `event_statistic` stay author-owned Lua behaviour and
+the migrator reports them as explicit TODOs.
+
+`ccb.content.Achievement` 与 `ccb.content.Conduct` 通过同样的事务模型暂存成就：
+`id`、`name`、`description` 与 `:hidden_by(id)` 关系都是普通 options，`Conduct`
+只是预置原生 conduct 标志。由于原生 achievement 持有 cpp 私有的 requirement
+类型，插入、擦除与 finalize 都通过引擎翻译单元内的有界 helper。legacy
+`requirements`、`time_constraint` 与 `event_statistic` 保持作者自有的 Lua
+行为，迁移器将其列为显式 TODO。
+
+`ccb.content.Blacklist` stages trait and monster blacklists and whitelists
+through the same transactional model: `kind` selects the native target,
+`whitelist` toggles whitelist semantics, and `:entry(id)` appends bounded
+entries.  Finalization inserts the entries into the shared trait or monster
+sets through engine-side helpers; rollback erases exactly the appended ids.
+The migrator converts `TRAIT_BLACKLIST`, `MONSTER_BLACKLIST`, and
+`MONSTER_WHITELIST` shapes and keeps `ITEM_BLACKLIST` and
+`SCENARIO_BLACKLIST` partial until their native registrars exist.
+
+`ccb.content.Blacklist` 通过同样的事务模型暂存特质与怪物黑/白名单：`kind`
+选择原生目标，`whitelist` 切换白名单语义，`:entry(id)` 追加有界条目。
+Finalize 时通过引擎侧 helper 把条目插入共享特质或怪物集合；回滚精确擦除追加的
+id。迁移器转换 `TRAIT_BLACKLIST`、`MONSTER_BLACKLIST` 与 `MONSTER_WHITELIST`
+形状，`ITEM_BLACKLIST` 与 `SCENARIO_BLACKLIST` 保持 partial，直到其原生注册器
+存在。
+
+`ccb.content.MapExtra` stages map extras through the same transactional model:
+`id`, `name`, `description`, `generator_id`, `symbol`, and `color` are plain
+options, while `:flag(id)` appends bounded flags.  Finalization inserts a
+native `map_extra` into the shared registry; rollback restores or erases the
+exact ids.  Native generator-function bindings and z-level ranges stay
+author-owned Lua behaviour and the migrator reports them as explicit TODOs.
+
+`ccb.content.MapExtra` 通过同样的事务模型暂存地图附加物：`id`、`name`、
+`description`、`generator_id`、`symbol` 与 `color` 都是普通 options，
+`:flag(id)` 追加有界标志。Finalize 时把原生 `map_extra` 插入共享注册表；
+回滚精确恢复或擦除对应 id。原生 generator 函数绑定与 z 层范围保持作者自有的
+Lua 行为，迁移器将其列为显式 TODO。
+
+`ccb.content.WeatherGenerator` stages weather generators through the same
+transactional model: `id`, base temperature/humidity/pressure/wind, wind
+distribution peaks, and the per-season temperature and humidity modifiers are
+plain options, while `:blacklisted_weather(id)` and
+`:whitelisted_weather(id)` append bounded weather lists.  Finalization inserts
+a native `weather_generator` into the shared registry; rollback restores or
+erases the exact ids.  Legacy `weather_types` keep the author-owned Lua
+behaviour and the migrator reports them as explicit TODOs.
+
+`ccb.content.WeatherGenerator` 通过同样的事务模型暂存天气生成器：`id`、基础
+温度/湿度/气压/风速、风速分布峰值与各季节温度/湿度修正都是普通 options，
+`:blacklisted_weather(id)` 与 `:whitelisted_weather(id)` 追加有界天气列表。
+Finalize 时把原生 `weather_generator` 插入共享注册表；回滚精确恢复或擦除对应
+id。legacy `weather_types` 保持作者自有的 Lua 行为，迁移器将其列为显式 TODO。
+
+`ccb.content.Migration` stages savegame id migrations through the same
+transactional model: `kind` selects the native target (bionic, effect,
+field_type, furniture, oter, overmap_special, proficiency, terrain, trap,
+var, vehicle_part), `from` names the legacy id, and an empty `to` means the id
+was removed.  Finalization routes each entry into the engine's per-kind
+migration map; rollback erases exactly the added keys.  The migrator expands
+`oter_id_migration` dictionaries and converts the per-kind legacy field names
+(`from_trap`, `from_ter`, `from_field_type`, `id`/`new_id`) without TODOs.
+
+`ccb.content.ShopkeeperBlacklist`, `ccb.content.ShopkeeperWhitelist`, and
+`ccb.content.ShopkeeperConsumptionRates` stage shopkeeper rules through the
+same transactional model: `id`, an optional `message`, and the consumption
+`default_rate` are plain options, while `:entry(item, category, item_group,
+message)` appends bounded entries.  Finalization inserts native
+`shopkeeper_blacklist`, `shopkeeper_whitelist`, and `shopkeeper_cons_rates`
+objects into the shared shop-rule registries; rollback erases the exact ids.
+Legacy entry `condition` functions and per-entry `rate` overrides stay
+author-owned Lua behaviour and the migrator reports them as explicit TODOs.
+
+`ccb.content.ShopkeeperBlacklist`、`ccb.content.ShopkeeperWhitelist` 与
+`ccb.content.ShopkeeperConsumptionRates` 通过同样的事务模型暂存商人规则：
+`id`、可选 `message` 与消费 `default_rate` 都是普通 options，
+`:entry(item, category, item_group, message)` 追加有界条目。Finalize 时把
+原生 `shopkeeper_blacklist`、`shopkeeper_whitelist` 与
+`shopkeeper_cons_rates` 对象插入共享商人规则注册表；回滚精确擦除对应 id。
+legacy 条目的 `condition` 函数与逐条 `rate` 覆盖保持作者自有的 Lua 行为，
+迁移器将其列为显式 TODO。
+
+`ccb.content.Migration` 通过同样的事务模型暂存存档 id 迁移：`kind` 选择原生
+目标(bionic、effect、field_type、furniture、oter、overmap_special、
+proficiency、terrain、trap、var、vehicle_part),`from` 命名 legacy id,`to`
+为空表示该 id 被移除。Finalize 时把每个条目路由进引擎对应 kind 的迁移 map；
+回滚精确擦除添加的键。迁移器展开 `oter_id_migration` 字典并转换各 kind 的
+legacy 字段名(`from_trap`、`from_ter`、`from_field_type`、`id`/`new_id`),无需
+TODO。
 
 Player-facing interaction is a separate top-level domain rather than an EOC
 effect spelling.  Inside an active callback, `ccb.presentation.notice`,
@@ -1490,8 +1920,7 @@ proficiencies, removed/added wounds, and referenced requirements.  Inheritance,
 implicit indefinite healing, rich translation metadata, and inline requirement
 objects remain explicit TODOs rather than hidden legacy loading.  The two JSON
 selectors are therefore `bounded_implemented_unverified`.
-The local creator/migrator run now passes 55 cases (46 extractor plus 9
-scaffolder).  Wound/WoundFix extraction fails closed at Platform UTF-8 byte
+The local creator/migrator run now passes all 86 cases.  Wound/WoundFix extraction fails closed at Platform UTF-8 byte
 limits: overlong ids or text and contradictory body-part flags become explicit
 TODOs or rejected definitions, and proficiency multipliers are rejected when
 their native `float` conversion is no longer positive.
@@ -1637,7 +2066,7 @@ service 证据见上文。静态提取器现在可把有界、具体的 `wound` 
 新增伤口及外部 Requirement 引用；继承、隐式无限愈合、复杂翻译元数据和内联 requirement
 对象仍会生成明确 TODO，不会暗中调用旧 loader。因此这两个 JSON selector 已是
 `bounded_implemented_unverified`。
-本地 creator/migrator 现已通过 55 个用例（提取器 46 个、脚手架 9 个）。Wound/WoundFix
+本地 creator/migrator 现已通过全部 86 个用例。Wound/WoundFix
 提取会按 Platform 的 UTF-8 字节上限安全失败：超长 id/文本及互相冲突的身体部位 flag 会
 生成明确 TODO 或拒绝该定义，熟练度倍率转成原生 `float` 后不再为正时也会被拒绝。
 
@@ -1751,14 +2180,16 @@ documentation are usable.  Removal requires all of the following:
 - a JSON/EOC-to-Lua extraction tool produces idiomatic native-object skeletons
   and explicit TODOs instead of `run_eoc` wrappers;
 - a complete zero-JSON/EOC example Mod passes discovery, load, save, reload,
-  and gameplay tests;
-- the deprecation window has lasted at least two stable releases and at least
-  twelve months, with both conditions satisfied.
+  and gameplay tests.
+
+Removal is deliberately not gated on a release count or calendar window: it
+may proceed as soon as the mapping, migration, save-migration, copied-world,
+and end-to-end evidence above exists.
 
 本文存在并不代表立即冻结旧作者接口。只有某个领域的 Platform 替代、工具、测试和
 文档可用后，才冻结该领域的新 JSON/EOC 能力。最终移除必须同时满足完整映射、核心与
-捆绑内容迁移、存档兼容、迁移工具、端到端纯 Lua Mod，以及至少两个稳定版且十二个月
-的弃用窗口。
+捆绑内容迁移、存档兼容、迁移工具与端到端纯 Lua Mod。移除不再附加发布数量或日历时限：
+只要上述映射、迁移、存档迁移、复制世界与端到端证据齐全即可执行。
 
 `tools/migrate_lua_first.py INPUT... --output TARGET` is the implemented
 extractor.  It deterministically translates the currently native item/recipe
@@ -1771,11 +2202,19 @@ damage-info presentation, named colors, rotatable symbols, ASCII art, limb
 scores, the global hit-range configuration, bash-damage profiles, clothing
 modifications, overmap land-use codes, overmap-vision profiles,
 overmap locations, profession groups, map-extra collections, vehicle groups,
-fault groups, explosion-light recipes, ammunition effects, addiction types, character modifiers, start locations, climbing aids, weather types, scores, the global mutation-overlay order, zone types, speech pools, end screens, nested recipe categories, attack vectors, magic types, and movement modes), and simple
-event/message behaviour.  Bounded literal `compare_string`,
+fault groups, faults and fault fixes, json flags, item categories, recipe
+categories, gates, recipe groups, ammunition types, blacklists, skills,
+proficiency categories, vehicle color palettes, monster groups, scenarios,
+butchery requirements, item actions, overmap connections, migrations,
+shopkeeper rules, sound effects and preloads, map extras, weather generators,
+achievements and conducts, techniques, martial arts, traps, constructions,
+furniture, terrain, dreams, explosion-light recipes, ammunition effects, addiction types, character modifiers, start locations, climbing aids, weather types, scores, the global mutation-overlay order, zone types, speech pools, end screens, nested recipe categories, attack vectors, magic types, and movement modes), and simple
+event/message behaviour.  The regenerated `data/mods/Migrated_Core/` fixture
+currently carries 4286 fully translated core entries across these domains with
+0 partial skeletons and 0 TODOs.  Bounded literal `compare_string`,
 `compare_string_match_all`, `one_in_chance`, `x_in_y_chance`,
-`roll_contested`, `mod_is_loaded`, and `current_dimension` conditions become ordinary Lua
-predicates over Platform services.  Random conditions convert only finite
+`roll_contested`, `mod_is_loaded`, `current_dimension`, and the context-free
+`is_day`, `is_season`, and `is_weather` conditions become ordinary Lua predicates over Platform services.  Literal-flag `map_furniture_with_flag` and `map_terrain_with_flag` conditions over a `context_val` location compose `services.gameplay.environment.furniture_has_flag`/`terrain_has_flag`; the same `context_val` + literal-id shape converts literal `map_terrain_id`, `map_furniture_id`, and `map_field_id` into `environment.terrain_id`, `environment.furniture_id`, and `environment.field_exists`; `context_val`-position `map_in_city` and `map_is_outside` compose `services.overmap.is_in_city` and `environment.is_indoor_tile` (including the legacy z < -1 clamp and the out-of-bounds false), and `context_val`-position `is_outside` emits the same `environment.is_outside` shape but stays primitive in the ledger until full parity; dynamic flags/ids and non-`context_val` locations remain explicit TODOs.  The proven `game_start` avatar slice also converts literal `u_is_on_terrain`/`u_is_on_furniture`/`u_is_in_field`/`u_is_on_terrain_with_flag`/`u_is_on_furniture_with_flag` through the same environment predicates at `service_value(services.characters.snapshot(actor)).creature.position`, with the matching `npc_*` mirrors under `npc_becomes_hostile`; dynamic values and other events remain explicit TODOs.  A literal `u_has_mission` mission type id composes `service_value(services.missions.avatar_has_active(services.types.id("mission", id)))` in any `required_event`, and the bare `u_has_camp` predicate composes `service_value(services.camps.player_has_camp())`; dynamic/variable `u_has_mission` ids remain explicit TODOs.  Random conditions convert only finite
 literal values inside the native service ranges: dynamic denominators,
 non-positive or out-of-range `x/y`, and non-positive, dynamic, or oversized
 die sizes remain explicit TODOs.  Literal avatar `u_has_trait`,
@@ -1783,9 +2222,70 @@ literal-array `u_has_any_trait`,
 `u_has_martial_art`, `u_using_martial_art`, `u_has_proficiency`, and specific-id
 `u_has_bionics` conditions reuse typed mutation, martial-art, proficiency, and
 bionic queries.  In the proven `game_start` avatar slice, literal
-`u_has_bionics: "ANY"` composes `bionics.summary`, and literal
-`u_know_recipe` composes `recipes.knows`; dynamic values and unproven actor
-contexts remain explicit TODOs.  The proven `game_start` and four item-event Character slices
+`u_has_bionics: "ANY"` composes `bionics.summary`, literal
+`u_know_recipe` composes `recipes.knows`, the bare `u_is_alive`, `u_is_avatar`,
+`u_is_character`, `u_exists`, `has_alpha`, and `u_friend` predicates are constant `true` while
+`u_is_npc`, `u_is_monster`, `u_is_item`, `u_is_furniture`, `u_is_vehicle`, `u_hostile`,
+`u_is_in_vehicle`, `u_controlling_vehicle`, `u_driving`, `u_is_riding`, `u_is_avatar_passenger`,
+`u_is_driven`, `u_is_remote_controlled`, and `u_is_on_rails` are constant `false` because the freshly created
+avatar is never dead, hostile, mounted, or in a vehicle during game-start setup, bare `u_male`/`u_female` predicates
+compose `service_value(services.characters.snapshot(actor)).male` and its negation, a literal-integer
+`u_has_cash` threshold composes the snapshot `cash` field in cents, a literal
+`u_has_profession` id composes
+`character_has_profession(actor, profession_id)` reproducing the guarded
+legacy current-profession-or-held-hobby test, a literal
+`u_has_flag` composes
+`service_value(services.characters.has_flag(actor, services.types.id("json_flag", flag)))`
+while keeping the legacy `MUTATION_THRESHOLD` divergence into
+`crossed_threshold()`, and the bare `u_is_outside` predicate composes
+`services.gameplay.environment.is_outside(service_value(services.characters.snapshot(actor)).creature.position)`
+because the avatar always occupies the map's current z; literal `u_is_wearing`
+under the proven `game_start` and four item-event Character slices composes
+`service_value(services.inventory.is_wearing(actor, services.types.id("item", item_id)))`
+and matches only an exact worn-item `itype_id` (never the wielded item, json
+flags, categories, charges, or contents); dynamic/variable `u_is_wearing`
+values, `npc_is_wearing`, and unproven actor contexts remain explicit TODOs.
+`npc_is_alive`, non-`game_start`
+`u_is_alive`/`u_is_avatar`/`u_is_character`/`u_male`/`u_female`/`u_is_outside`,
+range/var/math `u_has_cash` shapes, dynamic or variable
+`u_has_profession` values, `npc_has_profession`,
+dynamic or variable `u_has_flag` values, `npc_has_flag`, and `u_has_flag` under
+`npc_becomes_hostile`, dynamic values, and unproven actor contexts remain
+explicit TODOs.  In the proven `npc_becomes_hostile` slice, literal
+`npc_has_trait`, non-empty literal-array `npc_has_any_trait`,
+`npc_has_martial_art`, `npc_using_martial_art`, `npc_has_proficiency`, and
+specific-id or "ANY" `npc_has_bionics` mirror their bounded avatar siblings
+against `context.actors.npc`; bare `npc_male`/`npc_female` compose the snapshot
+`male` field and its negation, `npc_is_character`, `npc_is_npc`, `npc_exists`, and `npc_hostile` are constant `true`,
+while `npc_is_avatar`, `npc_is_monster`, `npc_is_item`, `npc_is_furniture`, `npc_is_vehicle`, and `npc_friend` are constant `false`,
+and `has_alpha`/`has_beta` stay primitive dialogue-projection selectors (`has_alpha` folds to `true` only in the `game_start` avatar slice; `has_beta` remains an explicit TODO because its legacy beta talker is unproven in every event),
+and the proven `game_start` avatar slice also folds the vehicle-only movement states `u_is_falling`/`u_is_floating`/`u_is_flying`/`u_is_sinking`/`u_is_skidding` to `false` (a Character talker never overrides them; the matching `npc_*` mirrors fold under `npc_becomes_hostile`), folds the degenerate mission selectors `u_mission_complete`/`u_mission_failed`/`u_mission_goal`/`u_mission_incomplete`/`u_has_available_mission`/`u_has_many_available_missions` to `false` and `u_has_no_available_mission` to `true` (the avatar talker exposes no selected/available mission), and converts literal `u_need`/`npc_need` shapes (bare need, integer `amount`, or the four sleepiness `level` names) into `snapshot.needs.hunger|thirst|sleepiness > N` comparisons, and folds literal `u_aim_rule`/`u_engagement_rule`/`u_cbm_recharge_rule`/`u_cbm_reserve_rule` to `false` (only the NPC talker overrides `has_ai_rule`, so the avatar's base implementation returns false for every rule), and folds literal `u_bodytype`/`npc_bodytype` by the hardcoded Character rule `bodytype == "human"`, folds `u_can_float`/`u_can_fly`/`npc_can_float`/`npc_can_fly`/`u_following` to `false` (the base talker returns false and no Character talker overrides them), and converts literal `u_is_trait_purifiable`/`npc_is_trait_purifiable` into `services.mutations.definition(...).availability.purifiable`, folds the bare `u_available` predicate to `true` (the freshly created avatar never carries the `currently_busy` effect at game-start), and folds literal `u_rule` to `false` alongside the other AI-rule predicates, and converts literal `u_safe_mode_trigger` cardinal directions into the context-free `services.gameplay.environment.safe_mode_dangerous(direction)` predicate, and folds literal `u_has_part_flag`/`npc_has_part_flag` shapes (with the optional `enabled` boolean) to `false` because the base talker `has_part_flag` returns false and no Character/NPC talker overrides it, and folds literal `u_has_class` to `false` because the Character talker never overrides `is_myclass`; dynamic need/amount/rule/bodytype/trait/direction/flag/class values, the bare/npc mission forms, and other events remain explicit TODOs,
+`npc_is_outside` composes `services.gameplay.environment.is_outside(service_value(services.characters.snapshot(actor)).creature.position)`,
+literal valid `npc_aim_rule`, `npc_engagement_rule`, `npc_cbm_reserve_rule`,
+and `npc_cbm_recharge_rule` compare against `services.npcs.ai_rules(actor)`,
+and literal `npc_add_bionic`/`npc_lose_bionic`, `npc_learn_recipe`/`npc_forget_recipe`,
+`npc_learn_martial_art`/`npc_forget_martial_art`, and `npc_add_morale`/`npc_lose_morale`
+mirror their avatar effect counterparts;
+the bare `npc_at_safe_space` predicate composes the same
+`character_at_safe_space(actor)` safety conjunction,
+literal `npc_has_profession`/`npc_has_flag`/`npc_is_wearing` mirror their
+bounded avatar helpers against `context.actors.npc`, the bare
+`npc_has_pickup_list` predicate composes the same whitelist query,
+and literal `npc_has_class` composes
+`service_value(services.npcs.get(actor)).class.value`,
+while literal `u_lose_var`/`npc_lose_var` effects compose
+`services.variables.remove(actor, name)` (`u_add_var` stays primitive because
+the variables API has no native adjust), literal `u_message` composes the same
+`services.message(text)` player message as the bare `message` effect (the
+avatar target is the player), and literal `npc_message` is a deliberate no-op
+under `npc_becomes_hostile` (the legacy handler returns early for NPC
+targets), while literal `u_activate_trait`/`u_deactivate_trait` and their
+`npc_*` mirrors compose `services.mutations.set_active(actor, id, true|false)`
+(dynamic trait ids stay TODO);
+`npc_has_item` and `npc_has_move_mode` emit the
+same mirrored shapes but stay primitive in the ledger until full parity;
+dynamic values, unknown AI rules, and other events remain explicit TODOs.
+The proven `game_start` and four item-event Character slices
 also convert string `u_has_weapon`/`u_can_drop_weapon` and literal
 `u_has_wielded_with_flag`; literal `npc_set_flag`/`npc_unset_flag` convert only
 for those item events and retain the optional semantic item guard.  `and`,
@@ -1836,17 +2336,75 @@ equivalence.
 字段排放、怪物阵营、突变类型、突变分类、地形/家具连接组、建造分类、建造组、载具
 部件位置、载具部件分类、心情表情、伤害信息显示顺序、命名颜色、可旋转符号、物品、
 ASCII 图、肢体评分、全局命中距离配置、bash 伤害配置、服装改造、大地图土地用途、
-大地图视野配置、大地图位置、职业组、地图额外内容集合、载具组、故障组、爆炸光效、弹药效果、成瘾类型、角色修正器、起始位置、攀爬辅助、天气类型、分数、全局突变覆盖显示顺序、区域类型、语音池、结束画面、嵌套配方分类、攻击向量、
-魔法类型、移动模式、配方与简单事件/消息行为。受限的字面量
+大地图视野配置、大地图位置、职业组、地图额外内容集合、载具组、故障组、故障与故障
+修复、JSON flag、物品分类、配方分类、大门、配方组、弹药类型、黑名单、技能、熟练度
+分类、载具调色板、怪物组、场景、屠宰需求、物品动作、大地图连接、迁移、商人规则、
+环境音效与预加载、地图附加物、天气生成器、成就与操守、武术技巧、武术风格、陷阱、
+建造、家具、地形、梦境、爆炸光效、弹药效果、成瘾类型、角色修正器、起始位置、攀爬
+辅助、天气类型、分数、全局突变覆盖显示顺序、区域类型、语音池、结束画面、嵌套配方
+分类、攻击向量、
+魔法类型、移动模式、配方与简单事件/消息行为。重新生成的
+`data/mods/Migrated_Core/` 夹具当前携带上述领域的 4286 个完整转换核心条目，0 个
+部分骨架、0 个 TODO。受限的字面量
 `compare_string`、`compare_string_match_all`、`one_in_chance`、
-`x_in_y_chance`、`roll_contested`、`mod_is_loaded` 和 `current_dimension` 条件会转成 Platform service
-上的普通 Lua 谓词；随机条件只转换处于原生 service 范围内的有限字面量，动态分母、非正或
+`x_in_y_chance`、`roll_contested`、`mod_is_loaded`、`current_dimension` 和上下文无关的
+`is_day`、`is_season` 与 `is_weather` 条件会转成 Platform service
+上的普通 Lua 谓词；字面量 flag 且位置为 `context_val` 的 `map_furniture_with_flag` 与 `map_terrain_with_flag` 条件会组合 `services.gameplay.environment.furniture_has_flag`/`terrain_has_flag`；同样的 `context_val` + 字面量 ID 形状会把字面量 `map_terrain_id`、`map_furniture_id` 与 `map_field_id` 转成 `environment.terrain_id`、`environment.furniture_id` 与 `environment.field_exists`；`context_val` 位置的 `map_in_city` 与 `map_is_outside` 则组合 `services.overmap.is_in_city` 与 `environment.is_indoor_tile`（保留 legacy 的 z < -1 夹取与越界 false），`context_val` 位置的 `is_outside` 会生成同样的 `environment.is_outside` 形状，但在账本中保持 primitive 直到完整 parity；动态 flag/ID 与非 `context_val` 位置仍保留显式 TODO。已证明的 `game_start` avatar 切片还会把字面量 `u_is_on_terrain`/`u_is_on_furniture`/`u_is_in_field`/`u_is_on_terrain_with_flag`/`u_is_on_furniture_with_flag` 通过同一批 environment 谓词作用在 `service_value(services.characters.snapshot(actor)).creature.position` 上，`npc_becomes_hostile` 下提供对应的 `npc_*` 镜像；动态值与其他事件仍保留显式 TODO。字面量 `u_has_mission` 任务类型 ID 会在任意 `required_event` 中组合 `service_value(services.missions.avatar_has_active(services.types.id("mission", id)))`，裸 `u_has_camp` 谓词则组合 `service_value(services.camps.player_has_camp())`；动态/变量 `u_has_mission` ID 仍保留显式 TODO。随机条件只转换处于原生 service 范围内的有限字面量，动态分母、非正或
 越界的 `x/y`，以及非正、动态或过大的 die size 都会保留显式 TODO。字面量玩家
 `u_has_trait`、字面量数组 `u_has_any_trait`、`u_has_martial_art`、
 `u_using_martial_art`、`u_has_proficiency` 与指定 ID 的 `u_has_bionics` 会复用类型化
 突变、武术、熟练度和仿生装置查询。在已证明的 `game_start` avatar 切片中，字面量
 `u_has_bionics: "ANY"` 会组合 `bionics.summary`，字面量 `u_know_recipe` 会组合
-`recipes.knows`；动态值和未证明的 actor 上下文仍生成明确 TODO。已证明的
+`recipes.knows`，裸 `u_is_alive`、`u_is_avatar`、`u_is_character`、`u_exists`、`has_alpha` 与 `u_friend` 谓词恒为 `true`，而
+`u_is_npc`、`u_is_monster`、`u_is_item`、`u_is_furniture`、`u_is_vehicle`、`u_hostile`、
+`u_is_in_vehicle`、`u_controlling_vehicle`、`u_driving`、`u_is_riding`、`u_is_avatar_passenger`、
+`u_is_driven`、`u_is_remote_controlled` 与 `u_is_on_rails` 谓词恒为 `false`（新创建的角色在
+game-start 设置阶段绝不会死亡、敌对、骑乘或身处载具中），裸 `u_male`/`u_female` 谓词分别组合
+`service_value(services.characters.snapshot(actor)).male` 及其否定，字面量整数 `u_has_cash` 阈值则组合
+快照中按美分计数的 `cash` 字段，字面量 `u_has_profession` ID 则组合
+`character_has_profession(actor, profession_id)`，复现受保护的旧式当前职业或已持有爱好判断，
+字面量 `u_has_flag` 则组合
+`service_value(services.characters.has_flag(actor, services.types.id("json_flag", flag)))`
+并保留旧 `MUTATION_THRESHOLD` 分叉到 `crossed_threshold()` 的语义，裸
+`u_is_outside` 谓词则组合
+`services.gameplay.environment.is_outside(service_value(services.characters.snapshot(actor)).creature.position)`
+（因为 avatar 始终位于地图当前 z 层）；在已证明的 `game_start` 与四类物品事件 Character
+切片中，字面量 `u_is_wearing` 会组合
+`service_value(services.inventory.is_wearing(actor, services.types.id("item", item_id)))`
+并只匹配穿着物品的精确 `itype_id` 相等（绝不匹配手持物品、json flag、分类、充能或
+内容物）；动态/变量 `u_is_wearing` 值、`npc_is_wearing` 与未证明的 actor 上下文仍生成
+明确 TODO。`npc_is_alive`、非 `game_start` 的
+`u_is_alive`/`u_is_avatar`/`u_is_character`/`u_male`/`u_female`/`u_is_outside`、区间/var/math 形状的
+`u_has_cash`、动态或变量 `u_has_profession` 值、`npc_has_profession`、
+动态或变量 `u_has_flag` 值、`npc_has_flag`、`npc_becomes_hostile` 下的
+`u_has_flag`、动态值与未证明的 actor 上下文仍生成明确 TODO。在已证明的
+`npc_becomes_hostile` 切片中，字面量 `npc_has_trait`、非空字面量数组
+`npc_has_any_trait`、`npc_has_martial_art`、`npc_using_martial_art`、
+`npc_has_proficiency`、指定 ID 或 "ANY" 的 `npc_has_bionics` 会对照
+`context.actors.npc` 镜像其已有界的 avatar 兄弟分支；裸 `npc_at_safe_space` 谓词组合同样的
+`character_at_safe_space(actor)` 安全合取，
+字面量 `npc_has_profession`/`npc_has_flag`/`npc_is_wearing` 对照
+`context.actors.npc` 镜像其已有界的 avatar helper，裸 `npc_has_pickup_list` 谓词组合同样的
+白名单查询，字面量 `npc_has_class` 组合
+`service_value(services.npcs.get(actor)).class.value`，
+字面量 `u_lose_var`/`npc_lose_var` 效果则组合
+`services.variables.remove(actor, name)`（`u_add_var` 保持 primitive，因为变量
+API 没有原生 adjust），字面量 `u_message` 组合与裸 `message` 效果相同的
+`services.message(text)` 玩家消息（avatar 目标即玩家），字面量 `npc_message` 在
+`npc_becomes_hostile` 下是刻意的空操作（legacy handler 对 NPC 目标直接提前返回），
+字面量 `u_activate_trait`/`u_deactivate_trait` 及其 `npc_*` 镜像则组合
+`services.mutations.set_active(actor, id, true|false)`（动态特质 ID 保持 TODO）；裸 `npc_male`/`npc_female` 组合快照
+`male` 字段及其否定，`npc_is_character`、`npc_is_npc`、`npc_exists` 与 `npc_hostile` 恒为 `true`，
+而 `npc_is_avatar`、`npc_is_monster`、`npc_is_item`、`npc_is_furniture`、`npc_is_vehicle` 与 `npc_friend` 恒为 `false`，
+`has_alpha`/`has_beta` 仍保持 primitive 的对话投影 selector（`has_alpha` 仅在 `game_start` avatar 切片折为 `true`；`has_beta` 保持显式 TODO，因为其 legacy beta talker 在任何事件中都未证明），
+已证明的 `game_start` avatar 切片还会把仅载具覆盖的移动状态 `u_is_falling`/`u_is_floating`/`u_is_flying`/`u_is_sinking`/`u_is_skidding` 折为 `false`（Character talker 从不覆盖它们；`npc_becomes_hostile` 下提供对应的 `npc_*` 镜像），把退化的任务 selector `u_mission_complete`/`u_mission_failed`/`u_mission_goal`/`u_mission_incomplete`/`u_has_available_mission`/`u_has_many_available_missions` 折为 `false`、`u_has_no_available_mission` 折为 `true`（avatar talker 不暴露已选/可接任务），并把字面量 `u_need`/`npc_need` 形状（裸需求、整数 `amount` 或四个 sleepiness `level` 名）转成 `snapshot.needs.hunger|thirst|sleepiness > N` 比较，把字面量 `u_aim_rule`/`u_engagement_rule`/`u_cbm_recharge_rule`/`u_cbm_reserve_rule` 折为 `false`（只有 NPC talker 覆盖 `has_ai_rule`，avatar 的基础实现对任何规则都返回 false），并把字面量 `u_bodytype`/`npc_bodytype` 按硬编码的 Character 规则 `bodytype == "human"` 折叠，把 `u_can_float`/`u_can_fly`/`npc_can_float`/`npc_can_fly`/`u_following` 折为 `false`（基础 talker 返回 false 且无 Character talker 覆盖），并把字面量 `u_is_trait_purifiable`/`npc_is_trait_purifiable` 转成 `services.mutations.definition(...).availability.purifiable`，把裸 `u_available` 谓词折为 `true`（新创建的角色在 game-start 绝不携带 `currently_busy` 效果），把字面量 `u_rule` 与其他 AI 规则谓词一起折为 `false`，并把字面量 `u_safe_mode_trigger` 的方位角转成上下文无关的 `services.gameplay.environment.safe_mode_dangerous(direction)` 谓词，把字面量 `u_has_part_flag`/`npc_has_part_flag` 形状（含可选 `enabled` 布尔）折为 `false`（基础 talker 的 `has_part_flag` 返回 false 且无 Character/NPC talker 覆盖），把字面量 `u_has_class` 折为 `false`（Character talker 从不覆盖 `is_myclass`）；动态需求/数值/规则/体型/特质/方位/flag/职业值、裸名与 npc 任务形式及其他事件仍保留显式 TODO，`npc_is_outside` 组合
+`services.gameplay.environment.is_outside(service_value(services.characters.snapshot(actor)).creature.position)`，字面量合法值的
+`npc_aim_rule`、`npc_engagement_rule`、`npc_cbm_reserve_rule` 与 `npc_cbm_recharge_rule`
+对照 `services.npcs.ai_rules(actor)` 比较，字面量 `npc_add_bionic`/`npc_lose_bionic`、`npc_learn_recipe`/`npc_forget_recipe`、
+`npc_learn_martial_art`/`npc_forget_martial_art` 与 `npc_add_morale`/`npc_lose_morale`
+镜像其 avatar effect 兄弟分支；`npc_has_item` 与
+`npc_has_move_mode` 会生成同样的镜像形状，但在账本中仍保持 primitive，直到完整
+parity；动态值、未知 AI 规则与其他事件仍生成明确 TODO。已证明的
 `game_start` 与四类物品事件 Character 切片还会转换字符串
 `u_has_weapon`/`u_can_drop_weapon` 和字面量 `u_has_wielded_with_flag`；字面量
 `npc_set_flag`/`npc_unset_flag` 只在这四类物品事件中转换，并保留可选语义物品 guard。
