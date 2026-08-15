@@ -105,7 +105,8 @@ bool dispatch_character_display_skill_action(
 
 native_hook_result dispatch_native_dialogue_hook(
     std::string_view, const const_talker &, const const_talker &,
-    std::string_view, std::optional<std::string_view> )
+    std::string_view, std::optional<std::string_view>,
+    bool, std::optional<std::string_view> )
 {
     return {};
 }
