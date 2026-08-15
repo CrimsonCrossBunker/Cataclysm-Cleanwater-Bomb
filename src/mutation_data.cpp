@@ -56,6 +56,23 @@ generic_factory<mutation_branch> trait_factory( "trait" );
 } // namespace
 
 std::vector<dream> dreams;
+
+void cata::lua_platform::detail::append_dream( const dream &value )
+{
+    dreams.push_back( value );
+}
+
+std::size_t cata::lua_platform::detail::dream_count()
+{
+    return dreams.size();
+}
+
+void cata::lua_platform::detail::truncate_dreams( const std::size_t count )
+{
+    if( count <= dreams.size() ) {
+        dreams.resize( count );
+    }
+}
 std::map<mutation_category_id, std::vector<trait_id> > mutations_category;
 static std::map<mutation_category_id, mutation_category_trait> mutation_category_traits;
 
@@ -960,6 +977,22 @@ void mutation_branch::load_trait_blacklist( const JsonObject &jsobj )
     }
 }
 
+void cata::lua_platform::detail::insert_platform_trait_blacklist(
+    const std::vector<std::string> &entries )
+{
+    for( const std::string &entry : entries ) {
+        trait_blacklist.insert( trait_id( entry ) );
+    }
+}
+
+void cata::lua_platform::detail::erase_platform_trait_blacklist(
+    const std::vector<std::string> &entries )
+{
+    for( const std::string &entry : entries ) {
+        trait_blacklist.erase( trait_id( entry ) );
+    }
+}
+
 bool mutation_branch::trait_is_blacklisted( const trait_id &tid )
 {
     return trait_blacklist.count( tid );
@@ -1036,6 +1069,23 @@ void mutation_branch::load_trait_group( const JsonObject &jsobj )
     const trait_group::Trait_group_tag group_id( jsobj.get_string( "id" ) );
     const std::string subtype = jsobj.get_string( "subtype", "old" );
     load_trait_group( jsobj, group_id, subtype );
+}
+
+void cata::lua_platform::detail::insert_platform_trait_group(
+    const std::string &id,
+    const std::vector<std::pair<std::string, std::int64_t>> &entries )
+{
+    auto group = make_shared_fast<Trait_group_collection>( 100 );
+    for( const auto &[trait, weight] : entries ) {
+        group->add_trait_entry( trait_id( trait ), "", static_cast<int>( weight ) );
+    }
+    trait_groups[trait_group::Trait_group_tag( id )] = std::move( group );
+}
+
+void cata::lua_platform::detail::erase_platform_trait_group(
+    const std::string &id )
+{
+    trait_groups.erase( trait_group::Trait_group_tag( id ) );
 }
 
 static Trait_group &make_group_or_throw( const trait_group::Trait_group_tag &gid,

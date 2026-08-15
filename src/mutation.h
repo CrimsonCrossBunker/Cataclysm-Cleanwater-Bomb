@@ -50,6 +50,7 @@ struct dream {
         std::vector<translation> raw_messages; // The messages that the dream will give
 
     public:
+        friend class cata::lua_platform::content_transaction;
         std::vector<std::string> messages() const;
 
         mutation_category_id category; // The category that will trigger the dream
