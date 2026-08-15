@@ -1,0 +1,4305 @@
+# Lua-first migration report: `Migrated_Core`
+
+This report is generated from source structure, not proof of gameplay equivalence.
+No JSON loader, EOC runner, or raw legacy object was emitted.
+
+- Fully translated skeletons: 4286
+- Partial skeletons: 0
+- Explicit TODOs: 0
+
+## Fully translated skeletons
+
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/anatomy.json#0: anatomy human_anatomy
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/anatomy.json#1: anatomy default_anatomy
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/attack_vectors.json#0: attack vector test_test
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/attack_vectors.json#1: attack vector vector_headbutt
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/attack_vectors.json#2: attack vector vector_bite
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/attack_vectors.json#3: attack vector vector_punch
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/attack_vectors.json#4: attack vector vector_wrist
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/attack_vectors.json#5: attack vector vector_palm
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/attack_vectors.json#6: attack vector vector_grasp
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/attack_vectors.json#7: attack vector vector_backhand
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/attack_vectors.json#8: attack vector vector_shoulder
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/attack_vectors.json#9: attack vector vector_arm
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/attack_vectors.json#10: attack vector vector_arm_grapple
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/attack_vectors.json#11: attack vector vector_elbow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/attack_vectors.json#12: attack vector vector_foot_toes
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/attack_vectors.json#13: attack vector vector_foot_sole
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/attack_vectors.json#14: attack vector vector_foot_heel
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/attack_vectors.json#15: attack vector vector_knee
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/attack_vectors.json#16: attack vector vector_shin
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/bash_damage_profiles.json#0: bash damage profile default
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/bash_damage_profiles.json#1: bash damage profile wooden_door
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#14: sub body part sub_limb_debug
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#15: sub body part sub_limb_debug_tail
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#16: sub body part sub_limb_debug_muzzle
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#17: sub body part torso_upper
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#18: sub body part torso_neck
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#19: sub body part torso_lower
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#20: sub body part torso_hanging_front
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#21: sub body part torso_hanging_back
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#22: sub body part leg_draped_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#23: sub body part leg_draped_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#24: sub body part torso_waist
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#25: sub body part arm_shoulder_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#26: sub body part arm_upper_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#27: sub body part arm_elbow_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#28: sub body part arm_lower_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#29: sub body part arm_shoulder_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#30: sub body part arm_upper_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#31: sub body part arm_elbow_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#32: sub body part arm_lower_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#33: sub body part leg_hip_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#34: sub body part leg_upper_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#35: sub body part leg_knee_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#36: sub body part leg_lower_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#37: sub body part leg_hip_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#38: sub body part leg_upper_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#39: sub body part leg_knee_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#40: sub body part leg_lower_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#41: sub body part hand_wrist_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#42: sub body part hand_palm_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#43: sub body part hand_back_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#44: sub body part hand_fingers_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#45: sub body part hand_wrist_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#46: sub body part hand_palm_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#47: sub body part hand_back_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#48: sub body part hand_fingers_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#49: sub body part eyes_left
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#50: sub body part eyes_right
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#51: sub body part mouth_lips
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#52: sub body part mouth_nose
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#53: sub body part mouth_cheeks
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#54: sub body part mouth_chin
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#55: sub body part foot_sole_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#56: sub body part foot_arch_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#57: sub body part foot_toes_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#58: sub body part foot_ankle_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#59: sub body part foot_heel_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#60: sub body part foot_sole_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#61: sub body part foot_arch_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#62: sub body part foot_toes_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#63: sub body part foot_ankle_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#64: sub body part foot_heel_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#65: sub body part head_forehead
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#66: sub body part head_crown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#67: sub body part head_nape
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#68: sub body part head_throat
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#69: sub body part head_ear_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/body_parts.json#70: sub body part head_ear_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/butchery_requirements.json#0: butchery requirement default
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/clothing_mods.json#0: clothing modification leather_padded
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/clothing_mods.json#1: clothing modification steel_padded
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/clothing_mods.json#2: clothing modification kevlar_padded
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/clothing_mods.json#3: clothing modification furred
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/clothing_mods.json#4: clothing modification wooled
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#0: connect group WALL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#1: connect group CHAINFENCE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#2: connect group WOODFENCE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#3: connect group RAILING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#4: connect group POOLWATER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#5: connect group WATER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#6: connect group PAVEMENT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#7: connect group PAVEMENT_MARKING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#8: connect group PAVEMENT_ZEBRA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#9: connect group RAIL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#10: connect group COUNTER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#11: connect group LIXATUBE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#12: connect group CANVAS_WALL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#13: connect group SAND
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#14: connect group SANDMOUND
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#15: connect group SANDPILE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#16: connect group SANDGLASS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#17: connect group GRAVELPILE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#18: connect group PIT_DEEP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#19: connect group LINOLEUM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#20: connect group CARPET
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#21: connect group CONCRETE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#22: connect group BRICKFLOOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#23: connect group MARBLEFLOOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#24: connect group CLAY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#25: connect group CLAYMOUND
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#26: connect group DIRT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#27: connect group DIRTMOUND
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#28: connect group MUD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#29: connect group PLANTER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#30: connect group ROCKFLOOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#31: connect group MULCHFLOOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#32: connect group METALFLOOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#33: connect group WOODFLOOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#34: connect group INDOORFLOOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#35: connect group BEACH_FORMATIONS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#36: connect group ICE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#37: connect group ALIENMEADOW
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#38: connect group GREENHOUSE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/connect_groups.json#39: connect group STRING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_category.json#0: construction category ALL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_category.json#1: construction category APPLIANCE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_category.json#2: construction category CONSTRUCT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_category.json#3: construction category FURN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_category.json#4: construction category DIG
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_category.json#5: construction category REPAIR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_category.json#6: construction category REINFORCE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_category.json#7: construction category DECORATE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_category.json#8: construction category FARM_WOOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_category.json#9: construction category TOOL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_category.json#10: construction category WINDOWS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_category.json#11: construction category BULK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_category.json#12: construction category OTHER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_category.json#13: construction category DECONSTRUCT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_category.json#14: construction category FILTER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#0: construction group armor_reinforced_window
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#1: construction group board_up_window
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#2: construction group wooden_shutters
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#3: construction group board_up_wood_door
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#4: construction group build_a_bellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#5: construction group build_a_drop_hammer
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#6: construction group build_a_radio_tower
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#7: construction group build_a_radio_tower_console
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#8: construction group build_arc_furnace
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#9: construction group place_arc_furnace
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#10: construction group build_armchair
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#11: construction group build_bar_door
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#12: construction group build_barbed_wire_fence
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#13: construction group build_beaded_curtain
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#14: construction group build_bed
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#15: construction group build_down_bed
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#16: construction group build_bookcase
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#17: construction group build_brick_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#18: construction group build_brick_wall_from_adobe
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#19: construction group build_bulletin_board
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#20: construction group build_butchering_rack
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#21: construction group build_cardboard_fort
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#22: construction group build_chainlink_fence
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#23: construction group build_chainlink_gate
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#24: construction group build_chair
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#25: construction group build_charcoal_kiln
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#26: construction group build_chest
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#27: construction group build_chickenwire_fence
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#28: construction group build_chickenwire_gate
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#29: construction group build_clay_kiln
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#30: construction group build_coat_rack
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#31: construction group build_coffee_table
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#32: construction group build_coffin
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#33: construction group build_concrete_column
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#34: construction group build_concrete_floor
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#35: construction group build_concrete_floor_with_roof
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#36: construction group build_counter
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#37: construction group build_counter_gate
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#38: construction group build_crate
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#39: construction group build_cupboard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#40: construction group build_decorative_tree
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#41: construction group build_deep_river_dock
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#42: construction group build_desk
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#43: construction group build_diagonal_small_railroad_track
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#44: construction group build_door
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#45: construction group build_door_curtain
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#46: construction group build_door_grass_curtain
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#47: construction group build_double_glazed_glass_window
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#48: construction group build_dresser
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#49: construction group build_dry_stone_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#50: construction group build_dumpster
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#51: construction group build_metal_trashcan
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#52: construction group build_gravelbag_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#53: construction group build_earthbag_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#54: construction group build_showjump_end
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#55: construction group build_showjump
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#56: construction group build_entertainment_center
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#57: construction group build_exercise_machine
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#58: construction group build_parkour_bars
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#59: construction group build_fence
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#60: construction group build_fence_gate
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#61: construction group build_fence_posts
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#62: construction group build_fermenting_vat
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#63: construction group build_wooden_fermenting_vat
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#64: construction group build_compost_tank
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#65: construction group build_fire_ring
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#66: construction group build_treadmill_mechanical
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#67: construction group build_glass_door
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#68: construction group build_glass_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#69: construction group build_high_end_of_an_earth_ramp
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#70: construction group build_high_end_of_a_concrete_ramp
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#71: construction group build_improvised_shelter
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#72: construction group build_junk_metal_barrier
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#73: construction group build_junk_metal_floor
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#74: construction group build_large_metal_support
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#75: construction group build_locker
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#76: construction group build_primitive_floor_with_log_sod_roof
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#77: construction group build_log_stool
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#78: construction group build_log_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#79: construction group build_low_end_of_an_earth_ramp
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#80: construction group build_low_end_of_a_concrete_ramp
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#81: construction group build_mailbox
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#82: construction group build_makeshift_bed
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#83: construction group build_makeshift_door
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#84: construction group build_mechanical_winch
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#85: construction group build_ergometer_mechanical
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#86: construction group build_metal_bars
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#87: construction group build_metal_charcoal_kiln
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#88: construction group place_char_kiln
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#89: construction group build_metal_door
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#90: construction group build_metal_gate
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#91: construction group build_metal_grate_over_a_window
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#92: construction group build_metal_grate_over_a_window_without_glass
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#93: construction group build_metal_rack
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#94: construction group build_scrap_floor_with_roof
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#95: construction group build_metal_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#96: construction group build_palisade_gate
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#97: construction group build_palisade_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#98: construction group build_pile_of_leaves
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#99: construction group place_hammock
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#100: construction group place_net_hammock
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#101: construction group build_pillow_fort
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#102: construction group build_pine_lean_to
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#103: construction group build_planter
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#104: construction group build_bee_hive
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#105: construction group build_plastic_window
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#106: construction group build_pontoon_bridge
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#107: construction group build_pony_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#108: construction group build_privacy_fence
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#109: construction group build_privacy_fence_gate
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#110: construction group build_quadruple_glazed_glass_window
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#111: construction group build_rammed_earth_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#112: construction group build_reinforced_concrete_floor_with_roof
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#113: construction group build_reinforced_concrete_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#114: construction group build_reinforced_concrete_wall_ropes
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#115: construction group build_brick_wall_embrasure
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#116: construction group build_brick_wall_embrasure_from_adobe
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#117: construction group build_rock_wall_embrasure
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#118: construction group build_wood_wall_embrasure
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#119: construction group build_log_wall_embrasure
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#120: construction group build_palisade_wall_embrasure
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#121: construction group build_sconcrete_wall_embrasure
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#122: construction group build_strconcrete_wall_embrasure
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#123: construction group build_reinforced_double_glazed_glass_window
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#124: construction group build_reinforced_glass_window
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#125: construction group build_reinforced_plastic_window
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#126: construction group build_reinforced_quadruple_glazed_glass_window
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#127: construction group build_reinforced_single_glazed_glass_window
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#128: construction group build_reinforced_triple_glazed_glass_window
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#129: construction group build_river_bridge
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#130: construction group build_river_dock_shallow_bridge
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#131: construction group build_road_barricade
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#132: construction group build_rock_forge
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#133: construction group build_floor_with_treated_roof
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#134: construction group build_dirt_floor
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#135: construction group build_root_cellar
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#136: construction group build_rope_fence
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#137: construction group build_rope_pulley_system
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#138: construction group build_safe
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#139: construction group build_sand_castle
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#140: construction group build_sandbag_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#141: construction group build_scrap_metal_bridge_using_bolts
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#142: construction group build_scrap_metal_bridge_using_welder
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#143: construction group build_scrap_metal_table
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#144: construction group build_screen_door
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#145: construction group build_screen_mesh_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#146: construction group build_shallow_temporary_bridge
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#147: construction group build_sign
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#148: construction group build_simple_concrete_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#149: construction group build_single_glazed_glass_window
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#150: construction group build_sky_light
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#151: construction group build_sky_light_frame
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#152: construction group build_small_metal_support
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#153: construction group build_smoking_rack
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#154: construction group build_solar_cooker
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#155: construction group build_spinwheel
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#156: construction group build_stationary_scutcher
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#157: construction group build_split_rail_fence
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#158: construction group build_split_rail_fence_gate
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#159: construction group build_standing_tank
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#160: construction group build_storage_tank
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#161: construction group build_brick_fireplace
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#162: construction group build_stone_fireplace
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#163: construction group build_stone_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#164: construction group build_stool
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#165: construction group build_straight_small_railroad_track
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#166: construction group build_straw_bed
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#167: construction group build_table
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#168: construction group build_tarp_lean_to
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#169: construction group build_triple_glazed_glass_window
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#170: construction group build_wardrobe
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#171: construction group build_warehouse_shelf
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#172: construction group build_water_well
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#173: construction group build_wattle_and_daub_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#174: construction group build_window
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#175: construction group build_window_from_tempered_glass
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#176: construction group build_wire_fence
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#177: construction group build_wood_stove
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#178: construction group build_wood_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#179: construction group build_wooden_floor
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#180: construction group build_wooden_gangway
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#181: construction group build_metal_gangway
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#182: construction group build_wooden_keg
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#183: construction group build_wooden_rack
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#184: construction group build_wooden_rack_primitive
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#185: construction group build_wooden_railing
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#186: construction group build_wooden_staircase
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#187: construction group build_woven_wattle_fence
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#188: construction group carpet_floor_green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#189: construction group carpet_floor_purple
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#190: construction group carpet_floor_red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#191: construction group carpet_floor_yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#192: construction group chop_tree_trunk_into_planks
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#193: construction group clean_broken_window
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#194: construction group cover_manhole
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#195: construction group cut_grass
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#196: construction group deconstruct_furniture
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#197: construction group deconstruct_simple_furniture
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#198: construction group dig_a_shallow_pit
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#199: construction group dig_a_pit
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#200: construction group construct_open_air
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#201: construction group dig_a_water_channel
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#202: construction group dig_a_small_water_basin
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#203: construction group fill_a_water_channel
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#204: construction group dig_downstair
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#205: construction group dig_grave_and_bury_sealed_coffin
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#206: construction group extract_clay
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#207: construction group extract_sand
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#208: construction group extract_dirt
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#209: construction group extrude_resin_floor_and_roof
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#210: construction group extrude_resin_floor_no_roof
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#211: construction group extrude_resin_lattice
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#212: construction group extrude_resin_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#213: construction group fill_pit_with_dirt
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#214: construction group pit_straw
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#215: construction group fill_salt_water_with_dirt
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#216: construction group fill_shallow_water_with_dirt
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#217: construction group fill_recess_with_dirt
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#218: construction group glass_pit
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#219: construction group hang_hanging_meathook
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#220: construction group install_bars_onto_window
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#221: construction group jackhammer_resin_cage
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#222: construction group lay_down_decorative_ground_cable
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#223: construction group make_crafting_spot
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#224: construction group make_stooking_spot
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#225: construction group make_gravel_floor
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#226: construction group make_rubber_mulch
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#227: construction group make_woodchip_floor
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#228: construction group mark_firewood_source
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#229: construction group mark_practice_target
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#230: construction group mine_downstair
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#231: construction group mine_resin_cage
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#232: construction group mine_upstair
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#233: construction group paint_grass_white
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#234: construction group paint_pavement_yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#235: construction group paint_wall_blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#236: construction group paint_wall_green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#237: construction group paint_wall_purple
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#238: construction group paint_wall_red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#239: construction group paint_wall_white
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#240: construction group paint_wall_yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#241: construction group paint_wall_orange
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#242: construction group paint_wall_pink
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#243: construction group paint_wall_gray
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#244: construction group paint_wall_cyan
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#245: construction group paint_wall_brown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#246: construction group paint_wall_black
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#247: construction group place_veh_tools_kitchen
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#248: construction group place_veh_tools_workshop
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#249: construction group place_apartment_fridge
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#250: construction group place_big_portable_fridge
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#251: construction group place_glass_fridge
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#252: construction group place_glass_fridge_double
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#253: construction group place_heavy_duty_fridge
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#254: construction group place_display_fridge
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#255: construction group place_minifridge
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#256: construction group place_mobile_weather_station
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#257: construction group place_xedra_mobile_weather_station
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#258: construction group place_robofac_mobile_weather_station
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#259: construction group place_apartment_freezer
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#260: construction group place_minifreezer
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#261: construction group place_big_portable_freezer
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#262: construction group place_chest_freezer
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#263: construction group place_heavy_duty_freezer
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#264: construction group place_glass_freezer
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#265: construction group place_display_freezer
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#266: construction group place_stereo
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#267: construction group place_oven
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#268: construction group place_water_purifier
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#269: construction group place_microwave
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#270: construction group place_arcade_machine
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#271: construction group place_electric_forge
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#272: construction group place_kiln
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#273: construction group place_glassblowers_crucible
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#274: construction group place_drill_press
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#275: construction group place_power_hammer
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#276: construction group place_steel_kiln
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#277: construction group place_tablesaw
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#278: construction group place_mitresaw
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#279: construction group place_bandsaw
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#280: construction group place_router
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#281: construction group place_planer
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#282: construction group place_jointer
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#283: construction group place_catalytic_cracking_reactor
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#284: construction group place_hydraulic_press
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#285: construction group place_air_compressor
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#286: construction group place_heater_large
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#287: construction group place_heater_small
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#288: construction group place_wall_light
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#289: construction group place_standing_lamp
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#290: construction group place_exodii_lamp
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#291: construction group place_nl_exodii_lamp
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#292: construction group place_solar_panel
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#293: construction group place_ground_solar_panel
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#294: construction group place_reinforced_solar_panel
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#295: construction group place_solar_panel_v2
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#296: construction group place_ground_solar_panel_v2
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#297: construction group place_reinforced_solar_panel_v2
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#298: construction group place_wind_turbine
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#299: construction group place_xl_wind_turbine
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#300: construction group place_water_wheel
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#301: construction group place_xl_water_wheel
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#302: construction group place_small_battery
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#303: construction group place_medium_battery
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#304: construction group place_battery
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#305: construction group place_large_battery
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#306: construction group place_car_battery
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#307: construction group place_motorbike_battery
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#308: construction group place_motorbike_small_battery
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#309: construction group place_washing_machine
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#310: construction group place_dishwasher
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#311: construction group place_electric_cooker
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#312: construction group place_autoclave
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#313: construction group place_standing_floodlight
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#314: construction group place_standing_directed_floodlight
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#315: construction group place_ap_foot_locker_recharge_station
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#316: construction group place_ap_box_battery_charger
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#317: construction group reveal_wall_wiring
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#318: construction group place_wall_wiring
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#319: construction group place_anvil
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#320: construction group place_anvil_bronze
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#321: construction group place_camp_anvil
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#322: construction group place_anvil_heavy
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#323: construction group place_anvil_crude
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#324: construction group place_anvil_ingot
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#325: construction group place_anvil_scavenged
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#326: construction group place_forge
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#327: construction group place_nitrogen_generator
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#328: construction group place_ammonia_machine_reactor
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#329: construction group place_ammonia_machine_pipework
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#330: construction group place_electrolyzer_makeshift
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#331: construction group place_hay_bale
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#332: construction group place_still
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#333: construction group place_table
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#334: construction group place_water_mill
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#335: construction group place_wind_mill
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#336: construction group place_screw_press
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#337: construction group place_workbench
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#338: construction group reinforce_boarded_window
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#339: construction group reinforce_junk_metal_wall_using_bolts
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#340: construction group reinforce_junk_metal_wall_using_spot_welds
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#341: construction group reinforce_wood_door
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#342: construction group remove_grass
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#343: construction group remove_tape_from_window
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#344: construction group remove_wax_from_floor
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#345: construction group repair_log_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#346: construction group repair_wattle_and_daub_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#347: construction group repair_wood_door
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#348: construction group repair_wood_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#349: construction group repair_wooden_staircase
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#350: construction group seal_coffin
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#351: construction group seal_crate
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#352: construction group spike_pit
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#353: construction group start_vehicle_construction
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#354: construction group take_paint_off_pavement
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#355: construction group take_paint_off_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#356: construction group tape_up_window
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#357: construction group wax_floor
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#358: construction group remove_gravel
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#359: construction group remove_rubber_mulch
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#360: construction group remove_empty_window
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#361: construction group remove_linoleum_tiles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#362: construction group deconstruct_fireplace
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#363: construction group remove_reinforced_concrete_floor
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#364: construction group remove_concrete_floor
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#365: construction group remove_floor
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#366: construction group remove_concrete_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#367: construction group remove_brick_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#368: construction group remove_wooden_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#369: construction group remove_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#370: construction group remove_rock_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#371: construction group remove_roadway
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#372: construction group remove_metal_door
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#373: construction group remove_concrete_column
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#374: construction group remove_reinforced_concrete_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#375: construction group remove_rebar_cage
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#376: construction group remove_glass_wall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#377: construction group remove_glass_door
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#378: construction group hang_heavy_punching_bag
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#379: construction group build_training_dummy_light
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#380: construction group build_training_dummy_heavy
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#381: construction group build_archery_target_box
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#382: construction group build_archery_target_bale
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#383: construction group build_flagpole
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#384: construction group build_clay_oven
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#385: construction group place_asrg_containment
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#386: construction group build_rope_hoist
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#387: construction group build_rope_tackle_hoist
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#388: construction group build_chain_hoist
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#389: construction group clear_rubble
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#390: construction group build_bench_wooden
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#391: construction group place_barstool
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#392: construction group place_chair_plywood
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#393: construction group place_chair_wood_black
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#394: construction group place_chair_wood_white
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#395: construction group place_travel_toilet
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#396: construction group place_oxygen_concentrator
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#397: construction group place_hd_compressor_unit
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#398: construction group obstacle_rock
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#399: construction group constr_excavate_forestfloor
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#400: construction group constr_dirtmound
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#401: construction group build_brick_oven
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#402: construction group sand_bulk
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#403: construction group gravel_bulk
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#404: construction group pebble_bulk
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#405: construction group clay_bulk
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#406: construction group rock_bulk
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#407: construction group rock_large_bulk
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#408: construction group glass_bulk
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#409: construction group log_bulk
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#410: construction group plank_bulk
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#411: construction group stick_bulk
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#412: construction group stick_long_bulk
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#413: construction group brick_bulk
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#414: construction group adobe_bulk
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#415: construction group rebar_bulk
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#416: construction group pipe_bulk
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#417: construction group place_piano
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#418: construction group build_scaffolding
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#419: construction group remove_scaffolding
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#420: construction group build_brick_roof
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#421: construction group build_concrete_roof
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#422: construction group build_flat_roof
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#423: construction group build_log_sod_roof
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#424: construction group build_metal_roof
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#425: construction group build_metal_flat_roof
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#426: construction group extrude_resin_roof
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#427: construction group build_shingle_flat_roof
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#428: construction group build_thatched_roof
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#429: construction group build_treated_wood_roof
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#430: construction group build_wood_roof
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#431: construction group build_chimney
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#432: construction group build_vent_pipe
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#433: construction group cover_windowframe_with_sheet
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#434: construction group build_beanbag
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#435: construction group place_lathe
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#436: construction group place_deep_fryer
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#437: construction group place_oil_press_industrial
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#438: construction group install_glass_onto_window_bars
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#439: construction group build_flagpole_indoor_wooden
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/construction_group.json#440: construction group place_nl_safehouse_boiler
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/damage_types.json#0: damage type bash
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/damage_types.json#1: damage info order bash
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/damage_types.json#2: damage type cut
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/damage_types.json#3: damage info order cut
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/damage_types.json#4: damage type stab
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/damage_types.json#5: damage info order stab
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/damage_types.json#6: damage type bullet
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/damage_types.json#7: damage info order bullet
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/damage_types.json#8: damage type acid
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/damage_types.json#9: damage info order acid
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/damage_types.json#10: damage type electric
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/damage_types.json#11: damage info order electric
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/damage_types.json#12: damage type heat
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/damage_types.json#13: damage info order heat
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/damage_types.json#14: damage type cold
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/damage_types.json#15: damage info order cold
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/damage_types.json#16: damage type biological
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/damage_types.json#17: damage info order biological
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/damage_types.json#18: damage type pure
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/damage_types.json#19: damage info order pure
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/default_blacklist.json#0: blacklist monster
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/disease.json#0: disease type bad_food
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/disease.json#1: disease type highly_contaminated_food
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#0: dream LIZARD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#1: dream MEDICAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#2: dream RABBIT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#3: dream BIRD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#4: dream GASTROPOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#5: dream CHIROPTERAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#6: dream BATRACHIAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#7: dream FISH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#8: dream BEAST
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#9: dream URSINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#10: dream FELINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#11: dream LUPINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#12: dream CATTLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#13: dream INSECT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#14: dream PLANT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#15: dream SLIME
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#16: dream TROGLOBITE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#17: dream CEPHALOPOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#18: dream SPIDER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#19: dream RAT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#20: dream ALPHA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#21: dream ELFA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#22: dream CHIMERA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#23: dream RAPTOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#24: dream MOUSE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#25: dream MARLOSS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#26: dream INTERSTICE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#27: dream CRUSTACEAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#28: dream LIZARD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#29: dream MEDICAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#30: dream RABBIT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#31: dream CHIROPTERAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#32: dream GASTROPOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#33: dream BATRACHIAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#34: dream BIRD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#35: dream FISH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#36: dream BEAST
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#37: dream URSINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#38: dream FELINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#39: dream LUPINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#40: dream CATTLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#41: dream INSECT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#42: dream PLANT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#43: dream SLIME
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#44: dream TROGLOBITE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#45: dream CEPHALOPOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#46: dream SPIDER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#47: dream RAT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#48: dream ALPHA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#49: dream ELFA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#50: dream CHIMERA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#51: dream RAPTOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#52: dream MOUSE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#53: dream CRUSTACEAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#54: dream INTERSTICE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#55: dream LIZARD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#56: dream RABBIT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#57: dream MEDICAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#58: dream BIRD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#59: dream CHIROPTERAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#60: dream FISH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#61: dream BATRACHIAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#62: dream GASTROPOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#63: dream BEAST
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#64: dream URSINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#65: dream FELINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#66: dream LUPINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#67: dream CATTLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#68: dream INSECT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#69: dream PLANT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#70: dream SLIME
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#71: dream TROGLOBITE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#72: dream CEPHALOPOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#73: dream SPIDER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#74: dream RAT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#75: dream ALPHA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#76: dream ELFA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#77: dream CHIMERA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#78: dream RAPTOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#79: dream MOUSE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#80: dream CRUSTACEAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#81: dream INTERSTICE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#82: dream LIZARD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#83: dream MEDICAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#84: dream BIRD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#85: dream RABBIT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#86: dream FISH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#87: dream BEAST
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#88: dream URSINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#89: dream FELINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#90: dream LUPINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#91: dream CATTLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#92: dream CHIROPTERAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#93: dream INSECT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#94: dream PLANT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#95: dream SLIME
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#96: dream TROGLOBITE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#97: dream CEPHALOPOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#98: dream SPIDER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#99: dream RAT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#100: dream ALPHA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#101: dream ELFA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#102: dream GASTROPOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#103: dream BATRACHIAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#104: dream CHIMERA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#105: dream RAPTOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#106: dream MOUSE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#107: dream CRUSTACEAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#108: dream MYCUS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/dreams.json#109: dream INTERSTICE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#0: emission emit_tobacco_trail
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#1: emission emit_joint_trail
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#2: emission emit_AEP_SMOKE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#3: emission emit_smoke_blast
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#4: emission emit_smoke_plume
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#5: emission emit_small_smoke_plume
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#6: emission emit_smaller_smoke_plume
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#7: emission emit_smoke_stream
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#8: emission emit_tear_gas_stream
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#9: emission emit_tear_gas_blast
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#10: emission emit_toxic_blast
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#11: emission emit_toxic_leak
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#12: emission emit_toxic_stream
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#13: emission emit_relax_gas_blast
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#14: emission emit_relax_gas_leak
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#15: emission emit_tear_gas_leak
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#16: emission emit_tear_gas_toad
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#17: emission emit_tindalos_gas_leak
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#18: emission emit_twisting_mass_dust
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#19: emission emit_toxic_cloud
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#20: emission emit_toxic_belch
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#21: emission emit_acid_drop
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#22: emission emit_shadow_field
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#23: emission emit_spark
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#24: emission emit_shock_burst
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#25: emission emit_shock_burst_rat
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#26: emission emit_shock_cloud
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#27: emission emit_shock_cloud_big
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#28: emission emit_cold_air2_stream
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#29: emission emit_cold_air2_blast
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#30: emission emit_hot_air2_stream
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#31: emission emit_pollen_stream
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#32: emission emit_hot_air2_blast
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#33: emission emit_heater_vehicle
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#34: emission emit_cooler_vehicle
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#35: emission emit_hot_air_migo_seep
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#36: emission emit_hot_air_migo_blast
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#37: emission emit_migo_atmosphere
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#38: emission emit_glimmer
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#39: emission emit_plasma
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#40: emission emit_plasma_continuously
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#41: emission emit_fungicidal_stream
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#42: emission emit_insecticidal_stream
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#43: emission emit_small_fungicidal_stream
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#44: emission emit_small_insecticidal_stream
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#45: emission emit_fungal_haze_plume
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#46: emission emit_fungal_leak
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#47: emission emit_fungal_blast
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#48: emission emit_hallucinogenic_spores
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#49: emission emit_hallucinogenic_spores_blast
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#50: emission emit_swamp_gas_leak
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#51: emission emit_fog_plume
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#52: emission emit_extinguisher_burst
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#53: emission emit_rad_leak
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#54: emission emit_rad_cloud
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#55: emission emit_web_small
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#56: emission emit_sludge_puddle
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#57: emission emit_tiny_fire
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#58: emission emit_clairvoyant
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#59: emission emit_bees
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#60: emission emit_monster_gas_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#61: emission emit_monster_gas_2
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#62: emission emit_nauseating_smell
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#63: emission emit_scarlet_sea_wave
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/emit.json#64: emission emit_scarlet_sea_gas
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/explosion_lights.json#0: explosion light default_blast
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/explosion_lights.json#1: explosion light fire_blast
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/explosion_lights.json#2: explosion light rainbow_blast
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/explosion_lights.json#3: explosion light muzzle_flash
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/explosion_lights.json#4: explosion light impact_spark
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/explosion_lights.json#5: explosion light bullet_tracer
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/explosion_lights.json#6: explosion light beam_laser
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/explosion_lights.json#7: explosion light beam_plasma
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/explosion_lights.json#8: explosion light beam_lightning
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/explosion_lights.json#9: explosion light emp_blast
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/explosion_lights.json#10: explosion light flashbang_blast
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/explosion_lights.json#11: explosion light gas_cloud
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/explosion_lights.json#12: explosion light incendiary_blast
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/explosion_lights.json#13: explosion light smoke_cloud
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/fault_groups_armor.json#0: fault group plate_lc
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/fault_groups_armor.json#1: fault group plate_mc
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/fault_groups_armor.json#2: fault group plate_hc
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/fault_groups_armor.json#3: fault group plate_ch
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/fault_groups_armor.json#4: fault group plate_qt
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/fault_groups_armor.json#5: fault group fabric_cotton
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/fault_groups_armor.json#6: fault group fabric_denim
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/fault_groups_electronics.json#0: fault group electronic_general
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/fault_groups_melee.json#0: fault group handle_short
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/fault_groups_melee.json#1: fault group handle_long
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/fault_groups_melee.json#2: fault group steel_pipe_short
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/fault_groups_melee.json#3: fault group steel_pipe_long
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/fault_groups_melee.json#4: fault group bladed_weapon_craft_failures
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/fault_groups_melee.json#5: fault group blade_general
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/fault_groups_melee.json#6: fault group blade_general_no_tip
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/fault_groups_melee.json#7: fault group spearhead
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/fault_groups_melee.json#8: fault group staff_short
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/fault_groups_melee.json#9: fault group staff_long
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/faults_vehicles.json#0: fault group any_ICE_engine_maintenance
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/faults_vehicles.json#1: fault group diesel_engine_maintenance
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/faults_vehicles.json#2: fault group gasoline_engine_maintenance
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/faults_vehicles.json#3: fault group any_ICE_defect
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/faults_vehicles.json#4: fault group steam_engine_maintenance
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/faults_vehicles.json#5: fault group tire_defects
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/faults_vehicles.json#6: fault fault_engine_belt_drive
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/faults_vehicles.json#7: fault fault_engine_glow_plug
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/faults_vehicles.json#8: fault fault_engine_immobiliser
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/faults_vehicles.json#9: fault fault_engine_pump_diesel
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/faults_vehicles.json#10: fault fault_engine_filter_air
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/faults_vehicles.json#11: fault fault_engine_filter_fuel
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/faults_vehicles.json#12: fault fault_engine_pump_fuel
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/faults_vehicles.json#13: fault fault_engine_starter
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/faults_vehicles.json#14: fault fault_punctured_tires
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/faults_vehicles.json#15: fault fault_flat_tire_riding_on_rims
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/faults_vehicles.json#16: fault fault_tire_treads
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/faults_vehicles.json#17: fault fault_broken_window
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/faults_vehicles.json#18: fault fault_axle_broken
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/faults/faults_vehicles.json#19: fault fault_cracked_rim
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags/trap.json#0: JSON flag SONAR_DETECTABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags/trap.json#1: JSON flag CONVECTS_TEMPERATURE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags/trap.json#2: JSON flag UNDODGEABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags/widget.json#0: JSON flag W_LABEL_NONE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags/widget.json#1: JSON flag W_DISABLED_WHEN_EMPTY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags/widget.json#2: JSON flag W_DISABLED_BY_DEFAULT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags/widget.json#3: JSON flag W_DYNAMIC_HEIGHT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags/widget.json#4: JSON flag W_NO_PADDING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#0: JSON flag DEBUG_ONLY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#1: JSON flag NO_PAINT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#2: JSON flag SWIM_UNDER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#3: JSON flag ABLATIVE_CHAINMAIL_ARMS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#4: JSON flag ABLATIVE_CHAINMAIL_ELBOWS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#5: JSON flag ABLATIVE_CHAINMAIL_LEGS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#6: JSON flag ABLATIVE_CHAINMAIL_KNEES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#7: JSON flag ABLATIVE_CHAINMAIL_TORSO
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#8: JSON flag ABLATIVE_LARGE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#9: JSON flag ABLATIVE_MANTLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#10: JSON flag STAR_PLATE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#11: JSON flag STAR_SHOULDER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#12: JSON flag STAR_SKIRT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#13: JSON flag ABLATIVE_MEDIUM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#14: JSON flag ABLATIVE_SKIRT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#15: JSON flag ABLATIVE_HELMET
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#16: JSON flag ACTIVE_CLOAKING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#17: JSON flag ALCOHOL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#18: JSON flag ALCOHOL_STRONG
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#19: JSON flag ALCOHOL_WEAK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#20: JSON flag ALLOWS_TAIL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#21: JSON flag ALLOWS_GASTROPOD_FOOT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#22: JSON flag ALLOWS_LEG_TENTACLES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#23: JSON flag ALLOWS_WING_ARMS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#24: JSON flag ALLOWS_WINGS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#25: JSON flag ALLOWS_TALONS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#26: JSON flag ALARMCLOCK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#27: JSON flag ALLOWS_BODY_BLOCK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#28: JSON flag ALLOWS_NATURAL_ATTACKS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#29: JSON flag ALLOWS_REMOTE_USE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#30: JSON flag CAN_USE_IN_DARK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#31: JSON flag ALWAYS_AIMED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#32: JSON flag AURA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#33: JSON flag BAROMETER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#34: JSON flag BELT_CLIP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#35: JSON flag BELTED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#36: JSON flag BIONIC_INSTALLATION_DATA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#37: JSON flag BIONIC_NPC_USABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#38: JSON flag BLIND
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#39: JSON flag BLOCK_WHILE_WORN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#40: JSON flag CALORIES_INTAKE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#41: JSON flag CALORIE_BURN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#42: JSON flag CRYOGENIC_ROT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#43: JSON flag CASELESS_ROUNDS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#44: JSON flag CBM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#45: JSON flag COLLAR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#46: JSON flag COLLAPSE_CONTENTS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#47: JSON flag DEAF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#48: JSON flag DESTROY_ON_CHARGE_USE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#49: JSON flag OVERHEATS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#50: JSON flag DIAMOND
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#51: JSON flag GEMSTONE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#52: JSON flag DIG_TOOL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#53: JSON flag DURABLE_MELEE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#54: JSON flag EASY_CLEAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#55: JSON flag FIELD_DRESS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#56: JSON flag FIELD_DRESS_FAILED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#57: JSON flag HIDDEN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#58: JSON flag QUARTERED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#59: JSON flag SCIENCE_CARD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#60: JSON flag MILITARY_CARD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#61: JSON flag INDUSTRIAL_CARD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#62: JSON flag ANDURIL_AR_CARD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#63: JSON flag EXODII_STRING_DIMENSION_CARD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#64: JSON flag COOP_CARD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#65: JSON flag SKINNED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#66: JSON flag BLED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#67: JSON flag CANT_HEAL_EVERYONE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#68: JSON flag CANT_WEAR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#69: JSON flag DECAY_EXPOSED_ATMOSPHERE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#70: JSON flag DIRTY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#71: JSON flag EATEN_COLD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#72: JSON flag EATEN_HOT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#73: JSON flag HUNGER_DISRUPTION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#74: JSON flag ELECTRIC_IMMUNE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#75: JSON flag BIO_IMMUNE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#76: JSON flag BASH_IMMUNE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#77: JSON flag EMP_IMMUNE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#78: JSON flag CUT_IMMUNE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#79: JSON flag BULLET_IMMUNE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#80: JSON flag ACID_IMMUNE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#81: JSON flag STAB_IMMUNE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#82: JSON flag HEAT_IMMUNE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#83: JSON flag HELMET_FACE_SHIELD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#84: JSON flag HELMET_FRONT_ATTACHMENT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#85: JSON flag HELMET_EAR_ATTACHMENT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#86: JSON flag HELMET_NAPE_PROTECTOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#87: JSON flag HELMET_MANDIBLE_GUARD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#88: JSON flag HELMET_MANDIBLE_GUARD_STRAPPED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#89: JSON flag HELMET_BACK_POUCH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#90: JSON flag HELMET_HEAD_ATTACHMENT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#91: JSON flag HELMET_AVENTAIL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#92: JSON flag BOOT_FINS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#93: JSON flag BOOT_FINS_CUSTOM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#94: JSON flag HEAD_STRAP_MOUNT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#95: JSON flag WRIST_MOUNT_ATTACHMENT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#96: JSON flag EXTRA_PLATING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#97: JSON flag NO_WING_GLIDING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#98: JSON flag COLD_IMMUNE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#99: JSON flag ACID
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#100: JSON flag CORROSIVE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#101: JSON flag COSPLAY_COSTUME
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#102: JSON flag COSPLAY_PROPS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#103: JSON flag ONE_PER_LAYER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#104: JSON flag FIRE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#105: JSON flag FIRESTARTER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#106: JSON flag FIREWOOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#107: JSON flag FIX_FARSIGHT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#108: JSON flag FIX_NEARSIGHT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#109: JSON flag MYOPIC_SUPERNATURAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#110: JSON flag MYOPIC_IN_LIGHT_SUPERNATURAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#111: JSON flag BLOCK_SUPERNATURAL_HEALING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#112: JSON flag FILTHY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#113: JSON flag FLASH_PROTECTION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#114: JSON flag FLOTATION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#115: JSON flag FIN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#116: JSON flag FRAGILE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#117: JSON flag FRAGILE_MELEE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#118: JSON flag GAS_PROOF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#119: JSON flag HOOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#120: JSON flag HYGROMETER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#121: JSON flag BURNOUT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#122: JSON flag BRASS_CATCHER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#123: JSON flag IRREMOVABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#124: JSON flag NORMAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#125: JSON flag NO_CVD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#126: JSON flag NO_REPAIR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#127: JSON flag NO_CLEAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#128: JSON flag NUTRIENT_OVERRIDE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#129: JSON flag OBSOLETE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#130: JSON flag PLANTABLE_SEED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#131: JSON flag POST_UP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#132: JSON flag MELTS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#133: JSON flag MAG_DESTROY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#134: JSON flag MOP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#135: JSON flag ARM_PROSTHETIC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#136: JSON flag LEG_PROSTHETIC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#137: JSON flag OUTER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#138: JSON flag OVERSIZE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#139: JSON flag UNDERSIZE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#140: JSON flag PARTIAL_DEAF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#141: JSON flag PERSONAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#142: JSON flag POCKETS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#143: JSON flag POLEARM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#144: JSON flag PREDATOR_FUN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#145: JSON flag PRESERVE_SPAWN_LOC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#146: JSON flag HINT_THE_LOCATION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#147: JSON flag LOCATION_PRECISE_CLOSEST_CITY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#148: JSON flag PROVIDES_TECHNIQUES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#149: JSON flag SPAWN_ACTIVE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#150: JSON flag STAB
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#151: JSON flag SPEAR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#152: JSON flag PRIMITIVE_RANGED_WEAPON
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#153: JSON flag SOLARPACK_ON
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#154: JSON flag PSEUDO
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#155: JSON flag RADIOSIGNAL_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#156: JSON flag RADIOSIGNAL_2
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#157: JSON flag RADIOSIGNAL_3
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#158: JSON flag RADIO_ACTIVATION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#159: JSON flag RADIO_MOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#160: JSON flag RADIOCARITEM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#161: JSON flag DISCOUNT_VALUE_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#162: JSON flag DISCOUNT_VALUE_2
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#163: JSON flag DISCOUNT_VALUE_3
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#164: JSON flag MC_MOBILE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#165: JSON flag MC_HAS_DATA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#166: JSON flag NO_PARASITES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#167: JSON flag MUSHY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#168: JSON flag IRRADIATED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#169: JSON flag FREEZERBURN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#170: JSON flag OLD_CURRENCY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#171: JSON flag NO_AUTO_CONSUME
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#172: JSON flag NO_WEAR_EFFECT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#173: JSON flag PADDED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#174: JSON flag PALS_SMALL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#175: JSON flag PALS_MEDIUM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#176: JSON flag PALS_LARGE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#177: JSON flag PSYSHIELD_PARTIAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#178: JSON flag RAD_DETECT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#179: JSON flag RAD_PROOF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#180: JSON flag RAD_RESIST
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#181: JSON flag RAD_STERILIZED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#182: JSON flag REQUIRES_BALANCE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#183: JSON flag ROLLER_ONE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#184: JSON flag ROLLER_INLINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#185: JSON flag ROLLER_QUAD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#186: JSON flag TWO_WAY_RADIO
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#187: JSON flag PERFECT_LOCKPICK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#188: JSON flag RAINPROOF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#189: JSON flag RESTRICT_HANDS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#190: JSON flag SEMITANGIBLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#191: JSON flag SHEATH_AXE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#192: JSON flag SHEATH_KNIFE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#193: JSON flag SHEATH_SWORD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#194: JSON flag SHEATH_SPEAR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#195: JSON flag SHEATH_BOW
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#196: JSON flag SHEATH_GOLF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#197: JSON flag SKINTIGHT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#198: JSON flag SLEEP_AID
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#199: JSON flag SLEEP_AID_CONTAINER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#200: JSON flag REVIVE_SPECIAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#201: JSON flag STURDY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#202: JSON flag FAULT_ON_COMPLETION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#203: JSON flag SUN_GLASSES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#204: JSON flag SWIM_GOGGLES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#205: JSON flag THERMOMETER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#206: JSON flag VARSIZE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#207: JSON flag WAIST
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#208: JSON flag WATCH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#209: JSON flag WATERPROOF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#210: JSON flag WATER_FRIENDLY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#211: JSON flag HIGH_GLARE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#212: JSON flag ITEM_BROKEN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#213: JSON flag WATER_BREAK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#214: JSON flag WATER_BREAK_ACTIVE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#215: JSON flag WATER_DISSOLVE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#216: JSON flag WET
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#217: JSON flag POWERARMOR_COMPATIBLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#218: JSON flag ZERO_WEIGHT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#219: JSON flag ZOOM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#220: JSON flag furred
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#221: JSON flag kevlar_padded
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#222: JSON flag leather_padded
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#223: JSON flag steel_padded
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#224: JSON flag wooled
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#225: JSON flag WONT_TRAIN_MARKSMANSHIP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#226: JSON flag GENE_TECH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#227: JSON flag NANOFAB_REPAIR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#228: JSON flag NANOFAB_TEMPLATE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#229: JSON flag NANOFAB_TEMPLATE_SINGLE_USE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#230: JSON flag BIONIC_FAULTY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#231: JSON flag BIONIC_POWER_SOURCE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#232: JSON flag BIONIC_TOGGLED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#233: JSON flag BIONIC_GUN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#234: JSON flag BIONIC_WEAPON
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#235: JSON flag BIONIC_ARMOR_INTERFACE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#236: JSON flag PERMANENT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#237: JSON flag NO_FAIL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#238: JSON flag HIDDEN_SPELL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#239: JSON flag IGNORE_WALLS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#240: JSON flag MAGIC_FOCUS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#241: JSON flag HOSTILE_SUMMON
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#242: JSON flag HOSTILE_50
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#243: JSON flag SILENT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#244: JSON flag LOUD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#245: JSON flag VERBAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#246: JSON flag SOMATIC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#247: JSON flag NO_HANDS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#248: JSON flag NO_LEGS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#249: JSON flag CONCENTRATE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#250: JSON flag WONDER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#251: JSON flag EXTRA_EFFECTS_FIRST
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#252: JSON flag PAIN_NORESIST
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#253: JSON flag SPAWN_WITH_DEATH_DROPS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#254: JSON flag TEMPORARY_SHAPESHIFT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#255: JSON flag SHAPESHIFT_SIZE_TINY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#256: JSON flag SHAPESHIFT_SIZE_SMALL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#257: JSON flag SHAPESHIFT_SIZE_LARGE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#258: JSON flag SHAPESHIFT_SIZE_HUGE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#259: JSON flag TEMPORARY_SHAPESHIFT_NO_HANDS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#260: JSON flag SHAPESHIFTED_ARMOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#261: JSON flag INTANGIBLE_ARMOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#262: JSON flag HANDS_CANNOT_USE_FIREARMS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#263: JSON flag NON_THRESH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#264: JSON flag ROBUST_GENETIC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#265: JSON flag CANNOT_USE_COMPUTERS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#266: JSON flag SKIP_HEALTH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#267: JSON flag HIDDEN_HALLU
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#268: JSON flag HIDDEN_POISON
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#269: JSON flag BAD_TASTE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#270: JSON flag RAW
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#271: JSON flag CANNIBALISM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#272: JSON flag STRICT_HUMANITARIANISM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#273: JSON flag ALLERGEN_BREAD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#274: JSON flag ALLERGEN_CHEESE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#275: JSON flag ALLERGEN_DRIED_VEGETABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#276: JSON flag ALLERGEN_EGG
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#277: JSON flag ALLERGEN_FRUIT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#278: JSON flag ALLERGEN_JUNK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#279: JSON flag ALLERGEN_MEAT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#280: JSON flag ALLERGEN_MILK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#281: JSON flag ALLERGEN_NUT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#282: JSON flag ALLERGEN_VEGGY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#283: JSON flag ALLERGEN_WHEAT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#284: JSON flag ALLERGEN_WOOL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#285: JSON flag ANIMAL_PRODUCT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#286: JSON flag ALWAYS_TWOHAND
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#287: JSON flag APPLIANCE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#288: JSON flag BIPOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#289: JSON flag BIRD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#290: JSON flag BOMB
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#291: JSON flag BYPRODUCT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#292: JSON flag CABLE_SPOOL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#293: JSON flag CAMERA_PRO
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#294: JSON flag CANNIBAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#295: JSON flag CARDIO_MIN_GUARANTE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#296: JSON flag CARNIVORE_OK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#297: JSON flag CASING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#298: JSON flag CATTLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#299: JSON flag CHALLENGE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#300: JSON flag CHARGEDIM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#301: JSON flag CITY_START
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#302: JSON flag COLD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#303: JSON flag COLLAPSIBLE_STOCK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#304: JSON flag REMOVED_STOCK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#305: JSON flag FOLDED_STOCK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#306: JSON flag COLLAPSED_STOCK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#307: JSON flag CONDUCTIVE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#308: JSON flag CONSUMABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#309: JSON flag COOKED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#310: JSON flag CORPSE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#311: JSON flag CRUTCHES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#312: JSON flag CUSTOM_EXPLOSION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#313: JSON flag DANGEROUS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#314: JSON flag DIMENSIONAL_ANCHOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#315: JSON flag PORTAL_PROOF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#316: JSON flag TELEPORT_LOCK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#317: JSON flag DISABLE_SIGHTS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#318: JSON flag DROP_ACTION_ONLY_IF_LIQUID
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#319: JSON flag EDIBLE_FROZEN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#320: JSON flag EFFECT_IMPEDING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#321: JSON flag EFFECT_LUA_ON_ADDED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#322: JSON flag EFFECT_LUA_ON_TICK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#323: JSON flag EFFECT_LUA_ON_REMOVED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#324: JSON flag ENCUMBRANCE_UPDATE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#325: JSON flag ETHEREAL_ITEM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#326: JSON flag E_COMBUSTION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#327: JSON flag FAKE_MILL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#328: JSON flag FAKE_SMOKE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#329: JSON flag FLAT_TIRE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#330: JSON flag FELINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#331: JSON flag FERTILIZER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#332: JSON flag FIT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#333: JSON flag FLAMING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#334: JSON flag FORAGE_HALLU
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#335: JSON flag FORAGE_POISON
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#336: JSON flag FROZEN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#337: JSON flag FUNGAL_VECTOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#338: JSON flag GAS_DISCOUNT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#339: JSON flag GIBBED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#340: JSON flag GNV_EFFECT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#341: JSON flag HIDDEN_ITEM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#342: JSON flag HOT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#343: JSON flag HURT_WHEN_WIELDED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#344: JSON flag IMPERIAL_ROAD_KEY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#345: JSON flag IMPERIAL_ROAD_TRAVELER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#346: JSON flag INEDIBLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#347: JSON flag INITIAL_PART
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#348: JSON flag INSPIRATIONAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#349: JSON flag INSTALL_DIFFICULT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#350: JSON flag INTEGRATED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#351: JSON flag MUTATED_ANATOMY_ONLY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#352: JSON flag MORPHIC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#353: JSON flag IS_ARMOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#354: JSON flag IS_PET_ARMOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#355: JSON flag IS_UPS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#356: JSON flag LEAK_DAM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#357: JSON flag LITCIG
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#358: JSON flag LUPINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#359: JSON flag MAG_BELT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#360: JSON flag MAG_BULKY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#361: JSON flag MAG_EJECT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#362: JSON flag MANUAL_CBM_INSTALLATION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#363: JSON flag MECH_BAT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#364: JSON flag MESSY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#365: JSON flag MISSION_ITEM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#366: JSON flag MODULE_HOLDER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#367: JSON flag MOUNTED_GUN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#368: JSON flag MULTI_DRILL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#369: JSON flag MUNDANE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#370: JSON flag RELIC_PINK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#371: JSON flag MUTAGEN_SAMPLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#372: JSON flag MUTAGEN_CATALYST
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#373: JSON flag MUTAGEN_PRIMER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#374: JSON flag MYCUS_OK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#375: JSON flag NEEDS_NO_LUBE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#376: JSON flag NEEDS_SUNLIGHT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#377: JSON flag MAGICAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#378: JSON flag NEEDS_UNFOLD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#379: JSON flag NEGATIVE_MONOTONY_OK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#380: JSON flag NEVER_JAMS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#381: JSON flag NONCONDUCTIVE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#382: JSON flag NON_FOULING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#383: JSON flag NO_DROP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#384: JSON flag NO_INGEST
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#385: JSON flag NO_PACKED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#386: JSON flag NO_RELOAD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#387: JSON flag NO_SALVAGE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#388: JSON flag NO_STERILE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#389: JSON flag NO_TAKEOFF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#390: JSON flag NO_TEMP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#391: JSON flag NO_TURRET
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#392: JSON flag NO_UNLOAD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#393: JSON flag NO_UNWIELD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#394: JSON flag NPC_ACTIVATE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#395: JSON flag NPC_ALT_ATTACK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#396: JSON flag NPC_SAFE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#397: JSON flag NPC_THROWN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#398: JSON flag NPC_THROW_NOW
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#399: JSON flag NVG_GREEN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#400: JSON flag ORGANIC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#401: JSON flag PERPETUAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#402: JSON flag PLACE_RANDOMLY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#403: JSON flag POWERED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#404: JSON flag PROCESSING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#405: JSON flag PROCESSING_RESULT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#406: JSON flag PULPED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#407: JSON flag PUMP_RAIL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#408: JSON flag LEVER_ACTION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#409: JSON flag SINGLE_ACTION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#410: JSON flag PUMP_ACTION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#411: JSON flag BOLT_ACTION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#412: JSON flag RADIOACTIVE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#413: JSON flag RADIOCAR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#414: JSON flag RADIO_CONTAINER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#415: JSON flag RADIO_INVOKE_PROC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#416: JSON flag RAIN_PROTECT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#417: JSON flag REACH3
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#418: JSON flag REACH_ATTACK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#419: JSON flag REBREATHER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#420: JSON flag REBREATHER_INTERNAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#421: JSON flag RECHARGE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#422: JSON flag REDUCED_BASHING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#423: JSON flag REDUCED_WEIGHT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#424: JSON flag RELOAD_AND_SHOOT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#425: JSON flag RELOAD_EJECT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#426: JSON flag RELOAD_ONE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#427: JSON flag REQUIRES_TINDER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#428: JSON flag SAFECRACK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#429: JSON flag SLEEP_IGNORE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#430: JSON flag SLOW_WIELD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#431: JSON flag SMOKED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#432: JSON flag SOLARPACK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#433: JSON flag SPEEDLOADER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#434: JSON flag SPEEDLOADER_CLIP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#435: JSON flag SPLINT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#436: JSON flag STR_RELOAD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#437: JSON flag TACK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#438: JSON flag TANGLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#439: JSON flag TARDIS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#440: JSON flag THROW_KEEP_WIELDED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#441: JSON flag TIE_UP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#442: JSON flag TINDER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#443: JSON flag TOBACCO
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#444: JSON flag TOUGH_FEET
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#445: JSON flag PAIN_IMMUNE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#446: JSON flag TOURNIQUET
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#447: JSON flag TOW_CABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#448: JSON flag TRADER_AVOID
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#449: JSON flag TRADER_KEEP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#450: JSON flag TRADER_KEEP_EQUIPPED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#451: JSON flag UNDERWATER_GUN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#452: JSON flag UNRECOVERABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#453: JSON flag URSINE_HONEY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#454: JSON flag USES_BIONIC_POWER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#455: JSON flag FIRING_EXT_POWER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#456: JSON flag USES_NEARBY_AMMO
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#457: JSON flag USE_EAT_VERB
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#458: JSON flag USE_PLAYER_ENERGY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#459: JSON flag USE_UPS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#460: JSON flag VEHICLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#461: JSON flag WATER_EXTINGUISH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#462: JSON flag WHIP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#463: JSON flag WIND_EXTINGUISH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#464: JSON flag WRITE_MESSAGE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#465: JSON flag MUTE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#466: JSON flag IRREPLACEABLE_CONSUMABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#467: JSON flag ACTIVATE_ON_PLACE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#468: JSON flag ACT_IN_FIRE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#469: JSON flag ACT_ON_RANGED_HIT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#470: JSON flag NO_MANUAL_ACTIVATION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#471: JSON flag BACKBLAST
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#472: JSON flag CAN_HAVE_CHARGES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#473: JSON flag DETERGENT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#474: JSON flag FIRE_TWOHAND
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#475: JSON flag GRENADE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#476: JSON flag JAVELIN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#477: JSON flag LEAK_ALWAYS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#478: JSON flag MAG_COMPACT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#479: JSON flag NOGIB
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#480: JSON flag PUMP_RAIL_COMPATIBLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#481: JSON flag RADIO_MODABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#482: JSON flag STR_DRAW
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#483: JSON flag UNBREAKABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#484: JSON flag UNBREAKABLE_MELEE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#485: JSON flag WATERPROOF_GUN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#486: JSON flag no_auto_equip
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#487: JSON flag auto_wield
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#488: JSON flag SOFT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#489: JSON flag HARD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#490: JSON flag PUNCTURE_VEHICLE_WHEELS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#491: JSON flag SCIENCE_CARD_VISITOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#492: JSON flag SCIENCE_CARD_MAINTENANCE_GREEN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#493: JSON flag SCIENCE_CARD_MAINTENANCE_YELLOW
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#494: JSON flag SCIENCE_CARD_MAINTENANCE_BLUE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#495: JSON flag SCIENCE_CARD_TRANSPORT_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#496: JSON flag SCIENCE_CARD_SECURITY_YELLOW
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#497: JSON flag SCIENCE_CARD_SECURITY_MAGENTA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#498: JSON flag SCIENCE_CARD_SECURITY_BLACK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#499: JSON flag SCIENCE_CARD_MUTAGEN_GREEN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#500: JSON flag SCIENCE_CARD_MUTAGEN_PINK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#501: JSON flag SCIENCE_CARD_MUTAGEN_CYAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#502: JSON flag SCIENCE_CARD_MEDICAL_RED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#503: JSON flag SCIENCE_CARD_MU_UNIVERSAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#504: JSON flag BATTERY_ULTRA_LIGHT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#505: JSON flag BATTERY_LIGHT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#506: JSON flag BATTERY_MEDIUM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#507: JSON flag BATTERY_HEAVY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#508: JSON flag METHANOL_TANK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#509: JSON flag COMBAT_TOGGLEABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#510: JSON flag CHOKE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#511: JSON flag GAS_TANK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#512: JSON flag LASER_SIGHT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#513: JSON flag JETPACK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#514: JSON flag LEVITATION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#515: JSON flag SNOWWALKING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#516: JSON flag NO_BODY_HEAT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#517: JSON flag ALL_TERRAIN_NAVIGATION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#518: JSON flag EXO_SMALL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#519: JSON flag EXO_LARGE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#520: JSON flag EXO_PSU
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#521: JSON flag EXO_SMALL_GADGET
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#522: JSON flag EXO_HELMET_GADGET
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#523: JSON flag EXO_MEDIUM_GADGET
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#524: JSON flag EXO_LARGE_GADGET
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#525: JSON flag EXO_UNDERLAYER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#526: JSON flag EXO_HELMET_PLATE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#527: JSON flag EXO_TORSO_PLATE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#528: JSON flag EXO_ARM_PLATE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#529: JSON flag EXO_GLOVE_PLATE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#530: JSON flag EXO_LEG_PLATE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#531: JSON flag EXO_BOOT_PLATE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#532: JSON flag ENERGY_SHIELD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#533: JSON flag ROBOFAC_ROBOT_MEDIUM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#534: JSON flag ROBOFAC_ROBOT_SMALL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#535: JSON flag VOLTMETER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#536: JSON flag SUNBURN_SUPERNATURAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#537: JSON flag SUNBURN_SUPERNATURAL_REDUCTION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#538: JSON flag SHREDDED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#539: JSON flag FROM_FROZEN_LIQUID
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#540: JSON flag SINGLE_USE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#541: JSON flag BIONIC_FUEL_SOURCE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#542: JSON flag BIONIC_WEAPON_MELEE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#543: JSON flag ELECTRONIC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#544: JSON flag E_FILE_DEVICE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#545: JSON flag E_STORABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#546: JSON flag E_STORABLE_EXCLUSIVE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#547: JSON flag E_COPIABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#548: JSON flag E_FILE_COLLECTION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#549: JSON flag E_FILE_DEVICE_UNREAD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#550: JSON flag VIEW_RECIPES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#551: JSON flag VIEW_PHOTOS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#552: JSON flag AFS_CS_LOCKER_CARD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#553: JSON flag AFS_CS_ARMORY_CARD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#554: JSON flag AFS_CS_EXOBAY_CARD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#555: JSON flag PAPER_SHAPED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#556: JSON flag CREDIT_CARD_SHAPED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#557: JSON flag BANK_NOTE_SHAPED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#558: JSON flag COIN_SHAPED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#559: JSON flag BANK_NOTE_STRAP_SHAPED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#560: JSON flag FRESH_GRAIN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#561: JSON flag CUT_HARVEST
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#562: JSON flag GASFILTER_SM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#563: JSON flag GASFILTER_MED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#564: JSON flag PANORAMIC_OUTSERT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#565: JSON flag PANORAMIC_INSERT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#566: JSON flag PAPR_MASK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#567: JSON flag PAPR_BLOWER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#568: JSON flag REBREATHER_CART
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#569: JSON flag OLD_GUN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#570: JSON flag USE_POWER_WHEN_HIT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#571: JSON flag RAT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#572: JSON flag MOUSE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#573: JSON flag RABBIT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#574: JSON flag ETHEREAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#575: JSON flag CLIMB_FLYING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#576: JSON flag HERITAGE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#577: JSON flag BLOCK_HUGE_ATTACKS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#578: JSON flag SUFFOCATION_IMMUNE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#579: JSON flag INHALED_TOXIN_IMMUNE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#580: JSON flag INFECTION_RECOVERY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#581: JSON flag TREE_COMMUNION_PLUS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#582: JSON flag ROOTS2
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#583: JSON flag ROOTS3
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#584: JSON flag VINE_RAPPEL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#585: JSON flag ANIMALDISCORD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#586: JSON flag ANIMALDISCORD2
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#587: JSON flag ANIMALEMPATH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#588: JSON flag TRUE_SEEING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#589: JSON flag SUPPRESS_INVISIBILITY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#590: JSON flag PAUSE_INFECTIONS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#591: JSON flag PAUSE_BODYPART_INFECTION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#592: JSON flag ANIMALEMPATH2
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#593: JSON flag UNDERFED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#594: JSON flag UNRESTRICTED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#595: JSON flag PSEUDOPOD_GRASP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#596: JSON flag HEMOVORE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#597: JSON flag BLOODFEEDER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#598: JSON flag HEMOVORE_FUN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#599: JSON flag QUADRUPED_CROUCH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#600: JSON flag THRESH_ALLOWS_QUADRUPEDAL_MOVEMENT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#601: JSON flag QUADRUPED_RUN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#602: JSON flag HEARING_PROTECTION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#603: JSON flag LIXA_SCIENCE_CARD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#604: JSON flag LIXA_SCIENCE_CARD_2
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#605: JSON flag LIXA_SCIENCE_CARD_3
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#606: JSON flag LIXA_MILITARY_CARD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#607: JSON flag DRACULIN_VENOM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#608: JSON flag PREFIX_XL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#609: JSON flag PREFIX_XS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#610: JSON flag DECAYS_IN_AIR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#611: JSON flag IRRITANT_IMMUNE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#612: JSON flag ITEM_WATERPROOFING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#613: JSON flag WATERWALKING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#614: JSON flag CRAFT_IN_DARKNESS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#615: JSON flag CANNOT_ATTACK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#616: JSON flag CANNOT_MOVE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#617: JSON flag CANNOT_TAKE_DAMAGE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#618: JSON flag CANNOT_CHANGE_TEMPERATURE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#619: JSON flag FREEZE_EFFECTS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#620: JSON flag CANNOT_GAIN_EFFECTS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#621: JSON flag NUMB
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#622: JSON flag PSYCHOPATH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#623: JSON flag INSENSITIVITY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#624: JSON flag BANK_NETWORKED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#625: JSON flag NATURAL_UNDERGROUND
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#626: JSON flag INSTANT_BLEED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#627: JSON flag ONE_STORY_FALL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#628: JSON flag CYLINDER_GRENADE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#629: JSON flag BARRICADABLE_DOOR_DAMAGED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#630: JSON flag BARRICADABLE_DOOR_REINFORCED_DAMAGED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#631: JSON flag BARRICADABLE_DOOR_REINFORCED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#632: JSON flag BARRICADABLE_DOOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#633: JSON flag BARRICADABLE_WINDOW_CURTAINS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#634: JSON flag BARRICADABLE_WINDOW
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#635: JSON flag CHIP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#636: JSON flag DIGGABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#637: JSON flag EASY_DECONSTRUCT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#638: JSON flag FLAT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#639: JSON flag PIT_FILLABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#640: JSON flag PLOWABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#641: JSON flag RUBBLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#642: JSON flag SUPPORTS_ROOF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#643: JSON flag TREE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#644: JSON flag WALL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#645: JSON flag WIRED_WALL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#646: JSON flag MWS_PORTAL_STORM_DATA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#647: JSON flag PHASE_BACK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#648: JSON flag ROBOFAC_ARM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#649: JSON flag ROBOFAC_LEG
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#650: JSON flag ROBOFAC_BACK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#651: JSON flag ROBOFAC_LENS_ACCESSORY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#652: JSON flag ROBOFAC_LENS_HELMET
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#653: JSON flag CANNOT_GAIN_WEARINESS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#654: JSON flag GENDER_FLUIDITY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#655: JSON flag GENDER_INVARIANCE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/flags.json#656: JSON flag NO_CROP_OVERGROWTH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/gates.json#0: gate t_gates_mech_control
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/gates.json#1: gate t_gates_control_concrete
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/gates.json#2: gate t_gates_control_brick
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/gates.json#3: gate t_gates_mech_control_lab
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/gates.json#4: gate t_gates_control_concrete_lab
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/gates.json#5: gate t_gates_control_brick_lab
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/gates.json#6: gate t_barndoor
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/gates.json#7: gate t_palisade_pulley
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/gates.json#8: gate t_palisade_pulley_wood
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/gates.json#9: gate t_gates_control_metal
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/harvest_drop_type.json#0: harvest drop type flesh
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/harvest_drop_type.json#1: harvest drop type bone
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/harvest_drop_type.json#2: harvest drop type skin
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/harvest_drop_type.json#3: harvest drop type blood
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/harvest_drop_type.json#4: harvest drop type offal
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/harvest_drop_type.json#5: harvest drop type mutagen
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/harvest_drop_type.json#6: harvest drop type mutagen_group
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/harvest_drop_type.json#7: harvest drop type bionic
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/harvest_drop_type.json#8: harvest drop type bionic_group
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/hit_range.json#0: hit range global
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#0: item action repair_fabric
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#1: item action repair_metal
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#2: item action sew_advanced
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#3: item action firestarter
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#4: item action PICK_LOCK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#5: item action deploy_furn
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#6: item action deploy_appliance
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#7: item action CROWBAR_WEAK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#8: item action CROWBAR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#9: item action MAKEMOUND
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#10: item action DIG_CHANNEL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#11: item action PICKAXE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#12: item action PACK_CBM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#13: item action GEIGER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#14: item action HACKSAW
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#15: item action BOLTCUTTERS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#16: item action HOTPLATE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#17: item action HOTPLATE_ATOMIC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#18: item action TOOLMOD_ATTACH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#19: item action GUNMOD_ATTACH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#20: item action GUN_REPAIR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#21: item action DIRECTIONAL_HOLOGRAM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#22: item action ROBOTCONTROL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#23: item action METH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#24: item action TAZER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#25: item action ANTICONVULSANT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#26: item action LUMBER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#27: item action REMOVE_ALL_MODS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#28: item action salvage
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#29: item action inscribe
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#30: item action fireweapon_off
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#31: item action fireweapon_on
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#32: item action CHANGE_EYES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#33: item action CHANGE_SKIN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#34: item action transform
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#35: item action message
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#36: item action learn_spell
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#37: item action cast_spell
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#38: item action holster
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#39: item action attach_molle
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#40: item action detach_molle
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#41: item action saw_barrel
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#42: item action saw_stock
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#43: item action ACIDBOMB_ACT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#44: item action ADRENALINE_INJECTOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#45: item action AFS_TRANSLOCATOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#46: item action ANTIBIOTIC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#47: item action ANTIFUNGAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#48: item action ANTIPARASITIC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#49: item action BELL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#50: item action BLECH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#51: item action BLECH_BECAUSE_UNCLEAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#52: item action CAMERA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#53: item action CAN_GOO
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#54: item action CAPTURE_MONSTER_ACT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#55: item action CAPTURE_MONSTER_VEH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#56: item action CHEW
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#57: item action CLEAR_RUBBLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#58: item action COIN_FLIP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#59: item action BINDER_ADD_RECIPE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#60: item action BINDER_MANAGE_RECIPE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#61: item action COKE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#62: item action DATURA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#63: item action DIG
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#64: item action DIRECTIONAL_ANTENNA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#65: item action DOG_WHISTLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#66: item action CALL_OF_TINDALOS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#67: item action DOLLCHAT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#68: item action ECIG
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#69: item action EHANDCUFFS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#70: item action EBOOKSAVE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#71: item action EMF_PASSIVE_ON
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#72: item action EXTINGUISHER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#73: item action MACE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#74: item action EYEDROPS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#75: item action FILL_PIT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#76: item action FIRECRACKER_PACK_ACT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#77: item action FISH_ROD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#78: item action FISH_TRAP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#79: item action FLUMED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#80: item action FLUSLEEP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#81: item action FLU_VACCINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#82: item action FOODPERSON
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#83: item action FUNGICIDE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#84: item action GRANADE_ACT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#85: item action GRENADE_INC_ACT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#86: item action detach_gunmods
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#87: item action modify_gunmods
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#88: item action HEATPACK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#89: item action HEAT_FOOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#90: item action HEAT_LIQUID_ITEMS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#91: item action HEAT_SOLID_ITEMS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#92: item action HEAT_ALL_ITEMS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#93: item action HONEYCOMB
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#94: item action INHALER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#95: item action JACKHAMMER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#96: item action JET_INJECTOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#97: item action MAGIC_8_BALL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#98: item action MEASURE_RESONANCE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#99: item action CHANGE_OUTFIT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#100: item action PLAY_GAME
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#101: item action MARLOSS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#102: item action MARLOSS_GEL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#103: item action MARLOSS_SEED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#104: item action MA_MANUAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#105: item action MEDITATE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#106: item action MININUKE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#107: item action MOP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#108: item action mp3
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#109: item action RPGDIE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#110: item action GASMASK_ACTIVATE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#111: item action PAPR_MASK_ACTIVATE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#112: item action DIVE_TANK_ACTIVATE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#113: item action SOLARPACK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#114: item action SOLARPACK_OFF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#115: item action MULTICOOKER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#116: item action MYCUS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#117: item action NOISE_EMITTER_ON
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#118: item action OXYGEN_BOTTLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#119: item action OXYTORCH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#120: item action PACK_ITEM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#121: item action PETFOOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#122: item action PLANTBLECH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#123: item action POISON
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#124: item action PORTABLE_GAME
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#125: item action FITNESS_CHECK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#126: item action deploy_tent
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#127: item action PORTAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#128: item action POST_UP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#129: item action PROZAC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#130: item action E_FILE_DEVICE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#131: item action VIEW_RECIPES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#132: item action VIEW_PHOTOS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#133: item action PURIFY_SMART
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#134: item action RADGLOVE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#135: item action RADIOCAR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#136: item action RADIOCONTROL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#137: item action RADIO_MOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#138: item action RADIO_ON
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#139: item action REMOTEVEH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#140: item action MANAGE_EXOSUIT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#141: item action SEED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#142: item action SEWAGE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#143: item action SIPHON
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#144: item action SMOKING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#145: item action SPRAY_CAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#146: item action paint_vehicle
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#147: item action STIMPACK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#148: item action TELEPORT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#149: item action THORAZINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#150: item action TOWEL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#151: item action UNFOLD_GENERIC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#152: item action BLOOD_DRAW
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#153: item action HAND_CRANK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#154: item action VIBE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#155: item action VORTEX
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#156: item action WASH_SOFT_ITEMS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#157: item action WASH_HARD_ITEMS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#158: item action WASH_ALL_ITEMS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#159: item action WATER_PURIFIER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#160: item action WEATHER_TOOL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#161: item action WEED_CAKE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#162: item action XANAX
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#163: item action ammobelt
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#164: item action consume_drug
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#165: item action delayed_transform
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#166: item action explosion
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#167: item action heal
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#168: item action link_up
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#169: item action manualnoise
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#170: item action musical_instrument
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#171: item action place_monster
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#172: item action place_npc
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#173: item action place_trap
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#174: item action reveal_map
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#175: item action change_scent
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#176: item action install_bionic
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#177: item action CHOP_TREE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#178: item action CHOP_LOGS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#179: item action BREAK_STICK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#180: item action WEAK_ANTIBIOTIC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#181: item action DISASSEMBLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#182: item action STRONG_ANTIBIOTIC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#183: item action weigh_self
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#184: item action CRAFT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#185: item action effect_on_conditions
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#186: item action SEXTANT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#187: item action LUX_METER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#188: item action DBG_LUX_METER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#189: item action CALORIES_INTAKE_TRACKER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#190: item action VOLTMETER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#191: item action play_instrument
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_actions.json#192: item action sound
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#0: item category e_files
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#1: item category software
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#2: item category guns
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#3: item category magazines
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#4: item category ammo
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#5: item category weapons
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#6: item category tools
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#7: item category clothing
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#8: item category food
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#9: item category drugs
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#10: item category manuals
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#11: item category books
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#12: item category maps
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#13: item category mods
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#14: item category mutagen
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#15: item category bionics
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#16: item category currency
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#17: item category veh_parts
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#18: item category other
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#19: item category fuel
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#20: item category seeds
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#21: item category ma_manuals
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#22: item category traps
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#23: item category chems
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#24: item category spare_parts
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#25: item category container
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#26: item category artifacts
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#27: item category keys
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#28: item category corpses
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#29: item category tool_magazine
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#30: item category armor
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#31: item category exosuit
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#32: item category ITEMS_WORN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#33: item category INTEGRATED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#34: item category BIONIC_FUEL_SOURCE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/item_category.json#35: item category WEAPON_HELD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#0: ammunition type bolt_heavy
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#1: ammunition type c_hydrogen
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#2: ammunition type 458wm
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#3: ammunition type 50
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#4: ammunition type 4570
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#5: ammunition type 50ae
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#6: ammunition type 50beowulf
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#7: ammunition type 450
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#8: ammunition type 338lapua
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#9: ammunition type 77mm_arisaka
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#10: ammunition type nail
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#11: ammunition type barb
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#12: ammunition type gene_sting
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#13: ammunition type nether_huntsman_javelin_ammo
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#14: ammunition type BB
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#15: ammunition type bolt_ballista
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#16: ammunition type bolt
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#17: ammunition type arrow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#18: ammunition type strange_arrow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#19: ammunition type atlatl
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#20: ammunition type pebble
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#21: ammunition type rock
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#22: ammunition type shot
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#23: ammunition type 410shot
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#24: ammunition type blunderbuss
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#25: ammunition type 22
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#26: ammunition type powder_blank
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#27: ammunition type 9mm
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#28: ammunition type 357sig
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#29: ammunition type 357mag
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#30: ammunition type 9x18
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#31: ammunition type 380
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#32: ammunition type 38
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#33: ammunition type 38super
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#34: ammunition type 40
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#35: ammunition type 10mm
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#36: ammunition type 44
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#37: ammunition type 45
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#38: ammunition type 454
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#39: ammunition type 460sw
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#40: ammunition type 45colt
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#41: ammunition type 500
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#42: ammunition type 57
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#43: ammunition type 762
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#44: ammunition type 545x39
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#45: ammunition type 223
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#46: ammunition type 303
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#47: ammunition type 3006
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#48: ammunition type 30carbine
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#49: ammunition type 270win
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#50: ammunition type 308
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#51: ammunition type 40x46mm
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#52: ammunition type 40x53mm
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#53: ammunition type 66mm
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#54: ammunition type 120mm
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#55: ammunition type 84x246mm
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#56: ammunition type m235
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#57: ammunition type mortar_60mm
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#58: ammunition type sling-ready_grenade
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#59: ammunition type gasoline
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#60: ammunition type jp8
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#61: ammunition type avgas
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#62: ammunition type diesel
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#63: ammunition type lamp_oil
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#64: ammunition type crude_lamp_oil
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#65: ammunition type butane
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#66: ammunition type aerosol_paint
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#67: ammunition type permanent_ink
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#68: ammunition type candle_wax
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#69: ammunition type flare_nitrate
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#70: ammunition type match
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#71: ammunition type incense
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#72: ammunition type oxygen
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#73: ammunition type hydrogen
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#74: ammunition type nitrogen
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#75: ammunition type motor_oil
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#76: ammunition type crude_oil
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#77: ammunition type thread
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#78: ammunition type anesthetic
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#79: ammunition type soap
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#80: ammunition type tape
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#81: ammunition type battery
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#82: ammunition type money
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#83: ammunition type plutonium
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#84: ammunition type uranium
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#85: ammunition type reactor_slurry
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#86: ammunition type 12mm
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#87: ammunition type plasma
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#88: ammunition type flammable
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#89: ammunition type weldgas
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#90: ammunition type propane
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#91: ammunition type biogas
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#92: ammunition type conc_alcohol
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#93: ammunition type methanol_fuelcell
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#94: ammunition type 8x40mm
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#95: ammunition type 20x66mm
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#96: ammunition type signal_flare
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#97: ammunition type charcoal
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#98: ammunition type coal
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#99: ammunition type thrown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#100: ammunition type ampoule
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#101: ammunition type albuterol
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#102: ammunition type liq_bandage
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#103: ammunition type stimpack_ammo
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#104: ammunition type components
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#105: ammunition type rebreather_filter
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#106: ammunition type rebreather_o2_regenerator
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#107: ammunition type gasfilter_s
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#108: ammunition type gasfilter_m
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#109: ammunition type 300
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#110: ammunition type 32
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#111: ammunition type 762x25
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#112: ammunition type flintlock
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#113: ammunition type 36paper
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#114: ammunition type 44paper
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#115: ammunition type 762R
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#116: ammunition type fishspear
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#117: ammunition type fish_bait
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#118: ammunition type homebrew_rocket
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#119: ammunition type atgm
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#120: ammunition type unfinished_char
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#121: ammunition type chemical_spray
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#122: ammunition type milk
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#123: ammunition type milk_raw
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#124: ammunition type paintball
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#125: ammunition type nitrox
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#126: ammunition type paper
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#127: ammunition type extinguishing_agent
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#128: ammunition type teargas_spray
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#129: ammunition type tinder
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#130: ammunition type esbit
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#131: ammunition type water
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#132: ammunition type 300blk
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#133: ammunition type 123ln
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#134: ammunition type 273x110
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#135: ammunition type 273x44
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#136: ammunition type 273x44RG
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#137: ammunition type 33naval
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#138: ammunition type caotel_cell
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#139: ammunition type khuunaofaai_payload
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#140: ammunition type khuunaofaai_payload_fire
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#141: ammunition type khuunaofaai_payload_acid
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#142: ammunition type khuunaofaai_payload_glue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#143: ammunition type glowstick_juice
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#144: ammunition type cannon
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#145: ammunition type quill_ink
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#146: ammunition type black_pen_ink
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#147: ammunition type red_pen_ink
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#148: ammunition type blue_pen_ink
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#149: ammunition type green_pen_ink
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#150: ammunition type ammonia_liquid
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#151: ammunition type notch
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#152: ammunition type turpentine
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#153: ammunition type airgun_pellet
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#154: ammunition type rivets
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#155: ammunition type 3030
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/items/ammo_types.json#156: ammunition type bone_dart
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/limb_scores.json#0: limb score manip
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/limb_scores.json#1: limb score lift
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/limb_scores.json#2: limb score grip
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/limb_scores.json#3: limb score block
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/limb_scores.json#4: limb score breathing
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/limb_scores.json#5: limb score vision
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/limb_scores.json#6: limb score night_vis
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/limb_scores.json#7: limb score reaction
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/limb_scores.json#8: limb score move_speed
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/limb_scores.json#9: limb score balance
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/limb_scores.json#10: limb score footing
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/limb_scores.json#11: limb score consume_solid
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/limb_scores.json#12: limb score consume_liquid
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/limb_scores.json#13: limb score swim
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/limb_scores.json#14: limb score crawl
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#0: zone type LOOT_AMMO
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#1: zone type LOOT_ARMOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#2: zone type LOOT_ARTIFACTS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#3: zone type LOOT_BIONICS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#4: zone type LOOT_BOOKS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#5: zone type LOOT_CHEMICAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#6: zone type LOOT_CLOTHING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#7: zone type LOOT_CONTAINERS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#8: zone type LOOT_CORPSE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#9: zone type LOOT_CURRENCY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#10: zone type LOOT_CUSTOM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#11: zone type LOOT_DEFAULT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#12: zone type LOOT_DRINK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#13: zone type LOOT_DRUGS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#14: zone type LOOT_FARMOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#15: zone type LOOT_FCLOTHING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#16: zone type LOOT_FOOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#17: zone type LOOT_FUEL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#18: zone type LOOT_GUNS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#19: zone type LOOT_IGNORE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#20: zone type LOOT_IGNORE_FAVORITES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#21: zone type LOOT_ITEM_GROUP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#22: zone type LOOT_KEYS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#23: zone type LOOT_MAGAZINES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#24: zone type LOOT_MANUALS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#25: zone type LOOT_MAPS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#26: zone type LOOT_MA_MANUALS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#27: zone type LOOT_MODS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#28: zone type LOOT_MUTAGENS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#29: zone type LOOT_OTHER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#30: zone type LOOT_PDRINK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#31: zone type LOOT_PFOOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#32: zone type LOOT_SEEDS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#33: zone type LOOT_SPARE_PARTS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#34: zone type LOOT_TOOL_MAGAZINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#35: zone type LOOT_TOOLS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#36: zone type LOOT_TRAPS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#37: zone type LOOT_UNSORTED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#38: zone type LOOT_VEHICLE_PARTS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#39: zone type LOOT_WEAPONS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#40: zone type LOOT_WOOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#41: zone type STRIP_CORPSES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/loot_zones.json#42: zone type UNLOAD_ALL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#0: monster flag SEES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#1: monster flag HEARS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#2: monster flag GOODHEARING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#3: monster flag SMELLS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#4: monster flag KEENNOSE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#5: monster flag STUMBLES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#6: monster flag CLUMSY_ATTACKS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#7: monster flag WARM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#8: monster flag NEMESIS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#9: monster flag HAS_MIND
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#10: monster flag NOHEAD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#11: monster flag HARDTOSHOOT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#12: monster flag GRABS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#13: monster flag BASHES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#14: monster flag DESTROYS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#15: monster flag BORES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#16: monster flag POISON
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#17: monster flag VENOM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#18: monster flag BADVENOM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#19: monster flag PARALYZEVENOM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#20: monster flag WEBWALK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#21: monster flag DIGS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#22: monster flag CAN_DIG
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#23: monster flag FLIES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#24: monster flag AQUATIC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#25: monster flag SWIMS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#26: monster flag ATTACKMON
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#27: monster flag ANIMAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#28: monster flag PLASTIC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#29: monster flag SUNDEATH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#30: monster flag PHOTOPHOBIC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#31: monster flag TRUESIGHT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#32: monster flag PLANT_BLOOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#33: monster flag PERMANENT_INVISIBILITY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#34: monster flag ELECTRIC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#35: monster flag ACIDPROOF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#36: monster flag ACIDTRAIL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#37: monster flag SHORTACIDTRAIL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#38: monster flag FIREPROOF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#39: monster flag IRONWROUGHT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#40: monster flag SLUDGEPROOF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#41: monster flag FAE_CREATURE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#42: monster flag SLUDGETRAIL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#43: monster flag SMALLSLUDGETRAIL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#44: monster flag BULLETPROOF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#45: monster flag COLDPROOF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#46: monster flag BIOLOGICALPROOF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#47: monster flag COMBAT_MOUNT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#48: monster flag FIREY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#49: monster flag FLASHBANGPROOF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#50: monster flag QUEEN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#51: monster flag ELECTRONIC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#52: monster flag CONSOLE_DESPAWN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#53: monster flag IMMOBILE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#54: monster flag ID_CARD_DESPAWN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#55: monster flag RIDEABLE_MECH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#56: monster flag MILITARY_MECH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#57: monster flag MECH_RECON_VISION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#58: monster flag MECH_DEFENSIVE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#59: monster flag HIT_AND_RUN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#60: monster flag PAY_BOT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#61: monster flag HUMAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#62: monster flag NO_BREATHE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#63: monster flag FLAMMABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#64: monster flag REVIVES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#65: monster flag DORMANT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#66: monster flag GEN_DORMANT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#67: monster flag QUIETDEATH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#68: monster flag NOGIB
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#69: monster flag ARTHROPOD_BLOOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#70: monster flag ACID_BLOOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#71: monster flag BILE_BLOOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#72: monster flag FILTHY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#73: monster flag FISHABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#74: monster flag GROUP_BASH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#75: monster flag SWARMS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#76: monster flag GROUP_MORALE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#77: monster flag INTERIOR_AMMO
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#78: monster flag CLIMBS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#79: monster flag PACIFIST
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#80: monster flag KEEP_DISTANCE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#81: monster flag PUSH_MON
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#82: monster flag PUSH_VEH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#83: monster flag UNBREAKABLE_MORALE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#84: monster flag NIGHT_INVISIBILITY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#85: monster flag REVIVES_HEALTHY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#86: monster flag NO_NECRO
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#87: monster flag PATH_AVOID_DANGER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#88: monster flag PATH_AVOID_FIRE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#89: monster flag PATH_AVOID_FALL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#90: monster flag PRIORITIZE_TARGETS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#91: monster flag NOT_HALLUCINATION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#92: monster flag CANPLAY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#93: monster flag CAN_BE_CULLED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#94: monster flag PET_MOUNTABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#95: monster flag PET_HARNESSABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#96: monster flag DOGFOOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#97: monster flag MILKABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#98: monster flag SHEARABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#99: monster flag NO_BREED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#100: monster flag NO_FUNG_DMG
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#101: monster flag PET_WONT_FOLLOW
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#102: monster flag DRIPS_NAPALM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#103: monster flag DRIPS_GASOLINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#104: monster flag ELECTRIC_FIELD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#105: monster flag LOUDMOVES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#106: monster flag QUIETMOVES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#107: monster flag SILENTMOVES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#108: monster flag CAN_OPEN_DOORS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#109: monster flag STUN_IMMUNE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#110: monster flag DROPS_AMMO
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#111: monster flag WIELDED_WEAPON
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#112: monster flag INSECTICIDEPROOF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#113: monster flag RANGED_ATTACKER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#114: monster flag CAMOUFLAGE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#115: monster flag WATER_CAMOUFLAGE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#116: monster flag ATTACK_UPPER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#117: monster flag ATTACK_LOWER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#118: monster flag DEADLY_VIRUS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#119: monster flag VAMP_VIRUS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#120: monster flag COPY_SUMMONER_LOOK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#121: monster flag COPY_AVATAR_LOOK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#122: monster flag ALWAYS_VISIBLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#123: monster flag APPEARS_NEUTRAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#124: monster flag ALWAYS_SEES_YOU
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#125: monster flag LOCKS_ON
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#126: monster flag ALL_SEEING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#127: monster flag MIND_SEEING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#128: monster flag INFRARED_VISION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#129: monster flag NEVER_WANDER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#130: monster flag CONVERSATION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#131: monster flag SILENT_DISAPPEAR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#132: monster flag EATS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#133: monster flag CORNERED_FIGHTER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#134: monster flag SMALL_HIDER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#135: monster flag GUILT_ANIMAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#136: monster flag GUILT_CHILD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#137: monster flag GUILT_HUMAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#138: monster flag GUILT_OTHERS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#139: monster flag DRACULIN_IMMUNE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#140: monster flag TEEP_IMMUNE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#141: monster flag PULP_PRYING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#142: monster flag ONE_DIMENSIONAL_X
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#143: monster flag ONE_DIMENSIONAL_Y
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/monsters/monster_flags.json#144: monster flag ONE_DIMENSIONAL_Z
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mood_faces.json#0: mood face DEFAULT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mood_faces.json#1: mood face DEFAULT_HORIZONTAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mood_faces.json#2: mood face THRESH_BIRD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mood_faces.json#3: mood face THRESH_BIRD_HORIZONTAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mood_faces.json#4: mood face THRESH_FELINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mood_faces.json#5: mood face THRESH_FELINE_HORIZONTAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mood_faces.json#6: mood face THRESH_URSINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mood_faces.json#7: mood face THRESH_URSINE_HORIZONTAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#0: morale type morale_food_good
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#1: morale type morale_food_hot
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#2: morale type morale_chat
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#3: morale type morale_chat_uncaring
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#4: morale type morale_ate_with_table
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#5: morale type morale_ate_without_table
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#6: morale type morale_music
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#7: morale type morale_honey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#8: morale type morale_game
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#9: morale type morale_marloss
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#10: morale type morale_mutagen
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#11: morale type morale_feeling_good
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#12: morale type morale_support
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#13: morale type morale_photos
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#14: morale type morale_craving_nicotine
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#15: morale type morale_craving_caffeine
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#16: morale type morale_craving_alcohol
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#17: morale type morale_craving_opiate
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#18: morale type morale_craving_speed
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#19: morale type morale_craving_cocaine
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#20: morale type morale_craving_crack
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#21: morale type morale_craving_mutagen
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#22: morale type morale_craving_diazepam
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#23: morale type morale_craving_marloss
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#24: morale type morale_food_bad
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#25: morale type morale_cannibal
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#26: morale type morale_demicannibal
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#27: morale type morale_vegetarian
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#28: morale type morale_antiveggy
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#29: morale type morale_meatarian
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#30: morale type morale_antimeat
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#31: morale type morale_antifruit
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#32: morale type morale_lactose
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#33: morale type morale_antijunk
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#34: morale type morale_antiwheat
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#35: morale type morale_sweettooth
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#36: morale type morale_no_digest
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#37: morale type morale_wet
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#38: morale type morale_dried_off
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#39: morale type morale_cold
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#40: morale type morale_hot
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#41: morale type morale_feeling_bad
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#42: morale type morale_bad_protein_bar
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#43: morale type morale_killed_innocent
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#44: morale type morale_killed_friend
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#45: morale type morale_killed_monster
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#46: morale type morale_mutilate_corpse
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#47: morale type morale_mutagen_elf
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#48: morale type morale_mutagen_chimera
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#49: morale type morale_mutagen_mutation
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#50: morale type morale_moodswing
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#51: morale type morale_book
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#52: morale type morale_comfy
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#53: morale type morale_scream
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#54: morale type morale_perm_masochist
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#55: morale type morale_perm_radiophile
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#56: morale type morale_perm_noface
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#57: morale type morale_perm_fpmode_on
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#58: morale type morale_perm_hoarder
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#59: morale type morale_perm_optimist
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#60: morale type morale_perm_badtemper
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#61: morale type morale_perm_numb
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#62: morale type morale_perm_emotionalvolatility
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#63: morale type morale_perm_emotionalflatness
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#64: morale type morale_perm_constrained
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#65: morale type morale_perm_nomad
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#66: morale type morale_game_found_kitten
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#67: morale type morale_haircut
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#68: morale type morale_shave
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#69: morale type morale_vomited
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#70: morale type morale_play_with_pet
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#71: morale type morale_pyromania_startfire
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#72: morale type morale_pyromania_nearfire
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#73: morale type morale_pyromania_nofire
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#74: morale type morale_killer_has_killed
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#75: morale type morale_killer_need_to_kill
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#76: morale type morale_perm_filthy
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#77: morale type morale_butcher
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#78: morale type morale_gravedigger
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#79: morale type morale_funeral
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#80: morale type morale_tree_communion
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#81: morale type morale_accomplishment
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#82: morale type morale_failure
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#83: morale type morale_fun_craft
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#84: morale type morale_shitty_craft
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#85: morale type morale_perm_debug
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#86: morale type morale_nightmare
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#87: morale type morale_migo_bio_tech
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#88: morale type morale_impossible_shape
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#89: morale type morale_afs_drugs
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#90: morale type morale_social
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#91: morale type morale_asocial
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#92: morale type morale_bile
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#93: morale type morale_sunrise
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#94: morale type morale_sunset
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/morale_types.json#95: morale type morale_applied_makeup
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/move_modes.json#0: movement mode walk
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/move_modes.json#1: movement mode run
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/move_modes.json#2: movement mode crouch
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/move_modes.json#3: movement mode prone
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#0: sub body part robofac_leg_bionic_basic_draped_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#1: sub body part robofac_leg_bionic_basic_draped_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#2: sub body part robofac_arm_bionic_basic_shoulder_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#3: sub body part robofac_arm_bionic_basic_upper_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#4: sub body part robofac_arm_bionic_basic_elbow_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#5: sub body part robofac_arm_bionic_basic_lower_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#6: sub body part robofac_arm_bionic_basic_shoulder_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#7: sub body part robofac_arm_bionic_basic_upper_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#8: sub body part robofac_arm_bionic_basic_elbow_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#9: sub body part robofac_arm_bionic_basic_lower_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#10: sub body part robofac_leg_bionic_basic_hip_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#11: sub body part robofac_leg_bionic_basic_upper_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#12: sub body part robofac_leg_bionic_basic_knee_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#13: sub body part robofac_leg_bionic_basic_lower_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#14: sub body part robofac_leg_bionic_basic_hip_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#15: sub body part robofac_leg_bionic_basic_upper_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#16: sub body part robofac_leg_bionic_basic_knee_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#17: sub body part robofac_leg_bionic_basic_lower_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#18: sub body part robofac_hand_bionic_basic_wrist_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#19: sub body part robofac_hand_bionic_basic_palm_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#20: sub body part robofac_hand_bionic_basic_back_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#21: sub body part robofac_hand_bionic_basic_fingers_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#22: sub body part robofac_hand_bionic_basic_wrist_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#23: sub body part robofac_hand_bionic_basic_palm_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#24: sub body part robofac_hand_bionic_basic_back_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#25: sub body part robofac_hand_bionic_basic_fingers_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#26: sub body part robofac_foot_bionic_basic_sole_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#27: sub body part robofac_foot_bionic_basic_arch_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#28: sub body part robofac_foot_bionic_basic_toes_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#29: sub body part robofac_foot_bionic_basic_ankle_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#30: sub body part robofac_foot_bionic_basic_heel_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#31: sub body part robofac_foot_bionic_basic_sole_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#32: sub body part robofac_foot_bionic_basic_arch_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#33: sub body part robofac_foot_bionic_basic_toes_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#34: sub body part robofac_foot_bionic_basic_ankle_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#35: sub body part robofac_foot_bionic_basic_heel_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#36: sub body part leg_bionic_basic_draped_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#37: sub body part leg_bionic_basic_draped_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#38: sub body part arm_bionic_basic_shoulder_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#39: sub body part arm_bionic_basic_upper_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#40: sub body part arm_bionic_basic_elbow_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#41: sub body part arm_bionic_basic_lower_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#42: sub body part arm_bionic_basic_shoulder_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#43: sub body part arm_bionic_basic_upper_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#44: sub body part arm_bionic_basic_elbow_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#45: sub body part arm_bionic_basic_lower_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#46: sub body part leg_bionic_basic_hip_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#47: sub body part leg_bionic_basic_upper_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#48: sub body part leg_bionic_basic_knee_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#49: sub body part leg_bionic_basic_lower_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#50: sub body part leg_bionic_basic_hip_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#51: sub body part leg_bionic_basic_upper_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#52: sub body part leg_bionic_basic_knee_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#53: sub body part leg_bionic_basic_lower_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#54: sub body part hand_bionic_basic_wrist_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#55: sub body part hand_bionic_basic_palm_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#56: sub body part hand_bionic_basic_back_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#57: sub body part hand_bionic_basic_fingers_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#58: sub body part hand_bionic_basic_wrist_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#59: sub body part hand_bionic_basic_palm_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#60: sub body part hand_bionic_basic_back_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#61: sub body part hand_bionic_basic_fingers_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#62: sub body part foot_bionic_basic_sole_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#63: sub body part foot_bionic_basic_arch_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#64: sub body part foot_bionic_basic_toes_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#65: sub body part foot_bionic_basic_ankle_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#66: sub body part foot_bionic_basic_heel_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#67: sub body part foot_bionic_basic_sole_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#68: sub body part foot_bionic_basic_arch_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#69: sub body part foot_bionic_basic_toes_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#70: sub body part foot_bionic_basic_ankle_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#71: sub body part foot_bionic_basic_heel_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#72: sub body part torso_bionic_basic_upper
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#73: sub body part torso_bionic_basic_neck
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#74: sub body part torso_bionic_basic_lower
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#75: sub body part torso_bionic_basic_hanging_front
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#76: sub body part torso_bionic_basic_hanging_back
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#77: sub body part torso_bionic_basic_waist
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#78: sub body part head_bionic_basic_forehead
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#79: sub body part head_bionic_basic_crown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#80: sub body part head_bionic_basic_nape
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#81: sub body part head_bionic_basic_throat
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#82: sub body part head_bionic_basic_ear_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#83: sub body part head_bionic_basic_ear_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#84: sub body part eyes_bionic_basic_left
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#85: sub body part eyes_bionic_basic_right
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#86: sub body part mouth_bionic_basic_lips
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#87: sub body part mouth_bionic_basic_nose
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#88: sub body part mouth_bionic_basic_cheeks
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#89: sub body part mouth_bionic_basic_chin
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#90: sub body part bionic_treads_body
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_bionic_sublimbs.json#91: sub body part bionic_treads_treads
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#0: sub body part head_dragonfly_forehead
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#1: sub body part head_dragonfly_crown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#2: sub body part head_dragonfly_nape
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#3: sub body part head_dragonfly_throat
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#4: sub body part head_dragonfly_ear_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#5: sub body part head_dragonfly_ear_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#6: sub body part eyes_bulging_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#7: sub body part eyes_bulging_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#8: sub body part eyes_fey_left
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#9: sub body part eyes_fey_right
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#10: sub body part eyes_fey_full_left
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#11: sub body part eyes_fey_full_right
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#12: sub body part eyes_feline_left
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#13: sub body part eyes_feline_right
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#14: sub body part eyes_ceph_left
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#15: sub body part eyes_ceph_right
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#16: sub body part eyes_ursine_left
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#17: sub body part eyes_ursine_right
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#18: sub body part eyes_avian_left
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#19: sub body part eyes_avian_right
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#20: sub body part eyes_snail_left
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#21: sub body part eyes_frog_right
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#22: sub body part eyes_frog_left
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#23: sub body part eyes_snail_right
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#24: sub body part eyes_snail_good_left
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#25: sub body part eyes_snail_good_right
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#26: sub body part eyes_crab_left
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#27: sub body part eyes_crab_right
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#28: sub body part eyes_compound_left
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#29: sub body part eyes_compound_right
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#30: sub body part muzzle_lips
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#31: sub body part muzzle_nose
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#32: sub body part muzzle_cheeks
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#33: sub body part muzzle_chin
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#34: sub body part muzzle_bear_lips
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#35: sub body part muzzle_bear_nose
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#36: sub body part muzzle_bear_cheeks
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#37: sub body part muzzle_bear_chin
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#38: sub body part muzzle_lupine_lips
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#39: sub body part muzzle_lupine_nose
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#40: sub body part muzzle_lupine_cheeks
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#41: sub body part muzzle_lupine_chin
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#42: sub body part muzzle_long_lips
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#43: sub body part muzzle_long_nostrils
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#44: sub body part muzzle_long_cheeks
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#45: sub body part muzzle_long_chin
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#46: sub body part muzzle_rodent_lips
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#47: sub body part muzzle_rodent_nose
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#48: sub body part muzzle_rodent_cheeks
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#49: sub body part muzzle_rodent_chin
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#50: sub body part muzzle_rabbit_lips
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#51: sub body part muzzle_rabbit_nose
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#52: sub body part muzzle_rabbit_cheeks
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#53: sub body part muzzle_rabbit_chin
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#54: sub body part beak_nares
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#55: sub body part beak_top
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#56: sub body part beak_tip
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#57: sub body part beak_bottom
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#58: sub body part beak_bird_nares
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#59: sub body part beak_bird_top
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#60: sub body part beak_bird_tip
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#61: sub body part beak_bird_bottom
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#62: sub body part beak_woodpecker_nares
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#63: sub body part beak_woodpecker_top
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#64: sub body part beak_woodpecker_tip
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#65: sub body part beak_woodpecker_bottom
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#66: sub body part beak_hummingbird_nares
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#67: sub body part beak_hummingbird_top
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#68: sub body part beak_hummingbird_tip
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#69: sub body part beak_hummingbird_bottom
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#70: sub body part gastropod_tongue_lips
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#71: sub body part gastropod_tongue_nose
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#72: sub body part gastropod_tongue_cheeks
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#73: sub body part gastropod_tongue_chin
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#74: sub body part insect_proboscis_base
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#75: sub body part insect_proboscis_labium
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#76: sub body part insect_proboscis_cheeks
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#77: sub body part insect_proboscis_bottom
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#78: sub body part crustacean_pincer_wrist_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#79: sub body part crustacean_pincer_claws_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#80: sub body part paw_default_wrist_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#81: sub body part paw_default_palm_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#82: sub body part paw_default_back_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#83: sub body part paw_default_fingers_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#84: sub body part paw_default_wrist_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#85: sub body part paw_default_palm_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#86: sub body part paw_default_back_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#87: sub body part paw_default_fingers_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#88: sub body part paw_broad_wrist_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#89: sub body part paw_broad_palm_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#90: sub body part paw_broad_back_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#91: sub body part paw_broad_fingers_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#92: sub body part paw_broad_wrist_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#93: sub body part paw_broad_palm_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#94: sub body part paw_broad_back_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#95: sub body part paw_broad_fingers_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#96: sub body part paw_wrist_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#97: sub body part paw_palm_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#98: sub body part paw_back_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#99: sub body part paw_fingers_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#100: sub body part paw_wrist_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#101: sub body part paw_palm_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#102: sub body part paw_back_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#103: sub body part paw_fingers_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#104: sub body part paw_rat_wrist_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#105: sub body part paw_rat_palm_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#106: sub body part paw_rat_back_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#107: sub body part paw_rat_fingers_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#108: sub body part paw_rat_wrist_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#109: sub body part paw_rat_palm_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#110: sub body part paw_rat_back_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#111: sub body part paw_rat_fingers_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#112: sub body part paw_little_wrist_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#113: sub body part paw_little_palm_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#114: sub body part paw_little_back_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#115: sub body part paw_little_fingers_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#116: sub body part paw_little_wrist_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#117: sub body part paw_little_palm_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#118: sub body part paw_little_back_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#119: sub body part paw_little_fingers_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#120: sub body part arm_feathers_shoulder_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#121: sub body part arm_feathers_upper_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#122: sub body part arm_feathers_elbow_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#123: sub body part arm_feathers_lower_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#124: sub body part arm_feathers_shoulder_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#125: sub body part arm_feathers_upper_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#126: sub body part arm_feathers_elbow_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#127: sub body part arm_feathers_lower_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#128: sub body part arm_wing_bird_shoulder_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#129: sub body part arm_wing_bird_upper_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#130: sub body part arm_wing_bird_elbow_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#131: sub body part arm_wing_bird_lower_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#132: sub body part arm_wing_bird_fingers_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#133: sub body part arm_wing_bird_shoulder_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#134: sub body part arm_wing_bird_upper_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#135: sub body part arm_wing_bird_elbow_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#136: sub body part arm_wing_bird_lower_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#137: sub body part arm_wing_bird_fingers_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#138: sub body part arm_leathery_shoulder_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#139: sub body part arm_leathery_upper_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#140: sub body part arm_leathery_elbow_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#141: sub body part arm_leathery_lower_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#142: sub body part arm_leathery_shoulder_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#143: sub body part arm_leathery_upper_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#144: sub body part arm_leathery_elbow_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#145: sub body part arm_leathery_lower_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#146: sub body part arm_wing_bat_shoulder_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#147: sub body part arm_wing_bat_upper_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#148: sub body part arm_wing_bat_elbow_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#149: sub body part arm_wing_bat_lower_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#150: sub body part arm_wing_bat_fingers_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#151: sub body part arm_wing_bat_shoulder_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#152: sub body part arm_wing_bat_upper_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#153: sub body part arm_wing_bat_elbow_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#154: sub body part arm_wing_bat_lower_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#155: sub body part arm_wing_bat_fingers_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#156: sub body part arm_insect_upper_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#157: sub body part arm_insect_elbow_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#158: sub body part arm_insect_lower_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#159: sub body part arm_insect_upper_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#160: sub body part arm_insect_elbow_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#161: sub body part arm_insect_lower_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#162: sub body part arm_insect_good_upper_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#163: sub body part arm_insect_good_elbow_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#164: sub body part arm_insect_good_lower_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#165: sub body part arm_insect_good_upper_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#166: sub body part arm_insect_good_elbow_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#167: sub body part arm_insect_good_lower_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#168: sub body part insect_tarsomere_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#169: sub body part insect_segment_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#170: sub body part insect_terminus_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#171: sub body part insect_tarsomere_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#172: sub body part insect_segment_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#173: sub body part insect_terminus_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#174: sub body part vine_sublimb_ur
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#175: sub body part vine_sublimb_ul
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#176: sub body part vine_sublimb_lr
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#177: sub body part vine_sublimb_ll
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#178: sub body part wing_shoulder_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#179: sub body part wing_shoulder_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#180: sub body part wing_upper_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#181: sub body part wing_upper_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#182: sub body part wing_joint_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#183: sub body part wing_joint_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#184: sub body part wing_lower_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#185: sub body part wing_lower_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#186: sub body part wing_butterfly_basal_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#187: sub body part wing_butterfly_forewing_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#188: sub body part wing_butterfly_hindwing_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#189: sub body part wing_butterfly_basal_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#190: sub body part wing_butterfly_forewing_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#191: sub body part wing_butterfly_hindwing_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#192: sub body part wing_insect_costal_margin_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#193: sub body part wing_insect_posterior_margin_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#194: sub body part wing_insect_apex_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#195: sub body part wing_insect_costal_margin_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#196: sub body part wing_insect_posterior_margin_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#197: sub body part wing_insect_apex_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#198: sub body part leg_hip_gastropod_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#199: sub body part leg_hip_gastropod_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#200: sub body part leg_gastropod_draped
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#201: sub body part leg_upper_gastropod
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#202: sub body part leg_lower_gastropod
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#203: sub body part leg_crab_basis_fl
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#204: sub body part leg_crab_merus_fl
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#205: sub body part leg_crab_carpus_fl
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#206: sub body part leg_crab_manus_fl
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#207: sub body part leg_crab_dactyl_fl
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#208: sub body part leg_crab_basis_fr
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#209: sub body part leg_crab_merus_fr
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#210: sub body part leg_crab_carpus_fr
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#211: sub body part leg_crab_manus_fr
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#212: sub body part leg_crab_dactyl_fr
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#213: sub body part leg_crab_basis_rl
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#214: sub body part leg_crab_merus_rl
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#215: sub body part leg_crab_carpus_rl
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#216: sub body part leg_crab_manus_rl
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#217: sub body part leg_crab_dactyl_rl
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#218: sub body part leg_crab_basis_rr
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#219: sub body part leg_crab_merus_rr
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#220: sub body part leg_crab_carpus_rr
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#221: sub body part leg_crab_manus_rr
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#222: sub body part leg_crab_dactyl_rr
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#223: sub body part tentacle_lower_front_base_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#224: sub body part tentacle_lower_front_middle_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#225: sub body part tentacle_lower_front_tip_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#226: sub body part tentacle_lower_middle_base_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#227: sub body part tentacle_lower_middle_middle_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#228: sub body part tentacle_lower_middle_tip_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#229: sub body part tentacle_lower_rear_base_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#230: sub body part tentacle_lower_rear_middle_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#231: sub body part tentacle_lower_rear_tip_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#232: sub body part tentacle_lower_front_base_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#233: sub body part tentacle_lower_front_middle_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#234: sub body part tentacle_lower_front_tip_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#235: sub body part tentacle_lower_middle_base_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#236: sub body part tentacle_lower_middle_middle_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#237: sub body part tentacle_lower_middle_tip_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#238: sub body part tentacle_lower_rear_base_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#239: sub body part tentacle_lower_rear_middle_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#240: sub body part tentacle_lower_rear_tip_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#241: sub body part tentacle_default_base_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#242: sub body part tentacle_default_middle_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#243: sub body part tentacle_default_tip_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#244: sub body part tentacle_default_base_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#245: sub body part tentacle_default_middle_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#246: sub body part tentacle_default_tip_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#247: sub body part tentacle_draped_lower_front_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#248: sub body part tentacle_draped_lower_middle_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#249: sub body part tentacle_draped_lower_rear_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#250: sub body part tentacle_draped_lower_front_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#251: sub body part tentacle_draped_lower_middle_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#252: sub body part tentacle_draped_lower_rear_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#253: sub body part hoof_sole_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#254: sub body part hoof_wall_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#255: sub body part hoof_fetlock_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#256: sub body part hoof_sole_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#257: sub body part hoof_wall_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#258: sub body part hoof_fetlock_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#259: sub body part avian_talon_bottom_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#260: sub body part avian_talon_top_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#261: sub body part avian_talon_talons_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#262: sub body part avian_talon_ankle_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#263: sub body part avian_talon_rear_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#264: sub body part avian_talon_bottom_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#265: sub body part avian_talon_top_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#266: sub body part avian_talon_talons_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#267: sub body part avian_talon_ankle_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#268: sub body part avian_talon_rear_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#269: sub body part digitigrade_foot_sole_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#270: sub body part digitigrade_foot_arch_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#271: sub body part digitigrade_foot_toes_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#272: sub body part digitigrade_foot_ankle_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#273: sub body part digitigrade_foot_heel_l
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#274: sub body part digitigrade_foot_sole_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#275: sub body part digitigrade_foot_arch_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#276: sub body part digitigrade_foot_toes_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#277: sub body part digitigrade_foot_ankle_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#278: sub body part digitigrade_foot_heel_r
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#279: sub body part tail_default_base
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#280: sub body part tail_default_center
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#281: sub body part tail_default_tip
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#282: sub body part tail_long_base
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#283: sub body part tail_long_center
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#284: sub body part tail_long_tip
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#285: sub body part tail_fluffy_base
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#286: sub body part tail_fluffy_center
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#287: sub body part tail_fluffy_tip
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#288: sub body part tail_thick_base
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#289: sub body part tail_thick_center
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#290: sub body part tail_thick_tip
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#291: sub body part tail_scorpion_base
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#292: sub body part tail_scorpion_center
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#293: sub body part tail_scorpion_stinger
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#294: sub body part tail_club_base
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#295: sub body part tail_club_center
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#296: sub body part tail_club_club
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#297: sub body part tail_bovine_base
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#298: sub body part tail_bovine_center
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#299: sub body part tail_bovine_tip
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#300: sub body part tail_raptor_base
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#301: sub body part tail_raptor_center
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#302: sub body part tail_raptor_tip
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#303: sub body part tail_finned_base
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#304: sub body part tail_finned_center
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#305: sub body part tail_finned_tip
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#306: sub body part tail_rat_base
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#307: sub body part tail_rat_center
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/limbs_sublimbs.json#308: sub body part tail_rat_tip
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#0: mutation category ANY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#1: mutation category HUMAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#2: mutation category PLANT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#3: mutation category INSECT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#4: mutation category SPIDER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#5: mutation category SLIME
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#6: mutation category FISH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#7: mutation category GASTROPOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#8: mutation category RAT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#9: mutation category BEAST
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#10: mutation category URSINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#11: mutation category FELINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#12: mutation category LUPINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#13: mutation category CATTLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#14: mutation category CEPHALOPOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#15: mutation category BIRD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#16: mutation category LIZARD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#17: mutation category BATRACHIAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#18: mutation category TROGLOBITE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#19: mutation category ALPHA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#20: mutation category MEDICAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#21: mutation category CHIMERA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#22: mutation category ELFA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#23: mutation category RAPTOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#24: mutation category MOUSE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#25: mutation category RABBIT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#26: mutation category CRUSTACEAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#27: mutation category CHIROPTERAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#28: mutation category MYCUS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_category.json#29: mutation category INTERSTICE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/mutations/mutation_ordering.json#0: overlay order global
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#0: named color Cataclysm Red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#1: named color Cataclysm Green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#2: named color Green beige
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#3: named color Beige
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#4: named color Sand yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#5: named color Signal yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#6: named color Golden yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#7: named color Honey yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#8: named color Maize yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#9: named color Daffodil yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#10: named color Brown beige
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#11: named color Lemon yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#12: named color Oyster white
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#13: named color Ivory
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#14: named color Light ivory
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#15: named color Sulfur yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#16: named color Saffron yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#17: named color Zinc yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#18: named color Grey beige
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#19: named color Olive yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#20: named color Colza yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#21: named color Traffic yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#22: named color Ochre yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#23: named color Luminous yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#24: named color Curry
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#25: named color Melon yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#26: named color Broom yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#27: named color Dahlia yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#28: named color Pastel yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#29: named color Pearl beige
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#30: named color Pearl gold
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#31: named color Sun yellow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#32: named color Yellow orange
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#33: named color Red orange
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#34: named color Vermilion
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#35: named color Pastel orange
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#36: named color Pure orange
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#37: named color Luminous orange
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#38: named color Luminous bright orange
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#39: named color Bright red orange
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#40: named color Traffic orange
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#41: named color Signal orange
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#42: named color Deep orange
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#43: named color Salmon orange
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#44: named color Pearl orange
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#45: named color RAL orange
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#46: named color Flame red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#47: named color Signal red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#48: named color Carmine red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#49: named color Ruby red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#50: named color Purple red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#51: named color Wine red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#52: named color Black red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#53: named color Oxide red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#54: named color Brown red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#55: named color Beige red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#56: named color Tomato red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#57: named color Antique pink
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#58: named color Light pink
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#59: named color Coral red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#60: named color Rose
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#61: named color Strawberry red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#62: named color Traffic red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#63: named color Salmon pink
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#64: named color Luminous red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#65: named color Luminous bright red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#66: named color Raspberry red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#67: named color Pure red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#68: named color Orient red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#69: named color Pearl ruby red
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#70: named color Pearl pink
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#71: named color Red lilac
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#72: named color Red violet
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#73: named color Heather violet
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#74: named color Claret violet
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#75: named color Blue lilac
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#76: named color Traffic purple
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#77: named color Purple violet
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#78: named color Signal violet
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#79: named color Pastel violet
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#80: named color Telemagenta
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#81: named color Pearl violet
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#82: named color Pearl blackberry
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#83: named color Violet blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#84: named color Green blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#85: named color Ultramarine blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#86: named color Sapphire blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#87: named color Black blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#88: named color Signal blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#89: named color Brilliant blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#90: named color Grey blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#91: named color Azure blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#92: named color Gentian blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#93: named color Steel blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#94: named color Light blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#95: named color Cobalt blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#96: named color Pigeon blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#97: named color Sky blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#98: named color Traffic blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#99: named color Turquoise blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#100: named color Capri blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#101: named color Ocean blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#102: named color Water blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#103: named color Night blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#104: named color Distant blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#105: named color Pastel blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#106: named color Pearl Gentian blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#107: named color Pearl night blue
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#108: named color Patina green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#109: named color Emerald green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#110: named color Leaf green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#111: named color Olive green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#112: named color Blue green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#113: named color Moss green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#114: named color Grey olive
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#115: named color Bottle green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#116: named color Brown green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#117: named color Fir green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#118: named color Grass green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#119: named color Reseda green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#120: named color Black green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#121: named color Reed green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#122: named color Yellow olive
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#123: named color Black olive
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#124: named color Turquoise green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#125: named color May green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#126: named color Yellow green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#127: named color Pastel green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#128: named color Chrome green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#129: named color Pale green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#130: named color Olive-drab/brown olive
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#131: named color Traffic green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#132: named color Fern green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#133: named color Opal green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#134: named color Light green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#135: named color Pine green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#136: named color Mint green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#137: named color Signal green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#138: named color Mint turquoise
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#139: named color Pastel turquoise
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#140: named color Pearl green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#141: named color Pearl opal green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#142: named color Pure green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#143: named color Luminous green
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#144: named color Squirrel grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#145: named color Silver grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#146: named color Olive grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#147: named color Moss grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#148: named color Signal grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#149: named color Mouse grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#150: named color Beige grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#151: named color Khaki grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#152: named color Green grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#153: named color Tarpaulin grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#154: named color Iron grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#155: named color Basalt grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#156: named color Brown grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#157: named color Slate grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#158: named color Anthracite grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#159: named color Black grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#160: named color Umbra grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#161: named color Concrete grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#162: named color Graphite grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#163: named color Granite grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#164: named color Stone grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#165: named color Blue grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#166: named color Pebble grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#167: named color Cement grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#168: named color Yellow grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#169: named color Light grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#170: named color Platinum grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#171: named color Dusty grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#172: named color Agate grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#173: named color Quartz grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#174: named color Window grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#175: named color Traffic grey A
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#176: named color Traffic grey B
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#177: named color Silk grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#178: named color Telegrey 1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#179: named color Telegrey 2
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#180: named color Telegrey 4
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#181: named color Pearl mouse grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#182: named color Green brown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#183: named color Ochre brown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#184: named color Signal brown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#185: named color Clay brown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#186: named color Copper brown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#187: named color Fawn brown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#188: named color Olive brown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#189: named color Nut brown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#190: named color Red brown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#191: named color Sepia brown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#192: named color Chestnut brown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#193: named color Mahogany brown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#194: named color Chocolate brown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#195: named color Grey brown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#196: named color Black brown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#197: named color Orange brown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#198: named color Beige brown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#199: named color Pale brown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#200: named color Terra brown
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#201: named color Pearl copper
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#202: named color Cream
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#203: named color Grey white
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#204: named color Signal white
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#205: named color Signal black
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#206: named color Jet black
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#207: named color White aluminium
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#208: named color Grey aluminium
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#209: named color Pure white
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#210: named color Graphite black
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#211: named color Clean room white
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#212: named color Traffic white
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#213: named color Traffic black
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#214: named color Papyrus white
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#215: named color Pearl light grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/named_colors.json#216: named color Pearl dark grey
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/npcs/exodii/exodii_merchant_missions.json#17: migration var
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/npcs/exodii/exodii_merchant_missions.json#20: migration var
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.I/blacklist_charge_removal.json#0: blacklist charge_removal
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.I/blacklist_scenarios.json#0: scenario defense_mode_fortified
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.I/blacklist_scenarios.json#1: blacklist scenario
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.I/blacklist_temperature_removal.json#0: blacklist temperature_removal
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.I/migrated_vehicleparts.json#0: migration vehicle_part
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.I/migrated_vehicleparts.json#1: migration vehicle_part
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.I/migrated_vehicleparts.json#2: migration vehicle_part
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.I/migrated_vehicleparts.json#3: migration vehicle_part
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.I/migrated_vehicleparts.json#4: migration vehicle_part
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.I/migration_terrain.json#0: migration terrain
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.I/obsolete_traps.json#0: migration trap
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/furniture.json#0: migration furniture
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/furniture.json#1: migration furniture
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_effects.json#0: migration effect
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_effects.json#1: migration effect
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_effects.json#2: migration effect
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_effects.json#3: migration effect
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_effects.json#4: migration effect
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_effects.json#5: migration effect
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_effects.json#6: migration effect
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_effects.json#7: migration effect
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#0: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#1: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#2: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#3: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#4: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#5: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#6: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#7: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#8: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#9: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#10: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#11: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#12: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#13: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#14: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#15: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#16: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#17: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#18: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#19: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#20: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#21: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#22: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#23: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#24: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#25: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#26: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_special.json#27: migration overmap_special
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_terrain.json#0: migration oter
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_terrain.json#1: migration oter
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_terrain.json#2: migration oter
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_terrain.json#3: migration oter
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_terrain.json#4: migration oter
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_terrain.json#5: migration oter
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/obsolete_overmap_terrain.json#6: migration oter
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/proficiencies.json#0: migration proficiency
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/proficiencies.json#1: migration proficiency
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/proficiencies.json#2: migration proficiency
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/proficiencies.json#3: migration proficiency
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/terrain.json#0: migration terrain
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/terrain.json#1: migration terrain
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/terrain.json#2: migration terrain
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/terrain.json#3: migration terrain
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/terrain.json#4: migration terrain
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/terrain.json#5: migration terrain
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/vehicle_parts.json#0: migration vehicle_part
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/obsoletion_and_migration_0.J/vehicle_parts.json#1: migration vehicle_part
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_connections.json#0: overmap connection local_road
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_connections.json#1: overmap connection highway_road_connection
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_connections.json#2: overmap connection sewer_tunnel
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_connections.json#3: overmap connection subway_tunnel
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_connections.json#4: overmap connection forest_trail
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#0: overmap land-use code 
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#1: overmap land-use code cropland
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#2: overmap land-use code pasture
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#3: overmap land-use code forest
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#4: overmap land-use code wetland
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#5: overmap land-use code mining
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#6: overmap land-use code open_land
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#7: overmap land-use code recreation_participation
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#8: overmap land-use code recreation_spectator
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#9: overmap land-use code recreation_water
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#10: overmap land-use code residential_multi
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#11: overmap land-use code residential_high
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#12: overmap land-use code residential_medium
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#13: overmap land-use code residential_low
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#14: overmap land-use code wetland_saltwater
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#15: overmap land-use code commercial
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#16: overmap land-use code industrial
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#17: overmap land-use code transitional
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#18: overmap land-use code transportation
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#19: overmap land-use code waste_disposal
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#20: overmap land-use code water
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#21: overmap land-use code cranberry_bog
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#22: overmap land-use code powerline_utility
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#23: overmap land-use code saltwater_sandy_beach
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#24: overmap land-use code golf_course
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#25: overmap land-use code marina
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#26: overmap land-use code urban_public_institutional
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#27: overmap land-use code cemetery
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#28: overmap land-use code orchard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#29: overmap land-use code nursery
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#30: overmap land-use code wetland_forest
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#31: overmap land-use code residential_very_low
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#32: overmap land-use code junkyard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/overmap_land_use_codes.json#33: overmap land-use code brushland
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#0: overmap vision default
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#1: overmap vision always_full
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#2: overmap vision isolated_building
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#3: overmap vision city_building
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#4: overmap vision alien_tower
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#5: overmap vision isolated_tower
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#6: overmap vision isolated_camp
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#7: overmap vision isolated_electronics
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#8: overmap vision industrial_building
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#9: overmap vision warehouse
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#10: overmap vision island
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#11: overmap vision wreckage
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#12: overmap vision forested
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#13: overmap vision first_glance_forest
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#14: overmap vision forested_swampy
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#15: overmap vision open_land
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#16: overmap vision farm_field
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#17: overmap vision large_pavement
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#18: overmap vision single_water
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#19: overmap vision water_body
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#20: overmap vision roof_or_air
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#21: overmap vision underground_dirt
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#22: overmap vision underground_stone
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#23: overmap vision large_building
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#24: overmap vision large_city_building
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#25: overmap vision large_industrial_building
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#26: overmap vision large_structure
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#27: overmap vision large_ship
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#28: overmap vision large_outcropping
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#29: overmap vision natural_outcropping
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#30: overmap vision natural_depression
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#31: overmap vision unusual_structure
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#32: overmap vision blends_till_outlines
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/overmap/vision_levels.json#33: overmap vision blends_till_details
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/profession_groups.json#0: profession group adult_basic_background
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/proficiencies/proficiency_categories.json#0: proficiency category prof_weakpoint
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/proficiencies/proficiency_categories.json#1: proficiency category prof_combat
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/proficiencies/proficiency_categories.json#2: proficiency category prof_chem
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/proficiencies/proficiency_categories.json#3: proficiency category prof_food
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/proficiencies/proficiency_categories.json#4: proficiency category prof_butchering
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/proficiencies/proficiency_categories.json#5: proficiency category prof_electronic
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/proficiencies/proficiency_categories.json#6: proficiency category prof_gunmaking
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/proficiencies/proficiency_categories.json#7: proficiency category prof_firstaid
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/proficiencies/proficiency_categories.json#8: proficiency category prof_mechanic
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/proficiencies/proficiency_categories.json#9: proficiency category prof_smithing
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/proficiencies/proficiency_categories.json#10: proficiency category prof_woodworking
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/proficiencies/proficiency_categories.json#11: proficiency category prof_devices
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/proficiencies/proficiency_categories.json#12: proficiency category prof_survival
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/proficiencies/proficiency_categories.json#13: proficiency category prof_archery
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/proficiencies/proficiency_categories.json#14: proficiency category prof_misc_craft
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/proficiencies/proficiency_categories.json#15: proficiency category prof_tailoring
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/proficiencies/proficiency_categories.json#16: proficiency category prof_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/proficiencies/proficiency_categories.json#17: proficiency category prof_athletics
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_bare_bones_basecamp/bare_bones_basecamp_personal_recipe_groups.json#0: recipe group fbbb_crafting_recipes_custom
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_bare_bones_basecamp/bare_bones_basecamp_recipe_groups.json#0: recipe group fbbb_crafting_recipes_basic
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_bare_bones_basecamp/bare_bones_basecamp_recipe_groups.json#1: recipe group fbbb_crafting_recipes_cooking
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_bare_bones_basecamp/bare_bones_basecamp_recipe_groups.json#2: recipe group fbbb_crafting_recipes_crafting
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_modular_firestation_1/modular_firestation_recipe_groups.json#0: recipe group fbmc_firestation_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_modular_firestation_1/modular_firestation_recipe_groups.json#1: recipe group fbmc_firestation_farm_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_modular_firestation_1/modular_firestation_recipe_groups.json#2: recipe group fbmc_firestation_cooking_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_modular_firestation_1/modular_firestation_recipe_groups.json#3: recipe group fbmc_firestation_cooking_recipes_2
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_modular_firestation_1/modular_firestation_recipe_groups.json#4: recipe group fbmc_firestation_cooking_recipes_3
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_modular_firestation_1/modular_firestation_recipe_groups.json#5: recipe group fbmc_firestation_blacksmith_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_modular_firestation_1/modular_firestation_recipe_groups.json#6: recipe group fbmc_firestation_blacksmith_recipes_3
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_modular_firestation_1/modular_firestation_recipe_groups.json#7: recipe group fbmc_firestation_blacksmith_recipes_4
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_modular_firestation_1/modular_firestation_recipe_groups.json#8: recipe group fbmc_firestation_blacksmith_recipes_5
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_modular_firestation_1/modular_firestation_recipe_groups.json#9: recipe group fbmc_firestation_blacksmith_recipes_6
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_modular_firestation_1/modular_firestation_recipe_groups.json#10: recipe group fbmc_firestation_blacksmith_recipes_7
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_modular_hub/version_2/modular_field_recipe_groups.json#0: recipe group fbmh_2_crafting_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_modular_hub/version_2/modular_field_recipe_groups.json#1: recipe group fbmh_2_cooking_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_modular_shelter/modular_shelter_recipe_groups.json#0: recipe group fbmc_shelter_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_modular_shelter/modular_shelter_recipe_groups.json#1: recipe group fbmc_shelter_cooking_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_modular_shelter_1/modular_shelter_1_recipe_groups.json#0: recipe group fbmc_shelter_1_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_modular_shelter_1/modular_shelter_1_recipe_groups.json#1: recipe group fbmc_shelter_1_cooking_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_modular_shelter_2/modular_shelter_2_recipe_groups.json#0: recipe group fbmc_shelter_2_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/base/recipe_modular_shelter_2/modular_shelter_2_recipe_groups.json#1: recipe group fbmc_shelter_2_cooking_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/expansion/recipe_modular_canteen/version_2/modular_canteen_recipe_groups.json#0: recipe group fbmk_2_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/expansion/recipe_modular_canteen/version_2/modular_canteen_recipe_groups.json#1: recipe group fbmk_2_recipes_2
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/expansion/recipe_modular_canteen/version_2/modular_canteen_recipe_groups.json#2: recipe group fbmk_2_recipes_3
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/expansion/recipe_modular_farm/version_2/modular_farm_recipe_groups.json#0: recipe group fbmf_2_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/expansion/recipe_modular_livestock/version_2/modular_livestock_recipe_groups.json#0: recipe group fbml_2_shed_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/expansion/recipe_modular_workshop/version_2/modular_workshop_recipe_groups.json#0: recipe group fbmw_2_potter_recipes_0
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/expansion/recipe_modular_workshop/version_2/modular_workshop_recipe_groups.json#1: recipe group fbmw_2_potter_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/expansion/recipe_modular_workshop/version_2/modular_workshop_recipe_groups.json#2: recipe group fbmw_2_blacksmith_recipes_0
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/expansion/recipe_modular_workshop/version_2/modular_workshop_recipe_groups.json#3: recipe group fbmw_2_blacksmith_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/expansion/recipe_modular_workshop/version_2/modular_workshop_recipe_groups.json#4: recipe group fbmw_2_blacksmith_recipes_2
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/expansion/recipe_modular_workshop/version_2/modular_workshop_recipe_groups.json#5: recipe group fbmw_2_blacksmith_recipes_3
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/expansion/recipe_modular_workshop/version_2/modular_workshop_recipe_groups.json#6: recipe group fbmw_2_blacksmith_recipes_4
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/expansion/recipe_modular_workshop/version_2/modular_workshop_recipe_groups.json#7: recipe group fbmw_2_blacksmith_recipes_5
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/expansion/recipe_modular_workshop/version_2/modular_workshop_recipe_groups.json#8: recipe group fbmw_2_blacksmith_recipes_6
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/expansion/recipe_modular_workshop/version_2/modular_workshop_recipe_groups.json#9: recipe group fbmw_2_glassblower_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/expansion/recipe_modular_workshop/version_2/modular_workshop_recipe_groups.json#10: recipe group fbmw_2_recipes_salt_water
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#0: recipe group all_faction_base_types
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#1: recipe group all_faction_base_expansions
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#2: recipe group kitchen_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#3: recipe group kitchen_recipes_2
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#4: recipe group kitchen_recipes_3
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#5: recipe group saltworks_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#6: recipe group saltworks_recipes_2
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#7: recipe group saltworks_recipes_3
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#8: recipe group primitive_camp_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#9: recipe group farm_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#10: recipe group blacksmith_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#11: recipe group blacksmith_recipes_2
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#12: recipe group blacksmith_recipes_3
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#13: recipe group blacksmith_recipes_4
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#14: recipe group blacksmith_recipes_5
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#15: recipe group blacksmith_recipes_6
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#16: recipe group blacksmith_recipes_7
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#17: recipe group power_saw_recipes
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#18: recipe group fishing_recipes
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#19: recipe group hack_recipes_general
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#20: recipe group clay_recipes_1
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#21: recipe group hack_recipes_science
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/basecamps/recipe_groups.json#22: recipe group hack_recipes_satellite
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/recipes.json#0: recipe category CC_*
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/recipes.json#1: recipe category CC_WEAPON
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/recipes.json#2: recipe category CC_AMMO
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/recipes.json#3: recipe category CC_FOOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/recipes.json#4: recipe category CC_CHEM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/recipes.json#5: recipe category CC_ELECTRONIC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/recipes.json#6: recipe category CC_ARMOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/recipes.json#7: recipe category CC_APPLIANCE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/recipes.json#8: recipe category CC_CAMP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/recipes.json#9: recipe category CC_OTHER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/recipes.json#10: recipe category CC_ANIMALS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/recipes.json#11: recipe category CC_MUSIC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/recipes.json#12: recipe category CC_BUILDING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/recipes/recipes.json#13: recipe category CC_PRACTICE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#0: rotatable symbol <
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#1: rotatable symbol ┘
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#2: rotatable symbol │
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#3: rotatable symbol ├
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#4: rotatable symbol ╝
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#5: rotatable symbol ║
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#6: rotatable symbol ╠
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#7: rotatable symbol ╛
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#8: rotatable symbol ╫
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#9: rotatable symbol ╞
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#10: rotatable symbol ╜
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#11: rotatable symbol ╟
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#12: rotatable symbol ┃
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#13: rotatable symbol ┆
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#14: rotatable symbol ┇
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#15: rotatable symbol ┊
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#16: rotatable symbol ┋
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#17: rotatable symbol ╎
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#18: rotatable symbol ╏
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#19: rotatable symbol ╯
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#20: rotatable symbol ▟
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#21: rotatable symbol ▚
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#22: rotatable symbol ▘
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/rotatable_symbols.json#23: rotatable symbol ▁
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scent_types.json#0: scent type sc_human
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scent_types.json#1: scent type sc_flower
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scent_types.json#2: scent type sc_fetid
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scent_types.json#3: scent type sc_bile
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#0: score score_kills
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#1: score score_moves
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#2: score score_distance_walked
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#3: score score_distance_mounted
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#4: score score_distance_ran
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#5: score score_distance_crouched
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#6: score score_distance_swam
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#7: score score_distance_swam_underwater
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#8: score score_min_move_z
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#9: score score_max_move_z
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#10: score score_distance_veh_onboard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#11: score score_distance_gndv_onboard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#12: score score_distance_rail_onboard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#13: score score_distance_boat_onboard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#14: score score_distance_acft_onboard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#15: score score_distance_veh_ctrl_remote
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#16: score score_max_velocity_gndv
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#17: score score_max_velocity_rail
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#18: score score_max_velocity_boat
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#19: score score_max_velocity_acft
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#20: score score_min_veh_z
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#21: score score_max_veh_z
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#22: score score_max_gndv_z
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#23: score score_max_acft_z
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#24: score score_damage_taken
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#25: score score_damage_healed
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#26: score score_headshots
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#27: score score_cut_trees
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#28: score score_buried_corpses
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#29: score score_exhumed_graves
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#30: score score_installs_cbm
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#31: score score_installs_faulty_cbm
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#32: score score_gains_mutation
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#33: score score_crosses_mutation_threshold
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#34: score score_broken_bones
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#35: score score_broken_right_leg
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#36: score score_broken_left_leg
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#37: score score_broken_right_arm
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#38: score score_broken_left_arm
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/scores.json#39: score score_skill_levels_gained
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skillDisplayType.json#0: skill display display_melee
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skillDisplayType.json#1: skill display display_ranged
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skillDisplayType.json#2: skill display display_crafting
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skillDisplayType.json#3: skill display display_interaction
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#0: skill speech
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#1: skill computer
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#2: skill firstaid
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#3: skill mechanics
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#4: skill traps
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#5: skill driving
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#6: skill swimming
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#7: skill fabrication
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#8: skill cooking
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#9: skill tailor
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#10: skill survival
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#11: skill electronics
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#12: skill archery
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#13: skill gun
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#14: skill launcher
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#15: skill pistol
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#16: skill rifle
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#17: skill shotgun
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#18: skill smg
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#19: skill throw
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#20: skill melee
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#21: skill bashing
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#22: skill cutting
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#23: skill dodge
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#24: skill stabbing
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#25: skill unarmed
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#26: skill chemistry
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/skills.json#27: skill weapon
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#0: species MAMMAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#1: species AMPHIBIAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#2: species BIRD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#3: species CYBORG
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#4: species REPTILE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#5: species FISH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#6: species KRAKEN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#7: species MUTANT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#8: species NETHER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#9: species NETHER_BURROWING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#10: species NETHER_EMANATION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#11: species MIGO
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#12: species TINDALOS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#13: species SLIME
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#14: species FUNGUS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#15: species LEECH_PLANT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#16: species INSECT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#17: species CENTIPEDE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#18: species INSECT_FLYING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#19: species SPIDER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#20: species PLANT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#21: species MOLLUSK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#22: species WORM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#23: species ZOMBIE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#24: species FERAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#25: species ROBOT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#26: species ROBOT_FLYING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#27: species YRAX
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#28: species HORROR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#29: species ABERRATION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#30: species HALLUCINATION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#31: species HUMAN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/species.json#32: species UNKNOWN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#0: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#1: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#2: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#3: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#4: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#5: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#6: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#7: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#8: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#9: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#10: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#11: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#12: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#13: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#14: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#15: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#16: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#17: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#18: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#19: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#20: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#21: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#22: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#23: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#24: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#25: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#26: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#27: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#28: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#29: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#30: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#31: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#32: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#33: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#34: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#35: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#36: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#37: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#38: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#39: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#40: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#41: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#42: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#43: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#44: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#45: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#46: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#47: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#48: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#49: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#50: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#51: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#52: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#53: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#54: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#55: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#56: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#57: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#58: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#59: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#60: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#61: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#62: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#63: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#64: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#65: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#66: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#67: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#68: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#69: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#70: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#71: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#72: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#73: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#74: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#75: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#76: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#77: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#78: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#79: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#80: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#81: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#82: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#83: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#84: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#85: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#86: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#87: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#88: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#89: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#90: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#91: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#92: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#93: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#94: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#95: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#96: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#97: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#98: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#99: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#100: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#101: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#102: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#103: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#104: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#105: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#106: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#107: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#108: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#109: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#110: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#111: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#112: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#113: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#114: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#115: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#116: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#117: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#118: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#119: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#120: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#121: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#122: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#123: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#124: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#125: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#126: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#127: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#128: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#129: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#130: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#131: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#132: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#133: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#134: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#135: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#136: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#137: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#138: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#139: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#140: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#141: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#142: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#143: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#144: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#145: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#146: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#147: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#148: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#149: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#150: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#151: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#152: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#153: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#154: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#155: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#156: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#157: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#158: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#159: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#160: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#161: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#162: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#163: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#164: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#165: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#166: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#167: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#168: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#169: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#170: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#171: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#172: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#173: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#174: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#175: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#176: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#177: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#178: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#179: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#180: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#181: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#182: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#183: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#184: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#185: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#186: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#187: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#188: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#189: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#190: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#191: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#192: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#193: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#194: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#195: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#196: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#197: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#198: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#199: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#200: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#201: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#202: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#203: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#204: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#205: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#206: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#207: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#208: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#209: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#210: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#211: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#212: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#213: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#214: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#215: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#216: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#217: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#218: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#219: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#220: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#221: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#222: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#223: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#224: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#225: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#226: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#227: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#228: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#229: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#230: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#231: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#232: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#233: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#234: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#235: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#236: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#237: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#238: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#239: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#240: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#241: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#242: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#243: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#244: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#245: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#246: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#247: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#248: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#249: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#250: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#251: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#252: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#253: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#254: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#255: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#256: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#257: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#258: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#259: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#260: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#261: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#262: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#263: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#264: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#265: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#266: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#267: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#268: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#269: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#270: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#271: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#272: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#273: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#274: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#275: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#276: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#277: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#278: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#279: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#280: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#281: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#282: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#283: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#284: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#285: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#286: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#287: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#288: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#289: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#290: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#291: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#292: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#293: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#294: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#295: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#296: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#297: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#298: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#299: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#300: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#301: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#302: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#303: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#304: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#305: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#306: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#307: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#308: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#309: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#310: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#311: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#312: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#313: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#314: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#315: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#316: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#317: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#318: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#319: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#320: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#321: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#322: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#323: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#324: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#325: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#326: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#327: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#328: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#329: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#330: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#331: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#332: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#333: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#334: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#335: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#336: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#337: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#338: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#339: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#340: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#341: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#342: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#343: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#344: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#345: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#346: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#347: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#348: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#349: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#350: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#351: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#352: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#353: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#354: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#355: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#356: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#357: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#358: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#359: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#360: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#361: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#362: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#363: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#364: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#365: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#366: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#367: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#368: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#369: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#370: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#371: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#372: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#373: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#374: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#375: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#376: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#377: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#378: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#379: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#380: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#381: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#382: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#383: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#384: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#385: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#386: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#387: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#388: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#389: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#390: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#391: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#392: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#393: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#394: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#395: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#396: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#397: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#398: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#399: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#400: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#401: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#402: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#403: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#404: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#405: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#406: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#407: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#408: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#409: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#410: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#411: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#412: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#413: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#414: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#415: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#416: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#417: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#418: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#419: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#420: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#421: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#422: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#423: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#424: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#425: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#426: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#427: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#428: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#429: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#430: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#431: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#432: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#433: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#434: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#435: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#436: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#437: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#438: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#439: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#440: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#441: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#442: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#443: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#444: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#445: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#446: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#447: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#448: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#449: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#450: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#451: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#452: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#453: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#454: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#455: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#456: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#457: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#458: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#459: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#460: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#461: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#462: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#463: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#464: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#465: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#466: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#467: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#468: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#469: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#470: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#471: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#472: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#473: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#474: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#475: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#476: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#477: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#478: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#479: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#480: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#481: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#482: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#483: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#484: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#485: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#486: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#487: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#488: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#489: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#490: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#491: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#492: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#493: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#494: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#495: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#496: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#497: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#498: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#499: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#500: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#501: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#502: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#503: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#504: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#505: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#506: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#507: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#508: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#509: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#510: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#511: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#512: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#513: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#514: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#515: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#516: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#517: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#518: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#519: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#520: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#521: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#522: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#523: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#524: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#525: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#526: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#527: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#528: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#529: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#530: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#531: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#532: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#533: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#534: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#535: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#536: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#537: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#538: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#539: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#540: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#541: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#542: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#543: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#544: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speech.json#545: speech line
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/speed_descriptions.json#0: speed description DEFAULT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#0: start location sloc_fort
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#1: start location sloc_shelter_safe
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#2: start location sloc_shelter_vandal
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#3: start location sloc_shelter_under_infested
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#4: start location sloc_town_hall
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#5: start location sloc_refugee_center
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#6: start location sloc_exodii_castle
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#7: start location sloc_house_boarded
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#8: start location sloc_field
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#9: start location sloc_ocean_shore
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#10: start location sloc_house
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#11: start location sloc_grocery_store
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#12: start location sloc_gun_store
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#13: start location sloc_garage
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#14: start location sloc_pawn_shop
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#15: start location sloc_bank
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#16: start location sloc_pharm
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#17: start location sloc_hardware
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#18: start location sloc_dojo
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#19: start location sloc_gym
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#20: start location sloc_clothes
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#21: start location sloc_restaurant
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#22: start location sloc_bar
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#23: start location sloc_electronics
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#24: start location sloc_arcade
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#25: start location sloc_animalshelter
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#26: start location sloc_laundromat
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#27: start location sloc_stripclub
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#28: start location sloc_sexshop
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#29: start location sloc_candyshop
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#30: start location sloc_bikeshop
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#31: start location sloc_petstore
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#32: start location sloc_military_surplus
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#33: start location sloc_furniture_store
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#34: start location sloc_library
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#35: start location sloc_bookstore
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#36: start location sloc_cabin
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#37: start location sloc_liam_cabin
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#38: start location sloc_hospital
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#39: start location sloc_lmoe
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#40: start location sloc_lmoe_under
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#41: start location sloc_forest
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#42: start location sloc_river
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#43: start location sloc_bridge
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#44: start location sloc_desert_island
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#45: start location sloc_lab_concourse_area
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#46: start location sloc_lab_medical
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#47: start location sloc_mall_loading_area
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#48: start location sloc_mall_food_court
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#49: start location sloc_fire_station
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#50: start location sloc_police
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#51: start location sloc_restaraunt_foodplace_break_room
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#52: start location sloc_school
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#53: start location sloc_school_rooftop
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#54: start location sloc_mine_finale
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#55: start location sloc_prison
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#56: start location sloc_prison_alcatraz
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#57: start location sloc_prison_island
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#58: start location sloc_mi-go_camp
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#59: start location sloc_hermit_shack
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#60: start location sloc_campsite
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#61: start location sloc_campground
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#62: start location sloc_farm_survivalist
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#63: start location sloc_church
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#64: start location sloc_cemetery
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#65: start location sloc_zoo_cafeteria
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#66: start location sloc_golfcourse_mid_course
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#67: start location sloc_golfcourse_clubhouse
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#68: start location sloc_apartments_rooftop
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#69: start location sloc_apartments_rooftop2
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#70: start location sloc_apartment_complex_roof
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#71: start location sloc_convention_center_rooftop
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#72: start location sloc_horse_ranch
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#73: start location sloc_cabin_lake
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#74: start location sloc_freshwater_research_station
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#75: start location sloc_lodge_ground
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#76: start location sloc_gas_station
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#77: start location sloc_lighthouse_ground
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#78: start location sloc_lighthouse_small_ground
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#79: start location sloc_military_base_warehouse
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#80: start location aircraft_carrier_berth
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#81: start location aircraft_carrier_bridge
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#82: start location sloc_private_resort
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#83: start location sloc_road
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#84: start location sloc_light_industry_scen
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#85: start location sloc_mansion_basement
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#86: start location sloc_enclosed_mansion_panic_room
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#87: start location sloc_enclosed_mansion_sex_lair
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#88: start location sloc_hotel_rooftop
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#89: start location sloc_office_tower_rooftop
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#90: start location sloc_office_tower_2_rooftop
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#91: start location sloc_cathedral_rooftop
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#92: start location sloc_retirement_community
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#93: start location nuclear_plant
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#94: start location sloc_motel
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#95: start location sloc_mobile_home
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#96: start location sloc_stadium
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#97: start location sloc_middle_of_nowhere
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#98: start location sloc_sewer
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#99: start location sloc_nesw_manhole
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/start_locations.json#100: start location sloc_town_in_the_open
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#0: tool quality CUT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#1: tool quality GRASS_CUT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#2: tool quality CUT_FINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#3: tool quality GLARE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#4: tool quality SHEAR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#5: tool quality CHURN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#6: tool quality LEATHER_AWL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#7: tool quality SEW_CURVED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#8: tool quality ANESTHESIA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#9: tool quality FISHING_ROD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#10: tool quality FISH_TRAP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#11: tool quality TREE_TAP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#12: tool quality SMOOTH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#13: tool quality WELD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#14: tool quality HACK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#15: tool quality HAMMER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#16: tool quality HAMMER_FINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#17: tool quality HAMMER_SOFT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#18: tool quality SAW_W
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#19: tool quality SAW_M
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#20: tool quality SAW_M_FINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#21: tool quality COOK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#22: tool quality HOTPLATE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#23: tool quality BOIL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#24: tool quality CONTAIN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#25: tool quality CHEM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#26: tool quality SIEVE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#27: tool quality WINNOW
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#28: tool quality STRAIN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#29: tool quality SMOKE_PIPE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#30: tool quality DISTILL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#31: tool quality AXE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#32: tool quality DIG
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#33: tool quality WRENCH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#34: tool quality WRENCH_FINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#35: tool quality SCREW
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#36: tool quality SCREW_FINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#37: tool quality BUTCHER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#38: tool quality DRILL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#39: tool quality DRILL_ROCK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#40: tool quality PRY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#41: tool quality PRYING_NAIL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#42: tool quality PUNCH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#43: tool quality WRITE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#44: tool quality LIFT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#45: tool quality JACK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#46: tool quality SELF_JACK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#47: tool quality HOSE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#48: tool quality CHISEL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#49: tool quality CHISEL_WOOD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#50: tool quality SEW
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#51: tool quality KNIT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#52: tool quality PULL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#53: tool quality ANVIL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#54: tool quality ANALYSIS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#55: tool quality CONCENTRATE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#56: tool quality SEPARATE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#57: tool quality FINE_DISTILL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#58: tool quality CHROMATOGRAPHY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#59: tool quality LUTHIER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#60: tool quality SNOW_MAKING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#61: tool quality GRIND
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#62: tool quality FINE_GRIND
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#63: tool quality REAM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#64: tool quality FILE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#65: tool quality VISE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#66: tool quality PRESSURIZATION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#67: tool quality LOCKPICK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#68: tool quality EXTRACT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#69: tool quality FILTER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#70: tool quality SUSPENDING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#71: tool quality ROPE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#72: tool quality SURFACE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#73: tool quality WHEEL_FAST
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#74: tool quality JUMPSTART
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#75: tool quality FABRIC_CUT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#76: tool quality OVEN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#77: tool quality GUN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#78: tool quality RIFLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#79: tool quality SHOTGUN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#80: tool quality SMG
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#81: tool quality PISTOL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#82: tool quality CUT_GLASS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#83: tool quality MOP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#84: tool quality BLOW_HOT_AIR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#85: tool quality THREAD_CUT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#86: tool quality THREAD_TAP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#87: tool quality STRIKING_SURFACE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/tool_qualities.json#88: tool quality TEMPER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#0: vehicle group city_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#1: vehicle group boatrent
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#2: vehicle group food_trucks
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#3: vehicle group lake
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#4: vehicle group boats_narrow
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#5: vehicle group boats_shore
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#6: vehicle group jetskis
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#7: vehicle group trains_and_cars
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#8: vehicle group city_pileup
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#9: vehicle group police_pileup
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#10: vehicle group highway
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#11: vehicle group suburban_home
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#12: vehicle group suburban_home_compact
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#13: vehicle group dirtlot
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#14: vehicle group parkinglot
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#15: vehicle group garage
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#16: vehicle group military_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#17: vehicle group military_cargo_trucks
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#18: vehicle group farm_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#19: vehicle group farm_horse_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#20: vehicle group industrial_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#21: vehicle group warehouse_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#22: vehicle group forklift_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#23: vehicle group school_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#24: vehicle group bandit_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#25: vehicle group junkyard_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#26: vehicle group dumpsite_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#27: vehicle group campground_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#28: vehicle group forgotten_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#29: vehicle group parkinglotbasic
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#30: vehicle group golf_carts
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#31: vehicle group workshop_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#32: vehicle group crashed_helicopters
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#33: vehicle group crashed_helicopters_small
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#34: vehicle group helicopters
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#35: vehicle group helicopters_no_wreck
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#36: vehicle group mil_helicopters
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#37: vehicle group mil_helicopters_small
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#38: vehicle group bikeshop
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#39: vehicle group back_alley
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#40: vehicle group oa_vg_cs_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#41: vehicle group showroom_small_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#42: vehicle group industrial_transport
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#43: vehicle group industrial_transport_no_truck
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#44: vehicle group oa_vg_cd_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#45: vehicle group buses
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#46: vehicle group VETS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#47: vehicle group parking_garage
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#48: vehicle group parking_garage_short
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#49: vehicle group trains_draisine
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#50: vehicle group oa_vg_wreck
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#51: vehicle group oa_vg_ts_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#52: vehicle group sugar_house_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#53: vehicle group pump_station_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#54: vehicle group dealership
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#55: vehicle group park_playground_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#56: vehicle group food_carts
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#57: vehicle group wagons_all
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#58: vehicle group prison_vehicles
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#59: vehicle group cars_only
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups.json#60: vehicle group small_cars_only
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups_aircraft.json#0: vehicle group personal_aircraft_small
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_groups_aircraft.json#1: vehicle group personal_aircraft_large
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_palette.json#0: vehicle color palette car_standard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_palette.json#1: vehicle color palette cargo_standard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_palette.json#2: vehicle color palette visibility_standard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_palette.json#3: vehicle color palette military_standard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_palette.json#4: vehicle color palette military_fighter
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_palette.json#5: vehicle color palette military_heli
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_palette.json#6: vehicle color palette military_boat
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_palette.json#7: vehicle color palette police_standard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_palette.json#8: vehicle color palette swat_standard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_palette.json#9: vehicle color palette construction_standard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_palette.json#10: vehicle color palette farm_standard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_palette.json#11: vehicle color palette firetruck_standard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_palette.json#12: vehicle color palette ems_standard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_palette.json#13: vehicle color palette bus_standard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_palette.json#14: vehicle color palette wienermobile_standard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_palette.json#15: vehicle color palette limo_standard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_palette.json#16: vehicle color palette sneaky_standard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_palette.json#17: vehicle color palette aircraft_standard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_palette.json#18: vehicle color palette aircraft_commercial
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_palette.json#19: vehicle color palette wooden_standard
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_part_locations.json#0: vehicle part location structure
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_part_locations.json#1: vehicle part location armor
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_part_locations.json#2: vehicle part location damping
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_part_locations.json#3: vehicle part location on_roof
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_part_locations.json#4: vehicle part location roof
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_part_locations.json#5: vehicle part location on_cargo
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_part_locations.json#6: vehicle part location center
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_part_locations.json#7: vehicle part location engine_block
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_part_locations.json#8: vehicle part location fuel_source
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_part_locations.json#9: vehicle part location under
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_part_locations.json#10: vehicle part location on_battery_mount
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_part_locations.json#11: vehicle part location on_frame
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_part_locations.json#12: vehicle part location axle
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_part_locations.json#13: vehicle part location on_ceiling
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_part_locations.json#14: vehicle part location on_controls
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_part_locations.json#15: vehicle part location on_lockable_cargo
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_part_locations.json#16: vehicle part location on_seat
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_part_locations.json#17: vehicle part location on_windshield
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_part_locations.json#18: vehicle part location structural
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicle_part_locations.json#19: vehicle part location anywhere
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_categories.json#0: vehicle part category _all
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_categories.json#1: vehicle part category _filter
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_categories.json#2: vehicle part category movement
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_categories.json#3: vehicle part category operations
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_categories.json#4: vehicle part category energy
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_categories.json#5: vehicle part category hull
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_categories.json#6: vehicle part category warfare
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_categories.json#7: vehicle part category passengers
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_categories.json#8: vehicle part category cargo
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_categories.json#9: vehicle part category lighting
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_categories.json#10: vehicle part category utility
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_categories.json#11: vehicle part category other
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#0: JSON flag ALTERNATOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#1: JSON flag AISLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#2: JSON flag AISLE_LIGHT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#3: JSON flag ARMOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#4: JSON flag BED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#5: JSON flag BELTABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#6: JSON flag BOARD_INTERNAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#7: JSON flag CABLE_PORTS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#8: JSON flag CARGO
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#9: JSON flag CTRL_ELECTRONIC
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#10: JSON flag CONTROLS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#11: JSON flag EOC_ACTIVATION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#12: JSON flag SMART_ENGINE_CONTROLLER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#13: JSON flag COVERED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#14: JSON flag CURTAIN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#15: JSON flag NEEDS_WINDOW
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#16: JSON flag DOOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#17: JSON flag ENABLED_DRAINS_EPOWER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#18: JSON flag SOLAR_PANEL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#19: JSON flag ENGINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#20: JSON flag E_ALTERNATOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#21: JSON flag EXTRA_DRAG
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#22: JSON flag FLOATS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#23: JSON flag FRAGILE_COMPONENTS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#24: JSON flag FURNITURE_TIEDOWN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#25: JSON flag FURNITURE_LIFT_ASSIST
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#26: JSON flag NO_LEAK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#27: JSON flag NONBELTABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#28: JSON flag ROOF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#29: JSON flag RESIST_RUNOVER_DAMAGE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#30: JSON flag SEAT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#31: JSON flag ENHANCED_VISION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#32: JSON flag SEATBELT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#33: JSON flag SHOCK_ABSORBER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#34: JSON flag STABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#35: JSON flag UNSTABLE_WHEEL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#36: JSON flag STEERABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#37: JSON flag TURRET
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#38: JSON flag TURRET_CONTROLS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#39: JSON flag WHEEL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#40: JSON flag WIND_TURBINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#41: JSON flag WATER_WHEEL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#42: JSON flag FLAT_SURF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#43: JSON flag WORKBENCH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#44: JSON flag NEEDS_WHEEL_MOUNT_LIGHT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#45: JSON flag NEEDS_WHEEL_MOUNT_MEDIUM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#46: JSON flag NEEDS_WHEEL_MOUNT_HEAVY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#47: JSON flag NEEDS_BATTERY_MOUNT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#48: JSON flag NEEDS_HANDHELD_BATTERY_MOUNT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#49: JSON flag ON_CONTROLS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#50: JSON flag INTERNAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#51: JSON flag CARGO_LOCKING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#52: JSON flag DOOR_LOCKING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#53: JSON flag DOOR_MOTOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#54: JSON flag ON_ROOF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#55: JSON flag ADVANCED_PLANTER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#56: JSON flag AIRCRAFT_REPAIRABLE_NOPROF
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#57: JSON flag ANIMAL_CTRL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#58: JSON flag ATOMIC_LIGHT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#59: JSON flag AUTOCLAVE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#60: JSON flag AUTO_COOKER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#61: JSON flag AUTOPILOT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#62: JSON flag BATTERY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#63: JSON flag BATTERY_MOUNT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#64: JSON flag HANDHELD_BATTERY_MOUNT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#65: JSON flag ARCADE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#66: JSON flag BEEPER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#67: JSON flag BIKE_RACK_VEH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#68: JSON flag BOARDABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#69: JSON flag CAMERA
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#70: JSON flag CAMERA_CONTROL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#71: JSON flag CAPTURE_MONSTER_VEH
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#72: JSON flag CHIMES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#73: JSON flag CIRCLE_LIGHT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#74: JSON flag CONE_LIGHT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#75: JSON flag CONTROL_ANIMAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#76: JSON flag COOLER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#77: JSON flag DISHWASHER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#78: JSON flag DOME_LIGHT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#79: JSON flag E_COLD_START
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#80: JSON flag E_DIESEL_FUEL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#81: JSON flag E_HEATER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#82: JSON flag E_HIGHER_SKILL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#83: JSON flag E_STARTS_INSTANTLY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#84: JSON flag EVENTURN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#85: JSON flag FLUIDTANK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#86: JSON flag GASTANK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#87: JSON flag FREEZER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#88: JSON flag FRIDGE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#89: JSON flag FULL_BOARD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#90: JSON flag FUNNEL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#91: JSON flag HALF_BOARD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#92: JSON flag HALF_CIRCLE_LIGHT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#93: JSON flag HARNESS_any
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#94: JSON flag HARNESS_human
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#95: JSON flag HEATED_TANK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#96: JSON flag HORN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#97: JSON flag LOCKABLE_CARGO
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#98: JSON flag LOCKABLE_DOOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#99: JSON flag LOW_FINAL_AIR_DRAG
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#100: JSON flag MOUNTABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#101: JSON flag MUFFLER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#102: JSON flag MULTISQUARE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#103: JSON flag MUSCLE_ARMS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#104: JSON flag MUSCLE_LEGS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#105: JSON flag MWS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#106: JSON flag ADVANCED_MWS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#107: JSON flag NEEDS_JACKING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#108: JSON flag NO_INSTALL_PLAYER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#109: JSON flag NO_INSTALL_HIDDEN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#110: JSON flag NO_ROOF_NEEDED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#111: JSON flag NO_UNINSTALL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#112: JSON flag OBSTACLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#113: JSON flag ODDTURN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#114: JSON flag OPAQUE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#115: JSON flag OPENABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#116: JSON flag OPENCLOSE_INSIDE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#117: JSON flag PLANTER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#118: JSON flag PLOW
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#119: JSON flag POWER_TRANSFER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#120: JSON flag PROTRUSION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#121: JSON flag RAIL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#122: JSON flag REACTOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#123: JSON flag REAPER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#124: JSON flag REMOTE_CONTROLS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#125: JSON flag ROCKWHEEL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#126: JSON flag ROTOR
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#127: JSON flag SCOOP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#128: JSON flag SECURITY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#129: JSON flag SELF_JACK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#130: JSON flag SHARP
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#131: JSON flag SIMPLE_PART
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#132: JSON flag SMASH_REMOVE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#133: JSON flag SPACE_HEATER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#134: JSON flag STEREO
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#135: JSON flag TRACK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#136: JSON flag TRANSFORM_TERRAIN
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#137: JSON flag TURRET_MOUNT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#138: JSON flag UNMOUNT_ON_DAMAGE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#139: JSON flag UNMOUNT_ON_MOVE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#140: JSON flag USE_BATTERIES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#141: JSON flag USE_TANKS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#142: JSON flag VARIABLE_SIZE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#143: JSON flag VEH_TOOLS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#144: JSON flag VISION
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#145: JSON flag WALL_MOUNTED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#146: JSON flag WASHING_MACHINE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#147: JSON flag WHEEL_MOUNT_HEAVY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#148: JSON flag WHEEL_MOUNT_LIGHT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#149: JSON flag WHEEL_MOUNT_MEDIUM
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#150: JSON flag WIDE_CONE_LIGHT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#151: JSON flag WIND_POWERED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#152: JSON flag WINDOW
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#153: JSON flag WINDSHIELD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#154: JSON flag WIRING
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#155: JSON flag SEAT_REQUIRES_BALANCE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#156: JSON flag WHEEL_MOUNT_SKATEBOARD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#157: JSON flag NEEDS_WHEEL_MOUNT_SKATEBOARD
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#158: JSON flag CARGO_PASSABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#159: JSON flag HUGE_OK
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#160: JSON flag IGNORE_LEG_REQUIREMENT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#161: JSON flag NEED_LEG
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#162: JSON flag INOPERABLE_SMALL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#163: JSON flag IGNORE_HEIGHT_REQUIREMENT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#164: JSON flag WHEEL_MOUNT_CONCRETE_MIX
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#165: JSON flag NEEDS_WHEEL_MOUNT_CONCRETE_MIX
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#166: JSON flag NL_BOILER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#167: JSON flag BALLOON
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#168: JSON flag PROPELLER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#169: JSON flag EXTENDABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#170: JSON flag SHOCK_IMMUNE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#171: JSON flag SHOCK_RESISTANT
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#172: JSON flag NOCOLLIDE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#173: JSON flag NOCOLLIDEBELOW
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#174: JSON flag FOLDABLE
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#175: JSON flag MANUAL
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/vehicleparts/vp_flags.json#176: JSON flag LADDER
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#0: weapon category AUTOMATIC_RIFLES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#1: weapon category AUTOMATIC_PISTOLS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#2: weapon category KNIVES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#3: weapon category BATONS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#4: weapon category FLAILS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#5: weapon category MACES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#6: weapon category MEDIUM_SWORDS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#7: weapon category LONG_SWORDS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#8: weapon category SHORT_SWORDS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#9: weapon category QUARTERSTAVES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#10: weapon category CLAWS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#11: weapon category SHIVS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#12: weapon category HOOKING_WEAPONRY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#13: weapon category SPEARS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#14: weapon category UNARMED
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#15: weapon category POLEARMS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#16: weapon category FENCING_WEAPONRY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#17: weapon category LONG_THRUSTING_SWORDS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#18: weapon category BIONIC_WEAPONRY
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#19: weapon category BIONIC_SWORDS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#20: weapon category GREAT_SWORDS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#21: weapon category GREAT_HAMMERS
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#22: weapon category GREAT_AXES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#23: weapon category HAND_AXES
+- /home/zhgpicg/GAME_DEV/Cataclysm-Cleanwater-Bomb/data/json/weapon_categories.json#24: weapon category WHIPS
+
+## Partial skeletons
+
+- None
+
+## Required manual decisions
+
+- None
