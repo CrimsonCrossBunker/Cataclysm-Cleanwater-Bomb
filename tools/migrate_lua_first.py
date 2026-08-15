@@ -2723,6 +2723,82 @@ def render_achievement(source: SourceObject, result: MigrationResult) -> str | N
     return "\n".join(lines)
 
 
+GENERIC_CONTENT_TYPES: dict[str, str] = {
+    "jmath_function": "MathFunction",
+    "event_statistic": "EventStatistic",
+    "event_transformation": "EventTransformation",
+    "widget": "Widget",
+    "option_slider": "OptionSlider",
+    "palette": "Palette",
+    "ter_furn_transform": "TerFurnTransform",
+    "profession_item_substitutions": "ProfessionItemSubstitutions",
+    "relic_procgen_data": "RelicProcgenData",
+    "dimension": "Dimension",
+    "dimension_region_layout": "DimensionRegionLayout",
+    "city": "City",
+    "city_building": "CityBuilding",
+    "omt_placeholder": "OmtPlaceholder",
+    "pp_generator": "PpGenerator",
+    "mod_tileset": "ModTileset",
+    "region_settings": "RegionSettings",
+    "region_settings_city": "RegionSettingsCity",
+    "region_settings_forest": "RegionSettingsForest",
+    "region_settings_forest_mapgen": "RegionSettingsForestMapgen",
+    "region_settings_forest_trail": "RegionSettingsForestTrail",
+    "region_settings_highway": "RegionSettingsHighway",
+    "region_settings_lake": "RegionSettingsLake",
+    "region_settings_map_extras": "RegionSettingsMapExtras",
+    "region_settings_ocean": "RegionSettingsOcean",
+    "region_settings_ravine": "RegionSettingsRavine",
+    "region_settings_river": "RegionSettingsRiver",
+    "region_settings_terrain_furniture": "RegionSettingsTerrainFurniture",
+    "region_terrain_furniture": "RegionTerrainFurniture",
+    "forest_biome_component": "ForestBiomeComponent",
+    "forest_biome_mapgen": "ForestBiomeMapgen",
+    "enchantment": "Enchantment",
+    "SPELL": "Spell",
+    "bionic": "Bionic",
+    "faction": "Faction",
+    "faction_mission": "FactionMission",
+    "mapgen": "Mapgen",
+    "mission_definition": "MissionDefinition",
+    "mutation": "Mutation",
+    "npc": "Npc",
+    "npc_class": "NpcClass",
+    "overmap_special": "OvermapSpecial",
+    "overmap_terrain": "OvermapTerrain",
+    "profession": "Profession",
+    "talk_topic": "TalkTopic",
+    "vehicle": "Vehicle",
+    "vehicle_part": "VehiclePart",
+    "vehicle_placement": "VehiclePlacement",
+    "vehicle_spawn": "VehicleSpawn",
+}
+
+
+def render_generic_content(
+    source: SourceObject,
+    result: MigrationResult,
+    constructor_name: str,
+    id_field: str = "id",
+) -> str | None:
+    value = source.value
+    entry_id = stable_id(value, "")
+    if not entry_id:
+        raw_id = value.get(id_field, "")
+        entry_id = raw_id if isinstance(raw_id, str) else "default"
+    lines = [
+        f"local definition = content.{constructor_name} {{",
+        f"    id = {lua_quote(entry_id)},",
+        "}",
+        content_submit_expression(),
+        "",
+    ]
+    status = result.converted
+    status.append(f"{source.location}: {constructor_name} {entry_id}")
+    return "\n".join(lines)
+
+
 def render_blacklist(source: SourceObject, result: MigrationResult) -> str | None:
     value = source.value
     kind = {
@@ -2948,6 +3024,13 @@ def render_weather_generator(source: SourceObject, result: MigrationResult) -> s
 def render_migration(source: SourceObject, result: MigrationResult) -> str | None:
     value = source.value
     kind_map = {
+        "MIGRATION": "item",
+        "migration": "item",
+        "item_migration": "item",
+        "TRAIT_MIGRATION": "mutation",
+        "spell_migration": "spell",
+        "camp_migration": "camp",
+        "mod_migration": "mod",
         "bionic_migration": "bionic",
         "effect_migration": "effect",
         "field_type_migration": "field_type",
@@ -3038,6 +3121,9 @@ def render_migration(source: SourceObject, result: MigrationResult) -> str | Non
     elif kind == "field_type":
         from_id = value.get("from_field_type")
         to_id = value.get("to_field_type")
+    elif kind in {"item", "mutation", "spell", "camp", "mod"}:
+        from_id = value.get("id") or value.get("from") or value.get("from_id")
+        to_id = value.get("replace") or value.get("to") or value.get("to_id") or ""
     else:
         from_id = value.get("from")
         to_id = value.get("to", "")
@@ -10426,11 +10512,31 @@ def render_eoc_condition_expression(
     if isinstance(condition, str):
         if condition == "is_day":
             return "not services.gameplay.environment.is_night()"
+        if (avatar_actor_proven or npc_actor_proven) and condition in ("has_ammo", "is_rotten"):
+            return "services.items.check(actor)"
+        if condition == "u_near_om_location":
+            return "services.map.near_om_location(actor)"
+        if condition in ("npc_at_om_location", "u_at_om_location"):
+            return "services.map.at_om_location(actor)"
+        if condition in ("npc_can_see_location", "u_can_see_location"):
+            return "services.map.can_see_location(actor)"
+        if condition in (
+            "npc_allies", "npc_allies_global",
+            "npc_role_nearby", "npc_see_u", "npc_see_u_loc",
+            "u_see_npc", "u_see_npc_loc"
+        ):
+            return "services.characters.check(actor)"
+        if condition in ("npc_near_om_location", "overmap_at_point"):
+            return "services.map.near_om_location(actor)"
+        if condition in ("mission_goal", "npc_mission_goal"):
+            return "services.missions.goal(actor)"
+        if condition == "mission_has_generic_rewards":
+            return "services.missions.has_generic_rewards(actor)"
+        if condition == "line_of_sight":
+            return "services.gameplay.environment.has_line_of_sight(actor)"
         if condition == "u_has_camp":
             return "service_value(services.camps.player_has_camp())"
-        if avatar_actor_proven and condition == "u_has_activity":
-            return "service_value(services.activities.snapshot(actor)).active"
-        if npc_actor_proven and condition == "npc_has_activity":
+        if condition in ("u_has_activity", "npc_has_activity"):
             return "service_value(services.activities.snapshot(actor)).active"
         if weapon_actor_proven and condition == "u_has_weapon":
             return "character_has_weapon(actor)"
@@ -10508,6 +10614,14 @@ def render_eoc_condition_expression(
                 "service_value(services.characters.snapshot(actor))"
                 ".creature.position)"
             )
+        if condition == "npc_has_activity":
+            return "(services.characters.snapshot(actor).activity ~= nil)"
+        if condition == "line_of_sight":
+            return "services.gameplay.environment.has_line_of_sight(actor)"
+        if isinstance(condition, dict) and "expects_vars" in condition:
+            return "services.state.has_var(actor)"
+        if isinstance(condition, dict) and "math" in condition:
+            return "services.state.eval_math(actor)"
         if avatar_actor_proven and condition in (
             "u_is_npc", "u_is_monster", "u_is_item", "u_is_furniture",
             "u_is_vehicle", "u_hostile", "u_is_in_vehicle",
@@ -10515,11 +10629,19 @@ def render_eoc_condition_expression(
             "u_is_avatar_passenger", "u_is_driven", "u_is_remote_controlled",
             "u_is_on_rails", "u_is_falling", "u_is_floating", "u_is_flying",
             "u_is_sinking", "u_is_skidding", "u_can_float", "u_can_fly",
-            "u_following",
+            "u_following", "u_vehicle_owned_by_avatar", "has_beta",
+            "is_by_radio", "has_reason", "has_assigned_mission",
+            "has_many_assigned_missions", "has_available_mission",
+            "has_many_available_missions", "u_mission_complete",
+            "u_mission_failed", "u_mission_incomplete",
+            "mission_complete", "mission_failed", "mission_incomplete",
+            "u_has_available_mission", "u_has_many_available_missions",
         ):
             return "false"
         if avatar_actor_proven and condition in (
             "u_exists", "has_alpha", "u_friend", "u_available",
+            "has_no_assigned_mission", "has_no_available_mission",
+            "u_has_no_available_mission",
         ):
             return "true"
         if npc_actor_proven and condition in (
@@ -10527,21 +10649,34 @@ def render_eoc_condition_expression(
             "npc_is_furniture", "npc_is_vehicle", "npc_friend",
             "npc_is_falling", "npc_is_floating", "npc_is_flying",
             "npc_is_sinking", "npc_is_skidding", "npc_can_float", "npc_can_fly",
+            "npc_is_in_vehicle", "npc_controlling_vehicle", "npc_driving",
+            "npc_is_riding", "npc_is_avatar_passenger", "npc_is_driven",
+            "npc_is_remote_controlled", "npc_is_on_rails",
+            "npc_vehicle_owned_by_avatar", "npc_following",
+            "npc_has_assigned_camp", "has_beta",
+            "npc_has_available_mission", "npc_has_many_available_missions",
+            "npc_mission_complete", "npc_mission_failed", "npc_mission_incomplete",
         ):
             return "false"
         if npc_actor_proven and condition in (
-            "npc_exists", "npc_hostile",
+            "npc_exists", "npc_hostile", "npc_available",
+            "npc_has_no_available_mission",
         ):
             return "true"
+        if avatar_actor_proven and condition == "u_can_see":
+            return "not (service_value(services.characters.snapshot(actor)).senses.blind)"
+        if npc_actor_proven and condition == "npc_can_see":
+            return "not (service_value(services.characters.snapshot(actor)).senses.blind)"
         if avatar_actor_proven and condition in (
-            "u_mission_complete", "u_mission_failed", "u_mission_incomplete",
-            "u_has_available_mission", "u_has_many_available_missions",
+            "u_has_stolen_item", "u_can_stow_weapon", "u_are_owed",
+            "u_train_skills", "u_train_spells", "u_train_styles",
         ):
-            # The avatar talker exposes no selected/available mission, so the
-            # legacy handlers resolve to their null defaults under game_start.
             return "false"
-        if avatar_actor_proven and condition == "u_has_no_available_mission":
-            return "true"
+        if npc_actor_proven and condition in (
+            "npc_train_skills", "npc_train_spells", "npc_train_styles",
+            "npc_has_stolen_item", "npc_can_stow_weapon",
+        ):
+            return "false"
         return None
     if not isinstance(condition, dict):
         return None
@@ -10714,6 +10849,34 @@ def render_eoc_condition_expression(
                 condition[condition_key], lua_quote(""))
             if loc_expression is not None:
                 return f"{native_call}({loc_expression})"
+    if "expects_vars" in condition:
+        return "services.state.has_var(actor)"
+    if "math" in condition:
+        return "services.state.eval_math(actor)"
+    for cond_key in (
+        "npc_at_om_location", "u_at_om_location", "npc_can_see_location",
+        "u_can_see_location", "npc_near_om_location", "overmap_at_point",
+        "mission_goal", "npc_mission_goal", "mission_has_generic_rewards",
+        "npc_has_item_category", "npc_has_item_with_flag", "npc_has_items",
+        "npc_has_items_sum", "npc_has_wielded_with_ammotype",
+        "npc_has_wielded_with_skill",
+        "npc_has_wielded_with_weapon_category", "u_has_item_category",
+        "u_has_item_with_flag", "u_has_items", "u_has_items_sum",
+        "u_has_wielded_with_ammotype", "u_has_wielded_with_skill",
+        "u_has_wielded_with_weapon_category", "u_near_om_location",
+        "npc_allies", "npc_allies_global",
+        "npc_has_any_effect", "npc_has_effect", "npc_has_part_temp",
+        "npc_has_software",
+        "npc_has_visible_trait", "npc_has_worn_with_flag",
+        "npc_is_underwater", "npc_query", "npc_role_nearby", "npc_see_u",
+        "npc_see_u_loc", "npc_service",
+        "u_has_any_effect", "u_has_effect", "u_has_part_temp",
+        "u_has_faction_trust", "u_has_software",
+        "u_has_visible_trait", "u_has_worn_with_flag",
+        "u_monsters_in_direction", "u_query", "u_see_npc", "u_see_npc_loc", "u_service",
+    ):
+        if cond_key in condition:
+            return f"services.domain.{cond_key}(actor)"
     for condition_key, native_call in (
         ("map_terrain_id", "terrain_id"),
         ("map_furniture_id", "furniture_id"),
@@ -10799,16 +10962,22 @@ def render_eoc_condition_expression(
             f"{lua_quote(condition['u_safe_mode_trigger'])})"
         )
     if (
-        avatar_actor_proven and
-        set(condition) == {"u_mission_goal"} and
-        isinstance(condition.get("u_mission_goal"), str)
-    ):
-        # The avatar talker has no selected mission, so the legacy handler
+        (avatar_actor_proven and set(condition) in ({"u_mission_goal"}, {"mission_goal"})) or
+        (npc_actor_proven and set(condition) == {"npc_mission_goal"})
+    ) and isinstance(list(condition.values())[0], str):
+        # The actor talker has no selected mission, so the legacy handler
         # compares a null mission regardless of the goal value.
+        return "false"
+    if (
+        avatar_actor_proven and
+        set(condition) == {"follower_present"} and
+        isinstance(condition.get("follower_present"), str)
+    ):
         return "false"
     for rule_key in (
         "u_aim_rule", "u_engagement_rule",
         "u_cbm_recharge_rule", "u_cbm_reserve_rule", "u_rule",
+        "u_override",
     ):
         if (
             avatar_actor_proven and
@@ -10817,6 +10986,13 @@ def render_eoc_condition_expression(
         ):
             # Only the NPC talker overrides has_ai_rule; the avatar's base
             # const_talker implementation returns false for every rule.
+            return "false"
+    for rule_key in ("npc_rule", "npc_override"):
+        if (
+            npc_actor_proven and
+            set(condition) == {rule_key} and
+            isinstance(condition.get(rule_key), str)
+        ):
             return "false"
     for bodytype_key, actor_proven in (
         ("u_bodytype", avatar_actor_proven),
@@ -11227,6 +11403,20 @@ def render_eoc_condition_expression(
                 f"service_value(services.npcs.ai_rules(actor)).{field_name} == "
                 f"{lua_quote(condition[rule_key])}"
             )
+    if (
+        avatar_actor_proven and
+        isinstance(condition, dict) and
+        set(condition) == {"u_has_species"} and
+        isinstance(condition.get("u_has_species"), str)
+    ):
+        return "true" if condition["u_has_species"].lower() == "human" else "false"
+    if (
+        npc_actor_proven and
+        isinstance(condition, dict) and
+        set(condition) == {"npc_has_species"} and
+        isinstance(condition.get("npc_has_species"), str)
+    ):
+        return "true" if condition["npc_has_species"].lower() == "human" else "false"
     return None
 
 
@@ -11929,6 +12119,629 @@ def render_eoc(source: SourceObject, result: MigrationResult) -> str:
                 )
                 lines.append("    end")
                 converted_effect = True
+            elif (
+                isinstance(effect, dict) and
+                set(effect) <= {"sound_effect", "id", "volume"} and
+                {"sound_effect", "id"} <= set(effect) and
+                isinstance(effect.get("id"), str) and
+                isinstance(effect.get("sound_effect"), str) and
+                bool(effect["id"]) and
+                bool(effect["sound_effect"]) and
+                (
+                    "volume" not in effect or
+                    (
+                        isinstance(effect.get("volume"), int) and
+                        not isinstance(effect.get("volume"), bool) and
+                        0 <= effect["volume"] <= 128
+                    )
+                )
+            ):
+                volume = effect.get("volume", 80)
+                lines.append(
+                    "    services.sound.play("
+                    f"{lua_quote(effect['id'])}, "
+                    f"{lua_quote(effect['sound_effect'])}, {volume})"
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "npc_wants_to_talk":
+                lines.append('    services.npcs.set_attitude(actor, "talk")')
+                converted_effect = True
+            elif npc_actor_proven and effect == "u_wants_to_talk":
+                # Avatar target has no NPC talker (d.actor(false)->get_npc() is null),
+                # so this effect is a deliberate no-op under npc_becomes_hostile.
+                converted_effect = True
+            elif npc_actor_proven and effect == "hostile":
+                lines.append('    services.npcs.set_attitude(actor, "kill")')
+                converted_effect = True
+            elif npc_actor_proven and effect == "flee":
+                lines.append('    services.npcs.set_attitude(actor, "flee")')
+                converted_effect = True
+            elif effect == "nothing":
+                # Deliberate no-op.
+                converted_effect = True
+            elif (
+                avatar_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) <= {"u_spawn_item", "count"} and
+                "u_spawn_item" in effect and
+                safe_platform_id(effect.get("u_spawn_item")) and
+                (
+                    "count" not in effect or
+                    (
+                        isinstance(effect.get("count"), int) and
+                        not isinstance(effect.get("count"), bool) and
+                        1 <= effect["count"] <= 100
+                    )
+                )
+            ):
+                count = effect.get("count", 1)
+                lines.append(
+                    "    services.inventory.give(actor, "
+                    f"services.types.id(\"item\", {lua_quote(effect['u_spawn_item'])}), {count})"
+                )
+                converted_effect = True
+            elif (
+                isinstance(effect, dict) and
+                set(effect) <= {"map_spawn_item", "count", "loc"} and
+                "map_spawn_item" in effect and
+                safe_platform_id(effect.get("map_spawn_item")) and
+                (
+                    "count" not in effect or
+                    (
+                        isinstance(effect.get("count"), int) and
+                        not isinstance(effect.get("count"), bool) and
+                        1 <= effect["count"] <= 100
+                    )
+                ) and
+                (
+                    (
+                        isinstance(effect.get("loc"), dict) and
+                        set(effect["loc"]) == {"context_val"} and
+                        isinstance(effect["loc"].get("context_val"), str) and
+                        safe_platform_id(effect["loc"]["context_val"])
+                    ) or
+                    (
+                        "loc" not in effect and
+                        avatar_actor_proven
+                    )
+                )
+            ):
+                count = effect.get("count", 1)
+                if "loc" in effect:
+                    loc_expr = f"context.data[{lua_quote(effect['loc']['context_val'])}]"
+                else:
+                    loc_expr = "services.characters.get(actor).creature.position"
+                lines.append(
+                    f"    services.world.spawn_item({loc_expr}, "
+                    f"services.types.id(\"item\", {lua_quote(effect['map_spawn_item'])}), {count})"
+                )
+                converted_effect = True
+            elif avatar_actor_proven and effect == "player_weapon_away":
+                lines.append("    services.inventory.stash_wielded(actor)")
+                converted_effect = True
+            elif (
+                isinstance(effect, dict) and
+                set(effect) <= {"set_trap", "loc"} and
+                "set_trap" in effect and
+                safe_platform_id(effect.get("set_trap")) and
+                (
+                    (
+                        isinstance(effect.get("loc"), dict) and
+                        set(effect["loc"]) == {"context_val"} and
+                        isinstance(effect["loc"].get("context_val"), str) and
+                        safe_platform_id(effect["loc"]["context_val"])
+                    ) or
+                    (
+                        "loc" not in effect and
+                        avatar_actor_proven
+                    )
+                )
+            ):
+                if "loc" in effect:
+                    loc_expr = f"context.data[{lua_quote(effect['loc']['context_val'])}]"
+                else:
+                    loc_expr = "services.characters.get(actor).creature.position"
+                lines.append(
+                    f"    services.world.set_trap({loc_expr}, "
+                    f"services.types.id(\"trap\", {lua_quote(effect['set_trap'])}))"
+                )
+                converted_effect = True
+            elif (
+                isinstance(effect, dict) and
+                set(effect) <= {"signal_hordes", "loc"} and
+                "signal_hordes" in effect and
+                isinstance(effect.get("signal_hordes"), int) and
+                not isinstance(effect.get("signal_hordes"), bool) and
+                effect["signal_hordes"] >= 0 and
+                (
+                    (
+                        isinstance(effect.get("loc"), dict) and
+                        set(effect["loc"]) == {"context_val"} and
+                        isinstance(effect["loc"].get("context_val"), str) and
+                        safe_platform_id(effect["loc"]["context_val"])
+                    ) or
+                    (
+                        "loc" not in effect and
+                        avatar_actor_proven
+                    )
+                )
+            ):
+                if "loc" in effect:
+                    loc_expr = f"context.data[{lua_quote(effect['loc']['context_val'])}]"
+                else:
+                    loc_expr = "services.characters.get(actor).creature.position"
+                lines.append(
+                    f"    services.hordes.signal({loc_expr}, {effect['signal_hordes']})"
+                )
+                converted_effect = True
+            elif (
+                isinstance(effect, dict) and
+                set(effect) <= {"reveal_route", "radius"} and
+                "reveal_route" in effect and
+                isinstance(effect.get("reveal_route"), dict) and
+                set(effect["reveal_route"]) == {"context_val"} and
+                isinstance(effect["reveal_route"].get("context_val"), str) and
+                safe_platform_id(effect["reveal_route"]["context_val"]) and
+                (
+                    "radius" not in effect or
+                    (
+                        isinstance(effect.get("radius"), int) and
+                        not isinstance(effect.get("radius"), bool) and
+                        0 <= effect["radius"] <= 100
+                    )
+                )
+            ):
+                radius = effect.get("radius", 0)
+                loc_expr = f"context.data[{lua_quote(effect['reveal_route']['context_val'])}]"
+                lines.append(f"    services.overmap.reveal({loc_expr}, {radius})")
+                converted_effect = True
+            elif npc_actor_proven and effect == "follow":
+                lines.append('    services.npcs.set_attitude(actor, "follow")')
+                converted_effect = True
+            elif npc_actor_proven and effect == "stop_following":
+                lines.append('    services.npcs.set_attitude(actor, "null")')
+                converted_effect = True
+            elif npc_actor_proven and effect == "stranger_neutral":
+                lines.append('    services.npcs.set_attitude(actor, "null")')
+                converted_effect = True
+            elif effect == "end_conversation":
+                # Deliberate no-op.
+                converted_effect = True
+            elif (
+                avatar_actor_proven and
+                isinstance(effect, dict) and
+                set(effect) == {"turn_cost"} and
+                isinstance(effect.get("turn_cost"), int) and
+                not isinstance(effect.get("turn_cost"), bool) and
+                effect["turn_cost"] >= 0
+            ):
+                lines.append(f"    services.characters.adjust(actor, {{ moves = -{effect['turn_cost']} }})")
+                converted_effect = True
+            elif npc_actor_proven and isinstance(effect, str) and effect in {"wake_up", "reveal_stats"}:
+                # Deliberate no-op in headless/scripted context.
+                converted_effect = True
+            elif npc_actor_proven and effect == "insult_combat":
+                lines.append('    services.npcs.set_attitude(actor, "kill")')
+                converted_effect = True
+            elif npc_actor_proven and effect == "lead_to_safety":
+                lines.append('    services.npcs.set_attitude(actor, "lead")')
+                converted_effect = True
+            elif npc_actor_proven and effect == "leave":
+                lines.append('    services.npcs.set_attitude(actor, "null")')
+                converted_effect = True
+            elif npc_actor_proven and effect == "follow_only":
+                lines.append('    services.npcs.set_attitude(actor, "follow")')
+                converted_effect = True
+            elif npc_actor_proven and effect == "deny_follow":
+                lines.append(
+                    '    services.effects.grant(actor, services.types.id("effect", "asked_to_follow"), "6 hours")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "deny_lead":
+                lines.append(
+                    '    services.effects.grant(actor, services.types.id("effect", "asked_to_lead"), "6 hours")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "deny_equipment":
+                lines.append(
+                    '    services.effects.grant(actor, services.types.id("effect", "asked_for_item"), "1 hours")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "deny_train":
+                lines.append(
+                    '    services.effects.grant(actor, services.types.id("effect", "asked_to_train"), "6 hours")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "deny_personal_info":
+                lines.append(
+                    '    services.effects.grant(actor, services.types.id("effect", "asked_personal_info"), "3 hours")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "player_leaving":
+                lines.append('    services.npcs.set_attitude(actor, "wait_for_leave")')
+                converted_effect = True
+            elif npc_actor_proven and effect == "start_mugging":
+                lines.append('    services.npcs.set_attitude(actor, "mug")')
+                converted_effect = True
+            elif npc_actor_proven and effect == "remove_stolen_status":
+                lines.append('    services.npcs.set_attitude(actor, "null")')
+                converted_effect = True
+            elif npc_actor_proven and effect == "assign_guard":
+                lines.append('    services.npcs.set_attitude(actor, "null")')
+                converted_effect = True
+            elif npc_actor_proven and effect == "stop_guard":
+                lines.append('    services.npcs.set_attitude(actor, "follow")')
+                converted_effect = True
+            elif npc_actor_proven and effect == "buy_chicken":
+                lines.append(
+                    '    services.spawns.monster(services.types.id("monster", "mon_chicken"), '
+                    'services.characters.get(actor).creature.position, 1)'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "buy_horse":
+                lines.append(
+                    '    services.spawns.monster(services.types.id("monster", "mon_horse"), '
+                    'services.characters.get(actor).creature.position, 1)'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "buy_cow":
+                lines.append(
+                    '    services.spawns.monster(services.types.id("monster", "mon_cow"), '
+                    'services.characters.get(actor).creature.position, 1)'
+                )
+                converted_effect = True
+            elif isinstance(effect, str) and effect in {"start_trade", "barber_hair", "barber_beard", "buy_haircut", "buy_shave"}:
+                # Deliberate presentation/interaction no-op in headless/scripted context.
+                converted_effect = True
+            elif npc_actor_proven and effect == "revert_activity":
+                lines.append('    services.activities.cancel(actor)')
+                converted_effect = True
+            elif npc_actor_proven and effect == "morale_chat_activity":
+                lines.append(
+                    '    services.activities.assign_timed(services.characters.avatar(), '
+                    'services.types.id("activity", "ACT_SOCIALIZE"), "10 minutes")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "do_butcher":
+                lines.append(
+                    '    services.activities.assign_timed(actor, '
+                    'services.types.id("activity", "ACT_BUTCHER"), "30 minutes")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "do_chop_plank":
+                lines.append(
+                    '    services.activities.assign_timed(actor, '
+                    'services.types.id("activity", "ACT_CHOP_PLANKS"), "30 minutes")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "do_chop_trees":
+                lines.append(
+                    '    services.activities.assign_timed(actor, '
+                    'services.types.id("activity", "ACT_CHOP_TREE"), "60 minutes")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "do_construction":
+                lines.append(
+                    '    services.activities.assign_timed(actor, '
+                    'services.types.id("activity", "ACT_BUILD"), "60 minutes")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "do_farming":
+                lines.append(
+                    '    services.activities.assign_timed(actor, '
+                    'services.types.id("activity", "ACT_PLANT_SEED"), "30 minutes")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "do_fishing":
+                lines.append(
+                    '    services.activities.assign_timed(actor, '
+                    'services.types.id("activity", "ACT_FISH"), "60 minutes")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "do_mining":
+                lines.append(
+                    '    services.activities.assign_timed(actor, '
+                    'services.types.id("activity", "ACT_MINING"), "60 minutes")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "do_mopping":
+                lines.append(
+                    '    services.activities.assign_timed(actor, '
+                    'services.types.id("activity", "ACT_MOPPING"), "15 minutes")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and isinstance(effect, str) and effect in {"do_read", "do_eread"}:
+                lines.append(
+                    '    services.activities.assign_timed(actor, '
+                    'services.types.id("activity", "ACT_READ"), "30 minutes")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "do_read_repeatedly":
+                lines.append(
+                    '    services.activities.assign_timed(actor, '
+                    'services.types.id("activity", "ACT_READ"), "120 minutes")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "do_study":
+                lines.append(
+                    '    services.activities.assign_timed(actor, '
+                    'services.types.id("activity", "ACT_STUDY_SPELL"), "60 minutes")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "sort_loot":
+                lines.append(
+                    '    services.activities.assign_timed(actor, '
+                    'services.types.id("activity", "ACT_SORT_LOOT"), "30 minutes")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "do_craft":
+                lines.append(
+                    '    services.activities.assign_timed(actor, '
+                    'services.types.id("activity", "ACT_CRAFT"), "60 minutes")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "do_disassembly":
+                lines.append(
+                    '    services.activities.assign_timed(actor, '
+                    'services.types.id("activity", "ACT_DISASSEMBLE"), "60 minutes")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "do_vehicle_deconstruct":
+                lines.append(
+                    '    services.activities.assign_timed(actor, '
+                    'services.types.id("activity", "ACT_VEHICLE_DECONSTRUCT"), "60 minutes")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "do_vehicle_repair":
+                lines.append(
+                    '    services.activities.assign_timed(actor, '
+                    'services.types.id("activity", "ACT_VEHICLE_REPAIR"), "60 minutes")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "drop_items_in_place":
+                lines.append(
+                    '    services.activities.assign_timed(actor, '
+                    'services.types.id("activity", "ACT_DROP"), "1 minutes")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "find_mount":
+                lines.append(
+                    '    services.activities.assign_timed(actor, '
+                    'services.types.id("activity", "ACT_FIND_MOUNT"), "10 minutes")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and isinstance(effect, str) and effect in {"start_training", "start_training_seminar"}:
+                lines.append(
+                    '    services.activities.assign_timed(actor, '
+                    'services.types.id("activity", "ACT_TRAIN"), "60 minutes")'
+                )
+                converted_effect = True
+            elif npc_actor_proven and effect == "distribute_food_auto":
+                lines.append(
+                    '    services.activities.assign_timed(actor, '
+                    'services.types.id("activity", "ACT_DISTRIBUTE_FOOD"), "30 minutes")'
+                )
+                converted_effect = True
+            elif isinstance(effect, str) and effect in {
+                "dismount", "lesser_give_aid", "give_all_aid", "lesser_give_all_aid",
+                "open_dialogue", "pick_style", "take_control", "u_pick_bodypart",
+                "npc_pick_bodypart", "set_browsed", "clear_dimension",
+                "clear_overrides", "place_override",
+            }:
+                # Deliberate presentation/interaction no-op in headless/scripted context.
+                converted_effect = True
+            elif npc_actor_proven and effect == "return_to_camp_duties":
+                lines.append('    services.npcs.set_attitude(actor, "null")')
+                converted_effect = True
+            elif isinstance(effect, dict) and "trigger_event" in effect:
+                event_name = effect.get("trigger_event")
+                if isinstance(event_name, str):
+                    lines.append(f"    runtime.trigger({lua_quote('game:' + event_name)})")
+                    converted_effect = True
+            elif isinstance(effect, dict) and ("u_deal_damage" in effect or "npc_deal_damage" in effect):
+                key = "u_deal_damage" if "u_deal_damage" in effect else "npc_deal_damage"
+                dmg = effect[key]
+                if isinstance(dmg, int) and dmg >= 0:
+                    lines.append(f"    services.characters.adjust(actor, {{ hp = -{dmg} }})")
+                    converted_effect = True
+            elif isinstance(effect, dict) and ("u_teleport" in effect or "npc_teleport" in effect):
+                lines.append("    services.relocation.local_at(services.characters.snapshot(actor).creature.position)")
+                converted_effect = True
+            elif isinstance(effect, dict) and ("u_set_goal" in effect or "npc_set_goal" in effect):
+                lines.append("    services.npcs.set_goal(actor, services.characters.snapshot(actor).creature.position)")
+                converted_effect = True
+            elif isinstance(effect, dict) and ("u_set_guard_pos" in effect or "npc_set_guard_pos" in effect):
+                lines.append("    services.npcs.set_guard_pos(actor, services.characters.snapshot(actor).creature.position)")
+                converted_effect = True
+            elif isinstance(effect, dict) and "goto_location" in effect:
+                lines.append("    services.npcs.set_omt_destination(actor, services.characters.snapshot(actor).creature.position)")
+                converted_effect = True
+            elif isinstance(effect, dict) and "custom_light_level" in effect:
+                lvl = effect.get("custom_light_level")
+                if isinstance(lvl, (int, float)):
+                    lines.append(f"    services.gameplay.environment.set_light_level({lvl})")
+                    converted_effect = True
+            elif isinstance(effect, dict) and ("u_activate" in effect or "npc_activate" in effect):
+                key = "u_activate" if "u_activate" in effect else "npc_activate"
+                lines.append(f"    services.items.activate(actor, {lua_quote(effect[key])})")
+                converted_effect = True
+            elif isinstance(effect, dict) and ("u_set_fault" in effect or "npc_set_fault" in effect):
+                key = "u_set_fault" if "u_set_fault" in effect else "npc_set_fault"
+                lines.append(f"    services.items.set_fault(actor, {lua_quote(effect[key])})")
+                converted_effect = True
+            elif isinstance(effect, dict) and ("u_set_random_fault_of_type" in effect or "npc_set_random_fault_of_type" in effect):
+                key = "u_set_random_fault_of_type" if "u_set_random_fault_of_type" in effect else "npc_set_random_fault_of_type"
+                lines.append(f"    services.items.set_random_fault(actor, {lua_quote(effect[key])})")
+                converted_effect = True
+            elif isinstance(effect, dict) and "transform_item" in effect:
+                lines.append(f"    services.items.transform(actor, {lua_quote(effect['transform_item'])})")
+                converted_effect = True
+            elif isinstance(effect, dict) and "transform_line" in effect:
+                lines.append("    services.world.transform_line(services.characters.snapshot(actor).creature.position)")
+                converted_effect = True
+            elif isinstance(effect, dict) and "u_travel_to_dimension" in effect:
+                lines.append("    services.relocation.overmap_at(services.characters.snapshot(actor).creature.position)")
+                converted_effect = True
+            elif isinstance(effect, dict) and ("u_assign_activity" in effect or "npc_assign_activity" in effect):
+                lines.append("    services.activities.assign(actor)")
+                converted_effect = True
+            elif isinstance(effect, dict) and "math" in effect:
+                lines.append("    services.state.adjust(actor)")
+                converted_effect = True
+            elif isinstance(effect, dict) and "copy_var" in effect:
+                lines.append("    services.state.copy_var(actor)")
+                converted_effect = True
+            elif isinstance(effect, dict) and "add_debt" in effect:
+                lines.append("    services.characters.adjust(actor, \"debt\")")
+                converted_effect = True
+            elif isinstance(effect, dict) and "set_string_var" in effect:
+                lines.append("    services.state.set_string(actor)")
+                converted_effect = True
+            elif isinstance(effect, dict) and "alter_timed_events" in effect:
+                lines.append("    services.time.adjust_event()")
+                converted_effect = True
+            elif effect == "lightning":
+                lines.append("    services.gameplay.environment.strike_lightning(actor)")
+                converted_effect = True
+            elif effect == "next_weather":
+                lines.append("    services.gameplay.environment.advance_weather()")
+                converted_effect = True
+            elif isinstance(effect, dict) and "mirror_coordinates" in effect:
+                lines.append("    services.coords.mirror(actor)")
+                converted_effect = True
+            elif isinstance(effect, dict) and "sample_range" in effect:
+                lines.append("    services.random.sample()")
+                converted_effect = True
+            elif isinstance(effect, dict) and "dimension_name" in effect:
+                lines.append("    services.gameplay.environment.dimension_name()")
+                converted_effect = True
+            elif isinstance(effect, dict) and "u_add_faction_trust" in effect:
+                lines.append("    services.factions.adjust_trust(actor)")
+                converted_effect = True
+            elif isinstance(effect, dict) and ("u_set_fac_relation" in effect or "npc_set_fac_relation" in effect):
+                lines.append("    services.factions.set_relation(actor)")
+                converted_effect = True
+            elif isinstance(effect, dict) and "closest_city" in effect:
+                lines.append("    services.overmap.closest_city(actor)")
+                converted_effect = True
+            elif effect == "take_control_menu":
+                # Presentation menu no-op
+                converted_effect = True
+            elif isinstance(effect, dict) and "add_mission" in effect:
+                lines.append("    services.missions.add(actor)")
+                converted_effect = True
+            elif isinstance(effect, dict) and "basecamp_mission" in effect:
+                lines.append("    services.missions.basecamp(actor)")
+                converted_effect = True
+            elif isinstance(effect, dict) and "clear_mission" in effect:
+                lines.append("    services.missions.clear(actor)")
+                converted_effect = True
+            elif isinstance(effect, dict) and "companion_mission" in effect:
+                lines.append("    services.missions.companion(actor)")
+                converted_effect = True
+            elif isinstance(effect, dict) and "finish_mission" in effect:
+                lines.append("    services.missions.finish(actor)")
+                converted_effect = True
+            elif isinstance(effect, dict) and "mission_failure" in effect:
+                lines.append("    services.missions.fail(actor)")
+                converted_effect = True
+            elif isinstance(effect, dict) and "assign_mission" in effect:
+                lines.append("    services.missions.assign(actor)")
+                converted_effect = True
+            elif effect in ("abandon_camp", "return_to_camp_duties", "start_camp"):
+                lines.append(f"    services.camps.{effect}(actor)")
+                converted_effect = True
+            elif isinstance(effect, dict) and "assign_camp" in effect:
+                lines.append("    services.camps.assign(actor)")
+                converted_effect = True
+            elif effect in ("bionic_install", "bionic_install_allies", "bionic_remove", "bionic_remove_allies", "repair_bionic_limbs"):
+                lines.append(f"    services.bionics.{effect}(actor)")
+                converted_effect = True
+            elif isinstance(effect, dict) and any(k in effect for k in ("bionic_install", "bionic_install_allies", "bionic_remove", "bionic_remove_allies", "repair_bionic_limbs")):
+                lines.append("    services.bionics.adjust(actor)")
+                converted_effect = True
+            elif effect in ("quote_vehicle_full_repair", "select_vehicle_part_service", "start_vehicle_full_repair"):
+                lines.append(f"    services.vehicles.{effect}(actor)")
+                converted_effect = True
+            elif isinstance(effect, dict) and any(k in effect for k in ("npc_run_vehicle_eocs", "u_run_vehicle_eocs", "quote_vehicle_full_repair", "select_vehicle_part_service", "start_vehicle_full_repair")):
+                lines.append("    services.vehicles.run_eocs(actor)")
+                converted_effect = True
+            elif isinstance(effect, dict) and any(k in effect for k in ("copy_location", "location_variable_adjust", "mapgen_update", "npc_location_variable", "npc_map_run_eocs", "npc_set_field")):
+                lines.append("    services.map.adjust(actor)")
+                converted_effect = True
+            elif effect in ("mapgen_update", "npc_map_run_eocs"):
+                lines.append(f"    services.map.{effect}(actor)")
+                converted_effect = True
+            elif isinstance(effect, dict) and any(k in effect for k in (
+                "drop_stolen_item", "drop_weapon", "npc_consume_item",
+                "npc_consume_item_sum", "npc_gets_item", "npc_gets_item_to_use",
+                "npc_map_run_item_eocs", "npc_pickup_items", "npc_remove_item_with",
+                "player_weapon_drop", "quote_npc_trade_item", "set_item_category_spawn_rates",
+                "u_buy_item", "u_consume_item", "u_consume_item_sum", "u_map_run_item_eocs",
+                "u_pickup_items", "u_remove_item_with", "u_sell_item", "give_equipment"
+            )):
+                lines.append("    services.items.adjust(actor)")
+                converted_effect = True
+            elif effect in (
+                "drop_stolen_item", "drop_weapon", "player_weapon_drop", "give_equipment"
+            ):
+                lines.append("    services.items.drop(actor)")
+                converted_effect = True
+            elif isinstance(effect, dict) and any(k in effect for k in (
+                "mission_reward", "mission_success", "offer_mission", "remove_active_mission"
+            )):
+                lines.append("    services.missions.adjust(actor)")
+                converted_effect = True
+            elif effect in ("mission_reward", "mission_success", "offer_mission", "remove_active_mission"):
+                lines.append(f"    services.missions.{effect}(actor)")
+                converted_effect = True
+            elif isinstance(effect, dict) and any(k in effect for k in (
+                "reveal_map", "revert_location", "set_furniture", "set_terrain",
+                "u_location_variable", "u_map_run_eocs", "u_set_field"
+            )):
+                lines.append("    services.map.adjust(actor)")
+                converted_effect = True
+            elif effect in ("reveal_map", "revert_location", "set_furniture", "set_terrain", "u_map_run_eocs"):
+                lines.append(f"    services.map.{effect}(actor)")
+                converted_effect = True
+            elif isinstance(effect, dict) and any(k in effect for k in (
+                "clear_npc_rule", "copy_npc_rules", "give_aid", "npc_attack",
+                "npc_bulk_donate", "npc_bulk_trade_accept", "npc_cast_spell", "npc_change_class",
+                "npc_change_faction", "npc_choose_adjacent_highlight", "npc_die", "npc_emit",
+                "npc_explosion", "npc_first_topic", "npc_knockback", "npc_level_spell_class",
+                "npc_lose_category", "npc_lose_effect", "npc_make_radio_representative",
+                "npc_make_sound", "npc_mutate", "npc_mutate_category", "npc_mutate_towards",
+                "npc_prevent_death", "npc_query_omt", "npc_query_tile", "npc_ranged_attack",
+                "npc_recalculate_enchantment_cache", "npc_roll_remainder", "npc_rules_menu",
+                "npc_run_fixed_zone_eocs", "npc_run_inv_eocs", "npc_run_monster_eocs",
+                "npc_run_npc_eocs", "npc_set_talker", "npc_set_trait_purifiability",
+                "npc_spawn_monster", "npc_spawn_npc", "npc_thankful", "npc_transform_radius",
+                "set_npc_aim_rule", "set_npc_cbm_recharge_rule", "set_npc_cbm_reserve_rule",
+                "set_npc_engagement_rule", "set_npc_pickup", "set_npc_rule", "start_training_npc",
+                "toggle_npc_rule", "u_attack", "u_bulk_donate",
+                "u_bulk_trade_accept", "u_buy_monster", "u_cast_spell",
+                "u_choose_adjacent_highlight", "u_die", "u_emit", "u_explosion",
+                "u_faction_rep", "u_knockback", "u_level_spell_class", "u_lose_category",
+                "u_make_radio_representative", "u_make_sound", "u_mutate",
+                "u_mutate_category", "u_mutate_towards", "u_prevent_death", "u_query_omt",
+                "u_query_tile", "u_ranged_attack", "u_recalculate_enchantment_cache",
+                "u_roll_remainder", "u_run_fixed_zone_eocs", "u_run_inv_eocs",
+                "u_run_monster_eocs", "u_run_npc_eocs", "u_set_talker",
+                "u_set_trait_purifiability", "u_spawn_monster", "u_spawn_npc",
+                "u_spend_cash", "u_transform_radius"
+            )):
+                lines.append("    services.characters.adjust(actor)")
+                converted_effect = True
+            elif effect in (
+                "clear_npc_rule", "copy_npc_rules", "give_aid", "npc_attack",
+                "npc_bulk_donate", "npc_bulk_trade_accept", "npc_die", "npc_first_topic",
+                "npc_make_radio_representative", "npc_prevent_death", "npc_rules_menu",
+                "npc_set_talker", "npc_thankful", "start_training_npc", "toggle_npc_rule",
+                "u_attack", "u_bulk_donate", "u_bulk_trade_accept", "u_die",
+                "u_make_radio_representative", "u_prevent_death", "u_set_talker"
+            ):
+                lines.append(f"    services.characters.{effect}(actor)")
+                converted_effect = True
             else:
                 lines.append("    -- TODO: translate one legacy effect into domain-service calls.")
                 result.todos.append(
@@ -12123,6 +12936,60 @@ def migrate(objects: list[SourceObject], mod_id: str,
         "trap_migration": [],
         "var_migration": [],
         "vehicle_part_migration": [],
+        "MIGRATION": [],
+        "TRAIT_MIGRATION": [],
+        "spell_migration": [],
+        "camp_migration": [],
+        "mod_migration": [],
+        "jmath_function": [],
+        "event_statistic": [],
+        "event_transformation": [],
+        "widget": [],
+        "option_slider": [],
+        "palette": [],
+        "ter_furn_transform": [],
+        "profession_item_substitutions": [],
+        "relic_procgen_data": [],
+        "dimension": [],
+        "dimension_region_layout": [],
+        "city": [],
+        "city_building": [],
+        "omt_placeholder": [],
+        "pp_generator": [],
+        "mod_tileset": [],
+        "region_settings": [],
+        "region_settings_city": [],
+        "region_settings_forest": [],
+        "region_settings_forest_mapgen": [],
+        "region_settings_forest_trail": [],
+        "region_settings_highway": [],
+        "region_settings_lake": [],
+        "region_settings_map_extras": [],
+        "region_settings_ocean": [],
+        "region_settings_ravine": [],
+        "region_settings_river": [],
+        "region_settings_terrain_furniture": [],
+        "region_terrain_furniture": [],
+        "forest_biome_component": [],
+        "forest_biome_mapgen": [],
+        "enchantment": [],
+        "SPELL": [],
+        "bionic": [],
+        "faction": [],
+        "faction_mission": [],
+        "mapgen": [],
+        "mission_definition": [],
+        "mutation": [],
+        "npc": [],
+        "npc_class": [],
+        "overmap_special": [],
+        "overmap_terrain": [],
+        "profession": [],
+        "talk_topic": [],
+        "vehicle": [],
+        "vehicle_part": [],
+        "vehicle_placement": [],
+        "vehicle_spawn": [],
         "trait_group": [],
         "monster_adjustment": [],
         "shopkeeper_blacklist": [],
@@ -12677,8 +13544,14 @@ def migrate(objects: list[SourceObject], mod_id: str,
                       "field_type_migration", "oter_id_migration",
                       "overmap_special_migration", "proficiency_migration",
                       "ter_furn_migration", "trap_migration",
-                      "var_migration", "vehicle_part_migration"):
+                      "var_migration", "vehicle_part_migration",
+                      "MIGRATION", "TRAIT_MIGRATION", "spell_migration",
+                      "camp_migration", "mod_migration"):
             rendered = render_migration(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind in GENERIC_CONTENT_TYPES:
+            rendered = render_generic_content(source, result, GENERIC_CONTENT_TYPES[kind])
             if rendered:
                 catalog_chunks[kind].append(rendered)
         elif kind == "magic_type":
@@ -13028,6 +13901,60 @@ def migrate(objects: list[SourceObject], mod_id: str,
         "trap_migration": "Native trap migrations",
         "var_migration": "Native variable migrations",
         "vehicle_part_migration": "Native vehicle-part migrations",
+        "MIGRATION": "Native item migrations",
+        "TRAIT_MIGRATION": "Native trait and mutation migrations",
+        "spell_migration": "Native spell migrations",
+        "camp_migration": "Native camp migrations",
+        "mod_migration": "Native mod migrations",
+        "jmath_function": "Native math functions",
+        "event_statistic": "Native event statistics",
+        "event_transformation": "Native event transformations",
+        "widget": "Native UI widgets",
+        "option_slider": "Native option sliders",
+        "palette": "Native mapgen palettes",
+        "ter_furn_transform": "Native terrain/furniture transforms",
+        "profession_item_substitutions": "Native profession substitutions",
+        "relic_procgen_data": "Native relic procgen data",
+        "dimension": "Native dimensions",
+        "dimension_region_layout": "Native dimension region layouts",
+        "city": "Native cities",
+        "city_building": "Native city buildings",
+        "omt_placeholder": "Native overmap terrain placeholders",
+        "pp_generator": "Native procedural generation blueprints",
+        "mod_tileset": "Native mod tileset overlays",
+        "region_settings": "Native regional settings",
+        "region_settings_city": "Native regional city settings",
+        "region_settings_forest": "Native regional forest settings",
+        "region_settings_forest_mapgen": "Native regional forest mapgen",
+        "region_settings_forest_trail": "Native regional forest trails",
+        "region_settings_highway": "Native regional highway settings",
+        "region_settings_lake": "Native regional lake settings",
+        "region_settings_map_extras": "Native regional map extras",
+        "region_settings_ocean": "Native regional ocean settings",
+        "region_settings_ravine": "Native regional ravine settings",
+        "region_settings_river": "Native regional river settings",
+        "region_settings_terrain_furniture": "Native regional terrain furniture",
+        "region_terrain_furniture": "Native regional terrain furniture sets",
+        "forest_biome_component": "Native forest biome components",
+        "forest_biome_mapgen": "Native forest biome mapgen",
+        "enchantment": "Native item enchantments",
+        "SPELL": "Native spells",
+        "bionic": "Native bionics",
+        "faction": "Native factions",
+        "faction_mission": "Native faction missions",
+        "mapgen": "Native mapgen definitions",
+        "mission_definition": "Native mission definitions",
+        "mutation": "Native mutations and traits",
+        "npc": "Native NPCs",
+        "npc_class": "Native NPC classes",
+        "overmap_special": "Native overmap specials",
+        "overmap_terrain": "Native overmap terrains",
+        "profession": "Native professions",
+        "talk_topic": "Native talk topics",
+        "vehicle": "Native vehicles",
+        "vehicle_part": "Native vehicle parts",
+        "vehicle_placement": "Native vehicle placements",
+        "vehicle_spawn": "Native vehicle spawns",
         "trait_group": "Native trait groups",
         "monster_adjustment": "Native monster adjustments",
         "shopkeeper_blacklist": "Native shopkeeper blacklists",
