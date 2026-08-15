@@ -201,7 +201,7 @@ def validate_contract(contract: dict[str, object]) -> dict[str, int]:
         "modules": 3,
         "namespaces": 70,
         "classes": 269,
-        "functions": 492,
+        "functions": 497,
         "methods": 149,
         "properties": 51,
         "operators": 47,
