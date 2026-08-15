@@ -85,6 +85,16 @@ generic_factory<attack_vector> &cata::lua_platform::detail::attack_vector_regist
     return attack_vector_factory;
 }
 
+generic_factory<ma_technique> &cata::lua_platform::detail::ma_technique_registry()
+{
+    return ma_techniques;
+}
+
+generic_factory<martialart> &cata::lua_platform::detail::martialart_registry()
+{
+    return martialarts;
+}
+
 /** @relates string_id */
 template<>
 const attack_vector &string_id<attack_vector>::obj() const
