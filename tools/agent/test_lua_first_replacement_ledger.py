@@ -11,10 +11,12 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
             result,
             {
                 "total": 775,
-                "implemented_unverified": 0,
-                "bounded_implemented_unverified": 119,
-                "primitive_available_unverified": 440,
-                "planned": 198,
+                "implemented_verified": 53,
+                "implemented_unverified": 14,
+                "bounded_implemented_verified": 14,
+                "bounded_implemented_unverified": 244,
+                "primitive_available_unverified": 299,
+                "planned": 133,
                 "private_adapter": 0,
                 "reviewed_not_applicable": 18,
             },
@@ -44,8 +46,8 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
         }
         for selector in {
             "monster_attack", "effect_type", "weakpoint_set",
-            "field_type", "item_group", "sub_body_part", "body_part",
-            "wound", "wound_fix", "anatomy",
+            "field_type", "item_group", "body_part",
+            "wound", "wound_fix",
             "body_graph", "MONSTER",
         }:
             self.assertEqual(
@@ -66,7 +68,9 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
     def test_coverage_statuses_have_status_specific_evidence(self):
         generated = build_ledger()
         implemented_statuses = {
+            "implemented_verified",
             "implemented_unverified",
+            "bounded_implemented_verified",
             "bounded_implemented_unverified",
         }
         evidenced_statuses = implemented_statuses | {
@@ -98,6 +102,125 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                     "migration evidence",
                 )
 
+    def test_full_coverage_selectors_are_implemented_unverified(self):
+        generated = build_ledger()
+        entries = {
+            (entry["inventory"], entry["selector"]): entry
+            for entry in generated["entries"]
+        }
+        for selector, target in {
+            "sound_effect": "content.sound-effects",
+            "sound_effect_preload": "content.sound-effects",
+            "TRAIT_BLACKLIST": "content.blacklists",
+            "MONSTER_WHITELIST": "content.blacklists",
+            "magic_type": "content.magic-types",
+            "playlist": "content.playlists",
+            "activity_type": "content.activity-types",
+            "help": "content.help-topics",
+            "bionic_migration": "content.migrations",
+            "field_type_migration": "content.migrations",
+            "ITEM_BLACKLIST": "content.blacklists",
+            "profession_blacklist": "content.blacklists",
+            "trait_group": "content.trait-groups",
+            "monster_adjustment": "content.monsters",
+        }.items():
+            entry = entries[("json-object-types", selector)]
+            self.assertEqual(
+                entry["status"], "implemented_unverified"
+            )
+            self.assertEqual(entry["target"], target)
+            self.assertEqual(entry["legacy_dependency"], "none")
+            self.assertIn("tools/migrate_lua_first.py", entry["evidence"])
+
+    def test_parity_verified_selectors_promote_to_verified(self):
+        generated = build_ledger()
+        entries = {
+            (entry["inventory"], entry["selector"]): entry
+            for entry in generated["entries"]
+        }
+        for selector, target in {
+            "ammunition_type": "content.ammunition-types",
+            "anatomy": "content.anatomies",
+            "attack_vector": "content.attack-vectors",
+            "bash_damage_profile": "content.bash-damage-profiles",
+            "butchery_requirement": "content.butchery-requirements",
+            "charge_removal_blacklist": "content.blacklists",
+            "connect_group": "content.connect-groups",
+            "construction_category": "content.construction-categories",
+            "construction_group": "content.construction-groups",
+            "damage_info_order": "content.damage-info-presentation",
+            "disease_type": "content.disease-types",
+            "dream": "content.gameplay",
+            "effect_migration": "content.migrations",
+            "emit": "content.emissions",
+            "fault_group": "content.fault-groups",
+            "gate": "content.map",
+            "harvest_drop_type": "content.harvest-drop-types",
+            "hit_range": "content.hit-range",
+            "item_action": "content.item-actions",
+            "limb_score": "content.limb-scores",
+            "MONSTER_BLACKLIST": "content.blacklists",
+            "monster_flag": "content.monster-flags",
+            "mutation_category": "content.mutation-categories",
+            "named_color": "content.named-colors",
+            "oter_id_migration": "content.migrations",
+            "oter_vision": "content.overmap-vision",
+            "overlay_order": "content.overlay-order",
+            "overmap_connection": "content.overmap-connections",
+            "overmap_land_use_code": "content.overmap-land-use-codes",
+            "overmap_special_migration": "content.migrations",
+            "profession_group": "content.profession-groups",
+            "proficiency_category": "content.proficiency-categories",
+            "proficiency_migration": "content.migrations",
+            "recipe_category": "content.recipe-categories",
+            "rotatable_symbol": "content.rotatable-symbols",
+            "SCENARIO_BLACKLIST": "content.blacklists",
+            "scent_type": "content.scent-types",
+            "skill": "content.skills",
+            "skill_display_type": "content.skill-display-categories",
+            "SPECIES": "content.species",
+            "speech": "content.speech-pools",
+            "speed_description": "content.speed-descriptions",
+            "sub_body_part": "content.sub-body-parts",
+            "temperature_removal_blacklist": "content.blacklists",
+            "ter_furn_migration": "content.migrations",
+            "trap_migration": "content.migrations",
+            "var_migration": "content.migrations",
+            "vehicle_color_palette": "content.vehicle-color-palettes",
+            "vehicle_group": "content.vehicle-groups",
+            "vehicle_part_category": "content.vehicle-part-categories",
+            "vehicle_part_location": "content.vehicle-part-locations",
+            "vehicle_part_migration": "content.migrations",
+            "weapon_category": "content.weapon-categories",
+        }.items():
+            entry = entries[("json-object-types", selector)]
+            self.assertEqual(entry["status"], "implemented_verified")
+            self.assertEqual(entry["target"], target)
+            self.assertEqual(entry["legacy_dependency"], "none")
+            self.assertIn("tests/catalua_ui_test.cpp", entry["evidence"])
+
+        for selector, target in {
+            "clothing_mod": "content.clothing-modifications",
+            "damage_type": "content.damage-types",
+            "explosion_light": "content.explosion-lights",
+            "fault": "content.faults",
+            "ITEM_CATEGORY": "content.item-categories",
+            "json_flag": "content.flags",
+            "LOOT_ZONE": "content.zone-types",
+            "mood_face": "content.mood-faces",
+            "morale_type": "content.morale-types",
+            "movement_mode": "content.movement-modes",
+            "recipe_group": "content.recipe-groups",
+            "scenario": "content.scenarios",
+            "start_location": "content.start-locations",
+            "tool_quality": "content.tool-qualities",
+        }.items():
+            entry = entries[("json-object-types", selector)]
+            self.assertEqual(entry["status"], "bounded_implemented_verified")
+            self.assertEqual(entry["target"], target)
+            self.assertEqual(entry["legacy_dependency"], "none")
+            self.assertIn("tests/catalua_ui_test.cpp", entry["evidence"])
+
     def test_lua_native_eoc_shapes_remain_bounded_until_full_parity(self):
         generated = build_ledger()
         entries = {
@@ -108,6 +231,7 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
             "compare_string",
             "compare_string_match_all",
             "current_dimension",
+            "is_season",
             "mod_is_loaded",
             "one_in_chance",
             "roll_contested",
@@ -239,15 +363,13 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
             wound_effect = entries[("eoc-effects", selector)]
             self.assertEqual(
                 wound_effect["status"],
-                "planned",
+                "primitive_available_unverified",
             )
             self.assertEqual(wound_effect["target"], "services.wounds")
             self.assertEqual(
-                wound_effect["legacy_dependency"], "public_legacy"
+                wound_effect["legacy_dependency"], "none"
             )
             self.assertIn("src/npctalk.cpp", wound_effect["evidence"])
-            self.assertIn("src/bodypart.cpp", wound_effect["evidence"])
-            self.assertIn("src/wound.cpp", wound_effect["evidence"])
             self.assertIn(
                 "src/catalua_platform_runtime.cpp", wound_effect["evidence"]
             )
@@ -269,18 +391,40 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
             )
 
         for selector, target in {
-            "npc_add_wet": "services.wetness",
-            "npc_add_wound": "services.wounds",
             "npc_deal_damage": "services.combat",
             "npc_pick_bodypart": "services.body-parts-and-wounds",
-            "npc_remove_wound": "services.wounds",
-            "u_add_wet": "services.wetness",
             "u_deal_damage": "services.combat",
             "u_pick_bodypart": "services.body-parts-and-wounds",
         }.items():
             wound_effect = entries[("eoc-effects", selector)]
             self.assertEqual(wound_effect["status"], "planned")
             self.assertEqual(wound_effect["target"], target)
+
+        for selector, target in {
+            "npc_add_wound": "services.wounds",
+            "npc_remove_wound": "services.wounds",
+        }.items():
+            wound_effect = entries[("eoc-effects", selector)]
+            self.assertEqual(
+                wound_effect["status"], "primitive_available_unverified"
+            )
+            self.assertEqual(wound_effect["target"], target)
+
+        for selector, status, target in {
+            (
+                "npc_add_wet",
+                "bounded_implemented_unverified",
+                "services.wetness",
+            ),
+            (
+                "u_add_wet",
+                "bounded_implemented_unverified",
+                "services.wetness",
+            ),
+        }:
+            wet_effect = entries[("eoc-effects", selector)]
+            self.assertEqual(wet_effect["status"], status)
+            self.assertEqual(wet_effect["target"], target)
 
         wound = entries[("json-object-types", "wound")]
         self.assertEqual(
@@ -321,7 +465,6 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 "services.inventory-and-items",
             ),
             ("eoc-effects", "map_spawn_item", "services.world"),
-            ("eoc-effects", "npc_cancel_activity", "services.activities"),
             (
                 "eoc-effects",
                 "assign_mission",
@@ -353,24 +496,12 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
             self.assertEqual(item_entry["target"], target)
 
         for inventory, selector, target in {
-            (
-                "eoc-conditions",
-                "npc_is_travelling",
-                "services.character-navigation",
-            ),
-            (
-                "eoc-conditions",
-                "u_is_travelling",
-                "services.character-navigation",
-            ),
             ("eoc-effects", "goto_location", "workflows.npc-navigation"),
             ("eoc-effects", "morale_chat_activity", "workflows.socialize"),
-            ("eoc-effects", "npc_assign_activity", "services.activities"),
             ("eoc-effects", "npc_set_goal", "services.npc-navigation"),
             ("eoc-effects", "npc_set_guard_pos", "services.npc-navigation"),
             ("eoc-effects", "npc_teleport", "services.relocation"),
             ("eoc-effects", "revert_activity", "services.npc-work"),
-            ("eoc-effects", "u_assign_activity", "services.activities"),
             ("eoc-effects", "u_set_goal", "services.npc-navigation"),
             ("eoc-effects", "u_set_guard_pos", "services.npc-navigation"),
             ("eoc-effects", "u_teleport", "services.relocation"),
@@ -383,6 +514,126 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
             activity_entry = entries[(inventory, selector)]
             self.assertEqual(activity_entry["status"], "planned")
             self.assertEqual(activity_entry["target"], target)
+
+        for inventory, selector, status, target in {
+            (
+                "eoc-conditions",
+                "npc_is_travelling",
+                "bounded_implemented_unverified",
+                "services.character-navigation",
+            ),
+            (
+                "eoc-conditions",
+                "u_is_travelling",
+                "bounded_implemented_unverified",
+                "services.character-navigation",
+            ),
+            (
+                "eoc-conditions",
+                "player_see_u",
+                "bounded_implemented_unverified",
+                "services.creatures.perception",
+            ),
+            (
+                "eoc-conditions",
+                "player_see_npc",
+                "bounded_implemented_unverified",
+                "services.creatures.perception",
+            ),
+            (
+                "eoc-conditions",
+                "u_at_safe_space",
+                "bounded_implemented_unverified",
+                "services.overmap-safety-and-characters",
+            ),
+            (
+                "eoc-conditions",
+                "at_safe_space",
+                "bounded_implemented_unverified",
+                "services.overmap-safety-and-characters",
+            ),
+            (
+                "eoc-conditions",
+                "u_has_pickup_list",
+                "bounded_implemented_unverified",
+                "services.npcs.ai-rules",
+            ),
+            (
+                "eoc-conditions",
+                "has_pickup_list",
+                "bounded_implemented_unverified",
+                "services.npcs.ai-rules",
+            ),
+            (
+                "eoc-conditions",
+                "is_rotten",
+                "primitive_available_unverified",
+                "services.items",
+            ),
+            (
+                "eoc-conditions",
+                "is_by_radio",
+                "primitive_available_unverified",
+                "services.dialogue-projection",
+            ),
+            (
+                "eoc-conditions",
+                "has_reason",
+                "primitive_available_unverified",
+                "services.dialogue-projection",
+            ),
+            (
+                "eoc-conditions",
+                "has_alpha",
+                "primitive_available_unverified",
+                "services.dialogue-projection",
+            ),
+            (
+                "eoc-conditions",
+                "has_beta",
+                "primitive_available_unverified",
+                "services.dialogue-projection",
+            ),
+        }:
+            predicate_entry = entries[(inventory, selector)]
+            self.assertEqual(predicate_entry["status"], status)
+            self.assertEqual(predicate_entry["target"], target)
+
+        for selector, status, target in {
+            (
+                "u_add_wound",
+                "primitive_available_unverified",
+                "services.wounds",
+            ),
+            (
+                "npc_add_wound",
+                "primitive_available_unverified",
+                "services.wounds",
+            ),
+            (
+                "u_remove_wound",
+                "primitive_available_unverified",
+                "services.wounds",
+            ),
+            (
+                "npc_remove_wound",
+                "primitive_available_unverified",
+                "services.wounds",
+            ),
+            (
+                "u_assign_activity",
+                "primitive_available_unverified",
+                "services.activities",
+            ),
+            (
+                "npc_assign_activity",
+                "primitive_available_unverified",
+                "services.activities",
+            ),
+        }:
+            effect_entry = entries[("eoc-effects", selector)]
+            self.assertEqual(effect_entry["status"], status)
+            self.assertEqual(effect_entry["target"], target)
 
         for selector in {
             "get_condition",
