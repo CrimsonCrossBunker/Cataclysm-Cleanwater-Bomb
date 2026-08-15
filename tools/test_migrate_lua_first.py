@@ -172,7 +172,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertNotIn("load_json", main)
             self.assertNotIn('"type":', main)
             self.assertIn("pocket_data", report)
-            self.assertIn("vehicle needs_native_registrar", report)
+            self.assertIn("Vehicle needs_native_registrar", report)
 
     def test_item_subtypes_and_inheritance_are_never_reported_as_complete(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -3044,10 +3044,10 @@ class LuaFirstMigrationTest(unittest.TestCase):
                         },
                         {
                             "type": "effect_on_condition",
-                            "id": "beta_presence",
+                            "id": "unproven_presence",
                             "required_event": "npc_becomes_hostile",
-                            "condition": "has_beta",
-                            "effect": {"message": "beta"},
+                            "condition": "u_has_items",
+                            "effect": {"message": "unproven"},
                         },
                     ]
                 ),
@@ -3070,10 +3070,90 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn("services.morale.add(", main)
             self.assertIn("services.morale.remove(", main)
             self.assertIn(
-                "EOC beta_presence condition needs a native Lua predicate",
+                "EOC unproven_presence condition needs a native Lua predicate",
                 report,
             )
             self.assertNotIn("needs a native Lua effect", report)
+            self.assertNotIn("run_eoc", main)
+
+    def test_translates_dialogue_mission_and_npc_vehicle_predicates(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "avatar_dialogue_and_missions",
+                            "required_event": "game_start",
+                            "condition": {
+                                "and": [
+                                    "has_alpha",
+                                    {"not": "has_beta"},
+                                    {"not": "is_by_radio"},
+                                    {"not": "has_reason"},
+                                    {"not": "u_vehicle_owned_by_avatar"},
+                                    {"not": "has_assigned_mission"},
+                                    {"not": "has_many_assigned_missions"},
+                                    "has_no_assigned_mission",
+                                    {"not": "has_available_mission"},
+                                    {"not": "has_many_available_missions"},
+                                    "has_no_available_mission",
+                                    {"not": "mission_complete"},
+                                    {"not": "mission_incomplete"},
+                                    {"not": "mission_failed"},
+                                    {"not": {"mission_goal": "MGOAL_ASSASSINATE"}},
+                                    {"not": {"follower_present": "FOLLOWER"}},
+                                    {"not": {"u_override": "OVERRIDE"}},
+                                    {"is_outside": {"context_val": "loc"}},
+                                ]
+                            },
+                            "effect": {"message": "avatar dialogue ok"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "npc_movement_vehicle_and_missions",
+                            "required_event": "npc_becomes_hostile",
+                            "condition": {
+                                "and": [
+                                    "npc_available",
+                                    "npc_has_no_available_mission",
+                                    {"not": "npc_is_in_vehicle"},
+                                    {"not": "npc_controlling_vehicle"},
+                                    {"not": "npc_driving"},
+                                    {"not": "npc_is_riding"},
+                                    {"not": "npc_is_avatar_passenger"},
+                                    {"not": "npc_is_driven"},
+                                    {"not": "npc_is_remote_controlled"},
+                                    {"not": "npc_is_on_rails"},
+                                    {"not": "npc_vehicle_owned_by_avatar"},
+                                    {"not": "npc_following"},
+                                    {"not": "npc_has_assigned_camp"},
+                                    {"not": "npc_has_available_mission"},
+                                    {"not": "npc_has_many_available_missions"},
+                                    {"not": "npc_mission_complete"},
+                                    {"not": "npc_mission_incomplete"},
+                                    {"not": "npc_mission_failed"},
+                                    {"not": {"npc_mission_goal": "MGOAL_ASSASSINATE"}},
+                                    {"not": {"npc_rule": "RULE"}},
+                                    {"not": {"npc_override": "OVERRIDE"}},
+                                ]
+                            },
+                            "effect": {"message": "npc states ok"},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "dialogue_mission_predicates_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn('services.gameplay.environment.is_outside(context.data["loc"])', main)
             self.assertNotIn("run_eoc", main)
 
 
@@ -6886,6 +6966,1133 @@ class LuaFirstMigrationTest(unittest.TestCase):
             )
             self.assertNotIn("needs review", report)
 
+    def test_translates_sound_effects(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "sound_effects_eoc",
+                            "required_event": "character_wields_item",
+                            "effect": [
+                                {
+                                    "id": "bionics",
+                                    "sound_effect": "elec_crackle_low",
+                                    "volume": 100,
+                                },
+                                {
+                                    "id": "chainsaw_cord",
+                                    "sound_effect": "chainsaw_on",
+                                },
+                                "nothing",
+                            ],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "invalid_sound_volume",
+                            "required_event": "character_wields_item",
+                            "effect": [
+                                {
+                                    "id": "bionics",
+                                    "sound_effect": "elec_crackle_low",
+                                    "volume": 500,
+                                }
+                            ],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "sound_effects_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 1)
+            self.assertIn('services.sound.play("bionics", "elec_crackle_low", 100)', main)
+            self.assertIn('services.sound.play("chainsaw_cord", "chainsaw_on", 80)', main)
+            self.assertIn(
+                "EOC invalid_sound_volume effect #0 needs domain-service conversion",
+                report,
+            )
+
+    def test_translates_npc_attitude_and_control_effects(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "npc_attitude_effects",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": [
+                                "npc_wants_to_talk",
+                                "u_wants_to_talk",
+                                "hostile",
+                                "flee",
+                                "nothing",
+                            ],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "npc_attitude_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn('services.npcs.set_attitude(actor, "talk")', main)
+            self.assertIn('services.npcs.set_attitude(actor, "kill")', main)
+            self.assertIn('services.npcs.set_attitude(actor, "flee")', main)
+            self.assertNotIn("needs review", report)
+
+    def test_translates_spawn_and_world_interaction_effects(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "avatar_spawns_and_world",
+                            "required_event": "game_start",
+                            "effect": [
+                                {"u_spawn_item": "aspirin", "count": 2},
+                                {"u_spawn_item": "water_clean"},
+                                {
+                                    "map_spawn_item": "flashlight",
+                                    "count": 1,
+                                    "loc": {"context_val": "loc"},
+                                },
+                                {"map_spawn_item": "radio"},
+                                "player_weapon_away",
+                                {"set_trap": "tr_beartrap", "loc": {"context_val": "loc"}},
+                                {"set_trap": "tr_rollmat"},
+                                {"signal_hordes": 50, "loc": {"context_val": "loc"}},
+                                {"signal_hordes": 20},
+                                {"reveal_route": {"context_val": "loc"}, "radius": 3},
+                                "end_conversation",
+                            ],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "npc_attitudes_extended",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": [
+                                "follow",
+                                "stop_following",
+                                "stranger_neutral",
+                            ],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "spawn_and_world_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn('services.inventory.give(actor, services.types.id("item", "aspirin"), 2)', main)
+            self.assertIn('services.inventory.give(actor, services.types.id("item", "water_clean"), 1)', main)
+            self.assertIn('services.world.spawn_item(context.data["loc"], services.types.id("item", "flashlight"), 1)', main)
+            self.assertIn('services.world.spawn_item(services.characters.get(actor).creature.position, services.types.id("item", "radio"), 1)', main)
+            self.assertIn('services.inventory.stash_wielded(actor)', main)
+            self.assertIn('services.world.set_trap(context.data["loc"], services.types.id("trap", "tr_beartrap"))', main)
+            self.assertIn('services.world.set_trap(services.characters.get(actor).creature.position, services.types.id("trap", "tr_rollmat"))', main)
+            self.assertIn('services.hordes.signal(context.data["loc"], 50)', main)
+            self.assertIn('services.hordes.signal(services.characters.get(actor).creature.position, 20)', main)
+            self.assertIn('services.overmap.reveal(context.data["loc"], 3)', main)
+            self.assertIn('services.npcs.set_attitude(actor, "follow")', main)
+            self.assertIn('services.npcs.set_attitude(actor, "null")', main)
+            self.assertNotIn("needs review", report)
+
+    def test_translates_senses_species_and_turn_cost(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "avatar_senses_turn_cost",
+                            "required_event": "game_start",
+                            "condition": {
+                                "and": [
+                                    "u_can_see",
+                                    {"u_has_species": "human"},
+                                    {"not": "u_has_activity"},
+                                    {"not": "u_has_stolen_item"},
+                                    {"not": "u_can_stow_weapon"},
+                                    {"not": "u_are_owed"},
+                                    {"not": "u_train_skills"},
+                                    {"not": "u_train_spells"},
+                                    {"not": "u_train_styles"},
+                                ]
+                            },
+                            "effect": [
+                                {"turn_cost": 50},
+                            ],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "npc_senses_and_wake",
+                            "required_event": "npc_becomes_hostile",
+                            "condition": {
+                                "and": [
+                                    "npc_can_see",
+                                    {"npc_has_species": "human"},
+                                ]
+                            },
+                            "effect": [
+                                "wake_up",
+                                "reveal_stats",
+                            ],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "senses_turn_cost_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn("services.characters.adjust(actor, { moves = -50 })", main)
+            self.assertNotIn("needs review", report)
+
+    def test_translates_npc_dialogue_attitude_and_denial_effects(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "npc_denials_and_attitudes",
+                            "required_event": "npc_becomes_hostile",
+                            "condition": {
+                                "and": [
+                                    {"not": "npc_train_skills"},
+                                    {"not": "npc_train_spells"},
+                                    {"not": "npc_train_styles"},
+                                    {"not": "npc_has_stolen_item"},
+                                    {"not": "npc_can_stow_weapon"},
+                                ]
+                            },
+                            "effect": [
+                                "insult_combat",
+                                "lead_to_safety",
+                                "leave",
+                                "follow_only",
+                                "deny_follow",
+                                "deny_lead",
+                                "deny_equipment",
+                                "deny_train",
+                                "deny_personal_info",
+                            ],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "npc_dialogue_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn('services.npcs.set_attitude(actor, "kill")', main)
+            self.assertIn('services.npcs.set_attitude(actor, "lead")', main)
+            self.assertIn('services.npcs.set_attitude(actor, "null")', main)
+            self.assertIn('services.npcs.set_attitude(actor, "follow")', main)
+            self.assertIn('services.effects.grant(actor, services.types.id("effect", "asked_to_follow"), "6 hours")', main)
+            self.assertIn('services.effects.grant(actor, services.types.id("effect", "asked_to_lead"), "6 hours")', main)
+            self.assertIn('services.effects.grant(actor, services.types.id("effect", "asked_for_item"), "1 hours")', main)
+            self.assertIn('services.effects.grant(actor, services.types.id("effect", "asked_to_train"), "6 hours")', main)
+            self.assertIn('services.effects.grant(actor, services.types.id("effect", "asked_personal_info"), "3 hours")', main)
+            self.assertNotIn("needs review", report)
+
+    def test_translates_npc_guard_trade_and_animal_purchase_effects(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "npc_guard_and_trade",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": [
+                                "player_leaving",
+                                "start_mugging",
+                                "remove_stolen_status",
+                                "assign_guard",
+                                "stop_guard",
+                                "buy_chicken",
+                                "buy_horse",
+                                "buy_cow",
+                                "start_trade",
+                                "barber_hair",
+                                "barber_beard",
+                                "buy_haircut",
+                                "buy_shave",
+                            ],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "npc_trade_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn('services.npcs.set_attitude(actor, "wait_for_leave")', main)
+            self.assertIn('services.npcs.set_attitude(actor, "mug")', main)
+            self.assertIn('services.npcs.set_attitude(actor, "null")', main)
+            self.assertIn('services.npcs.set_attitude(actor, "follow")', main)
+            self.assertIn('services.spawns.monster(services.types.id("monster", "mon_chicken"), services.characters.get(actor).creature.position, 1)', main)
+            self.assertIn('services.spawns.monster(services.types.id("monster", "mon_horse"), services.characters.get(actor).creature.position, 1)', main)
+            self.assertIn('services.spawns.monster(services.types.id("monster", "mon_cow"), services.characters.get(actor).creature.position, 1)', main)
+            self.assertNotIn("needs review", report)
+
+    def test_translates_npc_activity_effects(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "npc_activity_assigns",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": [
+                                "revert_activity",
+                                "morale_chat_activity",
+                                "do_butcher",
+                                "do_chop_plank",
+                                "do_chop_trees",
+                                "do_construction",
+                                "do_farming",
+                                "do_fishing",
+                                "do_mining",
+                                "do_mopping",
+                                "do_read",
+                                "do_eread",
+                                "do_read_repeatedly",
+                                "do_study",
+                                "sort_loot",
+                                "do_craft",
+                                "do_disassembly",
+                                "do_vehicle_deconstruct",
+                                "do_vehicle_repair",
+                                "drop_items_in_place",
+                            ],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "npc_activities_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn('services.activities.cancel(actor)', main)
+            self.assertIn('services.activities.assign_timed(services.characters.avatar(), services.types.id("activity", "ACT_SOCIALIZE"), "10 minutes")', main)
+            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_BUTCHER"), "30 minutes")', main)
+            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_CHOP_PLANKS"), "30 minutes")', main)
+            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_CHOP_TREE"), "60 minutes")', main)
+            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_BUILD"), "60 minutes")', main)
+            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_PLANT_SEED"), "30 minutes")', main)
+            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_FISH"), "60 minutes")', main)
+            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_MINING"), "60 minutes")', main)
+            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_MOPPING"), "15 minutes")', main)
+            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_READ"), "30 minutes")', main)
+            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_READ"), "120 minutes")', main)
+            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_STUDY_SPELL"), "60 minutes")', main)
+            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_SORT_LOOT"), "30 minutes")', main)
+            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_CRAFT"), "60 minutes")', main)
+            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_DISASSEMBLE"), "60 minutes")', main)
+            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_VEHICLE_DECONSTRUCT"), "60 minutes")', main)
+            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_VEHICLE_REPAIR"), "60 minutes")', main)
+            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_DROP"), "1 minutes")', main)
+            self.assertNotIn("needs review", report)
+
+    def test_translates_npc_mount_training_and_interaction_effects(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "npc_mount_and_train",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": [
+                                "dismount",
+                                "find_mount",
+                                "start_training",
+                                "start_training_seminar",
+                                "distribute_food_auto",
+                                "lesser_give_aid",
+                                "give_all_aid",
+                                "lesser_give_all_aid",
+                                "open_dialogue",
+                                "pick_style",
+                                "take_control",
+                            ],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "npc_mount_train_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_FIND_MOUNT"), "10 minutes")', main)
+            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_TRAIN"), "60 minutes")', main)
+            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_DISTRIBUTE_FOOD"), "30 minutes")', main)
+            self.assertNotIn("needs review", report)
+
+    def test_translates_teleport_navigation_damage_and_events(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "npc_teleport_and_damage",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": [
+                                {"u_teleport": {}},
+                                {"npc_teleport": {}},
+                                {"u_set_goal": {}},
+                                {"npc_set_goal": {}},
+                                {"u_set_guard_pos": {}},
+                                {"npc_set_guard_pos": {}},
+                                {"goto_location": {}},
+                                {"u_deal_damage": 10},
+                                {"npc_deal_damage": 15},
+                                {"trigger_event": "custom_event"},
+                                "u_pick_bodypart",
+                                "npc_pick_bodypart",
+                                "set_browsed",
+                                "clear_dimension",
+                                "clear_overrides",
+                                "place_override",
+                                "return_to_camp_duties",
+                            ],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "npc_teleport_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn("services.relocation.local_at(services.characters.snapshot(actor).creature.position)", main)
+            self.assertIn("services.npcs.set_goal(actor, services.characters.snapshot(actor).creature.position)", main)
+            self.assertIn("services.npcs.set_guard_pos(actor, services.characters.snapshot(actor).creature.position)", main)
+            self.assertIn("services.npcs.set_omt_destination(actor, services.characters.snapshot(actor).creature.position)", main)
+            self.assertIn("services.characters.adjust(actor, { hp = -10 })", main)
+            self.assertIn("services.characters.adjust(actor, { hp = -15 })", main)
+            self.assertIn('runtime.trigger("game:custom_event")', main)
+            self.assertIn('services.npcs.set_attitude(actor, "null")', main)
+            self.assertNotIn("needs review", report)
+
+    def test_translates_item_faults_light_level_and_dimensions(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "npc_fault_and_item",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": [
+                                {"custom_light_level": 50},
+                                {"u_activate": "item_id"},
+                                {"npc_activate": "item_id"},
+                                {"u_set_fault": "fault_id"},
+                                {"npc_set_fault": "fault_id"},
+                                {"u_set_random_fault_of_type": "engine"},
+                                {"npc_set_random_fault_of_type": "engine"},
+                                {"transform_item": "new_item_id"},
+                                {"transform_line": {}},
+                                {"u_travel_to_dimension": "nether"},
+                            ],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "npc_fault_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn("services.gameplay.environment.set_light_level(50)", main)
+            self.assertIn('services.items.activate(actor, "item_id")', main)
+            self.assertIn('services.items.set_fault(actor, "fault_id")', main)
+            self.assertIn('services.items.set_random_fault(actor, "engine")', main)
+            self.assertIn('services.items.transform(actor, "new_item_id")', main)
+            self.assertIn("services.world.transform_line(services.characters.snapshot(actor).creature.position)", main)
+            self.assertIn("services.relocation.overmap_at(services.characters.snapshot(actor).creature.position)", main)
+            self.assertNotIn("needs review", report)
+
+    def test_translates_migration_json_object_types(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {"type": "MIGRATION", "id": "old_item", "replace": "new_item"},
+                        {"type": "TRAIT_MIGRATION", "id": "old_trait", "replace": "new_trait"},
+                        {"type": "spell_migration", "id": "old_spell", "replace": "new_spell"},
+                        {"type": "camp_migration", "id": "old_camp", "replace": "new_camp"},
+                        {"type": "mod_migration", "id": "old_mod", "replace": "new_mod"},
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "migrations_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 5)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn('kind = "item"', main)
+            self.assertIn('from = "old_item"', main)
+            self.assertIn('to = "new_item"', main)
+            self.assertIn('kind = "mutation"', main)
+            self.assertIn('from = "old_trait"', main)
+            self.assertIn('kind = "spell"', main)
+            self.assertIn('from = "old_spell"', main)
+            self.assertIn('kind = "camp"', main)
+            self.assertIn('from = "old_camp"', main)
+            self.assertIn('kind = "mod"', main)
+            self.assertIn('from = "old_mod"', main)
+            self.assertNotIn("needs review", report)
+
+    def test_translates_generic_json_content_types(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {"type": "jmath_function", "id": "test_math"},
+                        {"type": "event_statistic", "id": "test_event_stat"},
+                        {"type": "event_transformation", "id": "test_event_trans"},
+                        {"type": "widget", "id": "test_widget"},
+                        {"type": "option_slider", "id": "test_slider"},
+                        {"type": "palette", "id": "test_palette"},
+                        {"type": "ter_furn_transform", "id": "test_transform"},
+                        {"type": "profession_item_substitutions", "id": "test_subst"},
+                        {"type": "relic_procgen_data", "id": "test_relic"},
+                        {"type": "dimension", "id": "test_dim"},
+                        {"type": "dimension_region_layout", "id": "test_dim_layout"},
+                        {"type": "city", "id": "test_city"},
+                        {"type": "city_building", "id": "test_building"},
+                        {"type": "omt_placeholder", "id": "test_placeholder"},
+                        {"type": "pp_generator", "id": "test_pp"},
+                        {"type": "mod_tileset", "id": "test_tileset"},
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "generic_content_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 16)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn('content.MathFunction', main)
+            self.assertIn('content.EventStatistic', main)
+            self.assertIn('content.EventTransformation', main)
+            self.assertIn('content.Widget', main)
+            self.assertIn('content.OptionSlider', main)
+            self.assertIn('content.Palette', main)
+            self.assertIn('content.TerFurnTransform', main)
+            self.assertIn('content.ProfessionItemSubstitutions', main)
+            self.assertIn('content.RelicProcgenData', main)
+            self.assertIn('content.Dimension', main)
+            self.assertIn('content.DimensionRegionLayout', main)
+            self.assertIn('content.City', main)
+            self.assertIn('content.CityBuilding', main)
+            self.assertIn('content.OmtPlaceholder', main)
+            self.assertIn('content.PpGenerator', main)
+            self.assertIn('content.ModTileset', main)
+            self.assertNotIn("needs review", report)
+
+    def test_translates_region_and_ecosystem_json_content_types(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {"type": "region_settings", "id": "test_region"},
+                        {"type": "region_settings_city", "id": "test_city_set"},
+                        {"type": "region_settings_forest", "id": "test_forest_set"},
+                        {"type": "region_settings_forest_mapgen", "id": "test_f_mapgen"},
+                        {"type": "region_settings_forest_trail", "id": "test_trail"},
+                        {"type": "region_settings_highway", "id": "test_highway"},
+                        {"type": "region_settings_lake", "id": "test_lake"},
+                        {"type": "region_settings_map_extras", "id": "test_extras"},
+                        {"type": "region_settings_ocean", "id": "test_ocean"},
+                        {"type": "region_settings_ravine", "id": "test_ravine"},
+                        {"type": "region_settings_river", "id": "test_river"},
+                        {"type": "region_settings_terrain_furniture", "id": "test_ter_furn"},
+                        {"type": "region_terrain_furniture", "id": "test_r_ter_furn"},
+                        {"type": "forest_biome_component", "id": "test_biome_comp"},
+                        {"type": "forest_biome_mapgen", "id": "test_biome_mapgen"},
+                        {"type": "enchantment", "id": "test_enchantment"},
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "ecosystem_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 16)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn('content.RegionSettings', main)
+            self.assertIn('content.RegionSettingsCity', main)
+            self.assertIn('content.RegionSettingsForest', main)
+            self.assertIn('content.RegionSettingsForestMapgen', main)
+            self.assertIn('content.RegionSettingsForestTrail', main)
+            self.assertIn('content.RegionSettingsHighway', main)
+            self.assertIn('content.RegionSettingsLake', main)
+            self.assertIn('content.RegionSettingsMapExtras', main)
+            self.assertIn('content.RegionSettingsOcean', main)
+            self.assertIn('content.RegionSettingsRavine', main)
+            self.assertIn('content.RegionSettingsRiver', main)
+            self.assertIn('content.RegionSettingsTerrainFurniture', main)
+            self.assertIn('content.RegionTerrainFurniture', main)
+            self.assertIn('content.ForestBiomeComponent', main)
+            self.assertIn('content.ForestBiomeMapgen', main)
+            self.assertIn('content.Enchantment', main)
+            self.assertNotIn("needs review", report)
+
+    def test_translates_final_json_content_types(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {"type": "SPELL", "id": "test_spell"},
+                        {"type": "bionic", "id": "test_bionic"},
+                        {"type": "faction", "id": "test_faction"},
+                        {"type": "faction_mission", "id": "test_faction_mission"},
+                        {"type": "mapgen", "id": "test_mapgen"},
+                        {"type": "mission_definition", "id": "test_mission_def"},
+                        {"type": "mutation", "id": "test_mutation"},
+                        {"type": "npc", "id": "test_npc"},
+                        {"type": "npc_class", "id": "test_npc_class"},
+                        {"type": "overmap_special", "id": "test_om_special"},
+                        {"type": "overmap_terrain", "id": "test_om_terrain"},
+                        {"type": "profession", "id": "test_profession"},
+                        {"type": "talk_topic", "id": "test_talk_topic"},
+                        {"type": "vehicle", "id": "test_vehicle"},
+                        {"type": "vehicle_part", "id": "test_vehicle_part"},
+                        {"type": "vehicle_placement", "id": "test_v_placement"},
+                        {"type": "vehicle_spawn", "id": "test_v_spawn"},
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "final_content_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 17)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn('content.Spell', main)
+            self.assertIn('content.Bionic', main)
+            self.assertIn('content.Faction', main)
+            self.assertIn('content.FactionMission', main)
+            self.assertIn('content.Mapgen', main)
+            self.assertIn('content.MissionDefinition', main)
+            self.assertIn('content.Mutation', main)
+            self.assertIn('content.Npc', main)
+            self.assertIn('content.NpcClass', main)
+            self.assertIn('content.OvermapSpecial', main)
+            self.assertIn('content.OvermapTerrain', main)
+            self.assertIn('content.Profession', main)
+            self.assertIn('content.TalkTopic', main)
+            self.assertIn('content.Vehicle', main)
+            self.assertIn('content.VehiclePart', main)
+            self.assertIn('content.VehiclePlacement', main)
+            self.assertIn('content.VehicleSpawn', main)
+            self.assertNotIn("needs review", report)
+
+    def test_translates_batch_28_primitive_to_bounded_selectors(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "eoc_batch_28",
+                            "required_event": "game_start",
+                            "condition": {
+                                "and": [
+                                    "npc_has_activity",
+                                    "line_of_sight",
+                                    {"expects_vars": ["test_var"]},
+                                    {"math": ["1 == 1"]},
+                                ]
+                            },
+                            "effect": [
+                                {"u_assign_activity": "ACT_WAIT"},
+                                {"npc_assign_activity": "ACT_WAIT"},
+                                {"math": ["x = 1"]},
+                                {"copy_var": "var_a"},
+                                {"add_debt": 10},
+                                {"set_string_var": "str_var"},
+                                {"alter_timed_events": "event"},
+                                "lightning",
+                                "next_weather",
+                                {"mirror_coordinates": [0, 0]},
+                                {"sample_range": [1, 10]},
+                                {"dimension_name": "nether"},
+                                {"u_add_faction_trust": 5},
+                                {"u_set_fac_relation": "ally"},
+                                {"npc_set_fac_relation": "ally"},
+                                {"closest_city": "center"},
+                                "take_control_menu",
+                            ],
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "batch_28_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn("services.activities.assign(actor)", main)
+            self.assertIn("services.state.adjust(actor)", main)
+            self.assertIn("services.state.copy_var(actor)", main)
+            self.assertIn('services.characters.adjust(actor, "debt")', main)
+            self.assertIn("services.state.set_string(actor)", main)
+            self.assertIn("services.time.adjust_event()", main)
+            self.assertIn("services.gameplay.environment.strike_lightning(actor)", main)
+            self.assertIn("services.gameplay.environment.advance_weather()", main)
+            self.assertIn("services.coords.mirror(actor)", main)
+            self.assertIn("services.random.sample()", main)
+            self.assertIn("services.gameplay.environment.dimension_name()", main)
+            self.assertIn("services.factions.adjust_trust(actor)", main)
+            self.assertIn("services.factions.set_relation(actor)", main)
+            self.assertIn("services.overmap.closest_city(actor)", main)
+            self.assertNotIn("needs review", report)
+
+    def test_translates_batch_29_primitive_to_bounded_selectors(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "eoc_batch_29",
+                            "required_event": "game_start",
+                            "condition": {
+                                "and": [
+                                    "npc_at_om_location",
+                                    "npc_can_see_location",
+                                    "npc_near_om_location",
+                                    "overmap_at_point",
+                                    "u_at_om_location",
+                                    "u_can_see_location",
+                                    "mission_goal",
+                                    "mission_has_generic_rewards",
+                                    "npc_mission_goal",
+                                ]
+                            },
+                            "effect": [
+                                {"add_mission": "mission_1"},
+                                {"basecamp_mission": "mission_2"},
+                                {"clear_mission": "mission_3"},
+                                {"companion_mission": "mission_4"},
+                                {"finish_mission": "mission_5"},
+                                {"mission_failure": "mission_6"},
+                                {"assign_mission": "mission_7"},
+                                "abandon_camp",
+                                {"assign_camp": "camp_1"},
+                                "return_to_camp_duties",
+                                "start_camp",
+                                "bionic_install",
+                                "bionic_install_allies",
+                                "bionic_remove",
+                                "bionic_remove_allies",
+                                "repair_bionic_limbs",
+                                "quote_vehicle_full_repair",
+                                "select_vehicle_part_service",
+                                "start_vehicle_full_repair",
+                                {"npc_run_vehicle_eocs": "eoc_1"},
+                                {"u_run_vehicle_eocs": "eoc_2"},
+                                {"copy_location": "loc_1"},
+                                {"location_variable_adjust": "loc_2"},
+                                "mapgen_update",
+                                {"npc_location_variable": "var_1"},
+                                "npc_map_run_eocs",
+                                {"npc_set_field": "field_1"},
+                            ],
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "batch_29_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn("services.missions.add(actor)", main)
+            self.assertIn("services.missions.basecamp(actor)", main)
+            self.assertIn("services.missions.clear(actor)", main)
+            self.assertIn("services.missions.companion(actor)", main)
+            self.assertIn("services.missions.finish(actor)", main)
+            self.assertIn("services.missions.fail(actor)", main)
+            self.assertIn("services.missions.assign(actor)", main)
+            self.assertIn("services.camps.abandon_camp(actor)", main)
+            self.assertIn("services.camps.assign(actor)", main)
+            self.assertIn("services.camps.return_to_camp_duties(actor)", main)
+            self.assertIn("services.camps.start_camp(actor)", main)
+            self.assertIn("services.bionics.bionic_install(actor)", main)
+            self.assertIn("services.bionics.bionic_install_allies(actor)", main)
+            self.assertIn("services.bionics.bionic_remove(actor)", main)
+            self.assertIn("services.bionics.bionic_remove_allies(actor)", main)
+            self.assertIn("services.bionics.repair_bionic_limbs(actor)", main)
+            self.assertIn("services.vehicles.quote_vehicle_full_repair(actor)", main)
+            self.assertIn("services.vehicles.select_vehicle_part_service(actor)", main)
+            self.assertIn("services.vehicles.start_vehicle_full_repair(actor)", main)
+            self.assertIn("services.vehicles.run_eocs(actor)", main)
+            self.assertIn("services.map.adjust(actor)", main)
+            self.assertIn("services.map.mapgen_update(actor)", main)
+            self.assertIn("services.map.npc_map_run_eocs(actor)", main)
+            self.assertNotIn("needs review", report)
+
+    def test_translates_batch_30_primitive_to_bounded_selectors(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "eoc_batch_30_u",
+                            "required_event": "game_start",
+                            "condition": {
+                                "and": [
+                                    {"u_has_item": "id2"},
+                                    {"u_has_item_category": "tools"},
+                                    {"u_has_item_with_flag": "FIRE"},
+                                    {"u_has_items": ["bandage"]},
+                                    {"u_has_items_sum": ["bandage", "splint"]},
+                                    {"u_has_wielded_with_ammotype": "45"},
+                                    {"u_has_wielded_with_skill": "rifle"},
+                                    {"u_has_wielded_with_weapon_category": "swords"},
+                                    "u_near_om_location",
+                                ]
+                            },
+                            "effect": [
+                                "drop_stolen_item",
+                                "drop_weapon",
+                                "give_equipment",
+                                "mission_reward",
+                                "mission_success",
+                                "offer_mission",
+                                "player_weapon_drop",
+                                "remove_active_mission",
+                                "reveal_map",
+                                "revert_location",
+                                "set_furniture",
+                                {"set_item_category_spawn_rates": "rate"},
+                                "set_terrain",
+                                {"u_buy_item": "item_x"},
+                                {"u_consume_item": "apple"},
+                                {"u_consume_item_sum": "juice"},
+                                {"u_location_variable": "var_y"},
+                                "u_map_run_eocs",
+                                {"u_map_run_item_eocs": "eoc_b"},
+                                {"u_pickup_items": "loot"},
+                                {"u_remove_item_with": "flag"},
+                                {"u_sell_item": "gold"},
+                                {"u_set_field": "fire"},
+                            ],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "eoc_batch_30_npc",
+                            "required_event": "npc_becomes_hostile",
+                            "condition": {
+                                "and": [
+                                    {"npc_has_item": "id1"},
+                                    {"npc_has_item_category": "food"},
+                                    {"npc_has_item_with_flag": "HOT"},
+                                    {"npc_has_items": ["item1"]},
+                                    {"npc_has_items_sum": ["item1", "item2"]},
+                                    {"npc_has_wielded_with_ammotype": "9mm"},
+                                    {"npc_has_wielded_with_skill": "pistol"},
+                                    {"npc_has_wielded_with_weapon_category": "knives"},
+                                ]
+                            },
+                            "effect": [
+                                {"npc_consume_item": "food"},
+                                {"npc_consume_item_sum": "water"},
+                                {"npc_gets_item": "gun"},
+                                {"npc_gets_item_to_use": "knife"},
+                                {"npc_map_run_item_eocs": "eoc_a"},
+                                {"npc_pickup_items": "items"},
+                                {"npc_remove_item_with": "flag"},
+                                {"quote_npc_trade_item": "coin"},
+                            ],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "batch_30_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn("services.items.adjust(actor)", main)
+            self.assertIn("services.items.drop(actor)", main)
+            self.assertIn("services.missions.mission_reward(actor)", main)
+            self.assertIn("services.map.adjust(actor)", main)
+            self.assertNotIn("needs review", report)
+
+    def test_translates_batch_31_primitive_to_bounded_selectors(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "eoc_batch_31_u",
+                            "required_event": "game_start",
+                            "condition": {
+                                "and": [
+                                    {"u_has_any_effect": ["eff1"]},
+                                    {"u_has_effect": "eff2"},
+                                    {"u_has_faction_trust": 5},
+                                    {"u_has_part_temp": "arm_l"},
+                                    {"u_has_software": "soft1"},
+                                    {"u_has_visible_trait": "trait1"},
+                                    {"u_has_worn_with_flag": "FLAG1"},
+                                    {"u_monsters_in_direction": "north"},
+                                    {"u_query": "query1"},
+                                    "u_see_npc",
+                                    "u_see_npc_loc",
+                                    {"u_service": "srv1"},
+                                ]
+                            },
+                            "effect": [
+                                "u_attack",
+                                "u_bulk_donate",
+                                "u_bulk_trade_accept",
+                                {"u_buy_monster": "m1"},
+                                {"u_cast_spell": "sp1"},
+                                {"u_choose_adjacent_highlight": "hi1"},
+                                "u_die",
+                                {"u_emit": "em1"},
+                                {"u_explosion": 10},
+                                {"u_faction_rep": 2},
+                                {"u_knockback": 3},
+                                {"u_level_spell_class": "cl1"},
+                                {"u_lose_category": "cat1"},
+                                "u_make_radio_representative",
+                                {"u_make_sound": "snd1"},
+                                {"u_mutate": "mut1"},
+                                {"u_mutate_category": "mutcat1"},
+                                {"u_mutate_towards": "muttow1"},
+                                "u_prevent_death",
+                                {"u_query_omt": "omt1"},
+                                {"u_query_tile": "tile1"},
+                                {"u_ranged_attack": "rg1"},
+                                {"u_recalculate_enchantment_cache": True},
+                                {"u_roll_remainder": "rem1"},
+                                {"u_run_fixed_zone_eocs": "z1"},
+                                {"u_run_inv_eocs": "inv1"},
+                                {"u_run_monster_eocs": "mon1"},
+                                {"u_run_npc_eocs": "npc1"},
+                                "u_set_talker",
+                                {"u_set_trait_purifiability": "trait1"},
+                                {"u_spawn_monster": "mon2"},
+                                {"u_spawn_npc": "npc2"},
+                                {"u_spend_cash": 100},
+                                {"u_transform_radius": 5},
+                            ],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "eoc_batch_31_npc",
+                            "required_event": "npc_becomes_hostile",
+                            "condition": {
+                                "and": [
+                                    "npc_allies",
+                                    "npc_allies_global",
+                                    {"npc_has_any_effect": ["eff1"]},
+                                    {"npc_has_effect": "eff2"},
+                                    {"npc_has_move_mode": "crouch"},
+                                    {"npc_has_part_temp": "arm_r"},
+                                    {"npc_has_software": "soft2"},
+                                    {"npc_has_visible_trait": "trait2"},
+                                    {"npc_has_worn_with_flag": "FLAG2"},
+                                    {"npc_query": "q2"},
+                                    "npc_role_nearby",
+                                    "npc_see_u",
+                                    "npc_see_u_loc",
+                                    {"npc_service": "srv2"},
+                                ]
+                            },
+                            "effect": [
+                                "clear_npc_rule",
+                                "copy_npc_rules",
+                                "give_aid",
+                                "npc_attack",
+                                "npc_bulk_donate",
+                                "npc_bulk_trade_accept",
+                                {"npc_cast_spell": "nsp1"},
+                                {"npc_change_class": "nc1"},
+                                {"npc_change_faction": "nf1"},
+                                {"npc_choose_adjacent_highlight": "nhi1"},
+                                "npc_die",
+                                {"npc_emit": "nem1"},
+                                {"npc_explosion": 5},
+                                "npc_first_topic",
+                                {"npc_knockback": 2},
+                                {"npc_level_spell_class": "ncl1"},
+                                {"npc_lose_category": "ncat1"},
+                                {"npc_lose_effect": "neff1"},
+                                "npc_make_radio_representative",
+                                {"npc_make_sound": "nsnd1"},
+                                {"npc_mutate": "nmut1"},
+                                {"npc_mutate_category": "nmutcat1"},
+                                {"npc_mutate_towards": "nmuttow1"},
+                                "npc_prevent_death",
+                                {"npc_query_omt": "nomt1"},
+                                {"npc_query_tile": "ntile1"},
+                                {"npc_ranged_attack": "nrg1"},
+                                {"npc_recalculate_enchantment_cache": True},
+                                {"npc_roll_remainder": "nrem1"},
+                                "npc_rules_menu",
+                                {"npc_run_fixed_zone_eocs": "nz1"},
+                                {"npc_run_inv_eocs": "ninv1"},
+                                {"npc_run_monster_eocs": "nmon1"},
+                                {"npc_run_npc_eocs": "nnpc1"},
+                                "npc_set_talker",
+                                {"npc_set_trait_purifiability": "ntrait1"},
+                                {"npc_spawn_monster": "nmon2"},
+                                {"npc_spawn_npc": "nnpc2"},
+                                "npc_thankful",
+                                {"npc_transform_radius": 3},
+                                {"set_npc_aim_rule": "aim1"},
+                                {"set_npc_cbm_recharge_rule": "cbm1"},
+                                {"set_npc_cbm_reserve_rule": "cbm2"},
+                                {"set_npc_engagement_rule": "eng1"},
+                                {"set_npc_pickup": "pick1"},
+                                {"set_npc_rule": "rule1"},
+                                "start_training_npc",
+                                "toggle_npc_rule",
+                            ],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "batch_31_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn("services.characters.adjust(actor)", main)
+            self.assertNotIn("needs review", report)
+
 
 if __name__ == "__main__":
     unittest.main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
