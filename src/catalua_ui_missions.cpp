@@ -757,6 +757,26 @@ sol::table current_instance(
                sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table avatar_has_active(
+    sol::this_state lua, const script_game_id &requested_id )
+{
+    require_mission_id(
+        requested_id, "game.missions.avatar_has_active" );
+    const mission_type_id requested_type(
+        requested_id.value() );
+    sol::state_view state( lua );
+    for( mission *entry : get_avatar().get_active_missions() ) {
+        if( entry->mission_id() == requested_type ) {
+            return make_game_value_result(
+                       state,
+                       sol::make_object( state, true ) );
+        }
+    }
+    return make_game_value_result(
+               state,
+               sol::make_object( state, false ) );
+}
+
 mission_origin require_origin(
     const script_enum_value &origin,
     const std::string &api_name )
@@ -1297,6 +1317,13 @@ void install_mission_api(
                    lua_state,
                    current_runtime_generation(),
                    current_world_generation() );
+    } );
+    missions.set_function(
+        "avatar_has_active",
+        [require_read]( sol::this_state lua_state,
+    const script_game_id & id ) {
+        require_read();
+        return avatar_has_active( lua_state, id );
     } );
     missions.set_function(
         "random_definition",
