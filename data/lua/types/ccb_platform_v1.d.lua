@@ -83,6 +83,10 @@ function ItemDefinition:on_use(handler_id, label) end
 ---@field duration_moves? integer Positive base duration in moves.
 ---@field autolearn? boolean Whether the recipe is automatically learnable.
 ---@field reversible? boolean Whether the recipe supplies disassembly data.
+---@field practice? boolean Whether this is a practice recipe; native practice
+---progression data stays author-owned Lua behaviour.
+---@field uncraft? boolean Whether this is a disassembly recipe staged into the
+---native uncraft dictionary.
 
 ---@class RecipeComponentAlternative
 ---@field id string Item type id.
@@ -235,6 +239,124 @@ local ScentTypeDefinition = {}
 ---@param species_id string Native monster-species id that can perceive this scent.
 ---@return ScentTypeDefinition self
 function ScentTypeDefinition:receptive_species(species_id) end
+
+---@class ButcheryRequirementDefinitionOptions
+---@field id string Stable butchery-requirement id.
+
+---@class ButcheryRequirementDefinition
+---@field id string
+local ButcheryRequirementDefinition = {}
+
+---@param speed number Finite non-negative speed bonus for this row.
+---@param size string Creature-size name: TINY, SMALL, MEDIUM, LARGE, or HUGE.
+---@param butcher string Butcher-type name: BLEED, QUICK, FULL, FIELD_DRESS, SKIN, QUARTER, DISMEMBER, or DISSECT.
+---@param requirement_id string Native requirement id the row resolves to.
+---@return ButcheryRequirementDefinition self
+function ButcheryRequirementDefinition:requirement(speed, size, butcher, requirement_id) end
+
+---@class ItemActionDefinitionOptions
+---@field id string Stable item-action id.
+---@field name? string Display name; defaults to the id.
+
+---@class ItemActionDefinition
+---@field id string
+local ItemActionDefinition = {}
+
+---@class ScenarioDefinitionOptions
+---@field id string Stable scenario id.
+---@field name string Scenario display name.
+---@field description string Scenario description.
+---@field start_name string Start-location display name.
+---@field points? integer Character-creation point cost; defaults to 0.
+---@field blacklist? boolean Professions are a blacklist instead of a whitelist.
+---@field extra_professions? boolean Professions add to the default set.
+---@field reveal_locale? boolean Whether the start locale is revealed; defaults to true.
+---@field hard_requirement? boolean Whether the unlock requirement applies with metaprogression disabled.
+---@field distance_initial_visibility? integer Initial overmap visibility distance.
+
+---@class ScenarioDefinition
+---@field id string
+local ScenarioDefinition = {}
+
+---@param location_id string Native start-location id.
+---@return ScenarioDefinition self
+function ScenarioDefinition:location(location_id) end
+
+---@param profession_id string Native profession id.
+---@return ScenarioDefinition self
+function ScenarioDefinition:profession(profession_id) end
+
+---@param trait_id string Native trait id allowed for this scenario.
+---@return ScenarioDefinition self
+function ScenarioDefinition:allowed_trait(trait_id) end
+
+---@param trait_id string Native trait id forced by this scenario.
+---@return ScenarioDefinition self
+function ScenarioDefinition:forced_trait(trait_id) end
+
+---@param trait_id string Native trait id forbidden by this scenario.
+---@return ScenarioDefinition self
+function ScenarioDefinition:forbidden_trait(trait_id) end
+
+---@param name string Scenario flag name.
+---@return ScenarioDefinition self
+function ScenarioDefinition:flag(name) end
+
+---@param achievement_id string Native achievement id required to unlock the scenario.
+---@return ScenarioDefinition self
+function ScenarioDefinition:requirement(achievement_id) end
+
+---@class VehicleColorPaletteDefinitionOptions
+---@field id string Stable vehicle color palette id.
+
+---@class VehicleColorPaletteDefinition
+---@field id string
+local VehicleColorPaletteDefinition = {}
+
+---@param fuzzy_ids string[] Dense array of fuzzy part-id prefixes mapped to this color group.
+---@param colors table[] Dense array of { color_name, positive_weight } pairs for this group.
+---@return VehicleColorPaletteDefinition self
+function VehicleColorPaletteDefinition:group(fuzzy_ids, colors) end
+
+---@class MonsterGroupDefinitionOptions
+---@field id string Stable monster-group id.
+---@field default_monster? string Native monster id used when no entry rolls.
+---@field is_animal? boolean Marks the group as animal-only for missions.
+
+---@class MonsterGroupDefinition
+---@field id string
+local MonsterGroupDefinition = {}
+
+---@param monster_id string Native monster id for this entry.
+---@param weight integer Positive spawn weight.
+---@param cost_multiplier integer Non-negative spawn cost multiplier.
+---@param pack_minimum integer Minimum pack size (1..pack_maximum).
+---@param pack_maximum integer Maximum pack size.
+---@return MonsterGroupDefinition self
+function MonsterGroupDefinition:monster(monster_id, weight, cost_multiplier, pack_minimum, pack_maximum) end
+
+---@param group_id string Native monster-group id referenced by this entry.
+---@param weight integer Positive spawn weight.
+---@param cost_multiplier integer Non-negative spawn cost multiplier.
+---@param pack_minimum integer Minimum pack size (1..pack_maximum).
+---@param pack_maximum integer Maximum pack size.
+---@return MonsterGroupDefinition self
+function MonsterGroupDefinition:group(group_id, weight, cost_multiplier, pack_minimum, pack_maximum) end
+
+---@class OvermapConnectionDefinitionOptions
+---@field id string Stable overmap-connection id.
+
+---@class OvermapConnectionDefinition
+---@field id string
+local OvermapConnectionDefinition = {}
+
+---@param terrain string Native oter-type terrain id for this subtype.
+---@param basic_cost integer Non-negative base pathing cost.
+---@param locations string[] Dense array of overmap-location ids allowed for this subtype.
+---@param orthogonal boolean Whether the subtype only connects orthogonally.
+---@param perpendicular_crossing boolean Whether the subtype supports perpendicular crossings.
+---@return OvermapConnectionDefinition self
+function OvermapConnectionDefinition:subtype(terrain, basic_cost, locations, orthogonal, perpendicular_crossing) end
 
 ---@class SpeedDescriptionDefinitionOptions
 ---@field id string Stable speed-description id.
@@ -1743,6 +1865,29 @@ local PlaylistDefinition = {}
 ---@return PlaylistDefinition self
 function PlaylistDefinition:track(relative_file, volume) end
 
+---@class SoundEffectDefinitionOptions
+---@field id string Stable ambient sound id.
+---@field variant? string Sound variant id; defaults to `default`.
+---@field season? string Season filter id; empty means every season.
+---@field is_indoors? boolean Indoor filter; omitted means both indoor and outdoor.
+---@field is_night? boolean Night filter; omitted means both day and night.
+---@field volume? integer Native volume from 0 through 128; defaults to 100.
+
+---@class SoundEffectDefinition
+---@field id string
+local SoundEffectDefinition = {}
+
+---@param relative_file string Sound file relative to the active soundpack; absolute and parent-traversing paths are rejected.
+---@return SoundEffectDefinition self
+function SoundEffectDefinition:file(relative_file) end
+
+---@class SoundEffectPreloadDefinitionOptions
+---@field id string Stable ambient sound id to preload.
+---@field variant? string Sound variant id; defaults to `default`.
+---@field season? string Season filter id; empty means every season.
+---@field is_indoors? boolean Indoor filter; omitted means both indoor and outdoor.
+---@field is_night? boolean Night filter; omitted means both day and night.
+
 ---@class AttackVectorDefinitionOptions
 ---@field id string Stable attack-vector id.
 ---@field weapon? boolean Whether this vector represents the wielded weapon.
@@ -1775,6 +1920,442 @@ function AttackVectorDefinition:requires_flag(flag_id) end
 ---@param flag_id string Native character/body-part flag forbidden on an eligible limb.
 ---@return AttackVectorDefinition self
 function AttackVectorDefinition:forbids_flag(flag_id) end
+
+---@class TechniqueDefinitionOptions
+---@field id string Stable technique id.
+---@field name string Player-facing technique name.
+---@field description? string Technique description.
+---@field avatar_message? string Message shown to the avatar on use.
+---@field npc_message? string Message shown to NPC observers on use.
+---@field crit_tec? boolean Critical-only technique.
+---@field crit_ok? boolean Usable on critical hits.
+---@field wall_adjacent? boolean Only works near a wall.
+---@field reach_tec? boolean Only usable during reach attacks.
+---@field reach_ok? boolean Usable during reach attacks.
+---@field needs_ammo? boolean Only works while the weapon is loaded.
+---@field defensive? boolean Defensive technique.
+---@field disarms? boolean Disarms the target.
+---@field take_weapon? boolean Disarms and equips the weapon when hands are free.
+---@field side_switch? boolean Moves the target behind the user.
+---@field dummy? boolean Placeholder technique.
+---@field dodge_counter? boolean Counter activated on a dodge.
+---@field block_counter? boolean Counter activated on a block.
+---@field miss_recovery? boolean Halves the move cost of a miss.
+---@field grab_break? boolean Allows grab breaks.
+---@field weighting? integer Non-negative usage frequency weight; defaults to 1.
+---@field repeat_min? integer Minimum repeats; defaults to 1.
+---@field repeat_max? integer Maximum repeats; defaults to 1.
+---@field down_dur? integer Non-negative knockdown duration.
+---@field stun_dur? integer Non-negative stun duration.
+---@field knockback_dist? integer Non-negative knockback distance.
+---@field knockback_spread? number Non-negative knockback randomness.
+---@field knockback_follow? boolean Follow a knocked-back target.
+---@field aoe? string Native area-of-effect shape id; empty means single target.
+---@field unarmed_allowed? boolean Whether unarmed characters may use it.
+---@field melee_allowed? boolean Whether armed characters may use it.
+---@field strictly_unarmed? boolean Ignore force-unarmed styles.
+
+---@class TechniqueDefinition
+---@field id string
+local TechniqueDefinition = {}
+
+---@param flag_id string Native technique flag id.
+---@return TechniqueDefinition self
+function TechniqueDefinition:flag(flag_id) end
+
+---@param attack_vector_id string Native attack-vector id.
+---@return TechniqueDefinition self
+function TechniqueDefinition:attack_vector(attack_vector_id) end
+
+---@param skill_id string Native skill id.
+---@param level integer Non-negative minimum skill level.
+---@return TechniqueDefinition self
+function TechniqueDefinition:requires_skill(skill_id, level) end
+
+---@class MartialArtDefinitionOptions
+---@field id string Stable martial-art style id.
+---@field name string Player-facing style name.
+---@field description? string Style description.
+---@field initiate_avatar? string Message shown when the avatar starts the style.
+---@field initiate_npc? string Message shown when an NPC starts the style.
+---@field priority? integer Style selection priority; defaults to 0.
+---@field primary_skill? string Primary skill id; empty means unarmed.
+---@field learn_difficulty? integer Non-negative learning difficulty.
+---@field teachable? boolean Whether the style is teachable; defaults to true.
+---@field arm_block? integer Arm-block effectiveness from zero through 100.
+---@field leg_block? integer Leg-block effectiveness from zero through 100.
+---@field arm_block_with_bio_armor_arms? boolean Arm blocking works with bionic arms.
+---@field leg_block_with_bio_armor_legs? boolean Leg blocking works with bionic legs.
+---@field strictly_unarmed? boolean Punch daggers and similar only.
+---@field strictly_melee? boolean A melee weapon is required.
+---@field allow_all_weapons? boolean Any weapon or unarmed works.
+---@field force_unarmed? boolean Never use weapons with this style.
+---@field prevent_weapon_blocking? boolean Weapon blocking is disabled.
+
+---@class MartialArtDefinition
+---@field id string
+local MartialArtDefinition = {}
+
+---@param skill_id string Native skill id.
+---@param level integer Non-negative skill level at which the style is auto-learned.
+---@return MartialArtDefinition self
+function MartialArtDefinition:autolearn(skill_id, level) end
+
+---@param technique_id string Native technique id available to the style.
+---@return MartialArtDefinition self
+function MartialArtDefinition:technique(technique_id) end
+
+---@param item_id string Native item id usable as a style weapon.
+---@return MartialArtDefinition self
+function MartialArtDefinition:weapon(item_id) end
+
+---@param category_id string Native weapon-category id usable with the style.
+---@return MartialArtDefinition self
+function MartialArtDefinition:weapon_category(category_id) end
+
+---@class TrapDefinitionOptions
+---@field id string Stable trap id.
+---@field name string Player-facing trap name.
+---@field color string Native color name.
+---@field symbol string Single map symbol character.
+---@field visibility? integer Non-negative spotting difficulty; smaller is easier.
+---@field avoidance? integer Non-negative dodge difficulty.
+---@field difficulty? integer Disarm difficulty from zero through 99; zero means always disarmable.
+---@field action string Native trap action id, such as `spike` or `none`.
+---@field memorial_male? string Memorial message for male victims; must pair with memorial_female.
+---@field memorial_female? string Memorial message for female victims; must pair with memorial_male.
+---@field trigger_message_u? string Message shown when the avatar triggers the trap.
+---@field trigger_message_npc? string Message shown when an NPC triggers the trap.
+---@field trap_radius? integer Non-negative trigger radius.
+---@field benign? boolean Non-dangerous trap without safety queries.
+---@field always_invisible? boolean Never visible without special search.
+---@field funnel_radius? integer Non-negative funnel collection radius.
+---@field comfort? integer Non-negative sleeping comfort.
+---@field trigger_weight_grams? integer Minimum thrown weight in grams that triggers the trap; defaults to 500.
+---@field sound_threshold_min? integer Non-negative minimum triggering volume.
+---@field sound_threshold_max? integer Non-negative maximum triggering volume.
+
+---@class TrapDefinition
+---@field id string
+local TrapDefinition = {}
+
+---@param flag_id string Native trap flag id.
+---@return TrapDefinition self
+function TrapDefinition:flag(flag_id) end
+
+---@param item_id string Native item id dropped by disassembly.
+---@param quantity? integer Positive quantity; defaults to 1.
+---@param charges? integer Positive charges; defaults to 1.
+---@return TrapDefinition self
+function TrapDefinition:drop(item_id, quantity, charges) end
+
+---@class ConstructionDefinitionOptions
+---@field id string Stable construction id.
+---@field group string Native construction-group id.
+---@field category? string Native construction-category id.
+---@field pre_note? string Note shown alongside the requirements.
+---@field post_terrain? string Terrain or furniture id created on success.
+---@field duration_moves? integer Non-negative base duration in moves.
+---@field activity_level? number Non-negative native exertion multiplier; defaults to 1.
+
+---@class ConstructionDefinition
+---@field id string
+local ConstructionDefinition = {}
+
+---@param skill_id string Native skill id.
+---@param level integer Non-negative minimum skill level.
+---@return ConstructionDefinition self
+function ConstructionDefinition:requires_skill(skill_id, level) end
+
+---@param requirement_id string Native requirement id consumed by the construction.
+---@param multiplier integer Positive requirement multiplier.
+---@return ConstructionDefinition self
+function ConstructionDefinition:using_requirement(requirement_id, multiplier) end
+
+---@param terrain_id string Terrain or furniture id required before the construction.
+---@return ConstructionDefinition self
+function ConstructionDefinition:pre_terrain(terrain_id) end
+
+---@param flag_id string Native flag required before the construction.
+---@param force_terrain? boolean Whether the flag forces the terrain check.
+---@return ConstructionDefinition self
+function ConstructionDefinition:pre_flag(flag_id, force_terrain) end
+
+---@param flag_id string Native flag applied after the construction.
+---@return ConstructionDefinition self
+function ConstructionDefinition:post_flag(flag_id) end
+
+---@class FurnitureDefinitionOptions
+---@field id string Stable furniture id.
+---@field name string Player-facing furniture name.
+---@field description? string Furniture description.
+---@field color string Native color name.
+---@field symbol string Single map symbol character.
+---@field move_cost_mod? integer Non-negative move cost modifier.
+---@field required_str? integer Non-negative strength required to move through.
+---@field light_emitted? integer Non-negative light emitted.
+---@field comfort? integer Non-negative sleeping comfort.
+---@field max_volume_ml? integer Non-negative tile storage volume in milliliters.
+---@field mass_grams? integer Non-negative furniture mass in grams.
+---@field keg_capacity_ml? integer Non-negative keg storage volume in milliliters.
+---@field transparent? boolean Whether sight passes through.
+---@field open? string Furniture id to transform into when opened.
+---@field close? string Furniture id to transform into when closed.
+---@field lockpick_result? string Furniture id to transform into when lockpicked.
+---@field crafting_pseudo_item? string Item id used for in-place crafting.
+---@field deployed_item? string Item id that deploys this furniture.
+
+---@class FurnitureDefinition
+---@field id string
+local FurnitureDefinition = {}
+
+---@param flag_id string Native furniture flag id.
+---@return FurnitureDefinition self
+function FurnitureDefinition:flag(flag_id) end
+
+---@class TerrainDefinitionOptions
+---@field id string Stable terrain id.
+---@field name string Player-facing terrain name.
+---@field description? string Terrain description.
+---@field color string Native color name.
+---@field symbol string Single map symbol character.
+---@field move_cost? integer Non-negative move cost modifier.
+---@field light_emitted? integer Non-negative light emitted.
+---@field comfort? integer Non-negative sleeping comfort.
+---@field max_volume_ml? integer Non-negative tile storage volume in milliliters.
+---@field heat_radiation? integer Non-negative heat radiated.
+---@field transparent? boolean Whether sight passes through.
+---@field open? string Terrain id to transform into when opened.
+---@field close? string Terrain id to transform into when closed.
+---@field transforms_into? string Terrain id to transform into.
+---@field roof? string Terrain id acting as this terrain's roof.
+---@field lockpick_result? string Terrain id to transform into when lockpicked.
+---@field trap? string Native trap id embedded in this terrain.
+
+---@class TerrainDefinition
+---@field id string
+local TerrainDefinition = {}
+
+---@param flag_id string Native terrain flag id.
+---@return TerrainDefinition self
+function TerrainDefinition:flag(flag_id) end
+
+---@class GateDefinitionOptions
+---@field id string Stable gate id; the matching terrain acts as the winch.
+---@field door string Terrain id acting as the gate door.
+---@field floor string Terrain id acting as the gate floor.
+---@field pull_message? string Message shown when the gate is pulled.
+---@field open_message? string Message shown when the gate opens.
+---@field close_message? string Message shown when the gate closes.
+---@field fail_message? string Message shown when the gate fails.
+---@field moves? integer Non-negative operation cost in moves.
+---@field bashing_damage? integer Non-negative damage dealt by the closing gate.
+
+---@class GateDefinition
+---@field id string
+local GateDefinition = {}
+
+---@param terrain_id string Terrain id usable as a gate wall section.
+---@return GateDefinition self
+function GateDefinition:wall(terrain_id) end
+
+---@class FaultDefinitionOptions
+---@field id string Stable fault id.
+---@field fault_type string Fault type id grouping faults by item prefix.
+---@field name string Player-facing fault name.
+---@field description? string Fault description.
+---@field item_prefix? string Prefix added to the affected item name.
+---@field item_suffix? string Suffix added to the affected item name.
+---@field message? string Message shown when the fault is discovered.
+---@field color? string Native color name.
+---@field price_modifier? number Item price multiplier; defaults to 1.
+---@field degradation_mod? integer Temporary degradation added by the fault.
+---@field instant_damage? integer Damage applied when the fault appears.
+---@field contact_area_mod? number Contact-area multiplier.
+---@field rolling_resistance_mod? number Rolling-resistance multiplier.
+---@field vehicle_move_penalty_mod? integer Vehicle move penalty.
+---@field encumbrance_mod_flat? integer Flat encumbrance modifier.
+---@field encumbrance_mod_mult? number Encumbrance multiplier.
+---@field affected_by_degradation? boolean Whether degradation affects the fault.
+
+---@class FaultDefinition
+---@field id string
+local FaultDefinition = {}
+
+---@param flag_id string Native fault flag id.
+---@return FaultDefinition self
+function FaultDefinition:flag(flag_id) end
+
+---@param fault_id string Fault id blocked by this fault.
+---@return FaultDefinition self
+function FaultDefinition:block_fault(fault_id) end
+
+---@param fix_id string Fault-fix id usable on this fault.
+---@return FaultDefinition self
+function FaultDefinition:fix(fix_id) end
+
+---@class FaultFixDefinitionOptions
+---@field id string Stable fault-fix id.
+---@field name string Player-facing fix name.
+---@field success_msg? string Message shown on a successful fix.
+---@field time_seconds? integer Non-negative fix duration in seconds.
+---@field mod_damage? integer Damage modifier applied by the fix.
+---@field mod_degradation? integer Degradation modifier applied by the fix.
+
+---@class FaultFixDefinition
+---@field id string
+local FaultFixDefinition = {}
+
+---@param skill_id string Native skill id.
+---@param level integer Non-negative minimum skill level.
+---@return FaultFixDefinition self
+function FaultFixDefinition:requires_skill(skill_id, level) end
+
+---@param fault_id string Fault id removed by the fix.
+---@return FaultFixDefinition self
+function FaultFixDefinition:removes_fault(fault_id) end
+
+---@param fault_id string Fault id added by the fix.
+---@return FaultFixDefinition self
+function FaultFixDefinition:adds_fault(fault_id) end
+
+---@class DreamDefinitionOptions
+---@field category string Mutation category that triggers the dream.
+---@field strength? integer Non-negative category strength required.
+
+---@class DreamDefinition
+local DreamDefinition = {}
+
+---@param text string Dream message text.
+---@return DreamDefinition self
+function DreamDefinition:message(text) end
+
+---@class AchievementDefinitionOptions
+---@field id string Stable achievement id.
+---@field name string Player-facing achievement name.
+---@field description? string Achievement description.
+---@field is_conduct? boolean Whether this is a conduct tracked by the legacy conduct UI.
+
+---@class AchievementDefinition
+---@field id string
+local AchievementDefinition = {}
+
+---@param achievement_id string Achievement id hidden while this one is visible.
+---@return AchievementDefinition self
+function AchievementDefinition:hidden_by(achievement_id) end
+
+---@class ConductDefinitionOptions
+---@field id string Stable conduct id.
+---@field name string Player-facing conduct name.
+---@field description? string Conduct description.
+
+---@class BlacklistDefinitionOptions
+---@field kind 'trait'|'monster' Native blacklist target kind.
+---@field whitelist? boolean Whether entries are whitelisted instead.
+
+---@class BlacklistDefinition
+local BlacklistDefinition = {}
+
+---@param entry_id string Native id added to the blacklist or whitelist.
+---@return BlacklistDefinition self
+function BlacklistDefinition:entry(entry_id) end
+
+---@class MapExtraDefinitionOptions
+---@field id string Stable map-extra id.
+---@field name string Player-facing map-extra name.
+---@field description? string Map-extra description.
+---@field generator_id? string Native generator id; empty means no generator.
+---@field symbol? string Single map symbol character.
+---@field color? string Native color name.
+
+---@class MapExtraDefinition
+---@field id string
+local MapExtraDefinition = {}
+
+---@param flag_id string Native map-extra flag id.
+---@return MapExtraDefinition self
+function MapExtraDefinition:flag(flag_id) end
+
+---@class WeatherGeneratorDefinitionOptions
+---@field id string Stable weather-generator id.
+---@field base_temperature? number Base temperature.
+---@field base_humidity? number Base humidity.
+---@field base_pressure? number Base pressure.
+---@field base_wind? number Base wind speed.
+---@field base_wind_distrib_peaks? integer Non-negative wind distribution peaks.
+---@field summer_temp_manual_mod? integer Summer temperature modifier.
+---@field spring_temp_manual_mod? integer Spring temperature modifier.
+---@field autumn_temp_manual_mod? integer Autumn temperature modifier.
+---@field winter_temp_manual_mod? integer Winter temperature modifier.
+---@field spring_humidity_manual_mod? integer Spring humidity modifier.
+---@field summer_humidity_manual_mod? integer Summer humidity modifier.
+---@field autumn_humidity_manual_mod? integer Autumn humidity modifier.
+---@field winter_humidity_manual_mod? integer Winter humidity modifier.
+
+---@class WeatherGeneratorDefinition
+---@field id string
+local WeatherGeneratorDefinition = {}
+
+---@param weather_id string Weather type id excluded from this generator.
+---@return WeatherGeneratorDefinition self
+function WeatherGeneratorDefinition:blacklisted_weather(weather_id) end
+
+---@param weather_id string Weather type id forced into this generator.
+---@return WeatherGeneratorDefinition self
+function WeatherGeneratorDefinition:whitelisted_weather(weather_id) end
+
+---@class MigrationDefinitionOptions
+---@field kind 'bionic'|'effect'|'field_type'|'furniture'|'oter'|'overmap_special'|'proficiency'|'terrain'|'trap'|'var'|'vehicle_part' Native migration target kind.
+---@field from string Legacy id being migrated.
+---@field to? string New id; empty means removed.
+
+---@class MigrationDefinition
+local MigrationDefinition = {}
+
+---@class TraitGroupDefinitionOptions
+---@field id string Stable trait-group id.
+
+---@class TraitGroupDefinition
+---@field id string
+local TraitGroupDefinition = {}
+
+---@class MonsterAdjustmentDefinitionOptions
+---@field species string Native species id adjusted by this entry.
+---@field stat? string Stat name adjusted (speed, hp, armor...).
+---@field stat_adjust? number Stat multiplier; defaults to 1.
+---@field flag? string Monster flag toggled by this entry.
+---@field flag_val? boolean Flag value; defaults to false.
+---@field special? string Special attack adjusted by this entry.
+
+---@class MonsterAdjustmentDefinition
+local MonsterAdjustmentDefinition = {}
+
+---@param trait_id string Native trait id weighted by this group.
+---@param weight integer Positive weight.
+---@return TraitGroupDefinition self
+function TraitGroupDefinition:trait(trait_id, weight) end
+
+---@class ShopkeeperEntryOptions
+---@field item? string Item id matched by this entry.
+---@field category? string Item-category id matched by this entry.
+---@field item_group? string Item-group id matched by this entry.
+---@field message? string Message shown when the entry matches.
+
+---@class ShopkeeperDefinitionOptions
+---@field id string Stable shopkeeper rule id.
+---@field message? string Override message shown when entries match.
+---@field default_rate? integer Default consumption rate.
+
+---@class ShopkeeperDefinition
+---@field id string
+local ShopkeeperDefinition = {}
+
+---@param item string Item id matched by this entry.
+---@param category string Item-category id matched by this entry.
+---@param item_group string Item-group id matched by this entry.
+---@param message string Message shown when the entry matches.
+---@return ShopkeeperDefinition self
+function ShopkeeperDefinition:entry(item, category, item_group, message) end
 
 ---@class MagicTypeDefinitionOptions
 ---@field id string Stable magic-system id.
@@ -1896,9 +2477,15 @@ function SkillDefinition:companion_practice(practice_id, weight) end
 
 ---@param level integer Level from zero through the native skill maximum.
 ---@param theory string Theory-level description.
----@param practice? string Practical-level description; defaults to theory text.
+---@param practice? string Practical-level description; omitted means theory-only,
+--- matching the legacy independent theory/practice maps.
 ---@return SkillDefinition self
 function SkillDefinition:level_description(level, theory, practice) end
+
+---@param level integer Level from zero through the native skill maximum.
+---@param practice string Practical-level description for a practice-only level.
+---@return SkillDefinition self
+function SkillDefinition:level_description_practice(level, practice) end
 
 ---@param trait_id string Trait that must be present.
 ---@return SkillDefinition self
@@ -2278,6 +2865,30 @@ function CcbPlatformContent.RecipeGroup(options) end
 ---@return ScentTypeDefinition
 function CcbPlatformContent.ScentType(options) end
 
+---@param options ButcheryRequirementDefinitionOptions
+---@return ButcheryRequirementDefinition
+function CcbPlatformContent.ButcheryRequirement(options) end
+
+---@param options ItemActionDefinitionOptions
+---@return ItemActionDefinition
+function CcbPlatformContent.ItemAction(options) end
+
+---@param options ScenarioDefinitionOptions
+---@return ScenarioDefinition
+function CcbPlatformContent.Scenario(options) end
+
+---@param options VehicleColorPaletteDefinitionOptions
+---@return VehicleColorPaletteDefinition
+function CcbPlatformContent.VehicleColorPalette(options) end
+
+---@param options MonsterGroupDefinitionOptions
+---@return MonsterGroupDefinition
+function CcbPlatformContent.MonsterGroup(options) end
+
+---@param options OvermapConnectionDefinitionOptions
+---@return OvermapConnectionDefinition
+function CcbPlatformContent.OvermapConnection(options) end
+
 ---@param options SpeedDescriptionDefinitionOptions
 ---@return SpeedDescriptionDefinition
 function CcbPlatformContent.SpeedDescription(options) end
@@ -2521,9 +3132,101 @@ function CcbPlatformContent.SnippetCategory(options) end
 ---@return PlaylistDefinition
 function CcbPlatformContent.Playlist(options) end
 
+---@param options SoundEffectDefinitionOptions
+---@return SoundEffectDefinition
+function CcbPlatformContent.SoundEffect(options) end
+
+---@param options SoundEffectPreloadDefinitionOptions
+---@return SoundEffectDefinition
+function CcbPlatformContent.SoundEffectPreload(options) end
+
 ---@param options AttackVectorDefinitionOptions
 ---@return AttackVectorDefinition
 function CcbPlatformContent.AttackVector(options) end
+
+---@param options TechniqueDefinitionOptions
+---@return TechniqueDefinition
+function CcbPlatformContent.Technique(options) end
+
+---@param options MartialArtDefinitionOptions
+---@return MartialArtDefinition
+function CcbPlatformContent.MartialArt(options) end
+
+---@param options TrapDefinitionOptions
+---@return TrapDefinition
+function CcbPlatformContent.Trap(options) end
+
+---@param options ConstructionDefinitionOptions
+---@return ConstructionDefinition
+function CcbPlatformContent.Construction(options) end
+
+---@param options FurnitureDefinitionOptions
+---@return FurnitureDefinition
+function CcbPlatformContent.Furniture(options) end
+
+---@param options TerrainDefinitionOptions
+---@return TerrainDefinition
+function CcbPlatformContent.Terrain(options) end
+
+---@param options GateDefinitionOptions
+---@return GateDefinition
+function CcbPlatformContent.Gate(options) end
+
+---@param options FaultDefinitionOptions
+---@return FaultDefinition
+function CcbPlatformContent.Fault(options) end
+
+---@param options FaultFixDefinitionOptions
+---@return FaultFixDefinition
+function CcbPlatformContent.FaultFix(options) end
+
+---@param options DreamDefinitionOptions
+---@return DreamDefinition
+function CcbPlatformContent.Dream(options) end
+
+---@param options AchievementDefinitionOptions
+---@return AchievementDefinition
+function CcbPlatformContent.Achievement(options) end
+
+---@param options ConductDefinitionOptions
+---@return AchievementDefinition
+function CcbPlatformContent.Conduct(options) end
+
+---@param options BlacklistDefinitionOptions
+---@return BlacklistDefinition
+function CcbPlatformContent.Blacklist(options) end
+
+---@param options MapExtraDefinitionOptions
+---@return MapExtraDefinition
+function CcbPlatformContent.MapExtra(options) end
+
+---@param options WeatherGeneratorDefinitionOptions
+---@return WeatherGeneratorDefinition
+function CcbPlatformContent.WeatherGenerator(options) end
+
+---@param options MigrationDefinitionOptions
+---@return MigrationDefinition
+function CcbPlatformContent.Migration(options) end
+
+---@param options TraitGroupDefinitionOptions
+---@return TraitGroupDefinition
+function CcbPlatformContent.TraitGroup(options) end
+
+---@param options MonsterAdjustmentDefinitionOptions
+---@return MonsterAdjustmentDefinition
+function CcbPlatformContent.MonsterAdjustment(options) end
+
+---@param options ShopkeeperDefinitionOptions
+---@return ShopkeeperDefinition
+function CcbPlatformContent.ShopkeeperBlacklist(options) end
+
+---@param options ShopkeeperDefinitionOptions
+---@return ShopkeeperDefinition
+function CcbPlatformContent.ShopkeeperWhitelist(options) end
+
+---@param options ShopkeeperDefinitionOptions
+---@return ShopkeeperDefinition
+function CcbPlatformContent.ShopkeeperConsumptionRates(options) end
 
 ---@param options MagicTypeDefinitionOptions
 ---@return MagicTypeDefinition
@@ -2886,17 +3589,23 @@ function CcbPlatformContent.edit_movement_mode(id) end
 ---@field avatar GameHandle The avatar starting the dialogue.
 ---@field interlocutor GameHandle|table The creature/entity handle or detached non-entity talker snapshot.
 ---@field initial_topic string Initial dialogue topic id.
+---@field by_radio? boolean Present and true only when the dialogue runs over radio contact.
+---@field reason? string Present only when the dialogue was opened with a reason string.
 
 ---@class CcbPlatformDialogueOptionHook
 ---@field avatar GameHandle The avatar participating in the dialogue.
 ---@field interlocutor GameHandle|table The creature/entity handle or detached non-entity talker snapshot.
 ---@field current_topic string Topic being left.
 ---@field selected_topic string Topic selected by the native dialogue response.
+---@field by_radio? boolean Present and true only when the dialogue runs over radio contact.
+---@field reason? string Present only when the dialogue was opened with a reason string.
 
 ---@class CcbPlatformDialogueEndHook
 ---@field avatar GameHandle The avatar ending the dialogue.
 ---@field interlocutor GameHandle|table The creature/entity handle or detached non-entity talker snapshot.
 ---@field last_topic string Last processed dialogue topic id.
+---@field by_radio? boolean Present and true only when the dialogue runs over radio contact.
+---@field reason? string Present only when the dialogue was opened with a reason string.
 
 ---@class CcbPlatformRuntime
 local CcbPlatformRuntime = {}
@@ -3059,6 +3768,15 @@ local CcbPlatformInventoryApi = {}
 ---@param character GameHandle Character handle.
 ---@return CcbResult result `value` is a live item GameHandle or nil when no item is wielded.
 function CcbPlatformInventoryApi.wielded(character) end
+
+---Test whether the Character wears an item whose exact `itype_id` equals the
+---requested item id.  Only `outfit::worn` membership is matched: the wielded
+---item, json flags, categories, charges, and contained items are never
+---considered, and an unknown or empty item id yields false instead of an error.
+---@param character GameHandle Character handle.
+---@param item GameId GameId<item>
+---@return CcbResult result `value` is true only when a worn item has the exact requested type id.
+function CcbPlatformInventoryApi.is_wearing(character, item) end
 
 ---@class CcbPlatformAchievementsApi: CcbAchievementsApi
 local CcbPlatformAchievementsApi = {}
@@ -3314,6 +4032,10 @@ local CcbPlatformEnvironmentQueries = {}
 ---@return string dimension_id Stable id of the currently active dimension.
 function CcbPlatformEnvironmentQueries.dimension() end
 
+---@return boolean is_night True while the sun is at or below civil dawn (i.e. it is not
+--- the legacy EOC "is_day" state); ordinary Lua code may negate it directly.
+function CcbPlatformEnvironmentQueries.is_night() end
+
 ---@param position TripointCoord Absolute map-square coordinate inside the active map.
 ---@return boolean
 function CcbPlatformEnvironmentQueries.is_outside(position) end
@@ -3324,6 +4046,44 @@ function CcbPlatformEnvironmentQueries.is_outside(position) end
 ---@param with_fields? boolean Defaults to true.
 ---@return boolean visible
 function CcbPlatformEnvironmentQueries.line_of_sight(from, to, range, with_fields) end
+
+---@param position TripointCoord Absolute map-square coordinate inside the active map.
+---@param flag string Bounded non-empty furniture flag id; unknown ids and out-of-bounds
+--- positions return false.
+---@return boolean
+function CcbPlatformEnvironmentQueries.furniture_has_flag(position, flag) end
+
+---@param position TripointCoord Absolute map-square coordinate; no inbounds gate
+--- (mirrors the legacy map_terrain_id handler, so out-of-bounds resolves to the
+--- null terrain id).
+---@return string
+function CcbPlatformEnvironmentQueries.terrain_id(position) end
+
+---@param position TripointCoord Absolute map-square coordinate; no inbounds gate
+--- (mirrors the legacy map_furniture_id handler, so out-of-bounds resolves to the
+--- null furniture id).
+---@return string
+function CcbPlatformEnvironmentQueries.furniture_id(position) end
+
+---@param position TripointCoord Absolute map-square coordinate.
+---@param field_id string Bounded non-empty field type id.
+---@return boolean
+function CcbPlatformEnvironmentQueries.field_exists(position, field_id) end
+
+---@param position TripointCoord Absolute map-square coordinate.
+---@param flag string Bounded non-empty terrain flag id.
+---@return boolean
+function CcbPlatformEnvironmentQueries.terrain_has_flag(position, flag) end
+
+---@param position TripointCoord Absolute map-square coordinate; out-of-bounds
+--- returns false (mirroring the legacy map_is_outside handler).
+---@return boolean True when the tile is indoors or under cover.
+function CcbPlatformEnvironmentQueries.is_indoor_tile(position) end
+
+---@param direction string One of N/NE/E/SE/S/SW/W/NW (cardinal direction).
+---@return boolean Whether the avatar's safe-mode visibility marks that
+--- direction dangerous (mirrors the legacy u_safe_mode_trigger handler).
+function CcbPlatformEnvironmentQueries.safe_mode_dangerous(direction) end
 
 ---@class CcbPlatformGameplayApi
 ---@field strings CcbPlatformStringPredicates
