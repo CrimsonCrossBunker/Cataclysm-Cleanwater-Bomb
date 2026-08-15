@@ -19,6 +19,24 @@ template <typename T> class generic_factory;
 namespace cata::lua_platform
 {
 class content_transaction;
+namespace detail
+{
+struct json_flag_snapshot_entry {
+    std::string id;
+    std::string name;
+    std::string info;
+    std::string restriction;
+    std::string item_prefix;
+    std::string item_suffix;
+    std::vector<std::string> conflicts;
+    bool inherit = true;
+    bool craft_inherit = false;
+    std::string requires_flag;
+    int taste_mod = 0;
+    mod_id owner;
+};
+std::vector<json_flag_snapshot_entry> json_flag_snapshot();
+} // namespace detail
 } // namespace cata::lua_platform
 
 // Bit positions for the flags that drive item::stacks_with.
@@ -463,6 +481,8 @@ class json_flag
         friend class DynamicDataLoader;
         friend class generic_factory<json_flag>;
         friend class cata::lua_platform::content_transaction;
+        friend std::vector<cata::lua_platform::detail::json_flag_snapshot_entry>
+        cata::lua_platform::detail::json_flag_snapshot();
 
     public:
         // used by generic_factory
