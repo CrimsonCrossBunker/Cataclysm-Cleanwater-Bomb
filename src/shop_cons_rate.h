@@ -18,6 +18,12 @@ class item;
 class npc;
 struct const_dialogue;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+} // namespace cata::lua_platform
+
+
 constexpr char const *SHOPKEEPER_CONSUMPTION_RATES = "shopkeeper_consumption_rates";
 constexpr char const *SHOPKEEPER_BLACKLIST = "shopkeeper_blacklist";
 constexpr char const *SHOPKEEPER_WHITELIST = "shopkeeper_whitelist";
@@ -52,6 +58,7 @@ struct shopkeeper_cons_rate_entry: public icg_entry {
 
 struct shopkeeper_cons_rates {
     shopkeeper_cons_rates_id id;
+    friend class cata::lua_platform::content_transaction;
     bool was_loaded = false;
 
     int default_rate = -1;
@@ -74,6 +81,7 @@ struct shopkeeper_cons_rates {
 
 struct shopkeeper_blacklist {
     shopkeeper_blacklist_id id;
+    friend class cata::lua_platform::content_transaction;
     bool was_loaded = false;
 
     std::vector<icg_entry> entries;
@@ -88,6 +96,7 @@ struct shopkeeper_blacklist {
 
 struct shopkeeper_whitelist {
     shopkeeper_whitelist_id id;
+    friend class cata::lua_platform::content_transaction;
     bool was_loaded = false;
 
     std::vector<icg_entry> entries;

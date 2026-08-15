@@ -1,3 +1,5 @@
+#include "catalua_platform_content.h"
+
 #include "shop_cons_rate.h"
 
 #include <algorithm>
@@ -56,6 +58,24 @@ bool string_id<shopkeeper_blacklist>::is_valid() const
 void shopkeeper_blacklist::reset()
 {
     shop_blacklist_factory.reset();
+}
+
+generic_factory<shopkeeper_blacklist> &
+cata::lua_platform::detail::shopkeeper_blacklist_registry()
+{
+    return shop_blacklist_factory;
+}
+
+generic_factory<shopkeeper_whitelist> &
+cata::lua_platform::detail::shopkeeper_whitelist_registry()
+{
+    return shop_whitelist_factory;
+}
+
+generic_factory<shopkeeper_cons_rates> &
+cata::lua_platform::detail::shopkeeper_cons_rates_registry()
+{
+    return shop_cons_rate_factory;
 }
 
 std::vector<shopkeeper_blacklist> const &shopkeeper_blacklist::get_all()
