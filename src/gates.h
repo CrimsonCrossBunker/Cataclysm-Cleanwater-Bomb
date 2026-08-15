@@ -6,12 +6,51 @@
 #include <vector>
 
 #include "coords_fwd.h"
+#include "translation.h"
 #include "type_id.h"
 
 class Character;
 class Creature;
 class JsonObject;
 class map;
+
+namespace cata::lua_platform
+{
+class content_transaction;
+} // namespace cata::lua_platform
+
+struct gate_data;
+using gate_id = string_id<gate_data>;
+
+struct gate_data {
+    friend class cata::lua_platform::content_transaction;
+
+    gate_data() :
+        moves( 0 ),
+        bash_dmg( 0 ),
+        was_loaded( false ) {}
+
+    gate_id id;
+    std::vector<std::pair<gate_id, mod_id>> src;
+
+    ter_str_id door;
+    ter_str_id floor;
+    std::vector<ter_str_id> walls;
+
+    translation pull_message;
+    translation open_message;
+    translation close_message;
+    translation fail_message;
+
+    int moves;
+    int bash_dmg;
+    bool was_loaded;
+
+    void load( const JsonObject &jo, std::string_view src );
+    void check() const;
+
+    bool is_suitable_wall( const tripoint_bub_ms &pos ) const;
+};
 
 namespace gates
 {
