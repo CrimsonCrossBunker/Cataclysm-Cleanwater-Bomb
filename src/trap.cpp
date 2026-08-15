@@ -1,5 +1,7 @@
 #include "trap.h"
 
+#include "catalua_platform_content.h"
+
 #include <cmath>
 #include <typeinfo>
 #include <vector>
@@ -41,6 +43,11 @@ namespace
 generic_factory<trap> trap_factory( "trap" );
 
 } // namespace
+
+generic_factory<trap> &cata::lua_platform::detail::trap_registry()
+{
+    return trap_factory;
+}
 
 /** @relates string_id */
 template<>
