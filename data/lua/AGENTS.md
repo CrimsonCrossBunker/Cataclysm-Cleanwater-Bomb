@@ -1,21 +1,16 @@
 # `data/lua/` agent instructions
 
-This subtree contains two distinct contracts:
+This subtree contains:
 
-- the implemented Lua API v5 runtime, manifest, examples, inventories, and
+- the implemented CCB Lua 0.1 runtime, manifest, examples, inventories, and
   LuaLS declarations; and
-- `LUA_FIRST_PLATFORM.md`, the accepted Platform v1 architecture for future
-  pure-Lua core and Mod authoring.  Its implementation status is tracked in
+- `LUA_FIRST_PLATFORM.md`, the platform architecture specification for pure-Lua
+  core and Mod authoring. Its implementation status is tracked in
   `ai/lua-first-roadmap.yml`.
 
 - `manifest.schema.json`, `types/ccb_api_v5.d.lua`, native registrations, and
-  generated inventories are authoritative for the currently shipped v5 API.
-- `types/ccb_platform_v1.d.lua` declares only the separately versioned
-  Platform surface with matching native source.  Implemented-but-unverified
-  entries stay distinct from available v5 APIs; do not merge its types into v5.
-- `LUA_FIRST_PLATFORM.md` is authoritative for Platform v1 design decisions;
-  do not present a roadmap item as implemented without matching source and
-  tests.
+  generated inventories are authoritative for the current Lua runtime contract.
+- `LUA_FIRST_PLATFORM.md` is authoritative for CCB Lua 0.1 platform design decisions.
 - Never hand-edit generated reference inventories; run their named generator.
 - Maintenance of existing v5 code keeps declaring the minimum capabilities it
   uses.  New Platform code follows the separately versioned Platform contract
