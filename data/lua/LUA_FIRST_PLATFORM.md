@@ -1,46 +1,36 @@
-# CCB Lua-first Platform v1 / CCB Lua 优先平台 v1
+# CCB Lua 0.1 平台规范 / CCB Lua 0.1 Platform Specification
 
-Status: accepted long-term architecture; implementation is tracked in
+Status: CCB Lua 0.1 native platform architecture; implementation is tracked in
 `ai/lua-first-roadmap.yml`.
 
-状态：已接受的长期架构方向；实际实现进度以 `ai/lua-first-roadmap.yml` 为准。
+状态：CCB Lua 0.1 纯原生创作平台架构；实现进度以 `ai/lua-first-roadmap.yml` 为准。
 
 ## Purpose / 目标
 
-Lua-first Platform v1 is the target authoring model for CCB core content and
-Mods.  It is intended to let an author define metadata, items, recipes,
-vehicles, creatures, world generation, dialogue, missions, UI, and runtime
-behaviour without authoring JSON or EOC.
+CCB Lua 0.1 is the native authoring model for CCB core content and Mods.
+It allows creators to define metadata, items, recipes, vehicles, creatures,
+world generation, dialogue, missions, UI, and runtime behaviour directly in
+pure Lua without authoring legacy JSON or EOC formats.
 
-Platform v1 is not a spelling change for JSON or EOC.  Lua code should use
-functions, modules, native objects, normal control flow, composition, named
-tasks, and persistent state.  New public APIs must be shaped around the game
-domain, not around legacy parser keys.
+Lua code uses functions, modules, native objects, normal control flow,
+composition, named tasks, generation-safe handles, and persistent state.
+Public APIs are shaped around the game domain rather than legacy parser keys.
 
-Lua-first Platform v1 是 CCB 核心内容与 Mod 的目标创作模型。最终作者应能在不编写
-JSON 或 EOC 的情况下定义 Mod 元数据、物品、配方、载具、怪物、地图生成、对话、
-任务、UI 与运行时行为。
+CCB Lua 0.1 是 CCB 核心游戏内容与 Mod 创作的原生模型。创作者直接在纯 Lua 环境中
+定义 Mod 元数据、物品、配方、载具、怪物、地图生成、对话、任务、UI 与运行时行为，
+告别繁复的旧数据格式。
 
-Platform v1 不是把 JSON/EOC 换一种拼写。Lua 应使用函数、模块、原生对象、普通控制
-流、组合、命名任务和持久状态；公共 API 应围绕游戏领域设计，而不是复刻旧解析器键。
+Lua 采用函数、模块、原生对象、普通控制流、组合、命名任务、代际安全句柄和持久化
+状态；公共 API 围绕游戏领域本身设计，而非复刻旧解析器键。
 
-## Current boundary / 当前边界
+## Architecture & Boundaries / 架构与边界
 
-The current implemented contract is Lua API v5.  It starts after JSON data is
-finalized and primarily queries or controls objects already defined by C++ and
-JSON.  It remains supported while Platform v1 is built, but it must not be
-described as if Lua-first static content already exists.
+The runtime provides modularity, transactional staging, rollback safety,
+and decoupled snapshots.  Lua code receives generation-safe handles instead
+of bare C++ pointers.
 
-The checked inventories currently contain 190 JSON top-level object types,
-275 canonical EOC condition keys, and 310 canonical EOC effect keys.  These
-inventories are migration denominators, not a list of Lua APIs to reproduce.
-
-当前已实现的契约是 Lua API v5。它在 JSON 数据 finalize 之后启动，主要查询或控制由
-C++/JSON 已经定义的对象。Platform v1 建设期间继续支持 v5，但不得把尚未实现的静态
-Lua 内容能力写成现状。
-
-当前受检清单包含 190 个 JSON 顶层类型、275 个规范 EOC condition 键和 310 个规范
-EOC effect 键。它们是迁移分母，不是要逐项复制的 Lua API 清单。
+运行时提供模块化、事务预载（Staged）、冲突原子回滚（Rollback）与分离数据快照。
+Lua 不直接接触 C++ 裸指针，全面采用代际安全句柄访问实体。
 
 ## Zero-configuration discovery / 零配置发现
 
