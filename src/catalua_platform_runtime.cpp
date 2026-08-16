@@ -19238,13 +19238,18 @@ bool content_transaction::apply( std::string &error )
             native->price = units::from_cent<std::int64_t>( entry.definition->price_cents );
             native->was_loaded = true;
             native->src.emplace_back( id, mod_id( pimpl_->owner ) );
+            bool first_material = true;
             for( const material_part &material : entry.definition->materials ) {
                 const material_id material_key( material.id );
                 native->materials[material_key] += static_cast<int>( material.portions );
                 native->mat_portion_total += static_cast<int>( material.portions );
-                if( native->default_mat.is_null() ) {
+                if( first_material ) {
                     native->default_mat = material_key;
+                    first_material = false;
                 }
+            }
+            if( native->materials.empty() ) {
+                native->default_mat = material_id::NULL_ID();
             }
             for( const quality_level &quality : entry.definition->qualities ) {
                 native->qualities[quality_id( quality.id )] = {
