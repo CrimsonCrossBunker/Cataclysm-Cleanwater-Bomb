@@ -34,7 +34,7 @@ function content.register(ccb)
 
     local harvest = ccb.content.Harvest {
         id = "harvest_lua_first_synthetic_drone",
-        message = "You carefully salvage the synthetic components.",
+        message = "你小心翼翼地拆解回收了无人机的人工合成电子零件。",
         leftovers = "ruined_chunks",
         butchery_requirements = "default",
     }
@@ -78,8 +78,8 @@ function content.register(ccb)
 
     local drone = ccb.content.Monster {
         id = "mon_lua_first_tutorial_drone",
-        name = "tutorial training drone",
-        description = "A hovering robotic sphere demonstrating custom Lua monster properties, dynamic attacks, harvest tables, and behavior tree AI.",
+        name = "教程训练无人机",
+        description = "一个悬浮飞行的球形机器人，用于向开发者展示纯 Lua 自定义怪物属性、动态攻击策略、采收分解表以及行为树 AI 决策。",
         symbol = "d",
         color = "c_cyan",
         default_faction = "fac_lua_first_drone",

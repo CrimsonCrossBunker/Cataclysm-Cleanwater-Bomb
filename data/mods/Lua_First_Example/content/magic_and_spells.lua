@@ -5,7 +5,7 @@ function content.register(ccb)
         id = "magic_lua_first_cybermancy",
         energy = "mana",
         energy_color = "c_light_blue",
-        cannot_cast_message = "Your cybermantic flow is disrupted.",
+        cannot_cast_message = "你的赛博法力回路受阻，无法引导能量。",
         failure_cost_fraction = 0.5,
         failure_experience_fraction = 0.25,
     }

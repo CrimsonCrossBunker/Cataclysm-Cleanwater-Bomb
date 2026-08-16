@@ -3,30 +3,30 @@ local content = {}
 function content.register(ccb)
     local quality = ccb.content.ToolQuality {
         id = "lua_first_purification_tech",
-        name = "Purification Tuning",
+        name = "纯化调校",
     }
-    quality:usage(1, "Basic electrolyte filtering")
-    quality:usage(2, "Advanced nanofiltration resonance")
+    quality:usage(1, "基础电解质过滤")
+    quality:usage(2, "高级纳米共振微滤")
     ccb.content.add(quality)
 
     local prof_cat = ccb.content.ProficiencyCategory {
         id = "prof_cat_lua_first",
-        name = "Lua Platform Modding",
-        description = "Crafting proficiencies relating to pure Lua engineering.",
+        name = "Lua 平台模组开发",
+        description = "与纯 Lua 原生工程相关的制作与设计专精。",
     }
     ccb.content.add(prof_cat)
 
     local prof = ccb.content.Proficiency {
         id = "prof_lua_first_engineering",
-        name = "Lua Modding Principles",
-        description = "Practical understanding of CCB Platform v1 content and runtime architectures.",
+        name = "Lua 架构设计原理",
+        description = "深入理解 CCB Platform v1 原生内容构建与运行时架构。",
         category = "prof_cat_lua_first",
     }
     ccb.content.add(prof)
 
     local req = ccb.content.Requirement {
         id = "req_lua_first_circuitry",
-        name = "basic circuitry",
+        name = "基础电路",
     }
     req:component_any {
         { id = "scrap", count = 2 },

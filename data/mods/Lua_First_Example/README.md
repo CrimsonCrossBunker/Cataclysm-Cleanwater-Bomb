@@ -1,92 +1,73 @@
-# Lua-First Bundled Example & Mod Developer Tutorial
-# 纯 Lua 内置示例 MOD 与开发者教程
+# 纯 Lua 内置范例 MOD 与开发者教程 (Lua-First Showcase & Tutorial)
 
-This bundled Mod is both an executable acceptance fixture and a comprehensive
-developer tutorial for the **CCB Lua Platform v1**. It contains 100% pure Lua code:
-no JSON definitions, no EOC scripts, no legacy manifests, and no required `lua/`
-folder hierarchy.
+**作者**: `g1ytx`  
+**版本**: `0.1.0`  
+**架构**: 基于 **CCB Lua Platform v1** (纯 Lua 架构，零 JSON、零 EOC、零旧式 manifest)
 
-本 MOD 既是仓库的纯 Lua 验收测试用例，也是面向 Mod 开发者的**全系统实战教程**。
-完全基于 **CCB Lua Platform v1** 编写，零 JSON、零 EOC、零旧式 manifest 配置文件。
+本 MOD 既是 CCB 纯 Lua 架构的官方验收测试夹具，也是面向 Mod 开发者的**全系统实战范例与教程**。
 
 ---
 
-## Directory Structure / 目录结构
+## 目录结构
 
 ```text
 data/mods/Lua_First_Example/
-├── mod.lua                         -- Mod metadata definition / 原生元数据声明
-├── main.lua                        -- Main entry point & wiring / 总装配与注册入口
-├── README.md                       -- Developer guide & documentation / 开发教程文档
-├── content/                        -- Pure Lua content registrations / 原生内容系统
-│   ├── cleanwater_charm.lua        -- Charm item & recipe fixture / 核心净化护符与配方
-│   ├── items_and_tools.lua         -- Developer codex, multitool & tonic / 物品与多功能工具
-│   ├── recipes_and_crafting.lua    -- Recipes, uncrafting & proficiencies / 配方、解体与熟练度
-│   ├── monsters_and_ai.lua         -- Monster, species, attacks & behavior trees / 怪物与行为树 AI
-│   ├── mutations_and_traits.lua    -- Categories, traits & modifiers / 突变特质与角色修正器
-│   ├── magic_and_spells.lua        -- Magic types, progression & failures / 魔法系统与失败策略
-│   └── environment_and_emissions.lua -- Field emissions & profiles / 环境字段排放与动态策略
-└── runtime/                        -- Runtime behaviour, UI & hooks / 运行时逻辑与界面
-    ├── behaviour.lua               -- Handler bridge & event routing / 回调总线与生命周期
-    ├── tutorial_ui.lua             -- In-game interactive codex UI & sandbox / 游戏内教程与沙盒终端
-    ├── tasks_and_state.lua         -- Delayed tasks, policies & diagnostics / 延迟任务与策略计算
-    └── combat_and_hooks.lua        -- Native game hooks & telemetry / 原生游戏钩子与事件统计
+├── mod.lua                         -- Mod 原生元数据声明 (ccb.ModDefinition)
+├── main.lua                        -- 模组总装配与注册入口
+├── README.md                       -- 模组说明与开发文档
+├── content/                        -- 原生游戏内容注册 (纯 Lua DSL)
+│   ├── cleanwater_charm.lua        -- 核心净化护符与基础配方
+│   ├── items_and_tools.lua         -- 全息开发手册、多功能振波刃与纳米注射剂
+│   ├── recipes_and_crafting.lua    -- 制作配方、可逆解体与熟练度系统
+│   ├── monsters_and_ai.lua         -- 教程训练无人机、专属采收表与行为树 AI
+│   ├── mutations_and_traits.lua    -- 突变分类、特质与动态角色修正器
+│   ├── magic_and_spells.lua        -- 赛博魔法系统、经验曲线与失败反噬策略
+│   └── environment_and_emissions.lua -- 动态环境字段排放与扩散策略
+└── runtime/                        -- 运行时逻辑、界面与事件钩子
+    ├── behaviour.lua               -- 回调总线与生命周期调度
+    ├── tutorial_ui.lua             -- 游戏内交互式开发手册与沙盒调试终端
+    ├── tasks_and_state.lua         -- 跨存档延迟任务、动态计算策略与自检诊断
+    └── combat_and_hooks.lua        -- 原生游戏事件钩子与实时统计
 ```
 
 ---
 
-## Core Features Demonstrated / 核心系统示范
+## 核心系统与实战范例
 
-### 1. Zero-Configuration & `mod.lua` (零配置发现与元数据)
-- A minimal mod only needs `main.lua` at the root.
-- Optional `mod.lua` returns a native `ccb.ModDefinition`:
-  ```lua
-  local ccb = require("ccb")
-  return ccb.ModDefinition {
-      id = "my_mod",
-      name = "My Mod",
-      version = "1.0.0",
-      dependencies = { "dda" },
-  }
-  ```
+### 1. 零配置发现与 `mod.lua`
+- 无需 `modinfo.json` 或 `manifest.json`，目录即模组。
+- `mod.lua` 声明原生元数据与依赖关系。
 
-### 2. Items, Tools & Consumables (原生物品与工具)
-- Staged via `ccb.content.Item { id, name, description, symbol }`.
-- Configures mass, volume, price, materials, qualities (`CUT`, `PRY`, etc.), and durability flags (`DURABLE_MELEE`).
-- Binds named Lua callbacks via `:on_use(handler_id, label)`.
+### 2. 原生物品与多功能工具 (`content/items_and_tools.lua`)
+- 使用 `ccb.content.Item` 注册物品，配置质量、体积、价格、材质、工具等级（切割/屠宰/撬锁/敲击）与耐久标签。
+- 绑定命名 Lua 回调处理函数 `:on_use(handler_id, label)`。
+- 支持在游戏内使用时实时切换高频振动、纳米精细等不同工作模式。
 
-### 3. Recipes, Uncrafting & Requirements (配方、解体与熟练度)
-- Staged via `ccb.content.Recipe { id, result, skill, difficulty, duration_moves, autolearn }`.
-- Defines component choices (`:component_any`), tool requirements (`:tool_any`), and reusable requirement definitions (`ccb.content.Requirement`).
-- Supports reversible disassembly with `uncraft = true`.
-- Custom tool qualities (`ccb.content.ToolQuality`) and proficiencies (`ccb.content.Proficiency`).
+### 3. 配方、解体与熟练度 (`content/recipes_and_crafting.lua`)
+- 声明制造配方与所需技能难度。
+- 支持可逆解体（`uncraft = true`），将装备 100% 还原为原始材料。
+- 自定义工具质量（`ToolQuality`）与制作熟练度（`Proficiency`）。
 
-### 4. Monsters & Behavior Trees (怪物、攻击与行为树 AI)
-- Staged via `ccb.content.Monster { id, name, symbol, color, hp, speed, default_faction, harvest }`.
-- Custom species (`ccb.content.Species`) with fear/anger triggers.
-- Custom monster attacks (`ccb.content.MonsterAttack`) bound to named Lua policies.
-- Full utility-based AI Behavior Trees (`ccb.content.Behavior`) with conditional execution (`:when`) and dynamic utility scoring (`:score`).
+### 4. 怪物、攻击与行为树 AI (`content/monsters_and_ai.lua`)
+- 注册自主巡逻无人机及其种族、掉落组和采收解剖表。
+- 搭载基于效用（Utility）评分的纯 Lua 行为树（`Behavior Tree`），支持自主巡逻与战斗策略切换。
+- 绑定自定义声学脉冲攻击策略。
 
-### 5. Mutations, Traits & Modifiers (突变特质与角色修正器)
-- Staged via `ccb.content.MutationCategory` and `ccb.content.MutationType`.
-- Dynamic character modifiers (`ccb.content.CharacterModifier`) using named Lua evaluators (`:evaluate_with`).
+### 5. 突变特质与角色修正器 (`content/mutations_and_traits.lua`)
+- 注册专属突变谱系。
+- 挂载动态角色修正器（`CharacterModifier`），由 Lua 函数实时计算角色制作与学习速度加成。
 
-### 6. Magic & Spells (魔法系统与动态策略)
-- Staged via `ccb.content.MagicType { id, energy, ... }`.
-- Policies for leveling curves (`:progression`), casting exp (`:casting_experience`), failure chance (`:failure_chance`), and failure backlash (`:on_failure`).
+### 6. 魔法系统与动态策略 (`content/magic_and_spells.lua`)
+- 注册赛博法术流派，由 Lua 动态接管升级经验公式、施法成功率判定与施法失败反噬效果。
 
-### 7. Emissions & Dynamic World (字段排放与动态环境)
-- Staged via `ccb.content.Emission { id, field, intensity, quantity, chance }`.
-- Supports dynamic Lua profile calculation per emission event (`:profile`).
+### 7. 环境字段排放 (`content/environment_and_emissions.lua`)
+- 定义烟雾/粒子动态排放源，支持由 Lua 策略函数根据周围环境实时微调排放浓度。
 
-### 8. Interactive In-Game Codex UI (游戏内交互式开发手册与沙盒)
-- Activate the **Lua Modding Codex (`lua_first_dev_codex`)** in-game to open a native menu powered by `ccb.presentation.choose` and `notice`.
-- **Tutorial Chapters**: Read structured guides on all Lua subsystems directly in-game.
-- **Sandbox Toolbox**: Test item usage, trigger delayed tasks, and modify persistent variables.
-- **Live State Inspector**: Inspect `ccb.state.character` and `ccb.state.world` savefile values in real time.
-- **Self-Diagnostics**: Run integrated unit tests and assertion checks.
+### 8. 游戏内交互式开发终端 (`runtime/tutorial_ui.lua`)
+- 激活开发手册物品即可在游戏内打开终端菜单。
+- 包含 8 大核心章节教程、开发者沙盒调试箱、运行时状态检视器与诊断报告。
 
-### 9. State Persistence, Tasks & Hooks (状态持久化、任务与钩子)
-- **Character & World State**: Durable storage via `ccb.state.character.get/set` and `ccb.state.world.get/set`, automatically saved into player/world sidecars.
-- **Delayed & Periodic Tasks**: Scheduled via `ccb.tasks.after(turns, handler_id, payload, version, owner)`. Survives save/reload cycles.
-- **Synchronous Hooks**: Subscribed via `ccb.runtime.hook(hook_name, handler_id)` for combat, crafting, and creature events.
+### 9. 状态持久化、延迟任务与事件钩子 (`runtime/tasks_and_state.lua` / `combat_and_hooks.lua`)
+- **持久化存储**：`ccb.state.character` 与 `ccb.state.world` 自动与角色及世界存档同步。
+- **跨存档延迟任务**：`ccb.tasks.after` 调度经过指定回合后触发的倒计时任务。
+- **原生事件钩子**：实时监听近战命中、物品制作等游戏底层事件。

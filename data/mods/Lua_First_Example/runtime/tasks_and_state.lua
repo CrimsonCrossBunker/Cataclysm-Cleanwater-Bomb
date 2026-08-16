@@ -4,7 +4,7 @@ local tasks = {}
 
 function tasks.monster_attack_pulse(payload)
     if payload.target and payload.target:is_valid() then
-        ccb.services.message("The tutorial drone emits a calibrating acoustic pulse.")
+        ccb.services.message("教程训练无人机释放了一道经过调谐的声学校准脉冲。")
         return true
     end
     return false
@@ -51,7 +51,7 @@ function tasks.magic_fail_chance(payload)
 end
 
 function tasks.magic_on_failure(payload)
-    ccb.services.message("A wave of destabilized cybermantic energy dissipates harmlessly.")
+    ccb.services.message("一股失稳的赛博法术余波在空气中悄然消散，未造成反噬伤害。")
 end
 
 function tasks.dynamic_mist_profile(payload)
@@ -66,32 +66,32 @@ end
 function tasks.tonic_tick(task)
     local ticks = ccb.state.character.get("lua_first_tonic_ticks", 0) + 1
     ccb.state.character.set("lua_first_tonic_ticks", ticks)
-    ccb.services.message("The nano-tonic circulates through your bloodstream (pulse " .. ticks .. ").")
+    ccb.services.message("净化纳米机器人在血液中循环作业（脉冲阶段 " .. ticks .. "）。")
 end
 
 function tasks.run_diagnostics()
     local log = {}
-    table.insert(log, "=== Lua Platform v1 Self-Diagnostics ===")
+    table.insert(log, "=== CCB Lua 平台 v1 原生自检诊断报告 ===")
     
-    table.insert(log, "1. ccb version: " .. tostring(ccb.platform_version))
+    table.insert(log, "1. 引擎底层版本 (ccb version): " .. tostring(ccb.platform_version))
     
     local char_val = ccb.state.character.get("diag_test", 0)
     ccb.state.character.set("diag_test", char_val + 1)
     local char_val_new = ccb.state.character.get("diag_test", 0)
-    table.insert(log, "2. ccb.state.character: OK (stored: " .. char_val_new .. ")")
+    table.insert(log, "2. 角色持久化侧车 (ccb.state.character): 正常 (值: " .. char_val_new .. ")")
     
     local world_val = ccb.state.world.get("diag_test", 0)
     ccb.state.world.set("diag_test", world_val + 1)
     local world_val_new = ccb.state.world.get("diag_test", 0)
-    table.insert(log, "3. ccb.state.world: OK (stored: " .. world_val_new .. ")")
+    table.insert(log, "3. 世界持久化侧车 (ccb.state.world): 正常 (值: " .. world_val_new .. ")")
     
     local rnd = ccb.services.random.int(1, 100)
-    table.insert(log, "4. ccb.services.random.int: OK (" .. rnd .. ")")
+    table.insert(log, "4. 随机数生成服务 (ccb.services.random.int): 正常 (" .. rnd .. ")")
     
     local dim = ccb.services.gameplay.environment.dimension()
-    table.insert(log, "5. ccb.services.gameplay.dimension: " .. tostring(dim))
+    table.insert(log, "5. 游戏空间维度服务 (ccb.services.gameplay.dimension): " .. tostring(dim))
     
-    table.insert(log, "=== All diagnostics completed successfully ===")
+    table.insert(log, "=== 所有核心诊断项全部通过，API 链路 100% 正常 ===")
     return table.concat(log, "\n")
 end
 

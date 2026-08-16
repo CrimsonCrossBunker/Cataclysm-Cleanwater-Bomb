@@ -3,15 +3,15 @@ local content = {}
 function content.register(ccb)
     local charm = ccb.content.Item {
         id = "lua_first_cleanwater_charm",
-        name = "clean-water charm",
-        description = "A tiny proof that bundled content can be authored as native Lua.",
+        name = "纯水护符",
+        description = "一个微小但精密的护符，作为游戏内容可以完全用纯原生 Lua 编写的有效证明。",
         symbol = "*",
     }
     charm:mass_grams(20)
     charm:volume_ml(10)
     charm:price_cents(250)
     charm:material("steel", 1)
-    charm:on_use("use_cleanwater_charm", "Listen to the charm")
+    charm:on_use("use_cleanwater_charm", "倾听护符的微鸣")
     ccb.content.add(charm)
 
     local recipe = ccb.content.Recipe {

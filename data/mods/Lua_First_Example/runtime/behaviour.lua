@@ -8,7 +8,7 @@ local behaviour = {}
 function behaviour.use_charm(context)
     local uses = ccb.state.character.get("cleanwater_charm_uses", 0) + 1
     ccb.state.character.set("cleanwater_charm_uses", uses)
-    context:message("The charm hums.  Lua use count: " .. uses .. ".")
+    context:message("护符发出柔和的微鸣。当前 Lua 触发计数: " .. uses .. " 次。")
     return 0
 end
 
@@ -19,12 +19,12 @@ function behaviour.world_ready(event)
     if not ccb.state.world.get("cleanwater_example_initialized", false) then
         ccb.state.world.set("cleanwater_example_initialized", true)
         ccb.tasks.after(10, "lua_first_example_reminder", {
-            text = "The clean-water charm remembers this world after loading.",
+            text = "【纯水护符】已将当前世界状态永久写入本地存档侧车数据库。",
         }, 1, "world")
     end
     if event.new_game then
         ccb.services.message(
-            "Lua-first bundled example is active in dimension '" .. dimension .. "'.")
+            "纯 Lua 内置范例 MOD 已在维度 '" .. dimension .. "' 中成功激活生效。")
     end
 end
 
@@ -41,18 +41,18 @@ function behaviour.use_codex(context)
 end
 
 function behaviour.use_omnitool(context)
-    local modes = { "Standard Salvage", "High-Frequency Vibro", "Nanofilter Pruning" }
+    local modes = { "标准拆解切削 (Standard Salvage)", "高频振荡破甲 (High-Frequency Vibro)", "纳米共振微滤 (Nanofilter Pruning)" }
     local cur_idx = ccb.state.character.get("omnitool_mode_idx", 1)
     local next_idx = (cur_idx % #modes) + 1
     ccb.state.character.set("omnitool_mode_idx", next_idx)
-    context:message("The multitool oscillates: switched to [" .. modes[next_idx] .. "] mode.")
+    context:message("振波刃内部动力核心快速震荡：已切换为【" .. modes[next_idx] .. "】模式。")
     return 0
 end
 
 function behaviour.use_nano_tonic(context)
     local ticks = ccb.state.character.get("lua_first_tonic_ticks", 0) + 1
     ccb.state.character.set("lua_first_tonic_ticks", ticks)
-    context:message("You inject the purifying nano-tonic. Cellular renewal underway.")
+    context:message("你将净化纳米针剂注入体内。微型纳米机器人开始在全身细胞间循环作业。")
     ccb.tasks.after(3, "lua_first_task_tonic_tick", {}, 1, "character")
     return 0
 end
