@@ -1,6 +1,6 @@
-# Lua API contract and coverage tools
+# CCB Lua 0.1 contract and coverage tools
 
-## CCB Lua API v5 public denominator
+## CCB Lua 0.1 public contract denominator
 
 `generate_public_contract.py` joins the authoritative native registrations,
 LuaLS declarations, Manifest Schema, event specifications, hook/callback
