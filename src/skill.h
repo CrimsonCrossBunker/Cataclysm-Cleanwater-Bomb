@@ -8,6 +8,7 @@
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "calendar.h"
@@ -35,10 +36,37 @@ struct time_info_t {
     int time_reduction_per_level = 25;
 };
 
+namespace cata::lua_platform::detail
+{
+struct skill_snapshot_entry {
+    std::string id;
+    std::string name;
+    std::string description;
+    std::vector<std::string> tags;
+    std::string display_category;
+    int sort_rank = 0;
+    std::vector<std::pair<std::string, int>> companion_practice;
+    std::vector<std::pair<int, std::string>> theory_descriptions;
+    std::vector<std::pair<int, std::string>> practice_descriptions;
+    bool teachable = true;
+    bool obsolete = false;
+    bool consumes_focus = true;
+    time_info_t attack_times;
+    int combat_rank = 0;
+    int survival_rank = 0;
+    int industry_rank = 0;
+    std::vector<std::string> requires_all;
+    std::vector<std::string> requires_any;
+};
+std::vector<skill_snapshot_entry> skill_registry_snapshot();
+} // namespace cata::lua_platform::detail
+
 class Skill
 {
         friend class string_id<Skill>;
         friend class cata::lua_platform::content_transaction;
+        friend std::vector<cata::lua_platform::detail::skill_snapshot_entry>
+        cata::lua_platform::detail::skill_registry_snapshot();
         skill_id _ident;
 
         translation _name;

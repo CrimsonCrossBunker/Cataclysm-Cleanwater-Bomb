@@ -375,6 +375,34 @@ void load_monster_adjustment( const JsonObject &jsobj )
     adjustments.push_back( adj );
 }
 
+void cata::lua_platform::detail::append_platform_monster_adjustment(
+    const std::string &species, const std::string &stat,
+    const double stat_adjust, const std::string &flag,
+    const bool flag_val, const std::string &special )
+{
+    monster_adjustment adj;
+    adj.species = species_id( species );
+    adj.stat = stat;
+    adj.stat_adjust = static_cast<float>( stat_adjust );
+    adj.flag = flag;
+    adj.flag_val = flag_val;
+    adj.special = special;
+    adjustments.push_back( adj );
+}
+
+std::size_t cata::lua_platform::detail::platform_monster_adjustment_count()
+{
+    return adjustments.size();
+}
+
+void cata::lua_platform::detail::truncate_platform_monster_adjustments(
+    const std::size_t count )
+{
+    if( count <= adjustments.size() ) {
+        adjustments.resize( count );
+    }
+}
+
 static void build_behavior_tree( mtype &type )
 {
     type.set_strategy();

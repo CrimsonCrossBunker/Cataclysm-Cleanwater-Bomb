@@ -1347,7 +1347,7 @@ $(PCH_P): $(PCH_H)
 
 $(BUILD_PREFIX)$(TARGET_NAME).a: $(OBJS) $(LUA_UI_LINK_MODE_STAMP)
 	$(RM) $@
-	$(AR) rcs $(AR_FLAGS) $(BUILD_PREFIX)$(TARGET_NAME).a $(filter-out $(ODIR)/main.o $(ODIR)/messages.o,$(OBJS))
+	$(AR) $(AR_FLAGS) rcs $(BUILD_PREFIX)$(TARGET_NAME).a $(filter-out $(ODIR)/main.o $(ODIR)/messages.o,$(OBJS))
 
 .PHONY: FORCE_LUA_UI_LINK_MODE version prefix
 FORCE_LUA_UI_LINK_MODE:
@@ -1757,7 +1757,7 @@ $(JSON_FORMATTER_BIN): $(JSON_FORMATTER_SOURCES)
 	$(LINK.cc) $(OUTPUT_OPTION) -MMD -MP $(TOOL_CXXFLAGS) -Itools/format -Isrc -isystem src/third-party $^
 
 $(BUILD_PREFIX)zstd.a: $(filter $(ODIR)/third-party/zstd/%.o,$(OBJS))
-	$(AR) rcs $(AR_FLAGS) $(BUILD_PREFIX)zstd.a $^
+	$(AR) $(AR_FLAGS) rcs $(BUILD_PREFIX)zstd.a $^
 
 $(ZZIP_BIN): $(ZZIP_SOURCES) $(BUILD_PREFIX)zstd.a
   # Remove SDL libraries used by cataclysm

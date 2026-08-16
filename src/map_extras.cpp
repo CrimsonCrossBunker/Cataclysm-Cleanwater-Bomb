@@ -1,5 +1,7 @@
 #include "map_extras.h"
 
+#include "catalua_platform_content.h"
+
 #include <array>
 #include <cstdlib>
 #include <functional>
@@ -202,6 +204,11 @@ namespace
 generic_factory<map_extra> extras( "map extra" );
 
 } // namespace
+
+generic_factory<map_extra> &cata::lua_platform::detail::map_extra_registry()
+{
+    return extras;
+}
 
 /** @relates string_id */
 template<>

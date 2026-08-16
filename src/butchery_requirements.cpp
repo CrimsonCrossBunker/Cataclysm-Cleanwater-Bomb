@@ -6,6 +6,7 @@
 #include <string>
 
 #include "cata_utility.h"
+#include "catalua_platform_content.h"
 #include "creature.h"
 #include "debug.h"
 #include "enum_conversions.h"
@@ -19,6 +20,12 @@ namespace
 {
 generic_factory<butchery_requirements> butchery_req_factory( "butchery_requirements" );
 } // namespace
+
+generic_factory<butchery_requirements> &
+cata::lua_platform::detail::butchery_requirements_registry()
+{
+    return butchery_req_factory;
+}
 
 template<>
 const butchery_requirements &string_id<butchery_requirements>::obj() const

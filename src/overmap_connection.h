@@ -15,12 +15,18 @@
 class JsonObject;
 struct overmap_location;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+} // namespace cata::lua_platform
+
 class overmap_connection
 {
     public:
         class subtype
         {
                 friend overmap_connection;
+                friend class cata::lua_platform::content_transaction;
 
             public:
                 enum class flag : int { orthogonal, perpendicular_crossing };
@@ -62,6 +68,7 @@ class overmap_connection
         bool was_loaded = false;
 
     private:
+        friend class cata::lua_platform::content_transaction;
         struct cache {
             const subtype *value = nullptr;
             bool assigned = false;

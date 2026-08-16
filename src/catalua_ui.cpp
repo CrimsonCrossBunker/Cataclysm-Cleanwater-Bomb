@@ -6852,7 +6852,9 @@ bool dispatch_character_display_skill_action(
 native_hook_result dispatch_native_dialogue_hook(
     const std::string_view name, const const_talker &alpha,
     const const_talker &beta, const std::string_view topic,
-    const std::optional<std::string_view> option )
+    const std::optional<std::string_view> option,
+    const bool by_radio,
+    const std::optional<std::string_view> reason )
 {
     native_callback_arguments payload = {
         { "alpha", &alpha },
@@ -6863,6 +6865,12 @@ native_hook_result dispatch_native_dialogue_hook(
         payload.push_back( {
             "option", std::string( *option )
         } );
+    }
+    if( by_radio ) {
+        payload.push_back( { "by_radio", true } );
+    }
+    if( reason && !reason->empty() ) {
+        payload.push_back( { "reason", std::string( *reason ) } );
     }
     return dispatch_native_hook_result( name, payload );
 }

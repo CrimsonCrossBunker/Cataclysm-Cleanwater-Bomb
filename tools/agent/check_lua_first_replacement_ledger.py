@@ -63,7 +63,9 @@ def check() -> dict[str, int]:
         )
     expected_summary = {"total": len(entries)}
     for status in (
+        "implemented_verified",
         "implemented_unverified",
+        "bounded_implemented_verified",
         "bounded_implemented_unverified",
         "primitive_available_unverified",
         "planned",
@@ -77,7 +79,9 @@ def check() -> dict[str, int]:
         raise RuntimeError("replacement ledger status summary is stale")
 
     implemented_statuses = {
+        "implemented_verified",
         "implemented_unverified",
+        "bounded_implemented_verified",
         "bounded_implemented_unverified",
     }
     evidenced_statuses = implemented_statuses | {

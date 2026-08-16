@@ -60,6 +60,7 @@ bool recipe_group_exists( std::string_view id );
 std::optional<recipe_group_native_definition> recipe_group_get( std::string_view id );
 void recipe_group_set( const recipe_group_native_definition &definition );
 void recipe_group_erase( std::string_view id );
+std::vector<recipe_group_native_definition> recipe_group_snapshot();
 
 } // namespace cata::lua_platform::detail
 

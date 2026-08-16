@@ -22,6 +22,16 @@
 
 class JsonObject;
 class JsonOut;
+
+namespace cata::lua_platform::detail
+{
+void insert_platform_monster_blacklist( const std::vector<std::string> &,
+                                        bool );
+void erase_platform_monster_blacklist( const std::vector<std::string> &,
+                                       bool );
+std::vector<std::string> monster_blacklist_snapshot();
+std::vector<std::string> monster_whitelist_snapshot();
+} // namespace cata::lua_platform::detail
 // from overmap.h
 class overmap;
 struct MonsterGroupEntry;
@@ -251,6 +261,14 @@ struct enum_traits<mongroup::horde_behaviour> {
 class MonsterGroupManager
 {
     public:
+        friend void cata::lua_platform::detail::insert_platform_monster_blacklist(
+            const std::vector<std::string> &, bool );
+        friend void cata::lua_platform::detail::erase_platform_monster_blacklist(
+            const std::vector<std::string> &, bool );
+        friend std::vector<std::string>
+        cata::lua_platform::detail::monster_blacklist_snapshot();
+        friend std::vector<std::string>
+        cata::lua_platform::detail::monster_whitelist_snapshot();
         static void LoadMonsterGroup( const JsonObject &jo );
         static void LoadMonsterBlacklist( const JsonObject &jo );
         static void LoadMonsterWhitelist( const JsonObject &jo );

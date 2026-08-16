@@ -275,6 +275,26 @@ struct sfx_map {
                                      tod_from_int( bool_or( is_night, -1 ) ), sfx_time_of_day::ANY );
         }
 
+        void erase( const sfx_args &key ) {
+            auto it1 = effects.find( key.id );
+            if( it1 == effects.end() ) {
+                return;
+            }
+            auto it2 = it1->second.find( key.variant );
+            if( it2 == it1->second.end() ) {
+                return;
+            }
+            auto it3 = it2->second.find( season_from_string( key.season ) );
+            if( it3 == it2->second.end() ) {
+                return;
+            }
+            auto it4 = it3->second.find( in_or_out_from_int( bool_or( key.indoors, -1 ) ) );
+            if( it4 == it3->second.end() ) {
+                return;
+            }
+            it4->second.erase( tod_from_int( bool_or( key.night, -1 ) ) );
+        }
+
     private:
         std::map<std::string, std::map<std::string, std::map<sfx_season, std::map<sfx_in_or_out, std::map<sfx_time_of_day, std::vector<sound_effect>>>>>>
         effects;
@@ -578,6 +598,25 @@ void sfx::load_sound_effects( const JsonObject &jsobj )
     }
 }
 
+void sfx::register_sound_effect( const sound_effect_key &requested, const int volume,
+                                 const std::vector<std::string> &files )
+{
+    if( !sound_init_success ) {
+        return;
+    }
+    sfx_args key = {
+        requested.id,
+        requested.variant,
+        requested.season,
+        requested.indoors,
+        requested.night,
+    };
+    std::vector<sound_effect> &effects = sfx_resources.sound_effects[key];
+    for( const std::string &file : files ) {
+        effects.emplace_back( volume, file );
+    }
+}
+
 void sfx::load_sound_effect_preload( const JsonObject &jsobj )
 {
     if( !sound_init_success ) {
@@ -611,6 +650,54 @@ void sfx::load_sound_effect_preload( const JsonObject &jsobj )
             sfx_preload.push_back( preload_key );
         }
     }
+}
+
+void sfx::register_sound_effect_preload( const sound_effect_key &requested )
+{
+    if( !sound_init_success ) {
+        return;
+    }
+    sfx_preload.push_back( sfx_args{
+        requested.id,
+        requested.variant,
+        requested.season,
+        requested.indoors,
+        requested.night,
+    } );
+}
+
+void sfx::erase_sound_effect( const sound_effect_key &requested )
+{
+    sfx_args key = {
+        requested.id,
+        requested.variant,
+        requested.season,
+        requested.indoors,
+        requested.night,
+    };
+    sfx_resources.sound_effects.erase( key );
+}
+
+void sfx::erase_sound_effect_preload( const sound_effect_key &requested )
+{
+    sfx_args key = {
+        requested.id,
+        requested.variant,
+        requested.season,
+        requested.indoors,
+        requested.night,
+    };
+    sfx_preload.erase(
+        std::remove_if(
+            sfx_preload.begin(), sfx_preload.end(),
+    [&key]( const sfx_args & entry ) {
+        return entry.id == key.id &&
+               entry.variant == key.variant &&
+               entry.season == key.season &&
+               entry.indoors == key.indoors &&
+               entry.night == key.night;
+    } ),
+    sfx_preload.end() );
 }
 
 void sfx::load_playlist( const JsonObject &jsobj )

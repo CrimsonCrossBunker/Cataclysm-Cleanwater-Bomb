@@ -169,7 +169,9 @@ bool dispatch_character_display_skill_action(
 native_hook_result dispatch_native_dialogue_hook(
     std::string_view name, const const_talker &alpha,
     const const_talker &beta, std::string_view topic,
-    std::optional<std::string_view> option = std::nullopt );
+    std::optional<std::string_view> option = std::nullopt,
+    bool by_radio = false,
+    std::optional<std::string_view> reason = std::nullopt );
 void clear_dialogue_response_callbacks();
 std::optional<std::string> dialogue_dynamic_line(
     dialogue &d, const talk_topic &topic );

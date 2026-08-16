@@ -26,7 +26,9 @@
 #include "move_mode.h"
 #include "mtype.h"
 #include "npc.h"
+#include "profession.h"
 #include "units.h"
+#include "weather.h"
 
 namespace cata::lua_ui
 {
@@ -42,6 +44,10 @@ constexpr int default_body_part_snapshot_limit = 32;
 constexpr int maximum_body_part_snapshot_limit = 64;
 constexpr int maximum_character_adjustment = 1000000;
 constexpr int maximum_character_healing = 10000;
+
+// Sentinel flag mirrored from conditional_t::f_has_flag (src/condition.cpp):
+// u_has_flag checks threshold-crossing state rather than literal flag presence.
+const json_character_flag json_flag_MUTATION_THRESHOLD( "MUTATION_THRESHOLD" );
 
 struct creature_query_options {
     int radius = default_creature_query_radius;
@@ -345,6 +351,26 @@ Character *mutable_character_from_handle(
         };
     }
     return character;
+}
+
+// Mirrors conditional_t::f_has_profession (src/condition.cpp): true when the
+// character's current profession matches, or when the id names a held hobby.
+// Unknown ids are guarded by is_valid() so they never dereference a dummy.
+bool character_has_profession(
+    const Character &character, const profession_id &requested )
+{
+    const profession *current = character.prof;
+    if( current != nullptr && current->get_profession_id() == requested ) {
+        return true;
+    }
+    if( requested.is_valid() && requested->is_hobby() ) {
+        for( const profession *hobby : character.get_hobbies() ) {
+            if( hobby->get_profession_id() == requested ) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 void require_id_kind( const script_game_id &id, const std::string &kind,
@@ -660,6 +686,7 @@ sol::table snapshot_character(
     result["avatar"] = character.is_avatar();
     result["npc"] = character.is_npc();
     result["male"] = character.male;
+    result["cash"] = character.cash;
     result["faction_id"] = character.get_faction_id().str();
 
     sol::table stats = lua.create_table();
@@ -751,6 +778,11 @@ sol::table snapshot_character(
         npc_state["present"] = false;
     }
     result["npc_state"] = std::move( npc_state );
+
+    sol::table travel = lua.create_table();
+    travel["has_path"] = !character.omt_path.empty();
+    result["travel"] = std::move( travel );
+
     result["body_parts"] = character_body_parts(
                                lua, character, requested_body_part_limit );
     return result;
@@ -916,6 +948,30 @@ void install_creature_api(
                    lua_state, position, current_runtime_generation(),
                    current_world_generation() );
     } );
+    creatures.set_function(
+        "can_see",
+        [current_runtime_generation, current_world_generation, require_read](
+    sol::this_state lua_state, const game_handle & observer,
+    const game_handle & target ) {
+        require_read();
+        sol::state_view state( lua_state );
+        const native_handle_result<Creature> resolved_observer =
+            observer.resolve_creature(
+                current_runtime_generation(), current_world_generation() );
+        if( !resolved_observer ) {
+            return make_game_error_result( state, *resolved_observer.error );
+        }
+        const native_handle_result<Creature> resolved_target =
+            target.resolve_creature(
+                current_runtime_generation(), current_world_generation() );
+        if( !resolved_target ) {
+            return make_game_error_result( state, *resolved_target.error );
+        }
+        return make_game_value_result(
+                   state, sol::make_object(
+                       state, resolved_observer.value->sees(
+                           get_map(), *resolved_target.value ) ) );
+    } );
     game["creatures"] = std::move( creatures );
 
     sol::table characters = lua.create_table();
@@ -979,6 +1035,96 @@ void install_creature_api(
                    lua_state, handle, body_part, amount,
                    current_runtime_generation(),
                    current_world_generation() );
+    } );
+    characters.set_function(
+        "is_safe",
+        [current_runtime_generation, current_world_generation, require_read](
+    sol::this_state lua_state, const game_handle & handle ) {
+        require_read();
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        const Character *character = character_from_handle(
+                                         handle, current_runtime_generation(),
+                                         current_world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        const bool safe = character->is_npc() ?
+                          character->as_npc()->is_safe() : true;
+        return make_game_value_result(
+                   state, sol::make_object( state, safe ) );
+    } );
+    characters.set_function(
+        "has_flag",
+        [current_runtime_generation, current_world_generation, require_read](
+    sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & flag ) {
+        require_read();
+        if( flag.kind() != "json_flag" ) {
+            throw std::invalid_argument(
+                "services.characters.has_flag requires GameId<json_flag>" );
+        }
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        const Character *character = character_from_handle(
+                                         handle, current_runtime_generation(),
+                                         current_world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        const json_character_flag requested( flag.value() );
+        const bool present = requested == json_flag_MUTATION_THRESHOLD ?
+                             character->crossed_threshold() :
+                             character->has_flag( requested );
+        return make_game_value_result(
+                   state, sol::make_object( state, present ) );
+    } );
+    characters.set_function(
+        "has_profession",
+        [current_runtime_generation, current_world_generation, require_read](
+    sol::this_state lua_state, const game_handle & handle,
+    const std::string & profession_id_string ) {
+        require_read();
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        const Character *character = character_from_handle(
+                                         handle, current_runtime_generation(),
+                                         current_world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        const profession_id requested( profession_id_string );
+        const bool present = character_has_profession( *character, requested );
+        return make_game_value_result(
+                   state, sol::make_object( state, present ) );
+    } );
+    characters.set_function(
+        "add_wet",
+        [current_runtime_generation, current_world_generation, require_write](
+    sol::this_state lua_state, const game_handle & handle,
+    const std::int64_t amount ) {
+        require_write();
+        if( amount < -1000000 || amount > 1000000 ) {
+            throw std::invalid_argument(
+                "services.characters.add_wet amount must be within -1000000..1000000" );
+        }
+        sol::state_view state( lua_state );
+        const native_handle_result<Creature> resolved =
+            handle.resolve_creature(
+                current_runtime_generation(), current_world_generation() );
+        if( !resolved ) {
+            return make_game_error_result( state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return make_game_error_result( state, {
+                "wrong_target",
+                "services.characters.add_wet requires a character handle"
+            } );
+        }
+        wet_character( *character, static_cast<int>( amount ) );
+        return make_game_value_result(
+                   state, sol::make_object( state, true ) );
     } );
     characters.set_function(
         "set_movement_mode",

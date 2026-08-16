@@ -12,6 +12,8 @@
 #include <unordered_set>
 #include <utility>
 
+#include "catalua_platform_content.h"
+
 #include "avatar.h"
 #include "character.h"
 #include "clone_ptr.h"
@@ -247,6 +249,36 @@ const item_action &item_action_generator::get_action( const item_action_id &id )
 
     debugmsg( "Couldn't find item action named %s", id.c_str() );
     return nullaction;
+}
+
+const item_action *cata::lua_platform::detail::item_action_registry_find(
+    const item_action_id &id )
+{
+    const auto iter = item_action_generator::generator().item_actions.find( id );
+    return iter == item_action_generator::generator().item_actions.end() ?
+           nullptr : &iter->second;
+}
+
+std::vector<std::pair<item_action_id, item_action>>
+cata::lua_platform::detail::item_action_registry_snapshot()
+{
+    std::vector<std::pair<item_action_id, item_action>> result;
+    result.reserve( item_action_generator::generator().item_actions.size() );
+    for( const auto &[id, value] : item_action_generator::generator().item_actions ) {
+        result.emplace_back( id, value );
+    }
+    return result;
+}
+
+void cata::lua_platform::detail::item_action_registry_set( const item_action &value )
+{
+    item_action_generator::generator().item_actions[value.id] = value;
+}
+
+void cata::lua_platform::detail::item_action_registry_erase(
+    const item_action_id &id )
+{
+    item_action_generator::generator().item_actions.erase( id );
 }
 
 void item_action_generator::load_item_action( const JsonObject &jo )

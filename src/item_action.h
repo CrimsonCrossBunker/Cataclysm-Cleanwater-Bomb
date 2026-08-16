@@ -17,6 +17,18 @@ using item_action_id = std::string;
 using item_action_map = std::map< item_action_id, item * >;
 using action_map = std::map< item_action_id, item_action >;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+namespace detail
+{
+const item_action *item_action_registry_find( const item_action_id &id );
+std::vector<std::pair<item_action_id, item_action>> item_action_registry_snapshot();
+void item_action_registry_set( const item_action &value );
+void item_action_registry_erase( const item_action_id &id );
+} // namespace detail
+} // namespace cata::lua_platform
+
 class item_action
 {
     public:
@@ -27,6 +39,15 @@ class item_action
 class item_action_generator
 {
     private:
+        friend class cata::lua_platform::content_transaction;
+        friend const item_action *cata::lua_platform::detail::item_action_registry_find(
+            const item_action_id &id );
+        friend std::vector<std::pair<item_action_id, item_action>>
+        cata::lua_platform::detail::item_action_registry_snapshot();
+        friend void cata::lua_platform::detail::item_action_registry_set(
+            const item_action &value );
+        friend void cata::lua_platform::detail::item_action_registry_erase(
+            const item_action_id &id );
         action_map item_actions;
     public:
         static item_action_generator &generator() {

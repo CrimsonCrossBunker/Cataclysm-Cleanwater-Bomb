@@ -1,3 +1,5 @@
+#include "catalua_platform_content.h"
+
 #include "cube_direction.h" // IWYU pragma: associated
 #include "omdata.h" // IWYU pragma: associated
 #include "overmap.h" // IWYU pragma: associated
@@ -1344,6 +1346,29 @@ void overmap::load_oter_id_migration( const JsonObject &jo )
             oter_id_migrations.insert_or_assign( old_id, new_id );
         }
     }
+}
+
+void cata::lua_platform::detail::insert_platform_oter_migration(
+    const platform_migration_data &value )
+{
+    oter_id_migrations.insert_or_assign( value.from_id, value.to_id );
+}
+
+void cata::lua_platform::detail::erase_platform_oter_migration(
+    const platform_migration_data &value )
+{
+    oter_id_migrations.erase( value.from_id );
+}
+
+std::vector<std::pair<std::string, std::string>>
+cata::lua_platform::detail::oter_migration_snapshot()
+{
+    std::vector<std::pair<std::string, std::string>> result;
+    result.reserve( oter_id_migrations.size() );
+    for( const auto &[from_id, to_id] : oter_id_migrations ) {
+        result.emplace_back( from_id, to_id );
+    }
+    return result;
 }
 
 void overmap::load_oter_id_camp_migration( const JsonObject &jo )

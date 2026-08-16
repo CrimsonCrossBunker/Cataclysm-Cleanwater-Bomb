@@ -114,6 +114,20 @@ struct playlist_definition {
 std::optional<playlist_definition> playlist_registry_get( std::string_view id );
 void playlist_registry_set( const playlist_definition &value );
 void playlist_registry_erase( std::string_view id );
+
+struct sound_effect_key {
+    std::string id;
+    std::string variant;
+    std::string season;
+    std::optional<bool> indoors;
+    std::optional<bool> night;
+};
+
+void register_sound_effect( const sound_effect_key &key, int volume,
+                            const std::vector<std::string> &files );
+void register_sound_effect_preload( const sound_effect_key &key );
+void erase_sound_effect( const sound_effect_key &key );
+void erase_sound_effect_preload( const sound_effect_key &key );
 //Channel assignments:
 enum class channel : int {
     any = -1,                   //Finds the first available channel

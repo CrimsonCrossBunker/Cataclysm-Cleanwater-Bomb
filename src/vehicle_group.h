@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "coords_fwd.h"
@@ -20,6 +21,15 @@ class JsonObject;
 class VehicleGroup;
 class VehicleSpawn;
 class map;
+
+namespace cata::lua_platform
+{
+namespace detail
+{
+std::vector<std::pair<std::string, int>> vehicle_group_weighted_entries(
+    const vgroup_id &id );
+} // namespace detail
+} // namespace cata::lua_platform
 
 using vspawn_id = string_id<VehicleSpawn>;
 
@@ -48,6 +58,9 @@ class VehicleGroup
         static void reset();
 
     private:
+        friend std::vector<std::pair<std::string, int>>
+        cata::lua_platform::detail::vehicle_group_weighted_entries(
+            const vgroup_id &id );
         weighted_int_list<vproto_id> vehicles;
 };
 

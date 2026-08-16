@@ -25,6 +25,32 @@ template <typename T> class generic_factory;
 namespace cata::lua_platform
 {
 class content_transaction;
+namespace detail
+{
+struct fault_snapshot_entry {
+    std::string id;
+    std::string name;
+    std::string type;
+    std::string description;
+    std::string item_prefix;
+    std::string item_suffix;
+    std::string message;
+    std::string color;
+    double price_mod = 1.0;
+    int degradation_mod = 0;
+    int instant_damage = 0;
+    float contact_area_mod = 1.f;
+    float rolling_resistance_mod = 1.f;
+    int vehicle_move_penalty_mod = 1;
+    double encumb_mod_flat = 0.0;
+    float encumb_mod_mult = 1.f;
+    bool affected_by_degradation = false;
+    std::vector<std::string> flags;
+    std::vector<std::string> fixes;
+    std::vector<std::string> block_faults;
+};
+std::vector<fault_snapshot_entry> fault_registry_snapshot();
+} // namespace detail
 }
 
 namespace faults
@@ -47,6 +73,7 @@ class fault_fix
 {
     public:
         fault_fix_id id = fault_fix_id::NULL_ID();
+        friend class cata::lua_platform::content_transaction;
         translation name;
         translation success_msg; // message to print on applying successfully
         time_duration time = 0_seconds;
@@ -79,6 +106,9 @@ class fault
 {
     public:
         fault_id id = fault_id::NULL_ID();
+        friend class cata::lua_platform::content_transaction;
+        friend std::vector<cata::lua_platform::detail::fault_snapshot_entry>
+        cata::lua_platform::detail::fault_registry_snapshot();
         std::string name() const;
         std::string type() const; // use a set of types?
         std::string description() const;

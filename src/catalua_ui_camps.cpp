@@ -398,6 +398,28 @@ sol::table get_camp(
                        state, *entry, 0 ) ) );
 }
 
+sol::table player_has_camp( sol::this_state lua )
+{
+    sol::state_view state( lua );
+    for( const tripoint_abs_omt &camp_tripoint :
+         get_player_character().camps ) {
+        std::optional<basecamp *> camp =
+            overmap_buffer.find_camp( camp_tripoint.xy() );
+        if( !camp ) {
+            continue;
+        }
+        if( ( *camp )->get_owner() ==
+            get_player_character().get_faction()->id ) {
+            return make_game_value_result(
+                       state,
+                       sol::make_object( state, true ) );
+        }
+    }
+    return make_game_value_result(
+               state,
+               sol::make_object( state, false ) );
+}
+
 void validate_camp_name(
     const std::string &name )
 {
@@ -578,6 +600,12 @@ void install_camp_api(
         require_read();
         return list_camps(
                    lua_state, options );
+    } );
+    camps.set_function(
+        "player_has_camp",
+        [require_read]( sol::this_state lua_state ) {
+        require_read();
+        return player_has_camp( lua_state );
     } );
     camps.set_function(
         "near",

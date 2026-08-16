@@ -1,3 +1,5 @@
+#include "catalua_platform_content.h"
+
 #include "bionics.h"
 
 #include <algorithm>
@@ -484,6 +486,19 @@ void bionic_data::load_bionic_migration( const JsonObject &jo, std::string_view 
     if( iter != migrations.end() && ( *iter ).second.is_null() ) {
         migrations.erase( iter );
     }
+}
+
+void cata::lua_platform::detail::insert_platform_bionic_migration(
+    const platform_migration_data &value )
+{
+    bionic_data::migrations[bionic_id( value.from_id )] =
+        bionic_id( value.to_id );
+}
+
+void cata::lua_platform::detail::erase_platform_bionic_migration(
+    const platform_migration_data &value )
+{
+    bionic_data::migrations.erase( bionic_id( value.from_id ) );
 }
 
 void bionic_data::finalize_bionic()

@@ -1,3 +1,5 @@
+#include "catalua_platform_content.h"
+
 #include "item_factory.h"
 
 #include <algorithm>
@@ -1871,6 +1873,56 @@ void Item_factory::load_item_blacklist( const JsonObject &json )
     std::set<itype_id> tmp_blacklist;
     json.read( "items", tmp_blacklist, true );
     item_blacklist.sub_blacklist.emplace_back( whitelist, tmp_blacklist );
+}
+
+std::size_t cata::lua_platform::detail::platform_item_blacklist_count()
+{
+    return item_blacklist.sub_blacklist.size();
+}
+
+void cata::lua_platform::detail::insert_platform_item_blacklist(
+    const platform_blacklist_data &value )
+{
+    std::set<itype_id> entries;
+    for( const std::string &entry : value.entries ) {
+        entries.insert( itype_id( entry ) );
+    }
+    item_blacklist.sub_blacklist.emplace_back( value.whitelist, entries );
+}
+
+void cata::lua_platform::detail::truncate_platform_item_blacklist(
+    const std::size_t count )
+{
+    if( count > item_blacklist.sub_blacklist.size() ) {
+        return;
+    }
+    item_blacklist.sub_blacklist.resize( count );
+    item_blacklist.blacklist.clear();
+    std::set<itype_id> whitelist;
+    for( const std::pair<bool, std::set<itype_id>> &entry :
+         item_blacklist.sub_blacklist ) {
+        if( entry.first ) {
+            whitelist.insert( entry.second.begin(), entry.second.end() );
+        } else {
+            item_blacklist.blacklist.insert( entry.second.begin(),
+                                             entry.second.end() );
+        }
+    }
+    const bool whitelist_exists = !whitelist.empty();
+    std::set<itype_id> &blacklist = item_blacklist.blacklist;
+    for( const itype_id &item : whitelist ) {
+        if( blacklist.count( item ) ) {
+            whitelist.erase( item );
+        }
+    }
+    if( whitelist_exists ) {
+        blacklist.clear();
+        for( const itype &item : item_controller->get_generic_factory().get_all() ) {
+            if( whitelist.count( item.id ) == 0 ) {
+                blacklist.insert( item.id );
+            }
+        }
+    }
 }
 
 Item_factory::~Item_factory() = default;

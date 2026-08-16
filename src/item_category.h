@@ -19,6 +19,24 @@ class item;
 namespace cata::lua_platform
 {
 class content_transaction;
+namespace detail
+{
+struct item_category_snapshot_entry {
+    std::string id;
+    std::string header;
+    std::string noun;
+    int sort_rank = 0;
+    std::string zone;
+    struct priority_rule {
+        std::string zone;
+        bool filthy = false;
+        std::vector<std::string> flags;
+    };
+    std::vector<priority_rule> priority_zones;
+    float spawn_rate = 1.0F;
+};
+std::vector<item_category_snapshot_entry> item_category_snapshot();
+} // namespace detail
 } // namespace cata::lua_platform
 
 // this is a helper struct with rules for picking a zone
@@ -41,6 +59,8 @@ struct zone_priority_data {
 class item_category
 {
         friend class cata::lua_platform::content_transaction;
+        friend std::vector<cata::lua_platform::detail::item_category_snapshot_entry>
+        cata::lua_platform::detail::item_category_snapshot();
     private:
         /** Name of category for displaying to the user */
         translation name_header_; // in inventory UI headers etc

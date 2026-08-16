@@ -66,6 +66,42 @@ generic_factory<start_location> &cata::lua_platform::detail::start_location_regi
     return all_start_locations;
 }
 
+std::vector<cata::lua_platform::detail::start_location_snapshot_entry>
+cata::lua_platform::detail::start_location_snapshot()
+{
+    std::vector<start_location_snapshot_entry> result;
+    for( const start_location &value : all_start_locations.get_all() ) {
+        start_location_snapshot_entry entry;
+        entry.id = value.id.str();
+        entry.name = value.name();
+        for( const omt_types_parameters &target : value._locations ) {
+            start_location_snapshot_entry::target converted;
+            converted.overmap_terrain = target.omt;
+            converted.match_type = io::enum_to_string( target.omt_type );
+            for( const auto &[key, item] : target.parameters ) {
+                converted.parameters.emplace_back( key, item );
+            }
+            std::sort( converted.parameters.begin(), converted.parameters.end() );
+            entry.targets.emplace_back( std::move( converted ) );
+        }
+        entry.flags.assign( value._flags.begin(), value._flags.end() );
+        entry.city_size_min = value.constraints_.city_size.min;
+        entry.city_size_max = value.constraints_.city_size.max;
+        entry.city_distance_min = value.constraints_.city_distance.min;
+        entry.city_distance_max = value.constraints_.city_distance.max;
+        entry.z_min = value.constraints_.allowed_z_levels.min;
+        entry.z_max = value.constraints_.allowed_z_levels.max;
+        entry.owner = value.src.empty() ? mod_id() : value.src.front().second;
+        result.emplace_back( std::move( entry ) );
+    }
+    std::sort( result.begin(), result.end(),
+    []( const start_location_snapshot_entry &left,
+        const start_location_snapshot_entry &right ) {
+        return left.id < right.id;
+    } );
+    return result;
+}
+
 /** @relates string_id */
 template<>
 const start_location &string_id<start_location>::obj() const

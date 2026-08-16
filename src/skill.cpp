@@ -47,6 +47,54 @@ static const skill_id skill_unarmed( "unarmed" );
 std::vector<Skill> Skill::skills;
 std::map<skill_id, Skill> Skill::contextual_skills;
 
+std::vector<cata::lua_platform::detail::skill_snapshot_entry>
+cata::lua_platform::detail::skill_registry_snapshot()
+{
+    std::vector<skill_snapshot_entry> result;
+    const auto collect = [&result]( const Skill &sk ) {
+        skill_snapshot_entry entry;
+        entry.id = sk.ident().str();
+        entry.name = sk.name();
+        entry.description = sk.description();
+        entry.tags.assign( sk._tags.begin(), sk._tags.end() );
+        entry.display_category = sk.display_category().str();
+        entry.sort_rank = sk.get_sort_rank();
+        for( const auto &[practice, weight] : sk._companion_skill_practice ) {
+            entry.companion_practice.emplace_back( practice, weight );
+        }
+        std::sort( entry.companion_practice.begin(), entry.companion_practice.end() );
+        for( const auto &[level, text] : sk._level_descriptions_theory ) {
+            entry.theory_descriptions.emplace_back( level, text.translated() );
+        }
+        for( const auto &[level, text] : sk._level_descriptions_practice ) {
+            entry.practice_descriptions.emplace_back( level, text.translated() );
+        }
+        entry.teachable = sk.is_teachable();
+        entry.obsolete = sk._obsolete;
+        entry.consumes_focus = sk.consumes_focus;
+        entry.attack_times = sk.time_to_attack();
+        entry.combat_rank = sk.companion_combat_rank_factor();
+        entry.survival_rank = sk.companion_survival_rank_factor();
+        entry.industry_rank = sk.companion_industry_rank_factor();
+        entry.requires_all.assign( sk._requires_all_traits.begin(),
+                                  sk._requires_all_traits.end() );
+        entry.requires_any.assign( sk._requires_any_traits.begin(),
+                                   sk._requires_any_traits.end() );
+        result.emplace_back( std::move( entry ) );
+    };
+    for( const Skill &sk : Skill::skills ) {
+        collect( sk );
+    }
+    for( const auto &[id, sk] : Skill::contextual_skills ) {
+        collect( sk );
+    }
+    std::sort( result.begin(), result.end(),
+    []( const skill_snapshot_entry &left, const skill_snapshot_entry &right ) {
+        return left.id < right.id;
+    } );
+    return result;
+}
+
 std::vector<SkillDisplayType> SkillDisplayType::skillTypes;
 
 static const Skill invalid_skill;

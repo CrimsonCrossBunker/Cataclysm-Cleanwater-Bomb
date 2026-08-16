@@ -2,6 +2,8 @@
 // functions are serialization functions.  This allows IWYU to check the
 // includes in such headers.
 
+#include "catalua_platform_content.h"
+
 #include "enums.h" // IWYU pragma: associated
 #include "npc_favor.h" // IWYU pragma: associated
 
@@ -3310,6 +3312,34 @@ void load_temperature_removal_blacklist( const JsonObject &jo, std::string_view/
     temperature_removal_blacklist.insert( new_blacklist.begin(), new_blacklist.end() );
 }
 
+void cata::lua_platform::detail::insert_platform_savegame_blacklist(
+    const platform_blacklist_data &value )
+{
+    if( value.kind == "charge_removal" ) {
+        for( const std::string &entry : value.entries ) {
+            charge_removal_blacklist.insert( itype_id( entry ) );
+        }
+    } else if( value.kind == "temperature_removal" ) {
+        for( const std::string &entry : value.entries ) {
+            temperature_removal_blacklist.insert( itype_id( entry ) );
+        }
+    }
+}
+
+void cata::lua_platform::detail::erase_platform_savegame_blacklist(
+    const platform_blacklist_data &value )
+{
+    if( value.kind == "charge_removal" ) {
+        for( const std::string &entry : value.entries ) {
+            charge_removal_blacklist.erase( itype_id( entry ) );
+        }
+    } else if( value.kind == "temperature_removal" ) {
+        for( const std::string &entry : value.entries ) {
+            temperature_removal_blacklist.erase( itype_id( entry ) );
+        }
+    }
+}
+
 template<typename Archive>
 void item::io( Archive &archive )
 {
@@ -5288,6 +5318,7 @@ void trap_migrations::load( const JsonObject &jo )
     tr_migrations.insert( std::make_pair( from_trap, to_trap ) );
 }
 
+
 void trap_migrations::reset()
 {
     tr_migrations.clear();
@@ -5303,6 +5334,98 @@ void trap_migrations::check()
 }
 
 static std::unordered_map<field_type_str_id, field_type_str_id> field_migrations;
+
+void cata::lua_platform::detail::insert_platform_savegame_migration(
+    const platform_migration_data &value )
+{
+    if( value.kind == "trap" ) {
+        tr_migrations[trap_str_id( value.from_id )] = trap_str_id( value.to_id );
+    } else if( value.kind == "terrain" ) {
+        ter_migrations[ter_str_id( value.from_id )] =
+            std::make_pair( ter_str_id( value.to_id ), furn_str_id::NULL_ID() );
+    } else if( value.kind == "furniture" ) {
+        furn_migrations[furn_str_id( value.from_id )] =
+            std::make_pair( ter_str_id::NULL_ID(), furn_str_id( value.to_id ) );
+    } else if( value.kind == "field_type" ) {
+        field_migrations[field_type_str_id( value.from_id )] =
+            field_type_str_id( value.to_id );
+    }
+}
+
+void cata::lua_platform::detail::erase_platform_savegame_migration(
+    const platform_migration_data &value )
+{
+    if( value.kind == "trap" ) {
+        tr_migrations.erase( trap_str_id( value.from_id ) );
+    } else if( value.kind == "terrain" ) {
+        ter_migrations.erase( ter_str_id( value.from_id ) );
+    } else if( value.kind == "furniture" ) {
+        furn_migrations.erase( furn_str_id( value.from_id ) );
+    } else if( value.kind == "field_type" ) {
+        field_migrations.erase( field_type_str_id( value.from_id ) );
+    }
+}
+
+std::vector<std::pair<std::string, std::string>>
+cata::lua_platform::detail::terrain_migration_snapshot()
+{
+    std::vector<std::pair<std::string, std::string>> result;
+    result.reserve( ter_migrations.size() );
+    for( const auto &[from_id, to_ids] : ter_migrations ) {
+        result.emplace_back( from_id.str(), to_ids.first.str() );
+    }
+    std::sort( result.begin(), result.end() );
+    return result;
+}
+
+std::vector<std::pair<std::string, std::string>>
+cata::lua_platform::detail::furniture_migration_snapshot()
+{
+    std::vector<std::pair<std::string, std::string>> result;
+    result.reserve( furn_migrations.size() );
+    for( const auto &[from_id, to_ids] : furn_migrations ) {
+        result.emplace_back( from_id.str(), to_ids.second.str() );
+    }
+    std::sort( result.begin(), result.end() );
+    return result;
+}
+
+std::vector<std::pair<std::string, std::string>>
+cata::lua_platform::detail::trap_migration_snapshot()
+{
+    std::vector<std::pair<std::string, std::string>> result;
+    result.reserve( tr_migrations.size() );
+    for( const auto &[from_id, to_id] : tr_migrations ) {
+        result.emplace_back( from_id.str(), to_id.str() );
+    }
+    std::sort( result.begin(), result.end() );
+    return result;
+}
+
+std::vector<std::string>
+cata::lua_platform::detail::charge_removal_blacklist_snapshot()
+{
+    std::vector<std::string> result;
+    result.reserve( charge_removal_blacklist.size() );
+    for( const itype_id &id : charge_removal_blacklist ) {
+        result.emplace_back( id.str() );
+    }
+    std::sort( result.begin(), result.end() );
+    return result;
+}
+
+std::vector<std::string>
+cata::lua_platform::detail::temperature_removal_blacklist_snapshot()
+{
+    std::vector<std::string> result;
+    result.reserve( temperature_removal_blacklist.size() );
+    for( const itype_id &id : temperature_removal_blacklist ) {
+        result.emplace_back( id.str() );
+    }
+    std::sort( result.begin(), result.end() );
+    return result;
+}
+
 
 void field_type_migrations::load( const JsonObject &jo )
 {

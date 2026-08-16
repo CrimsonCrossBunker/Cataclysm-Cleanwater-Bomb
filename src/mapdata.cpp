@@ -61,6 +61,16 @@ generic_factory<furn_t> furniture_data( "furniture" );
 
 } // namespace
 
+generic_factory<furn_t> &cata::lua_platform::detail::furniture_registry()
+{
+    return furniture_data;
+}
+
+generic_factory<ter_t> &cata::lua_platform::detail::terrain_registry()
+{
+    return terrain_data;
+}
+
 /** @relates int_id */
 template<>
 inline bool int_id<ter_t>::is_valid() const

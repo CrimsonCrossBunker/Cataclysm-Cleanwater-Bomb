@@ -1757,6 +1757,37 @@ void effect_migration::load( const JsonObject &jo )
     effect_migrations.emplace( migration.id_old, migration );
 }
 
+void cata::lua_platform::detail::insert_platform_effect_migration(
+    const platform_migration_data &value )
+{
+    effect_migration migration;
+    migration.id_old = efftype_id( value.from_id );
+    migration.id_new = value.to_id.empty() ?
+                       std::nullopt :
+                       std::optional<efftype_id>( efftype_id( value.to_id ) );
+    effect_migrations.emplace( migration.id_old, migration );
+}
+
+void cata::lua_platform::detail::erase_platform_effect_migration(
+    const platform_migration_data &value )
+{
+    effect_migrations.erase( efftype_id( value.from_id ) );
+}
+
+std::vector<std::pair<std::string, std::string>>
+cata::lua_platform::detail::effect_migration_snapshot()
+{
+    std::vector<std::pair<std::string, std::string>> result;
+    result.reserve( effect_migrations.size() );
+    for( const auto &[from_id, migration] : effect_migrations ) {
+        result.emplace_back(
+            from_id.str(),
+            migration.id_new.has_value() ? migration.id_new.value().str() : std::string()
+        );
+    }
+    return result;
+}
+
 void effect_migration::reset()
 {
     effect_migrations.clear();

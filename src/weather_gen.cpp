@@ -1,5 +1,7 @@
 #include "weather_gen.h"
 
+#include "catalua_platform_content.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -53,6 +55,11 @@ namespace
 {
 generic_factory<weather_generator> weather_generator_factory( "weather_generator" );
 } // namespace
+
+generic_factory<weather_generator> &cata::lua_platform::detail::weather_generator_registry()
+{
+    return weather_generator_factory;
+}
 template<>
 const weather_generator &string_id<weather_generator>::obj() const
 {

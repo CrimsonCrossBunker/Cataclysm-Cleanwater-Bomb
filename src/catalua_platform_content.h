@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 template<typename T>
@@ -35,6 +36,12 @@ class harvest_list;
 class item_category;
 class json_flag;
 struct map_extra_collection;
+class map_extra;
+class weather_generator;
+struct shopkeeper_blacklist;
+struct shopkeeper_whitelist;
+struct shopkeeper_cons_rates;
+struct overmap_special_migration;
 class material_type;
 class mattack_actor;
 class monfaction;
@@ -49,10 +56,25 @@ struct overmap_location;
 class oter_vision;
 struct limb_score;
 class magic_type;
+class ma_technique;
+class martialart;
+struct trap;
+struct construction;
+struct furn_t;
+struct ter_t;
+struct gate_data;
+class fault;
+class fault_fix;
+struct dream;
+class achievement;
 class proficiency;
 struct proficiency_category;
 struct profession_group;
 struct quality;
+class butchery_requirements;
+class item_action;
+class scenario;
+class overmap_connection;
 class scent_type;
 class score;
 class start_location;
@@ -92,6 +114,99 @@ generic_factory<weather_type> &weather_type_registry();
 generic_factory<end_screen> &end_screen_registry();
 generic_factory<attack_vector> &attack_vector_registry();
 void refresh_attack_vector_registry();
+generic_factory<ma_technique> &ma_technique_registry();
+generic_factory<martialart> &martialart_registry();
+generic_factory<trap> &trap_registry();
+generic_factory<construction> &construction_registry();
+generic_factory<furn_t> &furniture_registry();
+generic_factory<ter_t> &terrain_registry();
+generic_factory<gate_data> &gate_registry();
+generic_factory<fault> &fault_registry();
+generic_factory<fault_fix> &fault_fix_registry();
+void append_dream( const dream &value );
+std::size_t dream_count();
+void truncate_dreams( std::size_t count );
+struct platform_achievement_data {
+    std::string id;
+    std::string name;
+    std::string description;
+    bool is_conduct = false;
+    std::vector<std::string> hidden_by;
+};
+struct platform_blacklist_data {
+    std::string kind;
+    bool whitelist = false;
+    std::vector<std::string> entries;
+    bool registered = false;
+};
+struct platform_migration_data {
+    std::string kind;
+    std::string from_id;
+    std::string to_id;
+    bool registered = false;
+};
+void insert_platform_savegame_migration( const platform_migration_data &value );
+void erase_platform_savegame_migration( const platform_migration_data &value );
+void insert_platform_bionic_migration( const platform_migration_data &value );
+void erase_platform_bionic_migration( const platform_migration_data &value );
+void insert_platform_effect_migration( const platform_migration_data &value );
+void erase_platform_effect_migration( const platform_migration_data &value );
+void insert_platform_proficiency_migration( const platform_migration_data &value );
+void erase_platform_proficiency_migration( const platform_migration_data &value );
+void insert_platform_vpart_migration( const platform_migration_data &value );
+void erase_platform_vpart_migration( const platform_migration_data &value );
+void insert_platform_var_migration( const platform_migration_data &value );
+void erase_platform_var_migration( const platform_migration_data &value );
+void insert_platform_oter_migration( const platform_migration_data &value );
+void erase_platform_oter_migration( const platform_migration_data &value );
+
+// Deterministic whole-registry snapshots (sorted by from id) of the legacy
+// migration tables, used by the semantic parity gate to compare the
+// JSON-loaded maps against the committed Migrated_Core replacements.
+std::vector<std::pair<std::string, std::string>> effect_migration_snapshot();
+std::vector<std::pair<std::string, std::string>> oter_migration_snapshot();
+std::vector<std::pair<std::string, std::string>> proficiency_migration_snapshot();
+std::vector<std::pair<std::string, std::string>> vehicle_part_migration_snapshot();
+std::vector<std::pair<std::string, std::string>> terrain_migration_snapshot();
+std::vector<std::pair<std::string, std::string>> furniture_migration_snapshot();
+std::vector<std::pair<std::string, std::string>> trap_migration_snapshot();
+std::vector<std::pair<std::string, std::string>> var_migration_snapshot();
+std::vector<std::string> charge_removal_blacklist_snapshot();
+std::vector<std::string> temperature_removal_blacklist_snapshot();
+
+void insert_platform_trait_blacklist( const std::vector<std::string> &entries );
+void insert_platform_item_blacklist( const platform_blacklist_data &value );
+void truncate_platform_item_blacklist( std::size_t count );
+std::size_t platform_item_blacklist_count();
+void insert_platform_scenario_blacklist( const platform_blacklist_data &value );
+void insert_platform_profession_blacklist( const platform_blacklist_data &value );
+void erase_platform_profession_blacklist( const platform_blacklist_data &value );
+void insert_platform_trait_group(
+    const std::string &id,
+    const std::vector<std::pair<std::string, std::int64_t>> &entries );
+void erase_platform_trait_group( const std::string &id );
+void append_platform_monster_adjustment( const std::string &species,
+                                         const std::string &stat,
+                                         double stat_adjust,
+                                         const std::string &flag, bool flag_val,
+                                         const std::string &special );
+std::size_t platform_monster_adjustment_count();
+void truncate_platform_monster_adjustments( std::size_t count );
+void erase_platform_scenario_blacklist( const platform_blacklist_data &value );
+void insert_platform_savegame_blacklist( const platform_blacklist_data &value );
+void erase_platform_savegame_blacklist( const platform_blacklist_data &value );
+void erase_platform_trait_blacklist( const std::vector<std::string> &entries );
+void insert_platform_monster_blacklist( const std::vector<std::string> &entries,
+                                        bool whitelist );
+void erase_platform_monster_blacklist( const std::vector<std::string> &entries,
+                                       bool whitelist );
+generic_factory<map_extra> &map_extra_registry();
+generic_factory<weather_generator> &weather_generator_registry();
+generic_factory<shopkeeper_blacklist> &shopkeeper_blacklist_registry();
+generic_factory<shopkeeper_whitelist> &shopkeeper_whitelist_registry();
+generic_factory<shopkeeper_cons_rates> &shopkeeper_cons_rates_registry();
+generic_factory<overmap_special_migration> &overmap_special_migration_registry();
+generic_factory<achievement> &achievement_registry();
 generic_factory<magic_type> &magic_type_registry();
 generic_factory<bash_damage_profile> &bash_damage_profile_registry();
 generic_factory<clothing_mod> &clothing_mod_registry();
@@ -115,6 +230,9 @@ generic_factory<weapon_category> &weapon_category_registry();
 generic_factory<proficiency_category> &proficiency_category_registry();
 generic_factory<proficiency> &proficiency_registry();
 generic_factory<scent_type> &scent_type_registry();
+generic_factory<butchery_requirements> &butchery_requirements_registry();
+generic_factory<scenario> &scenario_registry();
+generic_factory<overmap_connection> &overmap_connection_registry();
 generic_factory<score> &score_registry();
 generic_factory<speed_description> &speed_description_registry();
 generic_factory<harvest_drop_type> &harvest_drop_type_registry();

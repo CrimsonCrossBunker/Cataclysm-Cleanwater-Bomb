@@ -1,7 +1,11 @@
 #include "flag.h"
 
-#include "debug.h"
+#include <algorithm>
+#include <utility>
+#include <vector>
+
 #include "catalua_platform_content.h"
+#include "debug.h"
 #include "generic_factory.h"
 #include "type_id.h"
 
@@ -407,6 +411,33 @@ generic_factory<json_flag> json_flags_all( "json_flags" );
 generic_factory<json_flag> &cata::lua_platform::detail::json_flag_registry()
 {
     return json_flags_all;
+}
+
+std::vector<cata::lua_platform::detail::json_flag_snapshot_entry>
+cata::lua_platform::detail::json_flag_snapshot()
+{
+    std::vector<json_flag_snapshot_entry> result;
+    for( const json_flag &value : json_flags_all.get_all() ) {
+        json_flag_snapshot_entry entry;
+        entry.id = value.id.str();
+        entry.name = value.name();
+        entry.info = value.info();
+        entry.restriction = value.restriction();
+        entry.item_prefix = value.item_prefix().translated();
+        entry.item_suffix = value.item_suffix().translated();
+        entry.conflicts.assign( value.conflicts_.begin(), value.conflicts_.end() );
+        entry.inherit = value.inherit();
+        entry.craft_inherit = value.craft_inherit();
+        entry.requires_flag = value.requires_flag();
+        entry.taste_mod = value.taste_mod();
+        entry.owner = value.src.empty() ? mod_id() : value.src.front().second;
+        result.emplace_back( std::move( entry ) );
+    }
+    std::sort( result.begin(), result.end(),
+    []( const json_flag_snapshot_entry &left, const json_flag_snapshot_entry &right ) {
+        return left.id < right.id;
+    } );
+    return result;
 }
 
 /** @relates string_id */

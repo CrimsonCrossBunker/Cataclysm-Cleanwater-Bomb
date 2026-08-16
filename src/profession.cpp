@@ -1,3 +1,5 @@
+#include "catalua_platform_content.h"
+
 #include "profession.h"
 
 #include <algorithm>
@@ -132,6 +134,23 @@ void profession_blacklist::check_consistency() const
         if( !p.is_valid() ) {
             debugmsg( "Invalid profession %s in blacklist", p.str() );
         }
+    }
+}
+
+void cata::lua_platform::detail::insert_platform_profession_blacklist(
+    const platform_blacklist_data &value )
+{
+    prof_blacklist.whitelist = value.whitelist;
+    for( const std::string &entry : value.entries ) {
+        prof_blacklist.professions.emplace( entry );
+    }
+}
+
+void cata::lua_platform::detail::erase_platform_profession_blacklist(
+    const platform_blacklist_data &value )
+{
+    for( const std::string &entry : value.entries ) {
+        prof_blacklist.professions.erase( string_id<profession>( entry ) );
     }
 }
 

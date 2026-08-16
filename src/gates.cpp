@@ -1,5 +1,7 @@
 #include "gates.h"
 
+#include "catalua_platform_content.h"
+
 #include <algorithm>
 #include <array>
 #include <functional>
@@ -49,50 +51,33 @@ static const material_id material_glass( "glass" );
 
 // Gates namespace
 
-namespace
-{
-
 struct gate_data;
 
-using gate_id = string_id<gate_data>;
-
-struct gate_data {
-
-    gate_data() :
-        moves( 0 ),
-        bash_dmg( 0 ),
-        was_loaded( false ) {}
-
-    gate_id id;
-    std::vector<std::pair<gate_id, mod_id>> src;
-
-    ter_str_id door;
-    ter_str_id floor;
-    std::vector<ter_str_id> walls;
-
-    translation pull_message;
-    translation open_message;
-    translation close_message;
-    translation fail_message;
-
-    int moves;
-    int bash_dmg;
-    bool was_loaded;
-
-    void load( const JsonObject &jo, std::string_view src );
-    void check() const;
-
-    bool is_suitable_wall( const tripoint_bub_ms &pos ) const;
-};
-
-gate_id get_gate_id( const tripoint_bub_ms &pos )
+static gate_id get_gate_id( const tripoint_bub_ms &pos )
 {
     return gate_id( get_map().ter( pos ).id().str() );
 }
 
 generic_factory<gate_data> gates_data( "gate type" );
 
-} // namespace
+generic_factory<gate_data> &cata::lua_platform::detail::gate_registry()
+{
+    return gates_data;
+}
+
+/** @relates string_id */
+template<>
+bool string_id<gate_data>::is_valid() const
+{
+    return gates_data.is_valid( *this );
+}
+
+/** @relates string_id */
+template<>
+const gate_data &string_id<gate_data>::obj() const
+{
+    return gates_data.obj( *this );
+}
 
 void gate_data::load( const JsonObject &jo, std::string_view )
 {

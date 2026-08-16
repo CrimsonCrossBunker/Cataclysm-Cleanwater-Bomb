@@ -28,10 +28,15 @@
 
 class Character;
 class JsonObject;
+class vpart_category;
 
 namespace cata::lua_platform
 {
 class content_transaction;
+namespace detail
+{
+int vehicle_part_category_priority( const vpart_category & );
+} // namespace detail
 } // namespace cata::lua_platform
 
 class JsonOut;
@@ -268,6 +273,8 @@ class vpart_category
 
     private:
         friend class cata::lua_platform::content_transaction;
+        friend int cata::lua_platform::detail::vehicle_part_category_priority(
+            const vpart_category & );
         std::string id_;
         translation name_;
         translation short_name_;

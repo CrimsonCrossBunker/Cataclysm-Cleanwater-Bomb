@@ -8,6 +8,9 @@
 #include "avatar.h"
 #include "basecamp.h"
 #include "bionics.h"
+#include "butchery.h"
+#include "butchery_requirements.h"
+#include "item_action.h"
 #include "behavior.h"
 #include "bodygraph.h"
 #include "bodypart.h"
@@ -64,10 +67,12 @@
 #include "fault.h"
 #include "field_type.h"
 #include "game.h"
+#include "gates.h"
 #include "generic_factory.h"
 #include "harvest.h"
 #include "help.h"
 #include "hsv_color.h"
+#include "vehicle_palette.h"
 #include "input_context_actions.h"
 #include "item.h"
 #include "item_category.h"
@@ -77,14 +82,17 @@
 #include "json_loader.h"
 #include "magic.h"
 #include "map.h"
+#include "map_extras.h"
 #include "map_accessories.h"
 #include "mapdata.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "mapgen.h"
+#include "melee.h"
 #include "mapgendata.h"
 #include "material.h"
 #include "martialarts.h"
+#include "construction.h"
 #include "mission.h"
 #include "morale_types.h"
 #include "mood_face.h"
@@ -98,6 +106,7 @@
 #include "npc.h"
 #include "omdata.h"
 #include "overmap.h"
+#include "overmap_connection.h"
 #include "overmap_location.h"
 #include "overmapbuffer.h"
 #include "overlay_ordering.h"
@@ -109,6 +118,7 @@
 #include "pocket_type.h"
 #include "projectile.h"
 #include "proficiency.h"
+#include "profession.h"
 #include "profession_group.h"
 #include "requirements.h"
 #include "recipe_dictionary.h"
@@ -122,6 +132,7 @@
 #include "speech.h"
 #include "speed_description.h"
 #include "start_location.h"
+#include "scenario.h"
 #include "subbodypart.h"
 #include "stats_tracker.h"
 #include "talker.h"
@@ -1243,6 +1254,50 @@ ccb.content.add(recipe)
     cata::lua_platform::discard_prepared_mods();
     CHECK_FALSE( item_controller->has_template( itype_id( "ccb_platform_native_item" ) ) );
     CHECK_FALSE( recipe_id( "ccb_platform_native_recipe" ).is_valid() );
+}
+
+TEST_CASE( "lua_first_practice_and_uncraft_recipes_stage_native_dictionaries",
+           "[lua][platform][content][catalog][recipes]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_practice_uncraft" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local practice = ccb.content.Recipe {
+    id = "ccb_platform_practice",
+    result = "ccb_platform_practice_result",
+    category = "CC_PRACTICE",
+    subcategory = "CSC_PRACTICE_MECHANICS",
+    skill = "driving",
+    duration_moves = 3600,
+    practice = true,
+}
+ccb.content.add(practice)
+
+local uncraft = ccb.content.Recipe {
+    id = "ccb_platform_disassembly",
+    result = "ccb_platform_scrap",
+    duration_moves = 60,
+    uncraft = true,
+}
+uncraft:component("scrap", 2)
+ccb.content.add(uncraft)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_practice_uncraft" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    CHECK( recipe_id( "ccb_platform_practice" ).is_valid() );
+    const recipe &disassembly =
+        recipe_dictionary::get_uncraft( itype_id( "ccb_platform_scrap" ) );
+    CHECK( disassembly.ident() == recipe_id( "ccb_platform_scrap" ) );
+
+    cata::lua_platform::shutdown();
 }
 
 TEST_CASE( "lua_first_foundational_catalogs_are_native_and_transactional",
@@ -4590,6 +4645,84 @@ ccb.content.add(playlist)
     cata::lua_platform::shutdown();
 }
 
+TEST_CASE( "lua_first_sound_effect_definitions_commit_and_reject_bad_shapes",
+           "[lua][platform][content][sound]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_sound_effects" );
+    const fs::path marker = test_mod.root() / "sound-effects.txt";
+    test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+
+local effect = ccb.content.SoundEffect {
+    id = "ccb_platform_ambient",
+    variant = "wind",
+    season = "autumn",
+    is_indoors = false,
+    volume = 64,
+}
+effect:file("env/autumn_wind.ogg")
+effect:file("env/autumn_wind_2.ogg")
+ccb.content.add(effect)
+
+local preload = ccb.content.SoundEffectPreload {
+    id = "ccb_platform_ambient",
+    variant = "wind",
+    season = "autumn",
+    is_indoors = false,
+}
+ccb.content.add(preload)
+
+local output = assert(io.open([[%s]], "wb"))
+output:write("ok")
+output:close()
+)lua", marker.generic_u8string() ) );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_sound_effects" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    std::ifstream input( marker, std::ios::binary );
+    std::string contents;
+    input >> contents;
+    REQUIRE( input );
+    CHECK( contents == "ok" );
+    cata::lua_platform::shutdown();
+
+    scoped_platform_test_mod invalid_mod( "ccb_platform_sound_effects_invalid" );
+    invalid_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local effect = ccb.content.SoundEffect {
+    id = "ccb_platform_bad_volume",
+    volume = 200,
+}
+effect:file("env/bad.ogg")
+ccb.content.add(effect)
+)lua" );
+    REQUIRE_FALSE( cata::lua_platform::prepare_mods(
+                       { invalid_mod.source( "ccb_platform_sound_effects_invalid" ) }, error ) );
+    CHECK( error.find( "volume outside 0..128" ) != std::string::npos );
+
+    scoped_platform_test_mod path_mod( "ccb_platform_sound_effects_path" );
+    path_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local effect = ccb.content.SoundEffect {
+    id = "ccb_platform_bad_path",
+}
+effect:file("../outside.ogg")
+ccb.content.add(effect)
+)lua" );
+    REQUIRE_FALSE( cata::lua_platform::prepare_mods(
+                       { path_mod.source( "ccb_platform_sound_effects_path" ) }, error ) );
+    CHECK( error.find( "invalid relative file" ) != std::string::npos );
+}
+
 TEST_CASE( "lua_first_hit_range_requires_explicit_singleton_replacement",
            "[lua][platform][content][catalog]" )
 {
@@ -5496,6 +5629,7 @@ ccb.runtime.handler("ready", function()
     assert(not ccb.services.gameplay.mods.is_loaded("missing-platform-mod"))
     local dimension = ccb.services.gameplay.environment.dimension()
     assert(type(dimension) == "string" and #dimension > 0)
+    assert(type(ccb.services.gameplay.environment.is_night()) == "boolean")
     local locator = avatar:locator()
     local avatar_position = ccb.services.coords.tripoint_abs_ms(
         locator.position.x, locator.position.y, locator.position.z)
@@ -5506,6 +5640,46 @@ ccb.runtime.handler("ready", function()
         ccb.services.gameplay.environment.line_of_sight(
             avatar_position, avatar_position, -1)
     end))
+    assert(type(ccb.services.gameplay.environment.furniture_has_flag(
+        avatar_position, "TRANSPARENT")) == "boolean")
+    local far_position = ccb.services.coords.tripoint_abs_ms(
+        avatar_position.x + 1000000, avatar_position.y, avatar_position.z)
+    assert(ccb.services.gameplay.environment.furniture_has_flag(
+        far_position, "TRANSPARENT") == false)
+    assert(not pcall(function()
+        ccb.services.gameplay.environment.furniture_has_flag(
+            avatar_position, "")
+    end))
+    assert(type(ccb.services.gameplay.environment.terrain_id(
+        avatar_position)) == "string")
+    assert(ccb.services.gameplay.environment.terrain_id(
+        avatar_position) ~= "")
+    assert(type(ccb.services.gameplay.environment.furniture_id(
+        avatar_position)) == "string")
+    assert(type(ccb.services.gameplay.environment.field_exists(
+        avatar_position, "fd_null")) == "boolean")
+    assert(ccb.services.gameplay.environment.field_exists(
+        avatar_position, "fd_null") == false)
+    assert(not pcall(function()
+        ccb.services.gameplay.environment.field_exists(
+            avatar_position, "")
+    end))
+    assert(type(ccb.services.gameplay.environment.terrain_has_flag(
+        avatar_position, "INDOORS")) == "boolean")
+    assert(not pcall(function()
+        ccb.services.gameplay.environment.terrain_has_flag(
+            avatar_position, "")
+    end))
+    assert(type(ccb.services.gameplay.environment.is_indoor_tile(
+        avatar_position)) == "boolean")
+    assert(ccb.services.gameplay.environment.is_indoor_tile(
+        far_position) == false)
+    assert(type(ccb.services.gameplay.environment.safe_mode_dangerous(
+        "N")) == "boolean")
+    assert(not pcall(function()
+        ccb.services.gameplay.environment.safe_mode_dangerous("BOGUS")
+    end))
+    assert(type(ccb.services.overmap.is_in_city(avatar_position)) == "boolean")
     local achievement_id = ccb.services.types.id(
         "achievement", "lua_test_manual_achievement")
     local completed = ccb.services.achievements.complete(achievement_id)
@@ -5930,6 +6104,83 @@ ccb.runtime.on("world_ready", "ready")
 
 }
 
+TEST_CASE( "lua_first_is_wearing_service_matches_exact_worn_itype_only",
+           "[lua][platform][runtime][services][inventory][is_wearing]" )
+{
+    cata::lua_platform::shutdown();
+    clear_avatar();
+    clear_map_without_vision();
+    on_out_of_scope restore_map( []() {
+        clear_map_without_vision();
+    } );
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    player.remove_weapon();
+    const auto storage = player.worn.wear_item(
+                             player, item( itype_id( "debug_backpack" ) ),
+                             false, false );
+    REQUIRE( storage );
+    const std::int64_t storage_uid = ( **storage ).uid().get_value();
+    on_out_of_scope cleanup( [&player, storage_uid]() {
+        player.remove_weapon();
+        player.remove_items_with( [storage_uid]( const item &candidate ) {
+            return candidate.uid().get_value() == storage_uid;
+        }, 100 );
+        cata::lua_platform::shutdown();
+    } );
+
+    scoped_platform_test_mod test_mod( "ccb_platform_is_wearing_service" );
+    const fs::path marker = test_mod.root() / "is-wearing-service.txt";
+    test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+local services = ccb.services
+
+local function value(result)
+    assert(result.ok, result.error and result.error.message)
+    return result.value
+end
+
+ccb.runtime.handler("ready", function()
+    local character = services.creatures.avatar()
+
+    local backpack = services.types.id("item", "debug_backpack")
+    assert(value(services.inventory.is_wearing(character, backpack)))
+
+    local rock = services.types.id("item", "rock")
+    assert(not value(services.inventory.is_wearing(character, rock)))
+
+    local missing = services.types.id("item", "ccb_no_such_worn_item")
+    assert(not value(services.inventory.is_wearing(character, missing)))
+
+    assert(pcall(function()
+        services.inventory.is_wearing(
+            character, services.types.id("json_flag", "NO_UNWIELD"))
+    end) == false)
+
+    local output = assert(io.open([[%s]], "wb"))
+    output:write("ok")
+    output:close()
+end)
+ccb.runtime.on("world_ready", "ready")
+)lua", marker.generic_u8string() ) );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_is_wearing_service" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    std::ifstream input( marker, std::ios::binary );
+    std::string contents;
+    input >> contents;
+    REQUIRE( input );
+    CHECK( contents == "ok" );
+
+}
+
 TEST_CASE( "lua_first_wound_services_preserve_native_character_and_handle_rules",
            "[lua][platform][runtime][services][wound]" )
 {
@@ -6237,6 +6488,3235 @@ assert(string.find(tostring(remove_error),
 assert(#value(services.wounds.snapshot(avatar, torso)) == 0)
 )lua" );
     REQUIRE( gate_result.valid() );
+}
+
+TEST_CASE( "lua_first_dialogue_predicate_services_cover_legacy_conditions",
+           "[lua][platform][runtime][services][predicates]" )
+{
+    cata::lua_platform::shutdown();
+    clear_avatar();
+    clear_map_without_vision();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+        clear_avatar();
+        clear_map_without_vision();
+    } );
+
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    calendar::turn = time_point::from_turn( 10000 );
+    const tripoint_bub_ms npc_position =
+        player.pos_bub( here ) + tripoint_rel_ms::east;
+    npc &native_npc = spawn_npc( npc_position.xy(), "test_talker" );
+    native_npc.name = "Lua predicate service NPC";
+    const character_id native_npc_id = native_npc.getID();
+    on_out_of_scope cleanup_creatures( [native_npc_id]() {
+        g->remove_npc_follower( native_npc_id );
+        g->remove_npc( native_npc_id );
+        overmap_buffer.remove_npc( native_npc_id );
+    } );
+
+    // u_has_profession: give the avatar a held hobby so the hobby branch of the
+    // guarded legacy predicate is exercised independently of the profession.
+    const std::vector<profession_id> native_hobbies = profession::get_all_hobbies();
+    REQUIRE( !native_hobbies.empty() );
+    const profession_id test_hobby = native_hobbies.front();
+    player.hobbies.clear();
+    player.hobbies.insert( &test_hobby.obj() );
+    const std::string current_profession =
+        player.prof == nullptr ? std::string{} :
+        player.prof->get_profession_id().str();
+
+    scoped_platform_test_mod test_mod( "ccb_platform_predicate_services" );
+    const fs::path marker = test_mod.root() / "predicate-services.txt";
+    test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+local services = ccb.services
+
+local function value(result)
+    assert(result.ok, result.error and result.error.message)
+    return result.value
+end
+
+ccb.runtime.handler("ready", function()
+    local avatar = services.characters.avatar()
+    local npcs = value(services.npcs.list())
+    assert(#npcs.items == 1)
+    local npc = npcs.items[1].handle
+
+    -- u_is_travelling: the travel snapshot projection defaults to no path.
+    local snapshot = value(services.characters.snapshot(avatar))
+    assert(snapshot.travel.has_path == false)
+
+    -- u_has_pickup_list: structured AI-rule snapshot with an empty whitelist.
+    local rules = value(services.npcs.ai_rules(npc))
+    assert(rules.pickup_whitelist == false)
+    assert(rules.aim == "AIM_WHEN_CONVENIENT")
+    assert(type(rules.allies) == "table")
+
+    -- Non-NPC handles carry no AI rules, matching legacy talker defaults.
+    local avatar_rules = services.npcs.ai_rules(avatar)
+    assert(not avatar_rules.ok)
+    assert(avatar_rules.error.code == "wrong_subtype")
+
+    -- player_see_u: the adjacent NPC is visible under native perception.
+    assert(value(services.creatures.can_see(avatar, npc)) == true)
+
+    -- u_at_safe_space pieces: character and overmap safety queries.
+    assert(value(services.characters.is_safe(npc)) == true)
+    local omt = services.coords.project_to(
+        snapshot.creature.position, "omt")
+    local omt_safe = services.overmap.is_safe(omt)
+    assert(type(omt_safe) == "boolean")
+
+    -- u_add_wet: native drenching service accepts bounded deltas.
+    assert(value(services.characters.add_wet(avatar, 1)) == true)
+    assert(value(services.characters.add_wet(npc, 0)) == true)
+
+    -- u_has_flag: five-source Character::has_flag with the MUTATION_THRESHOLD
+    -- divergence into crossed_threshold() instead of literal flag presence.
+    local limb_upper = services.types.id("json_flag", "LIMB_UPPER")
+    assert(value(services.characters.has_flag(avatar, limb_upper)) == true)
+    assert(value(services.characters.has_flag(npc, limb_upper)) == true)
+    local threshold = services.types.id("json_flag", "MUTATION_THRESHOLD")
+    assert(value(services.characters.has_flag(avatar, threshold)) == false)
+    assert(value(services.characters.has_flag(npc, threshold)) == false)
+    local no_unwield = services.types.id("json_flag", "NO_UNWIELD")
+    assert(value(services.characters.has_flag(avatar, no_unwield)) == false)
+
+    -- u_has_profession: guarded legacy current-profession-or-held-hobby test.
+    assert(value(services.characters.has_profession(avatar, "%s")) == true)
+    assert(value(services.characters.has_profession(avatar, "%s")) == true)
+    assert(value(services.characters.has_profession(npc, "%s")) == false)
+    assert(value(services.characters.has_profession(
+        avatar, "ccb_no_such_profession")) == false)
+
+    local output = assert(io.open([[%s]], "wb"))
+    output:write("ok")
+    output:close()
+end)
+ccb.runtime.on("world_ready", "ready")
+)lua", current_profession, test_hobby.str(), test_hobby.str(),
+        marker.generic_u8string() ) );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_predicate_services" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    std::ifstream input( marker, std::ios::binary );
+    std::string contents;
+    input >> contents;
+    REQUIRE( input );
+    CHECK( contents == "ok" );
+}
+
+TEST_CASE( "lua_first_technique_definitions_stage_native_techniques",
+           "[lua][platform][content][catalog][technique]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_technique" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local technique = ccb.content.Technique {
+    id = "tec_ccb_platform_sample",
+    name = "Platform Sample Technique",
+    description = "A deterministic technique authored without JSON.",
+    avatar_message = "You strike precisely.",
+    disarms = true,
+    stun_dur = 1,
+    weighting = 2,
+    unarmed_allowed = true,
+}
+technique:flag("BLIND_EASY")
+technique:attack_vector("vector_grasp")
+technique:requires_skill("unarmed", 1)
+ccb.content.add(technique)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_technique" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    const matec_id technique( "tec_ccb_platform_sample" );
+    REQUIRE( technique.is_valid() );
+    CHECK( technique->disarms );
+    CHECK( technique->stun_dur == 1 );
+    CHECK( technique->weighting == 2 );
+    CHECK( technique->reqs.unarmed_allowed );
+    REQUIRE( technique->reqs.min_skill.size() == 1 );
+    CHECK( technique->reqs.min_skill[0].first == skill_id( "unarmed" ) );
+    CHECK( technique->reqs.min_skill[0].second == 1 );
+    REQUIRE( technique->attack_vectors.size() == 1 );
+    CHECK( technique->attack_vectors[0] == attack_vector_id( "vector_grasp" ) );
+    CHECK( technique->flags.count( "BLIND_EASY" ) == 1 );
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_martial_art_definitions_stage_native_styles",
+           "[lua][platform][content][catalog][martial_art]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_martial_art" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local style = ccb.content.MartialArt {
+    id = "style_ccb_platform_sample",
+    name = "Platform Sample Style",
+    description = "A deterministic style authored without JSON.",
+    initiate_avatar = "You assume the sample stance.",
+    primary_skill = "unarmed",
+    teachable = true,
+    arm_block = 1,
+    leg_block = 99,
+    force_unarmed = true,
+    prevent_weapon_blocking = true,
+}
+style:autolearn("unarmed", 2)
+style:technique("tec_none")
+style:weapon("knife_combat")
+ccb.content.add(style)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_martial_art" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    const matype_id style( "style_ccb_platform_sample" );
+    REQUIRE( style.is_valid() );
+    CHECK( style->force_unarmed );
+    CHECK( style->prevent_weapon_blocking );
+    CHECK( style->arm_block == 1 );
+    CHECK( style->leg_block == 99 );
+    CHECK( style->primary_skill == skill_id( "unarmed" ) );
+    CHECK( style->teachable );
+    REQUIRE( style->autolearn_skills.size() == 1 );
+    CHECK( style->autolearn_skills[0].first == "unarmed" );
+    CHECK( style->autolearn_skills[0].second == 2 );
+    CHECK( style->techniques.count( matec_id( "tec_none" ) ) == 1 );
+    CHECK( style->weapons.count( itype_id( "knife_combat" ) ) == 1 );
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_trap_definitions_stage_native_traps",
+           "[lua][platform][content][catalog][trap]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_trap" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local trap = ccb.content.Trap {
+    id = "tr_ccb_platform_sample",
+    name = "Platform Sample Trap",
+    color = "red",
+    symbol = "^",
+    visibility = 10,
+    avoidance = 8,
+    difficulty = 3,
+    action = "none",
+    benign = true,
+}
+trap:flag("TRAP")
+trap:drop("spike", 2, 1)
+ccb.content.add(trap)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_trap" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    const trap_str_id trap( "tr_ccb_platform_sample" );
+    REQUIRE( trap.is_valid() );
+    CHECK( trap->is_benign() );
+    CHECK( trap->get_avoidance() == 8 );
+    CHECK( trap->has_flag( flag_id( "TRAP" ) ) );
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_construction_definitions_stage_native_constructions",
+           "[lua][platform][content][catalog][construction]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_construction" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local construction = ccb.content.Construction {
+    id = "con_ccb_platform_sample",
+    group = "dig_channel",
+    category = "DIG",
+    duration_moves = 1800,
+    post_terrain = "t_pit_shallow",
+}
+construction:requires_skill("fabrication", 1)
+construction:pre_terrain("t_pit")
+construction:post_flag("DIGGABLE")
+ccb.content.add(construction)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_construction" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    const construction_str_id construction( "con_ccb_platform_sample" );
+    REQUIRE( construction.is_valid() );
+    CHECK( construction->group == construction_group_str_id( "dig_channel" ) );
+    CHECK( construction->category == construction_category_id( "DIG" ) );
+    CHECK( construction->time == 1800 );
+    REQUIRE( construction->required_skills.count( skill_id( "fabrication" ) ) == 1 );
+    CHECK( construction->required_skills.at( skill_id( "fabrication" ) ) == 1 );
+    CHECK( construction->pre_terrain.count( "t_pit" ) == 1 );
+    CHECK( construction->post_terrain == "t_pit_shallow" );
+    CHECK( construction->post_flags.count( "DIGGABLE" ) == 1 );
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_furniture_definitions_stage_native_furniture",
+           "[lua][platform][content][catalog][furniture]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_furniture" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local furniture = ccb.content.Furniture {
+    id = "f_ccb_platform_sample",
+    name = "Platform Sample Furniture",
+    description = "A deterministic furniture authored without JSON.",
+    color = "blue",
+    symbol = "#",
+    move_cost_mod = 2,
+    required_str = 5,
+    comfort = 4,
+}
+furniture:flag("FLAMMABLE_ASH")
+ccb.content.add(furniture)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_furniture" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    const furn_str_id furniture( "f_ccb_platform_sample" );
+    REQUIRE( furniture.is_valid() );
+    CHECK( furniture->movecost == 2 );
+    CHECK( furniture->move_str_req == 5 );
+    CHECK( furniture->comfort == 4 );
+    CHECK( furniture->has_flag( "FLAMMABLE_ASH" ) );
+    CHECK( furniture->name() == "Platform Sample Furniture" );
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_terrain_definitions_stage_native_terrain",
+           "[lua][platform][content][catalog][terrain]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_terrain" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local terrain = ccb.content.Terrain {
+    id = "t_ccb_platform_sample",
+    name = "Platform Sample Terrain",
+    description = "A deterministic terrain authored without JSON.",
+    color = "brown",
+    symbol = ".",
+    move_cost = 2,
+}
+terrain:flag("FLAT")
+ccb.content.add(terrain)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_terrain" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    const ter_str_id terrain( "t_ccb_platform_sample" );
+    REQUIRE( terrain.is_valid() );
+    CHECK( terrain->movecost == 2 );
+    CHECK( terrain->has_flag( "FLAT" ) );
+    CHECK( terrain->name() == "Platform Sample Terrain" );
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_gate_definitions_stage_native_gates",
+           "[lua][platform][content][catalog][gate]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_gate" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local gate = ccb.content.Gate {
+    id = "t_ccb_platform_gate",
+    door = "t_door_o",
+    floor = "t_floor",
+    pull_message = "You pull the sample gate.",
+    moves = 200,
+    bashing_damage = 10,
+}
+gate:wall("t_wall")
+ccb.content.add(gate)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_gate" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    const gate_id gate( "t_ccb_platform_gate" );
+    REQUIRE( gate.is_valid() );
+    CHECK( gate->door == ter_str_id( "t_door_o" ) );
+    CHECK( gate->floor == ter_str_id( "t_floor" ) );
+    CHECK( gate->moves == 200 );
+    CHECK( gate->bash_dmg == 10 );
+    REQUIRE( gate->walls.size() == 1 );
+    CHECK( gate->walls[0] == ter_str_id( "t_wall" ) );
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_fault_definitions_stage_native_faults",
+           "[lua][platform][content][catalog][fault]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_fault" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local fix = ccb.content.FaultFix {
+    id = "mend_ccb_platform_sample",
+    name = "Mend Platform Sample",
+    time_seconds = 10,
+}
+fix:requires_skill("mechanics", 1)
+fix:removes_fault("fault_ccb_platform_sample")
+ccb.content.add(fix)
+
+local fault = ccb.content.Fault {
+    id = "fault_ccb_platform_sample",
+    fault_type = "generic",
+    name = "Platform Sample Fault",
+    description = "A deterministic fault authored without JSON.",
+    price_modifier = 0.5,
+    instant_damage = 2,
+}
+fault:flag("SILENT")
+fault:fix("mend_ccb_platform_sample")
+ccb.content.add(fault)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_fault" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    const fault_id fault( "fault_ccb_platform_sample" );
+    REQUIRE( fault.is_valid() );
+    CHECK( fault->price_mod() == 0.5 );
+    CHECK( fault->has_flag( "SILENT" ) );
+    const fault_fix_id fix( "mend_ccb_platform_sample" );
+    REQUIRE( fix.is_valid() );
+    REQUIRE( fix->skills.count( skill_id( "mechanics" ) ) == 1 );
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_dream_definitions_append_native_dreams",
+           "[lua][platform][content][catalog][dream]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_dream" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local dream = ccb.content.Dream {
+    category = "PLANT",
+    strength = 2,
+}
+dream:message("You dream of the platform.")
+ccb.content.add(dream)
+)lua" );
+
+    const std::size_t before = cata::lua_platform::detail::dream_count();
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_dream" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    CHECK( cata::lua_platform::detail::dream_count() == before + 1 );
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_achievement_definitions_stage_native_achievements",
+           "[lua][platform][content][catalog][achievement]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_achievement" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local achievement = ccb.content.Achievement {
+    id = "achievement_ccb_platform_sample",
+    name = "Platform Sample Achievement",
+    description = "A deterministic achievement authored without JSON.",
+}
+ccb.content.add(achievement)
+
+local conduct = ccb.content.Conduct {
+    id = "conduct_ccb_platform_sample",
+    name = "Platform Sample Conduct",
+}
+ccb.content.add(conduct)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_achievement" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    const achievement_id achievement( "achievement_ccb_platform_sample" );
+    REQUIRE( achievement.is_valid() );
+    CHECK_FALSE( achievement->is_conduct() );
+    const achievement_id conduct( "conduct_ccb_platform_sample" );
+    REQUIRE( conduct.is_valid() );
+    CHECK( conduct->is_conduct() );
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_blacklist_definitions_stage_native_blacklists",
+           "[lua][platform][content][catalog][blacklist]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_blacklist" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local trait_bl = ccb.content.Blacklist {
+    kind = "trait",
+}
+trait_bl:entry("TOUGH")
+ccb.content.add(trait_bl)
+
+local monster_wl = ccb.content.Blacklist {
+    kind = "monster",
+    whitelist = true,
+}
+monster_wl:entry("mon_zombie")
+ccb.content.add(monster_wl)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_blacklist" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    CHECK( mutation_branch::trait_is_blacklisted( trait_id( "TOUGH" ) ) );
+    CHECK_FALSE(
+        MonsterGroupManager::monster_is_blacklisted( mtype_id( "mon_zombie" ) ) );
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_map_extra_definitions_stage_native_map_extras",
+           "[lua][platform][content][catalog][map_extra]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_map_extra" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local extra = ccb.content.MapExtra {
+    id = "mx_ccb_platform_sample",
+    name = "Platform Sample Map Extra",
+    description = "A deterministic map extra authored without JSON.",
+    generator_id = "mx_house",
+    symbol = "M",
+    color = "green",
+}
+extra:flag("FIRE")
+ccb.content.add(extra)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_map_extra" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    const map_extra_id extra( "mx_ccb_platform_sample" );
+    REQUIRE( extra.is_valid() );
+    CHECK( extra->name() == "Platform Sample Map Extra" );
+    CHECK( extra->has_flag( "FIRE" ) );
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_weather_generator_definitions_stage_native_generators",
+           "[lua][platform][content][catalog][weather_generator]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_weather_generator" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local generator = ccb.content.WeatherGenerator {
+    id = "wg_ccb_platform_sample",
+    base_temperature = 10.5,
+    base_humidity = 50,
+    base_pressure = 101325,
+    base_wind = 4,
+}
+generator:blacklisted_weather("acid_rain")
+ccb.content.add(generator)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_weather_generator" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    const weather_generator_id generator( "wg_ccb_platform_sample" );
+    REQUIRE( generator.is_valid() );
+    CHECK( generator->base_temperature == 10.5 );
+    CHECK( generator->base_wind == 4.0 );
+    CHECK( generator->weather_black_list.size() == 1 );
+    CHECK( generator->weather_black_list[0] == "acid_rain" );
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_migrated_core_content_loads_without_json",
+           "[lua][platform][content][catalog][migrated_core][parity]" )
+{
+    cata::lua_platform::shutdown();
+    const std::size_t before = cata::lua_platform::detail::dream_count();
+
+    // Snapshot the legacy (JSON-loaded) objects before the migrated
+    // definitions replace the same ids, for the semantic parity slice below.
+    struct damage_snapshot {
+        damage_type_id id;
+        std::string name;
+        skill_id skill;
+        nc_color magic_color;
+        double bash_conversion_factor = 0.0;
+        std::pair<damage_type_id, float> derived_from;
+        cata::flat_set<std::string> immune_flags;
+        cata::flat_set<std::string> mon_immune_flags;
+        bool melee_only = false;
+        bool physical = false;
+        bool mon_difficulty = false;
+        bool no_resist = false;
+        bool edged = false;
+        bool env = false;
+        bool material_required = false;
+    };
+    const std::vector<damage_type_id> damage_ids = {
+        damage_type_id( "bash" ), damage_type_id( "cut" ),
+        damage_type_id( "stab" ), damage_type_id( "bullet" ),
+        damage_type_id( "acid" ), damage_type_id( "electric" ),
+        damage_type_id( "heat" ), damage_type_id( "cold" ),
+        damage_type_id( "biological" ), damage_type_id( "pure" ),
+    };
+    std::vector<damage_snapshot> legacy_damage;
+    for( const damage_type_id &id : damage_ids ) {
+        REQUIRE( id.is_valid() );
+        const damage_type &legacy = id.obj();
+        legacy_damage.push_back( damage_snapshot{
+            id, legacy.name.translated(), legacy.skill, legacy.magic_color,
+            legacy.bash_conversion_factor, legacy.derived_from,
+            legacy.immune_flags, legacy.mon_immune_flags,
+            legacy.melee_only, legacy.physical, legacy.mon_difficulty,
+            legacy.no_resist, legacy.edged, legacy.env,
+            legacy.material_required
+        } );
+    }
+
+    struct species_snapshot {
+        species_id id;
+        std::string description;
+        std::string footsteps;
+        field_type_str_id bleeds;
+        std::set<mon_flag_str_id> flags;
+        enum_bitset<mon_trigger> anger;
+        enum_bitset<mon_trigger> fear;
+        enum_bitset<mon_trigger> placate;
+        mod_id owner;
+    };
+    const std::vector<species_id> species_ids = {
+        species_id( "MAMMAL" ), species_id( "AMPHIBIAN" ),
+        species_id( "BIRD" ), species_id( "CYBORG" ),
+        species_id( "REPTILE" ), species_id( "FISH" ),
+        species_id( "KRAKEN" ), species_id( "MUTANT" ),
+        species_id( "NETHER" ), species_id( "NETHER_BURROWING" ),
+        species_id( "NETHER_EMANATION" ), species_id( "MIGO" ),
+        species_id( "TINDALOS" ), species_id( "SLIME" ),
+        species_id( "FUNGUS" ), species_id( "LEECH_PLANT" ),
+        species_id( "INSECT" ), species_id( "CENTIPEDE" ),
+        species_id( "INSECT_FLYING" ), species_id( "SPIDER" ),
+        species_id( "PLANT" ), species_id( "MOLLUSK" ),
+        species_id( "WORM" ), species_id( "ZOMBIE" ),
+        species_id( "FERAL" ), species_id( "ROBOT" ),
+        species_id( "ROBOT_FLYING" ), species_id( "YRAX" ),
+        species_id( "HORROR" ), species_id( "ABERRATION" ),
+        species_id( "HALLUCINATION" ), species_id( "HUMAN" ),
+        species_id( "UNKNOWN" ),
+    };
+    std::vector<species_snapshot> legacy_species;
+    for( const species_id &id : species_ids ) {
+        REQUIRE( id.is_valid() );
+        const species_type &legacy = id.obj();
+        REQUIRE( legacy.src.size() == 1 );
+        legacy_species.push_back( species_snapshot{
+            id, legacy.description.translated(), legacy.footsteps.translated(),
+            legacy.bleeds, legacy.flags, legacy.anger, legacy.fear,
+            legacy.placate, legacy.src.front().second
+        } );
+    }
+
+    struct quality_snapshot {
+        quality_id id;
+        std::string name;
+        std::vector<std::pair<int, std::string>> usages;
+        mod_id owner;
+    };
+    const std::vector<quality_id> quality_ids = {
+        quality_id( "CUT" ), quality_id( "GRASS_CUT" ),
+        quality_id( "CUT_FINE" ), quality_id( "GLARE" ),
+        quality_id( "SHEAR" ), quality_id( "CHURN" ),
+        quality_id( "LEATHER_AWL" ), quality_id( "SEW_CURVED" ),
+        quality_id( "ANESTHESIA" ), quality_id( "FISHING_ROD" ),
+        quality_id( "FISH_TRAP" ), quality_id( "TREE_TAP" ),
+        quality_id( "SMOOTH" ), quality_id( "WELD" ),
+        quality_id( "HACK" ), quality_id( "HAMMER" ),
+        quality_id( "HAMMER_FINE" ), quality_id( "HAMMER_SOFT" ),
+        quality_id( "SAW_W" ), quality_id( "SAW_M" ),
+        quality_id( "SAW_M_FINE" ), quality_id( "COOK" ),
+        quality_id( "HOTPLATE" ), quality_id( "BOIL" ),
+        quality_id( "CONTAIN" ), quality_id( "CHEM" ),
+        quality_id( "SIEVE" ), quality_id( "WINNOW" ),
+        quality_id( "STRAIN" ), quality_id( "SMOKE_PIPE" ),
+        quality_id( "DISTILL" ), quality_id( "AXE" ),
+        quality_id( "DIG" ), quality_id( "WRENCH" ),
+        quality_id( "WRENCH_FINE" ), quality_id( "SCREW" ),
+        quality_id( "SCREW_FINE" ), quality_id( "BUTCHER" ),
+        quality_id( "DRILL" ), quality_id( "DRILL_ROCK" ),
+        quality_id( "PRY" ), quality_id( "PRYING_NAIL" ),
+        quality_id( "PUNCH" ), quality_id( "WRITE" ),
+        quality_id( "LIFT" ), quality_id( "JACK" ),
+        quality_id( "SELF_JACK" ), quality_id( "HOSE" ),
+        quality_id( "CHISEL" ), quality_id( "CHISEL_WOOD" ),
+        quality_id( "SEW" ), quality_id( "KNIT" ),
+        quality_id( "PULL" ), quality_id( "ANVIL" ),
+        quality_id( "ANALYSIS" ), quality_id( "CONCENTRATE" ),
+        quality_id( "SEPARATE" ), quality_id( "FINE_DISTILL" ),
+        quality_id( "CHROMATOGRAPHY" ), quality_id( "LUTHIER" ),
+        quality_id( "SNOW_MAKING" ), quality_id( "GRIND" ),
+        quality_id( "FINE_GRIND" ), quality_id( "REAM" ),
+        quality_id( "FILE" ), quality_id( "VISE" ),
+        quality_id( "PRESSURIZATION" ), quality_id( "LOCKPICK" ),
+        quality_id( "EXTRACT" ), quality_id( "FILTER" ),
+        quality_id( "SUSPENDING" ), quality_id( "ROPE" ),
+        quality_id( "SURFACE" ), quality_id( "WHEEL_FAST" ),
+        quality_id( "JUMPSTART" ), quality_id( "FABRIC_CUT" ),
+        quality_id( "OVEN" ), quality_id( "GUN" ),
+        quality_id( "RIFLE" ), quality_id( "SHOTGUN" ),
+        quality_id( "SMG" ), quality_id( "PISTOL" ),
+        quality_id( "CUT_GLASS" ), quality_id( "MOP" ),
+        quality_id( "BLOW_HOT_AIR" ), quality_id( "THREAD_CUT" ),
+        quality_id( "THREAD_TAP" ), quality_id( "STRIKING_SURFACE" ),
+        quality_id( "TEMPER" ),
+    };
+    std::vector<quality_snapshot> legacy_qualities;
+    for( const quality_id &id : quality_ids ) {
+        REQUIRE( id.is_valid() );
+        const quality &legacy = id.obj();
+        REQUIRE( legacy.src.size() == 1 );
+        legacy_qualities.push_back( quality_snapshot{
+            id, legacy.name.translated(), legacy.usages,
+            legacy.src.front().second
+        } );
+    }
+
+    struct morale_snapshot {
+        morale_type id;
+        std::string description;
+        bool permanent = false;
+        mod_id owner;
+    };
+    const std::vector<morale_type> morale_ids = {
+        morale_type( "morale_food_good" ), morale_type( "morale_food_hot" ),
+        morale_type( "morale_chat" ), morale_type( "morale_chat_uncaring" ),
+        morale_type( "morale_ate_with_table" ), morale_type( "morale_ate_without_table" ),
+        morale_type( "morale_music" ), morale_type( "morale_honey" ),
+        morale_type( "morale_game" ), morale_type( "morale_marloss" ),
+        morale_type( "morale_mutagen" ), morale_type( "morale_feeling_good" ),
+        morale_type( "morale_support" ), morale_type( "morale_photos" ),
+        morale_type( "morale_craving_nicotine" ), morale_type( "morale_craving_caffeine" ),
+        morale_type( "morale_craving_alcohol" ), morale_type( "morale_craving_opiate" ),
+        morale_type( "morale_craving_speed" ), morale_type( "morale_craving_cocaine" ),
+        morale_type( "morale_craving_crack" ), morale_type( "morale_craving_mutagen" ),
+        morale_type( "morale_craving_diazepam" ), morale_type( "morale_craving_marloss" ),
+        morale_type( "morale_food_bad" ), morale_type( "morale_cannibal" ),
+        morale_type( "morale_demicannibal" ), morale_type( "morale_vegetarian" ),
+        morale_type( "morale_antiveggy" ), morale_type( "morale_meatarian" ),
+        morale_type( "morale_antimeat" ), morale_type( "morale_antifruit" ),
+        morale_type( "morale_lactose" ), morale_type( "morale_antijunk" ),
+        morale_type( "morale_antiwheat" ), morale_type( "morale_sweettooth" ),
+        morale_type( "morale_no_digest" ), morale_type( "morale_wet" ),
+        morale_type( "morale_dried_off" ), morale_type( "morale_cold" ),
+        morale_type( "morale_hot" ), morale_type( "morale_feeling_bad" ),
+        morale_type( "morale_bad_protein_bar" ), morale_type( "morale_killed_innocent" ),
+        morale_type( "morale_killed_friend" ), morale_type( "morale_killed_monster" ),
+        morale_type( "morale_mutilate_corpse" ), morale_type( "morale_mutagen_elf" ),
+        morale_type( "morale_mutagen_chimera" ), morale_type( "morale_mutagen_mutation" ),
+        morale_type( "morale_moodswing" ), morale_type( "morale_book" ),
+        morale_type( "morale_comfy" ), morale_type( "morale_scream" ),
+        morale_type( "morale_perm_masochist" ), morale_type( "morale_perm_radiophile" ),
+        morale_type( "morale_perm_noface" ), morale_type( "morale_perm_fpmode_on" ),
+        morale_type( "morale_perm_hoarder" ), morale_type( "morale_perm_optimist" ),
+        morale_type( "morale_perm_badtemper" ), morale_type( "morale_perm_numb" ),
+        morale_type( "morale_perm_emotionalvolatility" ), morale_type( "morale_perm_emotionalflatness" ),
+        morale_type( "morale_perm_constrained" ), morale_type( "morale_perm_nomad" ),
+        morale_type( "morale_game_found_kitten" ), morale_type( "morale_haircut" ),
+        morale_type( "morale_shave" ), morale_type( "morale_vomited" ),
+        morale_type( "morale_play_with_pet" ), morale_type( "morale_pyromania_startfire" ),
+        morale_type( "morale_pyromania_nearfire" ), morale_type( "morale_pyromania_nofire" ),
+        morale_type( "morale_killer_has_killed" ), morale_type( "morale_killer_need_to_kill" ),
+        morale_type( "morale_perm_filthy" ), morale_type( "morale_butcher" ),
+        morale_type( "morale_gravedigger" ), morale_type( "morale_funeral" ),
+        morale_type( "morale_tree_communion" ), morale_type( "morale_accomplishment" ),
+        morale_type( "morale_failure" ), morale_type( "morale_fun_craft" ),
+        morale_type( "morale_shitty_craft" ), morale_type( "morale_perm_debug" ),
+        morale_type( "morale_nightmare" ), morale_type( "morale_migo_bio_tech" ),
+        morale_type( "morale_impossible_shape" ), morale_type( "morale_afs_drugs" ),
+        morale_type( "morale_social" ), morale_type( "morale_asocial" ),
+        morale_type( "morale_bile" ), morale_type( "morale_sunrise" ),
+        morale_type( "morale_sunset" ), morale_type( "morale_applied_makeup" ),
+    };
+    std::vector<morale_snapshot> legacy_morales;
+    for( const morale_type &id : morale_ids ) {
+        REQUIRE( id.is_valid() );
+        const morale_type_data &legacy = id.obj();
+        REQUIRE( legacy.src.size() == 1 );
+        legacy_morales.push_back( morale_snapshot{
+            id, legacy.describe(), legacy.is_permanent(),
+            legacy.src.front().second
+        } );
+    }
+
+    struct zone_snapshot {
+        zone_type_id id;
+        std::string name;
+        std::string description;
+        field_type_str_id display_field;
+        bool can_be_personal = false;
+        bool hidden = false;
+        mod_id owner;
+    };
+    const std::vector<zone_type_id> zone_ids = {
+        zone_type_id( "LOOT_AMMO" ), zone_type_id( "LOOT_ARMOR" ),
+        zone_type_id( "LOOT_ARTIFACTS" ), zone_type_id( "LOOT_BIONICS" ),
+        zone_type_id( "LOOT_BOOKS" ), zone_type_id( "LOOT_CHEMICAL" ),
+        zone_type_id( "LOOT_CLOTHING" ), zone_type_id( "LOOT_CONTAINERS" ),
+        zone_type_id( "LOOT_CORPSE" ), zone_type_id( "LOOT_CURRENCY" ),
+        zone_type_id( "LOOT_CUSTOM" ), zone_type_id( "LOOT_DEFAULT" ),
+        zone_type_id( "LOOT_DRINK" ), zone_type_id( "LOOT_DRUGS" ),
+        zone_type_id( "LOOT_FARMOR" ), zone_type_id( "LOOT_FCLOTHING" ),
+        zone_type_id( "LOOT_FOOD" ), zone_type_id( "LOOT_FUEL" ),
+        zone_type_id( "LOOT_GUNS" ), zone_type_id( "LOOT_IGNORE" ),
+        zone_type_id( "LOOT_IGNORE_FAVORITES" ), zone_type_id( "LOOT_ITEM_GROUP" ),
+        zone_type_id( "LOOT_KEYS" ), zone_type_id( "LOOT_MAGAZINES" ),
+        zone_type_id( "LOOT_MANUALS" ), zone_type_id( "LOOT_MAPS" ),
+        zone_type_id( "LOOT_MA_MANUALS" ), zone_type_id( "LOOT_MODS" ),
+        zone_type_id( "LOOT_MUTAGENS" ), zone_type_id( "LOOT_OTHER" ),
+        zone_type_id( "LOOT_PDRINK" ), zone_type_id( "LOOT_PFOOD" ),
+        zone_type_id( "LOOT_SEEDS" ), zone_type_id( "LOOT_SPARE_PARTS" ),
+        zone_type_id( "LOOT_TOOL_MAGAZINE" ), zone_type_id( "LOOT_TOOLS" ),
+        zone_type_id( "LOOT_TRAPS" ), zone_type_id( "LOOT_UNSORTED" ),
+        zone_type_id( "LOOT_VEHICLE_PARTS" ), zone_type_id( "LOOT_WEAPONS" ),
+        zone_type_id( "LOOT_WOOD" ), zone_type_id( "STRIP_CORPSES" ),
+        zone_type_id( "UNLOAD_ALL" ),
+    };
+    std::vector<zone_snapshot> legacy_zones;
+    for( const zone_type_id &id : zone_ids ) {
+        REQUIRE( id.is_valid() );
+        const zone_type &legacy = id.obj();
+        REQUIRE( legacy.src.size() == 1 );
+        legacy_zones.push_back( zone_snapshot{
+            id, legacy.name(), legacy.desc(), legacy.get_field(),
+            legacy.can_be_personal, legacy.hidden, legacy.src.front().second
+        } );
+    }
+
+    const std::vector<scenttype_id> scent_ids = {
+        scenttype_id( "sc_human" ), scenttype_id( "sc_flower" ),
+        scenttype_id( "sc_fetid" ), scenttype_id( "sc_bile" ),
+    };
+    std::vector<std::pair<scenttype_id, std::set<species_id>>> legacy_scents;
+    for( const scenttype_id &id : scent_ids ) {
+        REQUIRE( id.is_valid() );
+        legacy_scents.emplace_back( id, id.obj().receptive_species );
+    }
+
+    const std::vector<skill_displayType_id> skill_display_ids = {
+        skill_displayType_id( "display_melee" ),
+        skill_displayType_id( "display_ranged" ),
+        skill_displayType_id( "display_crafting" ),
+        skill_displayType_id( "display_interaction" ),
+    };
+    std::vector<std::pair<skill_displayType_id, std::string>> legacy_skill_displays;
+    for( const skill_displayType_id &id : skill_display_ids ) {
+        REQUIRE( id.is_valid() );
+        legacy_skill_displays.emplace_back( id, id->display_string() );
+    }
+
+    struct construction_category_snapshot {
+        construction_category_id id;
+        std::string name;
+        mod_id owner;
+    };
+    const std::vector<construction_category_id> construction_category_ids = {
+        construction_category_id( "ALL" ), construction_category_id( "APPLIANCE" ),
+        construction_category_id( "CONSTRUCT" ), construction_category_id( "FURN" ),
+        construction_category_id( "DIG" ), construction_category_id( "REPAIR" ),
+        construction_category_id( "REINFORCE" ), construction_category_id( "DECORATE" ),
+        construction_category_id( "FARM_WOOD" ), construction_category_id( "TOOL" ),
+        construction_category_id( "WINDOWS" ), construction_category_id( "BULK" ),
+        construction_category_id( "OTHER" ), construction_category_id( "DECONSTRUCT" ),
+        construction_category_id( "FILTER" ),
+    };
+    std::vector<construction_category_snapshot> legacy_construction_categories;
+    for( const construction_category_id &id : construction_category_ids ) {
+        REQUIRE( id.is_valid() );
+        const construction_category &legacy = id.obj();
+        REQUIRE( legacy.src.size() == 1 );
+        legacy_construction_categories.push_back( construction_category_snapshot{
+            id, legacy.name(), legacy.src.front().second
+        } );
+    }
+
+    struct limb_score_snapshot {
+        limb_score_id id;
+        std::string name;
+        bool wound_affect = true;
+        bool encumb_affect = true;
+    };
+    const std::vector<limb_score_id> limb_score_ids = {
+        limb_score_id( "manip" ), limb_score_id( "lift" ),
+        limb_score_id( "grip" ), limb_score_id( "block" ),
+        limb_score_id( "breathing" ), limb_score_id( "vision" ),
+        limb_score_id( "night_vis" ), limb_score_id( "reaction" ),
+        limb_score_id( "move_speed" ), limb_score_id( "balance" ),
+        limb_score_id( "footing" ), limb_score_id( "consume_solid" ),
+        limb_score_id( "consume_liquid" ), limb_score_id( "swim" ),
+        limb_score_id( "crawl" ),
+    };
+    std::vector<limb_score_snapshot> legacy_limb_scores;
+    for( const limb_score_id &id : limb_score_ids ) {
+        REQUIRE( id.is_valid() );
+        const limb_score &legacy = id.obj();
+        legacy_limb_scores.push_back( limb_score_snapshot{
+            id, legacy.name().translated(), legacy.affected_by_wounds(),
+            legacy.affected_by_encumb()
+        } );
+    }
+
+    struct weapon_category_snapshot {
+        weapon_category_id id;
+        std::string name;
+        std::vector<proficiency_id> proficiencies;
+    };
+    const std::vector<weapon_category_id> weapon_category_ids = {
+        weapon_category_id( "AUTOMATIC_RIFLES" ), weapon_category_id( "AUTOMATIC_PISTOLS" ),
+        weapon_category_id( "KNIVES" ), weapon_category_id( "BATONS" ),
+        weapon_category_id( "FLAILS" ), weapon_category_id( "MACES" ),
+        weapon_category_id( "MEDIUM_SWORDS" ), weapon_category_id( "LONG_SWORDS" ),
+        weapon_category_id( "SHORT_SWORDS" ), weapon_category_id( "QUARTERSTAVES" ),
+        weapon_category_id( "CLAWS" ), weapon_category_id( "SHIVS" ),
+        weapon_category_id( "HOOKING_WEAPONRY" ), weapon_category_id( "SPEARS" ),
+        weapon_category_id( "UNARMED" ), weapon_category_id( "POLEARMS" ),
+        weapon_category_id( "FENCING_WEAPONRY" ), weapon_category_id( "LONG_THRUSTING_SWORDS" ),
+        weapon_category_id( "BIONIC_WEAPONRY" ), weapon_category_id( "BIONIC_SWORDS" ),
+        weapon_category_id( "GREAT_SWORDS" ), weapon_category_id( "GREAT_HAMMERS" ),
+        weapon_category_id( "GREAT_AXES" ), weapon_category_id( "HAND_AXES" ),
+        weapon_category_id( "WHIPS" ),
+    };
+    std::vector<weapon_category_snapshot> legacy_weapon_categories;
+    for( const weapon_category_id &id : weapon_category_ids ) {
+        REQUIRE( id.is_valid() );
+        const weapon_category &legacy = id.obj();
+        legacy_weapon_categories.push_back( weapon_category_snapshot{
+            id, legacy.name().translated(), legacy.category_proficiencies()
+        } );
+    }
+
+    struct vpart_location_snapshot {
+        vpart_location_id id;
+        std::string name;
+        std::string description;
+        int z_order = 0;
+        int list_order = 5;
+    };
+    const std::vector<vpart_location_id> vpart_location_ids = {
+        vpart_location_id( "structure" ), vpart_location_id( "armor" ),
+        vpart_location_id( "damping" ), vpart_location_id( "on_roof" ),
+        vpart_location_id( "roof" ), vpart_location_id( "on_cargo" ),
+        vpart_location_id( "center" ), vpart_location_id( "engine_block" ),
+        vpart_location_id( "fuel_source" ), vpart_location_id( "under" ),
+        vpart_location_id( "on_battery_mount" ), vpart_location_id( "on_frame" ),
+        vpart_location_id( "axle" ), vpart_location_id( "on_ceiling" ),
+        vpart_location_id( "on_controls" ), vpart_location_id( "on_lockable_cargo" ),
+        vpart_location_id( "on_seat" ), vpart_location_id( "on_windshield" ),
+        vpart_location_id( "structural" ), vpart_location_id( "anywhere" ),
+    };
+    std::vector<vpart_location_snapshot> legacy_vpart_locations;
+    for( const vpart_location_id &id : vpart_location_ids ) {
+        REQUIRE( id.is_valid() );
+        const vpart_location &legacy = id.obj();
+        legacy_vpart_locations.push_back( vpart_location_snapshot{
+            id, legacy.name.translated(), legacy.description.translated(),
+            legacy.z_order, legacy.list_order
+        } );
+    }
+
+    struct damage_info_order_snapshot {
+        damage_info_order_id id;
+        damage_type_id dmg_type;
+        damage_info_order::info_disp display;
+        std::string verb;
+        std::array<std::pair<int, bool>, 5> sections;
+    };
+    const std::vector<damage_info_order_id> damage_info_order_ids = {
+        damage_info_order_id( "bash" ), damage_info_order_id( "cut" ),
+        damage_info_order_id( "stab" ), damage_info_order_id( "bullet" ),
+        damage_info_order_id( "acid" ), damage_info_order_id( "electric" ),
+        damage_info_order_id( "heat" ), damage_info_order_id( "cold" ),
+        damage_info_order_id( "biological" ), damage_info_order_id( "pure" ),
+    };
+    std::vector<damage_info_order_snapshot> legacy_damage_info_orders;
+    for( const damage_info_order_id &id : damage_info_order_ids ) {
+        REQUIRE( id.is_valid() );
+        const damage_info_order &legacy = id.obj();
+        legacy_damage_info_orders.push_back( damage_info_order_snapshot{
+            id, legacy.dmg_type, legacy.info_display, legacy.verb.translated(),
+            { { std::make_pair( legacy.bionic_info.order, legacy.bionic_info.show_type ),
+                std::make_pair( legacy.protection_info.order, legacy.protection_info.show_type ),
+                std::make_pair( legacy.pet_prot_info.order, legacy.pet_prot_info.show_type ),
+                std::make_pair( legacy.melee_combat_info.order, legacy.melee_combat_info.show_type ),
+                std::make_pair( legacy.ablative_info.order, legacy.ablative_info.show_type ) } }
+        } );
+    }
+
+    struct move_mode_snapshot {
+        move_mode_id id;
+        std::string name;
+        move_mode_type type;
+        char letter = '\0';
+        char panel_letter = '\0';
+        nc_color panel_color;
+        nc_color symbol_color;
+        float exertion = 0.0f;
+        float riding_exertion = 0.0f;
+        float stamina_mult = 0.0f;
+        float sound_mult = 0.0f;
+        float speed_mult = 0.0f;
+        int mech_power_use = 0;
+        int swim_speed_mod = 0;
+        bool stop_hauling = false;
+        move_mode_id cycle;
+        move_mode_id cycle_reverse;
+    };
+    const std::vector<move_mode_id> move_mode_ids = {
+        move_mode_id( "walk" ), move_mode_id( "run" ),
+        move_mode_id( "crouch" ), move_mode_id( "prone" ),
+    };
+    std::vector<move_mode_snapshot> legacy_move_modes;
+    for( const move_mode_id &id : move_mode_ids ) {
+        REQUIRE( id.is_valid() );
+        const move_mode &legacy = id.obj();
+        legacy_move_modes.push_back( move_mode_snapshot{
+            id, legacy.name(), legacy.type(), legacy.letter(),
+            legacy.panel_letter(), legacy.panel_color(), legacy.symbol_color(),
+            legacy.exertion_level(), legacy.exertion_level_animal_riding(),
+            legacy.stamina_mult(), legacy.sound_mult(), legacy.move_speed_mult(),
+            static_cast<int>( units::to_kilojoule( legacy.mech_power_use() ) ),
+            legacy.swim_speed_mod(), legacy.stop_hauling(),
+            legacy.cycle(), legacy.cycle_reverse()
+        } );
+    }
+
+    const std::vector<score_id> score_ids = {
+        score_id( "score_kills" ), score_id( "score_moves" ),
+        score_id( "score_distance_walked" ), score_id( "score_distance_mounted" ),
+        score_id( "score_distance_ran" ), score_id( "score_distance_crouched" ),
+        score_id( "score_distance_swam" ), score_id( "score_distance_swam_underwater" ),
+        score_id( "score_min_move_z" ), score_id( "score_max_move_z" ),
+        score_id( "score_distance_veh_onboard" ), score_id( "score_distance_gndv_onboard" ),
+        score_id( "score_distance_rail_onboard" ), score_id( "score_distance_boat_onboard" ),
+        score_id( "score_distance_acft_onboard" ), score_id( "score_distance_veh_ctrl_remote" ),
+        score_id( "score_max_velocity_gndv" ), score_id( "score_max_velocity_rail" ),
+        score_id( "score_max_velocity_boat" ), score_id( "score_max_velocity_acft" ),
+        score_id( "score_min_veh_z" ), score_id( "score_max_veh_z" ),
+        score_id( "score_max_gndv_z" ), score_id( "score_max_acft_z" ),
+        score_id( "score_damage_taken" ), score_id( "score_damage_healed" ),
+        score_id( "score_headshots" ), score_id( "score_cut_trees" ),
+        score_id( "score_buried_corpses" ), score_id( "score_exhumed_graves" ),
+        score_id( "score_installs_cbm" ), score_id( "score_installs_faulty_cbm" ),
+        score_id( "score_gains_mutation" ), score_id( "score_crosses_mutation_threshold" ),
+        score_id( "score_broken_bones" ), score_id( "score_broken_right_leg" ),
+        score_id( "score_broken_left_leg" ), score_id( "score_broken_right_arm" ),
+        score_id( "score_broken_left_arm" ), score_id( "score_skill_levels_gained" ),
+    };
+    std::vector<std::pair<score_id, mod_id>> legacy_scores;
+    for( const score_id &id : score_ids ) {
+        REQUIRE( id.is_valid() );
+        const score &legacy = id.obj();
+        REQUIRE( legacy.src.size() == 1 );
+        legacy_scores.emplace_back( id, legacy.src.front().second );
+    }
+
+    struct disease_snapshot {
+        diseasetype_id id;
+        time_duration min_duration;
+        time_duration max_duration;
+        int min_intensity = 1;
+        int max_intensity = 1;
+        std::set<bodypart_str_id> affected_bodyparts;
+        std::optional<int> health_threshold;
+        efftype_id symptoms;
+        mod_id owner;
+    };
+    const std::vector<diseasetype_id> disease_ids = {
+        diseasetype_id( "bad_food" ),
+        diseasetype_id( "highly_contaminated_food" ),
+    };
+    std::vector<disease_snapshot> legacy_diseases;
+    for( const diseasetype_id &id : disease_ids ) {
+        REQUIRE( id.is_valid() );
+        const disease_type &legacy = id.obj();
+        REQUIRE( legacy.src.size() == 1 );
+        legacy_diseases.push_back( disease_snapshot{
+            id, legacy.min_duration, legacy.max_duration,
+            legacy.min_intensity, legacy.max_intensity,
+            legacy.affected_bodyparts, legacy.health_threshold,
+            legacy.symptoms, legacy.src.front().second
+        } );
+    }
+
+    const std::vector<std::string> connect_group_ids = {
+        "WALL", "CHAINFENCE", "WOODFENCE", "RAILING", "POOLWATER", "WATER",
+        "PAVEMENT", "PAVEMENT_MARKING", "PAVEMENT_ZEBRA", "RAIL", "COUNTER",
+        "LIXATUBE", "CANVAS_WALL", "SAND", "SANDMOUND", "SANDPILE", "SANDGLASS",
+        "GRAVELPILE", "PIT_DEEP", "LINOLEUM", "CARPET", "CONCRETE", "BRICKFLOOR",
+        "MARBLEFLOOR", "CLAY", "CLAYMOUND", "DIRT", "DIRTMOUND", "MUD", "PLANTER",
+        "ROCKFLOOR", "MULCHFLOOR", "METALFLOOR", "WOODFLOOR", "INDOORFLOOR",
+        "BEACH_FORMATIONS", "ICE", "ALIENMEADOW", "GREENHOUSE", "STRING",
+    };
+    struct connect_group_snapshot {
+        std::string id;
+        int index = -1;
+        std::set<ter_furn_flag> group_flags;
+        std::set<ter_furn_flag> connects_to_flags;
+        std::set<ter_furn_flag> rotates_to_flags;
+    };
+    std::vector<connect_group_snapshot> legacy_connect_groups;
+    for( const std::string &name : connect_group_ids ) {
+        const connect_group *legacy =
+            cata::lua_platform::detail::connect_group_registry_find( name );
+        REQUIRE( legacy != nullptr );
+        legacy_connect_groups.push_back( connect_group_snapshot{
+            name, legacy->index, legacy->group_flags,
+            legacy->connects_to_flags, legacy->rotates_to_flags
+        } );
+    }
+
+    struct attack_vector_snapshot {
+        attack_vector_id id;
+        bool weapon = false;
+        bool strict_limb_definition = false;
+        bool armor_bonus = true;
+        int encumbrance_limit = 100;
+        int bp_hp_limit = 10;
+        std::vector<bodypart_str_id> authored_limbs;
+        std::vector<sub_bodypart_str_id> authored_contact_area;
+        std::vector<bodypart_str_id> limbs;
+        std::vector<sub_bodypart_str_id> contact_area;
+        std::vector<std::pair<bp_type, int>> limb_req;
+        cata::flat_set<flag_id> required_limb_flags;
+        cata::flat_set<flag_id> forbidden_limb_flags;
+    };
+    const std::vector<attack_vector_id> attack_vector_ids = {
+        attack_vector_id( "test_test" ), attack_vector_id( "vector_headbutt" ),
+        attack_vector_id( "vector_bite" ), attack_vector_id( "vector_punch" ),
+        attack_vector_id( "vector_wrist" ), attack_vector_id( "vector_palm" ),
+        attack_vector_id( "vector_grasp" ), attack_vector_id( "vector_backhand" ),
+        attack_vector_id( "vector_shoulder" ), attack_vector_id( "vector_arm" ),
+        attack_vector_id( "vector_arm_grapple" ), attack_vector_id( "vector_elbow" ),
+        attack_vector_id( "vector_foot_toes" ), attack_vector_id( "vector_foot_sole" ),
+        attack_vector_id( "vector_foot_heel" ), attack_vector_id( "vector_knee" ),
+        attack_vector_id( "vector_shin" ),
+    };
+    std::vector<attack_vector_snapshot> legacy_attack_vectors;
+    for( const attack_vector_id &id : attack_vector_ids ) {
+        REQUIRE( id.is_valid() );
+        const attack_vector &legacy = id.obj();
+        legacy_attack_vectors.push_back( attack_vector_snapshot{
+            id, legacy.weapon, legacy.strict_limb_definition,
+            legacy.armor_bonus, legacy.encumbrance_limit, legacy.bp_hp_limit,
+            legacy.authored_limbs, legacy.authored_contact_area,
+            legacy.limbs, legacy.contact_area, legacy.limb_req,
+            legacy.required_limb_flags, legacy.forbidden_limb_flags
+        } );
+    }
+
+    struct clothing_mod_snapshot {
+        clothing_mod_id id;
+        flag_id flag;
+        itype_id item_string;
+        std::string implement_prompt;
+        std::string destroy_prompt;
+        bool restricted = false;
+        std::vector<mod_value> mod_values;
+    };
+    const std::vector<clothing_mod_id> clothing_mod_ids = {
+        clothing_mod_id( "leather_padded" ), clothing_mod_id( "steel_padded" ),
+        clothing_mod_id( "kevlar_padded" ), clothing_mod_id( "furred" ),
+        clothing_mod_id( "wooled" ),
+    };
+    std::vector<clothing_mod_snapshot> legacy_clothing_mods;
+    for( const clothing_mod_id &id : clothing_mod_ids ) {
+        REQUIRE( id.is_valid() );
+        const clothing_mod &legacy = id.obj();
+        legacy_clothing_mods.push_back( clothing_mod_snapshot{
+            id, legacy.flag, legacy.item_string,
+            legacy.implement_prompt.translated(), legacy.destroy_prompt.translated(),
+            legacy.restricted, legacy.mod_values
+        } );
+    }
+
+    struct harvest_drop_snapshot {
+        harvest_drop_type_id id;
+        std::vector<skill_id> skills;
+        bool is_group = false;
+        bool dissect_only = false;
+        // Message fields are snippet-category lookups (randomized via
+        // SNIPPET.random_from_category), so the raw category ids have no
+        // public accessor and are intentionally not compared here.
+    };
+    const std::vector<harvest_drop_type_id> harvest_drop_ids = {
+        harvest_drop_type_id( "flesh" ), harvest_drop_type_id( "bone" ),
+        harvest_drop_type_id( "skin" ), harvest_drop_type_id( "blood" ),
+        harvest_drop_type_id( "offal" ), harvest_drop_type_id( "mutagen" ),
+        harvest_drop_type_id( "mutagen_group" ), harvest_drop_type_id( "bionic" ),
+        harvest_drop_type_id( "bionic_group" ),
+    };
+    std::vector<harvest_drop_snapshot> legacy_harvest_drops;
+    for( const harvest_drop_type_id &id : harvest_drop_ids ) {
+        REQUIRE( id.is_valid() );
+        const harvest_drop_type &legacy = id.obj();
+        legacy_harvest_drops.push_back( harvest_drop_snapshot{
+            id, legacy.get_harvest_skills(), legacy.is_item_group(),
+            legacy.dissect_only()
+        } );
+    }
+
+    struct explosion_light_snapshot {
+        explosion_light_str_id id;
+        std::vector<light_stop> stops;
+        vfx_easing easing;
+        float wave_travel = 0.0f;
+        float wave_gap = 0.0f;
+        float rise = 0.0f;
+        float fade = 0.0f;
+        float blend = 0.0f;
+        float spread_jitter = 0.0f;
+        float color_jitter = 0.0f;
+        float flicker = 0.0f;
+        float duration_base_ms = 0.0f;
+        float duration_per_tile_ms = 0.0f;
+        float duration_min_ms = 0.0f;
+        float duration_max_ms = 0.0f;
+        float screen_shake_magnitude = 0.0f;
+        float screen_shake_duration_ms = 0.0f;
+        bool shockwave = false;
+        float shockwave_strength = 0.0f;
+        float shockwave_speed = 0.0f;
+        float shockwave_thickness = 0.0f;
+    };
+    const std::vector<explosion_light_str_id> explosion_light_ids = {
+        explosion_light_str_id( "default_blast" ), explosion_light_str_id( "fire_blast" ),
+        explosion_light_str_id( "rainbow_blast" ), explosion_light_str_id( "muzzle_flash" ),
+        explosion_light_str_id( "impact_spark" ), explosion_light_str_id( "bullet_tracer" ),
+        explosion_light_str_id( "beam_laser" ), explosion_light_str_id( "beam_plasma" ),
+        explosion_light_str_id( "beam_lightning" ), explosion_light_str_id( "emp_blast" ),
+        explosion_light_str_id( "flashbang_blast" ), explosion_light_str_id( "gas_cloud" ),
+        explosion_light_str_id( "incendiary_blast" ), explosion_light_str_id( "smoke_cloud" ),
+    };
+    std::vector<explosion_light_snapshot> legacy_explosion_lights;
+    for( const explosion_light_str_id &id : explosion_light_ids ) {
+        REQUIRE( id.is_valid() );
+        const explosion_light &legacy = id.obj();
+        legacy_explosion_lights.push_back( explosion_light_snapshot{
+            id, legacy.stops, legacy.easing, legacy.wave_travel,
+            legacy.wave_gap, legacy.rise, legacy.fade, legacy.blend,
+            legacy.spread_jitter, legacy.color_jitter, legacy.flicker,
+            legacy.duration_base_ms, legacy.duration_per_tile_ms,
+            legacy.duration_min_ms, legacy.duration_max_ms,
+            legacy.screen_shake_magnitude, legacy.screen_shake_duration_ms,
+            legacy.shockwave, legacy.shockwave_strength,
+            legacy.shockwave_speed, legacy.shockwave_thickness
+        } );
+    }
+
+    const std::vector<cata::lua_platform::detail::named_color_native_definition>
+    legacy_named_colors = cata::lua_platform::detail::named_color_registry_snapshot();
+    const std::vector<cata::lua_platform::detail::rotatable_symbol_native_entry>
+    legacy_rotatable_symbols =
+        cata::lua_platform::detail::rotatable_symbol_registry_snapshot();
+
+    const std::vector<int> legacy_hit_range_table =
+        Creature::dispersion_for_even_chance_of_good_hit;
+
+    const std::vector<std::pair<item_action_id, item_action>>
+    legacy_item_actions =
+        cata::lua_platform::detail::item_action_registry_snapshot();
+    REQUIRE( legacy_item_actions.size() == 193 );
+
+    struct palette_probe {
+        vpalette_id id;
+        std::vector<int> indexes;
+    };
+    const std::vector<std::string> palette_probe_parts = {
+        "door", "roof", "board", "windshield", "frame", "seat",
+    };
+    const std::vector<vpalette_id> palette_ids = {
+        vpalette_id( "car_standard" ), vpalette_id( "cargo_standard" ),
+        vpalette_id( "visibility_standard" ), vpalette_id( "military_standard" ),
+        vpalette_id( "military_fighter" ), vpalette_id( "military_heli" ),
+        vpalette_id( "military_boat" ), vpalette_id( "police_standard" ),
+        vpalette_id( "swat_standard" ), vpalette_id( "construction_standard" ),
+        vpalette_id( "farm_standard" ), vpalette_id( "firetruck_standard" ),
+        vpalette_id( "ems_standard" ), vpalette_id( "bus_standard" ),
+        vpalette_id( "wienermobile_standard" ), vpalette_id( "limo_standard" ),
+        vpalette_id( "sneaky_standard" ), vpalette_id( "aircraft_standard" ),
+        vpalette_id( "aircraft_commercial" ), vpalette_id( "wooden_standard" ),
+    };
+    std::vector<palette_probe> legacy_palette_probes;
+    for( const vpalette_id &id : palette_ids ) {
+        REQUIRE( id.is_valid() );
+        std::vector<int> indexes;
+        for( const std::string &part : palette_probe_parts ) {
+            indexes.push_back( id->fuzzy_to_index( vpart_id( part ) ) );
+        }
+        legacy_palette_probes.push_back( palette_probe{ id, indexes } );
+    }
+
+    struct connection_probe {
+        string_id<overmap_connection> id;
+        std::vector<int> costs;
+    };
+    const std::vector<int_id<oter_t>> connection_probe_oters = {
+        int_id<oter_t>( "road_ns" ), int_id<oter_t>( "road_nesw" ),
+        int_id<oter_t>( "bridge_ns" ),
+    };
+    const std::vector<std::string> connection_probe_oter_names = {
+        "road_ns", "road_nesw", "bridge_ns",
+    };
+    for( const int_id<oter_t> &oter : connection_probe_oters ) {
+        REQUIRE( oter );
+    }
+    const std::vector<string_id<overmap_connection>> connection_ids = {
+        string_id<overmap_connection>( "local_road" ),
+        string_id<overmap_connection>( "highway_road_connection" ),
+        string_id<overmap_connection>( "sewer_tunnel" ),
+        string_id<overmap_connection>( "subway_tunnel" ),
+        string_id<overmap_connection>( "forest_trail" ),
+    };
+    std::vector<connection_probe> legacy_connection_probes;
+    for( const string_id<overmap_connection> &id : connection_ids ) {
+        REQUIRE( id.is_valid() );
+        std::vector<int> costs;
+        for( const int_id<oter_t> &oter : connection_probe_oters ) {
+            const overmap_connection::subtype *subtype =
+                id->pick_subtype_for( oter );
+            costs.push_back( subtype == nullptr ? -1 : subtype->basic_cost );
+        }
+        legacy_connection_probes.push_back( connection_probe{ id, costs } );
+    }
+
+    struct butchery_probe {
+        creature_size size;
+        butcher_type butcher;
+        std::pair<float, requirement_id> result;
+    };
+    std::vector<butchery_probe> legacy_butchery_probes;
+    const string_id<butchery_requirements> legacy_butchery( "default" );
+    REQUIRE( legacy_butchery.is_valid() );
+    for( const creature_size size : { creature_size::tiny, creature_size::medium,
+                                      creature_size::huge } ) {
+        for( const butcher_type butcher : { butcher_type::BLEED, butcher_type::FULL,
+                                            butcher_type::DISSECT } ) {
+            legacy_butchery_probes.push_back( butchery_probe{
+                size, butcher,
+                legacy_butchery->get_fastest_requirements( get_avatar(), size, butcher )
+            } );
+        }
+    }
+
+    std::map<std::string, std::string> legacy_construction_group_names;
+    for( const construction_group &group : construction_groups::get_all() ) {
+        legacy_construction_group_names.emplace( group.id.str(), group.name() );
+    }
+    // construction_group.json contributes 441 of these; other core files add
+    // a few more, so only the migrated subset is asserted below.
+
+    std::vector<std::string> legacy_monster_flags;
+    for( const mon_flag &flag :
+         cata::lua_platform::detail::monster_flag_registry().get_all() ) {
+        legacy_monster_flags.push_back( flag.id.str() );
+    }
+    std::sort( legacy_monster_flags.begin(), legacy_monster_flags.end() );
+
+    struct ammunition_parity {
+        std::string id;
+        std::string name;
+        std::string default_item;
+    };
+    std::vector<ammunition_parity> legacy_ammunition;
+    for( const auto &[id, value] :
+         cata::lua_platform::detail::ammunition_type_registry_snapshot() ) {
+        legacy_ammunition.push_back( ammunition_parity{
+            id.str(), value.name(), value.default_ammotype().str()
+        } );
+    }
+
+    struct mutation_category_parity {
+        mutation_category_id id;
+        std::string name;
+        std::string mutagen_message;
+        std::string memorial_message;
+        bool wip;
+        bool skip_test;
+        trait_id threshold_mut;
+        int threshold_min;
+        vitamin_id vitamin;
+        int base_removal_chance;
+        float base_removal_cost_mul;
+    };
+    std::vector<mutation_category_parity> legacy_mutation_categories;
+    for( const auto &[id, value] : mutation_category_trait::get_all() ) {
+        legacy_mutation_categories.push_back( mutation_category_parity{
+            id, value.name(), value.mutagen_message(),
+            value.memorial_message_male(), value.wip, value.skip_test,
+            value.threshold_mut, value.threshold_min, value.vitamin,
+            value.base_removal_chance, value.base_removal_cost_mul
+        } );
+    }
+    std::sort( legacy_mutation_categories.begin(), legacy_mutation_categories.end(),
+    []( const mutation_category_parity &left, const mutation_category_parity &right ) {
+        return left.id.str() < right.id.str();
+    } );
+
+    struct vision_level_parity {
+        std::string name;
+        std::uint32_t symbol;
+        nc_color color;
+        std::string looks_like;
+        bool blends_adjacent;
+        bool present;
+    };
+    struct vision_parity {
+        std::string id;
+        std::vector<vision_level_parity> levels;
+    };
+    std::vector<vision_parity> legacy_visions;
+    for( const oter_vision &vision : oter_vision::get_all() ) {
+        vision_parity snapshot;
+        snapshot.id = vision.get_id().str();
+        for( int level = 0; level < 3; ++level ) {
+            const oter_vision::level *const viewed = vision.viewed(
+                        static_cast<om_vision_level>( level + 1 ) );
+            if( viewed == nullptr ) {
+                snapshot.levels.push_back(
+                    vision_level_parity{ {}, 0, c_black, {}, false, false } );
+                continue;
+            }
+            snapshot.levels.push_back( vision_level_parity{
+                viewed->name.translated(), viewed->symbol, viewed->color,
+                viewed->looks_like, viewed->blends_adjacent, true
+            } );
+        }
+        legacy_visions.push_back( snapshot );
+    }
+
+    struct land_use_parity {
+        std::string id;
+        int code;
+        std::string name;
+        std::string description;
+        std::string symbol;
+        nc_color color;
+        mod_id owner;
+    };
+    std::vector<land_use_parity> legacy_land_use_codes;
+    for( const overmap_land_use_code &value :
+         cata::lua_platform::detail::overmap_land_use_code_registry().get_all() ) {
+        REQUIRE( value.src.size() == 1 );
+        legacy_land_use_codes.push_back( land_use_parity{
+            value.id.str(), value.land_use_code, value.name.translated(),
+            value.detailed_definition.translated(), value.get_symbol(),
+            value.color, value.src.front().second
+        } );
+    }
+
+    struct proficiency_category_parity {
+        std::string id;
+        std::string name;
+        std::string description;
+    };
+    std::vector<proficiency_category_parity> legacy_proficiency_categories;
+    for( const proficiency_category &value : proficiency_category::get_all() ) {
+        legacy_proficiency_categories.push_back( proficiency_category_parity{
+            value.id.str(), value._name.translated(), value._description.translated()
+        } );
+    }
+
+    struct vpart_category_parity {
+        std::string id;
+        std::string name;
+        std::string short_name;
+        int priority;
+    };
+    std::vector<vpart_category_parity> legacy_vpart_categories;
+    for( const vpart_category &value : vpart_category::all() ) {
+        legacy_vpart_categories.push_back( vpart_category_parity{
+            value.get_id(), value.name(), value.short_name(),
+            cata::lua_platform::detail::vehicle_part_category_priority( value )
+        } );
+    }
+
+    const std::map<std::string, int> legacy_overlay_orders =
+        base_mutation_overlay_ordering;
+
+    const std::vector<std::pair<std::string, std::string>> legacy_effect_migrations =
+        cata::lua_platform::detail::effect_migration_snapshot();
+    const std::vector<std::pair<std::string, std::string>> legacy_oter_migrations =
+        cata::lua_platform::detail::oter_migration_snapshot();
+    const std::vector<std::pair<std::string, std::string>>
+    legacy_proficiency_migrations =
+        cata::lua_platform::detail::proficiency_migration_snapshot();
+    const std::vector<std::pair<std::string, std::string>>
+    legacy_vehicle_part_migrations =
+        cata::lua_platform::detail::vehicle_part_migration_snapshot();
+    const std::vector<std::pair<std::string, std::string>> legacy_terrain_migrations =
+        cata::lua_platform::detail::terrain_migration_snapshot();
+    const std::vector<std::pair<std::string, std::string>> legacy_furniture_migrations =
+        cata::lua_platform::detail::furniture_migration_snapshot();
+    const std::vector<std::pair<std::string, std::string>> legacy_trap_migrations =
+        cata::lua_platform::detail::trap_migration_snapshot();
+    const std::vector<std::pair<std::string, std::string>>
+    legacy_overmap_special_migrations =
+        cata::lua_platform::detail::overmap_special_migration_snapshot();
+
+    struct weighted_group_snapshot {
+        std::string id;
+        std::vector<std::pair<std::string, int>> entries;
+    };
+    std::vector<weighted_group_snapshot> legacy_vehicle_groups;
+    for( const auto &[id, group] : vgroups ) {
+        legacy_vehicle_groups.push_back( weighted_group_snapshot{
+            id.str(), cata::lua_platform::detail::vehicle_group_weighted_entries( id )
+        } );
+    }
+    std::sort( legacy_vehicle_groups.begin(), legacy_vehicle_groups.end(),
+    []( const weighted_group_snapshot &left, const weighted_group_snapshot &right ) {
+        return left.id < right.id;
+    } );
+
+    std::vector<weighted_group_snapshot> legacy_fault_groups;
+    for( const fault_group &group :
+         cata::lua_platform::detail::fault_group_registry().get_all() ) {
+        std::vector<std::pair<std::string, int>> entries;
+        const weighted_int_list<fault_id> list = group.get_weighted_list();
+        entries.reserve( list.size() );
+        for( const std::pair<fault_id, int> &entry : list ) {
+            entries.emplace_back( entry.first.str(), entry.second );
+        }
+        legacy_fault_groups.push_back(
+            weighted_group_snapshot{ group.id.str(), std::move( entries ) } );
+    }
+    std::sort( legacy_fault_groups.begin(), legacy_fault_groups.end(),
+    []( const weighted_group_snapshot &left, const weighted_group_snapshot &right ) {
+        return left.id < right.id;
+    } );
+
+    const std::vector<std::string> legacy_monster_blacklist =
+        cata::lua_platform::detail::monster_blacklist_snapshot();
+    const std::vector<std::string> legacy_monster_whitelist =
+        cata::lua_platform::detail::monster_whitelist_snapshot();
+    const scen_blacklist legacy_scenario_blacklist =
+        cata::lua_platform::detail::scenario_blacklist_snapshot();
+    const std::vector<std::string> legacy_charge_removal_blacklist =
+        cata::lua_platform::detail::charge_removal_blacklist_snapshot();
+    const std::vector<std::string> legacy_temperature_removal_blacklist =
+        cata::lua_platform::detail::temperature_removal_blacklist_snapshot();
+
+    const std::vector<cata::lua_platform::detail::skill_snapshot_entry>
+    legacy_skills = cata::lua_platform::detail::skill_registry_snapshot();
+
+    struct dream_snapshot {
+        std::string category;
+        int strength;
+        std::vector<std::string> messages;
+    };
+    // The legacy dreams.json entries are the head of the append-only dream
+    // registry; the committed Migrated_Core run appends its native
+    // translations right after the loaded set, so comparing the head against
+    // the appended tail proves field parity.
+    const std::vector<dream> legacy_dreams = dreams;
+    std::vector<dream_snapshot> legacy_dream_snapshots;
+    for( const dream &value : legacy_dreams ) {
+        legacy_dream_snapshots.push_back( dream_snapshot{
+            value.category.str(), value.strength, value.messages()
+        } );
+    }
+    REQUIRE( legacy_dream_snapshots.size() >= 110 );
+
+    const std::vector<cata::lua_platform::detail::fault_snapshot_entry>
+    legacy_faults = cata::lua_platform::detail::fault_registry_snapshot();
+    const std::vector<cata::lua_platform::detail::scenario_snapshot_entry>
+    legacy_scenarios = cata::lua_platform::detail::scenario_registry_snapshot();
+
+    struct sub_body_part_parity {
+        std::string id;
+        std::string name;
+        std::string name_multiple;
+        std::string parent;
+        std::string opposite;
+        int side;
+        bool secondary;
+        int max_coverage;
+        std::vector<std::string> locations_under;
+        std::string similar_bodypart;
+        damage_instance unarmed;
+    };
+    std::vector<sub_body_part_parity> legacy_sub_body_parts;
+    for( const sub_body_part_type &value :
+         cata::lua_platform::detail::sub_body_part_registry().get_all() ) {
+        std::vector<std::string> locations;
+        for( const sub_bodypart_str_id &location : value.locations_under ) {
+            locations.emplace_back( location.str() );
+        }
+        legacy_sub_body_parts.push_back( sub_body_part_parity{
+            value.id.str(), value.name.translated(), value.name_multiple.translated(),
+            value.parent.str(), value.opposite.str(),
+            static_cast<int>( value.part_side ), value.secondary,
+            value.max_coverage, locations,
+            value.similar_bodypart.has_value() ?
+            value.similar_bodypart.value().str() : std::string(),
+            value.unarmed_damage
+        } );
+    }
+
+    struct recipe_category_parity {
+        std::string id;
+        bool hidden;
+        bool practice;
+        bool building;
+        bool wildcard;
+        std::vector<std::string> subcategories;
+    };
+    std::vector<recipe_category_parity> legacy_recipe_categories;
+    for( const crafting_category &value :
+         cata::lua_platform::detail::crafting_category_registry().get_all() ) {
+        legacy_recipe_categories.push_back( recipe_category_parity{
+            value.id.str(), value.is_hidden, value.is_practice,
+            value.is_building, value.is_wildcard, value.subcategories
+        } );
+    }
+    std::sort( legacy_recipe_categories.begin(), legacy_recipe_categories.end(),
+    []( const recipe_category_parity &left, const recipe_category_parity &right ) {
+        return left.id < right.id;
+    } );
+
+    struct gate_parity {
+        std::string id;
+        std::string door;
+        std::string floor;
+        std::vector<std::string> walls;
+        std::string pull_message;
+        std::string open_message;
+        std::string close_message;
+        std::string fail_message;
+        int moves;
+        int bash_dmg;
+        mod_id owner;
+    };
+    std::vector<gate_parity> legacy_gates;
+    for( const gate_data &value :
+         cata::lua_platform::detail::gate_registry().get_all() ) {
+        std::vector<std::string> walls;
+        for( const ter_str_id &wall : value.walls ) {
+            walls.emplace_back( wall.str() );
+        }
+        REQUIRE( value.src.size() == 1 );
+        legacy_gates.push_back( gate_parity{
+            value.id.str(), value.door.str(), value.floor.str(), walls,
+            value.pull_message.translated(), value.open_message.translated(),
+            value.close_message.translated(), value.fail_message.translated(),
+            value.moves, value.bash_dmg, value.src.front().second
+        } );
+    }
+    std::sort( legacy_gates.begin(), legacy_gates.end(),
+    []( const gate_parity &left, const gate_parity &right ) {
+        return left.id < right.id;
+    } );
+
+    const std::vector<std::pair<std::string, std::string>> legacy_var_migrations =
+        cata::lua_platform::detail::var_migration_snapshot();
+
+    const std::vector<cata::lua_platform::detail::json_flag_snapshot_entry>
+    legacy_json_flags = cata::lua_platform::detail::json_flag_snapshot();
+    const std::vector<cata::lua_platform::detail::item_category_snapshot_entry>
+    legacy_item_categories = cata::lua_platform::detail::item_category_snapshot();
+    const std::vector<cata::lua_platform::detail::recipe_group_native_definition>
+    legacy_recipe_groups = cata::lua_platform::detail::recipe_group_snapshot();
+    const std::vector<cata::lua_platform::detail::start_location_snapshot_entry>
+    legacy_start_locations = cata::lua_platform::detail::start_location_snapshot();
+
+    struct mood_face_parity {
+        std::string id;
+        std::vector<std::pair<int, std::string>> values;
+    };
+    std::vector<mood_face_parity> legacy_mood_faces;
+    for( const mood_face &value : mood_face::get_all() ) {
+        std::vector<std::pair<int, std::string>> values;
+        for( const mood_face_value &entry : value.values() ) {
+            values.emplace_back( entry.value(), entry.face() );
+        }
+        legacy_mood_faces.push_back( mood_face_parity{ value.getId().str(), values } );
+    }
+    std::sort( legacy_mood_faces.begin(), legacy_mood_faces.end(),
+    []( const mood_face_parity &left, const mood_face_parity &right ) {
+        return left.id < right.id;
+    } );
+
+    const std::vector<anatomy_id> anatomy_ids = {
+        anatomy_id( "human_anatomy" ), anatomy_id( "default_anatomy" ),
+    };
+    struct anatomy_snapshot {
+        anatomy_id id;
+        std::vector<bodypart_id> parts;
+        float hit_size_sum = 0.0f;
+    };
+    std::vector<anatomy_snapshot> legacy_anatomies;
+    for( const anatomy_id &id : anatomy_ids ) {
+        REQUIRE( id.is_valid() );
+        const anatomy &legacy = id.obj();
+        legacy_anatomies.push_back( anatomy_snapshot{
+            id, legacy.get_bodyparts(), legacy.get_hit_size_sum()
+        } );
+    }
+
+    const profession_group_id profession_group( "adult_basic_background" );
+    REQUIRE( profession_group.is_valid() );
+    const std::vector<profession_id> legacy_profession_group =
+        profession_group->get_professions();
+
+    struct speed_value_snapshot {
+        double threshold = 0.0;
+        std::vector<std::string> descriptions;
+    };
+    const speed_description_id speed_description( "DEFAULT" );
+    REQUIRE( speed_description.is_valid() );
+    std::vector<speed_value_snapshot> legacy_speed_values;
+    for( const speed_description_value &value : speed_description->values() ) {
+        std::vector<std::string> descriptions;
+        for( const translation &description : value.descriptions() ) {
+            descriptions.push_back( description.translated() );
+        }
+        legacy_speed_values.push_back( speed_value_snapshot{
+            value.value(), descriptions
+        } );
+    }
+
+    struct bash_profile_input {
+        std::map<damage_type_id, int> damage;
+        int armor = 0;
+    };
+    const std::vector<bash_profile_input> bash_profile_inputs = {
+        { { { damage_type_id( "bash" ), 100 } }, 0 },
+        { { { damage_type_id( "bash" ), 100 }, { damage_type_id( "cut" ), 50 } }, 5 },
+        { { { damage_type_id( "bash" ), 30 }, { damage_type_id( "cut" ), 80 } }, 20 },
+    };
+    const std::vector<bash_damage_profile_id> bash_profile_ids = {
+        bash_damage_profile_id( "default" ),
+        bash_damage_profile_id( "wooden_door" ),
+    };
+    struct bash_profile_snapshot {
+        bash_damage_profile_id id;
+        std::vector<int> results;
+    };
+    std::vector<bash_profile_snapshot> legacy_bash_profiles;
+    for( const bash_damage_profile_id &id : bash_profile_ids ) {
+        REQUIRE( id.is_valid() );
+        std::vector<int> results;
+        for( const bash_profile_input &input : bash_profile_inputs ) {
+            results.push_back( id->damage_from( input.damage, input.armor ) );
+        }
+        legacy_bash_profiles.push_back( bash_profile_snapshot{ id, results } );
+    }
+
+    const std::vector<std::pair<std::string, std::vector<SpeechBubble>>>
+    legacy_speech_pools =
+        cata::lua_platform::detail::speech_registry_snapshot();
+
+    struct emission_snapshot {
+        emit_id id;
+        field_type_id field;
+        int intensity = 0;
+        int qty = 0;
+        int chance = 0;
+    };
+    const const_dialogue dialogue;
+    std::vector<emission_snapshot> legacy_emissions;
+    for( const auto &[id, value] : emit::all() ) {
+        legacy_emissions.push_back( emission_snapshot{
+            id, value.field( dialogue ), value.intensity( dialogue ),
+            value.qty( dialogue ), value.chance( dialogue )
+        } );
+    }
+
+    const fs::path migrated_root =
+        PATH_INFO::datadir() / fs::u8path( "mods" ) / fs::u8path( "Migrated_Core" );
+
+    std::string error;
+    const bool prepared = cata::lua_platform::prepare_mods(
+                              { cata::lua_platform::mod_source{
+                                  "Migrated_Core", migrated_root,
+                                  migrated_root / fs::u8path( "main.lua" )
+                              } }, error );
+    if( !prepared ) {
+        std::cerr << "MIGRATED_PREPARE_FAILED: [" << error << "]\n";
+    }
+    REQUIRE( prepared );
+    const bool applied = cata::lua_platform::apply_prepared_content( error );
+    if( !applied ) {
+        std::cerr << "MIGRATED_APPLY_FAILED: [" << error << "]\n";
+    }
+    REQUIRE( applied );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    CHECK( cata::lua_platform::detail::dream_count() == before + 110 );
+    CHECK( ( attack_vector_id( "vector_slam_low" ).is_valid() ||
+             attack_vector_id( "vector_grasp" ).is_valid() ) );
+
+    // Representative ids from every migrated catalog: the error-free apply
+    // above is the load gate, and these checks pin the exercised domains.
+    CHECK( anatomy_id( "human_anatomy" ).is_valid() );
+    CHECK( clothing_mod_id( "leather_padded" ).is_valid() );
+    CHECK( cata::lua_platform::detail::connect_group_registry_find( "WALL" ) !=
+           nullptr );
+    CHECK( construction_category_id( "ALL" ).is_valid() );
+    CHECK( construction_group_str_id( "armor_reinforced_window" ).is_valid() );
+    CHECK( damage_type_id( "bash" ).is_valid() );
+    CHECK( damage_info_order_id( "bash" ).is_valid() );
+    CHECK( diseasetype_id( "bad_food" ).is_valid() );
+    CHECK( harvest_drop_type_id( "flesh" ).is_valid() );
+    CHECK( limb_score_id( "manip" ).is_valid() );
+    CHECK( zone_type_id( "LOOT_AMMO" ).is_valid() );
+    CHECK( morale_type( "morale_food_good" ).is_valid() );
+    CHECK( move_mode_id( "walk" ).is_valid() );
+    CHECK( scenttype_id( "sc_human" ).is_valid() );
+    CHECK( score_id( "score_kills" ).is_valid() );
+    CHECK( skill_displayType_id( "display_melee" ).is_valid() );
+    CHECK( species_id( "MAMMAL" ).is_valid() );
+    CHECK( quality_id( "CUT" ).is_valid() );
+    CHECK( weapon_category_id( "KNIVES" ).is_valid() );
+    CHECK( explosion_light_str_id( "fire_blast" ).is_valid() );
+    CHECK( mon_flag_str_id( "SEES" ).is_valid() );
+    CHECK( ammotype( "bolt_heavy" ).is_valid() );
+    CHECK( mutation_category_id( "BEAST" ).is_valid() );
+    CHECK( oter_vision_id( "default" ).is_valid() );
+    CHECK( overmap_land_use_code_id( "forest" ).is_valid() );
+    CHECK( cata::lua_platform::detail::vehicle_part_category_registry_find( "_all" ) !=
+           nullptr );
+    CHECK( proficiency_category_id( "prof_weakpoint" ).is_valid() );
+    CHECK( base_mutation_overlay_ordering.count( "eye_color" ) == 1 );
+    CHECK( vgroup_id( "parkinglot" ).is_valid() );
+    CHECK( fault_group_id( "electronic_general" ).is_valid() );
+
+    // Semantic parity slice: the committed Migrated_Core replacements must
+    // match the legacy JSON-loaded objects field for field.
+    for( const damage_snapshot &legacy : legacy_damage ) {
+        CAPTURE( legacy.id.str() );
+        const damage_type &native = legacy.id.obj();
+        CHECK( native.name.translated() == legacy.name );
+        CHECK( native.skill == legacy.skill );
+        CHECK( native.magic_color == legacy.magic_color );
+        CHECK( native.bash_conversion_factor == legacy.bash_conversion_factor );
+        CHECK( native.derived_from == legacy.derived_from );
+        CHECK( native.immune_flags == legacy.immune_flags );
+        CHECK( native.mon_immune_flags == legacy.mon_immune_flags );
+        CHECK( native.melee_only == legacy.melee_only );
+        CHECK( native.physical == legacy.physical );
+        CHECK( native.mon_difficulty == legacy.mon_difficulty );
+        CHECK( native.no_resist == legacy.no_resist );
+        CHECK( native.edged == legacy.edged );
+        CHECK( native.env == legacy.env );
+        CHECK( native.material_required == legacy.material_required );
+    }
+
+    for( const species_snapshot &legacy : legacy_species ) {
+        CAPTURE( legacy.id.str() );
+        const species_type &native = legacy.id.obj();
+        // The registry now holds the Migrated_Core replacement, not the
+        // snapshot source: equality below is a real legacy-vs-native check.
+        REQUIRE( native.src.size() == 1 );
+        CHECK( native.src.front().second == mod_id( "Migrated_Core" ) );
+        CHECK( native.src.front().second != legacy.owner );
+        CHECK( native.description.translated() == legacy.description );
+        CHECK( native.footsteps.translated() == legacy.footsteps );
+        CHECK( native.bleeds == legacy.bleeds );
+        CHECK( native.flags == legacy.flags );
+        CHECK( native.anger == legacy.anger );
+        CHECK( native.fear == legacy.fear );
+        CHECK( native.placate == legacy.placate );
+    }
+
+    for( const quality_snapshot &legacy : legacy_qualities ) {
+        CAPTURE( legacy.id.str() );
+        const quality &native = legacy.id.obj();
+        REQUIRE( native.src.size() == 1 );
+        CHECK( native.src.front().second == mod_id( "Migrated_Core" ) );
+        CHECK( native.src.front().second != legacy.owner );
+        CHECK( native.name.translated() == legacy.name );
+        CHECK( native.usages == legacy.usages );
+    }
+
+    for( const morale_snapshot &legacy : legacy_morales ) {
+        CAPTURE( legacy.id.str() );
+        const morale_type_data &native = legacy.id.obj();
+        REQUIRE( native.src.size() == 1 );
+        CHECK( native.src.front().second == mod_id( "Migrated_Core" ) );
+        CHECK( native.src.front().second != legacy.owner );
+        CHECK( native.describe() == legacy.description );
+        CHECK( native.is_permanent() == legacy.permanent );
+    }
+    // describe() on texts containing '%s' logs a deterministic
+    // string_format error without an item argument; the comparison still
+    // holds, but the harness must not inherit those expected messages.
+    debug_reset_error_observed();
+
+    for( const zone_snapshot &legacy : legacy_zones ) {
+        CAPTURE( legacy.id.str() );
+        const zone_type &native = legacy.id.obj();
+        REQUIRE( native.src.size() == 1 );
+        CHECK( native.src.front().second == mod_id( "Migrated_Core" ) );
+        CHECK( native.src.front().second != legacy.owner );
+        CHECK( native.name() == legacy.name );
+        CHECK( native.desc() == legacy.description );
+        CHECK( native.get_field() == legacy.display_field );
+        CHECK( native.can_be_personal == legacy.can_be_personal );
+        CHECK( native.hidden == legacy.hidden );
+    }
+
+    for( const auto &[id, receptive_species] : legacy_scents ) {
+        CAPTURE( id.str() );
+        const scent_type &native = id.obj();
+        REQUIRE( native.src.size() == 1 );
+        CHECK( native.src.front().second == mod_id( "Migrated_Core" ) );
+        CHECK( native.receptive_species == receptive_species );
+    }
+
+    for( const auto &[id, label] : legacy_skill_displays ) {
+        CAPTURE( id.str() );
+        CHECK( id->display_string() == label );
+    }
+
+    for( const construction_category_snapshot &legacy :
+         legacy_construction_categories ) {
+        CAPTURE( legacy.id.str() );
+        const construction_category &native = legacy.id.obj();
+        REQUIRE( native.src.size() == 1 );
+        CHECK( native.src.front().second == mod_id( "Migrated_Core" ) );
+        CHECK( native.src.front().second != legacy.owner );
+        CHECK( native.name() == legacy.name );
+    }
+
+    for( const limb_score_snapshot &legacy : legacy_limb_scores ) {
+        CAPTURE( legacy.id.str() );
+        const limb_score &native = legacy.id.obj();
+        CHECK( native.name().translated() == legacy.name );
+        CHECK( native.affected_by_wounds() == legacy.wound_affect );
+        CHECK( native.affected_by_encumb() == legacy.encumb_affect );
+    }
+
+    for( const weapon_category_snapshot &legacy : legacy_weapon_categories ) {
+        CAPTURE( legacy.id.str() );
+        const weapon_category &native = legacy.id.obj();
+        CHECK( native.name().translated() == legacy.name );
+        CHECK( native.category_proficiencies() == legacy.proficiencies );
+    }
+
+    for( const vpart_location_snapshot &legacy : legacy_vpart_locations ) {
+        CAPTURE( legacy.id.str() );
+        const vpart_location &native = legacy.id.obj();
+        CHECK( native.name.translated() == legacy.name );
+        CHECK( native.description.translated() == legacy.description );
+        CHECK( native.z_order == legacy.z_order );
+        CHECK( native.list_order == legacy.list_order );
+    }
+
+    for( const damage_info_order_snapshot &legacy : legacy_damage_info_orders ) {
+        CAPTURE( legacy.id.str() );
+        const damage_info_order &native = legacy.id.obj();
+        CHECK( native.dmg_type == legacy.dmg_type );
+        CHECK( native.info_display == legacy.display );
+        CHECK( native.verb.translated() == legacy.verb );
+        const std::array<std::pair<int, bool>, 5> native_sections = { {
+                std::make_pair( native.bionic_info.order, native.bionic_info.show_type ),
+                std::make_pair( native.protection_info.order, native.protection_info.show_type ),
+                std::make_pair( native.pet_prot_info.order, native.pet_prot_info.show_type ),
+                std::make_pair( native.melee_combat_info.order, native.melee_combat_info.show_type ),
+                std::make_pair( native.ablative_info.order, native.ablative_info.show_type )
+            } };
+        CHECK( native_sections == legacy.sections );
+    }
+
+    for( const move_mode_snapshot &legacy : legacy_move_modes ) {
+        CAPTURE( legacy.id.str() );
+        const move_mode &native = legacy.id.obj();
+        CHECK( native.name() == legacy.name );
+        CHECK( native.type() == legacy.type );
+        CHECK( native.letter() == legacy.letter );
+        CHECK( native.panel_letter() == legacy.panel_letter );
+        CHECK( native.panel_color() == legacy.panel_color );
+        CHECK( native.symbol_color() == legacy.symbol_color );
+        CHECK( native.exertion_level() == legacy.exertion );
+        CHECK( native.exertion_level_animal_riding() == legacy.riding_exertion );
+        CHECK( native.stamina_mult() == legacy.stamina_mult );
+        CHECK( native.sound_mult() == legacy.sound_mult );
+        CHECK( native.move_speed_mult() == legacy.speed_mult );
+        CHECK( static_cast<int>( units::to_kilojoule(
+                                   native.mech_power_use() ) ) == legacy.mech_power_use );
+        CHECK( native.swim_speed_mod() == legacy.swim_speed_mod );
+        CHECK( native.stop_hauling() == legacy.stop_hauling );
+        CHECK( native.cycle() == legacy.cycle );
+        CHECK( native.cycle_reverse() == legacy.cycle_reverse );
+    }
+
+    for( const auto &[id, owner] : legacy_scores ) {
+        CAPTURE( id.str() );
+        const score &native = id.obj();
+        REQUIRE( native.src.size() == 1 );
+        CHECK( native.src.front().second == mod_id( "Migrated_Core" ) );
+        CHECK( native.src.front().second != owner );
+    }
+
+    for( const disease_snapshot &legacy : legacy_diseases ) {
+        CAPTURE( legacy.id.str() );
+        const disease_type &native = legacy.id.obj();
+        REQUIRE( native.src.size() == 1 );
+        CHECK( native.src.front().second == mod_id( "Migrated_Core" ) );
+        CHECK( native.src.front().second != legacy.owner );
+        CHECK( native.min_duration == legacy.min_duration );
+        CHECK( native.max_duration == legacy.max_duration );
+        CHECK( native.min_intensity == legacy.min_intensity );
+        CHECK( native.max_intensity == legacy.max_intensity );
+        CHECK( native.affected_bodyparts == legacy.affected_bodyparts );
+        CHECK( native.health_threshold == legacy.health_threshold );
+        CHECK( native.symptoms == legacy.symptoms );
+    }
+
+    for( const connect_group_snapshot &legacy : legacy_connect_groups ) {
+        CAPTURE( legacy.id );
+        const connect_group *native =
+            cata::lua_platform::detail::connect_group_registry_find( legacy.id );
+        REQUIRE( native != nullptr );
+        CHECK( native->index == legacy.index );
+        CHECK( native->group_flags == legacy.group_flags );
+        CHECK( native->connects_to_flags == legacy.connects_to_flags );
+        CHECK( native->rotates_to_flags == legacy.rotates_to_flags );
+    }
+
+    for( const attack_vector_snapshot &legacy : legacy_attack_vectors ) {
+        CAPTURE( legacy.id.str() );
+        const attack_vector &native = legacy.id.obj();
+        CHECK( native.weapon == legacy.weapon );
+        CHECK( native.strict_limb_definition == legacy.strict_limb_definition );
+        CHECK( native.armor_bonus == legacy.armor_bonus );
+        CHECK( native.encumbrance_limit == legacy.encumbrance_limit );
+        CHECK( native.bp_hp_limit == legacy.bp_hp_limit );
+        CHECK( native.authored_limbs == legacy.authored_limbs );
+        CHECK( native.authored_contact_area == legacy.authored_contact_area );
+        CHECK( native.limbs == legacy.limbs );
+        CHECK( native.contact_area == legacy.contact_area );
+        CHECK( native.limb_req == legacy.limb_req );
+        CHECK( native.required_limb_flags == legacy.required_limb_flags );
+        CHECK( native.forbidden_limb_flags == legacy.forbidden_limb_flags );
+    }
+
+    for( const clothing_mod_snapshot &legacy : legacy_clothing_mods ) {
+        CAPTURE( legacy.id.str() );
+        const clothing_mod &native = legacy.id.obj();
+        CHECK( native.flag == legacy.flag );
+        CHECK( native.item_string == legacy.item_string );
+        CHECK( native.implement_prompt.translated() == legacy.implement_prompt );
+        CHECK( native.destroy_prompt.translated() == legacy.destroy_prompt );
+        CHECK( native.restricted == legacy.restricted );
+        REQUIRE( native.mod_values.size() == legacy.mod_values.size() );
+        for( std::size_t i = 0; i < native.mod_values.size(); ++i ) {
+            CAPTURE( i );
+            CHECK( native.mod_values[i].type == legacy.mod_values[i].type );
+            CHECK( native.mod_values[i].value == legacy.mod_values[i].value );
+            CHECK( native.mod_values[i].round_up == legacy.mod_values[i].round_up );
+            CHECK( native.mod_values[i].thickness_proportion ==
+                   legacy.mod_values[i].thickness_proportion );
+            CHECK( native.mod_values[i].coverage_proportion ==
+                   legacy.mod_values[i].coverage_proportion );
+        }
+    }
+
+    for( const harvest_drop_snapshot &legacy : legacy_harvest_drops ) {
+        CAPTURE( legacy.id.str() );
+        const harvest_drop_type &native = legacy.id.obj();
+        CHECK( native.get_harvest_skills() == legacy.skills );
+        CHECK( native.is_item_group() == legacy.is_group );
+        CHECK( native.dissect_only() == legacy.dissect_only );
+    }
+
+    for( const explosion_light_snapshot &legacy : legacy_explosion_lights ) {
+        CAPTURE( legacy.id.str() );
+        const explosion_light &native = legacy.id.obj();
+        // color_a/color_b/alpha_a/alpha_b are legacy two-stop inputs; the
+        // native path populates `stops` directly, so those inputs are not
+        // compared.
+        REQUIRE( native.stops.size() == legacy.stops.size() );
+        for( std::size_t i = 0; i < native.stops.size(); ++i ) {
+            CAPTURE( i );
+            CHECK( native.stops[i].color == legacy.stops[i].color );
+            CHECK( native.stops[i].alpha == legacy.stops[i].alpha );
+        }
+        CHECK( native.easing == legacy.easing );
+        CHECK( native.wave_travel == legacy.wave_travel );
+        CHECK( native.wave_gap == legacy.wave_gap );
+        CHECK( native.rise == legacy.rise );
+        CHECK( native.fade == legacy.fade );
+        CHECK( native.blend == legacy.blend );
+        CHECK( native.spread_jitter == legacy.spread_jitter );
+        CHECK( native.color_jitter == legacy.color_jitter );
+        CHECK( native.flicker == legacy.flicker );
+        CHECK( native.duration_base_ms == legacy.duration_base_ms );
+        CHECK( native.duration_per_tile_ms == legacy.duration_per_tile_ms );
+        CHECK( native.duration_min_ms == legacy.duration_min_ms );
+        CHECK( native.duration_max_ms == legacy.duration_max_ms );
+        CHECK( native.screen_shake_magnitude == legacy.screen_shake_magnitude );
+        CHECK( native.screen_shake_duration_ms == legacy.screen_shake_duration_ms );
+        CHECK( native.shockwave == legacy.shockwave );
+        CHECK( native.shockwave_strength == legacy.shockwave_strength );
+        CHECK( native.shockwave_speed == legacy.shockwave_speed );
+        CHECK( native.shockwave_thickness == legacy.shockwave_thickness );
+    }
+
+    {
+        std::vector<cata::lua_platform::detail::named_color_native_definition>
+        native_colors = cata::lua_platform::detail::named_color_registry_snapshot();
+        const auto color_order = []( const auto & left, const auto & right ) {
+            return std::tie( left.name, left.red, left.green, left.blue, left.alpha ) <
+                   std::tie( right.name, right.red, right.green, right.blue, right.alpha );
+        };
+        std::sort( native_colors.begin(), native_colors.end(), color_order );
+        std::vector<cata::lua_platform::detail::named_color_native_definition>
+        sorted_legacy_colors = legacy_named_colors;
+        std::sort( sorted_legacy_colors.begin(), sorted_legacy_colors.end(), color_order );
+        REQUIRE( native_colors.size() == sorted_legacy_colors.size() );
+        for( std::size_t i = 0; i < native_colors.size(); ++i ) {
+            CAPTURE( i, sorted_legacy_colors[i].name );
+            CHECK( native_colors[i].name == sorted_legacy_colors[i].name );
+            CHECK( native_colors[i].red == sorted_legacy_colors[i].red );
+            CHECK( native_colors[i].green == sorted_legacy_colors[i].green );
+            CHECK( native_colors[i].blue == sorted_legacy_colors[i].blue );
+            CHECK( native_colors[i].alpha == sorted_legacy_colors[i].alpha );
+        }
+    }
+
+    {
+        const std::vector<cata::lua_platform::detail::rotatable_symbol_native_entry>
+        native_symbols = cata::lua_platform::detail::rotatable_symbol_registry_snapshot();
+        REQUIRE( native_symbols.size() == legacy_rotatable_symbols.size() );
+        for( std::size_t i = 0; i < native_symbols.size(); ++i ) {
+            CAPTURE( i, native_symbols[i].symbol );
+            CHECK( native_symbols[i].symbol == legacy_rotatable_symbols[i].symbol );
+            CHECK( native_symbols[i].rotations == legacy_rotatable_symbols[i].rotations );
+        }
+    }
+
+    CHECK( Creature::dispersion_for_even_chance_of_good_hit ==
+           legacy_hit_range_table );
+
+    std::size_t migrated_construction_groups = 0;
+    for( const auto &[name, legacy_name] : legacy_construction_group_names ) {
+        CAPTURE( name );
+        const construction_group_str_id native_id( name );
+        REQUIRE( native_id.is_valid() );
+        CHECK( native_id->name() == legacy_name );
+        if( !native_id->src.empty() &&
+            native_id->src.front().second == mod_id( "Migrated_Core" ) ) {
+            ++migrated_construction_groups;
+        }
+    }
+    CHECK( migrated_construction_groups == 441 );
+
+    for( const anatomy_snapshot &legacy : legacy_anatomies ) {
+        CAPTURE( legacy.id.str() );
+        const anatomy &native = legacy.id.obj();
+        CHECK( native.get_bodyparts() == legacy.parts );
+        CHECK( native.get_hit_size_sum() == legacy.hit_size_sum );
+    }
+
+    {
+        CAPTURE( profession_group.str() );
+        const std::vector<profession_id> native_professions =
+            profession_group->get_professions();
+        REQUIRE( native_professions.size() == legacy_profession_group.size() );
+        for( std::size_t i = 0; i < native_professions.size(); ++i ) {
+            CAPTURE( i );
+            CHECK( native_professions[i] == legacy_profession_group[i] );
+        }
+    }
+
+    {
+        CAPTURE( speed_description.str() );
+        const std::vector<speed_description_value> &native_values =
+            speed_description->values();
+        REQUIRE( native_values.size() == legacy_speed_values.size() );
+        for( std::size_t i = 0; i < native_values.size(); ++i ) {
+            CAPTURE( i );
+            CHECK( native_values[i].value() == legacy_speed_values[i].threshold );
+            REQUIRE( native_values[i].descriptions().size() ==
+                     legacy_speed_values[i].descriptions.size() );
+            for( std::size_t j = 0; j < legacy_speed_values[i].descriptions.size(); ++j ) {
+                CAPTURE( j );
+                CHECK( native_values[i].descriptions()[j].translated() ==
+                       legacy_speed_values[i].descriptions[j] );
+            }
+        }
+    }
+
+    for( const bash_profile_snapshot &legacy : legacy_bash_profiles ) {
+        CAPTURE( legacy.id.str() );
+        for( std::size_t i = 0; i < bash_profile_inputs.size(); ++i ) {
+            CAPTURE( i );
+            CHECK( legacy.id->damage_from( bash_profile_inputs[i].damage,
+                                           bash_profile_inputs[i].armor ) ==
+                   legacy.results[i] );
+        }
+    }
+
+    {
+        const std::vector<std::pair<std::string, std::vector<SpeechBubble>>>
+        native_pools = cata::lua_platform::detail::speech_registry_snapshot();
+        REQUIRE( native_pools.size() == legacy_speech_pools.size() );
+        for( std::size_t i = 0; i < native_pools.size(); ++i ) {
+            CAPTURE( native_pools[i].first );
+            CHECK( native_pools[i].first == legacy_speech_pools[i].first );
+            REQUIRE( native_pools[i].second.size() ==
+                     legacy_speech_pools[i].second.size() );
+            for( std::size_t j = 0; j < native_pools[i].second.size(); ++j ) {
+                CAPTURE( j );
+                CHECK( native_pools[i].second[j].text.translated() ==
+                       legacy_speech_pools[i].second[j].text.translated() );
+                CHECK( native_pools[i].second[j].volume ==
+                       legacy_speech_pools[i].second[j].volume );
+            }
+        }
+    }
+
+    {
+        std::vector<emission_snapshot> native_emissions;
+        for( const auto &[id, value] : emit::all() ) {
+            native_emissions.push_back( emission_snapshot{
+                id, value.field( dialogue ), value.intensity( dialogue ),
+                value.qty( dialogue ), value.chance( dialogue )
+            } );
+        }
+        REQUIRE( native_emissions.size() == legacy_emissions.size() );
+        for( std::size_t i = 0; i < native_emissions.size(); ++i ) {
+            CAPTURE( legacy_emissions[i].id.str() );
+            CHECK( native_emissions[i].id == legacy_emissions[i].id );
+            CHECK( native_emissions[i].field == legacy_emissions[i].field );
+            CHECK( native_emissions[i].intensity == legacy_emissions[i].intensity );
+            CHECK( native_emissions[i].qty == legacy_emissions[i].qty );
+            CHECK( native_emissions[i].chance == legacy_emissions[i].chance );
+        }
+    }
+
+    {
+        const std::vector<std::pair<item_action_id, item_action>>
+        native_item_actions =
+            cata::lua_platform::detail::item_action_registry_snapshot();
+        REQUIRE( native_item_actions.size() == legacy_item_actions.size() );
+        for( std::size_t i = 0; i < native_item_actions.size(); ++i ) {
+            CAPTURE( legacy_item_actions[i].first );
+            CHECK( native_item_actions[i].first == legacy_item_actions[i].first );
+            CHECK( native_item_actions[i].second.name.translated() ==
+                   legacy_item_actions[i].second.name.translated() );
+        }
+    }
+
+    {
+        const string_id<butchery_requirements> native_butchery( "default" );
+        REQUIRE( native_butchery.is_valid() );
+        for( const butchery_probe &probe : legacy_butchery_probes ) {
+            CAPTURE( static_cast<int>( probe.size ),
+                     static_cast<int>( probe.butcher ) );
+            const std::pair<float, requirement_id> native_result =
+                native_butchery->get_fastest_requirements(
+                    get_avatar(), probe.size, probe.butcher );
+            CHECK( native_result.first == probe.result.first );
+            CHECK( native_result.second == probe.result.second );
+        }
+    }
+
+    {
+        for( const palette_probe &probe : legacy_palette_probes ) {
+            CAPTURE( probe.id.str() );
+            REQUIRE( probe.id.is_valid() );
+            for( std::size_t i = 0; i < palette_probe_parts.size(); ++i ) {
+                CAPTURE( palette_probe_parts[i] );
+                CHECK( probe.id->fuzzy_to_index(
+                           vpart_id( palette_probe_parts[i] ) ) ==
+                       probe.indexes[i] );
+            }
+        }
+    }
+
+    {
+        for( const connection_probe &probe : legacy_connection_probes ) {
+            CAPTURE( probe.id.str() );
+            REQUIRE( probe.id.is_valid() );
+            for( std::size_t i = 0; i < connection_probe_oters.size(); ++i ) {
+                CAPTURE( connection_probe_oter_names[i] );
+                const overmap_connection::subtype *subtype =
+                    probe.id->pick_subtype_for( connection_probe_oters[i] );
+                CHECK( ( subtype == nullptr ? -1 : subtype->basic_cost ) ==
+                       probe.costs[i] );
+            }
+        }
+    }
+
+    {
+        std::vector<std::string> native_monster_flags;
+        for( const mon_flag &flag :
+             cata::lua_platform::detail::monster_flag_registry().get_all() ) {
+            native_monster_flags.push_back( flag.id.str() );
+        }
+        std::sort( native_monster_flags.begin(), native_monster_flags.end() );
+        CHECK( native_monster_flags == legacy_monster_flags );
+    }
+
+    {
+        std::vector<ammunition_parity> native_ammunition;
+        for( const auto &[id, value] :
+             cata::lua_platform::detail::ammunition_type_registry_snapshot() ) {
+            native_ammunition.push_back( ammunition_parity{
+                id.str(), value.name(), value.default_ammotype().str()
+            } );
+        }
+        REQUIRE( native_ammunition.size() == legacy_ammunition.size() );
+        for( std::size_t i = 0; i < native_ammunition.size(); ++i ) {
+            CAPTURE( legacy_ammunition[i].id );
+            CHECK( native_ammunition[i].id == legacy_ammunition[i].id );
+            CHECK( native_ammunition[i].name == legacy_ammunition[i].name );
+            CHECK( native_ammunition[i].default_item == legacy_ammunition[i].default_item );
+        }
+    }
+
+    {
+        std::vector<mutation_category_parity> native_mutation_categories;
+        for( const auto &[id, value] : mutation_category_trait::get_all() ) {
+            native_mutation_categories.push_back( mutation_category_parity{
+                id, value.name(), value.mutagen_message(),
+                value.memorial_message_male(), value.wip, value.skip_test,
+                value.threshold_mut, value.threshold_min, value.vitamin,
+                value.base_removal_chance, value.base_removal_cost_mul
+            } );
+        }
+        std::sort( native_mutation_categories.begin(), native_mutation_categories.end(),
+        []( const mutation_category_parity &left, const mutation_category_parity &right ) {
+            return left.id.str() < right.id.str();
+        } );
+        REQUIRE( native_mutation_categories.size() == legacy_mutation_categories.size() );
+        for( std::size_t i = 0; i < native_mutation_categories.size(); ++i ) {
+            CAPTURE( legacy_mutation_categories[i].id.str() );
+            CHECK( native_mutation_categories[i].id == legacy_mutation_categories[i].id );
+            CHECK( native_mutation_categories[i].name == legacy_mutation_categories[i].name );
+            CHECK( native_mutation_categories[i].mutagen_message ==
+                   legacy_mutation_categories[i].mutagen_message );
+            CHECK( native_mutation_categories[i].memorial_message ==
+                   legacy_mutation_categories[i].memorial_message );
+            CHECK( native_mutation_categories[i].wip == legacy_mutation_categories[i].wip );
+            CHECK( native_mutation_categories[i].skip_test ==
+                   legacy_mutation_categories[i].skip_test );
+            CHECK( native_mutation_categories[i].threshold_mut ==
+                   legacy_mutation_categories[i].threshold_mut );
+            CHECK( native_mutation_categories[i].threshold_min ==
+                   legacy_mutation_categories[i].threshold_min );
+            CHECK( native_mutation_categories[i].vitamin ==
+                   legacy_mutation_categories[i].vitamin );
+            CHECK( native_mutation_categories[i].base_removal_chance ==
+                   legacy_mutation_categories[i].base_removal_chance );
+            CHECK( native_mutation_categories[i].base_removal_cost_mul ==
+                   legacy_mutation_categories[i].base_removal_cost_mul );
+        }
+    }
+
+    {
+        std::vector<vision_parity> native_visions;
+        for( const oter_vision &vision : oter_vision::get_all() ) {
+            vision_parity snapshot;
+            snapshot.id = vision.get_id().str();
+            for( int level = 0; level < 3; ++level ) {
+                const oter_vision::level *const viewed = vision.viewed(
+                            static_cast<om_vision_level>( level + 1 ) );
+                if( viewed == nullptr ) {
+                    snapshot.levels.push_back(
+                        vision_level_parity{ {}, 0, c_black, {}, false, false } );
+                    continue;
+                }
+                snapshot.levels.push_back( vision_level_parity{
+                    viewed->name.translated(), viewed->symbol, viewed->color,
+                    viewed->looks_like, viewed->blends_adjacent, true
+                } );
+            }
+            native_visions.push_back( snapshot );
+        }
+        REQUIRE( native_visions.size() == legacy_visions.size() );
+        for( std::size_t i = 0; i < native_visions.size(); ++i ) {
+            CAPTURE( legacy_visions[i].id );
+            CHECK( native_visions[i].id == legacy_visions[i].id );
+            REQUIRE( native_visions[i].levels.size() == legacy_visions[i].levels.size() );
+            for( std::size_t level = 0; level < legacy_visions[i].levels.size(); ++level ) {
+                CAPTURE( level );
+                CHECK( native_visions[i].levels[level].present ==
+                       legacy_visions[i].levels[level].present );
+                CHECK( native_visions[i].levels[level].blends_adjacent ==
+                       legacy_visions[i].levels[level].blends_adjacent );
+                if( !legacy_visions[i].levels[level].present ) {
+                    continue;
+                }
+                CHECK( native_visions[i].levels[level].name ==
+                       legacy_visions[i].levels[level].name );
+                CHECK( native_visions[i].levels[level].symbol ==
+                       legacy_visions[i].levels[level].symbol );
+                CHECK( native_visions[i].levels[level].color ==
+                       legacy_visions[i].levels[level].color );
+                CHECK( native_visions[i].levels[level].looks_like ==
+                       legacy_visions[i].levels[level].looks_like );
+            }
+        }
+    }
+
+    {
+        std::vector<land_use_parity> native_land_use_codes;
+        for( const overmap_land_use_code &value :
+             cata::lua_platform::detail::overmap_land_use_code_registry().get_all() ) {
+            REQUIRE( value.src.size() == 1 );
+            native_land_use_codes.push_back( land_use_parity{
+                value.id.str(), value.land_use_code, value.name.translated(),
+                value.detailed_definition.translated(), value.get_symbol(),
+                value.color, value.src.front().second
+            } );
+        }
+        REQUIRE( native_land_use_codes.size() == legacy_land_use_codes.size() );
+        for( std::size_t i = 0; i < native_land_use_codes.size(); ++i ) {
+            CAPTURE( legacy_land_use_codes[i].id );
+            CHECK( native_land_use_codes[i].id == legacy_land_use_codes[i].id );
+            CHECK( native_land_use_codes[i].code == legacy_land_use_codes[i].code );
+            CHECK( native_land_use_codes[i].name == legacy_land_use_codes[i].name );
+            CHECK( native_land_use_codes[i].description ==
+                   legacy_land_use_codes[i].description );
+            CHECK( native_land_use_codes[i].symbol == legacy_land_use_codes[i].symbol );
+            CHECK( native_land_use_codes[i].color == legacy_land_use_codes[i].color );
+            CHECK( native_land_use_codes[i].owner == mod_id( "Migrated_Core" ) );
+            CHECK( native_land_use_codes[i].owner != legacy_land_use_codes[i].owner );
+        }
+    }
+
+    {
+        std::vector<proficiency_category_parity> native_proficiency_categories;
+        for( const proficiency_category &value : proficiency_category::get_all() ) {
+            native_proficiency_categories.push_back( proficiency_category_parity{
+                value.id.str(), value._name.translated(), value._description.translated()
+            } );
+        }
+        REQUIRE( native_proficiency_categories.size() ==
+                 legacy_proficiency_categories.size() );
+        for( std::size_t i = 0; i < native_proficiency_categories.size(); ++i ) {
+            CAPTURE( legacy_proficiency_categories[i].id );
+            CHECK( native_proficiency_categories[i].id ==
+                   legacy_proficiency_categories[i].id );
+            CHECK( native_proficiency_categories[i].name ==
+                   legacy_proficiency_categories[i].name );
+            CHECK( native_proficiency_categories[i].description ==
+                   legacy_proficiency_categories[i].description );
+        }
+    }
+
+    {
+        std::vector<vpart_category_parity> native_vpart_categories;
+        for( const vpart_category &value : vpart_category::all() ) {
+            native_vpart_categories.push_back( vpart_category_parity{
+                value.get_id(), value.name(), value.short_name(),
+                cata::lua_platform::detail::vehicle_part_category_priority( value )
+            } );
+        }
+        REQUIRE( native_vpart_categories.size() == legacy_vpart_categories.size() );
+        for( std::size_t i = 0; i < native_vpart_categories.size(); ++i ) {
+            CAPTURE( legacy_vpart_categories[i].id );
+            CHECK( native_vpart_categories[i].id == legacy_vpart_categories[i].id );
+            CHECK( native_vpart_categories[i].name == legacy_vpart_categories[i].name );
+            CHECK( native_vpart_categories[i].short_name ==
+                   legacy_vpart_categories[i].short_name );
+            CHECK( native_vpart_categories[i].priority ==
+                   legacy_vpart_categories[i].priority );
+        }
+    }
+
+    CHECK( base_mutation_overlay_ordering == legacy_overlay_orders );
+
+    CHECK( cata::lua_platform::detail::effect_migration_snapshot() ==
+           legacy_effect_migrations );
+    CHECK( cata::lua_platform::detail::oter_migration_snapshot() ==
+           legacy_oter_migrations );
+    CHECK( cata::lua_platform::detail::proficiency_migration_snapshot() ==
+           legacy_proficiency_migrations );
+    CHECK( cata::lua_platform::detail::vehicle_part_migration_snapshot() ==
+           legacy_vehicle_part_migrations );
+    CHECK( cata::lua_platform::detail::terrain_migration_snapshot() ==
+           legacy_terrain_migrations );
+    CHECK( cata::lua_platform::detail::furniture_migration_snapshot() ==
+           legacy_furniture_migrations );
+    CHECK( cata::lua_platform::detail::trap_migration_snapshot() ==
+           legacy_trap_migrations );
+    CHECK( cata::lua_platform::detail::overmap_special_migration_snapshot() ==
+           legacy_overmap_special_migrations );
+
+    {
+        std::vector<weighted_group_snapshot> native_vehicle_groups;
+        for( const auto &[id, group] : vgroups ) {
+            native_vehicle_groups.push_back( weighted_group_snapshot{
+                id.str(), cata::lua_platform::detail::vehicle_group_weighted_entries( id )
+            } );
+        }
+        std::sort( native_vehicle_groups.begin(), native_vehicle_groups.end(),
+        []( const weighted_group_snapshot &left, const weighted_group_snapshot &right ) {
+            return left.id < right.id;
+        } );
+        REQUIRE( native_vehicle_groups.size() == legacy_vehicle_groups.size() );
+        for( std::size_t i = 0; i < native_vehicle_groups.size(); ++i ) {
+            CAPTURE( legacy_vehicle_groups[i].id );
+            CHECK( native_vehicle_groups[i].id == legacy_vehicle_groups[i].id );
+            CHECK( native_vehicle_groups[i].entries == legacy_vehicle_groups[i].entries );
+        }
+    }
+
+    {
+        std::vector<weighted_group_snapshot> native_fault_groups;
+        for( const fault_group &group :
+             cata::lua_platform::detail::fault_group_registry().get_all() ) {
+            std::vector<std::pair<std::string, int>> entries;
+            const weighted_int_list<fault_id> list = group.get_weighted_list();
+            entries.reserve( list.size() );
+            for( const std::pair<fault_id, int> &entry : list ) {
+                entries.emplace_back( entry.first.str(), entry.second );
+            }
+            native_fault_groups.push_back(
+                weighted_group_snapshot{ group.id.str(), std::move( entries ) } );
+        }
+        std::sort( native_fault_groups.begin(), native_fault_groups.end(),
+        []( const weighted_group_snapshot &left, const weighted_group_snapshot &right ) {
+            return left.id < right.id;
+        } );
+        REQUIRE( native_fault_groups.size() == legacy_fault_groups.size() );
+        for( std::size_t i = 0; i < native_fault_groups.size(); ++i ) {
+            CAPTURE( legacy_fault_groups[i].id );
+            CHECK( native_fault_groups[i].id == legacy_fault_groups[i].id );
+            CHECK( native_fault_groups[i].entries == legacy_fault_groups[i].entries );
+        }
+    }
+
+    CHECK( cata::lua_platform::detail::monster_blacklist_snapshot() ==
+           legacy_monster_blacklist );
+    CHECK( cata::lua_platform::detail::monster_whitelist_snapshot() ==
+           legacy_monster_whitelist );
+    {
+        const scen_blacklist native_scenario_blacklist =
+            cata::lua_platform::detail::scenario_blacklist_snapshot();
+        CHECK( native_scenario_blacklist.scenarios ==
+               legacy_scenario_blacklist.scenarios );
+        CHECK( native_scenario_blacklist.whitelist ==
+               legacy_scenario_blacklist.whitelist );
+    }
+    CHECK( cata::lua_platform::detail::charge_removal_blacklist_snapshot() ==
+           legacy_charge_removal_blacklist );
+    CHECK( cata::lua_platform::detail::temperature_removal_blacklist_snapshot() ==
+           legacy_temperature_removal_blacklist );
+
+    {
+        const std::vector<cata::lua_platform::detail::skill_snapshot_entry>
+        native_skills = cata::lua_platform::detail::skill_registry_snapshot();
+        REQUIRE( native_skills.size() == legacy_skills.size() );
+        for( std::size_t i = 0; i < native_skills.size(); ++i ) {
+            CAPTURE( legacy_skills[i].id );
+            CHECK( native_skills[i].id == legacy_skills[i].id );
+            CHECK( native_skills[i].name == legacy_skills[i].name );
+            CHECK( native_skills[i].description == legacy_skills[i].description );
+            CHECK( native_skills[i].tags == legacy_skills[i].tags );
+            CHECK( native_skills[i].display_category == legacy_skills[i].display_category );
+            CHECK( native_skills[i].sort_rank == legacy_skills[i].sort_rank );
+            CHECK( native_skills[i].companion_practice ==
+                   legacy_skills[i].companion_practice );
+            CHECK( native_skills[i].theory_descriptions ==
+                   legacy_skills[i].theory_descriptions );
+            CHECK( native_skills[i].practice_descriptions ==
+                   legacy_skills[i].practice_descriptions );
+            CHECK( native_skills[i].teachable == legacy_skills[i].teachable );
+            CHECK( native_skills[i].obsolete == legacy_skills[i].obsolete );
+            CHECK( native_skills[i].consumes_focus == legacy_skills[i].consumes_focus );
+            CHECK( native_skills[i].attack_times.min_time ==
+                   legacy_skills[i].attack_times.min_time );
+            CHECK( native_skills[i].attack_times.base_time ==
+                   legacy_skills[i].attack_times.base_time );
+            CHECK( native_skills[i].attack_times.time_reduction_per_level ==
+                   legacy_skills[i].attack_times.time_reduction_per_level );
+            CHECK( native_skills[i].combat_rank == legacy_skills[i].combat_rank );
+            CHECK( native_skills[i].survival_rank == legacy_skills[i].survival_rank );
+            CHECK( native_skills[i].industry_rank == legacy_skills[i].industry_rank );
+            CHECK( native_skills[i].requires_all == legacy_skills[i].requires_all );
+            CHECK( native_skills[i].requires_any == legacy_skills[i].requires_any );
+        }
+    }
+
+    {
+        REQUIRE( dreams.size() == legacy_dream_snapshots.size() + 110 );
+        for( std::size_t i = 0; i < 110; ++i ) {
+            CAPTURE( i );
+            const dream &legacy = dreams[i];
+            const dream &native = dreams[legacy_dream_snapshots.size() + i];
+            CHECK( native.category == legacy.category );
+            CHECK( native.strength == legacy.strength );
+            CHECK( native.messages() == legacy.messages() );
+        }
+    }
+
+    {
+        const std::vector<cata::lua_platform::detail::fault_snapshot_entry>
+        native_faults = cata::lua_platform::detail::fault_registry_snapshot();
+        REQUIRE( native_faults.size() == legacy_faults.size() );
+        for( std::size_t i = 0; i < native_faults.size(); ++i ) {
+            CAPTURE( legacy_faults[i].id );
+            CHECK( native_faults[i].id == legacy_faults[i].id );
+            CHECK( native_faults[i].name == legacy_faults[i].name );
+            CHECK( native_faults[i].type == legacy_faults[i].type );
+            CHECK( native_faults[i].description == legacy_faults[i].description );
+            CHECK( native_faults[i].item_prefix == legacy_faults[i].item_prefix );
+            CHECK( native_faults[i].item_suffix == legacy_faults[i].item_suffix );
+            CHECK( native_faults[i].message == legacy_faults[i].message );
+            CHECK( native_faults[i].color == legacy_faults[i].color );
+            CHECK( native_faults[i].price_mod == legacy_faults[i].price_mod );
+            CHECK( native_faults[i].degradation_mod == legacy_faults[i].degradation_mod );
+            CHECK( native_faults[i].instant_damage == legacy_faults[i].instant_damage );
+            CHECK( native_faults[i].contact_area_mod == legacy_faults[i].contact_area_mod );
+            CHECK( native_faults[i].rolling_resistance_mod ==
+                   legacy_faults[i].rolling_resistance_mod );
+            CHECK( native_faults[i].vehicle_move_penalty_mod ==
+                   legacy_faults[i].vehicle_move_penalty_mod );
+            CHECK( native_faults[i].encumb_mod_flat == legacy_faults[i].encumb_mod_flat );
+            CHECK( native_faults[i].encumb_mod_mult == legacy_faults[i].encumb_mod_mult );
+            CHECK( native_faults[i].affected_by_degradation ==
+                   legacy_faults[i].affected_by_degradation );
+            CHECK( native_faults[i].flags == legacy_faults[i].flags );
+            CHECK( native_faults[i].fixes == legacy_faults[i].fixes );
+            CHECK( native_faults[i].block_faults == legacy_faults[i].block_faults );
+        }
+    }
+
+    {
+        const std::vector<cata::lua_platform::detail::scenario_snapshot_entry>
+        native_scenarios = cata::lua_platform::detail::scenario_registry_snapshot();
+        REQUIRE( native_scenarios.size() == legacy_scenarios.size() );
+        for( std::size_t i = 0; i < native_scenarios.size(); ++i ) {
+            CAPTURE( legacy_scenarios[i].id );
+            CHECK( native_scenarios[i].id == legacy_scenarios[i].id );
+            CHECK( native_scenarios[i].name == legacy_scenarios[i].name );
+            CHECK( native_scenarios[i].description == legacy_scenarios[i].description );
+            CHECK( native_scenarios[i].start_name == legacy_scenarios[i].start_name );
+            CHECK( native_scenarios[i].points == legacy_scenarios[i].points );
+            CHECK( native_scenarios[i].blacklist == legacy_scenarios[i].blacklist );
+            CHECK( native_scenarios[i].extra_professions ==
+                   legacy_scenarios[i].extra_professions );
+            CHECK( native_scenarios[i].professions == legacy_scenarios[i].professions );
+            CHECK( native_scenarios[i].allowed_traits ==
+                   legacy_scenarios[i].allowed_traits );
+            CHECK( native_scenarios[i].forced_traits == legacy_scenarios[i].forced_traits );
+            CHECK( native_scenarios[i].forbidden_traits ==
+                   legacy_scenarios[i].forbidden_traits );
+            CHECK( native_scenarios[i].locations == legacy_scenarios[i].locations );
+            CHECK( native_scenarios[i].flags == legacy_scenarios[i].flags );
+            CHECK( native_scenarios[i].requirement == legacy_scenarios[i].requirement );
+            CHECK( native_scenarios[i].hard_requirement ==
+                   legacy_scenarios[i].hard_requirement );
+            CHECK( native_scenarios[i].reveal_locale == legacy_scenarios[i].reveal_locale );
+            CHECK( native_scenarios[i].distance_initial_visibility ==
+                   legacy_scenarios[i].distance_initial_visibility );
+        }
+    }
+
+    {
+        std::vector<sub_body_part_parity> native_sub_body_parts;
+        for( const sub_body_part_type &value :
+             cata::lua_platform::detail::sub_body_part_registry().get_all() ) {
+            std::vector<std::string> locations;
+            for( const sub_bodypart_str_id &location : value.locations_under ) {
+                locations.emplace_back( location.str() );
+            }
+            native_sub_body_parts.push_back( sub_body_part_parity{
+                value.id.str(), value.name.translated(), value.name_multiple.translated(),
+                value.parent.str(), value.opposite.str(),
+                static_cast<int>( value.part_side ), value.secondary,
+                value.max_coverage, locations,
+                value.similar_bodypart.has_value() ?
+                value.similar_bodypart.value().str() : std::string(),
+                value.unarmed_damage
+            } );
+        }
+        REQUIRE( native_sub_body_parts.size() == legacy_sub_body_parts.size() );
+        for( std::size_t i = 0; i < native_sub_body_parts.size(); ++i ) {
+            CAPTURE( legacy_sub_body_parts[i].id );
+            CHECK( native_sub_body_parts[i].id == legacy_sub_body_parts[i].id );
+            CHECK( native_sub_body_parts[i].name == legacy_sub_body_parts[i].name );
+            CHECK( native_sub_body_parts[i].name_multiple ==
+                   legacy_sub_body_parts[i].name_multiple );
+            CHECK( native_sub_body_parts[i].parent == legacy_sub_body_parts[i].parent );
+            CHECK( native_sub_body_parts[i].opposite ==
+                   legacy_sub_body_parts[i].opposite );
+            CHECK( native_sub_body_parts[i].side == legacy_sub_body_parts[i].side );
+            CHECK( native_sub_body_parts[i].secondary ==
+                   legacy_sub_body_parts[i].secondary );
+            CHECK( native_sub_body_parts[i].max_coverage ==
+                   legacy_sub_body_parts[i].max_coverage );
+            CHECK( native_sub_body_parts[i].locations_under ==
+                   legacy_sub_body_parts[i].locations_under );
+            CHECK( native_sub_body_parts[i].similar_bodypart ==
+                   legacy_sub_body_parts[i].similar_bodypart );
+            CHECK( native_sub_body_parts[i].unarmed ==
+                   legacy_sub_body_parts[i].unarmed );
+        }
+    }
+
+    {
+        std::vector<recipe_category_parity> native_recipe_categories;
+        for( const crafting_category &value :
+             cata::lua_platform::detail::crafting_category_registry().get_all() ) {
+            native_recipe_categories.push_back( recipe_category_parity{
+                value.id.str(), value.is_hidden, value.is_practice,
+                value.is_building, value.is_wildcard, value.subcategories
+            } );
+        }
+        std::sort( native_recipe_categories.begin(), native_recipe_categories.end(),
+        []( const recipe_category_parity &left, const recipe_category_parity &right ) {
+            return left.id < right.id;
+        } );
+        REQUIRE( native_recipe_categories.size() == legacy_recipe_categories.size() );
+        for( std::size_t i = 0; i < native_recipe_categories.size(); ++i ) {
+            CAPTURE( legacy_recipe_categories[i].id );
+            CHECK( native_recipe_categories[i].id == legacy_recipe_categories[i].id );
+            CHECK( native_recipe_categories[i].hidden ==
+                   legacy_recipe_categories[i].hidden );
+            CHECK( native_recipe_categories[i].practice ==
+                   legacy_recipe_categories[i].practice );
+            CHECK( native_recipe_categories[i].building ==
+                   legacy_recipe_categories[i].building );
+            CHECK( native_recipe_categories[i].wildcard ==
+                   legacy_recipe_categories[i].wildcard );
+            CHECK( native_recipe_categories[i].subcategories ==
+                   legacy_recipe_categories[i].subcategories );
+        }
+    }
+
+    {
+        std::vector<gate_parity> native_gates;
+        for( const gate_data &value :
+             cata::lua_platform::detail::gate_registry().get_all() ) {
+            std::vector<std::string> walls;
+            for( const ter_str_id &wall : value.walls ) {
+                walls.emplace_back( wall.str() );
+            }
+            REQUIRE( value.src.size() == 1 );
+            native_gates.push_back( gate_parity{
+                value.id.str(), value.door.str(), value.floor.str(), walls,
+                value.pull_message.translated(), value.open_message.translated(),
+                value.close_message.translated(), value.fail_message.translated(),
+                value.moves, value.bash_dmg, value.src.front().second
+            } );
+        }
+        std::sort( native_gates.begin(), native_gates.end(),
+        []( const gate_parity &left, const gate_parity &right ) {
+            return left.id < right.id;
+        } );
+        REQUIRE( native_gates.size() == legacy_gates.size() );
+        std::size_t migrated_gate_count = 0;
+        for( std::size_t i = 0; i < native_gates.size(); ++i ) {
+            CAPTURE( legacy_gates[i].id );
+            CHECK( native_gates[i].id == legacy_gates[i].id );
+            CHECK( native_gates[i].door == legacy_gates[i].door );
+            CHECK( native_gates[i].floor == legacy_gates[i].floor );
+            CHECK( native_gates[i].walls == legacy_gates[i].walls );
+            CHECK( native_gates[i].pull_message == legacy_gates[i].pull_message );
+            CHECK( native_gates[i].open_message == legacy_gates[i].open_message );
+            CHECK( native_gates[i].close_message == legacy_gates[i].close_message );
+            CHECK( native_gates[i].fail_message == legacy_gates[i].fail_message );
+            CHECK( native_gates[i].moves == legacy_gates[i].moves );
+            CHECK( native_gates[i].bash_dmg == legacy_gates[i].bash_dmg );
+            // The ten gates.json entries are replaced by Migrated_Core; the
+            // two gates defined in other core files stay legacy-owned.
+            if( native_gates[i].owner == mod_id( "Migrated_Core" ) ) {
+                ++migrated_gate_count;
+                CHECK( native_gates[i].owner != legacy_gates[i].owner );
+            } else {
+                CHECK( native_gates[i].owner == legacy_gates[i].owner );
+            }
+        }
+        CHECK( migrated_gate_count == 10 );
+    }
+
+    CHECK( cata::lua_platform::detail::var_migration_snapshot() ==
+           legacy_var_migrations );
+
+    {
+        const std::vector<cata::lua_platform::detail::json_flag_snapshot_entry>
+        native_json_flags = cata::lua_platform::detail::json_flag_snapshot();
+        REQUIRE( native_json_flags.size() == legacy_json_flags.size() );
+        for( std::size_t i = 0; i < native_json_flags.size(); ++i ) {
+            CAPTURE( legacy_json_flags[i].id );
+            CHECK( native_json_flags[i].id == legacy_json_flags[i].id );
+            CHECK( native_json_flags[i].name == legacy_json_flags[i].name );
+            CHECK( native_json_flags[i].info == legacy_json_flags[i].info );
+            CHECK( native_json_flags[i].restriction == legacy_json_flags[i].restriction );
+            CHECK( native_json_flags[i].item_prefix == legacy_json_flags[i].item_prefix );
+            CHECK( native_json_flags[i].item_suffix == legacy_json_flags[i].item_suffix );
+            CHECK( native_json_flags[i].conflicts == legacy_json_flags[i].conflicts );
+            CHECK( native_json_flags[i].inherit == legacy_json_flags[i].inherit );
+            CHECK( native_json_flags[i].craft_inherit == legacy_json_flags[i].craft_inherit );
+            CHECK( native_json_flags[i].requires_flag == legacy_json_flags[i].requires_flag );
+            CHECK( native_json_flags[i].taste_mod == legacy_json_flags[i].taste_mod );
+            CHECK( native_json_flags[i].owner == mod_id( "Migrated_Core" ) );
+            CHECK( native_json_flags[i].owner != legacy_json_flags[i].owner );
+        }
+    }
+
+    {
+        const std::vector<cata::lua_platform::detail::item_category_snapshot_entry>
+        native_item_categories = cata::lua_platform::detail::item_category_snapshot();
+        REQUIRE( native_item_categories.size() == legacy_item_categories.size() );
+        for( std::size_t i = 0; i < native_item_categories.size(); ++i ) {
+            CAPTURE( legacy_item_categories[i].id );
+            CHECK( native_item_categories[i].id == legacy_item_categories[i].id );
+            CHECK( native_item_categories[i].header == legacy_item_categories[i].header );
+            CHECK( native_item_categories[i].noun == legacy_item_categories[i].noun );
+            CHECK( native_item_categories[i].sort_rank == legacy_item_categories[i].sort_rank );
+            CHECK( native_item_categories[i].zone == legacy_item_categories[i].zone );
+            CHECK( native_item_categories[i].spawn_rate == legacy_item_categories[i].spawn_rate );
+            REQUIRE( native_item_categories[i].priority_zones.size() ==
+                     legacy_item_categories[i].priority_zones.size() );
+            for( std::size_t rule = 0; rule < native_item_categories[i].priority_zones.size();
+                 ++rule ) {
+                CAPTURE( rule );
+                CHECK( native_item_categories[i].priority_zones[rule].zone ==
+                       legacy_item_categories[i].priority_zones[rule].zone );
+                CHECK( native_item_categories[i].priority_zones[rule].filthy ==
+                       legacy_item_categories[i].priority_zones[rule].filthy );
+                CHECK( native_item_categories[i].priority_zones[rule].flags ==
+                       legacy_item_categories[i].priority_zones[rule].flags );
+            }
+        }
+    }
+
+    {
+        const std::vector<cata::lua_platform::detail::recipe_group_native_definition>
+        native_recipe_groups = cata::lua_platform::detail::recipe_group_snapshot();
+        REQUIRE( native_recipe_groups.size() == legacy_recipe_groups.size() );
+        for( std::size_t i = 0; i < native_recipe_groups.size(); ++i ) {
+            CAPTURE( legacy_recipe_groups[i].id );
+            CHECK( native_recipe_groups[i].id == legacy_recipe_groups[i].id );
+            CHECK( native_recipe_groups[i].building_type ==
+                   legacy_recipe_groups[i].building_type );
+            REQUIRE( native_recipe_groups[i].recipes.size() ==
+                     legacy_recipe_groups[i].recipes.size() );
+            for( std::size_t recipe = 0; recipe < native_recipe_groups[i].recipes.size();
+                 ++recipe ) {
+                CAPTURE( legacy_recipe_groups[i].recipes[recipe].id );
+                CHECK( native_recipe_groups[i].recipes[recipe].id ==
+                       legacy_recipe_groups[i].recipes[recipe].id );
+                CHECK( native_recipe_groups[i].recipes[recipe].description.translated() ==
+                       legacy_recipe_groups[i].recipes[recipe].description.translated() );
+                REQUIRE( native_recipe_groups[i].recipes[recipe].overmap_terrains.size() ==
+                         legacy_recipe_groups[i].recipes[recipe].overmap_terrains.size() );
+                for( std::size_t terrain = 0;
+                     terrain < native_recipe_groups[i].recipes[recipe].overmap_terrains.size();
+                     ++terrain ) {
+                    CHECK( native_recipe_groups[i].recipes[recipe].overmap_terrains[terrain]
+                           .overmap_terrain ==
+                           legacy_recipe_groups[i].recipes[recipe].overmap_terrains[terrain]
+                           .overmap_terrain );
+                    CHECK( native_recipe_groups[i].recipes[recipe].overmap_terrains[terrain]
+                           .match_type ==
+                           legacy_recipe_groups[i].recipes[recipe].overmap_terrains[terrain]
+                           .match_type );
+                    CHECK( native_recipe_groups[i].recipes[recipe].overmap_terrains[terrain]
+                           .parameters ==
+                           legacy_recipe_groups[i].recipes[recipe].overmap_terrains[terrain]
+                           .parameters );
+                }
+            }
+        }
+    }
+
+    {
+        std::vector<mood_face_parity> native_mood_faces;
+        for( const mood_face &value : mood_face::get_all() ) {
+            std::vector<std::pair<int, std::string>> values;
+            for( const mood_face_value &entry : value.values() ) {
+                values.emplace_back( entry.value(), entry.face() );
+            }
+            native_mood_faces.push_back( mood_face_parity{ value.getId().str(), values } );
+        }
+        std::sort( native_mood_faces.begin(), native_mood_faces.end(),
+        []( const mood_face_parity &left, const mood_face_parity &right ) {
+            return left.id < right.id;
+        } );
+        REQUIRE( native_mood_faces.size() == legacy_mood_faces.size() );
+        for( std::size_t i = 0; i < native_mood_faces.size(); ++i ) {
+            CAPTURE( legacy_mood_faces[i].id );
+            CHECK( native_mood_faces[i].id == legacy_mood_faces[i].id );
+            CHECK( native_mood_faces[i].values == legacy_mood_faces[i].values );
+        }
+    }
+
+    {
+        const std::vector<cata::lua_platform::detail::start_location_snapshot_entry>
+        native_start_locations = cata::lua_platform::detail::start_location_snapshot();
+        REQUIRE( native_start_locations.size() == legacy_start_locations.size() );
+        for( std::size_t i = 0; i < native_start_locations.size(); ++i ) {
+            CAPTURE( legacy_start_locations[i].id );
+            CHECK( native_start_locations[i].id == legacy_start_locations[i].id );
+            CHECK( native_start_locations[i].name == legacy_start_locations[i].name );
+            REQUIRE( native_start_locations[i].targets.size() ==
+                     legacy_start_locations[i].targets.size() );
+            for( std::size_t target = 0;
+                 target < native_start_locations[i].targets.size(); ++target ) {
+                CHECK( native_start_locations[i].targets[target].overmap_terrain ==
+                       legacy_start_locations[i].targets[target].overmap_terrain );
+                CHECK( native_start_locations[i].targets[target].match_type ==
+                       legacy_start_locations[i].targets[target].match_type );
+                CHECK( native_start_locations[i].targets[target].parameters ==
+                       legacy_start_locations[i].targets[target].parameters );
+            }
+            CHECK( native_start_locations[i].flags == legacy_start_locations[i].flags );
+            CHECK( native_start_locations[i].city_size_min ==
+                   legacy_start_locations[i].city_size_min );
+            CHECK( native_start_locations[i].city_size_max ==
+                   legacy_start_locations[i].city_size_max );
+            CHECK( native_start_locations[i].city_distance_min ==
+                   legacy_start_locations[i].city_distance_min );
+            CHECK( native_start_locations[i].city_distance_max ==
+                   legacy_start_locations[i].city_distance_max );
+            CHECK( native_start_locations[i].z_min == legacy_start_locations[i].z_min );
+            CHECK( native_start_locations[i].z_max == legacy_start_locations[i].z_max );
+            CHECK( native_start_locations[i].owner == mod_id( "Migrated_Core" ) );
+            CHECK( native_start_locations[i].owner != legacy_start_locations[i].owner );
+        }
+    }
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_butchery_requirement_definitions_stage_native_tables",
+           "[lua][platform][content][catalog][butchery]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_butchery" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local definition = ccb.content.ButcheryRequirement {
+    id = "ccb_platform_butchery",
+}
+definition:requirement(1.0, "TINY", "BLEED", "field_dress")
+definition:requirement(2.0, "TINY", "BLEED", "butchery_small")
+ccb.content.add(definition)
+)lua" );
+
+    std::string error;
+    const bool prepared = cata::lua_platform::prepare_mods(
+                              { test_mod.source( "ccb_platform_butchery" ) }, error );
+    if( !prepared ) {
+        std::cerr << "BUTCHERY_PREPARE_FAILED: [" << error << "]\n";
+    }
+    REQUIRE( prepared );
+    const bool applied = cata::lua_platform::apply_prepared_content( error );
+    if( !applied ) {
+        std::cerr << "BUTCHERY_APPLY_FAILED: [" << error << "]\n";
+    }
+    REQUIRE( applied );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    const string_id<butchery_requirements> id( "ccb_platform_butchery" );
+    REQUIRE( id.is_valid() );
+    // With an empty crafting inventory every row fails can_make, so the
+    // fastest (highest speed) row is returned.
+    const std::pair<float, requirement_id> fastest =
+        id->get_fastest_requirements( get_avatar(), creature_size::tiny,
+                                      butcher_type::BLEED );
+    CHECK( fastest.first == 2.0f );
+    CHECK( fastest.second == requirement_id( "butchery_small" ) );
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_item_action_definitions_stage_native_tables",
+           "[lua][platform][content][catalog][item_action]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_item_action" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local definition = ccb.content.ItemAction {
+    id = "ccb_platform_action",
+    name = "Platform Sample Action",
+}
+ccb.content.add(definition)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_item_action" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    const item_action *action =
+        cata::lua_platform::detail::item_action_registry_find(
+            "ccb_platform_action" );
+    REQUIRE( action != nullptr );
+    CHECK( action->name.translated() == "Platform Sample Action" );
+
+    cata::lua_platform::shutdown();
+    // Committed content persists after shutdown by design; the undo records
+    // only serve mod reload/replacement flows.
+    CHECK( cata::lua_platform::detail::item_action_registry_find(
+               "ccb_platform_action" ) != nullptr );
+}
+
+TEST_CASE( "lua_first_scenario_definitions_stage_native_scenarios",
+           "[lua][platform][content][catalog][scenario]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_scenario" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local definition = ccb.content.Scenario {
+    id = "ccb_platform_scenario",
+    name = "Platform Sample Scenario",
+    description = "A deterministic scenario authored without JSON.",
+    start_name = "Platform Start",
+    points = 1,
+}
+definition:location("sloc_shelter_safe")
+definition:flag("CITY_START")
+ccb.content.add(definition)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_scenario" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    const string_id<scenario> id( "ccb_platform_scenario" );
+    REQUIRE( id.is_valid() );
+    CHECK( id->gender_appropriate_name( true ) == "Platform Sample Scenario" );
+    CHECK( id->description( true ) ==
+           "A deterministic scenario authored without JSON." );
+    CHECK( id->start_name() == "Platform Start" );
+    CHECK( id->start_location() == start_location_id( "sloc_shelter_safe" ) );
+    CHECK( id->start_location_count() == 1 );
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_vehicle_color_palette_definitions_stage_native_palettes",
+           "[lua][platform][content][catalog][vehicle_palette]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_palette" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local definition = ccb.content.VehicleColorPalette {
+    id = "ccb_platform_palette",
+}
+definition:group({ "door", "roof" }, { { "Jet black", 10 } })
+ccb.content.add(definition)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_palette" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    const vpalette_id id( "ccb_platform_palette" );
+    REQUIRE( id.is_valid() );
+    CHECK( id->fuzzy_to_index( vpart_id( "door" ) ) == 0 );
+    CHECK( id->fuzzy_to_index( vpart_id( "door_opaque" ) ) == 0 );
+    CHECK( id->fuzzy_to_index( vpart_id( "windshield" ) ) == -1 );
+    const std::vector<std::optional<RGBColor>> colors = id->pick_colors();
+    REQUIRE( colors.size() == 1 );
+    REQUIRE( colors[0] );
+    CHECK( *colors[0] == RGBColor::try_parse( "Jet black" ) );
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_monster_group_definitions_stage_native_groups",
+           "[lua][platform][content][catalog][monstergroup]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_monster_group" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local definition = ccb.content.MonsterGroup {
+    id = "ccb_platform_monster_group",
+}
+definition:monster("mon_zombie", 100, 0, 1, 2)
+definition:monster("mon_zombie_runner", 50, 0, 1, 1)
+ccb.content.add(definition)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_monster_group" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    const mongroup_id id( "ccb_platform_monster_group" );
+    REQUIRE( MonsterGroupManager::isValidMonsterGroup( id ) );
+    const MonsterGroup &group = MonsterGroupManager::GetMonsterGroup( id );
+    REQUIRE( group.monsters.size() == 2 );
+    CHECK( group.monsters[0].mtype == mtype_id( "mon_zombie" ) );
+    CHECK( group.monsters[0].frequency == 100 );
+    CHECK( group.monsters[0].pack_minimum == 1 );
+    CHECK( group.monsters[0].pack_maximum == 2 );
+    // No explicit default: the highest-frequency entry becomes the default.
+    CHECK( group.defaultMonster == mtype_id( "mon_zombie" ) );
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_overmap_connection_definitions_stage_native_connections",
+           "[lua][platform][content][catalog][overmap_connection]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_overmap_connection" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local definition = ccb.content.OvermapConnection {
+    id = "ccb_platform_connection",
+}
+definition:subtype("road", 0, { "road" }, true, false)
+definition:subtype("road", 30, { "stream" }, false, true)
+ccb.content.add(definition)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_overmap_connection" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    const string_id<overmap_connection> id( "ccb_platform_connection" );
+    REQUIRE( id.is_valid() );
+    const overmap_connection &connection = id.obj();
+    const overmap_connection::subtype *road =
+        connection.pick_subtype_for( int_id<oter_t>( "road_ns" ) );
+    REQUIRE( road != nullptr );
+    CHECK( road->basic_cost == 0 );
+    CHECK( road->is_orthogonal() );
+    CHECK_FALSE( road->is_perpendicular_crossing() );
+
+    cata::lua_platform::shutdown();
 }
 
 TEST_CASE( "lua_first_hooks_preserve_and_deduplicate_cross_runtime_results",
@@ -8370,6 +11850,7 @@ assert(type(character.name) == "string")
 assert(character.avatar == true)
 assert(character.npc == false)
 assert(type(character.male) == "boolean")
+assert(math.type(character.cash) == "integer")
 assert(type(character.faction_id) == "string")
 
 assert(math.type(character.stats.strength) == "integer")
@@ -11001,6 +14482,7 @@ assert(camp.board_position.origin == "abs")
 assert(camp.board_position.scale == "ms")
 assert(camp.owner == game.types.id(
     "faction", "your_followers"))
+assert(game.camps.player_has_camp().value == true)
 assert(math.type(camp.distance_submaps) == "integer")
 assert(type(camp.distance_omt) == "number")
 assert(camp.directions.returned ==
@@ -13185,6 +16667,7 @@ assert(assigned.ok == true)
 assert(assigned.value.status == "active")
 assert(assigned.value.assigned == true)
 assert(assigned.value.selected == true)
+assert(game.missions.avatar_has_active(test_id).value == true)
 local selected = game.missions.select(token)
 assert(selected.ok == true and selected.value.selected == true)
 assert(game.missions.current().value.uid == token.uid)
@@ -18720,6 +22203,8 @@ ccb.runtime.handler("dialogue_start", function(payload)
     assert(payload.avatar.kind == "creature")
     assert(payload.interlocutor.kind == "creature")
     assert(payload.initial_topic == "TALK_TEST_START")
+    assert(payload.by_radio == true)
+    assert(payload.reason == "TALK_TEST_REASON")
     assert(payload.results.result == "TALK_LUA_START")
     append("S")
     return { result = "TALK_PLATFORM_START" }
@@ -18732,6 +22217,8 @@ ccb.runtime.handler("dialogue_option", function(payload)
     assert(payload.interlocutor.kind == "creature")
     assert(payload.current_topic == "TALK_PLATFORM_START")
     assert(payload.selected_topic == "TALK_TEST_OPTION")
+    assert(payload.by_radio == true)
+    assert(payload.reason == "TALK_TEST_REASON")
     assert(payload.results.result == "TALK_LUA_OPTION")
     append("O")
     return { result = "TALK_PLATFORM_OPTION" }
@@ -18742,6 +22229,8 @@ ccb.runtime.handler("dialogue_end", function(payload)
     assert(payload.avatar.kind == "creature")
     assert(payload.interlocutor.kind == "creature")
     assert(payload.last_topic == "TALK_PLATFORM_OPTION")
+    assert(payload.by_radio == true)
+    assert(payload.reason == "TALK_TEST_REASON")
     append("E")
 end)
 
@@ -18831,18 +22320,22 @@ end)
     const native_hook_result start =
         dispatch_native_dialogue_hook(
             "on_dialogue_start", *alpha, *beta,
-            "TALK_TEST_START" );
+            "TALK_TEST_START", std::nullopt, true,
+            std::string_view( "TALK_TEST_REASON" ) );
     REQUIRE( start.result );
     CHECK( *start.result == "TALK_PLATFORM_START" );
 
     const native_hook_result option =
         dispatch_native_dialogue_hook(
             "on_dialogue_option", *alpha, *beta,
-            *start.result, "TALK_TEST_OPTION" );
+            *start.result, "TALK_TEST_OPTION", true,
+            std::string_view( "TALK_TEST_REASON" ) );
     REQUIRE( option.result );
     CHECK( *option.result == "TALK_PLATFORM_OPTION" );
     dispatch_native_dialogue_hook(
-        "on_dialogue_end", *alpha, *beta, *option.result );
+        "on_dialogue_end", *alpha, *beta, *option.result,
+        std::nullopt, true,
+        std::string_view( "TALK_TEST_REASON" ) );
 
     std::ifstream platform_input( platform_marker, std::ios::binary );
     const std::string platform_calls{

@@ -1,5 +1,7 @@
 #include "mongroup.h"
 
+#include "catalua_platform_content.h"
+
 #include <algorithm>
 #include <string>
 #include <utility>
@@ -378,6 +380,42 @@ void MonsterGroupManager::LoadMonsterWhitelist( const JsonObject &jo )
     add_array_to_set( monster_categories_whitelist, jo, "categories" );
     add_array_to_set( monster_species_whitelist, jo, "species" );
 
+}
+
+void cata::lua_platform::detail::insert_platform_monster_blacklist(
+    const std::vector<std::string> &entries, const bool whitelist )
+{
+    auto &target = whitelist ?
+                   MonsterGroupManager::monster_whitelist :
+                   MonsterGroupManager::monster_blacklist;
+    for( const std::string &entry : entries ) {
+        target.insert( entry );
+    }
+}
+
+void cata::lua_platform::detail::erase_platform_monster_blacklist(
+    const std::vector<std::string> &entries, const bool whitelist )
+{
+    auto &target = whitelist ?
+                   MonsterGroupManager::monster_whitelist :
+                   MonsterGroupManager::monster_blacklist;
+    for( const std::string &entry : entries ) {
+        target.erase( entry );
+    }
+}
+
+std::vector<std::string> cata::lua_platform::detail::monster_blacklist_snapshot()
+{
+    return std::vector<std::string>(
+               MonsterGroupManager::monster_blacklist.begin(),
+               MonsterGroupManager::monster_blacklist.end() );
+}
+
+std::vector<std::string> cata::lua_platform::detail::monster_whitelist_snapshot()
+{
+    return std::vector<std::string>(
+               MonsterGroupManager::monster_whitelist.begin(),
+               MonsterGroupManager::monster_whitelist.end() );
 }
 
 bool MonsterGroupManager::monster_is_blacklisted( const mtype_id &m )

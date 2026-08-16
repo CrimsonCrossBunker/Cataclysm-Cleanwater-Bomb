@@ -1298,6 +1298,32 @@ void install_overmap_api(
                    position, selector, match );
     } );
     overmap.set_function(
+        "is_safe",
+        [require_read](
+            const script_tripoint_coord & position ) {
+        require_read();
+        return overmap_buffer.is_safe(
+                   require_absolute_omt(
+                       position, "game.overmap.is_safe" ) );
+    } );
+    overmap.set_function(
+        "is_in_city",
+        [require_read](
+            const script_tripoint_coord & position ) {
+        require_read();
+        if( position.native_origin() != coords::origin::abs ||
+            position.native_scale() != coords::scale::map_square ) {
+            throw std::invalid_argument(
+                "game.overmap.is_in_city requires an absolute map-square Tripoint" );
+        }
+        const tripoint_abs_omt target_pos = project_to<coords::omt>(
+                                                tripoint_abs_ms( position.to_native() ) );
+        if( target_pos.z() < -1 ) {
+            return false;
+        }
+        return overmap_buffer.is_in_city( target_pos );
+    } );
+    overmap.set_function(
         "set_terrain",
         [require_write](
             sol::this_state lua_state,

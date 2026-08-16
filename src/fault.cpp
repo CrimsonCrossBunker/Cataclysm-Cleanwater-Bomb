@@ -1,5 +1,6 @@
 #include "fault.h"
 
+#include <algorithm>
 #include <utility>
 #include <vector>
 
@@ -20,11 +21,59 @@ generic_factory<fault_group> fault_group_factory( "fault_group", "id" );
 
 // we'll store requirement_ids here and wait for requirements to load in, then we can actualize them
 std::multimap<fault_fix_id, std::pair<std::string, int>> reqs_temp_storage;
-
 // Have a list of faults by type, the type right now is item prefix to avoid adding more JSON data
 std::map<std::string, std::vector<fault_id>> faults_by_type;
 
 } // namespace
+
+generic_factory<fault> &cata::lua_platform::detail::fault_registry()
+{
+    return fault_factory;
+}
+
+std::vector<cata::lua_platform::detail::fault_snapshot_entry>
+cata::lua_platform::detail::fault_registry_snapshot()
+{
+    std::vector<fault_snapshot_entry> result;
+    for( const fault &value : fault_factory.get_all() ) {
+        fault_snapshot_entry entry;
+        entry.id = value.id.str();
+        entry.name = value.name();
+        entry.type = value.type();
+        entry.description = value.description();
+        entry.item_prefix = value.item_prefix();
+        entry.item_suffix = value.item_suffix();
+        entry.message = value.message();
+        entry.color = value.color();
+        entry.price_mod = value.price_mod();
+        entry.degradation_mod = value.degradation_mod();
+        entry.instant_damage = value.instant_damage();
+        entry.contact_area_mod = value.contact_area_mod();
+        entry.rolling_resistance_mod = value.rolling_resistance_mod();
+        entry.vehicle_move_penalty_mod = value.vehicle_move_penalty_mod();
+        entry.encumb_mod_flat = value.encumb_mod_flat();
+        entry.encumb_mod_mult = value.encumb_mod_mult();
+        entry.affected_by_degradation = value.affected_by_degradation();
+        entry.flags.assign( value.flags.begin(), value.flags.end() );
+        for( const fault_fix_id &fix : value.get_fixes() ) {
+            entry.fixes.emplace_back( fix.str() );
+        }
+        for( const fault_id &blocked : value.get_block_faults() ) {
+            entry.block_faults.emplace_back( blocked.str() );
+        }
+        result.emplace_back( std::move( entry ) );
+    }
+    std::sort( result.begin(), result.end(),
+    []( const fault_snapshot_entry &left, const fault_snapshot_entry &right ) {
+        return left.id < right.id;
+    } );
+    return result;
+}
+
+generic_factory<fault_fix> &cata::lua_platform::detail::fault_fix_registry()
+{
+    return fault_fixes_factory;
+}
 
 generic_factory<fault_group> &cata::lua_platform::detail::fault_group_registry()
 {

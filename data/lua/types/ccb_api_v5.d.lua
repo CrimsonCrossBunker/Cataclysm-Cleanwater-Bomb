@@ -2182,6 +2182,13 @@ function CcbCreaturesApi.nearby(options) end
 ---@return CcbResult
 function CcbCreaturesApi.at(position) end
 
+---@param observer GameHandle Observer creature handle.
+---@param target GameHandle Target creature handle.
+---@return CcbResult result `value` is whether the observer currently sees the
+---target under native perception rules, including avatar clairvoyance and
+---light-dependent vision.
+function CcbCreaturesApi.can_see(observer, target) end
+
 ---@class CcbCharactersApi
 local CcbCharactersApi = {}
 
@@ -2216,6 +2223,35 @@ function CcbCharactersApi.heal(handle, body_part, amount) end
 ---@param mode GameId
 ---@return CcbResult
 function CcbCharactersApi.set_movement_mode(handle, mode) end
+
+---@param handle GameHandle
+---@return CcbResult result `value` is whether the character currently
+---considers itself safe: NPCs report their native danger assessment while
+---avatars and other characters are always safe, matching legacy dialogue
+---semantics.
+function CcbCharactersApi.is_safe(handle) end
+
+---@param handle GameHandle
+---@param flag GameId A `json_flag` id; the legacy sentinel `MUTATION_THRESHOLD`
+---reports threshold-crossing state rather than literal flag presence.
+---@return CcbResult result `value` is whether any of the five legacy sources
+---(traits, bionics, effects, body parts, martial-art buffs) carries the flag.
+function CcbCharactersApi.has_flag(handle, flag) end
+
+---@param handle GameHandle
+---@param amount integer Wetness delta applied through the native drenching
+---rules, including rain immunity, feather, rainproof-clothing, and warmth
+---filters.
+---@return CcbResult
+function CcbCharactersApi.add_wet(handle, amount) end
+
+---@param handle GameHandle
+---@param profession_id string Native profession id. Unknown ids return false
+---without throwing; the guarded legacy expression matches the character's
+---current profession or, for hobby-subtype ids, a held hobby.
+---@return CcbResult result `value` is whether the character has the profession,
+---mirroring conditional_t::f_has_profession (src/condition.cpp).
+function CcbCharactersApi.has_profession(handle, profession_id) end
 
 ---@class CcbEffectAddOptions
 ---@field body_part? GameId
@@ -2654,6 +2690,12 @@ function CcbMissionsApi.get(token) end
 ---@return CcbResult
 function CcbMissionsApi.current() end
 
+---@param id GameId GameId<mission>; wrong kinds or invalid ids raise
+---invalid_argument, while a valid id with no active match returns false.
+---@return CcbResult result `value` is whether the avatar has an active mission
+---of the requested type, mirroring conditional_t::f_u_has_mission.
+function CcbMissionsApi.avatar_has_active(id) end
+
 ---@param origin GameEnum
 ---@param position TripointCoord
 ---@return table?
@@ -2906,6 +2948,16 @@ function CcbOvermapApi.random(origin, options) end
 ---@param match? GameEnum
 ---@return boolean
 function CcbOvermapApi.matches(position, selector, match) end
+
+---@param position TripointCoord Absolute overmap-terrain coordinate.
+---@return boolean Whether native overmap safety rules mark that tile safe.
+function CcbOvermapApi.is_safe(position) end
+
+---@param position TripointCoord Absolute map-square coordinate projected to the
+--- overmap-terrain scale; z-levels below -1 return false (mirroring the legacy
+--- map_in_city clamp).
+---@return boolean
+function CcbOvermapApi.is_in_city(position) end
 
 ---@param position TripointCoord
 ---@param terrain GameId
@@ -4073,6 +4125,12 @@ function CcbNpcsApi.set_attitude(handle, attitude) end
 ---@return CcbResult
 function CcbNpcsApi.modify_opinion(handle, deltas) end
 
+---@param handle GameHandle
+---@return CcbResult result `value` is a snapshot with `aim`, `engagement`,
+---`cbm_recharge`, and `cbm_reserve` string ids, a dense one-based `allies`
+---string list of enabled ally rules, and a `pickup_whitelist` boolean.
+function CcbNpcsApi.ai_rules(handle) end
+
 ---@class CcbFactionReputation
 ---@field likes integer
 ---@field respects integer
@@ -4226,6 +4284,10 @@ local CcbCampsApi = {}
 ---@param options? CcbCampOptions
 ---@return CcbResult
 function CcbCampsApi.list(options) end
+
+---@return CcbResult result `value` is whether the player owns a faction camp,
+---mirroring conditional_t::f_u_has_camp (src/condition.cpp).
+function CcbCampsApi.player_has_camp() end
 
 ---@param center TripointCoord Absolute overmap-terrain coordinate.
 ---@param options? CcbCampOptions

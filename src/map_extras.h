@@ -22,12 +22,16 @@ class map;
 class mapgendata;
 class tinymap;
 template<typename T> class generic_factory;
+
+namespace cata::lua_platform
+{
+class content_transaction;
+} // namespace cata::lua_platform
 template<typename T> struct enum_traits;
 
 enum class om_vision_level : int8_t;
 
-enum class map_extra_method : int {
-    null = 0,
+enum class map_extra_method : int {    null = 0,
     map_extra_function,
     mapgen,
     update_mapgen,
@@ -61,6 +65,7 @@ class map_extra
 {
     public:
         map_extra_id id = string_id<map_extra>::NULL_ID();
+        friend class cata::lua_platform::content_transaction;
         std::vector<std::pair<map_extra_id, mod_id>> src;
         std::string generator_id;
         map_extra_method generator_method = map_extra_method::null;

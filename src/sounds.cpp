@@ -2062,6 +2062,11 @@ void sfx::playlist_registry_erase( const std::string_view id )
 void sfx::load_sound_effects( const JsonObject & ) { }
 void sfx::load_sound_effect_preload( const JsonObject & ) { }
 void sfx::load_playlist( const JsonObject & ) { }
+void sfx::register_sound_effect( const sound_effect_key &, int,
+                                 const std::vector<std::string> & ) { }
+void sfx::register_sound_effect_preload( const sound_effect_key & ) { }
+void sfx::erase_sound_effect( const sound_effect_key & ) { }
+void sfx::erase_sound_effect_preload( const sound_effect_key & ) { }
 void sfx::play_variant_sound( std::string_view, std::string_view, int, units::angle, double,
                               double ) { }
 void sfx::play_variant_sound( std::string_view, std::string_view, int ) { }

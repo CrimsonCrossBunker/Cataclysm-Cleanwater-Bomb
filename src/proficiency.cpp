@@ -5,9 +5,10 @@
 #include <cstddef>
 #include <string>
 #include <utility>
+#include <vector>
 
-#include "debug.h"
 #include "catalua_platform_content.h"
+#include "debug.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "json.h"
@@ -684,6 +685,37 @@ void proficiency_migration::load( const JsonObject &jo )
     mandatory( jo, false, "from", migration.id_old );
     optional( jo, false, "to", migration.id_new );
     prof_migrations.emplace( migration.id_old, migration );
+}
+
+void cata::lua_platform::detail::insert_platform_proficiency_migration(
+    const platform_migration_data &value )
+{
+    proficiency_migration migration;
+    migration.id_old = proficiency_id( value.from_id );
+    migration.id_new = value.to_id.empty() ?
+                       std::nullopt :
+                       std::optional<proficiency_id>( proficiency_id( value.to_id ) );
+    prof_migrations.emplace( migration.id_old, migration );
+}
+
+void cata::lua_platform::detail::erase_platform_proficiency_migration(
+    const platform_migration_data &value )
+{
+    prof_migrations.erase( proficiency_id( value.from_id ) );
+}
+
+std::vector<std::pair<std::string, std::string>>
+cata::lua_platform::detail::proficiency_migration_snapshot()
+{
+    std::vector<std::pair<std::string, std::string>> result;
+    result.reserve( prof_migrations.size() );
+    for( const auto &[from_id, migration] : prof_migrations ) {
+        result.emplace_back(
+            from_id.str(),
+            migration.id_new.has_value() ? migration.id_new.value().str() : std::string()
+        );
+    }
+    return result;
 }
 
 void proficiency_migration::reset()
