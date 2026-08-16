@@ -2165,34 +2165,6 @@ void options_manager::add_options_general()
 
     add_empty_line();
 
-    add_option_group( "general", Group( "misc_general_opts", to_translation( "Misc Options" ),
-                                        to_translation( "Miscellaneous options." ) ),
-    [&]( const std::string & page_id ) {
-        add( "CIRCLEDIST", page_id, to_translation( "Circular distances" ),
-             to_translation( "If true, the game will calculate range in a realistic way: light sources will be circles, diagonal movement will cover more ground and take longer.  If false, everything is square: moving to the northwest corner of a building takes as long as moving to the north wall." ),
-             true
-           );
-
-        add( "DROP_EMPTY", page_id, to_translation( "Drop empty containers" ),
-             to_translation( "Set to drop empty containers after use.  No: Don't drop any.  - Watertight: All except watertight containers.  - All: Drop all containers." ),
-        { { "no", to_translation( "No" ) }, { "watertight", to_translation( "Watertight" ) }, { "all", to_translation( "All" ) } },
-        "no"
-           );
-
-        add( "DEATHCAM", page_id, to_translation( "DeathCam" ),
-             to_translation( "Always: Always start deathcam.  Ask: Query upon death.  Never: Never show deathcam." ),
-        { { "always", to_translation( "Always" ) }, { "ask", to_translation( "Ask" ) }, { "never", to_translation( "Never" ) } },
-        "ask"
-           );
-
-        add( "EVENT_SPAWNS", page_id, to_translation( "Special event spawns" ),
-             to_translation( "If not disabled, unique items and/or monsters can spawn during special events (Christmas, Halloween, etc.)" ),
-        { { "off", to_translation( "Disabled" ) }, { "items", to_translation( "Items" ) }, { "monsters", to_translation( "Monsters" ) }, { "both", to_translation( "Both" ) } },
-        "off" );
-    } );
-
-    add_empty_line();
-
     add_option_group( "general", Group( "soundpacks_opts", to_translation( "Soundpack options" ),
                                         to_translation( "Options regarding soundpack." ) ),
     [&]( const std::string & page_id ) {
@@ -2234,6 +2206,34 @@ void options_manager::add_options_general()
            );
 
         get_option( "AMBIENT_SOUND_VOLUME" ).setPrerequisite( "SOUND_ENABLED" );
+    } );
+
+    add_empty_line();
+
+    add_option_group( "general", Group( "misc_general_opts", to_translation( "Misc Options" ),
+                                        to_translation( "Miscellaneous options." ) ),
+    [&]( const std::string & page_id ) {
+        add( "CIRCLEDIST", page_id, to_translation( "Circular distances" ),
+             to_translation( "If true, the game will calculate range in a realistic way: light sources will be circles, diagonal movement will cover more ground and take longer.  If false, everything is square: moving to the northwest corner of a building takes as long as moving to the north wall." ),
+             true
+           );
+
+        add( "DROP_EMPTY", page_id, to_translation( "Drop empty containers" ),
+             to_translation( "Set to drop empty containers after use.  No: Don't drop any.  - Watertight: All except watertight containers.  - All: Drop all containers." ),
+        { { "no", to_translation( "No" ) }, { "watertight", to_translation( "Watertight" ) }, { "all", to_translation( "All" ) } },
+        "no"
+           );
+
+        add( "DEATHCAM", page_id, to_translation( "DeathCam" ),
+             to_translation( "Always: Always start deathcam.  Ask: Query upon death.  Never: Never show deathcam." ),
+        { { "always", to_translation( "Always" ) }, { "ask", to_translation( "Ask" ) }, { "never", to_translation( "Never" ) } },
+        "ask"
+           );
+
+        add( "EVENT_SPAWNS", page_id, to_translation( "Special event spawns" ),
+             to_translation( "If not disabled, unique items and/or monsters can spawn during special events (Christmas, Halloween, etc.)" ),
+        { { "off", to_translation( "Disabled" ) }, { "items", to_translation( "Items" ) }, { "monsters", to_translation( "Monsters" ) }, { "both", to_translation( "Both" ) } },
+        "off" );
     } );
 
     add_empty_line();
@@ -2934,6 +2934,12 @@ void options_manager::add_options_graphics()
     add_option_group( "graphics", Group( "ascii_opts", to_translation( "ASCII graphic options" ),
                                          to_translation( "Options regarding ASCII graphic." ) ),
     [&]( const std::string & page_id ) {
+        add( "ENABLE_ASCII_ART", page_id,
+             to_translation( "Enable ASCII art in item/monster descriptions" ),
+             to_translation( "If true, item and monster description will show a picture of the object in ASCII art when available." ),
+             true
+           );
+
         add( "ENABLE_ASCII_TITLE", page_id,
              to_translation( "Enable ASCII art on the title screen" ),
              to_translation( "If true, shows an ASCII graphic on the title screen.  If false, shows a text-only title screen." ),
@@ -3051,14 +3057,6 @@ void options_manager::add_options_graphics()
            );
     } );
 #endif // TILES
-
-    add_empty_line();
-
-    add( "ENABLE_ASCII_ART", "graphics",
-         to_translation( "Enable ASCII art in item and monster descriptions" ),
-         to_translation( "If true, item and monster description will show a picture of the object in ASCII art when available." ),
-         true, COPT_NO_HIDE
-       );
 
     add_empty_line();
 
