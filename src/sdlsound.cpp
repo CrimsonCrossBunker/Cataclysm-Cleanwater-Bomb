@@ -275,6 +275,26 @@ struct sfx_map {
                                      tod_from_int( bool_or( is_night, -1 ) ), sfx_time_of_day::ANY );
         }
 
+        void erase( const sfx_args &key ) {
+            auto it1 = effects.find( key.id );
+            if( it1 == effects.end() ) {
+                return;
+            }
+            auto it2 = it1->second.find( key.variant );
+            if( it2 == it1->second.end() ) {
+                return;
+            }
+            auto it3 = it2->second.find( season_from_string( key.season ) );
+            if( it3 == it2->second.end() ) {
+                return;
+            }
+            auto it4 = it3->second.find( in_or_out_from_int( bool_or( key.indoors, -1 ) ) );
+            if( it4 == it3->second.end() ) {
+                return;
+            }
+            it4->second.erase( tod_from_int( bool_or( key.night, -1 ) ) );
+        }
+
     private:
         std::map<std::string, std::map<std::string, std::map<sfx_season, std::map<sfx_in_or_out, std::map<sfx_time_of_day, std::vector<sound_effect>>>>>>
         effects;
