@@ -72,6 +72,7 @@ TABLE_CLASSES = {
     "statistics": "CcbStatisticsApi",
     "targeting": "CcbTargetingApi",
     "time": "CcbTimeApi",
+    "trade": "CcbTradeApi",
     "types": "CcbTypesApi",
     "ui": "CcbUiApi",
     "units": "CcbUnitsApi",
@@ -188,6 +189,7 @@ def platform_sources() -> list[Path]:
     return [
         REPOSITORY_ROOT / "src/catalua_platform.cpp",
         REPOSITORY_ROOT / "src/catalua_platform_runtime.cpp",
+        REPOSITORY_ROOT / "src/catalua_platform_world_content.cpp",
     ]
 
 
@@ -272,6 +274,7 @@ PLATFORM_TABLE_CLASSES = {
     "content": "CcbPlatformContent",
     "environment": "CcbPlatformEnvironmentQueries",
     "inventory": "CcbPlatformInventoryApi",
+    "mapgen": "CcbPlatformMapgenApi",
     "martial_arts": "CcbPlatformMartialArtsApi",
     "morale": "CcbPlatformMoraleApi",
     "mods": "CcbPlatformModQueries",
@@ -311,6 +314,7 @@ PLATFORM_SERVICE_FIELDS = {
     "hordes",
     "inventory",
     "items",
+    "mapgen",
     "martial_arts",
     "messages",
     "missions",
@@ -332,6 +336,7 @@ PLATFORM_SERVICE_FIELDS = {
     "statistics",
     "targeting",
     "time",
+    "trade",
     "types",
     "units",
     "variables",

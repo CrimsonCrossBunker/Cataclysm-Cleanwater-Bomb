@@ -16,6 +16,7 @@
 
 #include "avatar.h"
 #include "auto_pickup.h"
+#include "calendar.h"
 #include "catalua_bindings_coords.h"
 #include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
@@ -24,6 +25,7 @@
 #include "game.h"
 #include "npc.h"
 #include "npc_class.h"
+#include "npctrade.h"
 
 namespace cata::lua_ui
 {
@@ -414,6 +416,8 @@ sol::table snapshot_npc(
     result["patrolling"] = entry.is_patrolling();
     result["shopkeeper"] =
         entry.is_shopkeeper();
+    result["restock_turn"] =
+        to_turn<std::int64_t>( entry.restock_time() );
     result["faction_representative"] =
         entry.faction_representative;
     result["opinion"] =
@@ -564,6 +568,51 @@ sol::table get_npc(
                        state, *entry,
                        runtime_generation,
                        world_generation ) ) );
+}
+
+sol::table open_trade(
+    sol::this_state lua, const game_handle &handle, const int cost,
+    const std::string &deal,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    if( cost < 0 ) {
+        throw std::invalid_argument( "game.trade.open cost cannot be negative" );
+    }
+    if( deal.empty() || deal.size() > 256 ) {
+        throw std::invalid_argument(
+            "game.trade.open deal must contain 1 to 256 bytes" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *entry = resolve_npc(
+                     handle, runtime_generation, world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, npc_trading::trade( *entry, cost, deal ) ) );
+}
+
+sol::table pay_npc(
+    sol::this_state lua, const game_handle &handle, const int cost,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    if( cost <= 0 ) {
+        throw std::invalid_argument( "game.trade.pay cost must be positive" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *entry = resolve_npc(
+                     handle, runtime_generation, world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, npc_trading::pay_npc( *entry, cost ) ) );
 }
 
 void validate_npc_name( const std::string &name )
@@ -922,6 +971,31 @@ void install_npc_api(
                        state, snapshot_ai_rules( state, *entry ) ) );
     } );
     game["npcs"] = std::move( npcs );
+
+    sol::table trade = lua.create_table();
+    trade.set_function(
+        "open",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle &handle,
+            const sol::optional<int> &cost,
+    const sol::optional<std::string> &deal ) {
+        require_write();
+        return open_trade(
+                   lua_state, handle, cost.value_or( 0 ),
+                   deal.value_or( "Trade" ), current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    trade.set_function(
+        "pay",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle &handle,
+    const int cost ) {
+        require_write();
+        return pay_npc(
+                   lua_state, handle, cost, current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    game["trade"] = std::move( trade );
 }
 
 } // namespace cata::lua_ui

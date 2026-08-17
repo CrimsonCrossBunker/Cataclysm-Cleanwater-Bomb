@@ -41,6 +41,11 @@ generic_factory<overmap_special_migration> migrations( "overmap special migratio
 
 } // namespace
 
+generic_factory<overmap_special> &cata::lua_platform::detail::overmap_special_registry()
+{
+    return specials;
+}
+
 generic_factory<overmap_special_migration> &
 cata::lua_platform::detail::overmap_special_migration_registry()
 {

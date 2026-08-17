@@ -94,6 +94,13 @@ struct sub_body_part_type;
 struct weakpoints;
 class wound_fix;
 class wound_type;
+class faction_template;
+class npc_class;
+struct oter_t;
+struct oter_type_t;
+class overmap_special;
+class vpart_info;
+struct vehicle_prototype;
 
 namespace behavior
 {
@@ -181,9 +188,15 @@ std::size_t platform_item_blacklist_count();
 void insert_platform_scenario_blacklist( const platform_blacklist_data &value );
 void insert_platform_profession_blacklist( const platform_blacklist_data &value );
 void erase_platform_profession_blacklist( const platform_blacklist_data &value );
+struct platform_trait_group_entry {
+    std::string id;
+    std::int64_t weight = 100;
+    bool group = false;
+    std::string variant;
+};
 void insert_platform_trait_group(
     const std::string &id,
-    const std::vector<std::pair<std::string, std::int64_t>> &entries );
+    const std::vector<platform_trait_group_entry> &entries );
 void erase_platform_trait_group( const std::string &id );
 void append_platform_monster_adjustment( const std::string &species,
                                          const std::string &stat,
@@ -251,6 +264,13 @@ generic_factory<anatomy> &anatomy_registry();
 generic_factory<bodygraph> &bodygraph_registry();
 generic_factory<morale_type_data> &morale_type_registry();
 generic_factory<move_mode> &movement_mode_registry();
+std::vector<faction_template> &faction_template_registry();
+generic_factory<npc_class> &npc_class_registry();
+generic_factory<oter_type_t> &overmap_terrain_type_registry();
+generic_factory<oter_t> &overmap_terrain_registry();
+generic_factory<overmap_special> &overmap_special_registry();
+generic_factory<vpart_info> &vehicle_part_registry();
+generic_factory<vehicle_prototype> &vehicle_prototype_registry();
 void refresh_movement_mode_registry();
 generic_factory<zone_type> &zone_type_registry();
 generic_factory<disease_type> &disease_type_registry();

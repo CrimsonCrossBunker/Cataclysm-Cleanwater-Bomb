@@ -60,6 +60,16 @@ generic_factory<vehicle_prototype> vehicle_prototype_factory( "vehicle", "id" );
 generic_factory<vpart_info> vpart_info_factory( "vehicle_part", "id" );
 } // namespace
 
+generic_factory<vpart_info> &cata::lua_platform::detail::vehicle_part_registry()
+{
+    return vpart_info_factory;
+}
+
+generic_factory<vehicle_prototype> &cata::lua_platform::detail::vehicle_prototype_registry()
+{
+    return vehicle_prototype_factory;
+}
+
 static const ammotype ammo_battery( "battery" );
 
 static const itype_id fuel_type_animal( "animal" );

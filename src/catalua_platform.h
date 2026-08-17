@@ -4,6 +4,7 @@
 
 #include <filesystem>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace cata::lua_platform
@@ -27,6 +28,9 @@ struct mod_definition {
     std::string version;
     std::string entry = "main.lua";
     std::vector<std::string> dependencies;
+    std::vector<std::string> authors;
+    std::string description;
+    std::string category;
     bool core = false;
 
     bool id_set = false;
@@ -34,6 +38,9 @@ struct mod_definition {
     bool version_set = false;
     bool entry_set = false;
     bool dependencies_set = false;
+    bool authors_set = false;
+    bool description_set = false;
+    bool category_set = false;
     bool core_set = false;
 };
 
@@ -74,6 +81,9 @@ void shutdown();
 
 /** IDs whose entry states are currently active, in dependency/load order. */
 std::vector<std::string> loaded_mod_ids();
+
+/** Whether the prepared candidate, or otherwise the active runtime, handles this concrete OMT. */
+bool has_primary_mapgen_for( std::string_view terrain_id );
 
 /** Deterministic fingerprint of the currently prepared static definitions. */
 std::string prepared_content_fingerprint();

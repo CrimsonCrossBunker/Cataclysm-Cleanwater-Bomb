@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "avatar.h"
+#include "catalua_platform_content.h"
 #include "condition.h"
 #include "creature.h"
 #include "debug.h"
@@ -28,6 +29,11 @@
 class item;
 
 static generic_factory<npc_class> npc_class_factory( "npc_class" );
+
+generic_factory<npc_class> &cata::lua_platform::detail::npc_class_registry()
+{
+    return npc_class_factory;
+}
 
 /** @relates string_id */
 template<>

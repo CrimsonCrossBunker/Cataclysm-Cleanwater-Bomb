@@ -181,13 +181,6 @@ static void starting_clothes( npc &who, const npc_class_id &type, bool male );
 static void starting_inv( npc &who, const npc_class_id &type );
 static void starting_inv_ammo( npc &who, std::list<item> &res, int multiplier );
 
-template <typename T> struct enum_traits;
-
-template<>
-struct enum_traits<npc_mission> {
-    static constexpr npc_mission last = npc_mission::NPC_MISSION_LAST;
-};
-
 namespace io
 {
 template<>

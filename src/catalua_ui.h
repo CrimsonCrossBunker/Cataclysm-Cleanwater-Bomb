@@ -235,6 +235,7 @@ void on_turn();
 // Invoke final, bounded Lua mapgen handlers for one newly generated OMT.
 // Worker threads never enter Lua, and builds without Lua provide a no-op.
 void dispatch_mapgen_postprocess( mapgendata &data );
+bool dispatch_mapgen_generate( mapgendata &data );
 
 // Load scripts after a new game or save has finished initializing.  Errors are
 // logged and reported through status(), without aborting game startup.

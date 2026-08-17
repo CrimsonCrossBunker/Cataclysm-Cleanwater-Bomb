@@ -1059,6 +1059,16 @@ Lua API v5 dispatcher keeps its own compatibility payload unchanged and runs
 before Platform, so its candidate result is visible through
 `payload.results` without becoming Platform's authoring vocabulary.
 
+Lua-owned dialogue topics use `ccb.runtime.dialogue_topic(topic_id, handler_id)`
+to render inside the native NPC dialogue window.  The named
+handler receives generation-bound `avatar` and `interlocutor` handles plus the
+current `topic`.  It is called with `phase = "line"` to return one non-empty
+string and with `phase = "responses"` to return a bounded dense array of
+`{ text = string, topic = string? }` descriptors.  Topic transitions and
+selection-side effects remain explicit native dialogue hooks; this API does
+not expose borrowed `dialogue` pointers, JSON talk-topic objects, or EOC
+execution.
+
 `ccb.runtime.hook` 将命名 handler 接到受检的同步 Hook 目录；payload 中的活对象只以
 代次绑定 handle 或快照跨界。只有 Hook 契约声明过的否决、文本、替换值或菜单结果才会
 生效，Platform handler 按 Mod 依赖顺序与原生 dispatcher 合成。字符串结果与菜单项必须
@@ -1076,6 +1086,13 @@ before Platform, so its candidate result is visible through
 `alpha`/`beta` 别名。现有 Lua API v5 dispatcher 为兼容仍保留自己的旧 payload，并先于
 Platform 运行；它产生的候选结果只通过 `payload.results` 进入 Platform，不会成为新的
 作者词汇。
+
+Lua 自有对话主题通过 `ccb.runtime.dialogue_topic(topic_id, handler_id)` 在原生 NPC
+对话窗口中渲染。命名 handler 得到受代次约束的 `avatar`、`interlocutor` handle 与当前
+`topic`；`phase = "line"` 时返回一个非空字符串，`phase = "responses"` 时返回有界、
+从 1 开始且无空洞的 `{ text = string, topic = string? }` 数组。主题跳转和选项副作用仍
+由显式原生对话 Hook 处理；该 API 不暴露借用的 `dialogue` 指针、JSON talk-topic 对象，
+也不提供 EOC 执行入口。
 
 Dialogue predicate queries are ordinary bounded snapshots over the same
 domain services instead of per-key condition functions.  A character

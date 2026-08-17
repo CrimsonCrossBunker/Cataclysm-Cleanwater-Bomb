@@ -8,15 +8,25 @@
 #include <stdexcept>
 #include <string_view>
 
+#include "calendar.h"
+#include "clzones.h"
 #include "game_constants.h"
+#include "game.h"
+#include "item.h"
+#include "item_group.h"
 #include "map.h"
 #include "mapgen.h"
 #include "mapgen_functions.h"
 #include "mapgendata.h"
+#include "npc.h"
 #include "omdata.h"
 #include "point.h"
 #include "trap.h"
 #include "type_id.h"
+#include "units.h"
+#include "vehicle.h"
+#include "vehicle_group.h"
+#include "veh_type.h"
 
 namespace cata::lua_ui
 {
@@ -51,6 +61,18 @@ void require_mapgen_id( const std::string &id, const std::string_view api_name )
         throw std::invalid_argument(
             std::string( api_name ) +
             " id must contain 1 to 256 non-NUL bytes" );
+    }
+}
+
+void require_rectangle( const int x1, const int y1, const int x2, const int y2,
+                        const std::string_view api_name )
+{
+    if( x1 < 0 || y1 < 0 || x2 < x1 || y2 < y1 ||
+        x2 >= script_mapgen_context::map_width ||
+        y2 >= script_mapgen_context::map_height ) {
+        throw std::out_of_range(
+            std::string( api_name ) +
+            " rectangle must stay within the current 24x24 OMT" );
     }
 }
 
@@ -432,6 +454,274 @@ bool script_mapgen_context::set_trap(
     return state.data->m.tr_at( position ).id.id() == target;
 }
 
+bool script_mapgen_context::set_terrain_id(
+    const int x, const int y, const std::string &id )
+{
+    require_mapgen_id( id, "Lua mapgen set_terrain_id" );
+    const ter_str_id target( id );
+    if( !target.is_valid() ) {
+        throw std::invalid_argument(
+            "Lua mapgen set_terrain_id received unknown terrain '" + id + "'" );
+    }
+    context_state &state = require_write_state();
+    const tripoint_bub_ms position = bounded_position( state, x, y );
+    consume( 1 );
+    return state.data->m.ter_set( position, target.id() );
+}
+
+bool script_mapgen_context::set_furniture_id(
+    const int x, const int y, const std::string &id )
+{
+    furn_id target = furn_str_id::NULL_ID().id();
+    if( !id.empty() ) {
+        require_mapgen_id( id, "Lua mapgen set_furniture_id" );
+        const furn_str_id source( id );
+        if( !source.is_valid() ) {
+            throw std::invalid_argument(
+                "Lua mapgen set_furniture_id received unknown furniture '" + id + "'" );
+        }
+        target = source.id();
+    }
+    context_state &state = require_write_state();
+    const tripoint_bub_ms position = bounded_position( state, x, y );
+    consume( 1 );
+    return state.data->m.furn_set( position, target );
+}
+
+bool script_mapgen_context::set_trap_id(
+    const int x, const int y, const std::string &id )
+{
+    trap_id target = tr_null;
+    if( !id.empty() ) {
+        require_mapgen_id( id, "Lua mapgen set_trap_id" );
+        const trap_str_id source( id );
+        if( !source.is_valid() ) {
+            throw std::invalid_argument(
+                "Lua mapgen set_trap_id received unknown trap '" + id + "'" );
+        }
+        target = source.id();
+    }
+    context_state &state = require_write_state();
+    const tripoint_bub_ms position = bounded_position( state, x, y );
+    consume( 1 );
+    state.data->m.trap_set( position, target );
+    return state.data->m.tr_at( position ).id.id() == target;
+}
+
+void script_mapgen_context::reset( const std::string &terrain_id )
+{
+    require_mapgen_id( terrain_id, "Lua mapgen reset" );
+    const ter_str_id target( terrain_id );
+    if( !target.is_valid() ) {
+        throw std::invalid_argument(
+            "Lua mapgen reset received unknown terrain '" + terrain_id + "'" );
+    }
+    context_state &state = require_write_state();
+    consume( static_cast<std::size_t>( map_width ) * map_height );
+    for( int y = 0; y < map_height; ++y ) {
+        for( int x = 0; x < map_width; ++x ) {
+            const tripoint_bub_ms position = bounded_position( state, x, y );
+            state.data->m.i_clear( position );
+            state.data->m.clear_fields( position );
+            state.data->m.trap_set( position, tr_null );
+            state.data->m.furn_set( position, furn_str_id::NULL_ID().id() );
+            state.data->m.ter_set( position, target.id() );
+        }
+    }
+}
+
+void script_mapgen_context::place_item(
+    const int x, const int y, const std::string &item_id,
+    const int quantity, const int charges, const std::string &faction_id )
+{
+    require_mapgen_id( item_id, "Lua mapgen place_item" );
+    const itype_id type( item_id );
+    if( !item::type_is_defined( type ) ) {
+        throw std::invalid_argument(
+            "Lua mapgen place_item received unknown item '" + item_id + "'" );
+    }
+    if( quantity <= 0 || quantity > 10000 || charges < 0 ) {
+        throw std::invalid_argument(
+            "Lua mapgen place_item quantity or charges are outside native limits" );
+    }
+    context_state &state = require_write_state();
+    const tripoint_bub_ms position = bounded_position( state, x, y );
+    consume( static_cast<std::size_t>( quantity ) );
+    state.data->m.spawn_item(
+        position, type, static_cast<unsigned>( quantity ), charges,
+        calendar::start_of_cataclysm, 0, {}, "", faction_id );
+}
+
+void script_mapgen_context::place_item_group(
+    const int x1, const int y1, const int x2, const int y2,
+    const std::string &group_id, const int chance,
+    const std::string &faction_id )
+{
+    require_rectangle( x1, y1, x2, y2, "Lua mapgen place_item_group" );
+    require_mapgen_id( group_id, "Lua mapgen place_item_group" );
+    const item_group_id group( group_id );
+    if( !item_group::group_is_defined( group ) || chance <= 0 || chance > 100 ) {
+        throw std::invalid_argument(
+            "Lua mapgen place_item_group requires a known group and chance from 1 to 100" );
+    }
+    context_state &state = require_write_state();
+    const tripoint_bub_ms start = bounded_position( state, x1, y1 );
+    const tripoint_bub_ms end = bounded_position( state, x2, y2 );
+    consume( static_cast<std::size_t>( x2 - x1 + 1 ) *
+             static_cast<std::size_t>( y2 - y1 + 1 ) );
+    state.data->m.place_items( group, chance, start, end, true,
+                               calendar::start_of_cataclysm, 0, 0, faction_id );
+}
+
+void script_mapgen_context::place_liquid(
+    const int x, const int y, const std::string &item_id, const int charges )
+{
+    if( charges <= 0 ) {
+        throw std::invalid_argument( "Lua mapgen liquid charges must be positive" );
+    }
+    place_item( x, y, item_id, 1, charges, "" );
+}
+
+void script_mapgen_context::place_toilet(
+    const int x, const int y, const int charges )
+{
+    if( charges < 0 ) {
+        throw std::invalid_argument( "Lua mapgen toilet charges cannot be negative" );
+    }
+    context_state &state = require_write_state();
+    const tripoint_bub_ms position = bounded_position( state, x, y );
+    consume( 1 );
+    if( charges == 0 ) {
+        state.data->m.place_toilet( position );
+    } else {
+        state.data->m.place_toilet( position, charges );
+    }
+}
+
+void script_mapgen_context::place_sign(
+    const int x, const int y, const std::string &text,
+    const std::string &furniture_id )
+{
+    if( text.empty() || text.size() > 4096 || text.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument( "Lua mapgen sign text is invalid" );
+    }
+    const std::string target_id = furniture_id.empty() ? "f_sign" : furniture_id;
+    const furn_str_id target( target_id );
+    if( !target.is_valid() ) {
+        throw std::invalid_argument(
+            "Lua mapgen place_sign received unknown furniture '" + target_id + "'" );
+    }
+    context_state &state = require_write_state();
+    const tripoint_bub_ms position = bounded_position( state, x, y );
+    consume( 1 );
+    state.data->m.furn_set( position, target.id() );
+    state.data->m.set_signage( position, text );
+}
+
+void script_mapgen_context::place_zone(
+    const int x1, const int y1, const int x2, const int y2,
+    const std::string &zone_type, const std::string &faction,
+    const std::string &name, const std::string &filter )
+{
+    require_rectangle( x1, y1, x2, y2, "Lua mapgen place_zone" );
+    const zone_type_id type( zone_type );
+    const faction_id owner( faction );
+    if( !type.is_valid() || !owner.is_valid() ) {
+        throw std::invalid_argument(
+            "Lua mapgen place_zone requires known zone and faction ids" );
+    }
+    context_state &state = require_write_state();
+    const tripoint_abs_ms start = state.data->m.get_abs(
+                                      bounded_position( state, x1, y1 ) );
+    const tripoint_abs_ms end = state.data->m.get_abs(
+                                    bounded_position( state, x2, y2 ) );
+    consume( static_cast<std::size_t>( x2 - x1 + 1 ) *
+             static_cast<std::size_t>( y2 - y1 + 1 ) );
+    mapgen_place_zone( start, end, type, owner, name, filter, &state.data->m );
+}
+
+std::int64_t script_mapgen_context::place_npc(
+    const int x, const int y, const std::string &template_id,
+    const std::string &unique_id )
+{
+    const string_id<npc_template> type( template_id );
+    if( !type.is_valid() ) {
+        throw std::invalid_argument(
+            "Lua mapgen place_npc received unknown template '" + template_id + "'" );
+    }
+    if( !unique_id.empty() && g != nullptr && g->unique_npc_exists( unique_id ) ) {
+        return 0;
+    }
+    context_state &state = require_write_state();
+    const tripoint_bub_ms position = bounded_position( state, x, y );
+    consume( 1 );
+    const character_id id = state.data->m.place_npc( position.xy(), type );
+    if( !unique_id.empty() && g != nullptr ) {
+        if( npc *placed = g->find_npc( id ) ) {
+            placed->set_unique_id( unique_id );
+        }
+    }
+    return id.get_value();
+}
+
+bool script_mapgen_context::place_vehicle(
+    const int x, const int y, const std::string &prototype_or_group_id,
+    const int rotation_degrees, const int fuel_percent, const int status,
+    const std::string &faction )
+{
+    vproto_id prototype( prototype_or_group_id );
+    if( !prototype.is_valid() ) {
+        const vgroup_id group( prototype_or_group_id );
+        if( !group.is_valid() ) {
+            throw std::invalid_argument(
+                "Lua mapgen place_vehicle received unknown prototype or group '" +
+                prototype_or_group_id + "'" );
+        }
+        prototype = group->pick();
+    }
+    if( fuel_percent < -1 || fuel_percent > 100 || status < -1 || status > 2 ) {
+        throw std::invalid_argument(
+            "Lua mapgen vehicle fuel or status is outside native limits" );
+    }
+    std::optional<faction_id> owner;
+    if( !faction.empty() ) {
+        owner.emplace( faction );
+        if( !owner->is_valid() ) {
+            throw std::invalid_argument(
+                "Lua mapgen place_vehicle received unknown faction '" + faction + "'" );
+        }
+    }
+    context_state &state = require_write_state();
+    const tripoint_bub_ms position = bounded_position( state, x, y );
+    consume( 1 );
+    vehicle *placed = state.data->m.add_vehicle(
+                          prototype, position, units::from_degrees( rotation_degrees ),
+                          fuel_percent, static_cast<veh_spawn_status>( status ) );
+    if( placed != nullptr && owner ) {
+        placed->set_owner( *owner );
+    }
+    return placed != nullptr;
+}
+
+void script_mapgen_context::apply_faction_ownership(
+    const int x1, const int y1, const int x2, const int y2,
+    const std::string &faction )
+{
+    require_rectangle( x1, y1, x2, y2,
+                       "Lua mapgen apply_faction_ownership" );
+    const faction_id owner( faction );
+    if( !owner.is_valid() ) {
+        throw std::invalid_argument(
+            "Lua mapgen apply_faction_ownership received unknown faction '" +
+            faction + "'" );
+    }
+    context_state &state = require_write_state();
+    consume( static_cast<std::size_t>( x2 - x1 + 1 ) *
+             static_cast<std::size_t>( y2 - y1 + 1 ) );
+    state.data->m.apply_faction_ownership(
+        point_bub_ms( x1, y1 ), point_bub_ms( x2, y2 ), owner );
+}
+
 void script_mapgen_context::fill_groundcover()
 {
     context_state &state = require_write_state();
@@ -514,6 +804,57 @@ void script_mapgen_context::generate( const std::string &id )
             "Lua mapgen full generator had no selectable implementation" );
     }
     resolve_regional_terrain_and_furniture( *state.data );
+}
+
+void install_script_mapgen_context_api( sol::state &lua )
+{
+    lua.new_usertype<script_mapgen_context>(
+        "ScriptMapgenContext", sol::no_constructor,
+        "valid", &script_mapgen_context::valid,
+        "operations_used", &script_mapgen_context::operations_used,
+        "operations_remaining", &script_mapgen_context::operations_remaining,
+        "id", &script_mapgen_context::id,
+        "north", &script_mapgen_context::north,
+        "east", &script_mapgen_context::east,
+        "south", &script_mapgen_context::south,
+        "west", &script_mapgen_context::west,
+        "neast", &script_mapgen_context::neast,
+        "seast", &script_mapgen_context::seast,
+        "swest", &script_mapgen_context::swest,
+        "nwest", &script_mapgen_context::nwest,
+        "above", &script_mapgen_context::above,
+        "below", &script_mapgen_context::below,
+        "get_nesw", &script_mapgen_context::get_nesw,
+        "zlevel", &script_mapgen_context::zlevel,
+        "get_direction", &script_mapgen_context::get_direction,
+        "set_dir", &script_mapgen_context::set_dir,
+        "get_rotation", &script_mapgen_context::get_rotation,
+        "get_rot_suffix", &script_mapgen_context::get_rot_suffix,
+        "random_int", &script_mapgen_context::random_int,
+        "random_chance", &script_mapgen_context::random_chance,
+        "terrain_at", &script_mapgen_context::terrain_at,
+        "furniture_at", &script_mapgen_context::furniture_at,
+        "trap_at", &script_mapgen_context::trap_at,
+        "set_terrain", &script_mapgen_context::set_terrain,
+        "set_furniture", &script_mapgen_context::set_furniture,
+        "set_trap", &script_mapgen_context::set_trap,
+        "set_terrain_id", &script_mapgen_context::set_terrain_id,
+        "set_furniture_id", &script_mapgen_context::set_furniture_id,
+        "set_trap_id", &script_mapgen_context::set_trap_id,
+        "reset", &script_mapgen_context::reset,
+        "place_item", &script_mapgen_context::place_item,
+        "place_item_group", &script_mapgen_context::place_item_group,
+        "place_liquid", &script_mapgen_context::place_liquid,
+        "place_toilet", &script_mapgen_context::place_toilet,
+        "place_sign", &script_mapgen_context::place_sign,
+        "place_zone", &script_mapgen_context::place_zone,
+        "place_npc", &script_mapgen_context::place_npc,
+        "place_vehicle", &script_mapgen_context::place_vehicle,
+        "apply_faction_ownership",
+        &script_mapgen_context::apply_faction_ownership,
+        "fill_groundcover", &script_mapgen_context::fill_groundcover,
+        "nest", &script_mapgen_context::nest,
+        "generate", &script_mapgen_context::generate );
 }
 
 } // namespace cata::lua_ui

@@ -16,9 +16,12 @@ class Character;
 class Creature;
 class item;
 class map;
+class mapgendata;
 class player_activity;
 class recipe;
+struct dialogue;
 struct itype;
+struct talk_topic;
 struct w_point;
 
 #if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
@@ -141,6 +144,12 @@ void hot_swap_active_runtimes(
     const std::vector<std::shared_ptr<runtime>> &values );
 void clear_active_runtimes();
 
+bool runtime_has_primary_mapgen_for( const std::shared_ptr<runtime> &value,
+                                     std::string_view terrain_id );
+std::optional<std::string> platform_dialogue_dynamic_line( dialogue &d,
+        const talk_topic &topic );
+bool gen_platform_dialogue_responses( dialogue &d, const talk_topic &topic );
+
 std::optional<int> invoke_use_handler( std::string_view mod_id,
                                        std::string_view handler_id,
                                        Character *character, item &used_item,
@@ -152,6 +161,8 @@ void runtime_before_save();
 bool runtime_save( std::string &error );
 void runtime_after_save( bool success, std::string_view error );
 void runtime_process_tasks();
+bool dispatch_platform_mapgen_generate( mapgendata &data );
+void dispatch_platform_mapgen_postprocess( mapgendata &data );
 
 bool has_runtime_hook( std::string_view name );
 cata::lua_ui::native_hook_result dispatch_runtime_hook(

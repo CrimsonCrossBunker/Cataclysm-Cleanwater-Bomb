@@ -48,6 +48,7 @@
 #include "cata_utility.h"
 #include "cata_variant.h"
 #include "catalua_platform_content.h"
+#include "catalua_platform_world_content.h"
 #include "catalua_ui_state.h"
 #include "catalua_bindings_coords.h"
 #include "catalua_bindings_values.h"
@@ -67,6 +68,7 @@
 #include "catalua_ui_interaction.h"
 #include "catalua_ui_items.h"
 #include "catalua_ui_magic.h"
+#include "catalua_ui_mapgen.h"
 #include "catalua_ui_martial_arts.h"
 #include "catalua_ui_missions.h"
 #include "catalua_ui_mutations.h"
@@ -97,6 +99,7 @@
 #include "construction_group.h"
 #include "crafting_gui.h"
 #include "debug.h"
+#include "dialogue.h"
 #include "disease.h"
 #include "emit.h"
 #include "effect.h"
@@ -132,6 +135,7 @@
 #include "json_loader.h"
 #include "map.h"
 #include "map_accessories.h"
+#include "mapgendata.h"
 #include "mapdata.h"
 #include "map_extras.h"
 #include "map_scale_constants.h"
@@ -268,15 +272,34 @@ struct quality_level {
 
 struct item_definition_data {
     std::string id;
+    std::string copy_from;
     std::string name;
     std::string description;
     std::string symbol = "?";
     std::int64_t mass_grams = 0;
     std::int64_t volume_ml = 0;
     std::int64_t price_cents = 0;
+    std::int64_t price_postapoc_cents = 0;
+    std::string color = "white";
+    std::string category;
+    std::string looks_like;
+    bool has_name = false;
+    bool has_description = false;
+    bool has_symbol = false;
+    bool has_mass = false;
+    bool has_volume = false;
+    bool has_price = false;
+    bool has_price_postapoc = false;
+    bool has_color = false;
+    bool has_category = false;
+    bool has_looks_like = false;
     std::vector<material_part> materials;
     std::vector<quality_level> qualities;
     std::set<std::string> flags;
+    std::map<std::string, double> melee_damage;
+    std::map<std::string, std::int64_t> magazine_ammo;
+    std::int64_t magazine_capacity = 0;
+    bool has_magazine_capacity = false;
     std::string use_handler;
     std::string use_label;
     bool registered = false;
@@ -285,6 +308,7 @@ struct item_definition_data {
 struct component_requirement {
     std::string id;
     std::int64_t count = 1;
+    bool requirement = false;
 };
 
 struct recipe_definition_data {
@@ -308,6 +332,15 @@ struct recipe_definition_data {
     std::vector<std::vector<component_requirement>> tools;
     std::map<std::string, std::int64_t> required_skills;
     std::map<std::string, std::int64_t> external_requirements;
+    struct proficiency_data {
+        std::string id;
+        bool required = false;
+        double time_multiplier = 0.0;
+        double skill_penalty = 0.0;
+        bool skill_penalty_assigned = false;
+    };
+    std::vector<proficiency_data> proficiencies;
+    std::map<std::string, std::int64_t> books;
     bool registered = false;
 };
 
@@ -387,6 +420,7 @@ struct scenario_definition_data {
     std::vector<std::string> forced_traits;
     std::vector<std::string> forbidden_traits;
     std::vector<std::string> flags;
+    std::string map_extra;
     std::string requirement;
     bool registered = false;
 };
@@ -643,6 +677,8 @@ struct item_group_entry_definition_data {
     bool group = false;
     std::int64_t probability = 100;
     std::string variant;
+    std::int64_t count_min = 1;
+    std::int64_t count_max = 1;
 };
 
 struct item_group_definition_data {
@@ -1962,6 +1998,7 @@ struct item_definition_handle {
             throw std::runtime_error( "item mass is outside the native range" );
         }
         definition->mass_grams = grams;
+        definition->has_mass = true;
         return *this;
     }
 
@@ -1972,6 +2009,7 @@ struct item_definition_handle {
             throw std::runtime_error( "item volume is outside the native range" );
         }
         definition->volume_ml = milliliters;
+        definition->has_volume = true;
         return *this;
     }
 
@@ -1981,6 +2019,48 @@ struct item_definition_handle {
             throw std::runtime_error( "item price is outside the native range" );
         }
         definition->price_cents = cents;
+        definition->has_price = true;
+        return *this;
+    }
+
+    item_definition_handle &price_postapoc( std::int64_t cents ) {
+        require_building_handle( token, *definition, "item" );
+        if( cents < 0 || cents > std::numeric_limits<units::money::value_type>::max() ) {
+            throw std::runtime_error( "item post-Cataclysm price is outside the native range" );
+        }
+        definition->price_postapoc_cents = cents;
+        definition->has_price_postapoc = true;
+        return *this;
+    }
+
+    item_definition_handle &melee( const std::string &damage_type, double amount ) {
+        require_building_handle( token, *definition, "item" );
+        if( damage_type.empty() || !std::isfinite( amount ) ) {
+            throw std::runtime_error( "item melee damage requires a type and finite amount" );
+        }
+        definition->melee_damage[damage_type] = amount;
+        return *this;
+    }
+
+    item_definition_handle &magazine_ammo( const std::string &ammo_type,
+                                            std::int64_t capacity ) {
+        require_building_handle( token, *definition, "item" );
+        if( ammo_type.empty() || capacity <= 0 ||
+            capacity > std::numeric_limits<int>::max() ) {
+            throw std::runtime_error(
+                "item magazine ammo requires a type and positive native capacity" );
+        }
+        definition->magazine_ammo[ammo_type] = capacity;
+        return *this;
+    }
+
+    item_definition_handle &magazine_capacity( std::int64_t capacity ) {
+        require_building_handle( token, *definition, "item" );
+        if( capacity <= 0 || capacity > std::numeric_limits<int>::max() ) {
+            throw std::runtime_error( "item magazine capacity is outside the native range" );
+        }
+        definition->magazine_capacity = capacity;
+        definition->has_magazine_capacity = true;
         return *this;
     }
 
@@ -2041,12 +2121,13 @@ struct recipe_definition_handle {
         return *this;
     }
 
-    recipe_definition_handle &component( const std::string &id, std::int64_t count ) {
+    recipe_definition_handle &component( const std::string &id, std::int64_t count,
+                                         const sol::optional<bool> &requirement ) {
         require_building_handle( token, *definition, "recipe" );
         if( id.empty() || count <= 0 || count > std::numeric_limits<int>::max() ) {
             throw std::runtime_error( "recipe component requires a non-empty id and positive count" );
         }
-        definition->components.push_back( { { id, count } } );
+        definition->components.push_back( { { id, count, requirement.value_or( false ) } } );
         return *this;
     }
 
@@ -2067,29 +2148,31 @@ struct recipe_definition_handle {
             if( id.empty() || count <= 0 || count > std::numeric_limits<int>::max() ) {
                 throw std::runtime_error( "recipe component alternative requires an id and positive count" );
             }
-            group.push_back( { id, count } );
+            group.push_back( { id, count, choice.get_or( "requirement", false ) } );
         }
         definition->components.push_back( std::move( group ) );
         return *this;
     }
 
-    recipe_definition_handle &tool( const std::string &id, std::int64_t count ) {
+    recipe_definition_handle &tool( const std::string &id, std::int64_t count,
+                                    const sol::optional<bool> &requirement ) {
         require_building_handle( token, *definition, "recipe" );
         if( id.empty() || count <= 0 || count > std::numeric_limits<int>::max() ) {
             throw std::runtime_error(
                 "recipe tool requires a non-empty id and positive instance count" );
         }
-        definition->tools.push_back( { { id, -count } } );
+        definition->tools.push_back( { { id, -count, requirement.value_or( false ) } } );
         return *this;
     }
 
-    recipe_definition_handle &tool_charges( const std::string &id, std::int64_t charges ) {
+    recipe_definition_handle &tool_charges( const std::string &id, std::int64_t charges,
+                                            const sol::optional<bool> &requirement ) {
         require_building_handle( token, *definition, "recipe" );
         if( id.empty() || charges <= 0 || charges > std::numeric_limits<int>::max() ) {
             throw std::runtime_error(
                 "recipe tool charges require a non-empty id and positive charge count" );
         }
-        definition->tools.push_back( { { id, charges } } );
+        definition->tools.push_back( { { id, charges, requirement.value_or( false ) } } );
         return *this;
     }
 
@@ -2122,7 +2205,8 @@ struct recipe_definition_handle {
                 throw std::runtime_error(
                     "recipe tool alternative requires an id and positive amount" );
             }
-            group.push_back( { id, consumes_charges ? amount : -amount } );
+            group.push_back( { id, consumes_charges ? amount : -amount,
+                               choice.get_or( "requirement", false ) } );
         }
         definition->tools.push_back( std::move( group ) );
         return *this;
@@ -2145,6 +2229,36 @@ struct recipe_definition_handle {
                 "recipe external requirement needs a non-empty id and positive multiplier" );
         }
         definition->external_requirements[id] = multiplier;
+        return *this;
+    }
+
+    recipe_definition_handle &proficiency( const std::string &id,
+                                            const sol::optional<sol::table> &options ) {
+        require_building_handle( token, *definition, "recipe" );
+        if( id.empty() ) {
+            throw std::runtime_error( "recipe proficiency id cannot be empty" );
+        }
+        recipe_definition_data::proficiency_data value;
+        value.id = id;
+        if( options ) {
+            value.required = options->get_or( "required", false );
+            value.time_multiplier = options->get_or( "time_multiplier", 0.0 );
+            if( const sol::optional<double> penalty =
+                    options->get<sol::optional<double>>( "skill_penalty" ) ) {
+                value.skill_penalty = *penalty;
+                value.skill_penalty_assigned = true;
+            }
+        }
+        definition->proficiencies.push_back( std::move( value ) );
+        return *this;
+    }
+
+    recipe_definition_handle &book( const std::string &id, std::int64_t skill_level ) {
+        require_building_handle( token, *definition, "recipe" );
+        if( id.empty() || skill_level < 0 || skill_level > MAX_SKILL ) {
+            throw std::runtime_error( "recipe book needs an id and valid skill level" );
+        }
+        definition->books[id] = skill_level;
         return *this;
     }
 
@@ -2177,12 +2291,13 @@ struct requirement_definition_handle {
     std::shared_ptr<requirement_definition_data> definition;
     std::shared_ptr<owner_token> token;
 
-    requirement_definition_handle &component( const std::string &id, std::int64_t count ) {
+    requirement_definition_handle &component( const std::string &id, std::int64_t count,
+            const sol::optional<bool> &requirement ) {
         require_building_handle( token, *definition, "requirement" );
         if( id.empty() || count <= 0 || count > std::numeric_limits<int>::max() ) {
             throw std::runtime_error( "requirement component needs an id and positive count" );
         }
-        definition->components.push_back( { { id, count } } );
+        definition->components.push_back( { { id, count, requirement.value_or( false ) } } );
         return *this;
     }
 
@@ -2200,28 +2315,29 @@ struct requirement_definition_handle {
                 throw std::runtime_error(
                     "requirement component alternative needs an id and positive count" );
             }
-            group.push_back( { id, amount } );
+            group.push_back( { id, amount, choice.get_or( "requirement", false ) } );
         }
         definition->components.push_back( std::move( group ) );
         return *this;
     }
 
-    requirement_definition_handle &tool( const std::string &id, std::int64_t count ) {
+    requirement_definition_handle &tool( const std::string &id, std::int64_t count,
+                                         const sol::optional<bool> &requirement ) {
         require_building_handle( token, *definition, "requirement" );
         if( id.empty() || count <= 0 || count > std::numeric_limits<int>::max() ) {
             throw std::runtime_error( "requirement tool needs an id and positive count" );
         }
-        definition->tools.push_back( { { id, -count } } );
+        definition->tools.push_back( { { id, -count, requirement.value_or( false ) } } );
         return *this;
     }
 
     requirement_definition_handle &tool_charges( const std::string &id,
-            std::int64_t charges ) {
+            std::int64_t charges, const sol::optional<bool> &requirement ) {
         require_building_handle( token, *definition, "requirement" );
         if( id.empty() || charges <= 0 || charges > std::numeric_limits<int>::max() ) {
             throw std::runtime_error( "requirement tool charges need an id and positive amount" );
         }
-        definition->tools.push_back( { { id, charges } } );
+        definition->tools.push_back( { { id, charges, requirement.value_or( false ) } } );
         return *this;
     }
 
@@ -2249,7 +2365,8 @@ struct requirement_definition_handle {
                 throw std::runtime_error(
                     "requirement tool alternative needs an id and positive amount" );
             }
-            group.push_back( { id, charges ? amount : -amount } );
+            group.push_back( { id, charges ? amount : -amount,
+                               choice.get_or( "requirement", false ) } );
         }
         definition->tools.push_back( std::move( group ) );
         return *this;
@@ -4042,6 +4159,34 @@ struct item_group_definition_handle {
             return add_entry( id, true, probability.value_or( 100 ), std::string() );
         }
 
+        item_group_definition_handle &entry( const sol::table &options ) {
+            const std::string item = options.get_or( "item", std::string() );
+            const std::string group_id = options.get_or( "group", std::string() );
+            if( item.empty() == group_id.empty() ) {
+                throw std::runtime_error(
+                    "item-group entry requires exactly one of item or group" );
+            }
+            item_group_entry_definition_data value;
+            value.id = item.empty() ? group_id : item;
+            value.group = item.empty();
+            value.probability = options.get_or<std::int64_t>( "probability", 100 );
+            value.variant = options.get_or( "variant", std::string() );
+            if( const sol::optional<sol::table> count =
+                    options.get<sol::optional<sol::table>>( "count" ) ) {
+                require_dense_array( *count, "item-group count", 2, 2 );
+                value.count_min = count->raw_get<std::int64_t>( 1 );
+                value.count_max = count->raw_get<std::int64_t>( 2 );
+            }
+            if( value.probability <= 0 || value.count_min < 0 ||
+                value.count_max < value.count_min ||
+                value.count_max > std::numeric_limits<int>::max() ) {
+                throw std::runtime_error( "item-group entry has invalid probability or count" );
+            }
+            require_building_handle( token, *definition, "item group" );
+            definition->entries.push_back( std::move( value ) );
+            return *this;
+        }
+
         std::string id() const {
             require_readable_handle( token, *definition, "item group" );
             return definition->id;
@@ -5683,7 +5828,7 @@ struct monster_adjustment_definition_data {
 
 struct trait_group_definition_data {
     std::string id;
-    std::vector<std::pair<std::string, std::int64_t>> entries;
+    std::vector<detail::platform_trait_group_entry> entries;
     bool registered = false;
 };
 
@@ -5771,12 +5916,25 @@ struct trait_group_definition_handle {
     std::shared_ptr<owner_token> token;
 
     trait_group_definition_handle &trait( const std::string &trait,
-                                          const std::int64_t weight ) {
+                                          const std::int64_t weight,
+                                          const sol::optional<std::string> &variant ) {
         require_building_handle( token, *definition, "trait group" );
         if( trait.empty() || weight <= 0 ) {
             throw std::runtime_error( "trait-group entry must be positive" );
         }
-        definition->entries.emplace_back( trait, weight );
+        definition->entries.push_back( {
+            trait, weight, false, variant.value_or( std::string() )
+        } );
+        return *this;
+    }
+
+    trait_group_definition_handle &group( const std::string &group,
+                                          const std::int64_t weight ) {
+        require_building_handle( token, *definition, "trait group" );
+        if( group.empty() || weight <= 0 ) {
+            throw std::runtime_error( "trait-group subgroup must be positive" );
+        }
+        definition->entries.push_back( { group, weight, true, std::string() } );
         return *this;
     }
 
@@ -6820,6 +6978,15 @@ class runtime : public std::enable_shared_from_this<runtime>
                 task_migrations;
         std::unordered_map<std::string, std::vector<std::string>> subscriptions;
         std::unordered_map<std::string, std::vector<std::string>> hooks;
+        std::map<std::string, std::string> dialogue_topics;
+        struct mapgen_registration {
+            std::string handler_id;
+            std::vector<std::string> terrain_ids;
+            int z_min = std::numeric_limits<int>::min();
+            int z_max = std::numeric_limits<int>::max();
+            bool primary = false;
+        };
+        std::vector<mapgen_registration> mapgen_handlers;
         persistent_state character_state;
         persistent_state world_state;
         std::vector<persistent_task> tasks;
@@ -6838,11 +7005,13 @@ struct content_transaction::impl {
     impl( std::string owner_id, std::size_t owner_generation ) :
         owner( std::move( owner_id ) ), generation( owner_generation ),
         token( std::make_shared<owner_token>( owner_token{ owner, generation,
-                                              handle_lifecycle::building } ) ) {}
+                                              handle_lifecycle::building } ) ),
+        world( owner, generation ) {}
 
     std::string owner;
     std::size_t generation = 0;
     std::shared_ptr<owner_token> token;
+    world_content_transaction world;
     std::vector<tool_quality_registration> tool_qualities;
     std::vector<skill_display_registration> skill_displays;
     std::vector<skill_registration> skills;
@@ -8091,6 +8260,10 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         "mass_grams", &item_definition_handle::mass,
         "volume_ml", &item_definition_handle::volume,
         "price_cents", &item_definition_handle::price,
+        "price_postapoc_cents", &item_definition_handle::price_postapoc,
+        "melee_damage", &item_definition_handle::melee,
+        "magazine_ammo", &item_definition_handle::magazine_ammo,
+        "magazine_capacity", &item_definition_handle::magazine_capacity,
         "material", &item_definition_handle::material,
         "quality", &item_definition_handle::quality,
         "flag", &item_definition_handle::flag,
@@ -8105,7 +8278,9 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         "tool_charges", &recipe_definition_handle::tool_charges,
         "tool_any", &recipe_definition_handle::tool_any,
         "requires_skill", &recipe_definition_handle::requires_skill,
-        "requirement", &recipe_definition_handle::requirement );
+        "requirement", &recipe_definition_handle::requirement,
+        "proficiency", &recipe_definition_handle::proficiency,
+        "book", &recipe_definition_handle::book );
     ccb.new_usertype<nested_recipe_category_definition_handle>(
         "NestedRecipeCategoryDefinition", sol::no_constructor,
         "id", sol::property( &nested_recipe_category_definition_handle::id ),
@@ -8219,7 +8394,8 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         "ItemGroupDefinition", sol::no_constructor,
         "id", sol::property( &item_group_definition_handle::id ),
         "item", &item_group_definition_handle::item,
-        "group", &item_group_definition_handle::group );
+        "group", &item_group_definition_handle::group,
+        "entry", &item_group_definition_handle::entry );
     ccb.new_usertype<sub_body_part_definition_handle>(
         "SubBodyPartDefinition", sol::no_constructor,
         "id", sol::property( &sub_body_part_definition_handle::id ),
@@ -8571,7 +8747,8 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
     ccb.new_usertype<trait_group_definition_handle>(
         "TraitGroupDefinition", sol::no_constructor,
         "id", sol::property( &trait_group_definition_handle::id ),
-        "trait", &trait_group_definition_handle::trait );
+        "trait", &trait_group_definition_handle::trait,
+        "group", &trait_group_definition_handle::group );
     ccb.new_usertype<monster_adjustment_definition_handle>(
         "MonsterAdjustmentDefinition", sol::no_constructor );
     ccb.new_usertype<magic_type_definition_handle>(
@@ -8786,9 +8963,54 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         }
         auto definition = std::make_shared<item_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
-        definition->description = options.get_or( "description", std::string() );
-        definition->symbol = options.get_or( "symbol", std::string( "?" ) );
+        definition->copy_from = options.get_or( "copy_from", std::string() );
+        const auto read_string = [&options]( const char *key, std::string &target,
+        bool &present ) {
+            if( const sol::optional<std::string> value =
+                    options.get<sol::optional<std::string>>( key ) ) {
+                target = *value;
+                present = true;
+            }
+        };
+        read_string( "name", definition->name, definition->has_name );
+        read_string( "description", definition->description, definition->has_description );
+        read_string( "symbol", definition->symbol, definition->has_symbol );
+        read_string( "color", definition->color, definition->has_color );
+        read_string( "category", definition->category, definition->has_category );
+        read_string( "looks_like", definition->looks_like, definition->has_looks_like );
+        if( !definition->has_name && definition->copy_from.empty() ) {
+            definition->name = definition->id;
+            definition->has_name = true;
+        }
+        if( const sol::optional<std::int64_t> mass =
+                options.get<sol::optional<std::int64_t>>( "mass_grams" ) ) {
+            definition->mass_grams = *mass;
+            definition->has_mass = true;
+        }
+        if( const sol::optional<std::int64_t> volume =
+                options.get<sol::optional<std::int64_t>>( "volume_ml" ) ) {
+            definition->volume_ml = *volume;
+            definition->has_volume = true;
+        }
+        if( const sol::optional<std::int64_t> price =
+                options.get<sol::optional<std::int64_t>>( "price_cents" ) ) {
+            definition->price_cents = *price;
+            definition->has_price = true;
+        }
+        if( const sol::optional<std::int64_t> price_postapoc =
+                options.get<sol::optional<std::int64_t>>( "price_postapoc_cents" ) ) {
+            definition->price_postapoc_cents = *price_postapoc;
+            definition->has_price_postapoc = true;
+        }
+        if( const sol::optional<std::int64_t> magazine_capacity =
+                options.get<sol::optional<std::int64_t>>( "magazine_capacity" ) ) {
+            if( *magazine_capacity <= 0 ||
+                *magazine_capacity > std::numeric_limits<int>::max() ) {
+                throw std::runtime_error( "item magazine capacity is outside the native range" );
+            }
+            definition->magazine_capacity = *magazine_capacity;
+            definition->has_magazine_capacity = true;
+        }
         return item_definition_handle{ std::move( definition ), transaction->token };
     } );
     content.set_function( "Recipe", [transaction]( const sol::table & options ) {
@@ -8808,6 +9030,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->reversible = options.get_or( "reversible", false );
         definition->practice = options.get_or( "practice", false );
         definition->uncraft = options.get_or( "uncraft", false );
+        definition->activity_level = options.get_or( "activity_level", 1.0 );
         return recipe_definition_handle{ std::move( definition ), transaction->token };
     } );
     content.set_function( "NestedRecipeCategory", [transaction]( const sol::table & options ) {
@@ -8888,6 +9111,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->hard_requirement = options.get_or( "hard_requirement", false );
         definition->distance_initial_visibility = options.get_or<std::int64_t>(
                     "distance_initial_visibility", 15 );
+        definition->map_extra = options.get_or( "map_extra", std::string() );
         return scenario_definition_handle{ std::move( definition ), transaction->token };
     } );
     content.set_function( "VehicleColorPalette",
@@ -11087,6 +11311,10 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             transaction->recipes.push_back( { operation, handle.definition } );
             return;
         }
+        if( transaction->world.register_definition(
+                value, static_cast<int>( operation ) ) ) {
+            return;
+        }
         throw std::runtime_error(
             "content registration requires a native Platform definition" );
     };
@@ -11686,6 +11914,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
+    transaction->world.install_lua_api( lua, ccb, content );
     ccb["content"] = std::move( content );
 
     static_cast<void>( owner_runtime );
@@ -12371,6 +12600,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                     ( check_engine_state && *match == ot_match_type::exact &&
                       !oter_str_id( target.terrain ).is_valid() ) ||
                     ( check_engine_state && *match == ot_match_type::type &&
+                      !pimpl_->world.defines_overmap_terrain_type( target.terrain ) &&
                       !oter_type_str_id( target.terrain ).is_valid() ) ) {
                     throw std::runtime_error( "start location '" + definition.id +
                                               "' has an invalid or duplicate terrain selector" );
@@ -14022,7 +14252,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                           "' requires a name and one registration per transaction" );
             }
             for( const std::string &location : definition.locations ) {
-                if( !start_location_id( location ).is_valid() ) {
+                if( start_location_ids.count( location ) == 0 &&
+                    !start_location_id( location ).is_valid() ) {
                     throw std::runtime_error( "scenario '" + definition.id +
                                               "' references unknown start location '" + location + "'" );
                 }
@@ -14050,6 +14281,13 @@ bool content_transaction::validate( const runtime &owner_runtime,
                     throw std::runtime_error( "scenario '" + definition.id +
                                               "' references unknown trait '" + trait + "'" );
                 }
+            }
+            if( !definition.map_extra.empty() &&
+                map_extra_ids.count( definition.map_extra ) == 0 &&
+                !map_extra_id( definition.map_extra ).is_valid() ) {
+                throw std::runtime_error( "scenario '" + definition.id +
+                                          "' references unknown map extra '" +
+                                          definition.map_extra + "'" );
             }
             if( !definition.requirement.empty() &&
                 !achievement_id( definition.requirement ).is_valid() ) {
@@ -15281,7 +15519,10 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                           "' must contain native requirements and be registered once per transaction" );
             }
             staged_requirements.emplace( definition.id, &definition );
-            const auto validate_item_groups = [&declared_item_ids, &definition](
+        }
+        for( const requirement_registration &entry : pimpl_->requirements ) {
+            const requirement_definition_data &definition = *entry.definition;
+            const auto validate_item_groups = [&declared_item_ids, &requirement_ids, &definition](
             const std::vector<std::vector<component_requirement>> &groups, const char *kind ) {
                 for( const std::vector<component_requirement> &group : groups ) {
                     if( group.empty() ) {
@@ -15289,10 +15530,17 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                                   "' has an empty alternative group" );
                     }
                     for( const component_requirement &component : group ) {
-                        if( declared_item_ids.count( component.id ) == 0 &&
-                            !item::type_is_defined( itype_id( component.id ) ) ) {
+                        const bool valid = component.requirement ?
+                                           requirement_ids.count( component.id ) != 0 ||
+                                           requirement_data::registry().count(
+                                               requirement_id( component.id ) ) != 0 :
+                                           declared_item_ids.count( component.id ) != 0 ||
+                                           item::type_is_defined( itype_id( component.id ) );
+                        if( !valid ) {
                             throw std::runtime_error( "requirement '" + definition.id +
-                                                      "' references unknown " + kind + " '" +
+                                                      "' references unknown " +
+                                                      ( component.requirement ?
+                                                        std::string( "requirement" ) : kind ) + " '" +
                                                       component.id + "'" );
                         }
                     }
@@ -15461,15 +15709,15 @@ bool content_transaction::validate( const runtime &owner_runtime,
                             staged->second->components, scaled_component_groups,
                         []( const component_requirement & component ) {
                             return component.id;
-                        }, []( const component_requirement & ) {
-                            return false;
+                        }, []( const component_requirement & component ) {
+                            return component.requirement;
                         } );
                         append_scaled_groups(
                             staged->second->tools, scaled_tool_groups,
                         []( const component_requirement & component ) {
                             return component.id;
-                        }, []( const component_requirement & ) {
-                            return false;
+                        }, []( const component_requirement & component ) {
+                            return component.requirement;
                         } );
                     }
                 } else {
@@ -15703,8 +15951,21 @@ bool content_transaction::validate( const runtime &owner_runtime,
             if( definition.id.empty() || definition.id.find( '#' ) != std::string::npos ) {
                 throw std::runtime_error( "invalid item id '" + definition.id + "'" );
             }
-            if( definition.name.empty() || definition.symbol.empty() ) {
+            if( definition.copy_from.empty() &&
+                ( definition.name.empty() || definition.symbol.empty() ) ) {
                 throw std::runtime_error( "item '" + definition.id + "' requires a name and symbol" );
+            }
+            if( !definition.copy_from.empty() && check_engine_state &&
+                declared_item_ids.count( definition.copy_from ) == 0 &&
+                !item::type_is_defined( itype_id( definition.copy_from ) ) &&
+                item_controller->get_generic_factory().find_abstract(
+                    definition.copy_from ) == nullptr ) {
+                throw std::runtime_error( "item '" + definition.id +
+                                          "' copies unknown item '" + definition.copy_from + "'" );
+            }
+            if( definition.has_color &&
+                color_from_string( definition.color, report_color_error::no ) == c_unset ) {
+                throw std::runtime_error( "item '" + definition.id + "' has an invalid color" );
             }
             if( !item_ids.insert( definition.id ).second ) {
                 throw std::runtime_error( "item '" + definition.id +
@@ -15840,6 +16101,47 @@ bool content_transaction::validate( const runtime &owner_runtime,
                     throw std::runtime_error( "recipe '" + definition.id +
                                               "' references unknown requirement '" +
                                               requirement_key + "'" );
+                }
+            }
+            const auto validate_recipe_groups = [&definition, &declared_item_ids,
+                                                &requirement_ids](
+            const std::vector<std::vector<component_requirement>> &groups,
+            const char *kind ) {
+                for( const std::vector<component_requirement> &group : groups ) {
+                    for( const component_requirement &component : group ) {
+                        const bool valid = component.requirement ?
+                                           requirement_ids.count( component.id ) != 0 ||
+                                           requirement_data::registry().count(
+                                               requirement_id( component.id ) ) != 0 :
+                                           declared_item_ids.count( component.id ) != 0 ||
+                                           item::type_is_defined( itype_id( component.id ) );
+                        if( !valid ) {
+                            throw std::runtime_error( "recipe '" + definition.id +
+                                                      "' references unknown " +
+                                                      ( component.requirement ?
+                                                        std::string( "requirement" ) : kind ) + " '" +
+                                                      component.id + "'" );
+                        }
+                    }
+                }
+            };
+            validate_recipe_groups( definition.components, "component" );
+            validate_recipe_groups( definition.tools, "tool" );
+            for( const recipe_definition_data::proficiency_data &proficiency :
+                 definition.proficiencies ) {
+                if( proficiency.id.empty() ||
+                    ( check_engine_state && !proficiency_id( proficiency.id ).is_valid() ) ||
+                    !std::isfinite( proficiency.time_multiplier ) ||
+                    !std::isfinite( proficiency.skill_penalty ) ) {
+                    throw std::runtime_error( "recipe '" + definition.id +
+                                              "' has an invalid proficiency" );
+                }
+            }
+            for( const auto &[book, level] : definition.books ) {
+                if( level < 0 || ( check_engine_state &&
+                                   !item::type_is_defined( itype_id( book ) ) ) ) {
+                    throw std::runtime_error( "recipe '" + definition.id +
+                                              "' has an invalid book" );
                 }
             }
         }
@@ -16037,6 +16339,9 @@ bool content_transaction::validate( const runtime &owner_runtime,
             validate_triggers( definition.anger_triggers );
             validate_triggers( definition.fear_triggers );
             validate_triggers( definition.placate_triggers );
+        }
+        if( !pimpl_->world.validate( check_engine_state, error ) ) {
+            return false;
         }
         error.clear();
         return true;
@@ -18282,6 +18587,8 @@ bool content_transaction::apply( std::string &error )
             native.hard_requirement = source.hard_requirement;
             native.distance_initial_visibility =
                 static_cast<int>( source.distance_initial_visibility );
+            native._map_extra = source.map_extra.empty() ?
+                                map_extra_id::NULL_ID() : map_extra_id( source.map_extra );
             for( const std::string &location : source.locations ) {
                 native._allowed_locs.push_back( start_location_id( location ) );
             }
@@ -18463,14 +18770,22 @@ bool content_transaction::apply( std::string &error )
                               static_cast<int>( source.with_magazine ),
                               "Lua-first item group " + source.id );
             for( const item_group_entry_definition_data &source_entry : source.entries ) {
-                if( source_entry.group ) {
-                    native->add_group_entry( item_group_id( source_entry.id ),
-                                             static_cast<int>( source_entry.probability ) );
-                } else {
-                    native->add_item_entry( itype_id( source_entry.id ),
-                                            static_cast<int>( source_entry.probability ),
-                                            source_entry.variant );
+                const Single_item_creator::Type entry_type = source_entry.group ?
+                        Single_item_creator::S_ITEM_GROUP : Single_item_creator::S_ITEM;
+                auto native_entry = std::make_unique<Single_item_creator>(
+                                        source_entry.id, entry_type,
+                                        static_cast<int>( source_entry.probability ),
+                                        "Lua-first item-group entry " + source.id );
+                if( source_entry.count_min != 1 || source_entry.count_max != 1 ||
+                    !source_entry.variant.empty() ) {
+                    native_entry->modifier.emplace();
+                    native_entry->modifier->count = {
+                        static_cast<int>( source_entry.count_min ),
+                        static_cast<int>( source_entry.count_max )
+                    };
+                    native_entry->modifier->variant = source_entry.variant;
                 }
+                native->add_entry( std::move( native_entry ) );
             }
             item_controller->m_template_groups[id] = std::move( native );
         }
@@ -19131,8 +19446,10 @@ bool content_transaction::apply( std::string &error )
             for( const std::vector<component_requirement> &source_group : source.components ) {
                 std::vector<item_comp> group;
                 for( const component_requirement &component : source_group ) {
-                    group.emplace_back( itype_id( component.id ),
-                                        static_cast<int>( component.count ) );
+                    item_comp native_component( itype_id( component.id ),
+                                                static_cast<int>( component.count ) );
+                    native_component.requirement = component.requirement;
+                    group.push_back( std::move( native_component ) );
                 }
                 components.push_back( std::move( group ) );
             }
@@ -19140,7 +19457,9 @@ bool content_transaction::apply( std::string &error )
             for( const std::vector<component_requirement> &source_group : source.tools ) {
                 std::vector<tool_comp> group;
                 for( const component_requirement &tool : source_group ) {
-                    group.emplace_back( itype_id( tool.id ), static_cast<int>( tool.count ) );
+                    tool_comp native_tool( itype_id( tool.id ), static_cast<int>( tool.count ) );
+                    native_tool.requirement = tool.requirement;
+                    group.push_back( std::move( native_tool ) );
                 }
                 tools.push_back( std::move( group ) );
             }
@@ -19228,17 +19547,72 @@ bool content_transaction::apply( std::string &error )
                 id, previous == item_controller->m_runtimes.end() ?
                 std::optional<itype>() : std::optional<itype>( *previous->second ) );
 
-            auto native = std::make_unique<itype>();
+            const item_definition_data &definition = *entry.definition;
+            std::unique_ptr<itype> native;
+            if( definition.copy_from.empty() ) {
+                native = std::make_unique<itype>();
+            } else {
+                const itype_id source_id( definition.copy_from );
+                const itype *source = nullptr;
+                const auto runtime_source = item_controller->m_runtimes.find( source_id );
+                if( runtime_source != item_controller->m_runtimes.end() ) {
+                    source = runtime_source->second.get();
+                } else {
+                    generic_factory<itype> &factory = item_controller->get_generic_factory();
+                    if( factory.is_valid( source_id ) ) {
+                        source = &factory.obj( source_id );
+                    } else {
+                        source = factory.find_abstract( definition.copy_from );
+                    }
+                }
+                if( source == nullptr ) {
+                    throw std::runtime_error( "item '" + definition.id +
+                                              "' lost its copy-from source '" +
+                                              definition.copy_from + "' while being applied" );
+                }
+                native = std::make_unique<itype>( *source );
+            }
             native->id = id;
-            native->name = no_translation( entry.definition->name );
-            native->description = no_translation( entry.definition->description );
-            native->sym = entry.definition->symbol;
-            native->weight = units::from_gram<std::int64_t>( entry.definition->mass_grams );
-            native->volume = units::from_milliliter<std::int64_t>( entry.definition->volume_ml );
-            native->price = units::from_cent<std::int64_t>( entry.definition->price_cents );
+            if( entry.definition->has_name ) {
+                native->name = no_translation( entry.definition->name );
+            }
+            if( entry.definition->has_description ) {
+                native->description = no_translation( entry.definition->description );
+            }
+            if( entry.definition->has_symbol ) {
+                native->sym = entry.definition->symbol;
+            }
+            if( entry.definition->has_mass ) {
+                native->weight = units::from_gram<std::int64_t>( entry.definition->mass_grams );
+            }
+            if( entry.definition->has_volume ) {
+                native->volume = units::from_milliliter<std::int64_t>( entry.definition->volume_ml );
+            }
+            if( entry.definition->has_price ) {
+                native->price = units::from_cent<std::int64_t>( entry.definition->price_cents );
+            }
+            if( entry.definition->has_price_postapoc ) {
+                native->price_post = units::from_cent<std::int64_t>(
+                                         entry.definition->price_postapoc_cents );
+            }
+            if( entry.definition->has_color ) {
+                native->color = color_from_string( entry.definition->color,
+                                                   report_color_error::no );
+            }
+            if( entry.definition->has_category ) {
+                native->category_force = item_category_id( entry.definition->category );
+            }
+            if( entry.definition->has_looks_like ) {
+                native->looks_like = itype_id( entry.definition->looks_like );
+            }
             native->was_loaded = true;
+            native->src.clear();
             native->src.emplace_back( id, mod_id( pimpl_->owner ) );
             bool first_material = true;
+            if( !entry.definition->materials.empty() ) {
+                native->materials.clear();
+                native->mat_portion_total = 0;
+            }
             for( const material_part &material : entry.definition->materials ) {
                 const material_id material_key( material.id );
                 native->materials[material_key] += static_cast<int>( material.portions );
@@ -19258,6 +19632,35 @@ bool content_transaction::apply( std::string &error )
             }
             for( const std::string &flag : entry.definition->flags ) {
                 native->item_tags.insert( flag_id( flag ) );
+            }
+            for( const auto &[damage, amount] : entry.definition->melee_damage ) {
+                native->melee.damage_map[damage_type_id( damage )] = static_cast<float>( amount );
+            }
+            if( !entry.definition->magazine_ammo.empty() ) {
+                if( !native->magazine ) {
+                    native->magazine = cata::make_value<islot_magazine>();
+                }
+                native->magazine->was_loaded = true;
+                native->magazine->type.clear();
+                native->magazine->capacity = 0;
+                pocket_data pocket( pocket_type::MAGAZINE );
+                for( const auto &[ammo, capacity] : entry.definition->magazine_ammo ) {
+                    native->magazine->type.emplace( ammo );
+                    native->magazine->capacity = std::max(
+                                                    native->magazine->capacity,
+                                                    static_cast<int>( capacity ) );
+                    pocket.ammo_restriction.emplace(
+                        ammotype( ammo ), static_cast<int>( capacity ) );
+                }
+                if( entry.definition->has_magazine_capacity ) {
+                    native->magazine->capacity = static_cast<int>(
+                                                     entry.definition->magazine_capacity );
+                }
+                native->pockets.erase( std::remove_if( native->pockets.begin(),
+                native->pockets.end(), []( const pocket_data & value ) {
+                    return value.type == pocket_type::MAGAZINE;
+                } ), native->pockets.end() );
+                native->pockets.push_back( std::move( pocket ) );
             }
             if( !entry.definition->use_handler.empty() ) {
                 const std::string action_id = "lua_platform:" + pimpl_->owner + ":" +
@@ -19341,17 +19744,33 @@ bool content_transaction::apply( std::string &error )
                                 skill_id::NULL_ID() : skill_id( entry.definition->skill );
             native.autolearn = entry.definition->autolearn;
             native.reversible = entry.definition->reversible;
+            native.exertion = static_cast<float>( entry.definition->activity_level );
             native.was_loaded = true;
             native.src.emplace_back( id, mod_id( pimpl_->owner ) );
             for( const auto &[skill, level] : entry.definition->required_skills ) {
                 native.required_skills[skill_id( skill )] = static_cast<int>( level );
             }
+            for( const recipe_definition_data::proficiency_data &source :
+                 entry.definition->proficiencies ) {
+                recipe_proficiency native_proficiency;
+                native_proficiency.id = proficiency_id( source.id );
+                native_proficiency.required = source.required;
+                native_proficiency.time_multiplier = static_cast<float>( source.time_multiplier );
+                native_proficiency.skill_penalty = static_cast<float>( source.skill_penalty );
+                native_proficiency._skill_penalty_assigned = source.skill_penalty_assigned;
+                native.proficiencies.push_back( std::move( native_proficiency ) );
+            }
+            for( const auto &[book, level] : entry.definition->books ) {
+                native.booksets[itype_id( book )].skill_req = static_cast<int>( level );
+            }
             requirement_data::alter_item_comp_vector components;
             for( const std::vector<component_requirement> &group : entry.definition->components ) {
                 std::vector<item_comp> alternatives;
                 for( const component_requirement &component : group ) {
-                    alternatives.emplace_back( itype_id( component.id ),
-                                               static_cast<int>( component.count ) );
+                    item_comp native_component( itype_id( component.id ),
+                                                static_cast<int>( component.count ) );
+                    native_component.requirement = component.requirement;
+                    alternatives.push_back( std::move( native_component ) );
                 }
                 components.push_back( std::move( alternatives ) );
             }
@@ -19359,8 +19778,9 @@ bool content_transaction::apply( std::string &error )
             for( const std::vector<component_requirement> &group : entry.definition->tools ) {
                 std::vector<tool_comp> alternatives;
                 for( const component_requirement &tool : group ) {
-                    alternatives.emplace_back( itype_id( tool.id ),
-                                               static_cast<int>( tool.count ) );
+                    tool_comp native_tool( itype_id( tool.id ), static_cast<int>( tool.count ) );
+                    native_tool.requirement = tool.requirement;
+                    alternatives.push_back( std::move( native_tool ) );
                 }
                 tools.push_back( std::move( alternatives ) );
             }
@@ -19560,6 +19980,9 @@ bool content_transaction::apply( std::string &error )
             !pimpl_->body_parts.empty() ) {
             detail::refresh_wound_fix_links();
             detail::refresh_body_part_wound_cache();
+        }
+        if( !pimpl_->world.apply( error ) ) {
+            throw std::runtime_error( error );
         }
         pimpl_->applied = true;
         error.clear();
@@ -20330,12 +20753,16 @@ bool content_transaction::validate_finalized( std::string &error ) const
             return false;
         }
     }
+    if( !pimpl_->world.validate_finalized( error ) ) {
+        return false;
+    }
     error.clear();
     return true;
 }
 
 void content_transaction::rollback()
 {
+    pimpl_->world.rollback();
     const bool rebuild_wound_fixes = !pimpl_->requirement_undo.empty() ||
                                      !pimpl_->wound_fix_undo.empty();
     const bool refresh_wound_derived = !pimpl_->wound_type_undo.empty() ||
@@ -21560,6 +21987,7 @@ void content_transaction::rollback()
 
 void content_transaction::commit()
 {
+    pimpl_->world.commit();
     if( !pimpl_->applied ) {
         return;
     }
@@ -21676,6 +22104,7 @@ void content_transaction::commit()
 
 void content_transaction::seal()
 {
+    pimpl_->world.seal();
     if( pimpl_->token->lifecycle == handle_lifecycle::building ) {
         pimpl_->token->lifecycle = handle_lifecycle::committed;
     }
@@ -21684,6 +22113,7 @@ void content_transaction::seal()
 void content_transaction::discard()
 {
     rollback();
+    pimpl_->world.discard();
     pimpl_->token->lifecycle = handle_lifecycle::discarded;
 }
 
@@ -21691,6 +22121,7 @@ std::string content_transaction::fingerprint() const
 {
     std::uint64_t state = 1469598103934665603ULL;
     hash_part( state, pimpl_->owner );
+    pimpl_->world.append_fingerprint( state );
     for( const json_flag_registration &entry : pimpl_->json_flags ) {
         hash_part( state, "json_flag" );
         hash_part( state, operation_name( entry.operation ) );
@@ -22654,6 +23085,8 @@ std::string content_transaction::fingerprint() const
             hash_part( state, group_entry.id );
             hash_part( state, std::to_string( group_entry.probability ) );
             hash_part( state, group_entry.variant );
+            hash_part( state, std::to_string( group_entry.count_min ) );
+            hash_part( state, std::to_string( group_entry.count_max ) );
         }
     }
     for( const harvest_drop_type_registration &entry : pimpl_->harvest_drop_types ) {
@@ -23174,6 +23607,7 @@ std::string content_transaction::fingerprint() const
             for( const component_requirement &component : group ) {
                 hash_part( state, component.id );
                 hash_part( state, std::to_string( component.count ) );
+                hash_part( state, component.requirement ? "requirement" : "item" );
             }
         }
         for( const auto &group : value.tools ) {
@@ -23181,6 +23615,7 @@ std::string content_transaction::fingerprint() const
             for( const component_requirement &tool : group ) {
                 hash_part( state, tool.id );
                 hash_part( state, std::to_string( tool.count ) );
+                hash_part( state, tool.requirement ? "requirement" : "item" );
             }
         }
         for( const auto &group : value.qualities ) {
@@ -23253,12 +23688,18 @@ std::string content_transaction::fingerprint() const
         hash_part( state, operation_name( entry.operation ) );
         const item_definition_data &value = *entry.definition;
         hash_part( state, value.id );
+        hash_part( state, value.copy_from );
         hash_part( state, value.name );
         hash_part( state, value.description );
         hash_part( state, value.symbol );
         hash_part( state, std::to_string( value.mass_grams ) );
         hash_part( state, std::to_string( value.volume_ml ) );
         hash_part( state, std::to_string( value.price_cents ) );
+        hash_part( state, std::to_string( value.price_postapoc_cents ) );
+        hash_part( state, value.color );
+        hash_part( state, value.category );
+        hash_part( state, value.looks_like );
+        hash_part( state, std::to_string( value.magazine_capacity ) );
         hash_part( state, value.use_handler );
         hash_part( state, value.use_label );
         for( const material_part &material : value.materials ) {
@@ -23271,6 +23712,14 @@ std::string content_transaction::fingerprint() const
         }
         for( const std::string &flag : value.flags ) {
             hash_part( state, flag );
+        }
+        for( const auto &[damage, amount] : value.melee_damage ) {
+            hash_part( state, damage );
+            hash_part( state, std::to_string( amount ) );
+        }
+        for( const auto &[ammo, capacity] : value.magazine_ammo ) {
+            hash_part( state, ammo );
+            hash_part( state, std::to_string( capacity ) );
         }
     }
     for( const clothing_mod_registration &entry : pimpl_->clothing_mods ) {
@@ -23316,6 +23765,7 @@ std::string content_transaction::fingerprint() const
             for( const component_requirement &component : group ) {
                 hash_part( state, component.id );
                 hash_part( state, std::to_string( component.count ) );
+                hash_part( state, component.requirement ? "requirement" : "item" );
             }
         }
         for( const auto &group : value.tools ) {
@@ -23323,6 +23773,7 @@ std::string content_transaction::fingerprint() const
             for( const component_requirement &tool : group ) {
                 hash_part( state, tool.id );
                 hash_part( state, std::to_string( tool.count ) );
+                hash_part( state, tool.requirement ? "requirement" : "item" );
             }
         }
         for( const auto &[skill, level] : value.required_skills ) {
@@ -23332,6 +23783,17 @@ std::string content_transaction::fingerprint() const
         for( const auto &[requirement_key, multiplier] : value.external_requirements ) {
             hash_part( state, requirement_key );
             hash_part( state, std::to_string( multiplier ) );
+        }
+        for( const recipe_definition_data::proficiency_data &proficiency :
+             value.proficiencies ) {
+            hash_part( state, proficiency.id );
+            hash_part( state, proficiency.required ? "required" : "optional" );
+            hash_part( state, std::to_string( proficiency.time_multiplier ) );
+            hash_part( state, std::to_string( proficiency.skill_penalty ) );
+        }
+        for( const auto &[book, level] : value.books ) {
+            hash_part( state, book );
+            hash_part( state, std::to_string( level ) );
         }
     }
     std::ostringstream result;
@@ -23540,6 +24002,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                           sol::state &lua, sol::table &ccb )
 {
     value->content.install_lua_api( lua, ccb, value );
+    cata::lua_ui::install_script_mapgen_context_api( lua );
 
     ccb.new_usertype<use_context_data>(
         "ItemUseContext", sol::no_constructor,
@@ -23652,6 +24115,26 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                       "' for handler '" + handler_id + "'" );
         }
         handlers.push_back( handler_id );
+    } );
+    runtime_api.set_function( "dialogue_topic", [weak]( const std::string & topic_id,
+    const std::string & handler_id ) {
+        const std::shared_ptr<runtime> owner = weak.lock();
+        if( !owner ) {
+            throw std::runtime_error( "stale Platform runtime" );
+        }
+        if( topic_id.empty() || topic_id.size() > 256 ||
+            topic_id.find( '\0' ) != std::string::npos ) {
+            throw std::runtime_error( "dialogue topic id must contain 1 to 256 non-NUL bytes" );
+        }
+        if( handler_id.empty() ) {
+            throw std::runtime_error( "dialogue topic handler id cannot be empty" );
+        }
+        if( owner->dialogue_topics.size() >= 256 ) {
+            throw std::runtime_error( "dialogue topic registration limit reached" );
+        }
+        if( !owner->dialogue_topics.emplace( topic_id, handler_id ).second ) {
+            throw std::runtime_error( "duplicate dialogue topic '" + topic_id + "'" );
+        }
     } );
     ccb["runtime"] = std::move( runtime_api );
 
@@ -23843,6 +24326,77 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         }
         return to_turn<std::int64_t>( calendar::turn );
     } );
+    sol::table mapgen = lua.create_table();
+    const auto register_mapgen = [weak](
+                                           const std::string &handler_id,
+                                           const sol::optional<sol::table> &options,
+                                           const bool primary,
+                                           const std::string_view api_name ) {
+        const std::shared_ptr<runtime> owner = weak.lock();
+        if( !owner ) {
+            throw std::runtime_error( "stale Platform runtime" );
+        }
+        if( handler_id.empty() ) {
+            throw std::invalid_argument(
+                std::string( api_name ) + " requires a handler id" );
+        }
+        runtime::mapgen_registration registration;
+        registration.handler_id = handler_id;
+        registration.primary = primary;
+        if( options ) {
+            if( const sol::optional<int> z_min =
+                    options->get<sol::optional<int>>( "z_min" ) ) {
+                registration.z_min = *z_min;
+            }
+            if( const sol::optional<int> z_max =
+                    options->get<sol::optional<int>>( "z_max" ) ) {
+                registration.z_max = *z_max;
+            }
+            const sol::object terrain_ids = options->raw_get<sol::object>(
+                                                "terrain_ids" );
+            if( terrain_ids.valid() && terrain_ids.get_type() != sol::type::nil ) {
+                if( terrain_ids.get_type() != sol::type::table ) {
+                    throw std::invalid_argument(
+                        "mapgen terrain_ids must be a dense string array" );
+                }
+                const sol::table values = terrain_ids.as<sol::table>();
+                const std::size_t count = require_dense_array(
+                                              values, "mapgen terrain_ids", 1, 256 );
+                registration.terrain_ids.reserve( count );
+                for( std::size_t index = 1; index <= count; ++index ) {
+                    const sol::object entry = values.raw_get<sol::object>( index );
+                    if( entry.get_type() != sol::type::string ) {
+                        throw std::invalid_argument(
+                            "mapgen terrain_ids must contain only strings" );
+                    }
+                    registration.terrain_ids.push_back( entry.as<std::string>() );
+                }
+                std::sort( registration.terrain_ids.begin(),
+                           registration.terrain_ids.end() );
+                if( std::adjacent_find( registration.terrain_ids.begin(),
+                                        registration.terrain_ids.end() ) !=
+                    registration.terrain_ids.end() ) {
+                    throw std::invalid_argument(
+                        "mapgen terrain_ids cannot contain duplicates" );
+                }
+            }
+        }
+        if( registration.z_min > registration.z_max ) {
+            throw std::invalid_argument( "mapgen z_min cannot exceed z_max" );
+        }
+        owner->mapgen_handlers.push_back( std::move( registration ) );
+    };
+    mapgen.set_function( "on_generate", [register_mapgen](
+    const std::string &handler_id, const sol::optional<sol::table> &options ) {
+        register_mapgen( handler_id, options, true,
+                         "services.mapgen.on_generate" );
+    } );
+    mapgen.set_function( "on_postprocess", [register_mapgen](
+    const std::string &handler_id, const sol::optional<sol::table> &options ) {
+        register_mapgen( handler_id, options, false,
+                         "services.mapgen.on_postprocess" );
+    } );
+    services["mapgen"] = std::move( mapgen );
 
     // Platform and the capability-scoped v5 runtime share these native domain
     // implementations, but not an authoring contract or Lua state.  Platform
@@ -25170,7 +25724,282 @@ bool validate_runtime( const std::shared_ptr<runtime> &value,
             }
         }
     }
+    for( const runtime::mapgen_registration &registration :
+         value->mapgen_handlers ) {
+        if( value->handlers.count( registration.handler_id ) == 0 ) {
+            error = "Lua-first Mod '" + value->mod_id +
+                    "' mapgen registration references missing handler '" +
+                    registration.handler_id + "'";
+            return false;
+        }
+    }
+    for( const auto &[topic_id, handler_id] : value->dialogue_topics ) {
+        if( value->handlers.count( handler_id ) == 0 ) {
+            error = "Lua-first Mod '" + value->mod_id +
+                    "' dialogue topic '" + topic_id +
+                    "' references missing handler '" + handler_id + "'";
+            return false;
+        }
+    }
     return value->content.validate( *value, check_engine_state, error );
+}
+
+namespace
+{
+
+bool dispatch_platform_mapgen_phase( mapgendata &data, const bool primary )
+{
+    if( platform_event_dispatch_depth >= 4 ) {
+        DebugLog( D_ERROR, D_MAP_GEN ) <<
+                "Lua-first Platform mapgen recursion limit reached";
+        return false;
+    }
+    platform_event_dispatch_scope dispatch_scope;
+    bool matched = false;
+    const std::vector<std::shared_ptr<runtime>> runtimes = active_runtimes;
+    for( const std::shared_ptr<runtime> &owner : runtimes ) {
+        if( !owner || owner->lua == nullptr ) {
+            continue;
+        }
+        for( const runtime::mapgen_registration &registration :
+             owner->mapgen_handlers ) {
+            if( registration.primary != primary ||
+                data.zlevel() < registration.z_min ||
+                data.zlevel() > registration.z_max ) {
+                continue;
+            }
+            const std::string terrain_id = data.terrain_type().id().str();
+            if( !registration.terrain_ids.empty() &&
+                !std::binary_search( registration.terrain_ids.begin(),
+                                     registration.terrain_ids.end(), terrain_id ) ) {
+                continue;
+            }
+            matched = true;
+            const auto handler = owner->handlers.find( registration.handler_id );
+            if( handler == owner->handlers.end() || owner->callback_depth >= 16 ) {
+                continue;
+            }
+            std::uint64_t seed = fnv1a( owner->mod_id );
+            seed = fnv1a( terrain_id, seed );
+            seed = fnv1a( std::to_string( data.pos().x() ), seed );
+            seed = fnv1a( std::to_string( data.pos().y() ), seed );
+            seed = fnv1a( std::to_string( data.pos().z() ), seed );
+            if( g != nullptr ) {
+                seed ^= static_cast<std::uint64_t>( g->get_seed() );
+            }
+            const std::shared_ptr<cata::lua_ui::script_mapgen_context> context =
+                std::make_shared<cata::lua_ui::script_mapgen_context>(
+                    data, true, seed );
+            sol::table payload = owner->lua->create_table();
+            payload["context"] = context;
+            sol::protected_function callback = handler->second.callback;
+            callback_scope scope( *owner );
+            const sol::protected_function_result result = callback( payload );
+            context->invalidate();
+            if( !result.valid() ) {
+                report_callback_error( *owner, registration.handler_id, result );
+            }
+        }
+    }
+    return matched;
+}
+
+} // namespace
+
+bool runtime_has_primary_mapgen_for( const std::shared_ptr<runtime> &value,
+                                     const std::string_view terrain_id )
+{
+    if( !value ) {
+        return false;
+    }
+    return std::any_of( value->mapgen_handlers.begin(), value->mapgen_handlers.end(),
+    [terrain_id]( const runtime::mapgen_registration & registration ) {
+        return registration.primary &&
+               ( registration.terrain_ids.empty() ||
+                 std::binary_search( registration.terrain_ids.begin(),
+                                     registration.terrain_ids.end(), std::string( terrain_id ) ) );
+    } );
+}
+
+namespace
+{
+
+struct platform_dialogue_handler {
+    std::shared_ptr<runtime> owner;
+    std::string handler_id;
+};
+
+std::optional<platform_dialogue_handler> find_platform_dialogue_handler(
+    const std::string_view topic_id )
+{
+    for( const std::shared_ptr<runtime> &owner : active_runtimes ) {
+        if( !owner || !owner->world_is_ready || owner->lua == nullptr ) {
+            continue;
+        }
+        const auto registration = owner->dialogue_topics.find(
+                                      std::string( topic_id ) );
+        if( registration == owner->dialogue_topics.end() ) {
+            continue;
+        }
+        return platform_dialogue_handler{ owner, registration->second };
+    }
+    return std::nullopt;
+}
+
+sol::protected_function_result invoke_platform_dialogue_handler(
+    const platform_dialogue_handler &registration, dialogue &d,
+    const talk_topic &topic, const std::string_view phase )
+{
+    runtime &owner = *registration.owner;
+    const auto handler = owner.handlers.find( registration.handler_id );
+    if( handler == owner.handlers.end() ) {
+        throw std::runtime_error( "missing dialogue handler '" +
+                                  registration.handler_id + "'" );
+    }
+    if( owner.callback_depth >= 16 ) {
+        throw std::runtime_error( "dialogue callback recursion limit reached" );
+    }
+    sol::table payload = platform_callback_payload( owner, {
+        { "avatar", d.const_actor( false ) },
+        { "interlocutor", d.const_actor( true ) },
+        { "topic", topic.id },
+        { "phase", std::string( phase ) }
+    } );
+    sol::protected_function callback = handler->second.callback;
+    callback_scope scope( owner );
+    return callback( payload );
+}
+
+void report_platform_dialogue_error( const platform_dialogue_handler &registration,
+                                     const std::string_view topic_id,
+                                     const std::string &error )
+{
+    DebugLog( D_ERROR, D_MAIN ) << "Lua-first Mod '" << registration.owner->mod_id
+                                << "' dialogue topic '" << topic_id << "': " << error;
+}
+
+void add_platform_dialogue_response( dialogue &d, const std::string &text,
+                                     const std::string &next_topic )
+{
+    talk_response response;
+    response.truetext = no_translation( text );
+    response.truefalse_condition = []( const_dialogue const & ) {
+        return true;
+    };
+    response.success.next_topic = talk_topic( next_topic );
+    d.add_gen_response( response, false );
+}
+
+} // namespace
+
+std::optional<std::string> platform_dialogue_dynamic_line( dialogue &d,
+        const talk_topic &topic )
+{
+    const std::optional<platform_dialogue_handler> registration =
+        find_platform_dialogue_handler( topic.id );
+    if( !registration ) {
+        return std::nullopt;
+    }
+    try {
+        const sol::protected_function_result result =
+            invoke_platform_dialogue_handler( *registration, d, topic, "line" );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            throw std::runtime_error( error.what() );
+        }
+        if( result.get_type() != sol::type::string ) {
+            throw std::runtime_error( "line phase must return a string" );
+        }
+        std::string line = result.get<std::string>();
+        if( line.empty() || line.size() > 16384 ||
+            line.find( '\0' ) != std::string::npos ) {
+            throw std::runtime_error( "line must contain 1 to 16384 non-NUL bytes" );
+        }
+        return line;
+    } catch( const std::exception &exception ) {
+        report_platform_dialogue_error( *registration, topic.id, exception.what() );
+        return "&This dialogue is unavailable because its Lua handler failed.";
+    }
+}
+
+bool gen_platform_dialogue_responses( dialogue &d, const talk_topic &topic )
+{
+    const std::optional<platform_dialogue_handler> registration =
+        find_platform_dialogue_handler( topic.id );
+    if( !registration ) {
+        return false;
+    }
+    try {
+        const sol::protected_function_result result =
+            invoke_platform_dialogue_handler( *registration, d, topic, "responses" );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            throw std::runtime_error( error.what() );
+        }
+        if( result.get_type() != sol::type::table ) {
+            throw std::runtime_error( "responses phase must return an array table" );
+        }
+        const sol::table responses = result.get<sol::table>();
+        const std::size_t count = require_dense_array(
+                                      responses, "dialogue responses", 1, 256 );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            const sol::object entry = responses.raw_get<sol::object>( index );
+            if( entry.get_type() != sol::type::table ) {
+                throw std::runtime_error( "dialogue responses must contain tables" );
+            }
+            const sol::table descriptor = entry.as<sol::table>();
+            for( const auto &field : descriptor ) {
+                if( field.first.get_type() != sol::type::string ) {
+                    throw std::runtime_error(
+                        "dialogue response descriptor keys must be strings" );
+                }
+                const std::string key = field.first.as<std::string>();
+                if( key != "text" && key != "topic" ) {
+                    throw std::runtime_error(
+                        "dialogue response descriptor has unknown field '" + key + "'" );
+                }
+            }
+            const sol::object text_value = descriptor.raw_get<sol::object>( "text" );
+            if( text_value.get_type() != sol::type::string ) {
+                throw std::runtime_error(
+                    "dialogue response descriptor requires string field 'text'" );
+            }
+            const std::string text = text_value.as<std::string>();
+            const sol::object topic_value = descriptor.raw_get<sol::object>( "topic" );
+            if( topic_value.valid() && topic_value.get_type() != sol::type::nil &&
+                topic_value.get_type() != sol::type::string ) {
+                throw std::runtime_error(
+                    "dialogue response descriptor field 'topic' must be a string" );
+            }
+            const std::string next_topic = topic_value.valid() &&
+                                           topic_value.get_type() == sol::type::string ?
+                                           topic_value.as<std::string>() : "TALK_NONE";
+            if( text.empty() || text.size() > 16384 ||
+                text.find( '\0' ) != std::string::npos ) {
+                throw std::runtime_error( "dialogue response text is invalid" );
+            }
+            if( next_topic.empty() || next_topic.size() > 256 ||
+                next_topic.find( '\0' ) != std::string::npos ) {
+                throw std::runtime_error( "dialogue response topic is invalid" );
+            }
+            add_platform_dialogue_response( d, text, next_topic );
+        }
+        return true;
+    } catch( const std::exception &exception ) {
+        report_platform_dialogue_error( *registration, topic.id, exception.what() );
+        add_platform_dialogue_response( d, "End the conversation.", "TALK_DONE" );
+        return true;
+    }
+}
+
+bool dispatch_platform_mapgen_generate( mapgendata &data )
+{
+    return dispatch_platform_mapgen_phase( data, true );
+}
+
+void dispatch_platform_mapgen_postprocess( mapgendata &data )
+{
+    static_cast<void>( dispatch_platform_mapgen_phase( data, false ) );
 }
 
 bool apply_runtime_content( const std::shared_ptr<runtime> &value, std::string &error )

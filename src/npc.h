@@ -54,6 +54,14 @@ class mission;
 class monster;
 class talker;
 class vehicle;
+template<typename E>
+struct enum_traits;
+
+namespace io
+{
+template<typename E>
+std::string enum_to_string( E );
+} // namespace io
 
 namespace npc_factions
 {
@@ -178,6 +186,17 @@ enum npc_mission : int {
     NPC_MISSION_CAMP_RESIDENT, // Attached to camp, works jobs + has free time
     NPC_MISSION_LAST
 };
+
+template<>
+struct enum_traits<npc_mission> {
+    static constexpr npc_mission last = npc_mission::NPC_MISSION_LAST;
+};
+
+namespace io
+{
+template<>
+std::string enum_to_string<npc_mission>( npc_mission data );
+} // namespace io
 
 struct npc_companion_mission {
     mission_id miss_id;

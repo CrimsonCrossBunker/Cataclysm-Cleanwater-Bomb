@@ -436,6 +436,18 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
         record_rejection( "Mod version must contain between 1 and 128 bytes" );
         return;
     }
+    if( definition.description_set &&
+        ( definition.description.size() > 4096 ||
+          definition.description.find( '\0' ) != std::string::npos ) ) {
+        record_rejection( "Mod description cannot exceed 4096 bytes or contain NUL" );
+        return;
+    }
+    if( definition.category_set &&
+        ( definition.category.empty() || definition.category.size() > 128 ||
+          definition.category.find( '\0' ) != std::string::npos ) ) {
+        record_rejection( "Mod category must contain between 1 and 128 bytes" );
+        return;
+    }
     if( ident_string.find( '#' ) != std::string::npos ) {
         record_rejection( "Mod id '" + ident_string +
                           "' contains illegal '#' character" );
@@ -462,6 +474,36 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
             return;
         }
         dependencies.push_back( dependency );
+    }
+    std::set<std::string> authors;
+    for( const std::string &author : definition.authors ) {
+        if( author.empty() || author.size() > 256 ||
+            author.find( '\0' ) != std::string::npos ) {
+            record_rejection( "Mod authors must contain between 1 and 256 bytes" );
+            return;
+        }
+        if( !authors.insert( author ).second ) {
+            record_rejection( "duplicate Mod author '" + author + "'" );
+            return;
+        }
+    }
+
+    std::optional<std::pair<int, translation>> category;
+    if( definition.category_set ) {
+        const auto found = std::find_if(
+                               get_mod_list_categories().begin(),
+                               get_mod_list_categories().end(),
+        [&definition]( const auto & entry ) {
+            return entry.first == definition.category;
+        } );
+        if( found == get_mod_list_categories().end() ) {
+            record_rejection( "unknown Mod category '" + definition.category + "'" );
+            return;
+        }
+        category = std::make_pair(
+                       static_cast<int>( std::distance(
+                                             get_mod_list_categories().begin(), found ) ),
+                       found->second );
     }
 
     const std::string entry_string = definition.entry_set ? definition.entry : "main.lua";
@@ -511,6 +553,15 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
         if( definition.dependencies_set ) {
             hybrid.dependencies = std::move( dependencies );
         }
+        if( definition.authors_set ) {
+            hybrid.authors = std::move( authors );
+        }
+        if( definition.description_set ) {
+            hybrid.description = no_translation( definition.description );
+        }
+        if( category ) {
+            hybrid.category = *category;
+        }
         if( definition.core_set ) {
             hybrid.core = definition.core;
         }
@@ -530,11 +581,14 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
     mod.ident = ident;
     mod.name_ = no_translation( definition.name_set ? definition.name : ident_string );
     const size_t default_category = get_mod_list_categories().size() - 1;
-    mod.category = { static_cast<int>( default_category ),
-                     get_mod_list_categories()[default_category].second
-                   };
+    mod.category = category.value_or( std::make_pair(
+                                          static_cast<int>( default_category ),
+                                          get_mod_list_categories()[default_category].second ) );
     mod.version = definition.version_set ? definition.version : std::string();
     mod.dependencies = std::move( dependencies );
+    mod.authors = std::move( authors );
+    mod.description = definition.description_set ?
+                      no_translation( definition.description ) : translation();
     mod.core = definition.core_set && definition.core;
     mod.path = root;
     mod.mod_root_path = root;
