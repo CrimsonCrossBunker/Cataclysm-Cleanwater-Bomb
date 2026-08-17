@@ -22,12 +22,14 @@
 #include "creature.h"
 #include "creature_tracker.h"
 #include "debug.h"
+#include "distraction_manager.h"
 #include "enums.h"
 #include "flag.h"
 #include "game.h"
 #include "game_constants.h"
 #include "game_inventory.h"
 #include "gun_mode.h"
+#include "input.h"
 #include "input_context.h"
 #include "inventory.h"
 #include "item.h"
@@ -60,6 +62,7 @@
 #include "type_id.h"
 #include "ui_manager.h"
 #include "uilist.h"
+#include "uistate.h"
 #include "veh_type.h"
 #include "vehicle.h"
 #include "vpart_position.h"
@@ -180,6 +183,49 @@ static bool check_water_affect_items( avatar &you )
     menu.query();
     if( menu.ret != 1 ) {
         you.add_msg_if_player( _( "You back away from the water." ) );
+        return false;
+    }
+
+    return true;
+}
+
+static bool confirm_non_hostile_melee_attack( avatar &you, const monster &critter )
+{
+    if( !uistate.distraction_non_hostile_melee ||
+        critter.attitude_to( you ) == Creature::Attitude::HOSTILE ) {
+        return true;
+    }
+
+    const bool force_uc = get_option<bool>( "FORCE_CAPITAL_YN" );
+    const auto &allow_key = force_uc ? input_context::disallow_lower_case_or_non_modified_letters
+                            : input_context::allow_all_keys;
+
+    while( uistate.distraction_non_hostile_melee ) {
+        const std::string action = query_popup()
+                                   .preferred_keyboard_mode( keyboard_mode::keycode )
+                                   .context( "CANCEL_ACTIVITY_OR_IGNORE_QUERY" )
+                                   .message( force_uc && !is_keycode_mode_supported() ?
+                                             pgettext( "non_hostile_melee_query",
+                                                     "<color_light_red>Really attack the non-hostile %s? (Case Sensitive)</color>" ) :
+                                             pgettext( "non_hostile_melee_query",
+                                                     "<color_light_red>Really attack the non-hostile %s?</color>" ),
+                                             critter.name() )
+                                   .option( "YES", allow_key )
+                                   .option( "NO", allow_key )
+                                   .option( "MANAGER", allow_key )
+                                   .cursor( 1 )
+                                   .query()
+                                   .action;
+
+        if( action == "YES" ) {
+            return true;
+        }
+        if( action == "MANAGER" ) {
+            get_distraction_manager().show();
+            ui_manager::redraw();
+            refresh_display();
+            continue;
+        }
         return false;
     }
 
@@ -397,8 +443,7 @@ bool avatar_action::move( avatar &you, map &m, const tripoint_rel_ms &d )
                                           _( "You're too pacified to strike anything…" ) ) ) {
                 return false;
             }
-            if( critter.attitude_to( you ) != Creature::Attitude::HOSTILE &&
-                !you.query_yn( _( "Really attack the non-hostile %s?" ), critter.name() ) ) {
+            if( !confirm_non_hostile_melee_attack( you, critter ) ) {
                 return false;
             }
             const int hp_before = critter.get_hp();
