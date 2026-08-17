@@ -535,6 +535,12 @@ class generic_factory
         std::vector<T> &get_all_mod() {
             return list;
         }
+
+        /** Returns a JSON abstract while inheritance is still being resolved. */
+        const T *find_abstract( const std::string &id ) const {
+            const auto found = abstracts.find( id );
+            return found == abstracts.end() ? nullptr : &found->second;
+        }
         /**
          * @name `string_id/int_id` interface functions
          *

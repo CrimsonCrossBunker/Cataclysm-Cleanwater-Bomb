@@ -3935,40 +3935,7 @@ void initialize_state( runtime_state &state )
                    source_id + ":" + name, copied );
     } );
 
-    state.lua.new_usertype<script_mapgen_context>(
-        "ScriptMapgenContext", sol::no_constructor,
-        "valid", &script_mapgen_context::valid,
-        "operations_used", &script_mapgen_context::operations_used,
-        "operations_remaining",
-        &script_mapgen_context::operations_remaining,
-        "id", &script_mapgen_context::id,
-        "north", &script_mapgen_context::north,
-        "east", &script_mapgen_context::east,
-        "south", &script_mapgen_context::south,
-        "west", &script_mapgen_context::west,
-        "neast", &script_mapgen_context::neast,
-        "seast", &script_mapgen_context::seast,
-        "swest", &script_mapgen_context::swest,
-        "nwest", &script_mapgen_context::nwest,
-        "above", &script_mapgen_context::above,
-        "below", &script_mapgen_context::below,
-        "get_nesw", &script_mapgen_context::get_nesw,
-        "zlevel", &script_mapgen_context::zlevel,
-        "get_direction", &script_mapgen_context::get_direction,
-        "set_dir", &script_mapgen_context::set_dir,
-        "get_rotation", &script_mapgen_context::get_rotation,
-        "get_rot_suffix", &script_mapgen_context::get_rot_suffix,
-        "random_int", &script_mapgen_context::random_int,
-        "random_chance", &script_mapgen_context::random_chance,
-        "terrain_at", &script_mapgen_context::terrain_at,
-        "furniture_at", &script_mapgen_context::furniture_at,
-        "trap_at", &script_mapgen_context::trap_at,
-        "set_terrain", &script_mapgen_context::set_terrain,
-        "set_furniture", &script_mapgen_context::set_furniture,
-        "set_trap", &script_mapgen_context::set_trap,
-        "fill_groundcover", &script_mapgen_context::fill_groundcover,
-        "nest", &script_mapgen_context::nest,
-        "generate", &script_mapgen_context::generate );
+    install_script_mapgen_context_api( state.lua );
 
     state.lua.new_usertype<script_dialogue_context>(
         "ScriptDialogueContext", sol::no_constructor,
@@ -6885,6 +6852,10 @@ void clear_dialogue_response_callbacks()
 std::optional<std::string> dialogue_dynamic_line(
     dialogue &d, const talk_topic &topic )
 {
+    if( std::optional<std::string> line =
+            cata::lua_platform::platform_dialogue_dynamic_line( d, topic ) ) {
+        return line;
+    }
     if( !active_state ) {
         return std::nullopt;
     }
@@ -6948,6 +6919,9 @@ std::optional<std::string> dialogue_dynamic_line(
 bool gen_lua_dialogue_responses(
     dialogue &d, const talk_topic &topic )
 {
+    if( cata::lua_platform::gen_platform_dialogue_responses( d, topic ) ) {
+        return true;
+    }
     if( !active_state ) {
         return false;
     }
@@ -7370,6 +7344,7 @@ void dispatch_mapgen_postprocess( mapgendata &data )
         return;
     }
     bootstrap_mapgen_runtime_if_needed();
+    cata::lua_platform::dispatch_platform_mapgen_postprocess( data );
     if( !active_state ) {
         return;
     }
@@ -7488,6 +7463,15 @@ void dispatch_mapgen_postprocess( mapgendata &data )
             remove_mapgen_handler( state, handler.id );
         }
     }
+}
+
+bool dispatch_mapgen_generate( mapgendata &data )
+{
+    if( is_pool_worker_thread() ) {
+        return false;
+    }
+    bootstrap_mapgen_runtime_if_needed();
+    return cata::lua_platform::dispatch_platform_mapgen_generate( data );
 }
 
 void on_world_ready( const world_ready_kind kind )

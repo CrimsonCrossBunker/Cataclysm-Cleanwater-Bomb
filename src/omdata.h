@@ -52,6 +52,7 @@ template <typename T> class generic_factory;
 namespace cata::lua_platform
 {
 class content_transaction;
+class world_content_transaction;
 namespace detail
 {
 std::vector<std::pair<std::string, std::string>> overmap_special_migration_snapshot();
@@ -418,6 +419,7 @@ class oter_vision
 };
 
 struct oter_type_t {
+    friend class cata::lua_platform::world_content_transaction;
     public:
         static const oter_type_t null_type;
 
@@ -778,6 +780,7 @@ struct special_placement_result;
 
 class overmap_special
 {
+    friend class cata::lua_platform::world_content_transaction;
     public:
         overmap_special() = default;
         overmap_special( const overmap_special_id &, const overmap_special_terrain & );

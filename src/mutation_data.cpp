@@ -1073,11 +1073,17 @@ void mutation_branch::load_trait_group( const JsonObject &jsobj )
 
 void cata::lua_platform::detail::insert_platform_trait_group(
     const std::string &id,
-    const std::vector<std::pair<std::string, std::int64_t>> &entries )
+    const std::vector<platform_trait_group_entry> &entries )
 {
     auto group = make_shared_fast<Trait_group_collection>( 100 );
-    for( const auto &[trait, weight] : entries ) {
-        group->add_trait_entry( trait_id( trait ), "", static_cast<int>( weight ) );
+    for( const platform_trait_group_entry &entry : entries ) {
+        if( entry.group ) {
+            group->add_group_entry( trait_group::Trait_group_tag( entry.id ),
+                                    static_cast<int>( entry.weight ) );
+        } else {
+            group->add_trait_entry( trait_id( entry.id ), entry.variant,
+                                    static_cast<int>( entry.weight ) );
+        }
     }
     trait_groups[trait_group::Trait_group_tag( id )] = std::move( group );
 }

@@ -201,6 +201,11 @@ void dispatch_mapgen_postprocess( mapgendata & )
 {
 }
 
+bool dispatch_mapgen_generate( mapgendata & )
+{
+    return false;
+}
+
 void on_world_ready( world_ready_kind )
 {
 }

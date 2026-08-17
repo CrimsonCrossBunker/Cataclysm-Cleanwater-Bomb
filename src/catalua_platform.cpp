@@ -135,30 +135,32 @@ void set_optional_field( const sol::table &values, const char *key, T &field, bo
     was_set = true;
 }
 
-std::vector<std::string> dependency_array( const sol::table &values )
+std::vector<std::string> bounded_string_array( const sol::table &values,
+        const std::string_view field )
 {
-    constexpr std::size_t maximum_dependencies = 256;
+    constexpr std::size_t maximum_entries = 256;
     const std::size_t count = values.size();
-    if( count > maximum_dependencies ) {
-        throw std::runtime_error( "ModDefinition dependencies exceed 256 entries" );
+    if( count > maximum_entries ) {
+        throw std::runtime_error( "ModDefinition " + std::string( field ) +
+                                  " exceed 256 entries" );
     }
     std::size_t observed = 0;
     for( const auto &entry : values ) {
         const sol::object key = entry.first;
         if( !key.is<lua_Integer>() ) {
             throw std::runtime_error(
-                "ModDefinition dependencies must be a dense array" );
+                "ModDefinition " + std::string( field ) + " must be a dense array" );
         }
         const lua_Integer index = key.as<lua_Integer>();
         if( index < 1 || static_cast<std::uint64_t>( index ) > count ) {
             throw std::runtime_error(
-                "ModDefinition dependencies must be a dense array" );
+                "ModDefinition " + std::string( field ) + " must be a dense array" );
         }
         ++observed;
     }
     if( observed != count ) {
         throw std::runtime_error(
-            "ModDefinition dependencies must be a dense array" );
+            "ModDefinition " + std::string( field ) + " must be a dense array" );
     }
     std::vector<std::string> result;
     result.reserve( count );
@@ -166,7 +168,7 @@ std::vector<std::string> dependency_array( const sol::table &values )
         const sol::object entry = values.raw_get<sol::object>( index );
         if( entry.get_type() != sol::type::string ) {
             throw std::runtime_error(
-                "ModDefinition dependencies may only contain strings" );
+                "ModDefinition " + std::string( field ) + " may only contain strings" );
         }
         result.push_back( entry.as<std::string>() );
     }
@@ -180,6 +182,9 @@ mod_definition make_mod_definition( const sol::table &values )
     set_optional_field( values, "name", result.name, result.name_set );
     set_optional_field( values, "version", result.version, result.version_set );
     set_optional_field( values, "entry", result.entry, result.entry_set );
+    set_optional_field( values, "description", result.description,
+                        result.description_set );
+    set_optional_field( values, "category", result.category, result.category_set );
     set_optional_field( values, "core", result.core, result.core_set );
     const sol::object dependencies = values.raw_get<sol::object>( "dependencies" );
     if( dependencies.valid() && dependencies.get_type() != sol::type::nil ) {
@@ -187,8 +192,19 @@ mod_definition make_mod_definition( const sol::table &values )
             throw std::runtime_error(
                 "ModDefinition dependencies must be a dense array" );
         }
-        result.dependencies = dependency_array( dependencies.as<sol::table>() );
+        result.dependencies = bounded_string_array(
+                                  dependencies.as<sol::table>(), "dependencies" );
         result.dependencies_set = true;
+    }
+    const sol::object authors = values.raw_get<sol::object>( "authors" );
+    if( authors.valid() && authors.get_type() != sol::type::nil ) {
+        if( authors.get_type() != sol::type::table ) {
+            throw std::runtime_error(
+                "ModDefinition authors must be a dense array" );
+        }
+        result.authors = bounded_string_array(
+                             authors.as<sol::table>(), "authors" );
+        result.authors_set = true;
     }
     return result;
 }
@@ -234,8 +250,32 @@ void install_mod_definition( sol::table &ccb )
         return definition.dependencies;
     },
     []( mod_definition & definition, const sol::table & value ) {
-        definition.dependencies = dependency_array( value );
+        definition.dependencies = bounded_string_array( value, "dependencies" );
         definition.dependencies_set = true;
+    } ),
+    "authors", sol::property(
+    []( const mod_definition & definition ) {
+        return definition.authors;
+    },
+    []( mod_definition & definition, const sol::table & value ) {
+        definition.authors = bounded_string_array( value, "authors" );
+        definition.authors_set = true;
+    } ),
+    "description", sol::property(
+    []( const mod_definition & definition ) {
+        return definition.description;
+    },
+    []( mod_definition & definition, std::string value ) {
+        definition.description = std::move( value );
+        definition.description_set = true;
+    } ),
+    "category", sol::property(
+    []( const mod_definition & definition ) {
+        return definition.category;
+    },
+    []( mod_definition & definition, std::string value ) {
+        definition.category = std::move( value );
+        definition.category_set = true;
     } ),
     "core", sol::property(
     []( const mod_definition & definition ) {
@@ -557,6 +597,16 @@ std::vector<std::string> loaded_mod_ids()
     return result;
 }
 
+bool has_primary_mapgen_for( const std::string_view terrain_id )
+{
+    const std::vector<runtime_state> &states = candidate_is_prepared ?
+            prepared_states : active_states;
+    return std::any_of( states.begin(), states.end(),
+    [terrain_id]( const runtime_state & state ) {
+        return runtime_has_primary_mapgen_for( state.platform, terrain_id );
+    } );
+}
+
 std::string prepared_content_fingerprint()
 {
     std::ostringstream joined;
@@ -696,6 +746,11 @@ void shutdown()
 std::vector<std::string> loaded_mod_ids()
 {
     return {};
+}
+
+bool has_primary_mapgen_for( std::string_view )
+{
+    return false;
 }
 
 std::string prepared_content_fingerprint()

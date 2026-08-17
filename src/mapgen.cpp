@@ -6557,7 +6557,8 @@ void map::draw_map( mapgendata &dat )
     const oter_id &terrain_type = dat.terrain_type();
     const std::string function_key = terrain_type->get_mapgen_id();
 
-    if( !run_mapgen_func( function_key, dat ) ) {
+    if( !run_mapgen_func( function_key, dat ) &&
+        !cata::lua_ui::dispatch_mapgen_generate( dat ) ) {
         debugmsg( "Error: tried to generate map for omtype %s, \"%s\" (id_mapgen %s)",
                   terrain_type.id().c_str(), terrain_type->get_name( om_vision_level::full ), function_key.c_str() );
         // Fallback to the default mapgen for this z-level or just a grass fill if something has gone horribly wrong

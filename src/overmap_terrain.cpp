@@ -10,6 +10,7 @@
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "catacharset.h"
+#include "catalua_platform.h"
 #include "catalua_platform_content.h"
 #include "coordinates.h"
 #include "debug.h"
@@ -87,6 +88,16 @@ generic_factory<oter_type_t> terrain_types( "overmap terrain type" );
 generic_factory<oter_t> terrains( "overmap terrain" );
 
 } // namespace
+
+generic_factory<oter_type_t> &cata::lua_platform::detail::overmap_terrain_type_registry()
+{
+    return terrain_types;
+}
+
+generic_factory<oter_t> &cata::lua_platform::detail::overmap_terrain_registry()
+{
+    return terrains;
+}
 
 generic_factory<overmap_land_use_code> &
 cata::lua_platform::detail::overmap_land_use_code_registry()
@@ -924,7 +935,8 @@ void overmap_terrains::check_consistency()
                 }
             }
             check_mapgen_consistent_with( mid, elem );
-        } else if( !elem.has_uniform_terrain() ) {
+        } else if( !elem.has_uniform_terrain() &&
+                   !cata::lua_platform::has_primary_mapgen_for( elem.id.str() ) ) {
             debugmsg( "No mapgen terrain exists for \"%s\".", mid.c_str() );
         }
     }

@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <cstddef>
 #include <map>
 #include <optional>
@@ -14,14 +15,21 @@
 #include <utility>
 #include <vector>
 
+#include "avatar.h"
 #include "catalua_bindings_coords.h"
 #include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
 #include "coordinates.h"
+#include "game.h"
 #include "map.h"
+#include "math_parser_diag_value.h"
+#include "npc.h"
+#include "npctalk.h"
+#include "npctrade.h"
 #include "units.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "vehicle_price.h"
 
 namespace cata::lua_ui
 {
@@ -40,6 +48,12 @@ constexpr int maximum_part_offset = 1000000;
 constexpr std::size_t maximum_fuel_entries = 128;
 constexpr std::size_t maximum_vehicle_name_bytes = 256;
 constexpr int maximum_requested_velocity = 1000000;
+constexpr int minimum_spawn_fuel = -1;
+constexpr int maximum_spawn_fuel = 100;
+
+const std::string vehicle_service_target = "vehicle_part_repair_target";
+const std::string vehicle_repair_multiplier = "vehicle_part_repair_price_multiplier";
+const std::string vehicle_install_multiplier = "vehicle_part_install_price_multiplier";
 
 struct definition_options {
     int offset = 0;
@@ -248,6 +262,60 @@ vehicle *resolve_vehicle(
         return nullptr;
     }
     return resolved.value;
+}
+
+npc *resolve_mechanic(
+    const game_handle &handle, const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation,
+    std::optional<game_handle_error> &error )
+{
+    const native_handle_result<Creature> resolved =
+        handle.resolve_creature( runtime_generation, world_generation );
+    if( !resolved ) {
+        error = resolved.error;
+        return nullptr;
+    }
+    npc *result = resolved.value->as_npc();
+    if( result == nullptr ) {
+        error = game_handle_error{
+            "wrong_subtype", "The requested character is not an NPC"
+        };
+    }
+    return result;
+}
+
+game_handle make_vehicle_handle(
+    vehicle &entry, const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    const tripoint_abs_ms position = entry.pos_abs();
+    game_handle_locator locator;
+    locator.scope = "map_vehicle";
+    locator.x = position.x();
+    locator.y = position.y();
+    locator.z = position.z();
+    return game_handle::from_vehicle(
+               entry, std::move( locator ), runtime_generation,
+               world_generation );
+}
+
+tripoint_bub_ms require_loaded_position(
+    map &here, const script_tripoint_coord &position,
+    const std::string_view api_name )
+{
+    if( position.native_origin() != coords::origin::abs ||
+        position.native_scale() != coords::scale::map_square ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " requires an absolute map-square Tripoint" );
+    }
+    const tripoint_abs_ms absolute( position.to_native() );
+    if( !here.inbounds( absolute ) ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " position is outside the active map" );
+    }
+    return here.get_bub( absolute );
 }
 
 sol::table snapshot_motion(
@@ -948,6 +1016,357 @@ sol::table set_vehicle_part_enabled(
                    state, std::move( value ) ) );
 }
 
+int prototype_value( const script_game_id &id, const bool post_cataclysm )
+{
+    require_vehicle_prototype_id( id, "game.vehicles.prototype_value" );
+    const vehicle_prototype &prototype = vproto_id( id.value() ).obj();
+    return prototype.blueprint ?
+           vehicle_part_base_price( *prototype.blueprint, post_cataclysm ) : 0;
+}
+
+sol::table live_vehicle_value(
+    sol::this_state lua, const game_handle &handle,
+    const sol::optional<sol::table> &requested,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    bool post_cataclysm = true;
+    bool include_liquid_engine_fuel = true;
+    if( requested ) {
+        post_cataclysm = requested->get_or( "post_cataclysm", post_cataclysm );
+        include_liquid_engine_fuel = requested->get_or(
+                                         "include_liquid_engine_fuel",
+                                         include_liquid_engine_fuel );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    vehicle *entry = resolve_vehicle(
+                         handle, runtime_generation, world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const int parts = vehicle_part_base_price( *entry, post_cataclysm );
+    const int fuel = post_cataclysm && include_liquid_engine_fuel ?
+                     vehicle_tank_fuel_price_postapoc( *entry ) : 0;
+    sol::table value = state.create_table();
+    value["parts_cents"] = parts;
+    value["liquid_engine_fuel_cents"] = fuel;
+    value["total_cents"] = parts + fuel;
+    value["post_cataclysm"] = post_cataclysm;
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table is_player_controlling_vehicle(
+    sol::this_state lua, const game_handle &handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    vehicle *entry = resolve_vehicle(
+                         handle, runtime_generation, world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, entry->player_in_control( get_map(), get_avatar() ) ) );
+}
+
+struct vehicle_spawn_options {
+    int rotation_degrees = 0;
+    int fuel_percent = -1;
+    int status = -1;
+    bool merge_wrecks = false;
+    std::optional<faction_id> owner;
+};
+
+vehicle_spawn_options read_vehicle_spawn_options(
+    const sol::optional<sol::table> &requested )
+{
+    vehicle_spawn_options result;
+    if( requested ) {
+        result.rotation_degrees = requested->get_or(
+                                      "rotation_degrees", result.rotation_degrees );
+        result.fuel_percent = requested->get_or(
+                                  "fuel_percent", result.fuel_percent );
+        result.status = requested->get_or( "status", result.status );
+        result.merge_wrecks = requested->get_or(
+                                  "merge_wrecks", result.merge_wrecks );
+        const sol::object owner = requested->raw_get<sol::object>( "owner" );
+        if( owner.valid() && owner.get_type() != sol::type::nil ) {
+            if( !owner.is<script_game_id>() ) {
+                throw std::invalid_argument(
+                    "game.vehicles.spawn owner must be a GameId<faction>" );
+            }
+            const script_game_id id = owner.as<script_game_id>();
+            if( id.kind() != "faction" || !id.is_valid() ) {
+                throw std::invalid_argument(
+                    "game.vehicles.spawn owner must be a valid GameId<faction>" );
+            }
+            result.owner = faction_id( id.value() );
+        }
+    }
+    if( result.rotation_degrees < -360 || result.rotation_degrees > 360 ) {
+        throw std::invalid_argument(
+            "game.vehicles.spawn rotation_degrees must be within -360..360" );
+    }
+    if( result.fuel_percent < minimum_spawn_fuel ||
+        result.fuel_percent > maximum_spawn_fuel ) {
+        throw std::invalid_argument(
+            "game.vehicles.spawn fuel_percent must be within -1..100" );
+    }
+    if( result.status < -1 || result.status > 2 ) {
+        throw std::invalid_argument(
+            "game.vehicles.spawn status must be within -1..2" );
+    }
+    return result;
+}
+
+sol::table spawn_vehicle(
+    sol::this_state lua, const script_game_id &prototype,
+    const script_tripoint_coord &position,
+    const sol::optional<sol::table> &requested,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    require_vehicle_prototype_id( prototype, "game.vehicles.spawn" );
+    const vehicle_spawn_options options = read_vehicle_spawn_options( requested );
+    map &here = get_map();
+    const tripoint_bub_ms local = require_loaded_position(
+                                      here, position, "game.vehicles.spawn" );
+    vehicle *created = here.add_vehicle(
+                           vproto_id( prototype.value() ), local,
+                           units::from_degrees( options.rotation_degrees ),
+                           options.fuel_percent,
+                           static_cast<veh_spawn_status>( options.status ),
+                           options.merge_wrecks, true );
+    sol::state_view state( lua );
+    if( created == nullptr ) {
+        return make_game_error_result(
+        state, { "blocked", "The vehicle could not be placed at the requested position" } );
+    }
+    if( options.owner ) {
+        created->set_owner( *options.owner );
+        created->remove_old_owner();
+    }
+    sol::table value = state.create_table();
+    value["handle"] = make_vehicle_handle(
+                           *created, runtime_generation, world_generation );
+    value["vehicle"] = snapshot_live_vehicle( state, here, *created );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table destroy_live_vehicle(
+    sol::this_state lua, const game_handle &handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    vehicle *entry = resolve_vehicle(
+                         handle, runtime_generation, world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    if( !entry->boarded_parts().empty() ) {
+        return make_game_error_result(
+                   state, { "blocked", "The vehicle cannot be destroyed while occupied" } );
+    }
+    sol::table value = state.create_table();
+    value["name"] = entry->disp_name();
+    value["position"] = script_tripoint_coord::from_native(
+                              coords::origin::abs, coords::scale::map_square,
+                              entry->pos_abs().raw() );
+    get_map().destroy_vehicle( entry );
+    value["destroyed"] = true;
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table set_vehicle_owner(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &owner,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    if( owner.kind() != "faction" || !owner.is_valid() ) {
+        throw std::invalid_argument(
+            "game.vehicles.set_owner requires a valid GameId<faction>" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    vehicle *entry = resolve_vehicle(
+                         handle, runtime_generation, world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    sol::table value = state.create_table();
+    value["before"] = entry->get_owner().is_null() ? sol::make_object( state, sol::nil ) :
+                      sol::make_object( state, script_game_id(
+                                           "faction", entry->get_owner().str() ) );
+    entry->set_owner( faction_id( owner.value() ) );
+    entry->remove_old_owner();
+    value["after"] = owner;
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+void mark_vehicle_for_service( vehicle &target, const double repair_multiplier,
+                               const double install_multiplier )
+{
+    for( wrapped_vehicle &wrapped : get_map().get_vehicles() ) {
+        if( wrapped.v != nullptr ) {
+            wrapped.v->remove_value( vehicle_service_target );
+        }
+    }
+    target.set_value( vehicle_service_target, "yes" );
+    static_cast<void>( repair_multiplier );
+    static_cast<void>( install_multiplier );
+}
+
+std::string npc_value_string( const npc &mechanic, const std::string &key )
+{
+    const diag_value *value = mechanic.maybe_get_value( key );
+    return value == nullptr ? std::string() : value->to_string();
+}
+
+int npc_value_integer( const npc &mechanic, const std::string &key )
+{
+    const diag_value *value = mechanic.maybe_get_value( key );
+    return value != nullptr && value->is_dbl() ? static_cast<int>( value->dbl() ) : 0;
+}
+
+sol::table full_repair_quote_value( sol::state_view state, const npc &mechanic )
+{
+    sol::table value = state.create_table();
+    value["status"] = npc_value_string( mechanic, "vehicle_full_repair_status" );
+    value["vehicle_name"] = npc_value_string(
+                                  mechanic, "vehicle_full_repair_vehicle_name" );
+    value["part_count"] = npc_value_integer(
+                                mechanic, "vehicle_full_repair_part_count" );
+    value["cost_cents"] = npc_value_integer(
+                                mechanic, "vehicle_full_repair_cost" );
+    value["cost_text"] = npc_value_string(
+                               mechanic, "vehicle_full_repair_cost_text" );
+    value["time_turns"] = npc_value_integer(
+                                mechanic, "vehicle_full_repair_time" );
+    value["time_text"] = npc_value_string(
+                               mechanic, "vehicle_full_repair_time_text" );
+    return value;
+}
+
+std::pair<vehicle *, npc *> resolve_vehicle_service(
+    const game_handle &vehicle_handle, const game_handle &mechanic_handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation,
+    std::optional<game_handle_error> &error )
+{
+    vehicle *target = resolve_vehicle(
+                          vehicle_handle, runtime_generation, world_generation, error );
+    if( target == nullptr ) {
+        return { nullptr, nullptr };
+    }
+    npc *mechanic = resolve_mechanic(
+                        mechanic_handle, runtime_generation, world_generation, error );
+    return { target, mechanic };
+}
+
+sol::table quote_full_repair(
+    sol::this_state lua, const game_handle &vehicle_handle,
+    const game_handle &mechanic_handle, const double repair_multiplier,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    if( !std::isfinite( repair_multiplier ) || repair_multiplier <= 0.0 ||
+        repair_multiplier > 1000.0 ) {
+        throw std::invalid_argument(
+            "game.vehicles.quote_full_repair multiplier must be within (0, 1000]" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    const auto [target, mechanic] = resolve_vehicle_service(
+                                        vehicle_handle, mechanic_handle,
+                                        runtime_generation, world_generation, error );
+    if( target == nullptr || mechanic == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    mark_vehicle_for_service( *target, repair_multiplier, 1.0 );
+    mechanic->set_value( vehicle_repair_multiplier, repair_multiplier );
+    talk_function::quote_vehicle_full_repair( *mechanic );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, full_repair_quote_value( state, *mechanic ) ) );
+}
+
+sol::table start_full_repair(
+    sol::this_state lua, const game_handle &vehicle_handle,
+    const game_handle &mechanic_handle, const double repair_multiplier,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::table quoted = quote_full_repair(
+                            lua, vehicle_handle, mechanic_handle, repair_multiplier,
+                            runtime_generation, world_generation );
+    if( !quoted.get_or( "ok", false ) ) {
+        return quoted;
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *mechanic = resolve_mechanic(
+                        mechanic_handle, runtime_generation, world_generation, error );
+    if( mechanic == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const int cost = npc_value_integer( *mechanic, "vehicle_full_repair_cost" );
+    if( npc_value_string( *mechanic, "vehicle_full_repair_status" ) != "quoted" || cost <= 0 ) {
+        return quoted;
+    }
+    if( !npc_trading::pay_npc( *mechanic, cost ) ) {
+        sol::table value = full_repair_quote_value( state, *mechanic );
+        value["status"] = "payment_cancelled";
+        return make_game_value_result(
+                   state, sol::make_object( state, std::move( value ) ) );
+    }
+    talk_function::start_vehicle_full_repair( *mechanic );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, full_repair_quote_value( state, *mechanic ) ) );
+}
+
+sol::table open_part_service(
+    sol::this_state lua, const game_handle &vehicle_handle,
+    const game_handle &mechanic_handle, const double repair_multiplier,
+    const double install_multiplier,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    if( !std::isfinite( repair_multiplier ) || repair_multiplier <= 0.0 ||
+        repair_multiplier > 1000.0 || !std::isfinite( install_multiplier ) ||
+        install_multiplier <= 0.0 || install_multiplier > 1000.0 ) {
+        throw std::invalid_argument(
+            "game.vehicles.open_part_service multipliers must be within (0, 1000]" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    const auto [target, mechanic] = resolve_vehicle_service(
+                                        vehicle_handle, mechanic_handle,
+                                        runtime_generation, world_generation, error );
+    if( target == nullptr || mechanic == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    mark_vehicle_for_service( *target, repair_multiplier, install_multiplier );
+    mechanic->set_value( vehicle_repair_multiplier, repair_multiplier );
+    mechanic->set_value( vehicle_install_multiplier, install_multiplier );
+    talk_function::select_vehicle_part_service( *mechanic );
+    sol::table value = state.create_table();
+    value["status"] = npc_value_string( *mechanic, "vehicle_part_service_status" );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_vehicle_api(
@@ -1061,6 +1480,100 @@ void install_vehicle_api(
                    lua_state, handle, part_index, enabled,
                    current_runtime_generation(),
                    current_world_generation() );
+    } );
+    vehicles_api.set_function(
+        "prototype_value",
+        [require_read]( const script_game_id &id,
+    const sol::optional<bool> &post_cataclysm ) {
+        require_read();
+        return prototype_value( id, post_cataclysm.value_or( true ) );
+    } );
+    vehicles_api.set_function(
+        "value",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle &handle,
+    const sol::optional<sol::table> &options ) {
+        require_read();
+        return live_vehicle_value(
+                   lua_state, handle, options, current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    vehicles_api.set_function(
+        "is_player_controlling",
+        [current_runtime_generation, current_world_generation, require_read](
+    sol::this_state lua_state, const game_handle &handle ) {
+        require_read();
+        return is_player_controlling_vehicle(
+                   lua_state, handle, current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    vehicles_api.set_function(
+        "spawn",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const script_game_id &prototype,
+            const script_tripoint_coord &position,
+    const sol::optional<sol::table> &options ) {
+        require_write();
+        return spawn_vehicle(
+                   lua_state, prototype, position, options,
+                   current_runtime_generation(), current_world_generation() );
+    } );
+    vehicles_api.set_function(
+        "destroy",
+        [current_runtime_generation, current_world_generation, require_write](
+    sol::this_state lua_state, const game_handle &handle ) {
+        require_write();
+        return destroy_live_vehicle(
+                   lua_state, handle, current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    vehicles_api.set_function(
+        "set_owner",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle &handle,
+    const script_game_id &owner ) {
+        require_write();
+        return set_vehicle_owner(
+                   lua_state, handle, owner, current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    vehicles_api.set_function(
+        "quote_full_repair",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle &vehicle_handle,
+            const game_handle &mechanic_handle,
+    const sol::optional<double> &repair_multiplier ) {
+        require_write();
+        return quote_full_repair(
+                   lua_state, vehicle_handle, mechanic_handle,
+                   repair_multiplier.value_or( 1.0 ), current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    vehicles_api.set_function(
+        "start_full_repair",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle &vehicle_handle,
+            const game_handle &mechanic_handle,
+    const sol::optional<double> &repair_multiplier ) {
+        require_write();
+        return start_full_repair(
+                   lua_state, vehicle_handle, mechanic_handle,
+                   repair_multiplier.value_or( 1.0 ), current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    vehicles_api.set_function(
+        "open_part_service",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle &vehicle_handle,
+            const game_handle &mechanic_handle,
+            const sol::optional<double> &repair_multiplier,
+    const sol::optional<double> &install_multiplier ) {
+        require_write();
+        return open_part_service(
+                   lua_state, vehicle_handle, mechanic_handle,
+                   repair_multiplier.value_or( 1.0 ),
+                   install_multiplier.value_or( 1.0 ),
+                   current_runtime_generation(), current_world_generation() );
     } );
     game["vehicles"] = std::move( vehicles_api );
 }

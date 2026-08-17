@@ -9,6 +9,9 @@
 ---@field version? string 1-128-byte author-defined Mod version.
 ---@field entry? string Root-relative entry path of at most 4096 bytes; defaults to main.lua.
 ---@field dependencies? string[] Dense one-based array of at most 256 unique stable Mod ids loaded before this Mod.
+---@field authors? string[] Dense one-based array of unique author names.
+---@field description? string Player-facing Mod description of at most 4096 bytes.
+---@field category? string Existing Mod-list category id.
 ---@field core? boolean Whether this is a core Mod.
 
 ---@class ModDefinition
@@ -17,6 +20,9 @@
 ---@field version string
 ---@field entry string
 ---@field dependencies string[]
+---@field authors string[]
+---@field description string
+---@field category string
 ---@field core boolean
 local ModDefinition = {}
 
@@ -34,9 +40,18 @@ local ModDefinition = {}
 
 ---@class ItemDefinitionOptions
 ---@field id string Stable item type id.
+---@field copy_from? string Existing item id used as the patch base.
 ---@field name? string Display name; defaults to id.
 ---@field description? string Player-facing description.
 ---@field symbol? string Map symbol; defaults to `?`.
+---@field color? string Native color id.
+---@field category? string Native item-category id.
+---@field looks_like? string Existing item id used for presentation.
+---@field mass_grams? integer Non-negative mass in grams.
+---@field volume_ml? integer Non-negative volume in milliliters.
+---@field price_cents? integer Non-negative pre-Cataclysm price in cents.
+---@field price_postapoc_cents? integer Non-negative post-Cataclysm price in cents.
+---@field magazine_capacity? integer Positive legacy magazine capacity, independent of per-ammo pocket restrictions.
 
 ---@class ItemDefinition
 ---@field id string
@@ -53,6 +68,24 @@ function ItemDefinition:volume_ml(milliliters) end
 ---@param cents integer
 ---@return ItemDefinition self
 function ItemDefinition:price_cents(cents) end
+
+---@param cents integer
+---@return ItemDefinition self
+function ItemDefinition:price_postapoc_cents(cents) end
+
+---@param damage_type string
+---@param amount number
+---@return ItemDefinition self
+function ItemDefinition:melee_damage(damage_type, amount) end
+
+---@param ammo_type string
+---@param capacity integer
+---@return ItemDefinition self
+function ItemDefinition:magazine_ammo(ammo_type, capacity) end
+
+---@param capacity integer Positive legacy magazine capacity, independent of per-ammo pocket restrictions.
+---@return ItemDefinition self
+function ItemDefinition:magazine_capacity(capacity) end
 
 ---@param id string
 ---@param portions integer
@@ -87,10 +120,12 @@ function ItemDefinition:on_use(handler_id, label) end
 ---progression data stays author-owned Lua behaviour.
 ---@field uncraft? boolean Whether this is a disassembly recipe staged into the
 ---native uncraft dictionary.
+---@field activity_level? number Positive native exertion multiplier.
 
 ---@class RecipeComponentAlternative
 ---@field id string Item type id.
 ---@field count? integer Positive count; defaults to one.
+---@field requirement? boolean Treat `id` as a native Requirement id (`LIST` semantics).
 
 ---@class RecipeDefinition
 ---@field id string
@@ -102,8 +137,9 @@ function RecipeDefinition:duration_moves(moves) end
 
 ---@param id string
 ---@param count integer
+---@param requirement? boolean Treat `id` as a native Requirement id.
 ---@return RecipeDefinition self
-function RecipeDefinition:component(id, count) end
+function RecipeDefinition:component(id, count, requirement) end
 
 ---@param choices RecipeComponentAlternative[] Dense one-based array with at most 128 entries.
 ---@return RecipeDefinition self
@@ -111,18 +147,21 @@ function RecipeDefinition:component_any(choices) end
 
 ---@param id string
 ---@param count integer Positive number of tool instances; tools are not consumed.
+---@param requirement? boolean Treat `id` as a native Requirement id.
 ---@return RecipeDefinition self
-function RecipeDefinition:tool(id, count) end
+function RecipeDefinition:tool(id, count, requirement) end
 
 ---@param id string
 ---@param charges integer Positive charges consumed by crafting.
+---@param requirement? boolean Treat `id` as a native Requirement id.
 ---@return RecipeDefinition self
-function RecipeDefinition:tool_charges(id, charges) end
+function RecipeDefinition:tool_charges(id, charges, requirement) end
 
 ---@class RecipeToolAlternative
 ---@field id string Item type id.
 ---@field count? integer Positive non-consuming instance count; defaults to one.
 ---@field charges? integer Positive charge count consumed instead of `count`.
+---@field requirement? boolean Treat `id` as a native Requirement id (`LIST` semantics).
 
 ---@param choices RecipeToolAlternative[] Dense one-based array with at most 128 entries.
 ---@return RecipeDefinition self
@@ -137,6 +176,21 @@ function RecipeDefinition:requires_skill(id, level) end
 ---@param multiplier integer Positive multiplier.
 ---@return RecipeDefinition self
 function RecipeDefinition:requirement(requirement_id, multiplier) end
+
+---@class RecipeProficiencyOptions
+---@field required? boolean Whether crafting is forbidden without this proficiency.
+---@field time_multiplier? number Native time multiplier when missing.
+---@field skill_penalty? number Native skill penalty when missing.
+
+---@param proficiency_id string Existing proficiency id.
+---@param options? RecipeProficiencyOptions
+---@return RecipeDefinition self
+function RecipeDefinition:proficiency(proficiency_id, options) end
+
+---@param item_id string Existing book item id.
+---@param skill_level integer Required primary skill level.
+---@return RecipeDefinition self
+function RecipeDefinition:book(item_id, skill_level) end
 
 ---@class NestedRecipeCategoryDefinitionOptions
 ---@field id string Stable nested-category recipe id.
@@ -161,6 +215,7 @@ function NestedRecipeCategoryDefinition:recipe(recipe_id) end
 ---@class RequirementAlternative
 ---@field id string Item type id.
 ---@field count? integer Positive count; defaults to one.
+---@field requirement? boolean Treat `id` as another native Requirement id (`LIST` semantics).
 
 ---@class RequirementQualityAlternative
 ---@field id string ToolQuality id.
@@ -173,8 +228,9 @@ local RequirementDefinition = {}
 
 ---@param item_id string
 ---@param count integer
+---@param requirement? boolean Treat `item_id` as another native Requirement id.
 ---@return RequirementDefinition self
-function RequirementDefinition:component(item_id, count) end
+function RequirementDefinition:component(item_id, count, requirement) end
 
 ---@param choices RequirementAlternative[] Dense one-based array with at most 128 entries.
 ---@return RequirementDefinition self
@@ -182,13 +238,15 @@ function RequirementDefinition:component_any(choices) end
 
 ---@param item_id string
 ---@param count integer Positive non-consuming instance count.
+---@param requirement? boolean Treat `item_id` as another native Requirement id.
 ---@return RequirementDefinition self
-function RequirementDefinition:tool(item_id, count) end
+function RequirementDefinition:tool(item_id, count, requirement) end
 
 ---@param item_id string
 ---@param charges integer Positive charge count consumed.
+---@param requirement? boolean Treat `item_id` as another native Requirement id.
 ---@return RequirementDefinition self
-function RequirementDefinition:tool_charges(item_id, charges) end
+function RequirementDefinition:tool_charges(item_id, charges, requirement) end
 
 ---@param choices RecipeToolAlternative[] Dense one-based array with at most 128 entries.
 ---@return RequirementDefinition self
@@ -273,6 +331,7 @@ local ItemActionDefinition = {}
 ---@field reveal_locale? boolean Whether the start locale is revealed; defaults to true.
 ---@field hard_requirement? boolean Whether the unlock requirement applies with metaprogression disabled.
 ---@field distance_initial_visibility? integer Initial overmap visibility distance.
+---@field map_extra? string Native map-extra id applied at game start; omission means none.
 
 ---@class ScenarioDefinition
 ---@field id string
@@ -680,6 +739,17 @@ function ItemGroupDefinition:item(item_id, probability, variant) end
 ---@param probability? integer Positive distribution weight or collection percentage.
 ---@return ItemGroupDefinition self
 function ItemGroupDefinition:group(group_id, probability) end
+
+---@class ItemGroupEntryOptions
+---@field item? string Exactly one of item or group is required.
+---@field group? string Exactly one of item or group is required.
+---@field probability? integer Positive distribution weight or collection percentage.
+---@field count? integer[] Two-element inclusive count interval.
+---@field variant? string Native item variant id.
+
+---@param options ItemGroupEntryOptions
+---@return ItemGroupDefinition self
+function ItemGroupDefinition:entry(options) end
 
 ---@class SubBodyPartDefinitionOptions
 ---@field id string Stable native sub-body-part id.
@@ -2332,8 +2402,14 @@ local MonsterAdjustmentDefinition = {}
 
 ---@param trait_id string Native trait id weighted by this group.
 ---@param weight integer Positive weight.
+---@param variant? string Native mutation variant id.
 ---@return TraitGroupDefinition self
-function TraitGroupDefinition:trait(trait_id, weight) end
+function TraitGroupDefinition:trait(trait_id, weight, variant) end
+
+---@param group_id string Existing trait-group id.
+---@param weight integer Positive weight.
+---@return TraitGroupDefinition self
+function TraitGroupDefinition:group(group_id, weight) end
 
 ---@class ShopkeeperEntryOptions
 ---@field item? string Item id matched by this entry.
@@ -2786,12 +2862,270 @@ local ItemUseContext = {}
 ---@param text string
 function ItemUseContext:message(text) end
 
+---@class FactionDefinitionOptions
+---@field id string Stable faction id.
+---@field name? string Player-facing name; defaults to id.
+---@field description? string Player-facing description.
+---@field likes? integer Initial player like score.
+---@field respects? integer Initial player respect score.
+---@field trusts? integer Initial player trust score.
+---@field known? boolean Whether the player initially knows the faction.
+---@field size? integer Initial member count.
+---@field power? integer Initial power score.
+---@field wealth? integer Initial wealth score.
+---@field food_calories? integer Initial food energy in kilocalories.
+---@field food_vitamins? table<string, integer> Initial native vitamin units keyed by vitamin id.
+---@field consumes_food? boolean Whether faction members consume the shared supply.
+---@field lone_wolf? boolean Whether the faction is a lone-wolf faction.
+---@field limited_area? boolean Whether area claims are limited.
+---@field currency? string Existing item id used as faction currency.
+---@field monster_faction? string Existing monster-faction id; defaults to human.
+---@field relations? table<string, string[]> Relation flags keyed by target faction id.
+
+---@class FactionDefinition
+---@field id string
+local FactionDefinition = {}
+
+---@class NpcDistribution
+---@field constant? integer Constant value.
+---@field rng? integer[] Two-element inclusive random interval.
+---@field dice? integer[] Two-element dice count and sides.
+---@field add? integer Constant added to the selected distribution.
+
+---@class NpcShopGroupOptions
+---@field id string Existing item-group id.
+---@field trust? integer Minimum trust.
+---@field strict? boolean Native strict matching flag.
+---@field rigid? boolean Native rigid restock flag.
+
+---@class NpcPriceRuleOptions
+---@field item? string Item id matched by this rule.
+---@field group? string Item-group id matched by this rule.
+---@field category? string Item-category id matched by this rule.
+---@field markup? number Sale markup; defaults to one.
+---@field premium? number Purchase premium; defaults to one.
+---@field fixed_adjustment? number Optional fixed adjustment.
+---@field price? integer Optional fixed price in cents.
+
+---@class NpcClassDefinitionOptions
+---@field id string Stable NPC-class id.
+---@field name? string Player-facing class name; defaults to id.
+---@field job_description? string Player-facing job description.
+---@field common? boolean Whether random NPC generation may select the class.
+---@field sells_belongings? boolean Whether the NPC sells personal belongings.
+---@field worn? string Existing starting worn item-group id.
+---@field carry? string Existing starting carried item-group id.
+---@field weapon? string Existing starting weapon item-group id.
+---@field traits? string Existing or same-transaction trait-group id.
+---@field consumption_rates? string Existing shopkeeper-consumption-rates id.
+---@field strength? NpcDistribution
+---@field dexterity? NpcDistribution
+---@field intelligence? NpcDistribution
+---@field perception? NpcDistribution
+---@field skills? table<string, NpcDistribution> Base skill distributions keyed by skill id.
+---@field bonus_skills? table<string, NpcDistribution> Bonus skill distributions keyed by skill id.
+---@field shop_groups? NpcShopGroupOptions[]
+---@field price_rules? NpcPriceRuleOptions[]
+
+---@class NpcClassDefinition
+---@field id string
+local NpcClassDefinition = {}
+
+---@class NpcDefinitionOptions
+---@field id string Stable NPC-template id.
+---@field unique_name? string Fixed personal name.
+---@field suffix? string Display-name suffix.
+---@field temporary_suffix? string Temporary display-name suffix.
+---@field gender? 'male'|'female'|'random'
+---@field class string Existing or same-transaction NPC-class id.
+---@field faction? string Existing or same-transaction faction id.
+---@field attitude? integer Native NPC-attitude value.
+---@field mission? string Native NPC-mission enum name.
+---@field chat? string Initial dialogue topic id.
+---@field stole_item_chat? string Stolen-item dialogue topic id.
+---@field age? integer Fixed generated age.
+---@field height? integer Fixed generated height in centimeters.
+
+---@class NpcDefinition
+---@field id string
+local NpcDefinition = {}
+
+---@class OvermapTerrainDefinitionOptions
+---@field id string Stable overmap-terrain type id.
+---@field name? string Player-facing name; defaults to id.
+---@field symbol? string Single display symbol.
+---@field color? string Native color id.
+---@field see_cost? string Native overmap see-cost enum name.
+---@field default_map_data? string Native map-data-summary id; defaults to `full_omt`.
+---@field vision_levels? string Native overmap-vision id; defaults to `default`.
+---@field monster_density? integer Native monster density.
+---@field flags? string[] Native overmap-terrain flags.
+
+---@class OvermapTerrainDefinition
+---@field id string
+local OvermapTerrainDefinition = {}
+
+---@class OvermapSpecialTerrainOptions
+---@field point integer[] Three-element relative overmap-terrain coordinate.
+---@field terrain? string Concrete overmap-terrain id; empty marks a location-only footprint tile.
+---@field locations? string[] Allowed overmap-location ids for this tile.
+---@field flags? string[] Native special-terrain flags.
+
+---@class OvermapSpecialConnectionOptions
+---@field point integer[] Three-element relative overmap-terrain coordinate.
+---@field from? integer[] Optional three-element source coordinate.
+---@field terrain? string Overmap-terrain type connected at this point.
+---@field connection? string Existing overmap-connection id.
+---@field existing? boolean Whether the connection must already exist.
+
+---@class OvermapSpecialDefinitionOptions
+---@field id string Stable overmap-special id.
+---@field terrains? OvermapSpecialTerrainOptions[]
+---@field connections? OvermapSpecialConnectionOptions[]
+---@field locations? string[] Default overmap-location ids.
+---@field flags? string[] Native overmap-special flags.
+---@field city_size? integer[] Two-element inclusive city-size interval.
+---@field city_distance? integer[] Two-element inclusive city-distance interval.
+---@field occurrences? integer[] Two-element inclusive occurrence interval.
+---@field priority? integer Placement priority.
+---@field rotate? boolean Whether the special may rotate.
+
+---@class OvermapSpecialDefinition
+---@field id string
+local OvermapSpecialDefinition = {}
+
+---@class VehiclePartVariantOptions
+---@field id? string Native variant id; empty is the default variant.
+---@field label? string Player-facing variant label.
+---@field symbols? string Native eight-direction symbol sequence.
+---@field broken_symbols? string Native eight-direction broken symbol sequence.
+
+---@class VehiclePartRequirementReference
+---@field id string Existing Requirement id.
+---@field multiplier? integer Positive multiplier; defaults to one.
+
+---@class VehiclePartRequirementOptions
+---@field id? string Single existing Requirement id.
+---@field multiplier? integer Positive multiplier for id.
+---@field using? VehiclePartRequirementReference[] Ordered existing Requirement references.
+---@field time_minutes? integer Native work time in minutes.
+---@field skills? table<string, integer> Required levels keyed by skill id.
+
+---@class VehiclePartControlOptions
+---@field air_proficiencies? string[] Existing air-control proficiency ids.
+---@field land_proficiencies? string[] Existing land-control proficiency ids.
+
+---@class VehiclePartDefinitionOptions
+---@field id string Stable vehicle-part id.
+---@field copy_from? string Existing vehicle-part id used as the patch base.
+---@field name? string Player-facing name.
+---@field description? string Player-facing description.
+---@field item? string Existing or same-transaction base item id.
+---@field location? string Existing vehicle-part-location id.
+---@field looks_like? string Existing vehicle-part id used for presentation.
+---@field color? string Native color id.
+---@field broken_color? string Native broken color id.
+---@field fuel_type? string Existing fuel item id.
+---@field durability? integer Positive durability.
+---@field size_ml? integer Cargo size in milliliters.
+---@field damage_modifier? integer Native damage modifier.
+---@field power_watts? integer Mechanical power in watts.
+---@field epower_watts? integer Electrical power in watts.
+---@field energy_consumption_watts? integer Fuel-energy consumption in watts.
+---@field balloon_height? number Per-part balloon lift in kilograms.
+---@field backfire_threshold? number Engine backfire threshold.
+---@field backfire_frequency? integer Engine backfire frequency.
+---@field damaged_power_factor? number Damaged engine power factor.
+---@field noise_factor? integer Engine noise factor.
+---@field m2c? integer Engine mechanical-to-combustion factor.
+---@field categories? string[] Vehicle-part category ids replacing inherited categories.
+---@field flags? string[] Vehicle-part flags replacing inherited flags.
+---@field variants? VehiclePartVariantOptions[] Variants replacing inherited variants.
+---@field fuel_options? string[] Engine fuel item ids replacing inherited options.
+---@field damage_reduction? table<string, number> Damage reduction keyed by damage-type id.
+---@field breaks_into? string Existing or same-transaction item-group id.
+---@field install? VehiclePartRequirementOptions
+---@field removal? VehiclePartRequirementOptions
+---@field repair? VehiclePartRequirementOptions
+---@field control? VehiclePartControlOptions
+
+---@class VehiclePartDefinition
+---@field id string
+local VehiclePartDefinition = {}
+
+---@class VehiclePartPlacementOptions
+---@field x integer Mount x coordinate.
+---@field y integer Mount y coordinate.
+---@field part string Existing or same-transaction vehicle-part id.
+---@field variant? string Vehicle-part variant id.
+---@field with_ammo? integer Ammo fill percentage.
+---@field ammo_types? string[] Allowed ammo item ids.
+---@field ammo_quantity? integer[] Two-element ammo quantity interval.
+---@field fuel? string Initial fuel item id.
+---@field tools? string[] Initial tool item ids.
+
+---@class VehicleItemPlacementOptions
+---@field x integer Mount x coordinate.
+---@field y integer Mount y coordinate.
+---@field chance? integer Spawn chance from zero through 100.
+---@field with_ammo? integer Ammo fill percentage.
+---@field with_magazine? integer Magazine chance percentage.
+---@field items? string[] Concrete item ids.
+---@field groups? string[] Item-group ids.
+
+---@class VehicleZonePlacementOptions
+---@field x integer Mount x coordinate.
+---@field y integer Mount y coordinate.
+---@field type string Existing zone-type id.
+---@field name? string Zone name.
+---@field filter? string Zone item filter.
+
+---@class VehicleDefinitionOptions
+---@field id string Stable vehicle prototype id.
+---@field name string Player-facing vehicle name.
+---@field color_palette? string Existing vehicle-color-palette id.
+---@field parts VehiclePartPlacementOptions[]
+---@field items? VehicleItemPlacementOptions[]
+---@field zones? VehicleZonePlacementOptions[]
+
+---@class VehicleDefinition
+---@field id string
+local VehicleDefinition = {}
+
 ---@class CcbPlatformContent
 local CcbPlatformContent = {}
 
 ---@param options ItemDefinitionOptions
 ---@return ItemDefinition
 function CcbPlatformContent.Item(options) end
+
+---@param options FactionDefinitionOptions
+---@return FactionDefinition
+function CcbPlatformContent.Faction(options) end
+
+---@param options NpcClassDefinitionOptions
+---@return NpcClassDefinition
+function CcbPlatformContent.NpcClass(options) end
+
+---@param options NpcDefinitionOptions
+---@return NpcDefinition
+function CcbPlatformContent.Npc(options) end
+
+---@param options OvermapTerrainDefinitionOptions
+---@return OvermapTerrainDefinition
+function CcbPlatformContent.OvermapTerrain(options) end
+
+---@param options OvermapSpecialDefinitionOptions
+---@return OvermapSpecialDefinition
+function CcbPlatformContent.OvermapSpecial(options) end
+
+---@param options VehiclePartDefinitionOptions
+---@return VehiclePartDefinition
+function CcbPlatformContent.VehiclePart(options) end
+
+---@param options VehicleDefinitionOptions
+---@return VehicleDefinition
+function CcbPlatformContent.Vehicle(options) end
 
 ---@param options RecipeDefinitionOptions
 ---@return RecipeDefinition
@@ -3236,7 +3570,7 @@ function CcbPlatformContent.MagicType(options) end
 ---@return MovementModeDefinition
 function CcbPlatformContent.MovementMode(options) end
 
----@alias PlatformContentDefinition ItemDefinition|RecipeDefinition|NestedRecipeCategoryDefinition|ToolQualityDefinition|SkillDisplayDefinition|SkillDefinition|VitaminDefinition|JsonFlagDefinition|DamageTypeDefinition|MaterialDefinition|AmmunitionTypeDefinition|ItemCategoryDefinition|RecipeCategoryDefinition|ProficiencyCategoryDefinition|ProficiencyDefinition|WeaponCategoryDefinition|RequirementDefinition|RecipeGroupDefinition|ScentTypeDefinition|SpeedDescriptionDefinition|HarvestDropTypeDefinition|HarvestDefinition|BehaviorDefinition|MonsterAttackDefinition|EffectTypeDefinition|WeakpointSetDefinition|FieldTypeDefinition|ItemGroupDefinition|SubBodyPartDefinition|WoundDefinition|BodyPartDefinition|WoundFixDefinition|AnatomyDefinition|BodyGraphDefinition|MonsterDefinition|MoraleTypeDefinition|DiseaseTypeDefinition|MonsterFlagDefinition|SpeciesDefinition|EmissionDefinition|MonsterFactionDefinition|MutationTypeDefinition|ConnectGroupDefinition|MutationCategoryDefinition|ConstructionCategoryDefinition|ConstructionGroupDefinition|VehiclePartLocationDefinition|MoodFaceDefinition|DamageInfoOrderDefinition|VehiclePartCategoryDefinition|NamedColorDefinition|RotatableSymbolDefinition|AsciiArtDefinition|LimbScoreDefinition|HitRangeDefinition|BashDamageProfileDefinition|ClothingModDefinition|OvermapLandUseCodeDefinition|OvermapVisionDefinition|OvermapLocationDefinition|ProfessionGroupDefinition|MapExtraCollectionDefinition|VehicleGroupDefinition|FaultGroupDefinition|ExplosionLightDefinition|AmmoEffectDefinition|AddictionTypeDefinition|CharacterModifierDefinition|StartLocationDefinition|ClimbingAidDefinition|WeatherTypeDefinition|ScoreDefinition|OverlayOrderDefinition|ZoneTypeDefinition|SpeechPoolDefinition|EndScreenDefinition|ActivityTypeDefinition|HelpTopicDefinition|SnippetCategoryDefinition|PlaylistDefinition|AttackVectorDefinition|MagicTypeDefinition|MovementModeDefinition
+---@alias PlatformContentDefinition FactionDefinition|NpcClassDefinition|NpcDefinition|OvermapTerrainDefinition|OvermapSpecialDefinition|VehiclePartDefinition|VehicleDefinition|ItemDefinition|RecipeDefinition|NestedRecipeCategoryDefinition|ToolQualityDefinition|SkillDisplayDefinition|SkillDefinition|VitaminDefinition|JsonFlagDefinition|DamageTypeDefinition|MaterialDefinition|AmmunitionTypeDefinition|ItemCategoryDefinition|RecipeCategoryDefinition|ProficiencyCategoryDefinition|ProficiencyDefinition|WeaponCategoryDefinition|RequirementDefinition|RecipeGroupDefinition|ScentTypeDefinition|SpeedDescriptionDefinition|HarvestDropTypeDefinition|HarvestDefinition|BehaviorDefinition|MonsterAttackDefinition|EffectTypeDefinition|WeakpointSetDefinition|FieldTypeDefinition|ItemGroupDefinition|SubBodyPartDefinition|WoundDefinition|BodyPartDefinition|WoundFixDefinition|AnatomyDefinition|BodyGraphDefinition|MonsterDefinition|MoraleTypeDefinition|DiseaseTypeDefinition|MonsterFlagDefinition|SpeciesDefinition|EmissionDefinition|MonsterFactionDefinition|MutationTypeDefinition|ConnectGroupDefinition|MutationCategoryDefinition|ConstructionCategoryDefinition|ConstructionGroupDefinition|VehiclePartLocationDefinition|MoodFaceDefinition|DamageInfoOrderDefinition|VehiclePartCategoryDefinition|NamedColorDefinition|RotatableSymbolDefinition|AsciiArtDefinition|LimbScoreDefinition|HitRangeDefinition|BashDamageProfileDefinition|ClothingModDefinition|OvermapLandUseCodeDefinition|OvermapVisionDefinition|OvermapLocationDefinition|ProfessionGroupDefinition|MapExtraCollectionDefinition|VehicleGroupDefinition|FaultGroupDefinition|ExplosionLightDefinition|AmmoEffectDefinition|AddictionTypeDefinition|CharacterModifierDefinition|StartLocationDefinition|ClimbingAidDefinition|WeatherTypeDefinition|ScoreDefinition|OverlayOrderDefinition|ZoneTypeDefinition|SpeechPoolDefinition|EndScreenDefinition|ActivityTypeDefinition|HelpTopicDefinition|SnippetCategoryDefinition|PlaylistDefinition|AttackVectorDefinition|MagicTypeDefinition|MovementModeDefinition
 
 ---@param definition PlatformContentDefinition
 function CcbPlatformContent.add(definition) end
@@ -3622,6 +3956,22 @@ function CcbPlatformRuntime.on(event_name, handler_id) end
 ---@param handler_id string Named Platform handler.
 function CcbPlatformRuntime.hook(hook_name, handler_id) end
 
+---Render a Lua-owned topic inside the native NPC dialogue window. The named
+---handler receives CcbPlatformDialogueRenderHook for both phases.
+---@param topic_id string Native dialogue topic id.
+---@param handler_id string Named Platform handler returning a line or response array.
+function CcbPlatformRuntime.dialogue_topic(topic_id, handler_id) end
+
+---@class CcbPlatformDialogueResponse
+---@field text string Player response displayed by the native dialogue window.
+---@field topic? string Next native or Lua-owned topic; defaults to `TALK_NONE`.
+
+---@class CcbPlatformDialogueRenderHook
+---@field avatar GameHandle The avatar participating in the dialogue.
+---@field interlocutor GameHandle|table The creature/entity handle or detached talker snapshot.
+---@field topic string Topic currently being rendered.
+---@field phase 'line'|'responses' Return a string for `line`, or CcbPlatformDialogueResponse[] for `responses`.
+
 ---@class PlatformTaskMigration
 ---@field task_id integer
 ---@field handler_id string
@@ -3707,6 +4057,24 @@ function CcbPlatformPresentation.choose(prompt, entries) end
 ---@return string|nil text
 function CcbPlatformPresentation.input_text(prompt, options) end
 
+---@class CcbPlatformMapgenRegistrationOptions
+---@field terrain_ids? string[] Concrete directional overmap-terrain ids to match.
+---@field z_min? integer Minimum generated z level.
+---@field z_max? integer Maximum generated z level.
+
+---@class CcbPlatformMapgenApi
+local CcbPlatformMapgenApi = {}
+
+---Register a primary OMT generator invoked before native missing-mapgen fallback.
+---@param handler_id string Registered Platform handler receiving `{ context = ScriptMapgenContext }`.
+---@param options? CcbPlatformMapgenRegistrationOptions
+function CcbPlatformMapgenApi.on_generate(handler_id, options) end
+
+---Register a generator invoked after the primary native or Platform mapgen finishes.
+---@param handler_id string Registered Platform handler receiving `{ context = ScriptMapgenContext }`.
+---@param options? CcbPlatformMapgenRegistrationOptions
+function CcbPlatformMapgenApi.on_postprocess(handler_id, options) end
+
 ---@class CcbPlatformServices
 ---@field achievements CcbPlatformAchievementsApi
 ---@field activities CcbPlatformActivitiesApi
@@ -3730,6 +4098,7 @@ function CcbPlatformPresentation.input_text(prompt, options) end
 ---@field messages CcbMessagesApi
 ---@field missions CcbMissionsApi
 ---@field morale CcbPlatformMoraleApi
+---@field mapgen CcbPlatformMapgenApi
 ---@field mutations CcbMutationsApi
 ---@field needs CcbNeedsApi
 ---@field npcs CcbNpcsApi
@@ -3747,6 +4116,7 @@ function CcbPlatformPresentation.input_text(prompt, options) end
 ---@field statistics CcbStatisticsApi
 ---@field targeting CcbTargetingApi
 ---@field time CcbTimeApi
+---@field trade CcbTradeApi
 ---@field types CcbTypesApi
 ---@field units CcbUnitsApi
 ---@field variables CcbVariablesApi

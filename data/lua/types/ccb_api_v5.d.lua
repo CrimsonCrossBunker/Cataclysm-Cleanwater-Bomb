@@ -1778,6 +1778,95 @@ function ScriptMapgenContext:set_furniture(x, y, id) end
 ---@return boolean
 function ScriptMapgenContext:set_trap(x, y, id) end
 
+---@param x integer
+---@param y integer
+---@param id string Existing terrain id.
+---@return boolean changed
+function ScriptMapgenContext:set_terrain_id(x, y, id) end
+
+---@param x integer
+---@param y integer
+---@param id string Existing furniture id; `f_null` clears furniture.
+---@return boolean changed
+function ScriptMapgenContext:set_furniture_id(x, y, id) end
+
+---@param x integer
+---@param y integer
+---@param id string Existing trap id; `tr_null` clears the trap.
+---@return boolean changed
+function ScriptMapgenContext:set_trap_id(x, y, id) end
+
+---@param terrain_id string Existing terrain id used for all 24x24 squares.
+function ScriptMapgenContext:reset(terrain_id) end
+
+---@param x integer
+---@param y integer
+---@param item_id string Existing item id.
+---@param quantity integer Positive item quantity.
+---@param charges integer Non-negative charge override.
+---@param faction_id string Faction owner id, or empty for none.
+function ScriptMapgenContext:place_item(x, y, item_id, quantity, charges, faction_id) end
+
+---@param x1 integer
+---@param y1 integer
+---@param x2 integer
+---@param y2 integer
+---@param group_id string Existing item-group id.
+---@param chance integer Chance from one through 100.
+---@param faction_id string Faction owner id, or empty for none.
+function ScriptMapgenContext:place_item_group(x1, y1, x2, y2, group_id, chance, faction_id) end
+
+---@param x integer
+---@param y integer
+---@param item_id string Existing liquid item id.
+---@param charges integer Positive charges.
+function ScriptMapgenContext:place_liquid(x, y, item_id, charges) end
+
+---@param x integer
+---@param y integer
+---@param charges integer Non-negative water charges.
+function ScriptMapgenContext:place_toilet(x, y, charges) end
+
+---@param x integer
+---@param y integer
+---@param text string Sign text.
+---@param furniture_id string Existing sign furniture id.
+function ScriptMapgenContext:place_sign(x, y, text, furniture_id) end
+
+---@param x1 integer
+---@param y1 integer
+---@param x2 integer
+---@param y2 integer
+---@param zone_type string Existing zone-type id.
+---@param faction_id string Faction id, or empty for none.
+---@param name string Zone name.
+---@param filter string Zone item filter.
+function ScriptMapgenContext:place_zone(x1, y1, x2, y2, zone_type, faction_id, name, filter) end
+
+---@param x integer
+---@param y integer
+---@param template_id string Existing NPC-template id.
+---@param unique_id string Optional stable unique id, or empty.
+---@return integer character_id
+function ScriptMapgenContext:place_npc(x, y, template_id, unique_id) end
+
+---@param x integer
+---@param y integer
+---@param prototype_or_group_id string Existing vehicle prototype or group id.
+---@param rotation_degrees integer
+---@param fuel_percent integer From -1 through 100.
+---@param status integer From -1 through 2.
+---@param faction_id string Faction owner id, or empty for none.
+---@return boolean placed
+function ScriptMapgenContext:place_vehicle(x, y, prototype_or_group_id, rotation_degrees, fuel_percent, status, faction_id) end
+
+---@param x1 integer
+---@param y1 integer
+---@param x2 integer
+---@param y2 integer
+---@param faction_id string Existing faction id.
+function ScriptMapgenContext:apply_faction_ownership(x1, y1, x2, y2, faction_id) end
+
 function ScriptMapgenContext:fill_groundcover() end
 
 ---@param id string
@@ -4033,6 +4122,75 @@ function CcbVehiclesApi.set_tracking(handle, enabled) end
 ---@return CcbResult
 function CcbVehiclesApi.set_part_enabled(handle, part_index, enabled) end
 
+---@param prototype GameId GameId<vehicle_prototype>.
+---@param post_cataclysm? boolean Defaults to true.
+---@return integer cents Prototype part value in cents.
+function CcbVehiclesApi.prototype_value(prototype, post_cataclysm) end
+
+---@class CcbVehicleValueOptions
+---@field post_cataclysm? boolean Defaults to true.
+---@field include_liquid_engine_fuel? boolean Defaults to true.
+
+---@class CcbVehicleValue
+---@field parts_cents integer
+---@field liquid_engine_fuel_cents integer
+---@field total_cents integer
+---@field post_cataclysm boolean
+
+---@param handle GameHandle
+---@param options? CcbVehicleValueOptions
+---@return CcbResult result `value` is CcbVehicleValue.
+function CcbVehiclesApi.value(handle, options) end
+
+---@param handle GameHandle
+---@return CcbResult result `value` is true only while the avatar controls this vehicle.
+function CcbVehiclesApi.is_player_controlling(handle) end
+
+---@class CcbVehicleSpawnOptions
+---@field rotation_degrees? integer Rotation from -360 through 360.
+---@field fuel_percent? integer Fuel fill from -1 through 100.
+---@field status? integer Native spawn status from -1 through 2.
+---@field merge_wrecks? boolean Whether placement may merge wrecks.
+---@field owner? GameId Valid GameId<faction> assigned as owner.
+
+---@class CcbVehicleSpawnResult
+---@field handle GameHandle Live vehicle handle.
+---@field vehicle CcbVehicleSnapshot Snapshot after spawning.
+
+---@param prototype GameId GameId<vehicle_prototype>.
+---@param position TripointCoord Loaded absolute map-square position.
+---@param options? CcbVehicleSpawnOptions
+---@return CcbResult result `value` is CcbVehicleSpawnResult.
+function CcbVehiclesApi.spawn(prototype, position, options) end
+
+---@param handle GameHandle
+---@return CcbResult result `value.destroyed` is true after removal; occupied vehicles return `blocked`.
+function CcbVehiclesApi.destroy(handle) end
+
+---@param handle GameHandle
+---@param owner GameId Valid GameId<faction>.
+---@return CcbResult
+function CcbVehiclesApi.set_owner(handle, owner) end
+
+---@param vehicle GameHandle
+---@param mechanic GameHandle NPC mechanic handle.
+---@param repair_multiplier? number Positive price multiplier; defaults to one.
+---@return CcbResult result `value` contains native full-repair quote fields.
+function CcbVehiclesApi.quote_full_repair(vehicle, mechanic, repair_multiplier) end
+
+---@param vehicle GameHandle
+---@param mechanic GameHandle NPC mechanic handle.
+---@param repair_multiplier? number Positive price multiplier; defaults to one.
+---@return CcbResult result `value.status` reports quote, cancellation, or activity state.
+function CcbVehiclesApi.start_full_repair(vehicle, mechanic, repair_multiplier) end
+
+---@param vehicle GameHandle
+---@param mechanic GameHandle NPC mechanic handle.
+---@param repair_multiplier? number Positive repair price multiplier; defaults to one.
+---@param install_multiplier? number Positive install price multiplier; defaults to one.
+---@return CcbResult result `value.status` reports the native part-service result.
+function CcbVehiclesApi.open_part_service(vehicle, mechanic, repair_multiplier, install_multiplier) end
+
 ---@class CcbNpcClassDefinition
 ---@field id GameId
 ---@field name string
@@ -4079,6 +4237,7 @@ function CcbVehiclesApi.set_part_enabled(handle, part_index, enabled) end
 ---@field guarding boolean
 ---@field patrolling boolean
 ---@field shopkeeper boolean
+---@field restock_turn integer Absolute game turn when native shop stock next refreshes.
 ---@field faction_representative boolean
 ---@field opinion CcbNpcOpinion
 ---@field personality table
@@ -4130,6 +4289,20 @@ function CcbNpcsApi.modify_opinion(handle, deltas) end
 ---`cbm_recharge`, and `cbm_reserve` string ids, a dense one-based `allies`
 ---string list of enabled ally rules, and a `pickup_whitelist` boolean.
 function CcbNpcsApi.ai_rules(handle) end
+
+---@class CcbTradeApi
+local CcbTradeApi = {}
+
+---@param npc GameHandle NPC trader handle.
+---@param cost? integer Non-negative additional cost in cents.
+---@param deal? string Player-facing deal label.
+---@return CcbResult result `value` is true when the trade completes.
+function CcbTradeApi.open(npc, cost, deal) end
+
+---@param npc GameHandle NPC payee handle.
+---@param cost integer Positive cost in cents.
+---@return CcbResult result `value` is true when payment completes.
+function CcbTradeApi.pay(npc, cost) end
 
 ---@class CcbFactionReputation
 ---@field likes integer
@@ -4653,6 +4826,7 @@ function CcbWeatherApi.refresh() end
 ---@field random CcbRandomApi
 ---@field sound CcbSoundApi
 ---@field targeting CcbTargetingApi
+---@field trade CcbTradeApi
 ---@field spawns CcbSpawnsApi
 ---@field followers CcbFollowersApi
 ---@field relocation CcbRelocationApi
