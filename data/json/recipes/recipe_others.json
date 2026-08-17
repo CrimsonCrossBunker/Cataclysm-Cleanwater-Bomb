@@ -1209,7 +1209,7 @@
     "autolearn": true,
     "components": [
       [ [ "bag_plastic_small", 1 ], [ "bag_plastic", 1 ] ],
-      [ [ "glue_strong", 5 ] ],
+      [ [ "glue_strong", 10 ] ],
       [ [ "soapy_water", 1 ] ],
       [
         [ "shredded_rubber", 1 ],
