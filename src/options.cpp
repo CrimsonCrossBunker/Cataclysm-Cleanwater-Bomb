@@ -2069,7 +2069,7 @@ void options_manager::add_options_general()
                                         to_translation( "Options regarding safe mode." ) ),
     [&]( const std::string & page_id ) {
         add( "SAFEMODEDEFAULTSTATE", page_id, to_translation( "Safe mode default state" ),
-             to_translation( "The default state of save mode when starting game." ),
+             to_translation( "The default state of safe mode when starting game." ),
              true
            );
 
@@ -2165,34 +2165,6 @@ void options_manager::add_options_general()
 
     add_empty_line();
 
-    add_option_group( "general", Group( "misc_general_opts", to_translation( "Misc Options" ),
-                                        to_translation( "Miscellaneous options." ) ),
-    [&]( const std::string & page_id ) {
-        add( "CIRCLEDIST", page_id, to_translation( "Circular distances" ),
-             to_translation( "If true, the game will calculate range in a realistic way: light sources will be circles, diagonal movement will cover more ground and take longer.  If false, everything is square: moving to the northwest corner of a building takes as long as moving to the north wall." ),
-             true
-           );
-
-        add( "DROP_EMPTY", page_id, to_translation( "Drop empty containers" ),
-             to_translation( "Set to drop empty containers after use.  No: Don't drop any.  - Watertight: All except watertight containers.  - All: Drop all containers." ),
-        { { "no", to_translation( "No" ) }, { "watertight", to_translation( "Watertight" ) }, { "all", to_translation( "All" ) } },
-        "no"
-           );
-
-        add( "DEATHCAM", page_id, to_translation( "DeathCam" ),
-             to_translation( "Always: Always start deathcam.  Ask: Query upon death.  Never: Never show deathcam." ),
-        { { "always", to_translation( "Always" ) }, { "ask", to_translation( "Ask" ) }, { "never", to_translation( "Never" ) } },
-        "ask"
-           );
-
-        add( "EVENT_SPAWNS", page_id, to_translation( "Special event spawns" ),
-             to_translation( "If not disabled, unique items and/or monsters can spawn during special events (Christmas, Halloween, etc.)" ),
-        { { "off", to_translation( "Disabled" ) }, { "items", to_translation( "Items" ) }, { "monsters", to_translation( "Monsters" ) }, { "both", to_translation( "Both" ) } },
-        "off" );
-    } );
-
-    add_empty_line();
-
     add_option_group( "general", Group( "soundpacks_opts", to_translation( "Soundpack options" ),
                                         to_translation( "Options regarding soundpack." ) ),
     [&]( const std::string & page_id ) {
@@ -2234,6 +2206,34 @@ void options_manager::add_options_general()
            );
 
         get_option( "AMBIENT_SOUND_VOLUME" ).setPrerequisite( "SOUND_ENABLED" );
+    } );
+
+    add_empty_line();
+
+    add_option_group( "general", Group( "misc_general_opts", to_translation( "Misc Options" ),
+                                        to_translation( "Miscellaneous options." ) ),
+    [&]( const std::string & page_id ) {
+        add( "CIRCLEDIST", page_id, to_translation( "Circular distances" ),
+             to_translation( "If true, the game will calculate range in a realistic way: light sources will be circles, diagonal movement will cover more ground and take longer.  If false, everything is square: moving to the northwest corner of a building takes as long as moving to the north wall." ),
+             true
+           );
+
+        add( "DROP_EMPTY", page_id, to_translation( "Drop empty containers" ),
+             to_translation( "Set to drop empty containers after use.  No: Don't drop any.  - Watertight: All except watertight containers.  - All: Drop all containers." ),
+        { { "no", to_translation( "No" ) }, { "watertight", to_translation( "Watertight" ) }, { "all", to_translation( "All" ) } },
+        "no"
+           );
+
+        add( "DEATHCAM", page_id, to_translation( "DeathCam" ),
+             to_translation( "Always: Always start deathcam.  Ask: Query upon death.  Never: Never show deathcam." ),
+        { { "always", to_translation( "Always" ) }, { "ask", to_translation( "Ask" ) }, { "never", to_translation( "Never" ) } },
+        "ask"
+           );
+
+        add( "EVENT_SPAWNS", page_id, to_translation( "Special event spawns" ),
+             to_translation( "If not disabled, unique items and/or monsters can spawn during special events (Christmas, Halloween, etc.)" ),
+        { { "off", to_translation( "Disabled" ) }, { "items", to_translation( "Items" ) }, { "monsters", to_translation( "Monsters" ) }, { "both", to_translation( "Both" ) } },
+        "off" );
     } );
 
     add_empty_line();
@@ -2934,6 +2934,12 @@ void options_manager::add_options_graphics()
     add_option_group( "graphics", Group( "ascii_opts", to_translation( "ASCII graphic options" ),
                                          to_translation( "Options regarding ASCII graphic." ) ),
     [&]( const std::string & page_id ) {
+        add( "ENABLE_ASCII_ART", page_id,
+             to_translation( "Enable ASCII art in item/monster descriptions" ),
+             to_translation( "If true, item and monster description will show a picture of the object in ASCII art when available." ),
+             true
+           );
+
         add( "ENABLE_ASCII_TITLE", page_id,
              to_translation( "Enable ASCII art on the title screen" ),
              to_translation( "If true, shows an ASCII graphic on the title screen.  If false, shows a text-only title screen." ),
@@ -2959,6 +2965,15 @@ void options_manager::add_options_graphics()
     add_option_group( "graphics", Group( "term_opts", to_translation( "Terminal display options" ),
                                          to_translation( "Options regarding terminal display." ) ),
     [&]( const std::string & page_id ) {
+#if defined(__ANDROID__)
+        add( "ANDROID_TERMINAL_SIZE", page_id, to_translation( "Terminal size" ),
+             to_translation( "Automatically match the terminal layout to the usable Android screen area.  Manual uses Terminal width and Terminal height instead." ),
+        {
+            { "auto", to_translation( "Automatic" ) },
+            { "manual", to_translation( "Manual" ) }
+        }, "auto"
+           );
+#endif
         add( "TERMINAL_X", page_id, to_translation( "Terminal width" ),
              to_translation( "Set the size of the terminal along the X axis." ),
              80, 960, 80, COPT_POSIX_CURSES_HIDE
@@ -2968,6 +2983,10 @@ void options_manager::add_options_graphics()
              to_translation( "Set the size of the terminal along the Y axis." ),
              24, 270, 24, COPT_POSIX_CURSES_HIDE
            );
+#if defined(__ANDROID__)
+        get_option( "TERMINAL_X" ).setPrerequisite( "ANDROID_TERMINAL_SIZE", "manual" );
+        get_option( "TERMINAL_Y" ).setPrerequisite( "ANDROID_TERMINAL_SIZE", "manual" );
+#endif
     } );
 
     add_empty_line();
@@ -3038,14 +3057,6 @@ void options_manager::add_options_graphics()
            );
     } );
 #endif // TILES
-
-    add_empty_line();
-
-    add( "ENABLE_ASCII_ART", "graphics",
-         to_translation( "Enable ASCII art in item and monster descriptions" ),
-         to_translation( "If true, item and monster description will show a picture of the object in ASCII art when available." ),
-         true, COPT_NO_HIDE
-       );
 
     add_empty_line();
 
@@ -3523,19 +3534,6 @@ void options_manager::add_options_world_default()
 
     add_empty_line();
 
-    // string_input (free text) rather than string_select: total-conversion
-    // mods set this via EXTERNAL_OPTION (e.g. Aftershock -> "default_aftershock"),
-    // and a string_select silently rejects any value not in its candidate list.
-    // The candidate list cannot be pre-populated here because region data loads
-    // after options, so a free-text field is the only form that accepts arbitrary
-    // (mod-provided or player-typed) region ids while staying visible in worldgen.
-    add( "DEFAULT_REGION", "world_default", to_translation( "Default region type" ),
-         to_translation( "(WIP feature) Determines terrain, shops, plants, and more.  Set by total-conversion mods; leave as \"default\" unless you know the id of an installed region." ),
-         "default", 60
-       );
-
-    add_empty_line();
-
     add_option_group( "world_default", Group( "spawn_time_opts", to_translation( "World time options" ),
                       to_translation( "Options regarding the passage of time in the world." ) ),
     [&]( const std::string & page_id ) {
@@ -3565,13 +3563,43 @@ void options_manager::add_options_world_default()
 
     add_empty_line();
 
+    add_option_group( "world_default", Group( "crop_opts", to_translation( "Crop options" ),
+                      to_translation( "Options regarding crop growth, harvest yield and water consumption." ) ),
+    [&]( const std::string & page_id ) {
+        add( "CROP_GROWTH_SPEED", page_id, to_translation( "Crop growth speed" ),
+             to_translation( "Multiplier for crop growth speed.  Higher values make crops grow faster." ),
+             0.1f, 10.0f, 1.0f, 0.1f, COPT_NO_HIDE, "%.1f"
+           );
+
+        add( "CROP_HARVEST_MULTIPLIER", page_id, to_translation( "Crop harvest yield" ),
+             to_translation( "Multiplier for the number of crops harvested from a plant." ),
+             0.1f, 10.0f, 1.0f, 0.1f, COPT_NO_HIDE, "%.1f"
+           );
+
+        add( "CROP_WATER_CONSUMPTION", page_id, to_translation( "Crop water consumption" ),
+             to_translation( "Multiplier for daily water consumption of irrigated crops.  "
+                             "Higher values make crops thirstier." ),
+             0.1f, 10.0f, 1.0f, 0.1f, COPT_NO_HIDE, "%.1f"
+           );
+
+        add( "CROP_OVERGROWN_ENABLED", page_id,
+             to_translation( "Crops can wither from overgrowth" ),
+             to_translation( "If true, mature crops will eventually become overgrown and "
+                             "wither if not harvested." ),
+             true
+           );
+    } );
+
+    add_empty_line();
+
     add_option_group( "world_default", Group( "misc_worlddef_opts", to_translation( "Misc options" ),
                       to_translation( "Miscellaneous options." ) ),
     [&]( const std::string & page_id ) {
-        add( "WANDER_SPAWNS", page_id, to_translation( "Wandering hordes" ),
-             to_translation( "If true, emulates zombie hordes.  Zombies can group together into hordes, which can wander around cities and will sometimes move towards noise.  Note: the current implementation does not properly respect obstacles, so hordes can appear to walk through walls under some circumstances.  Must reset world directory after changing for it to take effect." ),
-             false
-           );
+        // TODO: find the code keypoint and implement this option.
+        // add( "WANDER_SPAWNS", page_id, to_translation( "Wandering hordes" ),
+        //      to_translation( "If true, emulates zombie hordes.  Zombies can group together into hordes, which can wander around cities and will sometimes move towards noise.  Note: the current implementation does not properly respect obstacles, so hordes can appear to walk through walls under some circumstances.  Must reset world directory after changing for it to take effect." ),
+        //      false
+        //    );
 
         add( "FACTION_TERRITORY_CHECKS", page_id,
              to_translation( "Faction territory permission checks" ),
@@ -3599,7 +3627,7 @@ void options_manager::add_options_world_default()
     add( "CHARACTER_POINT_POOLS", "world_default", to_translation( "Character point pools" ),
          to_translation( "Allowed point pools for character generation." ),
     { { "any", to_translation( "Any" ) }, { "multi_pool", to_translation( "Legacy Multipool" ) }, { "story_teller", to_translation( "Survivor" ) } },
-    "story_teller"
+    "any"
        );
 
     add_empty_line();
@@ -3617,32 +3645,16 @@ void options_manager::add_options_world_default()
 
     add_empty_line();
 
-    add_option_group( "world_default", Group( "crop_opts", to_translation( "Crop options" ),
-                      to_translation( "Options regarding crop growth, harvest yield and water consumption." ) ),
-    [&]( const std::string & page_id ) {
-        add( "CROP_GROWTH_SPEED", page_id, to_translation( "Crop growth speed" ),
-             to_translation( "Multiplier for crop growth speed.  Higher values make crops grow faster." ),
-             0.1f, 10.0f, 1.0f, 0.1f, COPT_NO_HIDE, "%.1f"
-           );
-
-        add( "CROP_HARVEST_MULTIPLIER", page_id, to_translation( "Crop harvest yield" ),
-             to_translation( "Multiplier for the number of crops harvested from a plant." ),
-             0.1f, 10.0f, 1.0f, 0.1f, COPT_NO_HIDE, "%.1f"
-           );
-
-        add( "CROP_WATER_CONSUMPTION", page_id, to_translation( "Crop water consumption" ),
-             to_translation( "Multiplier for daily water consumption of irrigated crops.  "
-                             "Higher values make crops thirstier." ),
-             0.1f, 10.0f, 1.0f, 0.1f, COPT_NO_HIDE, "%.1f"
-           );
-
-        add( "CROP_OVERGROWN_ENABLED", page_id,
-             to_translation( "Crops can wither from overgrowth" ),
-             to_translation( "If true, mature crops will eventually become overgrown and "
-                             "wither if not harvested." ),
-             true
-           );
-    } );
+    // string_input (free text) rather than string_select: total-conversion
+    // mods set this via EXTERNAL_OPTION (e.g. Aftershock -> "default_aftershock"),
+    // and a string_select silently rejects any value not in its candidate list.
+    // The candidate list cannot be pre-populated here because region data loads
+    // after options, so a free-text field is the only form that accepts arbitrary
+    // (mod-provided or player-typed) region ids while staying visible in worldgen.
+    add( "DEFAULT_REGION", "world_default", to_translation( "Default region type" ),
+         to_translation( "(WIP feature) Determines terrain, shops, plants, and more.  Set by total-conversion mods; leave as \"default\" unless you know the id of an installed region." ),
+         "default", 60
+       );
 }
 
 void options_manager::add_options_debug()
@@ -3749,14 +3761,6 @@ void options_manager::add_options_android()
         add( "ANDROID_RENDER_SAFE_AREA", page_id, to_translation( "Confine display to safe area" ),
              to_translation( "If true, keep the game within the screen's safe area so it does not draw under the camera cutout or other unsafe edges.  If false, the game fills the entire screen.  This does not show or hide Android system bars." ),
              true
-           );
-
-        add( "ANDROID_TERMINAL_SIZE", page_id, to_translation( "Terminal size" ),
-             to_translation( "Automatically match the terminal layout to the usable Android screen area.  Manual uses Terminal width and Terminal height instead." ),
-        {
-            { "auto", to_translation( "Automatic" ) },
-            { "manual", to_translation( "Manual" ) }
-        }, "auto"
            );
     } );
 
