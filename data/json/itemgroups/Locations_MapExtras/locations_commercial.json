@@ -1438,7 +1438,8 @@
       [ "wrench_large", 20 ],
       [ "socket_wrench_set", 40 ],
       [ "gloves_work", 30 ],
-      [ "glasses_safety", 20 ]
+      [ "glasses_safety", 20 ],
+      [ "tire_repair_kit", 60 ]
     ]
   },
   {
