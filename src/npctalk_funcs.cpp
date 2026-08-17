@@ -675,15 +675,35 @@ static double vehicle_part_install_multiplier( const npc &mechanic )
     return value && value->is_dbl() && value->dbl() > 0.0 ? value->dbl() : 1.0;
 }
 
-static int vehicle_part_install_labor_cost( const vpart_info &part, const double multiplier )
+static double vehicle_part_service_skill_factor( const std::map<skill_id, int> &skills )
 {
-    const int pristine_value = units::to_cent( part.base_item->price_post );
-    if( pristine_value <= 0 || multiplier <= 0.0 ) {
+    int highest_skill = 0;
+    for( const std::pair<const skill_id, int> &skill_requirement : skills ) {
+        highest_skill = std::max( highest_skill, skill_requirement.second );
+    }
+    const int extra_skill_count = std::max( 0, static_cast<int>( skills.size() ) - 1 );
+    return 1.0 + 0.10 * highest_skill + 0.05 * extra_skill_count;
+}
+
+static int ceil_cents_to_dollar( const double cents )
+{
+    if( cents <= 0.0 ) {
         return 0;
     }
-    const double calculated = std::ceil( pristine_value * multiplier );
-    return std::max( 1, static_cast<int>( std::min<double>(
-            calculated, std::numeric_limits<int>::max() ) ) );
+    const double capped = std::min<double>( cents, std::numeric_limits<int>::max() - 99 );
+    const int rounded_cents = static_cast<int>( std::ceil( capped ) );
+    return ( ( rounded_cents + 99 ) / 100 ) * 100;
+}
+
+static int vehicle_part_service_labor_cost( const std::map<skill_id, int> &skills,
+        const time_duration &service_time, const double multiplier )
+{
+    if( multiplier <= 0.0 ) {
+        return 0;
+    }
+    const double base_labor = std::max( 200.0, to_hours<double>( service_time ) * 1200.0 );
+    const double calculated = base_labor * vehicle_part_service_skill_factor( skills ) * multiplier;
+    return ceil_cents_to_dollar( calculated );
 }
 
 struct vehicle_part_install_candidate {
@@ -744,8 +764,9 @@ static std::optional<vehicle_part_install_candidate> choose_vehicle_part_source(
     const time_duration &install_time, const trade_ui::item_locations_t &trade_items )
 {
     std::vector<vehicle_part_install_candidate> candidates;
-    const int labor_cost = vehicle_part_install_labor_cost(
-                               part, vehicle_part_install_multiplier( mechanic ) );
+    const int labor_cost = vehicle_part_service_labor_cost(
+                               part.install_skills, install_time,
+                               vehicle_part_install_multiplier( mechanic ) );
     const auto append_candidates = [&]( const std::vector<item_location> &locations,
     const bool supplied_by_mechanic ) {
         for( const item_location &location : locations ) {
@@ -917,9 +938,10 @@ void talk_function::select_vehicle_part_service( npc &p )
         }
         const vehicle_part &part = veh->part( selection->part_index );
         const vpart_info &part_info = part.info();
-        const int cost = vehicle_part_install_labor_cost( part_info,
-                         vehicle_part_install_multiplier( p ) );
         const time_duration removal_time = std::max( 1_seconds, part_info.removal_time( p ) );
+        const int cost = vehicle_part_service_labor_cost(
+                             part_info.removal_skills, removal_time,
+                             vehicle_part_install_multiplier( p ) );
         const bool disable_flyable = veh->would_removal_prevent_flyable( part, player_character );
         if( disable_flyable &&
             !query_yn( _( "Removing this part will make the vehicle no longer flightworthy.  Continue?" ) ) ) {

@@ -397,11 +397,8 @@ bool avatar_action::move( avatar &you, map &m, const tripoint_rel_ms &d )
                                           _( "You're too pacified to strike anything…" ) ) ) {
                 return false;
             }
-            if( g->safe_mode == SAFE_MODE_ON && critter.attitude_to( you ) == Creature::Attitude::NEUTRAL ) {
-                const std::string msg_safe_mode = press_x( ACTION_TOGGLE_SAFEMODE );
-                add_msg( m_warning,
-                         _( "Not attacking the %1$s -- safe mode is on!  (%2$s to turn it off)" ), critter.name(),
-                         msg_safe_mode );
+            if( critter.attitude_to( you ) != Creature::Attitude::HOSTILE &&
+                !you.query_yn( _( "Really attack the non-hostile %s?" ), critter.name() ) ) {
                 return false;
             }
             const int hp_before = critter.get_hp();
