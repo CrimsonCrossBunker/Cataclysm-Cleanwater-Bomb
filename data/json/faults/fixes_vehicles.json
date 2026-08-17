@@ -107,7 +107,7 @@
     "requirements": [
       {
         "qualities": [ { "id": "JACK", "level": 3 }, { "id": "WRENCH", "level": 2 }, { "id": "PRESSURIZATION", "level": 1 } ],
-        "components": [ [ [ "tire_repair_kit", 1 ] ], [ [ "soapy_water", 1 ] ] ]
+        "components": [ [ [ "tire_repair_kit", 1 ] ] ]
       }
     ]
   }

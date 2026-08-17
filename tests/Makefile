@@ -88,7 +88,7 @@ check-single: $(TEST_TARGET)
 	cd .. && tests/$(TEST_TARGET) --min-duration 0.2 --rng-seed time --order lex
 
 clean:
-	rm -rf *obj *objwin
+	rm -rf *obj *objwin *obj-lua
 	rm -f *cata_test
 
 #Unconditionally create object directory on invocation.

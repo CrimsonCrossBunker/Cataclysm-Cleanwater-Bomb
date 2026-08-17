@@ -304,10 +304,10 @@
     "copy-from": "spare_part",
     "type": "ITEM",
     "name": { "str": "tire repair kit" },
-    "description": "A set of tools, multiple cords, and a glue, all designed to save your punctured tire and make it back on track.  It supposed to last only for a day or two, and change of the tire is strongly advised by the manufacturer.",
+    "description": "A set of tools: cords/patches with strong glue, and some soapy water for locating puncture, all designed to save your punctured tire and make it back on track.  It supposed to last only for a day or two, and change of the tire is strongly advised by the manufacturer.",
     "material": [ "plastic" ],
-    "weight": "100 g",
-    "volume": "150 ml",
+    "weight": "180 g",
+    "volume": "200 ml",
     "price": "23 USD",
     "price_postapoc": "5 USD"
   }

@@ -1198,6 +1198,33 @@
   },
   {
     "type": "recipe",
+    "activity_level": "NO_EXERCISE",
+    "result": "tire_repair_kit",
+    "category": "CC_OTHER",
+    "subcategory": "CSC_OTHER_TOOLS",
+    "skill_used": "mechanics",
+    "difficulty": 1,
+    "time": "1 m",
+    "reversible": true,
+    "autolearn": true,
+    "components": [
+      [ [ "bag_plastic_small", 1 ], [ "bag_plastic", 1 ] ],
+      [ [ "glue_strong", 5 ] ],
+      [ [ "soapy_water", 1 ] ],
+      [
+        [ "shredded_rubber", 1 ],
+        [ "string_6", 4 ],
+        [ "cotton_patchwork", 1 ],
+        [ "canvas_patch", 1 ],
+        [ "lycra_patch", 1 ],
+        [ "denim_patch", 1 ],
+        [ "nylon", 1 ],
+        [ "nomex", 1 ]
+      ]
+    ]
+  },
+  {
+    "type": "recipe",
     "activity_level": "LIGHT_EXERCISE",
     "result": "pipe_cleaner",
     "category": "CC_OTHER",
