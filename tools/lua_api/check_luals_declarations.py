@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import re
 from collections import defaultdict
 from pathlib import Path
@@ -12,6 +13,7 @@ from pathlib import Path
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DECLARATIONS = Path("data/lua/types/ccb_api_v5.d.lua")
 PLATFORM_DECLARATIONS = Path("data/lua/types/ccb_platform_v1.d.lua")
+MIGRATION_TOOL = REPOSITORY_ROOT / "tools/migrate_lua_first.py"
 
 TABLE_CLASSES = {
     "achievements": "CcbAchievementsApi",
@@ -137,6 +139,9 @@ NEW_USERTYPE = re.compile(
 QUOTED_MEMBER = re.compile(r'"([A-Za-z_][A-Za-z0-9_]*)"\s*,')
 PLATFORM_PROPERTY = re.compile(
     r'"([A-Za-z_][A-Za-z0-9_]*)"\s*,\s*sol::property\s*\('
+)
+MIGRATION_CONTENT_METHOD = re.compile(
+    r"\bcontent\.([A-Za-z_][A-Za-z0-9_]*)"
 )
 COORDINATE_KIND = re.compile(
     r'\{\s*"([a-z]+_[a-z]+)"\s*,\s*coords::origin::'
@@ -383,6 +388,139 @@ def platform_source_methods() -> dict[str, set[str]]:
         if table == "game":
             result["services"].add(method)
     return result
+
+
+def migration_content_methods(path: Path = MIGRATION_TOOL) -> set[str]:
+    """Return statically named content methods emitted by the migrator."""
+    contents = path.read_text(encoding="utf-8")
+    tree = ast.parse(contents, filename=str(path))
+    result = set(MIGRATION_CONTENT_METHOD.findall(contents))
+
+    def dynamic_variables(node: ast.AST) -> set[str]:
+        variables: set[str] = set()
+        for joined in (
+            child for child in ast.walk(node)
+            if isinstance(child, ast.JoinedStr)
+        ):
+            values = joined.values
+            for index, value in enumerate(values[1:], start=1):
+                previous = values[index - 1]
+                if (
+                    isinstance(previous, ast.Constant) and
+                    isinstance(previous.value, str) and
+                    previous.value.endswith("content.") and
+                    isinstance(value, ast.FormattedValue) and
+                    isinstance(value.value, ast.Name)
+                ):
+                    variables.add(value.value.id)
+        return variables
+
+    def string_values(node: ast.AST) -> set[str] | None:
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return {node.value}
+        if isinstance(node, ast.IfExp):
+            left = string_values(node.body)
+            right = string_values(node.orelse)
+            return None if left is None or right is None else left | right
+        if (
+            isinstance(node, ast.Subscript) and
+            isinstance(node.value, ast.Dict)
+        ):
+            values: set[str] = set()
+            for entry in node.value.values:
+                resolved = string_values(entry)
+                if resolved is None:
+                    return None
+                values.update(resolved)
+            return values
+        return None
+
+    function_nodes = [
+        node for node in tree.body if isinstance(node, ast.FunctionDef)
+    ]
+    covered_dynamic_nodes: set[int] = set()
+    for function in function_nodes:
+        variables = dynamic_variables(function)
+        if not variables:
+            continue
+        for node in ast.walk(function):
+            if isinstance(node, ast.JoinedStr) and dynamic_variables(node):
+                covered_dynamic_nodes.add(id(node))
+        positional = [argument.arg for argument in function.args.args]
+        keyword_only = [
+            argument.arg for argument in function.args.kwonlyargs
+        ]
+        parameters = set(positional) | set(keyword_only)
+        for variable in variables:
+            resolved: set[str] = set()
+            bounded = True
+            if variable in parameters:
+                for call in (
+                    node for node in ast.walk(tree)
+                    if isinstance(node, ast.Call) and
+                    isinstance(node.func, ast.Name) and
+                    node.func.id == function.name
+                ):
+                    values: set[str] | None = None
+                    if variable in positional:
+                        position = positional.index(variable)
+                        if position < len(call.args):
+                            values = string_values(call.args[position])
+                    for keyword in call.keywords:
+                        if keyword.arg == variable:
+                            values = string_values(keyword.value)
+                    if values is None:
+                        bounded = False
+                    else:
+                        resolved.update(values)
+            else:
+                assignments = []
+                for node in ast.walk(function):
+                    if not isinstance(node, ast.Assign):
+                        continue
+                    if any(
+                        isinstance(target, ast.Name) and
+                        target.id == variable
+                        for target in node.targets
+                    ):
+                        assignments.append(node.value)
+                for assignment in assignments:
+                    values = string_values(assignment)
+                    if values is None:
+                        bounded = False
+                    else:
+                        resolved.update(values)
+            if not bounded or not resolved:
+                raise RuntimeError(
+                    "Lua-first migrator emits a dynamic content method "
+                    f"through unbounded variable {function.name}.{variable}"
+                )
+            result.update(resolved)
+
+    all_dynamic_nodes = {
+        id(node)
+        for node in ast.walk(tree)
+        if isinstance(node, ast.JoinedStr) and dynamic_variables(node)
+    }
+    if all_dynamic_nodes - covered_dynamic_nodes:
+        raise RuntimeError(
+            "Lua-first migrator emits a dynamic content method outside a "
+            "statically bounded function"
+        )
+    return result
+
+
+def validate_migration_content_methods(
+    registered: set[str], path: Path = MIGRATION_TOOL
+) -> set[str]:
+    referenced = migration_content_methods(path)
+    missing = sorted(referenced - registered)
+    if missing:
+        raise RuntimeError(
+            "Lua-first migrator references unregistered content methods: "
+            f"{missing}"
+        )
+    return referenced
 
 
 def source_game_tables() -> dict[str, str]:
@@ -852,6 +990,9 @@ def check_platform(path: Path = PLATFORM_DECLARATIONS) -> dict[str, int]:
                 f"{PLATFORM_TABLE_CLASSES[table]}: "
                 f"declared={sorted(declared)}, native={sorted(native_methods)}"
             )
+    migration_methods = validate_migration_content_methods(
+        methods["content"]
+    )
     shared_contents = (
         REPOSITORY_ROOT / DEFAULT_DECLARATIONS
     ).read_text(encoding="utf-8")
@@ -863,6 +1004,7 @@ def check_platform(path: Path = PLATFORM_DECLARATIONS) -> dict[str, int]:
         "usertypes": len(usertypes),
         "properties": len(properties),
         "methods": sum(len(value) for value in methods.values()),
+        "migration_content_methods": len(migration_methods),
         "usertype_members": sum(
             len(value) for value in native_members.values()
         ),

@@ -2508,6 +2508,821 @@ local MovementModeDefinition = {}
 ---@return MovementModeDefinition self
 function MovementModeDefinition:messages(steed, options) end
 
+---@class RegionSettingsRavineDefinitionOptions
+---@field id string Stable region settings ravine id.
+---@field num_ravines? integer Number of ravines; defaults to 0.
+---@field ravine_range? integer Ravine range; defaults to 45.
+---@field ravine_width? integer Ravine width; defaults to 1.
+---@field ravine_depth? integer Ravine depth; defaults to -3.
+
+---@class RegionSettingsRavineDefinition
+---@field id string
+local RegionSettingsRavineDefinition = {}
+
+---@param count integer
+---@return RegionSettingsRavineDefinition self
+function RegionSettingsRavineDefinition:num_ravines(count) end
+
+---@param range integer
+---@return RegionSettingsRavineDefinition self
+function RegionSettingsRavineDefinition:ravine_range(range) end
+
+---@param width integer
+---@return RegionSettingsRavineDefinition self
+function RegionSettingsRavineDefinition:ravine_width(width) end
+
+---@param depth integer
+---@return RegionSettingsRavineDefinition self
+function RegionSettingsRavineDefinition:ravine_depth(depth) end
+
+---@class RegionSettingsLakeAliasOptions
+---@field om_terrain string Overmap terrain id or prefix.
+---@field alias string Alias overmap terrain id.
+---@field om_terrain_match_type? 'exact'|'type'|'subtype'|'prefix'|'contains' Match type; defaults to exact. Legacy uppercase spellings are also accepted.
+
+---@class RegionSettingsLakeDefinitionOptions
+---@field id string Stable region settings lake id.
+---@field noise_threshold_lake? number Lake noise threshold; defaults to 0.25.
+---@field lake_size_min? integer Minimum lake size; defaults to 20.
+---@field lake_depth? integer Lake depth; defaults to -5.
+---@field invert_lakes? boolean Whether to invert lakes; defaults to false.
+---@field surface? string Surface terrain id; defaults to "lake_surface".
+---@field surface_ter? string Surface terrain id; alias for surface.
+---@field shore? string Shore terrain id; defaults to "lake_shore".
+---@field shore_ter? string Shore terrain id; alias for shore.
+---@field interior? string Interior terrain id; defaults to "lake_water_cube".
+---@field interior_ter? string Interior terrain id; alias for interior.
+---@field bed? string Bed terrain id; defaults to "lake_bed".
+---@field bed_ter? string Bed terrain id; alias for bed.
+---@field shore_extendable_overmap_terrain? string[] Overmap terrains allowed for shore extension.
+---@field shore_extendable_overmap_terrain_aliases? RegionSettingsLakeAliasOptions[] Overmap terrain aliases.
+
+---@class RegionSettingsLakeDefinition
+---@field id string
+local RegionSettingsLakeDefinition = {}
+
+---@param threshold number
+---@return RegionSettingsLakeDefinition self
+function RegionSettingsLakeDefinition:noise_threshold_lake(threshold) end
+
+---@param size integer
+---@return RegionSettingsLakeDefinition self
+function RegionSettingsLakeDefinition:lake_size_min(size) end
+
+---@param depth integer
+---@return RegionSettingsLakeDefinition self
+function RegionSettingsLakeDefinition:lake_depth(depth) end
+
+---@param invert boolean
+---@return RegionSettingsLakeDefinition self
+function RegionSettingsLakeDefinition:invert_lakes(invert) end
+
+---@param terrain string
+---@return RegionSettingsLakeDefinition self
+function RegionSettingsLakeDefinition:surface_ter(terrain) end
+
+---@param terrain string
+---@return RegionSettingsLakeDefinition self
+function RegionSettingsLakeDefinition:shore_ter(terrain) end
+
+---@param terrain string
+---@return RegionSettingsLakeDefinition self
+function RegionSettingsLakeDefinition:interior_ter(terrain) end
+
+---@param terrain string
+---@return RegionSettingsLakeDefinition self
+function RegionSettingsLakeDefinition:bed_ter(terrain) end
+
+---@param terrain string
+---@return RegionSettingsLakeDefinition self
+function RegionSettingsLakeDefinition:shore_extendable_terrain(terrain) end
+
+---@param options_or_terrain RegionSettingsLakeAliasOptions|string Alias options, or the source overmap terrain for the positional form.
+---@param alias? string Required alias terrain when using the positional form.
+---@param match_type? 'exact'|'type'|'subtype'|'prefix'|'contains' Optional positional match type; legacy uppercase spellings are accepted.
+---@return RegionSettingsLakeDefinition self
+function RegionSettingsLakeDefinition:shore_extendable_alias(options_or_terrain, alias, match_type) end
+
+---@class RegionSettingsOceanDefinitionOptions
+---@field id string Stable region settings ocean id.
+---@field noise_threshold_ocean? number Ocean noise threshold; defaults to 0.25.
+---@field ocean_size_min? integer Minimum ocean size; defaults to 100.
+---@field ocean_depth? integer Ocean depth; defaults to -9.
+---@field ocean_start_north? integer Distance to north edge; optional.
+---@field ocean_start_east? integer Distance to east edge; optional.
+---@field ocean_start_west? integer Distance to west edge; optional.
+---@field ocean_start_south? integer Distance to south edge; optional.
+---@field sandy_beach_width? integer Sandy beach width; defaults to 2.
+
+---@class RegionSettingsOceanDefinition
+---@field id string
+local RegionSettingsOceanDefinition = {}
+
+---@param threshold number
+---@return RegionSettingsOceanDefinition self
+function RegionSettingsOceanDefinition:noise_threshold_ocean(threshold) end
+
+---@param size integer
+---@return RegionSettingsOceanDefinition self
+function RegionSettingsOceanDefinition:ocean_size_min(size) end
+
+---@param depth integer
+---@return RegionSettingsOceanDefinition self
+function RegionSettingsOceanDefinition:ocean_depth(depth) end
+
+---@param distance integer|nil Pass nil to clear the optional distance.
+---@return RegionSettingsOceanDefinition self
+function RegionSettingsOceanDefinition:ocean_start_north(distance) end
+
+---@param distance integer|nil Pass nil to clear the optional distance.
+---@return RegionSettingsOceanDefinition self
+function RegionSettingsOceanDefinition:ocean_start_east(distance) end
+
+---@param distance integer|nil Pass nil to clear the optional distance.
+---@return RegionSettingsOceanDefinition self
+function RegionSettingsOceanDefinition:ocean_start_west(distance) end
+
+---@param distance integer|nil Pass nil to clear the optional distance.
+---@return RegionSettingsOceanDefinition self
+function RegionSettingsOceanDefinition:ocean_start_south(distance) end
+
+---@param width integer
+---@return RegionSettingsOceanDefinition self
+function RegionSettingsOceanDefinition:sandy_beach_width(width) end
+
+---@class RegionSettingsForestDefinitionOptions
+---@field id string Stable region settings forest id.
+---@field noise_threshold_forest? number Forest noise threshold; defaults to 0.25.
+---@field noise_threshold_forest_thick? number Thick forest noise threshold; defaults to 0.3.
+---@field noise_threshold_swamp_adjacent_water? number Swamp adjacent water noise threshold; defaults to 0.3.
+---@field noise_threshold_swamp_isolated? number Isolated swamp noise threshold; defaults to 0.6.
+---@field river_floodplain_buffer_distance_min? integer Minimum floodplain buffer distance; defaults to 3.
+---@field river_floodplain_buffer_distance_max? integer Maximum floodplain buffer distance; defaults to 15.
+---@field forest_threshold_limit? number Forest threshold limit (max_forest); defaults to 0.395.
+---@field max_forest? number Forest threshold limit; alias for forest_threshold_limit.
+---@field forest_threshold_increase? number[] Forest threshold increase array of 4 floats; defaults to {0, 0, 0, 0}.
+
+---@class RegionSettingsForestDefinition
+---@field id string
+local RegionSettingsForestDefinition = {}
+
+---@param threshold number
+---@return RegionSettingsForestDefinition self
+function RegionSettingsForestDefinition:noise_threshold_forest(threshold) end
+
+---@param threshold number
+---@return RegionSettingsForestDefinition self
+function RegionSettingsForestDefinition:noise_threshold_forest_thick(threshold) end
+
+---@param threshold number
+---@return RegionSettingsForestDefinition self
+function RegionSettingsForestDefinition:noise_threshold_swamp_adjacent_water(threshold) end
+
+---@param threshold number
+---@return RegionSettingsForestDefinition self
+function RegionSettingsForestDefinition:noise_threshold_swamp_isolated(threshold) end
+
+---@param distance integer
+---@return RegionSettingsForestDefinition self
+function RegionSettingsForestDefinition:river_floodplain_buffer_distance_min(distance) end
+
+---@param distance integer
+---@return RegionSettingsForestDefinition self
+function RegionSettingsForestDefinition:river_floodplain_buffer_distance_max(distance) end
+
+---@param limit number
+---@return RegionSettingsForestDefinition self
+function RegionSettingsForestDefinition:forest_threshold_limit(limit) end
+
+---@param increase number[]
+---@return RegionSettingsForestDefinition self
+function RegionSettingsForestDefinition:forest_threshold_increase(increase) end
+
+---@class RegionSettingsRiverDefinitionOptions
+---@field id string Stable region settings river id.
+---@field river_scale? integer River scale; defaults to 1.
+---@field river_frequency? number River frequency; defaults to 1.5.
+---@field river_branch_chance? number River branch chance; defaults to 64.0.
+---@field river_branch_remerge_chance? number River branch remerge chance; defaults to 4.0.
+---@field river_branch_scale_decrease? number River branch scale decrease; defaults to 1.0.
+
+---@class RegionSettingsRiverDefinition
+---@field id string
+local RegionSettingsRiverDefinition = {}
+
+---@param scale integer
+---@return RegionSettingsRiverDefinition self
+function RegionSettingsRiverDefinition:river_scale(scale) end
+
+---@param frequency number
+---@return RegionSettingsRiverDefinition self
+function RegionSettingsRiverDefinition:river_frequency(frequency) end
+
+---@param chance number
+---@return RegionSettingsRiverDefinition self
+function RegionSettingsRiverDefinition:river_branch_chance(chance) end
+
+---@param chance number
+---@return RegionSettingsRiverDefinition self
+function RegionSettingsRiverDefinition:river_branch_remerge_chance(chance) end
+
+---@param decrease number
+---@return RegionSettingsRiverDefinition self
+function RegionSettingsRiverDefinition:river_branch_scale_decrease(decrease) end
+
+---@class RegionSettingsForestMapgenDefinitionOptions
+---@field id string Stable region settings forest mapgen id.
+---@field biomes? string[] Forest biome mapgen ids; defaults to {}.
+
+---@class RegionSettingsForestMapgenDefinition
+---@field id string
+local RegionSettingsForestMapgenDefinition = {}
+
+---@param biome_id string
+---@return RegionSettingsForestMapgenDefinition self
+function RegionSettingsForestMapgenDefinition:biome(biome_id) end
+
+---@param biomes string[]
+---@return RegionSettingsForestMapgenDefinition self
+function RegionSettingsForestMapgenDefinition:biomes(biomes) end
+
+---@class RegionSettingsMapExtrasDefinitionOptions
+---@field id string Stable region settings map extras id.
+---@field extras? string[] Map extra collection ids; defaults to {}.
+
+---@class RegionSettingsMapExtrasDefinition
+---@field id string
+local RegionSettingsMapExtrasDefinition = {}
+
+---@param extra_id string
+---@return RegionSettingsMapExtrasDefinition self
+function RegionSettingsMapExtrasDefinition:extra(extra_id) end
+
+---@param extras string[]
+---@return RegionSettingsMapExtrasDefinition self
+function RegionSettingsMapExtrasDefinition:extras(extras) end
+
+---@class RegionSettingsTerrainFurnitureDefinitionOptions
+---@field id string Stable region settings terrain furniture id.
+---@field ter_furn? string[] Region terrain furniture ids; defaults to {}.
+
+---@class RegionSettingsTerrainFurnitureDefinition
+---@field id string
+local RegionSettingsTerrainFurnitureDefinition = {}
+
+---@param tf_id string
+---@return RegionSettingsTerrainFurnitureDefinition self
+function RegionSettingsTerrainFurnitureDefinition:terrain_furniture(tf_id) end
+
+---@param ter_furn string[]
+---@return RegionSettingsTerrainFurnitureDefinition self
+function RegionSettingsTerrainFurnitureDefinition:ter_furn(ter_furn) end
+
+---@alias PlatformWeightedEntry string|[string, integer]
+
+---@class RegionSettingsForestTrailDefinitionOptions
+---@field id string Stable region settings forest trail id.
+---@field chance? integer Forest trail chance; defaults to 1.
+---@field border_point_chance? integer Border point chance; defaults to 2.
+---@field minimum_forest_size? integer Minimum forest size; defaults to 50.
+---@field random_point_min? integer Random point min; defaults to 4.
+---@field random_point_max? integer Random point max; defaults to 50.
+---@field random_point_size_scalar? integer Random point size scalar; defaults to 100.
+---@field trailhead_chance? integer Trailhead chance; defaults to 1.
+---@field trailhead_road_distance? integer Trailhead road distance; defaults to 6.
+---@field trailheads? PlatformWeightedEntry[] Trailheads; duplicate ids replace the prior weight.
+
+---@class RegionSettingsForestTrailDefinition
+---@field id string
+local RegionSettingsForestTrailDefinition = {}
+
+---@param value integer
+---@return RegionSettingsForestTrailDefinition self
+function RegionSettingsForestTrailDefinition:chance(value) end
+
+---@param value integer
+---@return RegionSettingsForestTrailDefinition self
+function RegionSettingsForestTrailDefinition:border_point_chance(value) end
+
+---@param value integer
+---@return RegionSettingsForestTrailDefinition self
+function RegionSettingsForestTrailDefinition:minimum_forest_size(value) end
+
+---@param value integer
+---@return RegionSettingsForestTrailDefinition self
+function RegionSettingsForestTrailDefinition:random_point_min(value) end
+
+---@param value integer
+---@return RegionSettingsForestTrailDefinition self
+function RegionSettingsForestTrailDefinition:random_point_max(value) end
+
+---@param value integer
+---@return RegionSettingsForestTrailDefinition self
+function RegionSettingsForestTrailDefinition:random_point_size_scalar(value) end
+
+---@param value integer
+---@return RegionSettingsForestTrailDefinition self
+function RegionSettingsForestTrailDefinition:trailhead_chance(value) end
+
+---@param value integer
+---@return RegionSettingsForestTrailDefinition self
+function RegionSettingsForestTrailDefinition:trailhead_road_distance(value) end
+
+---@param special_id string Overmap special id.
+---@param weight integer Positive weight.
+---@return RegionSettingsForestTrailDefinition self
+function RegionSettingsForestTrailDefinition:trailhead(special_id, weight) end
+
+---@param special_id string Overmap special id.
+---@param weight integer Positive weight.
+---@return RegionSettingsForestTrailDefinition self
+function RegionSettingsForestTrailDefinition:add_trailhead(special_id, weight) end
+
+---@class RegionSettingsHighwayDefinitionOptions
+---@field id string Stable region settings highway id.
+---@field width_of_segments? integer Width of segments; defaults to 2.
+---@field straightness_chance? number Straightness chance; defaults to 0.6.
+---@field reserved_terrain_id? string Reserved terrain id.
+---@field reserved_terrain_water_id? string Reserved terrain water id.
+---@field segment_flat_special? string Segment flat special.
+---@field segment_ramp_special? string Segment ramp special.
+---@field segment_road_bridge_special? string Segment road bridge special.
+---@field segment_bridge_special? string Segment bridge special.
+---@field segment_bridge_supports_special? string Segment bridge supports special.
+---@field segment_overpass_special? string Segment overpass special.
+---@field clockwise_slant_special? string Clockwise slant special.
+---@field counterclockwise_slant_special? string Counterclockwise slant special.
+---@field fallback_onramp_special? string Fallback onramp special.
+---@field fallback_bend_special? string Fallback bend special.
+---@field fallback_three_way_intersection_special? string Fallback three way intersection special.
+---@field fallback_four_way_intersection_special? string Fallback four way intersection special.
+---@field fallback_supports? string Fallback supports.
+---@field four_way_intersections? PlatformWeightedEntry[] Four way intersections; duplicate ids replace weights.
+---@field three_way_intersections? PlatformWeightedEntry[] Three way intersections; duplicate ids replace weights.
+---@field bends? PlatformWeightedEntry[] Bends; duplicate ids replace weights.
+---@field road_connections? PlatformWeightedEntry[] Road connections; duplicate ids replace weights.
+---@field interchanges? PlatformWeightedEntry[] Interchanges; duplicate ids replace weights.
+
+---@class RegionSettingsHighwayDefinition
+---@field id string
+local RegionSettingsHighwayDefinition = {}
+
+---@param value integer
+---@return RegionSettingsHighwayDefinition self
+function RegionSettingsHighwayDefinition:width_of_segments(value) end
+
+---@param value number
+---@return RegionSettingsHighwayDefinition self
+function RegionSettingsHighwayDefinition:straightness_chance(value) end
+
+---@param value string
+---@return RegionSettingsHighwayDefinition self
+function RegionSettingsHighwayDefinition:reserved_terrain_id(value) end
+
+---@param value string
+---@return RegionSettingsHighwayDefinition self
+function RegionSettingsHighwayDefinition:reserved_terrain_water_id(value) end
+
+---@param value string
+---@return RegionSettingsHighwayDefinition self
+function RegionSettingsHighwayDefinition:segment_flat_special(value) end
+
+---@param value string
+---@return RegionSettingsHighwayDefinition self
+function RegionSettingsHighwayDefinition:segment_ramp_special(value) end
+
+---@param value string
+---@return RegionSettingsHighwayDefinition self
+function RegionSettingsHighwayDefinition:segment_road_bridge_special(value) end
+
+---@param value string
+---@return RegionSettingsHighwayDefinition self
+function RegionSettingsHighwayDefinition:segment_bridge_special(value) end
+
+---@param value string
+---@return RegionSettingsHighwayDefinition self
+function RegionSettingsHighwayDefinition:segment_bridge_supports_special(value) end
+
+---@param value string
+---@return RegionSettingsHighwayDefinition self
+function RegionSettingsHighwayDefinition:segment_overpass_special(value) end
+
+---@param value string
+---@return RegionSettingsHighwayDefinition self
+function RegionSettingsHighwayDefinition:clockwise_slant_special(value) end
+
+---@param value string
+---@return RegionSettingsHighwayDefinition self
+function RegionSettingsHighwayDefinition:counterclockwise_slant_special(value) end
+
+---@param value string
+---@return RegionSettingsHighwayDefinition self
+function RegionSettingsHighwayDefinition:fallback_onramp_special(value) end
+
+---@param value string
+---@return RegionSettingsHighwayDefinition self
+function RegionSettingsHighwayDefinition:fallback_bend_special(value) end
+
+---@param value string
+---@return RegionSettingsHighwayDefinition self
+function RegionSettingsHighwayDefinition:fallback_three_way_intersection_special(value) end
+
+---@param value string
+---@return RegionSettingsHighwayDefinition self
+function RegionSettingsHighwayDefinition:fallback_four_way_intersection_special(value) end
+
+---@param value string
+---@return RegionSettingsHighwayDefinition self
+function RegionSettingsHighwayDefinition:fallback_supports(value) end
+
+---@param special_id string Overmap special id.
+---@param weight integer Positive weight.
+---@return RegionSettingsHighwayDefinition self
+function RegionSettingsHighwayDefinition:four_way_intersection(special_id, weight) end
+
+---@param special_id string Overmap special id.
+---@param weight integer Positive weight.
+---@return RegionSettingsHighwayDefinition self
+function RegionSettingsHighwayDefinition:three_way_intersection(special_id, weight) end
+
+---@param special_id string Overmap special id.
+---@param weight integer Positive weight.
+---@return RegionSettingsHighwayDefinition self
+function RegionSettingsHighwayDefinition:bend(special_id, weight) end
+
+---@param special_id string Overmap special id.
+---@param weight integer Positive weight.
+---@return RegionSettingsHighwayDefinition self
+function RegionSettingsHighwayDefinition:road_connection(special_id, weight) end
+
+---@param special_id string Overmap special id.
+---@param weight integer Positive weight.
+---@return RegionSettingsHighwayDefinition self
+function RegionSettingsHighwayDefinition:interchange(special_id, weight) end
+
+---@class RegionTerrainFurnitureDefinitionOptions
+---@field id string Stable region terrain furniture id.
+---@field ter_id? string Target terrain id.
+---@field furn_id? string Target furniture id.
+---@field replace_with_terrain? PlatformWeightedEntry[] Replacement terrains; duplicate ids replace weights.
+---@field replace_with_furniture? PlatformWeightedEntry[] Replacement furniture; duplicate ids replace weights.
+
+---@class RegionTerrainFurnitureDefinition
+---@field id string
+local RegionTerrainFurnitureDefinition = {}
+
+---@param value string
+---@return RegionTerrainFurnitureDefinition self
+function RegionTerrainFurnitureDefinition:ter_id(value) end
+
+---@param value string
+---@return RegionTerrainFurnitureDefinition self
+function RegionTerrainFurnitureDefinition:furn_id(value) end
+
+---@param terrain_id string Terrain id.
+---@param weight integer Positive weight.
+---@return RegionTerrainFurnitureDefinition self
+function RegionTerrainFurnitureDefinition:replace_terrain(terrain_id, weight) end
+
+---@param terrain_id string Terrain id.
+---@param weight integer Positive weight.
+---@return RegionTerrainFurnitureDefinition self
+function RegionTerrainFurnitureDefinition:replace_with_terrain(terrain_id, weight) end
+
+---@param furniture_id string Furniture id.
+---@param weight integer Positive weight.
+---@return RegionTerrainFurnitureDefinition self
+function RegionTerrainFurnitureDefinition:replace_furniture(furniture_id, weight) end
+
+---@param furniture_id string Furniture id.
+---@param weight integer Positive weight.
+---@return RegionTerrainFurnitureDefinition self
+function RegionTerrainFurnitureDefinition:replace_with_furniture(furniture_id, weight) end
+
+---@class ForestBiomeComponentDefinitionOptions
+---@field id string Stable forest biome component id.
+---@field chance? integer Feature chance; defaults to 0.
+---@field sequence? integer Feature sequence; defaults to 0.
+---@field types? PlatformWeightedEntry[] Component types; duplicate ids replace weights.
+
+---@class ForestBiomeComponentDefinition
+---@field id string
+local ForestBiomeComponentDefinition = {}
+
+---@param value integer
+---@return ForestBiomeComponentDefinition self
+function ForestBiomeComponentDefinition:chance(value) end
+
+---@param value integer
+---@return ForestBiomeComponentDefinition self
+function ForestBiomeComponentDefinition:sequence(value) end
+
+---@param ter_furn_id string Terrain, furniture, or region terrain furniture id.
+---@param weight integer Positive weight.
+---@return ForestBiomeComponentDefinition self
+function ForestBiomeComponentDefinition:type(ter_furn_id, weight) end
+
+---@param ter_furn_id string Terrain, furniture, or region terrain furniture id.
+---@param weight integer Positive weight.
+---@return ForestBiomeComponentDefinition self
+function ForestBiomeComponentDefinition:add_type(ter_furn_id, weight) end
+
+---@class CityDefinitionOptions
+---@field id string Stable city id.
+---@field database_id integer Native city database id.
+---@field name? string City name; defaults to empty.
+---@field population? integer Population; defaults to 0.
+---@field size? integer Size; defaults to -1.
+---@field pos_om integer[]|{x: integer, y: integer} Overmap coordinate [x, y].
+---@field pos integer[]|{x: integer, y: integer} Overmap-terrain coordinate [x, y].
+
+---@class CityDefinition
+---@field id string
+local CityDefinition = {}
+
+---@param value integer
+---@return CityDefinition self
+function CityDefinition:database_id(value) end
+
+---@param value string
+---@return CityDefinition self
+function CityDefinition:name(value) end
+
+---@param value integer Non-negative population.
+---@return CityDefinition self
+function CityDefinition:population(value) end
+
+---@param value integer Size >= -1.
+---@return CityDefinition self
+function CityDefinition:size(value) end
+
+---@param x integer|integer[]|{x: integer, y: integer}
+---@param y? integer
+---@return CityDefinition self
+function CityDefinition:pos_om(x, y) end
+
+---@param x integer|integer[]|{x: integer, y: integer}
+---@param y? integer
+---@return CityDefinition self
+function CityDefinition:pos(x, y) end
+
+---@class FactionMissionDefinitionOptions
+---@field id string Stable faction mission id.
+---@field name string Name.
+---@field desc string Description.
+---@field description? string Description alias.
+---@field skill? string Required skill id.
+---@field difficulty? string Difficulty enum name.
+---@field risk? string Risk enum name.
+---@field activity? string Activity level name.
+---@field time? string Time estimate description.
+---@field positions? integer Number of positions (0-65535).
+---@field items_label? string Items label.
+---@field items_possibilities? string[] Items possibilities.
+---@field effects? string[] Mission effects descriptions.
+---@field footer? string Footer text.
+
+---@class FactionMissionDefinition
+---@field id string
+local FactionMissionDefinition = {}
+
+---@param value string
+---@return FactionMissionDefinition self
+function FactionMissionDefinition:name(value) end
+
+---@param value string
+---@return FactionMissionDefinition self
+function FactionMissionDefinition:desc(value) end
+
+---@param value string
+---@return FactionMissionDefinition self
+function FactionMissionDefinition:description(value) end
+
+---@param value string
+---@return FactionMissionDefinition self
+function FactionMissionDefinition:skill(value) end
+
+---@param value string
+---@return FactionMissionDefinition self
+function FactionMissionDefinition:difficulty(value) end
+
+---@param value string
+---@return FactionMissionDefinition self
+function FactionMissionDefinition:risk(value) end
+
+---@param value string
+---@return FactionMissionDefinition self
+function FactionMissionDefinition:activity(value) end
+
+---@param value string
+---@return FactionMissionDefinition self
+function FactionMissionDefinition:time(value) end
+
+---@param value integer
+---@return FactionMissionDefinition self
+function FactionMissionDefinition:positions(value) end
+
+---@param value string
+---@return FactionMissionDefinition self
+function FactionMissionDefinition:items_label(value) end
+
+---@param value string
+---@return FactionMissionDefinition self
+function FactionMissionDefinition:items_possibility(value) end
+
+---@param value string
+---@return FactionMissionDefinition self
+function FactionMissionDefinition:add_items_possibility(value) end
+
+---@param table string[]
+---@return FactionMissionDefinition self
+function FactionMissionDefinition:items_possibilities(table) end
+
+---@param value string
+---@return FactionMissionDefinition self
+function FactionMissionDefinition:effect(value) end
+
+---@param value string
+---@return FactionMissionDefinition self
+function FactionMissionDefinition:add_effect(value) end
+
+---@param table string[]
+---@return FactionMissionDefinition self
+function FactionMissionDefinition:effects(table) end
+
+---@param value string
+---@return FactionMissionDefinition self
+function FactionMissionDefinition:footer(value) end
+
+---@class RegionSettingsCityDefinitionOptions
+---@field id string Stable region settings city id.
+---@field is_megacity? boolean
+---@field city_size integer Required native city-size bound.
+---@field city_spacing? integer
+---@field shop_radius? integer
+---@field shop_sigma? integer
+---@field park_radius? integer
+---@field park_sigma? integer
+---@field name_snippet? string
+---@field houses? PlatformWeightedEntry[]
+---@field shops? PlatformWeightedEntry[]
+---@field parks? PlatformWeightedEntry[]
+
+---@class RegionSettingsCityDefinition
+---@field id string
+local RegionSettingsCityDefinition = {}
+
+---@param value boolean
+---@return RegionSettingsCityDefinition self
+function RegionSettingsCityDefinition:is_megacity(value) end
+
+---@param value integer
+---@return RegionSettingsCityDefinition self
+function RegionSettingsCityDefinition:city_size(value) end
+
+---@param value integer
+---@return RegionSettingsCityDefinition self
+function RegionSettingsCityDefinition:city_spacing(value) end
+
+---@param value integer
+---@return RegionSettingsCityDefinition self
+function RegionSettingsCityDefinition:shop_radius(value) end
+
+---@param value integer
+---@return RegionSettingsCityDefinition self
+function RegionSettingsCityDefinition:shop_sigma(value) end
+
+---@param value integer
+---@return RegionSettingsCityDefinition self
+function RegionSettingsCityDefinition:park_radius(value) end
+
+---@param value integer
+---@return RegionSettingsCityDefinition self
+function RegionSettingsCityDefinition:park_sigma(value) end
+
+---@param value string
+---@return RegionSettingsCityDefinition self
+function RegionSettingsCityDefinition:name_snippet(value) end
+
+---@param special_id string
+---@param weight integer
+---@return RegionSettingsCityDefinition self
+function RegionSettingsCityDefinition:house(special_id, weight) end
+
+---@param special_id string
+---@param weight integer
+---@return RegionSettingsCityDefinition self
+function RegionSettingsCityDefinition:add_house(special_id, weight) end
+
+---@param table PlatformWeightedEntry[]
+---@return RegionSettingsCityDefinition self
+function RegionSettingsCityDefinition:houses(table) end
+
+---@param special_id string
+---@param weight integer
+---@return RegionSettingsCityDefinition self
+function RegionSettingsCityDefinition:shop(special_id, weight) end
+
+---@param special_id string
+---@param weight integer
+---@return RegionSettingsCityDefinition self
+function RegionSettingsCityDefinition:add_shop(special_id, weight) end
+
+---@param table PlatformWeightedEntry[]
+---@return RegionSettingsCityDefinition self
+function RegionSettingsCityDefinition:shops(table) end
+
+---@param special_id string
+---@param weight integer
+---@return RegionSettingsCityDefinition self
+function RegionSettingsCityDefinition:park(special_id, weight) end
+
+---@param special_id string
+---@param weight integer
+---@return RegionSettingsCityDefinition self
+function RegionSettingsCityDefinition:add_park(special_id, weight) end
+
+---@param table PlatformWeightedEntry[]
+---@return RegionSettingsCityDefinition self
+function RegionSettingsCityDefinition:parks(table) end
+
+---@class ForestBiomeMapgenDefinitionOptions
+---@field id string Stable forest biome mapgen id.
+---@field sparseness_adjacency_factor? integer
+---@field item_group? string
+---@field item_group_chance? integer
+---@field item_spawn_iterations? integer
+---@field terrains? string[]
+---@field components? string[]
+---@field groundcover? PlatformWeightedEntry[]
+---@field terrain_furniture? table<string, {chance: integer, furniture: PlatformWeightedEntry[]}>
+
+---@class ForestBiomeMapgenDefinition
+---@field id string
+local ForestBiomeMapgenDefinition = {}
+
+---@param value integer
+---@return ForestBiomeMapgenDefinition self
+function ForestBiomeMapgenDefinition:sparseness_adjacency_factor(value) end
+
+---@param value string
+---@return ForestBiomeMapgenDefinition self
+function ForestBiomeMapgenDefinition:item_group(value) end
+
+---@param value integer
+---@return ForestBiomeMapgenDefinition self
+function ForestBiomeMapgenDefinition:item_group_chance(value) end
+
+---@param value integer
+---@return ForestBiomeMapgenDefinition self
+function ForestBiomeMapgenDefinition:item_spawn_iterations(value) end
+
+---@param value string
+---@return ForestBiomeMapgenDefinition self
+function ForestBiomeMapgenDefinition:terrain(value) end
+
+---@param value string
+---@return ForestBiomeMapgenDefinition self
+function ForestBiomeMapgenDefinition:add_terrain(value) end
+
+---@param table string[]
+---@return ForestBiomeMapgenDefinition self
+function ForestBiomeMapgenDefinition:terrains(table) end
+
+---@param value string
+---@return ForestBiomeMapgenDefinition self
+function ForestBiomeMapgenDefinition:component(value) end
+
+---@param value string
+---@return ForestBiomeMapgenDefinition self
+function ForestBiomeMapgenDefinition:add_component(value) end
+
+---@param table string[]
+---@return ForestBiomeMapgenDefinition self
+function ForestBiomeMapgenDefinition:components(table) end
+
+---@param ter_id string|PlatformWeightedEntry[]
+---@param weight? integer
+---@return ForestBiomeMapgenDefinition self
+function ForestBiomeMapgenDefinition:groundcover(ter_id, weight) end
+
+---@param ter_id string
+---@param weight integer
+---@return ForestBiomeMapgenDefinition self
+function ForestBiomeMapgenDefinition:add_groundcover(ter_id, weight) end
+
+---@param ter_id string|table<string, {chance: integer, furniture: PlatformWeightedEntry[]}>
+---@param chance? integer
+---@param furniture_table? PlatformWeightedEntry[]
+---@return ForestBiomeMapgenDefinition self
+function ForestBiomeMapgenDefinition:terrain_furniture(ter_id, chance, furniture_table) end
+
+---@param ter_id string
+---@param chance integer
+---@param furniture_table PlatformWeightedEntry[]
+---@return ForestBiomeMapgenDefinition self
+function ForestBiomeMapgenDefinition:add_terrain_furniture(ter_id, chance, furniture_table) end
+
 ---@class ToolQualityDefinitionOptions
 ---@field id string Stable tool-quality id.
 ---@field name? string Display name; defaults to id.
@@ -3571,7 +4386,71 @@ function CcbPlatformContent.MagicType(options) end
 ---@return MovementModeDefinition
 function CcbPlatformContent.MovementMode(options) end
 
----@alias PlatformContentDefinition FactionDefinition|NpcClassDefinition|NpcDefinition|OvermapTerrainDefinition|OvermapSpecialDefinition|VehiclePartDefinition|VehicleDefinition|ItemDefinition|RecipeDefinition|NestedRecipeCategoryDefinition|ToolQualityDefinition|SkillDisplayDefinition|SkillDefinition|VitaminDefinition|JsonFlagDefinition|DamageTypeDefinition|MaterialDefinition|AmmunitionTypeDefinition|ItemCategoryDefinition|RecipeCategoryDefinition|ProficiencyCategoryDefinition|ProficiencyDefinition|WeaponCategoryDefinition|RequirementDefinition|RecipeGroupDefinition|ScentTypeDefinition|SpeedDescriptionDefinition|HarvestDropTypeDefinition|HarvestDefinition|BehaviorDefinition|MonsterAttackDefinition|EffectTypeDefinition|WeakpointSetDefinition|FieldTypeDefinition|ItemGroupDefinition|SubBodyPartDefinition|WoundDefinition|BodyPartDefinition|WoundFixDefinition|AnatomyDefinition|BodyGraphDefinition|MonsterDefinition|MoraleTypeDefinition|DiseaseTypeDefinition|MonsterFlagDefinition|SpeciesDefinition|EmissionDefinition|MonsterFactionDefinition|MutationTypeDefinition|ConnectGroupDefinition|MutationCategoryDefinition|ConstructionCategoryDefinition|ConstructionGroupDefinition|VehiclePartLocationDefinition|MoodFaceDefinition|DamageInfoOrderDefinition|VehiclePartCategoryDefinition|NamedColorDefinition|RotatableSymbolDefinition|AsciiArtDefinition|LimbScoreDefinition|HitRangeDefinition|BashDamageProfileDefinition|ClothingModDefinition|OvermapLandUseCodeDefinition|OvermapVisionDefinition|OvermapLocationDefinition|ProfessionGroupDefinition|MapExtraCollectionDefinition|VehicleGroupDefinition|FaultGroupDefinition|ExplosionLightDefinition|AmmoEffectDefinition|AddictionTypeDefinition|CharacterModifierDefinition|StartLocationDefinition|ClimbingAidDefinition|WeatherTypeDefinition|ScoreDefinition|OverlayOrderDefinition|ZoneTypeDefinition|SpeechPoolDefinition|EndScreenDefinition|ActivityTypeDefinition|HelpTopicDefinition|SnippetCategoryDefinition|PlaylistDefinition|AttackVectorDefinition|MagicTypeDefinition|MovementModeDefinition
+---@param options RegionSettingsRavineDefinitionOptions
+---@return RegionSettingsRavineDefinition
+function CcbPlatformContent.RegionSettingsRavine(options) end
+
+---@param options RegionSettingsLakeDefinitionOptions
+---@return RegionSettingsLakeDefinition
+function CcbPlatformContent.RegionSettingsLake(options) end
+
+---@param options RegionSettingsOceanDefinitionOptions
+---@return RegionSettingsOceanDefinition
+function CcbPlatformContent.RegionSettingsOcean(options) end
+
+---@param options RegionSettingsForestDefinitionOptions
+---@return RegionSettingsForestDefinition
+function CcbPlatformContent.RegionSettingsForest(options) end
+
+---@param options RegionSettingsRiverDefinitionOptions
+---@return RegionSettingsRiverDefinition
+function CcbPlatformContent.RegionSettingsRiver(options) end
+
+---@param options RegionSettingsForestMapgenDefinitionOptions
+---@return RegionSettingsForestMapgenDefinition
+function CcbPlatformContent.RegionSettingsForestMapgen(options) end
+
+---@param options RegionSettingsMapExtrasDefinitionOptions
+---@return RegionSettingsMapExtrasDefinition
+function CcbPlatformContent.RegionSettingsMapExtras(options) end
+
+---@param options RegionSettingsTerrainFurnitureDefinitionOptions
+---@return RegionSettingsTerrainFurnitureDefinition
+function CcbPlatformContent.RegionSettingsTerrainFurniture(options) end
+
+---@param options RegionSettingsForestTrailDefinitionOptions
+---@return RegionSettingsForestTrailDefinition
+function CcbPlatformContent.RegionSettingsForestTrail(options) end
+
+---@param options RegionSettingsHighwayDefinitionOptions
+---@return RegionSettingsHighwayDefinition
+function CcbPlatformContent.RegionSettingsHighway(options) end
+
+---@param options RegionTerrainFurnitureDefinitionOptions
+---@return RegionTerrainFurnitureDefinition
+function CcbPlatformContent.RegionTerrainFurniture(options) end
+
+---@param options ForestBiomeComponentDefinitionOptions
+---@return ForestBiomeComponentDefinition
+function CcbPlatformContent.ForestBiomeComponent(options) end
+
+---@param options CityDefinitionOptions
+---@return CityDefinition
+function CcbPlatformContent.City(options) end
+
+---@param options FactionMissionDefinitionOptions
+---@return FactionMissionDefinition
+function CcbPlatformContent.FactionMission(options) end
+
+---@param options RegionSettingsCityDefinitionOptions
+---@return RegionSettingsCityDefinition
+function CcbPlatformContent.RegionSettingsCity(options) end
+
+---@param options ForestBiomeMapgenDefinitionOptions
+---@return ForestBiomeMapgenDefinition
+function CcbPlatformContent.ForestBiomeMapgen(options) end
+
+---@alias PlatformContentDefinition FactionDefinition|NpcClassDefinition|NpcDefinition|OvermapTerrainDefinition|OvermapSpecialDefinition|VehiclePartDefinition|VehicleDefinition|ItemDefinition|RecipeDefinition|NestedRecipeCategoryDefinition|ToolQualityDefinition|SkillDisplayDefinition|SkillDefinition|VitaminDefinition|JsonFlagDefinition|DamageTypeDefinition|MaterialDefinition|AmmunitionTypeDefinition|ItemCategoryDefinition|RecipeCategoryDefinition|ProficiencyCategoryDefinition|ProficiencyDefinition|WeaponCategoryDefinition|RequirementDefinition|RecipeGroupDefinition|ScentTypeDefinition|SpeedDescriptionDefinition|HarvestDropTypeDefinition|HarvestDefinition|BehaviorDefinition|MonsterAttackDefinition|EffectTypeDefinition|WeakpointSetDefinition|FieldTypeDefinition|ItemGroupDefinition|SubBodyPartDefinition|WoundDefinition|BodyPartDefinition|WoundFixDefinition|AnatomyDefinition|BodyGraphDefinition|MonsterDefinition|MoraleTypeDefinition|DiseaseTypeDefinition|MonsterFlagDefinition|SpeciesDefinition|EmissionDefinition|MonsterFactionDefinition|MutationTypeDefinition|ConnectGroupDefinition|MutationCategoryDefinition|ConstructionCategoryDefinition|ConstructionGroupDefinition|VehiclePartLocationDefinition|MoodFaceDefinition|DamageInfoOrderDefinition|VehiclePartCategoryDefinition|NamedColorDefinition|RotatableSymbolDefinition|AsciiArtDefinition|LimbScoreDefinition|HitRangeDefinition|BashDamageProfileDefinition|ClothingModDefinition|OvermapLandUseCodeDefinition|OvermapVisionDefinition|OvermapLocationDefinition|ProfessionGroupDefinition|MapExtraCollectionDefinition|VehicleGroupDefinition|FaultGroupDefinition|ExplosionLightDefinition|AmmoEffectDefinition|AddictionTypeDefinition|CharacterModifierDefinition|StartLocationDefinition|ClimbingAidDefinition|WeatherTypeDefinition|ScoreDefinition|OverlayOrderDefinition|ZoneTypeDefinition|SpeechPoolDefinition|EndScreenDefinition|ActivityTypeDefinition|HelpTopicDefinition|SnippetCategoryDefinition|PlaylistDefinition|AttackVectorDefinition|MagicTypeDefinition|MovementModeDefinition|RegionSettingsRavineDefinition|RegionSettingsLakeDefinition|RegionSettingsOceanDefinition|RegionSettingsForestDefinition|RegionSettingsRiverDefinition|RegionSettingsForestMapgenDefinition|RegionSettingsMapExtrasDefinition|RegionSettingsTerrainFurnitureDefinition|RegionSettingsForestTrailDefinition|RegionSettingsHighwayDefinition|RegionTerrainFurnitureDefinition|ForestBiomeComponentDefinition|CityDefinition|FactionMissionDefinition|RegionSettingsCityDefinition|ForestBiomeMapgenDefinition
 
 ---@param definition PlatformContentDefinition
 function CcbPlatformContent.add(definition) end
@@ -3906,6 +4785,70 @@ function CcbPlatformContent.edit_magic_type(id) end
 ---@param id string Movement-mode id staged earlier by this Mod.
 ---@return MovementModeDefinition
 function CcbPlatformContent.edit_movement_mode(id) end
+
+---@param id string Region-settings-ravine id staged earlier by this Mod.
+---@return RegionSettingsRavineDefinition
+function CcbPlatformContent.edit_region_settings_ravine(id) end
+
+---@param id string Region-settings-lake id staged earlier by this Mod.
+---@return RegionSettingsLakeDefinition
+function CcbPlatformContent.edit_region_settings_lake(id) end
+
+---@param id string Region-settings-ocean id staged earlier by this Mod.
+---@return RegionSettingsOceanDefinition
+function CcbPlatformContent.edit_region_settings_ocean(id) end
+
+---@param id string Region-settings-forest id staged earlier by this Mod.
+---@return RegionSettingsForestDefinition
+function CcbPlatformContent.edit_region_settings_forest(id) end
+
+---@param id string Region-settings-river id staged earlier by this Mod.
+---@return RegionSettingsRiverDefinition
+function CcbPlatformContent.edit_region_settings_river(id) end
+
+---@param id string Region-settings-forest-mapgen id staged earlier by this Mod.
+---@return RegionSettingsForestMapgenDefinition
+function CcbPlatformContent.edit_region_settings_forest_mapgen(id) end
+
+---@param id string Region-settings-map-extras id staged earlier by this Mod.
+---@return RegionSettingsMapExtrasDefinition
+function CcbPlatformContent.edit_region_settings_map_extras(id) end
+
+---@param id string Region-settings-terrain-furniture id staged earlier by this Mod.
+---@return RegionSettingsTerrainFurnitureDefinition
+function CcbPlatformContent.edit_region_settings_terrain_furniture(id) end
+
+---@param id string Region-settings-forest-trail id staged earlier by this Mod.
+---@return RegionSettingsForestTrailDefinition
+function CcbPlatformContent.edit_region_settings_forest_trail(id) end
+
+---@param id string Region-settings-highway id staged earlier by this Mod.
+---@return RegionSettingsHighwayDefinition
+function CcbPlatformContent.edit_region_settings_highway(id) end
+
+---@param id string Region-terrain-furniture id staged earlier by this Mod.
+---@return RegionTerrainFurnitureDefinition
+function CcbPlatformContent.edit_region_terrain_furniture(id) end
+
+---@param id string Forest-biome-component id staged earlier by this Mod.
+---@return ForestBiomeComponentDefinition
+function CcbPlatformContent.edit_forest_biome_component(id) end
+
+---@param id string City id staged earlier by this Mod.
+---@return CityDefinition
+function CcbPlatformContent.edit_city(id) end
+
+---@param id string Faction-mission id staged earlier by this Mod.
+---@return FactionMissionDefinition
+function CcbPlatformContent.edit_faction_mission(id) end
+
+---@param id string Region-settings-city id staged earlier by this Mod.
+---@return RegionSettingsCityDefinition
+function CcbPlatformContent.edit_region_settings_city(id) end
+
+---@param id string Forest-biome-mapgen id staged earlier by this Mod.
+---@return ForestBiomeMapgenDefinition
+function CcbPlatformContent.edit_forest_biome_mapgen(id) end
 
 ---@class CcbPlatformNativeEvent
 ---@field type string Native event type without the `game:` prefix.

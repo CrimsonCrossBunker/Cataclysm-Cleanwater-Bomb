@@ -4,6 +4,7 @@
 #include <climits>
 #include <vector>
 
+#include "catalua_platform_content.h"
 #include "coordinates.h"
 #include "debug.h"
 #include "generic_factory.h"
@@ -15,6 +16,12 @@ generic_factory<city> &get_city_factory()
 {
     static generic_factory<city> city_factory( "city" );
     return city_factory;
+}
+
+generic_factory<city> &
+cata::lua_platform::detail::city_registry()
+{
+    return get_city_factory();
 }
 
 /** @relates string_id */

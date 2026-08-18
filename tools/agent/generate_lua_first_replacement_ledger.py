@@ -946,6 +946,214 @@ BOUNDED_IMPLEMENTED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
+    "region_settings_forest": {
+        "target": "content.gameplay",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/regional_settings.cpp",
+            "src/regional_settings.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "region_settings_forest_mapgen": {
+        "target": "content.map",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/regional_settings.cpp",
+            "src/regional_settings.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "region_settings_lake": {
+        "target": "content.gameplay",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/regional_settings.cpp",
+            "src/regional_settings.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "region_settings_map_extras": {
+        "target": "content.map",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/regional_settings.cpp",
+            "src/regional_settings.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "region_settings_ocean": {
+        "target": "content.gameplay",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/regional_settings.cpp",
+            "src/regional_settings.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "region_settings_ravine": {
+        "target": "content.gameplay",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/regional_settings.cpp",
+            "src/regional_settings.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "region_settings_river": {
+        "target": "content.gameplay",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/regional_settings.cpp",
+            "src/regional_settings.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "region_settings_terrain_furniture": {
+        "target": "content.map",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/regional_settings.cpp",
+            "src/regional_settings.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "region_settings_forest_trail": {
+        "target": "content.gameplay",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/regional_settings.cpp",
+            "src/regional_settings.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "region_settings_highway": {
+        "target": "content.gameplay",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/regional_settings.cpp",
+            "src/regional_settings.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "region_terrain_furniture": {
+        "target": "content.map",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/regional_settings.cpp",
+            "src/regional_settings.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "forest_biome_component": {
+        "target": "content.gameplay",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/regional_settings.cpp",
+            "src/regional_settings.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "city": {
+        "target": "content.gameplay",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/city.cpp",
+            "src/city.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "faction_mission": {
+        "target": "content.missions",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/faction_mission.cpp",
+            "src/faction_camp.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "region_settings_city": {
+        "target": "content.gameplay",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/regional_settings.cpp",
+            "src/regional_settings.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "forest_biome_mapgen": {
+        "target": "content.map",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/regional_settings.cpp",
+            "src/regional_settings.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
     "MOD_INFO": {
         "target": "platform.mod-metadata",
         "evidence": [
@@ -1033,6 +1241,11 @@ BOUNDED_IMPLEMENTED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
+}
+
+# These selectors still lack native content registrars.  Their entries remain
+# useful as an explicit implementation queue, but are not shipped capability.
+PLANNED_JSON = {
     "jmath_function": {
         "target": "content.state-and-values",
         "evidence": [
@@ -1154,17 +1367,6 @@ BOUNDED_IMPLEMENTED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
-    "city": {
-        "target": "content.gameplay",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "tools/test_migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
     "city_building": {
         "target": "content.gameplay",
         "evidence": [
@@ -1220,160 +1422,6 @@ BOUNDED_IMPLEMENTED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
-    "region_settings_city": {
-        "target": "content.gameplay",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "tools/test_migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "region_settings_forest": {
-        "target": "content.gameplay",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "tools/test_migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "region_settings_forest_mapgen": {
-        "target": "content.map",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "tools/test_migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "region_settings_forest_trail": {
-        "target": "content.gameplay",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "tools/test_migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "region_settings_highway": {
-        "target": "content.gameplay",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "tools/test_migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "region_settings_lake": {
-        "target": "content.gameplay",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "tools/test_migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "region_settings_map_extras": {
-        "target": "content.map",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "tools/test_migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "region_settings_ocean": {
-        "target": "content.gameplay",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "tools/test_migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "region_settings_ravine": {
-        "target": "content.gameplay",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "tools/test_migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "region_settings_river": {
-        "target": "content.gameplay",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "tools/test_migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "region_settings_terrain_furniture": {
-        "target": "content.map",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "tools/test_migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "region_terrain_furniture": {
-        "target": "content.map",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "tools/test_migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "forest_biome_component": {
-        "target": "content.gameplay",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "tools/test_migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "forest_biome_mapgen": {
-        "target": "content.map",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "tools/test_migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
     "enchantment": {
         "target": "content.gameplay",
         "evidence": [
@@ -1409,17 +1457,6 @@ BOUNDED_IMPLEMENTED_JSON = {
     },
     "faction": {
         "target": "content.factions",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "tools/test_migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "faction_mission": {
-        "target": "content.missions",
         "evidence": [
             "src/catalua_platform_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
@@ -1572,6 +1609,9 @@ BOUNDED_IMPLEMENTED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
+}
+
+BOUNDED_IMPLEMENTED_JSON.update({
     "recipe": {
         "target": "content.recipes",
         "evidence": [
@@ -2252,9 +2292,7 @@ BOUNDED_IMPLEMENTED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
-}
-
-PLANNED_JSON = {}
+})
 
 NATIVE_PRIMITIVE_DOMAINS = {
     "items",
@@ -2640,7 +2678,6 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "npc_set_fault"): "services.items",
     ("eoc-effects", "u_set_random_fault_of_type"): "services.items",
     ("eoc-effects", "npc_set_random_fault_of_type"): "services.items",
-    ("eoc-effects", "transform_item"): "services.items",
     ("eoc-effects", "transform_line"): "services.world",
     ("eoc-effects", "u_travel_to_dimension"): "services.relocation",
     ("eoc-effects", "u_assign_activity"): "services.activities",

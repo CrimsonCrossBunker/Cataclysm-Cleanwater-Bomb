@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "catalua_platform_content.h"
 #include "cata_utility.h"
 #include "debug.h"
 #include "display.h"
@@ -69,6 +70,12 @@ namespace
 generic_factory<faction_mission> faction_mission_factory( "faction_mission" );
 
 } // namespace
+
+generic_factory<faction_mission> &
+cata::lua_platform::detail::faction_mission_registry()
+{
+    return faction_mission_factory;
+}
 
 /** @relates string_id */
 template<>

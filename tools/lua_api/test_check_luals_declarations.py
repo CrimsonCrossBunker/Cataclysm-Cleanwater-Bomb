@@ -10,6 +10,7 @@ try:
     from .check_luals_declarations import (
         check,
         check_platform,
+        validate_migration_content_methods,
         platform_source_usertypes,
         validate_table_mappings,
         validate_type_references,
@@ -18,6 +19,7 @@ except ImportError:
     from check_luals_declarations import (
         check,
         check_platform,
+        validate_migration_content_methods,
         platform_source_usertypes,
         validate_table_mappings,
         validate_type_references,
@@ -64,10 +66,11 @@ class LuaLsDeclarationTest(unittest.TestCase):
         )
         self.assertIn("ModDefinition", platform_source_usertypes())
         result = check_platform(PLATFORM_DECLARATIONS)
-        self.assertEqual(result["usertypes"], 118)
+        self.assertEqual(result["usertypes"], 134)
         self.assertEqual(result["properties"], 9)
-        self.assertEqual(result["methods"], 280)
-        self.assertEqual(result["usertype_members"], 394)
+        self.assertEqual(result["methods"], 312)
+        self.assertEqual(result["migration_content_methods"], 130)
+        self.assertEqual(result["usertype_members"], 547)
 
         contents = PLATFORM_DECLARATIONS.read_text(encoding="utf-8")
         with tempfile.TemporaryDirectory() as directory:
@@ -119,6 +122,21 @@ class LuaLsDeclarationTest(unittest.TestCase):
             )
             with self.assertRaisesRegex(RuntimeError, "methods differ"):
                 check_platform(path)
+
+    def test_migrator_cannot_emit_unregistered_or_dynamic_content_methods(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "migrator.py"
+            path.write_text('output = "content.Mapgen {}"\n', encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "unregistered"):
+                validate_migration_content_methods({"add", "replace"}, path)
+
+            path.write_text(
+                'output = f"content.{constructor} {{}}"\n', encoding="utf-8"
+            )
+            with self.assertRaisesRegex(RuntimeError, "dynamic"):
+                validate_migration_content_methods({"add", "replace"}, path)
 
     def test_unmapped_registered_table_is_rejected(self) -> None:
         with self.assertRaisesRegex(RuntimeError, "table mappings"):

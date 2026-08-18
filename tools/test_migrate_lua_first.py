@@ -172,7 +172,10 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertNotIn("load_json", main)
             self.assertNotIn('"type":', main)
             self.assertIn("pocket_data", report)
-            self.assertIn("Vehicle needs_native_registrar", report)
+            self.assertIn(
+                "vehicle needs_native_registrar has no native Platform registrar",
+                report,
+            )
 
     def test_item_subtypes_and_inheritance_are_never_reported_as_complete(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -7436,7 +7439,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn('services.npcs.set_attitude(actor, "null")', main)
             self.assertNotIn("needs review", report)
 
-    def test_translates_item_faults_light_level_and_dimensions(self) -> None:
+    def test_reports_missing_item_transform_service_without_crashing(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -7455,6 +7458,11 @@ class LuaFirstMigrationTest(unittest.TestCase):
                                 {"u_set_random_fault_of_type": "engine"},
                                 {"npc_set_random_fault_of_type": "engine"},
                                 {"transform_item": "new_item_id"},
+                                {
+                                    "transform_item": {
+                                        "context_val": "transform_target"
+                                    }
+                                },
                                 {"transform_line": {}},
                                 {"u_travel_to_dimension": "nether"},
                             ],
@@ -7469,16 +7477,19 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(len(result.partial), 0)
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 1)
             self.assertIn("services.gameplay.environment.set_light_level(50)", main)
             self.assertIn('services.items.activate(actor, "item_id")', main)
             self.assertIn('services.items.set_fault(actor, "fault_id")', main)
             self.assertIn('services.items.set_random_fault(actor, "engine")', main)
-            self.assertIn('services.items.transform(actor, "new_item_id")', main)
+            self.assertNotIn("services.items.transform", main)
             self.assertIn("services.world.transform_line(services.characters.snapshot(actor).creature.position)", main)
             self.assertIn("services.relocation.overmap_at(services.characters.snapshot(actor).creature.position)", main)
-            self.assertNotIn("needs review", report)
+            self.assertIn(
+                "transform_item needs a native item-talker transform service",
+                report,
+            )
 
     def test_translates_migration_json_object_types(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -7516,7 +7527,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn('from = "old_mod"', main)
             self.assertNotIn("needs review", report)
 
-    def test_translates_generic_json_content_types(self) -> None:
+    def test_reports_unregistered_generic_json_content_types(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -7533,7 +7544,6 @@ class LuaFirstMigrationTest(unittest.TestCase):
                         {"type": "relic_procgen_data", "id": "test_relic"},
                         {"type": "dimension", "id": "test_dim"},
                         {"type": "dimension_region_layout", "id": "test_dim_layout"},
-                        {"type": "city", "id": "test_city"},
                         {"type": "city_building", "id": "test_building"},
                         {"type": "omt_placeholder", "id": "test_placeholder"},
                         {"type": "pp_generator", "id": "test_pp"},
@@ -7548,47 +7558,19 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 16)
-            self.assertEqual(len(result.partial), 0)
-            self.assertIn('content.MathFunction', main)
-            self.assertIn('content.EventStatistic', main)
-            self.assertIn('content.EventTransformation', main)
-            self.assertIn('content.Widget', main)
-            self.assertIn('content.OptionSlider', main)
-            self.assertIn('content.Palette', main)
-            self.assertIn('content.TerFurnTransform', main)
-            self.assertIn('content.ProfessionItemSubstitutions', main)
-            self.assertIn('content.RelicProcgenData', main)
-            self.assertIn('content.Dimension', main)
-            self.assertIn('content.DimensionRegionLayout', main)
-            self.assertIn('content.City', main)
-            self.assertIn('content.CityBuilding', main)
-            self.assertIn('content.OmtPlaceholder', main)
-            self.assertIn('content.PpGenerator', main)
-            self.assertIn('content.ModTileset', main)
-            self.assertNotIn("needs review", report)
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 15)
+            self.assertEqual(len(result.todos), 15)
+            self.assertNotIn("local definition = content.", main)
+            self.assertIn("has no native Platform registrar", report)
 
-    def test_translates_region_and_ecosystem_json_content_types(self) -> None:
+    def test_reports_unregistered_region_json_content_types(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
                 json.dumps(
                     [
                         {"type": "region_settings", "id": "test_region"},
-                        {"type": "region_settings_city", "id": "test_city_set"},
-                        {"type": "region_settings_forest", "id": "test_forest_set"},
-                        {"type": "region_settings_forest_mapgen", "id": "test_f_mapgen"},
-                        {"type": "region_settings_forest_trail", "id": "test_trail"},
-                        {"type": "region_settings_highway", "id": "test_highway"},
-                        {"type": "region_settings_lake", "id": "test_lake"},
-                        {"type": "region_settings_map_extras", "id": "test_extras"},
-                        {"type": "region_settings_ocean", "id": "test_ocean"},
-                        {"type": "region_settings_ravine", "id": "test_ravine"},
-                        {"type": "region_settings_river", "id": "test_river"},
-                        {"type": "region_settings_terrain_furniture", "id": "test_ter_furn"},
-                        {"type": "region_terrain_furniture", "id": "test_r_ter_furn"},
-                        {"type": "forest_biome_component", "id": "test_biome_comp"},
-                        {"type": "forest_biome_mapgen", "id": "test_biome_mapgen"},
                         {"type": "enchantment", "id": "test_enchantment"},
                     ]
                 ),
@@ -7600,27 +7582,13 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 16)
-            self.assertEqual(len(result.partial), 0)
-            self.assertIn('content.RegionSettings', main)
-            self.assertIn('content.RegionSettingsCity', main)
-            self.assertIn('content.RegionSettingsForest', main)
-            self.assertIn('content.RegionSettingsForestMapgen', main)
-            self.assertIn('content.RegionSettingsForestTrail', main)
-            self.assertIn('content.RegionSettingsHighway', main)
-            self.assertIn('content.RegionSettingsLake', main)
-            self.assertIn('content.RegionSettingsMapExtras', main)
-            self.assertIn('content.RegionSettingsOcean', main)
-            self.assertIn('content.RegionSettingsRavine', main)
-            self.assertIn('content.RegionSettingsRiver', main)
-            self.assertIn('content.RegionSettingsTerrainFurniture', main)
-            self.assertIn('content.RegionTerrainFurniture', main)
-            self.assertIn('content.ForestBiomeComponent', main)
-            self.assertIn('content.ForestBiomeMapgen', main)
-            self.assertIn('content.Enchantment', main)
-            self.assertNotIn("needs review", report)
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(len(result.todos), 2)
+            self.assertNotIn("local definition = content.", main)
+            self.assertIn("has no native Platform registrar", report)
 
-    def test_translates_final_json_content_types(self) -> None:
+    def test_reports_unregistered_final_json_content_types(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -7629,7 +7597,6 @@ class LuaFirstMigrationTest(unittest.TestCase):
                         {"type": "SPELL", "id": "test_spell"},
                         {"type": "bionic", "id": "test_bionic"},
                         {"type": "faction", "id": "test_faction"},
-                        {"type": "faction_mission", "id": "test_faction_mission"},
                         {"type": "mapgen", "id": "test_mapgen"},
                         {"type": "mission_definition", "id": "test_mission_def"},
                         {"type": "mutation", "id": "test_mutation"},
@@ -7653,26 +7620,11 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 17)
-            self.assertEqual(len(result.partial), 0)
-            self.assertIn('content.Spell', main)
-            self.assertIn('content.Bionic', main)
-            self.assertIn('content.Faction', main)
-            self.assertIn('content.FactionMission', main)
-            self.assertIn('content.Mapgen', main)
-            self.assertIn('content.MissionDefinition', main)
-            self.assertIn('content.Mutation', main)
-            self.assertIn('content.Npc', main)
-            self.assertIn('content.NpcClass', main)
-            self.assertIn('content.OvermapSpecial', main)
-            self.assertIn('content.OvermapTerrain', main)
-            self.assertIn('content.Profession', main)
-            self.assertIn('content.TalkTopic', main)
-            self.assertIn('content.Vehicle', main)
-            self.assertIn('content.VehiclePart', main)
-            self.assertIn('content.VehiclePlacement', main)
-            self.assertIn('content.VehicleSpawn', main)
-            self.assertNotIn("needs review", report)
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 16)
+            self.assertEqual(len(result.todos), 16)
+            self.assertNotIn("local definition = content.", main)
+            self.assertIn("has no native Platform registrar", report)
 
     def test_translates_batch_28_primitive_to_bounded_selectors(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -8075,24 +8027,1222 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn("services.characters.adjust(actor)", main)
             self.assertNotIn("needs review", report)
 
+    def test_migrates_region_settings_ravine(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "region_settings_ravine",
+                            "id": "ravine_default",
+                            "num_ravines": 2,
+                            "ravine_range": 50,
+                            "ravine_width": 3,
+                            "ravine_depth": -4,
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "regional_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn("content.RegionSettingsRavine", main)
+            self.assertIn('id = "ravine_default"', main)
+            self.assertIn("num_ravines = 2", main)
+            self.assertIn("ravine_range = 50", main)
+            self.assertIn("ravine_width = 3", main)
+            self.assertIn("ravine_depth = -4", main)
+            self.assertIn("content.add(definition)", main)
+            self.assertNotIn("needs review", report)
+
+    def test_migrates_region_settings_lake(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "region_settings_lake",
+                            "id": "lake_default",
+                            "noise_threshold_lake": 0.5,
+                            "lake_size_min": 25,
+                            "lake_depth": -6,
+                            "invert_lakes": True,
+                            "surface_ter": "lake_surface",
+                            "shore_ter": "lake_shore",
+                            "interior_ter": "lake_water_cube",
+                            "bed_ter": "lake_bed",
+                            "shore_extendable_overmap_terrain": ["forest", "field"],
+                            "shore_extendable_overmap_terrain_aliases": [
+                                {
+                                    "om_terrain": "swamp",
+                                    "alias": "lake_shore",
+                                    "om_terrain_match_type": "TYPE"
+                                }
+                            ]
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "regional_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn("content.RegionSettingsLake", main)
+            self.assertIn('id = "lake_default"', main)
+            self.assertIn("noise_threshold_lake = 0.5", main)
+            self.assertIn("lake_size_min = 25", main)
+            self.assertIn("lake_depth = -6", main)
+            self.assertIn("invert_lakes = true", main)
+            self.assertIn('surface_ter = "lake_surface"', main)
+            self.assertIn('shore_extendable_overmap_terrain = {', main)
+            self.assertIn('"forest"', main)
+            self.assertIn('om_terrain = "swamp"', main)
+            self.assertIn('om_terrain_match_type = "TYPE"', main)
+            self.assertNotIn("needs review", report)
+
+    def test_migrates_region_settings_ocean(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "region_settings_ocean",
+                            "id": "ocean_default",
+                            "noise_threshold_ocean": 0.25,
+                            "ocean_size_min": 120,
+                            "ocean_depth": -12,
+                            "ocean_start_north": 10,
+                            "ocean_start_east": 20,
+                            "sandy_beach_width": 3,
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "regional_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn("content.RegionSettingsOcean", main)
+            self.assertIn('id = "ocean_default"', main)
+            self.assertIn("noise_threshold_ocean = 0.25", main)
+            self.assertIn("ocean_size_min = 120", main)
+            self.assertIn("ocean_depth = -12", main)
+            self.assertIn("ocean_start_north = 10", main)
+            self.assertIn("ocean_start_east = 20", main)
+            self.assertIn("sandy_beach_width = 3", main)
+            self.assertNotIn("needs review", report)
+
+    def test_migrates_region_settings_forest(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "region_settings_forest",
+                            "id": "forest_default",
+                            "noise_threshold_forest": 0.25,
+                            "noise_threshold_forest_thick": 0.5,
+                            "noise_threshold_swamp_adjacent_water": 0.75,
+                            "noise_threshold_swamp_isolated": 0.625,
+                            "river_floodplain_buffer_distance_min": 4,
+                            "river_floodplain_buffer_distance_max": 18,
+                            "forest_threshold_limit": 0.375,
+                            "forest_threshold_increase": [0.125, 0.25, 0.375, 0.5],
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "regional_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn("content.RegionSettingsForest", main)
+            self.assertIn('id = "forest_default"', main)
+            self.assertIn("noise_threshold_forest = 0.25", main)
+            self.assertIn("noise_threshold_forest_thick = 0.5", main)
+            self.assertIn("noise_threshold_swamp_adjacent_water = 0.75", main)
+            self.assertIn("noise_threshold_swamp_isolated = 0.625", main)
+            self.assertIn("river_floodplain_buffer_distance_min = 4", main)
+            self.assertIn("river_floodplain_buffer_distance_max = 18", main)
+            self.assertIn("forest_threshold_limit = 0.375", main)
+            self.assertIn("forest_threshold_increase = {0.125, 0.25, 0.375, 0.5}", main)
+            self.assertNotIn("needs review", report)
+
+    def test_migrates_region_settings_river(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "region_settings_river",
+                            "id": "test_river_custom",
+                            "river_scale": 2,
+                            "river_frequency": 1.25,
+                            "river_branch_chance": 32.0,
+                            "river_branch_remerge_chance": 8.0,
+                            "river_branch_scale_decrease": 1.5,
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "river_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn("local definition = content.RegionSettingsRiver {", main)
+            self.assertIn('id = "test_river_custom"', main)
+            self.assertIn("river_scale = 2", main)
+            self.assertIn("river_frequency = 1.25", main)
+            self.assertIn("river_branch_chance = 32", main)
+            self.assertIn("river_branch_remerge_chance = 8", main)
+            self.assertIn("river_branch_scale_decrease = 1.5", main)
+            self.assertNotIn("needs review", report)
+
+    def test_migrates_region_settings_forest_mapgen(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "region_settings_forest_mapgen",
+                            "id": "test_forest_mapgen_custom",
+                            "biomes": ["forest_biome_test_a", "forest_biome_test_b"],
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "forest_mapgen_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn("local definition = content.RegionSettingsForestMapgen {", main)
+            self.assertIn('id = "test_forest_mapgen_custom"', main)
+            self.assertIn('biomes = { "forest_biome_test_a", "forest_biome_test_b" }', main)
+            self.assertNotIn("needs review", report)
+
+    def test_migrates_region_settings_map_extras(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "region_settings_map_extras",
+                            "id": "test_map_extras_custom",
+                            "extras": ["map_extra_test_a", "map_extra_test_b"],
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "map_extras_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn("local definition = content.RegionSettingsMapExtras {", main)
+            self.assertIn('id = "test_map_extras_custom"', main)
+            self.assertIn('extras = { "map_extra_test_a", "map_extra_test_b" }', main)
+            self.assertNotIn("needs review", report)
+
+    def test_migrates_region_settings_terrain_furniture(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "region_settings_terrain_furniture",
+                            "id": "test_terrain_furniture_custom",
+                            "ter_furn": ["region_ter_furn_test_a", "region_ter_furn_test_b"],
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "terrain_furniture_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 0)
+            self.assertIn("local definition = content.RegionSettingsTerrainFurniture {", main)
+            self.assertIn('id = "test_terrain_furniture_custom"', main)
+            self.assertIn('ter_furn = { "region_ter_furn_test_a", "region_ter_furn_test_b" }', main)
+            self.assertNotIn("needs review", report)
+
+    def test_g2_regional_reference_ids_and_duplicates_are_partial(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "region_settings_river",
+                            "id": "r" * 257,
+                        },
+                        {
+                            "type": "region_settings_forest_mapgen",
+                            "id": "duplicate_biomes",
+                            "biomes": ["biome_a", "biome_a"],
+                        },
+                        {
+                            "type": "region_settings_map_extras",
+                            "id": "overlong_extra",
+                            "extras": ["x" * 257],
+                        },
+                        {
+                            "type": "region_settings_terrain_furniture",
+                            "id": "duplicate_ter_furn",
+                            "ter_furn": ["mapping_a", "mapping_a"],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "regional_invalid_ids"
+            )
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 4)
+            self.assertIn("region settings river needs a stable native id", report)
+            self.assertIn("biomes entry needs review", report)
+            self.assertIn("extras entry needs review", report)
+            self.assertIn("ter_furn entry needs review", report)
+
+    def test_g2_regional_inheritance_without_parents_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "region_settings_river",
+                            "id": "river_child",
+                            "copy-from": "default",
+                        },
+                        {
+                            "type": "region_settings_forest_mapgen",
+                            "id": "forest_child",
+                            "copy-from": "default",
+                            "extend": {"biomes": ["biome_extra"]},
+                        },
+                        {
+                            "type": "region_settings_map_extras",
+                            "id": "extras_child",
+                            "copy-from": "default",
+                            "delete": {"extras": ["forest"]},
+                        },
+                        {
+                            "type": "region_settings_terrain_furniture",
+                            "id": "terrain_child",
+                            "copy-from": "default",
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "regional_inheritance"
+            )
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 4)
+            self.assertIn(
+                "copy-from parent 'default' is not available in the migration corpus "
+                "after deferred resolution",
+                report,
+            )
+
+    def test_regional_inheritance_resolves_forward_and_multihop_parents(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "region_settings_ravine",
+                            "id": "ravine_child",
+                            "copy-from": "ravine_middle",
+                            "ravine_depth": -8,
+                        },
+                        {
+                            "type": "region_settings_ravine",
+                            "id": "ravine_middle",
+                            "copy-from": "ravine_base",
+                            "ravine_width": 4,
+                        },
+                        {
+                            "type": "region_settings_terrain_furniture",
+                            "id": "terrain_child",
+                            "copy-from": "terrain_base",
+                            "ter_furn": ["mapping_child"],
+                        },
+                        {
+                            "type": "region_settings_ravine",
+                            "id": "ravine_base",
+                            "num_ravines": 2,
+                            "ravine_range": 50,
+                            "ravine_width": 3,
+                            "ravine_depth": -4,
+                        },
+                        {
+                            "type": "region_settings_terrain_furniture",
+                            "id": "terrain_base",
+                            "ter_furn": ["mapping_base"],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "forward_regional_inheritance"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 5)
+            self.assertEqual(len(result.partial), 0)
+            self.assertEqual(len(result.todos), 0)
+            self.assertIn('id = "ravine_child"', main)
+            self.assertIn("ravine_range = 50", main)
+            self.assertIn("ravine_width = 4", main)
+            self.assertIn("ravine_depth = -8", main)
+            self.assertIn('id = "terrain_child"', main)
+            self.assertIn('ter_furn = { "mapping_child" }', main)
+
+    def test_regional_inheritance_flattens_copy_extend_and_delete(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "region_settings_ravine",
+                            "id": "ravine_base",
+                            "num_ravines": 2,
+                            "ravine_range": 50,
+                            "ravine_width": 3,
+                            "ravine_depth": -4,
+                        },
+                        {
+                            "type": "region_settings_ravine",
+                            "id": "ravine_child",
+                            "copy-from": "ravine_base",
+                            "ravine_depth": -8,
+                        },
+                        {
+                            "type": "region_settings_lake",
+                            "id": "lake_base",
+                            "noise_threshold_lake": 0.5,
+                            "lake_size_min": 25,
+                            "shore_extendable_overmap_terrain": ["forest", "field"],
+                        },
+                        {
+                            "type": "region_settings_lake",
+                            "id": "lake_child",
+                            "copy-from": "lake_base",
+                            "extend": {
+                                "shore_extendable_overmap_terrain": ["swamp"]
+                            },
+                            "delete": {
+                                "shore_extendable_overmap_terrain": ["forest"]
+                            },
+                        },
+                        {
+                            "type": "region_settings_ocean",
+                            "id": "ocean_base",
+                            "noise_threshold_ocean": 0.25,
+                            "ocean_depth": -12,
+                        },
+                        {
+                            "type": "region_settings_ocean",
+                            "id": "ocean_child",
+                            "copy-from": "ocean_base",
+                            "ocean_size_min": 120,
+                        },
+                        {
+                            "type": "region_settings_forest",
+                            "id": "forest_base",
+                            "noise_threshold_forest": 0.25,
+                            "forest_threshold_limit": 0.375,
+                        },
+                        {
+                            "type": "region_settings_forest",
+                            "id": "forest_child",
+                            "copy-from": "forest_base",
+                            "noise_threshold_forest_thick": 0.5,
+                        },
+                        {
+                            "type": "region_settings_river",
+                            "id": "river_base",
+                            "river_scale": 2,
+                            "river_frequency": 1.25,
+                        },
+                        {
+                            "type": "region_settings_river",
+                            "id": "river_child",
+                            "copy-from": "river_base",
+                            "river_scale": 4,
+                        },
+                        {
+                            "type": "region_settings_forest_mapgen",
+                            "id": "forest_mapgen_base",
+                            "biomes": ["biome_a", "biome_b"],
+                        },
+                        {
+                            "type": "region_settings_forest_mapgen",
+                            "id": "forest_mapgen_child",
+                            "copy-from": "forest_mapgen_base",
+                            "extend": {"biomes": ["biome_c"]},
+                            "delete": {"biomes": ["biome_a"]},
+                        },
+                        {
+                            "type": "region_settings_map_extras",
+                            "id": "map_extras_base",
+                            "extras": ["forest", "field"],
+                        },
+                        {
+                            "type": "region_settings_map_extras",
+                            "id": "map_extras_child",
+                            "copy-from": "map_extras_base",
+                            "extend": {"extras": ["road"]},
+                            "delete": {"extras": ["forest"]},
+                        },
+                        {
+                            "type": "region_settings_terrain_furniture",
+                            "id": "terrain_furniture_base",
+                            "ter_furn": ["mapping_a", "mapping_b"],
+                        },
+                        {
+                            "type": "region_settings_terrain_furniture",
+                            "id": "terrain_furniture_child",
+                            "copy-from": "terrain_furniture_base",
+                            "extend": {"ter_furn": ["mapping_c"]},
+                            "delete": {"ter_furn": ["mapping_a"]},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "regional_inheritance"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 16)
+            self.assertEqual(len(result.partial), 0)
+            self.assertEqual(len(result.todos), 0)
+            self.assertIn('id = "ravine_child"', main)
+            self.assertIn("ravine_range = 50", main)
+            self.assertIn("ravine_depth = -8", main)
+            self.assertIn('id = "lake_child"', main)
+            self.assertIn('"field"', main)
+            self.assertIn('"swamp"', main)
+            self.assertIn('id = "ocean_child"', main)
+            self.assertIn("noise_threshold_ocean = 0.25", main)
+            self.assertIn('id = "forest_child"', main)
+            self.assertIn("forest_threshold_limit = 0.375", main)
+            self.assertIn('id = "river_child"', main)
+            self.assertIn("river_frequency = 1.25", main)
+            self.assertIn(
+                'biomes = { "biome_b", "biome_c" }', main
+            )
+            self.assertIn(
+                'extras = { "field", "road" }', main
+            )
+            self.assertIn(
+                'ter_furn = { "mapping_b", "mapping_c" }', main
+            )
+            self.assertNotIn("copy-from", main)
+            self.assertNotIn("needs review", report)
+
+    def test_regional_inheritance_rejects_impossible_delete(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "region_settings_map_extras",
+                            "id": "base",
+                            "extras": ["forest"],
+                        },
+                        {
+                            "type": "region_settings_map_extras",
+                            "id": "child",
+                            "copy-from": "base",
+                            "delete": {"extras": ["road"]},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "bad_regional_delete"
+            )
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 1)
+            self.assertIn(
+                "delete.extras references values absent from the inherited container",
+                report,
+            )
+
+    def test_regional_inheritance_same_id_uses_previous_effective_object(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "region_settings_map_extras",
+                            "id": "default",
+                            "extras": ["forest"],
+                        },
+                        {
+                            "type": "region_settings_map_extras",
+                            "id": "default",
+                            "copy-from": "default",
+                            "extend": {"extras": ["field"]},
+                        },
+                        {
+                            "type": "region_settings_map_extras",
+                            "id": "child",
+                            "copy-from": "default",
+                            "delete": {"extras": ["forest"]},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "same_id_inheritance"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 3)
+            self.assertEqual(len(result.partial), 0)
+            self.assertEqual(len(result.todos), 0)
+            self.assertIn('extras = { "forest", "field" }', main)
+            self.assertIn('extras = { "field" }', main)
+
+    def test_g3_regional_inheritance_flattens_weighted_lists(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "region_settings_forest_trail",
+                            "id": "trail_base",
+                            "chance": 3,
+                            "trailheads": [["trail_a", 1]],
+                        },
+                        {
+                            "type": "region_settings_forest_trail",
+                            "id": "trail_child",
+                            "copy-from": "trail_base",
+                            "extend": {"trailheads": [["trail_a", 7], "trail_b"]},
+                        },
+                        {
+                            "type": "region_settings_highway",
+                            "id": "highway_base",
+                            "clockwise_slant_special": "slant_clockwise",
+                            "counterclockwise_slant_special": "slant_counterclockwise",
+                            "bends": [["bend_a", 1]],
+                        },
+                        {
+                            "type": "region_settings_highway",
+                            "id": "highway_child",
+                            "copy-from": "highway_base",
+                            "extend": {"bends": [["bend_a", 4], ["bend_b", 2]]},
+                        },
+                        {
+                            "type": "region_terrain_furniture",
+                            "id": "rtf_base",
+                            "ter_id": "t_base",
+                            "replace_with_terrain": [["t_a", 1], ["t_b", 2]],
+                        },
+                        {
+                            "type": "region_terrain_furniture",
+                            "id": "rtf_child",
+                            "copy-from": "rtf_base",
+                            "extend": {"replace_with_terrain": [["t_a", 9], ["t_c", 3]]},
+                            "delete": {"replace_with_terrain": ["t_b"]},
+                        },
+                        {
+                            "type": "forest_biome_component",
+                            "id": "component_base",
+                            "chance": 5,
+                            "types": {"t_a": 1, "t_b": 2},
+                        },
+                        {
+                            "type": "forest_biome_component",
+                            "id": "component_child",
+                            "copy-from": "component_base",
+                            "extend": {"types": [["t_a", 8], "t_c"]},
+                            "delete": {"types": ["t_b"]},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "g3_inheritance"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 8)
+            self.assertEqual(result.partial, [])
+            self.assertEqual(result.todos, [])
+            self.assertIn('id = "trail_child"', main)
+            self.assertIn('definition:trailhead("trail_a", 7)', main)
+            self.assertIn('definition:trailhead("trail_b", 1)', main)
+            self.assertIn('id = "highway_child"', main)
+            self.assertIn('definition:bend("bend_a", 4)', main)
+            self.assertIn('definition:bend("bend_b", 2)', main)
+            self.assertIn('id = "rtf_child"', main)
+            self.assertIn('definition:replace_terrain("t_a", 9)', main)
+            self.assertNotIn('definition:replace_terrain("t_b", 2)', main.split('id = "rtf_child"', 1)[1])
+            self.assertIn('definition:replace_terrain("t_c", 3)', main)
+            self.assertIn('id = "component_child"', main)
+            self.assertIn('definition:type("t_a", 8)', main)
+            self.assertIn('definition:type("t_c", 1)', main)
+
+    def test_g3_weighted_lists_replace_duplicate_weights_in_place(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "forest_biome_component",
+                        "id": "duplicate_component",
+                        "types": [["t_first", 1], ["t_second", 2], ["t_first", 9]],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "g3_duplicates"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
+            self.assertEqual(main.count('definition:type("t_first",'), 1)
+            self.assertLess(
+                main.index('definition:type("t_first", 9)'),
+                main.index('definition:type("t_second", 2)'),
+            )
+
+    def test_regional_leaf_invalid_native_values_are_partial(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "region_settings_ravine",
+                            "id": "ravine_invalid",
+                            "num_ravines": 1 << 40,
+                        },
+                        {
+                            "type": "region_settings_lake",
+                            "id": "lake_invalid",
+                            "invert_lakes": "false",
+                            "surface_ter": 7,
+                            "shore_extendable_overmap_terrain_aliases": [
+                                {
+                                    "om_terrain": "forest",
+                                    "alias": "lake_shore",
+                                    "om_terrain_match_type": "sideways",
+                                }
+                            ],
+                        },
+                        {
+                            "type": "region_settings_ocean",
+                            "id": "ocean_invalid",
+                            "ocean_start_north": 1 << 40,
+                        },
+                        {
+                            "type": "region_settings_forest",
+                            "id": "forest_invalid",
+                            "forest_threshold_limit": 1e300,
+                            "forest_threshold_increase": [1e300, 0, 0, 0],
+                        },
+                        {
+                            "type": "region_settings_river",
+                            "id": "river_invalid",
+                            "river_scale": 1 << 40,
+                        },
+                        {
+                            "type": "region_settings_forest_mapgen",
+                            "id": "forest_mapgen_invalid",
+                            "biomes": "not_a_list",
+                        },
+                        {
+                            "type": "region_settings_map_extras",
+                            "id": "map_extras_invalid",
+                            "extras": [""],
+                        },
+                        {
+                            "type": "region_settings_terrain_furniture",
+                            "id": "terrain_furniture_invalid",
+                            "ter_furn": [123],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "regional_invalid_mod"
+            )
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 8)
+            self.assertIn("num_ravines needs review", report)
+            self.assertIn("invert_lakes needs review", report)
+            self.assertIn("surface_ter needs review", report)
+            self.assertIn(
+                "shore_extendable_overmap_terrain_aliases element needs review",
+                report,
+            )
+            self.assertIn("ocean_start_north needs review", report)
+            self.assertIn("forest_threshold_limit needs review", report)
+            self.assertIn("forest_threshold_increase element needs review", report)
+            self.assertIn("river_scale needs review", report)
+            self.assertIn("biomes must be a list", report)
+            self.assertIn("extras entry needs review", report)
+            self.assertIn("ter_furn entry needs review", report)
+
+    def test_migrates_region_settings_forest_trail(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "region_settings_forest_trail",
+                            "id": "test_trail",
+                            "chance": 3,
+                            "border_point_chance": 4,
+                            "minimum_forest_size": 80,
+                            "random_point_min": 5,
+                            "random_point_max": 45,
+                            "random_point_size_scalar": 90,
+                            "trailhead_chance": 2,
+                            "trailhead_road_distance": 8,
+                            "trailheads": [
+                                ["trailhead_basic", 2],
+                                ["trailhead_outhouse", 1],
+                            ],
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "forest_trail_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
+            self.assertIn("content.RegionSettingsForestTrail {", main)
+            self.assertIn('id = "test_trail"', main)
+            self.assertIn("chance = 3", main)
+            self.assertIn("border_point_chance = 4", main)
+            self.assertIn("minimum_forest_size = 80", main)
+            self.assertIn("random_point_min = 5", main)
+            self.assertIn("random_point_max = 45", main)
+            self.assertIn("random_point_size_scalar = 90", main)
+            self.assertIn("trailhead_chance = 2", main)
+            self.assertIn("trailhead_road_distance = 8", main)
+            self.assertIn('definition:trailhead("trailhead_basic", 2)', main)
+            self.assertIn('definition:trailhead("trailhead_outhouse", 1)', main)
+
+    def test_migrates_region_settings_highway(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "region_settings_highway",
+                            "id": "test_highway",
+                            "width_of_segments": 3,
+                            "straightness_chance": 0.75,
+                            "reserved_terrain_id": "hw_reserved",
+                            "reserved_terrain_water_id": "hw_reserved_water",
+                            "segment_flat_special": "highway_segment_flat",
+                            "clockwise_slant_special": "Highway Slant Minor Clockwise",
+                            "counterclockwise_slant_special": "Highway Slant Minor Counterclockwise",
+                            "four_way_intersections": [["Highway Clover Leaf", 2]],
+                            "three_way_intersections": [["Highway Trumpet Interchange", 1]],
+                            "bends": [["Highway Bend", 3]],
+                            "road_connections": [["Highway Diamond Interchange", 1]],
+                            "interchanges": [["Highway Diamond Interchange", 2]],
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "highway_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
+            self.assertIn("content.RegionSettingsHighway {", main)
+            self.assertIn('id = "test_highway"', main)
+            self.assertIn("width_of_segments = 3", main)
+            self.assertIn("straightness_chance = 0.75", main)
+            self.assertIn('reserved_terrain_id = "hw_reserved"', main)
+            self.assertIn('reserved_terrain_water_id = "hw_reserved_water"', main)
+            self.assertIn('segment_flat_special = "highway_segment_flat"', main)
+            self.assertIn('definition:four_way_intersection("Highway Clover Leaf", 2)', main)
+            self.assertIn('definition:three_way_intersection("Highway Trumpet Interchange", 1)', main)
+            self.assertIn('definition:bend("Highway Bend", 3)', main)
+            self.assertIn('definition:road_connection("Highway Diamond Interchange", 1)', main)
+            self.assertIn('definition:interchange("Highway Diamond Interchange", 2)', main)
+
+    def test_migrates_region_terrain_furniture(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "region_terrain_furniture",
+                            "id": "test_rtf",
+                            "ter_id": "t_region_groundcover",
+                            "furn_id": "f_region_flower",
+                            "replace_with_terrain": [
+                                ["t_grass", 100],
+                                ["t_dirt", 10],
+                            ],
+                            "replace_with_furniture": [
+                                ["f_flower_tulip", 5],
+                            ],
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "rtf_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
+            self.assertIn("content.RegionTerrainFurniture {", main)
+            self.assertIn('id = "test_rtf"', main)
+            self.assertIn('ter_id = "t_region_groundcover"', main)
+            self.assertIn('furn_id = "f_region_flower"', main)
+            self.assertIn('definition:replace_terrain("t_grass", 100)', main)
+            self.assertIn('definition:replace_terrain("t_dirt", 10)', main)
+            self.assertIn('definition:replace_furniture("f_flower_tulip", 5)', main)
+
+    def test_migrates_forest_biome_component(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "forest_biome_component",
+                            "id": "test_fbc",
+                            "sequence": 1,
+                            "chance": 25,
+                            "types": [
+                                ["t_tree_young", 10],
+                                ["t_region_tree_forest", 50],
+                            ],
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "fbc_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
+            self.assertIn("content.ForestBiomeComponent {", main)
+            self.assertIn('id = "test_fbc"', main)
+            self.assertIn("sequence = 1", main)
+            self.assertIn("chance = 25", main)
+            self.assertIn('definition:type("t_tree_young", 10)', main)
+            self.assertIn('definition:type("t_region_tree_forest", 50)', main)
+
+    def test_migrates_batch_g3_invalid_fields_report_todos(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "region_settings_forest_trail",
+                            "id": "trail_inv",
+                            "chance": 1 << 40,
+                            "trailheads": 7,
+                        },
+                        {
+                            "type": "region_settings_highway",
+                            "id": "highway_inv",
+                            "width_of_segments": 1 << 40,
+                            "four_way_intersections": 7,
+                        },
+                        {
+                            "type": "region_terrain_furniture",
+                            "id": "rtf_inv",
+                            "replace_with_terrain": 7,
+                        },
+                        {
+                            "type": "forest_biome_component",
+                            "id": "fbc_inv",
+                            "chance": 1 << 40,
+                            "types": 7,
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "g3_inv_mod"
+            )
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 4)
+            self.assertIn("chance needs review", report)
+            self.assertIn("trailheads need review", report)
+            self.assertIn("width_of_segments needs review", report)
+            self.assertIn("four_way_intersections needs review", report)
+            self.assertIn("replace_with_terrain needs review", report)
+            self.assertIn("types need review", report)
+
+    def test_translates_batch_g4_selectors(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "city",
+                            "id": "city_boston",
+                            "database_id": 42,
+                            "name": "Boston",
+                            "population": 650000,
+                            "size": 12,
+                            "pos_om": [ 10, 20 ],
+                            "pos": [ 30, 40 ],
+                        },
+                        {
+                            "type": "faction_mission",
+                            "id": "mission_scout",
+                            "name": "Scouting Mission",
+                            "desc": "Scout nearby sector.",
+                            "skill": "survival",
+                            "difficulty": "LOW",
+                            "risk": "VERY_LOW",
+                            "activity": "LIGHT_EXERCISE",
+                            "time": "2 Hours",
+                            "positions": 2,
+                            "items_label": "Rewards",
+                            "items_possibilities": [ "canteen", "matchbook" ],
+                            "effects": [ "Uncovers map tiles." ],
+                            "footer": "Report back to base.",
+                        },
+                        {
+                            "type": "region_settings_city",
+                            "id": "default_city",
+                            "is_megacity": False,
+                            "city_size": 8,
+                            "city_spacing": 4,
+                            "shop_radius": 30,
+                            "shop_sigma": 50,
+                            "park_radius": 20,
+                            "park_sigma": 80,
+                            "name_snippet": "city_names",
+                            "houses": [ [ "house_suburban", 50 ] ],
+                            "shops": [ [ "shop_grocery", 25 ] ],
+                            "parks": [ [ "park_central", 10 ] ],
+                        },
+                        {
+                            "type": "region_settings_city",
+                            "id": "child_city",
+                            "copy-from": "default_city",
+                            "city_size": 10,
+                            "extend": {
+                                "houses": [ [ "house_modern", 40 ] ],
+                            },
+                            "delete": {
+                                "shops": [ [ "shop_grocery", 25 ] ],
+                            },
+                        },
+                        {
+                            "type": "forest_biome_mapgen",
+                            "id": "default_biome",
+                            "sparseness_adjacency_factor": 3,
+                            "item_group": "forest",
+                            "item_group_chance": 60,
+                            "item_spawn_iterations": 1,
+                            "terrains": [ "forest", "special_forest" ],
+                            "components": [ "trees_forest" ],
+                            "groundcover": [ [ "t_region_groundcover_forest", 1 ] ],
+                            "terrain_furniture": {
+                                "t_water_murky": {
+                                    "chance": 2,
+                                    "furniture": [ [ "f_region_water_plant", 1 ] ],
+                                },
+                            },
+                        },
+                        {
+                            "type": "forest_biome_mapgen",
+                            "id": "child_biome",
+                            "copy-from": "default_biome",
+                            "sparseness_adjacency_factor": 4,
+                            "extend": {
+                                "terrains": [ "forest_thick" ],
+                                "components": [ "shrubs_forest" ],
+                                "groundcover": [ [ "t_region_groundcover_swamp", 2 ] ],
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "g4_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 6)
+            self.assertEqual(len(result.partial), 0)
+            self.assertEqual(len(result.todos), 0)
+            self.assertIn("content.City", main)
+            self.assertIn("content.FactionMission", main)
+            self.assertIn("content.RegionSettingsCity", main)
+            self.assertIn("content.ForestBiomeMapgen", main)
+            self.assertIn('id = "city_boston"', main)
+            self.assertIn('id = "mission_scout"', main)
+            self.assertIn('id = "default_city"', main)
+            self.assertIn('id = "child_city"', main)
+            self.assertIn('id = "default_biome"', main)
+            self.assertIn('id = "child_biome"', main)
+            self.assertIn('definition:add_house("house_modern", 40)', main)
+            self.assertIn('definition:add_terrain("forest_thick")', main)
+            self.assertIn('definition:add_component("shrubs_forest")', main)
+            self.assertIn('definition:add_groundcover("t_region_groundcover_swamp", 2)', main)
+
+    def test_batch_g4_defaults_and_invalid_shapes_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "city",
+                            "id": "city_missing_native_members",
+                        },
+                        {
+                            "type": "faction_mission",
+                            "id": "mission_missing_text",
+                            "activity": "NOT_AN_ACTIVITY_LEVEL",
+                        },
+                        {
+                            "type": "region_settings_city",
+                            "id": "city_settings_missing_size",
+                            "is_megacity": "false",
+                        },
+                        {
+                            "type": "region_settings_city",
+                            "id": "city_settings_defaults",
+                            "city_size": 8,
+                        },
+                        {
+                            "type": "forest_biome_mapgen",
+                            "id": "forest_defaults",
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "g4_invalid_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(len(result.partial), 3)
+            self.assertIn("database_id needs review", report)
+            self.assertIn("name needs review", report)
+            self.assertIn("activity needs review", report)
+            self.assertIn("is_megacity needs review", report)
+            self.assertIn("city_size needs review", report)
+            self.assertIn("shop_sigma = 20", main)
+            self.assertIn("park_radius = 30", main)
+            self.assertIn("park_sigma = 70", main)
+            self.assertIn('name_snippet = "<city_name>"', main)
+            self.assertIn("sparseness_adjacency_factor = 0", main)
+            self.assertIn("item_group_chance = 0", main)
+            self.assertIn("item_spawn_iterations = 0", main)
+
 
 if __name__ == "__main__":
     unittest.main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

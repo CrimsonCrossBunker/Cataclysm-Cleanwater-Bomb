@@ -27,9 +27,9 @@ summary:
   implemented_verified: 67
   implemented_unverified: 0
   bounded_implemented_verified: 14
-  bounded_implemented_unverified: 672
+  bounded_implemented_unverified: 638
   primitive_available_unverified: 4
-  planned: 0
+  planned: 34
   private_adapter: 0
   reviewed_not_applicable: 18
 entries:
@@ -6822,15 +6822,12 @@ entries:
   selector: transform_item
   target_kind: shared_service
   target: services.items
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
-  - src/catalua_platform_runtime.cpp
-  - data/lua/types/ccb_platform_v1.d.lua
-  - tests/catalua_ui_test.cpp
-  - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
-  - data/lua/LUA_FIRST_PLATFORM.md
+  - talk_effect_fun::f_transform_item
+  - src/npctalk.cpp
+  - src/catalua_ui_items.cpp
 - inventory: eoc-effects
   selector: transform_line
   target_kind: shared_service
@@ -8199,8 +8196,8 @@ entries:
   selector: SPELL
   target_kind: platform_domain
   target: content.magic
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -8383,8 +8380,8 @@ entries:
   selector: bionic
   target_kind: platform_domain
   target: content.bionics
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -8494,17 +8491,19 @@ entries:
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
+  - src/city.cpp
+  - src/city.h
+  - src/catalua_platform_content.h
   - data/lua/types/ccb_platform_v1.d.lua
   - tests/catalua_ui_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: city_building
   target_kind: platform_domain
   target: content.gameplay
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -8645,8 +8644,8 @@ entries:
   selector: dimension
   target_kind: platform_domain
   target: content.gameplay
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -8658,8 +8657,8 @@ entries:
   selector: dimension_region_layout
   target_kind: platform_domain
   target: content.gameplay
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -8752,8 +8751,8 @@ entries:
   selector: enchantment
   target_kind: platform_domain
   target: content.gameplay
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -8778,8 +8777,8 @@ entries:
   selector: event_statistic
   target_kind: platform_domain
   target: content.gameplay
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -8791,8 +8790,8 @@ entries:
   selector: event_transformation
   target_kind: platform_domain
   target: content.gameplay
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -8817,8 +8816,8 @@ entries:
   selector: faction
   target_kind: platform_domain
   target: content.factions
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -8834,10 +8833,12 @@ entries:
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
+  - src/faction_mission.cpp
+  - src/faction_camp.h
+  - src/catalua_platform_content.h
   - data/lua/types/ccb_platform_v1.d.lua
   - tests/catalua_ui_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: fault
@@ -8917,10 +8918,12 @@ entries:
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
+  - src/regional_settings.cpp
+  - src/regional_settings.h
+  - src/catalua_platform_content.h
   - data/lua/types/ccb_platform_v1.d.lua
   - tests/catalua_ui_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: forest_biome_mapgen
@@ -8930,10 +8933,12 @@ entries:
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
+  - src/regional_settings.cpp
+  - src/regional_settings.h
+  - src/catalua_platform_content.h
   - data/lua/types/ccb_platform_v1.d.lua
   - tests/catalua_ui_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: furniture
@@ -9047,8 +9052,8 @@ entries:
   selector: jmath_function
   target_kind: platform_domain
   target: content.state-and-values
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -9129,8 +9134,8 @@ entries:
   selector: mapgen
   target_kind: platform_domain
   target: content.map
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -9169,8 +9174,8 @@ entries:
   selector: mission_definition
   target_kind: platform_domain
   target: content.missions
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -9195,8 +9200,8 @@ entries:
   selector: mod_tileset
   target_kind: platform_domain
   target: content.gameplay
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -9300,8 +9305,8 @@ entries:
   selector: mutation
   target_kind: platform_domain
   target: content.mutations
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -9366,8 +9371,8 @@ entries:
   selector: npc
   target_kind: platform_domain
   target: content.characters
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -9379,8 +9384,8 @@ entries:
   selector: npc_class
   target_kind: platform_domain
   target: content.characters
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -9392,8 +9397,8 @@ entries:
   selector: omt_placeholder
   target_kind: platform_domain
   target: content.gameplay
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -9405,8 +9410,8 @@ entries:
   selector: option_slider
   target_kind: platform_domain
   target: content.gameplay
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -9496,8 +9501,8 @@ entries:
   selector: overmap_special
   target_kind: platform_domain
   target: content.map
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -9522,8 +9527,8 @@ entries:
   selector: overmap_terrain
   target_kind: platform_domain
   target: content.map
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -9535,8 +9540,8 @@ entries:
   selector: palette
   target_kind: platform_domain
   target: content.gameplay
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -9562,8 +9567,8 @@ entries:
   selector: pp_generator
   target_kind: platform_domain
   target: content.gameplay
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -9588,8 +9593,8 @@ entries:
   selector: profession
   target_kind: platform_domain
   target: content.gameplay
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -9628,8 +9633,8 @@ entries:
   selector: profession_item_substitutions
   target_kind: platform_domain
   target: content.items
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -9718,8 +9723,8 @@ entries:
   selector: region_settings
   target_kind: platform_domain
   target: content.gameplay
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -9735,10 +9740,12 @@ entries:
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
+  - src/regional_settings.cpp
+  - src/regional_settings.h
+  - src/catalua_platform_content.h
   - data/lua/types/ccb_platform_v1.d.lua
   - tests/catalua_ui_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: region_settings_forest
@@ -9748,10 +9755,12 @@ entries:
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
+  - src/regional_settings.cpp
+  - src/regional_settings.h
+  - src/catalua_platform_content.h
   - data/lua/types/ccb_platform_v1.d.lua
   - tests/catalua_ui_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: region_settings_forest_mapgen
@@ -9761,10 +9770,12 @@ entries:
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
+  - src/regional_settings.cpp
+  - src/regional_settings.h
+  - src/catalua_platform_content.h
   - data/lua/types/ccb_platform_v1.d.lua
   - tests/catalua_ui_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: region_settings_forest_trail
@@ -9774,10 +9785,12 @@ entries:
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
+  - src/regional_settings.cpp
+  - src/regional_settings.h
+  - src/catalua_platform_content.h
   - data/lua/types/ccb_platform_v1.d.lua
   - tests/catalua_ui_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: region_settings_highway
@@ -9787,10 +9800,12 @@ entries:
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
+  - src/regional_settings.cpp
+  - src/regional_settings.h
+  - src/catalua_platform_content.h
   - data/lua/types/ccb_platform_v1.d.lua
   - tests/catalua_ui_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: region_settings_lake
@@ -9800,10 +9815,12 @@ entries:
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
+  - src/regional_settings.cpp
+  - src/regional_settings.h
+  - src/catalua_platform_content.h
   - data/lua/types/ccb_platform_v1.d.lua
   - tests/catalua_ui_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: region_settings_map_extras
@@ -9813,10 +9830,12 @@ entries:
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
+  - src/regional_settings.cpp
+  - src/regional_settings.h
+  - src/catalua_platform_content.h
   - data/lua/types/ccb_platform_v1.d.lua
   - tests/catalua_ui_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: region_settings_ocean
@@ -9826,10 +9845,12 @@ entries:
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
+  - src/regional_settings.cpp
+  - src/regional_settings.h
+  - src/catalua_platform_content.h
   - data/lua/types/ccb_platform_v1.d.lua
   - tests/catalua_ui_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: region_settings_ravine
@@ -9839,10 +9860,12 @@ entries:
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
+  - src/regional_settings.cpp
+  - src/regional_settings.h
+  - src/catalua_platform_content.h
   - data/lua/types/ccb_platform_v1.d.lua
   - tests/catalua_ui_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: region_settings_river
@@ -9852,10 +9875,12 @@ entries:
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
+  - src/regional_settings.cpp
+  - src/regional_settings.h
+  - src/catalua_platform_content.h
   - data/lua/types/ccb_platform_v1.d.lua
   - tests/catalua_ui_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: region_settings_terrain_furniture
@@ -9865,10 +9890,12 @@ entries:
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
+  - src/regional_settings.cpp
+  - src/regional_settings.h
+  - src/catalua_platform_content.h
   - data/lua/types/ccb_platform_v1.d.lua
   - tests/catalua_ui_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: region_terrain_furniture
@@ -9878,17 +9905,19 @@ entries:
   legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
+  - src/regional_settings.cpp
+  - src/regional_settings.h
+  - src/catalua_platform_content.h
   - data/lua/types/ccb_platform_v1.d.lua
   - tests/catalua_ui_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   - data/lua/LUA_FIRST_PLATFORM.md
 - inventory: json-object-types
   selector: relic_procgen_data
   target_kind: platform_domain
   target: content.gameplay
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -10145,8 +10174,8 @@ entries:
   selector: talk_topic
   target_kind: platform_domain
   target: content.gameplay
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -10201,8 +10230,8 @@ entries:
   selector: ter_furn_transform
   target_kind: platform_domain
   target: content.gameplay
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -10319,8 +10348,8 @@ entries:
   selector: vehicle
   target_kind: platform_domain
   target: content.vehicles
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -10358,8 +10387,8 @@ entries:
   selector: vehicle_part
   target_kind: platform_domain
   target: content.vehicles
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -10410,8 +10439,8 @@ entries:
   selector: vehicle_placement
   target_kind: platform_domain
   target: content.vehicles
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -10423,8 +10452,8 @@ entries:
   selector: vehicle_spawn
   target_kind: platform_domain
   target: content.vehicles
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua
@@ -10504,8 +10533,8 @@ entries:
   selector: widget
   target_kind: platform_domain
   target: content.gameplay
-  status: bounded_implemented_unverified
-  legacy_dependency: none
+  status: planned
+  legacy_dependency: public_legacy
   evidence:
   - src/catalua_platform_runtime.cpp
   - data/lua/types/ccb_platform_v1.d.lua

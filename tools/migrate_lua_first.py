@@ -10,6 +10,7 @@ TODO.
 from __future__ import annotations
 
 import argparse
+import copy
 import functools
 import json
 import math
@@ -108,6 +109,63 @@ PROVEN_ITEM_ACTOR_EVENTS = frozenset({
 })
 
 EMIT_REPLACE_CONTENT = False
+
+REGIONAL_INHERITANCE_LABELS = {
+    "region_settings_ravine": "region settings ravine",
+    "region_settings_lake": "region settings lake",
+    "region_settings_ocean": "region settings ocean",
+    "region_settings_forest": "region settings forest",
+    "region_settings_river": "region settings river",
+    "region_settings_forest_mapgen": "region settings forest mapgen",
+    "region_settings_map_extras": "region settings map extras",
+    "region_settings_terrain_furniture": "region settings terrain furniture",
+    "region_settings_forest_trail": "region settings forest trail",
+    "region_settings_highway": "region settings highway",
+    "region_settings_city": "region settings city",
+    "region_terrain_furniture": "region terrain furniture",
+    "forest_biome_component": "forest biome component",
+    "forest_biome_mapgen": "forest biome mapgen",
+}
+
+# Only members loaded through a container reader support legacy extend/delete.
+# Other regional members are scalar, fixed-size, or use a reader that replaces
+# the complete value.  Keep this table closed so the migration tool never
+# guesses that an unsupported legacy patch was applied.
+REGIONAL_INHERITANCE_CONTAINER_FIELDS = {
+    "region_settings_ravine": frozenset(),
+    "region_settings_lake": frozenset({"shore_extendable_overmap_terrain"}),
+    "region_settings_ocean": frozenset(),
+    "region_settings_forest": frozenset(),
+    "region_settings_river": frozenset(),
+    "region_settings_forest_mapgen": frozenset({"biomes"}),
+    "region_settings_map_extras": frozenset({"extras"}),
+    "region_settings_terrain_furniture": frozenset({"ter_furn"}),
+    "region_settings_forest_trail": frozenset({"trailheads"}),
+    "region_settings_highway": frozenset({
+        "four_way_intersections", "three_way_intersections", "bends",
+        "road_connections", "interchanges",
+    }),
+    "region_settings_city": frozenset({"houses", "shops", "parks"}),
+    "region_terrain_furniture": frozenset({
+        "replace_with_terrain", "replace_with_furniture",
+    }),
+    "forest_biome_component": frozenset({"types"}),
+    "forest_biome_mapgen": frozenset({"terrains", "components", "groundcover"}),
+}
+
+REGIONAL_INHERITANCE_WEIGHTED_FIELDS = {
+    "region_settings_forest_trail": frozenset({"trailheads"}),
+    "region_settings_highway": frozenset({
+        "four_way_intersections", "three_way_intersections", "bends",
+        "road_connections", "interchanges",
+    }),
+    "region_settings_city": frozenset({"houses", "shops", "parks"}),
+    "region_terrain_furniture": frozenset({
+        "replace_with_terrain", "replace_with_furniture",
+    }),
+    "forest_biome_component": frozenset({"types"}),
+    "forest_biome_mapgen": frozenset({"groundcover"}),
+}
 
 PROVEN_NPC_ACTOR_EVENTS = frozenset({
     "npc_becomes_hostile",
@@ -2723,80 +2781,54 @@ def render_achievement(source: SourceObject, result: MigrationResult) -> str | N
     return "\n".join(lines)
 
 
-GENERIC_CONTENT_TYPES: dict[str, str] = {
-    "jmath_function": "MathFunction",
-    "event_statistic": "EventStatistic",
-    "event_transformation": "EventTransformation",
-    "widget": "Widget",
-    "option_slider": "OptionSlider",
-    "palette": "Palette",
-    "ter_furn_transform": "TerFurnTransform",
-    "profession_item_substitutions": "ProfessionItemSubstitutions",
-    "relic_procgen_data": "RelicProcgenData",
-    "dimension": "Dimension",
-    "dimension_region_layout": "DimensionRegionLayout",
-    "city": "City",
-    "city_building": "CityBuilding",
-    "omt_placeholder": "OmtPlaceholder",
-    "pp_generator": "PpGenerator",
-    "mod_tileset": "ModTileset",
-    "region_settings": "RegionSettings",
-    "region_settings_city": "RegionSettingsCity",
-    "region_settings_forest": "RegionSettingsForest",
-    "region_settings_forest_mapgen": "RegionSettingsForestMapgen",
-    "region_settings_forest_trail": "RegionSettingsForestTrail",
-    "region_settings_highway": "RegionSettingsHighway",
-    "region_settings_lake": "RegionSettingsLake",
-    "region_settings_map_extras": "RegionSettingsMapExtras",
-    "region_settings_ocean": "RegionSettingsOcean",
-    "region_settings_ravine": "RegionSettingsRavine",
-    "region_settings_river": "RegionSettingsRiver",
-    "region_settings_terrain_furniture": "RegionSettingsTerrainFurniture",
-    "region_terrain_furniture": "RegionTerrainFurniture",
-    "forest_biome_component": "ForestBiomeComponent",
-    "forest_biome_mapgen": "ForestBiomeMapgen",
-    "enchantment": "Enchantment",
-    "SPELL": "Spell",
-    "bionic": "Bionic",
-    "faction": "Faction",
-    "faction_mission": "FactionMission",
-    "mapgen": "Mapgen",
-    "mission_definition": "MissionDefinition",
-    "mutation": "Mutation",
-    "npc": "Npc",
-    "npc_class": "NpcClass",
-    "overmap_special": "OvermapSpecial",
-    "overmap_terrain": "OvermapTerrain",
-    "profession": "Profession",
-    "talk_topic": "TalkTopic",
-    "vehicle": "Vehicle",
-    "vehicle_part": "VehiclePart",
-    "vehicle_placement": "VehiclePlacement",
-    "vehicle_spawn": "VehicleSpawn",
-}
+UNREGISTERED_CONTENT_TYPES = frozenset({
+    "jmath_function",
+    "event_statistic",
+    "event_transformation",
+    "widget",
+    "option_slider",
+    "palette",
+    "ter_furn_transform",
+    "profession_item_substitutions",
+    "relic_procgen_data",
+    "dimension",
+    "dimension_region_layout",
+    "city_building",
+    "omt_placeholder",
+    "pp_generator",
+    "mod_tileset",
+    "region_settings",
+    "enchantment",
+    "SPELL",
+    "bionic",
+    "faction",
+    "mapgen",
+    "mission_definition",
+    "mutation",
+    "npc",
+    "npc_class",
+    "overmap_special",
+    "overmap_terrain",
+    "profession",
+    "talk_topic",
+    "vehicle",
+    "vehicle_part",
+    "vehicle_placement",
+    "vehicle_spawn",
+})
 
 
-def render_generic_content(
-    source: SourceObject,
-    result: MigrationResult,
-    constructor_name: str,
-    id_field: str = "id",
-) -> str | None:
-    value = source.value
-    entry_id = stable_id(value, "")
-    if not entry_id:
-        raw_id = value.get(id_field, "")
-        entry_id = raw_id if isinstance(raw_id, str) else "default"
-    lines = [
-        f"local definition = content.{constructor_name} {{",
-        f"    id = {lua_quote(entry_id)},",
-        "}",
-        content_submit_expression(),
-        "",
-    ]
-    status = result.converted
-    status.append(f"{source.location}: {constructor_name} {entry_id}")
-    return "\n".join(lines)
+def report_missing_content_registrar(
+    source: SourceObject, result: MigrationResult
+) -> None:
+    kind = source.value.get("type")
+    object_id = stable_id(source.value, "<no stable id>")
+    label = (
+        f"{source.location}: {kind or '<missing type>'} {object_id} "
+        "has no native Platform registrar"
+    )
+    result.partial.append(label)
+    result.todos.append(label)
 
 
 def render_blacklist(source: SourceObject, result: MigrationResult) -> str | None:
@@ -4671,6 +4703,290 @@ def damage_entries(value: Any) -> list[tuple[str, int | float, int | float]] | N
             return None
         entries.append((damage_id, amount, armor_penetration))
     return entries
+
+
+def canonical_weighted_entries(raw: Any) -> list[tuple[str, int]] | None:
+    """Return the effective native weighted-list order and weights.
+
+    Legacy JSON accepts a string, a dense array of strings/pairs, or an
+    object map.  Repeated ids replace the earlier weight without changing its
+    first position, matching ``weighted_int_list::add_or_replace``.
+    """
+    parsed: list[tuple[str, int]] = []
+
+    def append(entry_id: Any, weight: Any) -> bool:
+        if (
+            not bounded_platform_id(entry_id) or
+            not isinstance(weight, int) or
+            isinstance(weight, bool) or
+            not 0 < weight <= NATIVE_INT_MAX
+        ):
+            return False
+        for index, (existing_id, _existing_weight) in enumerate(parsed):
+            if existing_id == entry_id:
+                parsed[index] = (entry_id, weight)
+                return True
+        parsed.append((entry_id, weight))
+        return True
+
+    if isinstance(raw, str):
+        return parsed if append(raw, 1) else None
+    if isinstance(raw, dict):
+        for entry_id, weight in raw.items():
+            if not append(entry_id, weight):
+                return None
+        return parsed
+    if not isinstance(raw, list):
+        return None
+    for entry in raw:
+        if isinstance(entry, str):
+            if not append(entry, 1):
+                return None
+        elif isinstance(entry, list) and len(entry) == 2:
+            if not append(entry[0], entry[1]):
+                return None
+        elif isinstance(entry, dict) and len(entry) in {1, 2}:
+            ids = [value for value in entry.values() if isinstance(value, str)]
+            weights = [
+                value for value in entry.values()
+                if isinstance(value, int) and not isinstance(value, bool)
+            ]
+            if len(ids) != 1 or len(weights) > 1:
+                return None
+            if not append(ids[0], weights[0] if weights else 1):
+                return None
+        else:
+            return None
+    return parsed
+
+
+def resolve_regional_inheritance(
+    source: SourceObject,
+    effective_objects: dict[str, dict[str, Any]],
+    *,
+    defer_missing_parent: bool = False,
+) -> tuple[SourceObject | None, list[str]]:
+    """Flatten one regional generic-factory object in source load order.
+
+    The native factory resolves ``copy-from`` against the object state that
+    exists immediately before the child is loaded.  That distinction matters
+    for regional overlays such as ``id: default, copy-from: default``: a global
+    id-to-last-definition map would make the object inherit from itself.
+
+    Direct child members replace inherited members.  For the small closed set
+    of container-reader fields, legacy ``extend`` entries are inserted and
+    ``delete`` entries are removed afterwards.  Unsupported or impossible
+    patches fail closed instead of emitting a Lua definition with guessed
+    semantics.  The returned object contains no legacy inheritance keys.
+    """
+    value = source.value
+    kind = value.get("type")
+    label = REGIONAL_INHERITANCE_LABELS.get(kind)
+    if label is None:
+        return source, []
+
+    raw_id = value.get("id")
+    raw_abstract = value.get("abstract")
+    object_id = raw_id if isinstance(raw_id, str) and raw_id else raw_abstract
+    display_id = object_id if isinstance(object_id, str) and object_id else "<invalid id>"
+    prefix = f"{source.location}: {label} {display_id}"
+    has_copy_from = "copy-from" in value
+    has_patch = "extend" in value or "delete" in value
+
+    if not has_copy_from and has_patch:
+        return None, [
+            f"{prefix} extend/delete requires a resolved copy-from parent"
+        ]
+
+    if has_copy_from:
+        parent_id = value.get("copy-from")
+        if not isinstance(parent_id, str) or not parent_id:
+            return None, [f"{prefix} copy-from id needs review"]
+        parent = effective_objects.get(parent_id)
+        if parent is None:
+            if defer_missing_parent:
+                return None, []
+            return None, [
+                f"{prefix} copy-from parent '{parent_id}' is not available "
+                "in the migration corpus after deferred resolution"
+            ]
+        resolved = copy.deepcopy(parent)
+        resolved.pop("id", None)
+        resolved.pop("abstract", None)
+        resolved["type"] = kind
+        if isinstance(raw_id, str) and raw_id:
+            resolved["id"] = raw_id
+        elif isinstance(raw_abstract, str) and raw_abstract:
+            resolved["abstract"] = raw_abstract
+    else:
+        resolved = copy.deepcopy(value)
+
+    inheritance_keys = {
+        "type", "id", "abstract", "copy-from", "extend", "delete"
+    }
+    if has_copy_from:
+        for key, item in value.items():
+            if key not in inheritance_keys:
+                resolved[key] = copy.deepcopy(item)
+
+    allowed_fields = REGIONAL_INHERITANCE_CONTAINER_FIELDS[kind]
+    todos: list[str] = []
+    for operation in ("extend", "delete"):
+        patch = value.get(operation)
+        if patch is None:
+            continue
+        if not isinstance(patch, dict):
+            todos.append(f"{prefix} {operation} must be an object")
+            continue
+        for member, raw_entries in patch.items():
+            if member not in allowed_fields:
+                todos.append(
+                    f"{prefix} {operation}.{member} is not supported by the native regional reader"
+                )
+                continue
+            # A direct member replaces the inherited container; the native
+            # reader does not subsequently process extend/delete for it.
+            if member in value:
+                continue
+            if member in REGIONAL_INHERITANCE_WEIGHTED_FIELDS.get(kind, frozenset()):
+                current = canonical_weighted_entries(resolved.get(member, []))
+                entries = canonical_weighted_entries(raw_entries)
+                if current is None or entries is None:
+                    todos.append(
+                        f"{prefix} {operation}.{member} has malformed weighted entries"
+                    )
+                    continue
+                updated = list(current)
+                if operation == "extend":
+                    for entry_id, weight in entries:
+                        for index, (existing_id, _existing_weight) in enumerate(updated):
+                            if existing_id == entry_id:
+                                updated[index] = (entry_id, weight)
+                                break
+                        else:
+                            updated.append((entry_id, weight))
+                else:
+                    missing = [
+                        entry_id for entry_id, _weight in entries
+                        if all(existing_id != entry_id for existing_id, _ in updated)
+                    ]
+                    if missing:
+                        todos.append(
+                            f"{prefix} delete.{member} references ids absent from the inherited container"
+                        )
+                        continue
+                    deleted_ids = {entry_id for entry_id, _weight in entries}
+                    updated = [
+                        entry for entry in updated if entry[0] not in deleted_ids
+                    ]
+                resolved[member] = [list(entry) for entry in updated]
+                continue
+
+            current = resolved.get(member, [])
+            if not isinstance(current, list):
+                todos.append(
+                    f"{prefix} {operation}.{member} cannot patch a non-array inherited value"
+                )
+                continue
+            entries = raw_entries if isinstance(raw_entries, list) else [raw_entries]
+            updated = copy.deepcopy(current)
+            if operation == "extend":
+                for entry in entries:
+                    if entry not in updated:
+                        updated.append(copy.deepcopy(entry))
+            else:
+                missing = [entry for entry in entries if entry not in updated]
+                if missing:
+                    todos.append(
+                        f"{prefix} delete.{member} references values absent from the inherited container"
+                    )
+                    continue
+                for entry in entries:
+                    while entry in updated:
+                        updated.remove(entry)
+            resolved[member] = updated
+
+    if todos:
+        return None, todos
+
+    for key in ("copy-from", "extend", "delete"):
+        resolved.pop(key, None)
+    if isinstance(raw_id, str) and raw_id:
+        resolved.pop("abstract", None)
+    if isinstance(object_id, str) and object_id:
+        effective_objects[object_id] = copy.deepcopy(resolved)
+    return SourceObject(source.path, source.index, resolved), []
+
+
+def resolve_regional_inheritance_corpus(
+    objects: list[SourceObject],
+    exclude_types: frozenset[str],
+) -> tuple[
+    dict[tuple[Path, int], SourceObject],
+    dict[tuple[Path, int], list[str]],
+]:
+    """Flatten regional inheritance with generic_factory-style deferral.
+
+    ``generic_factory`` loads a child immediately when its parent already
+    exists, which preserves the previous value for same-id regional overlays.
+    A child whose parent is not loaded yet is retried during finalization until
+    the dependency graph stops making progress.  Mirror both behaviours here
+    so forward references and ordered overlays produce the same effective
+    definitions without exposing legacy inheritance at Lua runtime.
+    """
+    effective_objects: dict[str, dict[str, dict[str, Any]]] = {}
+    resolved_sources: dict[tuple[Path, int], SourceObject] = {}
+    failures: dict[tuple[Path, int], list[str]] = {}
+    deferred: list[SourceObject] = []
+
+    def source_key(source: SourceObject) -> tuple[Path, int]:
+        return source.path, source.index
+
+    for source in objects:
+        kind = source.value.get("type")
+        if kind in exclude_types or kind not in REGIONAL_INHERITANCE_LABELS:
+            continue
+        resolved, todos = resolve_regional_inheritance(
+            source,
+            effective_objects.setdefault(kind, {}),
+            defer_missing_parent=True,
+        )
+        if resolved is not None:
+            resolved_sources[source_key(source)] = resolved
+        elif todos:
+            failures[source_key(source)] = todos
+        else:
+            deferred.append(source)
+
+    while deferred:
+        remaining: list[SourceObject] = []
+        made_progress = False
+        for source in deferred:
+            kind = source.value["type"]
+            resolved, todos = resolve_regional_inheritance(
+                source,
+                effective_objects.setdefault(kind, {}),
+                defer_missing_parent=True,
+            )
+            if resolved is not None:
+                resolved_sources[source_key(source)] = resolved
+                made_progress = True
+            elif todos:
+                failures[source_key(source)] = todos
+            else:
+                remaining.append(source)
+        if not made_progress:
+            for source in remaining:
+                kind = source.value["type"]
+                _resolved, todos = resolve_regional_inheritance(
+                    source,
+                    effective_objects.setdefault(kind, {}),
+                )
+                failures[source_key(source)] = todos
+            break
+        deferred = remaining
+
+    return resolved_sources, failures
 
 
 def resolve_copy_from(
@@ -9542,6 +9858,1157 @@ def render_movement_mode(source: SourceObject, result: MigrationResult) -> str |
     )
 
 
+def render_region_settings_ravine(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    ravine_id = value.get("id")
+    if not safe_platform_id(ravine_id):
+        result.partial.append(f"{source.location}: region settings ravine <invalid id>")
+        result.todos.append(f"{source.location}: region settings ravine needs a stable native id")
+        return None
+    todo_count = len(result.todos)
+
+    def integer_field(name: str, default: int) -> int:
+        parsed = native_integer(value.get(name, default))
+        if parsed is not None:
+            return parsed
+        result.todos.append(
+            f"{source.location}: region settings ravine {ravine_id} {name} needs review"
+        )
+        return default
+
+    num_ravines = integer_field("num_ravines", 0)
+    ravine_range = integer_field("ravine_range", 45)
+    ravine_width = integer_field("ravine_width", 1)
+    ravine_depth = integer_field("ravine_depth", -3)
+
+    lines = [
+        "local definition = content.RegionSettingsRavine {",
+        f"    id = {lua_quote(ravine_id)},",
+        f"    num_ravines = {num_ravines},",
+        f"    ravine_range = {ravine_range},",
+        f"    ravine_width = {ravine_width},",
+        f"    ravine_depth = {ravine_depth},",
+        "}",
+    ]
+    return finish_catalog(
+        source,
+        result,
+        "region settings ravine",
+        ravine_id,
+        lines,
+        {"type", "id", "num_ravines", "ravine_range", "ravine_width", "ravine_depth"},
+        todo_count,
+    )
+
+
+def render_region_settings_lake(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    lake_id = value.get("id")
+    if not safe_platform_id(lake_id):
+        result.partial.append(f"{source.location}: region settings lake <invalid id>")
+        result.todos.append(f"{source.location}: region settings lake needs a stable native id")
+        return None
+    todo_count = len(result.todos)
+
+    noise_threshold = value.get("noise_threshold_lake", 0.25)
+    if not (isinstance(noise_threshold, (int, float)) and not isinstance(noise_threshold, bool) and math.isfinite(noise_threshold)):
+        result.todos.append(f"{source.location}: region settings lake {lake_id} noise_threshold_lake needs review")
+        noise_threshold = 0.25
+
+    lake_size_min = native_integer(value.get("lake_size_min", 20))
+    if lake_size_min is None:
+        result.todos.append(f"{source.location}: region settings lake {lake_id} lake_size_min needs review")
+        lake_size_min = 20
+
+    lake_depth = native_integer(value.get("lake_depth", -5))
+    if lake_depth is None:
+        result.todos.append(f"{source.location}: region settings lake {lake_id} lake_depth needs review")
+        lake_depth = -5
+
+    invert_lakes = value.get("invert_lakes", False)
+    if not isinstance(invert_lakes, bool):
+        result.todos.append(f"{source.location}: region settings lake {lake_id} invert_lakes needs review")
+        invert_lakes = False
+
+    def terrain_field(name: str, alias: str, default: str) -> str:
+        raw = value.get(name, value.get(alias, default))
+        if safe_platform_id(raw):
+            return raw
+        result.todos.append(
+            f"{source.location}: region settings lake {lake_id} {name} needs review"
+        )
+        return default
+
+    surface_ter = terrain_field("surface_ter", "surface", "lake_surface")
+    shore_ter = terrain_field("shore_ter", "shore", "lake_shore")
+    interior_ter = terrain_field("interior_ter", "interior", "lake_water_cube")
+    bed_ter = terrain_field("bed_ter", "bed", "lake_bed")
+
+    lines = [
+        "local definition = content.RegionSettingsLake {",
+        f"    id = {lua_quote(lake_id)},",
+        f"    noise_threshold_lake = {lua_number(float(noise_threshold))},",
+        f"    lake_size_min = {lake_size_min},",
+        f"    lake_depth = {lake_depth},",
+        f"    invert_lakes = {'true' if invert_lakes else 'false'},",
+        f"    surface_ter = {lua_quote(str(surface_ter))},",
+        f"    shore_ter = {lua_quote(str(shore_ter))},",
+        f"    interior_ter = {lua_quote(str(interior_ter))},",
+        f"    bed_ter = {lua_quote(str(bed_ter))},",
+    ]
+
+    shore_terrains = value.get("shore_extendable_overmap_terrain")
+    if isinstance(shore_terrains, list):
+        lines.append("    shore_extendable_overmap_terrain = {")
+        for elem in shore_terrains:
+            if safe_platform_id(elem):
+                lines.append(f"        {lua_quote(elem)},")
+            else:
+                result.todos.append(f"{source.location}: region settings lake {lake_id} shore_extendable_overmap_terrain element needs review")
+        lines.append("    },")
+    elif shore_terrains is not None:
+        result.todos.append(f"{source.location}: region settings lake {lake_id} shore_extendable_overmap_terrain needs review")
+
+    aliases = value.get("shore_extendable_overmap_terrain_aliases")
+    if isinstance(aliases, list):
+        lines.append("    shore_extendable_overmap_terrain_aliases = {")
+        for alias_obj in aliases:
+            if isinstance(alias_obj, dict):
+                om_terrain = alias_obj.get("om_terrain", "")
+                alias_str = alias_obj.get("alias", "")
+                match_type = alias_obj.get("om_terrain_match_type", "exact")
+                if (
+                    not safe_platform_id(om_terrain) or
+                    not safe_platform_id(alias_str) or
+                    not isinstance(match_type, str) or
+                    match_type.lower() not in {
+                        "exact", "type", "subtype", "prefix", "contains"
+                    }
+                ):
+                    result.todos.append(
+                        f"{source.location}: region settings lake {lake_id} "
+                        "shore_extendable_overmap_terrain_aliases element needs review"
+                    )
+                    continue
+                lines.append("        {")
+                lines.append(f"            om_terrain = {lua_quote(om_terrain)},")
+                lines.append(f"            alias = {lua_quote(alias_str)},")
+                lines.append(f"            om_terrain_match_type = {lua_quote(match_type)},")
+                lines.append("        },")
+            else:
+                result.todos.append(f"{source.location}: region settings lake {lake_id} shore_extendable_overmap_terrain_aliases element needs review")
+        lines.append("    },")
+    elif aliases is not None:
+        result.todos.append(f"{source.location}: region settings lake {lake_id} shore_extendable_overmap_terrain_aliases needs review")
+
+    lines.append("}")
+
+    return finish_catalog(
+        source,
+        result,
+        "region settings lake",
+        lake_id,
+        lines,
+        {
+            "type", "id", "noise_threshold_lake", "lake_size_min", "lake_depth",
+            "invert_lakes", "surface_ter", "surface", "shore_ter", "shore",
+            "interior_ter", "interior", "bed_ter", "bed",
+            "shore_extendable_overmap_terrain", "shore_extendable_overmap_terrain_aliases",
+        },
+        todo_count,
+    )
+
+
+def render_region_settings_ocean(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    ocean_id = value.get("id")
+    if not safe_platform_id(ocean_id):
+        result.partial.append(f"{source.location}: region settings ocean <invalid id>")
+        result.todos.append(f"{source.location}: region settings ocean needs a stable native id")
+        return None
+    todo_count = len(result.todos)
+
+    noise_threshold = value.get("noise_threshold_ocean", 0.25)
+    if not (isinstance(noise_threshold, (int, float)) and not isinstance(noise_threshold, bool) and math.isfinite(noise_threshold)):
+        result.todos.append(f"{source.location}: region settings ocean {ocean_id} noise_threshold_ocean needs review")
+        noise_threshold = 0.25
+
+    ocean_size_min = native_integer(value.get("ocean_size_min", 100))
+    if ocean_size_min is None:
+        result.todos.append(f"{source.location}: region settings ocean {ocean_id} ocean_size_min needs review")
+        ocean_size_min = 100
+
+    ocean_depth = native_integer(value.get("ocean_depth", -9))
+    if ocean_depth is None:
+        result.todos.append(f"{source.location}: region settings ocean {ocean_id} ocean_depth needs review")
+        ocean_depth = -9
+
+    sandy_beach_width = native_integer(value.get("sandy_beach_width", 2))
+    if sandy_beach_width is None:
+        result.todos.append(f"{source.location}: region settings ocean {ocean_id} sandy_beach_width needs review")
+        sandy_beach_width = 2
+
+    lines = [
+        "local definition = content.RegionSettingsOcean {",
+        f"    id = {lua_quote(ocean_id)},",
+        f"    noise_threshold_ocean = {lua_number(float(noise_threshold))},",
+        f"    ocean_size_min = {ocean_size_min},",
+        f"    ocean_depth = {ocean_depth},",
+        f"    sandy_beach_width = {sandy_beach_width},",
+    ]
+
+    for dir_key in ("ocean_start_north", "ocean_start_east", "ocean_start_west", "ocean_start_south"):
+        dir_val = value.get(dir_key)
+        parsed = native_integer(dir_val)
+        if parsed is not None:
+            lines.append(f"    {dir_key} = {parsed},")
+        elif dir_val is not None:
+            result.todos.append(f"{source.location}: region settings ocean {ocean_id} {dir_key} needs review")
+
+    lines.append("}")
+
+    return finish_catalog(
+        source,
+        result,
+        "region settings ocean",
+        ocean_id,
+        lines,
+        {
+            "type", "id", "noise_threshold_ocean", "ocean_size_min", "ocean_depth",
+            "ocean_start_north", "ocean_start_east", "ocean_start_west", "ocean_start_south",
+            "sandy_beach_width",
+        },
+        todo_count,
+    )
+
+
+def render_region_settings_forest(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    forest_id = value.get("id")
+    if not safe_platform_id(forest_id):
+        result.partial.append(f"{source.location}: region settings forest <invalid id>")
+        result.todos.append(f"{source.location}: region settings forest needs a stable native id")
+        return None
+    todo_count = len(result.todos)
+
+    def forest_finite_number(name: str, default: float) -> float:
+        raw = value.get(name, default)
+        if isinstance(raw, (int, float)) and not isinstance(raw, bool) and math.isfinite(raw):
+            return float(raw)
+        result.todos.append(f"{source.location}: region settings forest {forest_id} {name} needs review")
+        return default
+
+    noise_threshold_forest = forest_finite_number("noise_threshold_forest", 0.25)
+    noise_threshold_forest_thick = forest_finite_number("noise_threshold_forest_thick", 0.3)
+    noise_threshold_swamp_adjacent_water = forest_finite_number(
+        "noise_threshold_swamp_adjacent_water", 0.3
+    )
+    noise_threshold_swamp_isolated = forest_finite_number(
+        "noise_threshold_swamp_isolated", 0.6
+    )
+    forest_threshold_limit = finite_number(
+        value.get("forest_threshold_limit", value.get("max_forest", 0.395)),
+        -NATIVE_FLOAT_MAX,
+        NATIVE_FLOAT_MAX,
+    )
+    if forest_threshold_limit is None:
+        result.todos.append(f"{source.location}: region settings forest {forest_id} forest_threshold_limit needs review")
+        forest_threshold_limit = 0.395
+    else:
+        forest_threshold_limit = float(forest_threshold_limit)
+
+    dist_min = native_integer(value.get("river_floodplain_buffer_distance_min", 3))
+    if dist_min is None:
+        result.todos.append(f"{source.location}: region settings forest {forest_id} river_floodplain_buffer_distance_min needs review")
+        dist_min = 3
+
+    dist_max = native_integer(value.get("river_floodplain_buffer_distance_max", 15))
+    if dist_max is None:
+        result.todos.append(f"{source.location}: region settings forest {forest_id} river_floodplain_buffer_distance_max needs review")
+        dist_max = 15
+
+    lines = [
+        "local definition = content.RegionSettingsForest {",
+        f"    id = {lua_quote(forest_id)},",
+        f"    noise_threshold_forest = {lua_number(noise_threshold_forest)},",
+        f"    noise_threshold_forest_thick = {lua_number(noise_threshold_forest_thick)},",
+        f"    noise_threshold_swamp_adjacent_water = {lua_number(noise_threshold_swamp_adjacent_water)},",
+        f"    noise_threshold_swamp_isolated = {lua_number(noise_threshold_swamp_isolated)},",
+        f"    river_floodplain_buffer_distance_min = {dist_min},",
+        f"    river_floodplain_buffer_distance_max = {dist_max},",
+        f"    forest_threshold_limit = {lua_number(forest_threshold_limit)},",
+    ]
+
+    forest_increase = value.get("forest_threshold_increase")
+    if isinstance(forest_increase, list) and len(forest_increase) == 4:
+        inc_vals = []
+        for elem in forest_increase:
+            parsed = finite_number(elem, -NATIVE_FLOAT_MAX, NATIVE_FLOAT_MAX)
+            if parsed is None:
+                inc_vals.append("0.0")
+                result.todos.append(f"{source.location}: region settings forest {forest_id} forest_threshold_increase element needs review")
+            else:
+                inc_vals.append(lua_number(float(parsed)))
+        lines.append(f"    forest_threshold_increase = {{{', '.join(inc_vals)}}},")
+    elif forest_increase is not None:
+        result.todos.append(f"{source.location}: region settings forest {forest_id} forest_threshold_increase needs review")
+
+    lines.append("}")
+
+    return finish_catalog(
+        source,
+        result,
+        "region settings forest",
+        forest_id,
+        lines,
+        {
+            "type", "id", "noise_threshold_forest", "noise_threshold_forest_thick",
+            "noise_threshold_swamp_adjacent_water", "noise_threshold_swamp_isolated",
+            "river_floodplain_buffer_distance_min", "river_floodplain_buffer_distance_max",
+            "forest_threshold_limit", "max_forest", "forest_threshold_increase",
+        },
+        todo_count,
+    )
+
+
+def render_region_settings_river(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    river_id = value.get("id")
+    if not bounded_platform_id(river_id):
+        result.partial.append(f"{source.location}: region settings river <invalid id>")
+        result.todos.append(f"{source.location}: region settings river needs a stable native id")
+        return None
+    todo_count = len(result.todos)
+
+    river_scale = native_integer(value.get("river_scale", 1))
+    if river_scale is None:
+        result.todos.append(f"{source.location}: region settings river {river_id} river_scale needs review")
+        river_scale = 1
+
+    def river_finite_number(name: str, default: float) -> float:
+        raw = value.get(name, default)
+        if isinstance(raw, (int, float)) and not isinstance(raw, bool) and math.isfinite(raw):
+            return float(raw)
+        result.todos.append(f"{source.location}: region settings river {river_id} {name} needs review")
+        return default
+
+    river_frequency = river_finite_number("river_frequency", 1.5)
+    river_branch_chance = river_finite_number("river_branch_chance", 64.0)
+    river_branch_remerge_chance = river_finite_number("river_branch_remerge_chance", 4.0)
+    river_branch_scale_decrease = river_finite_number("river_branch_scale_decrease", 1.0)
+
+    lines = [
+        "local definition = content.RegionSettingsRiver {",
+        f"    id = {lua_quote(river_id)},",
+        f"    river_scale = {river_scale},",
+        f"    river_frequency = {lua_number(river_frequency)},",
+        f"    river_branch_chance = {lua_number(river_branch_chance)},",
+        f"    river_branch_remerge_chance = {lua_number(river_branch_remerge_chance)},",
+        f"    river_branch_scale_decrease = {lua_number(river_branch_scale_decrease)},",
+        "}",
+    ]
+
+    return finish_catalog(
+        source,
+        result,
+        "region settings river",
+        river_id,
+        lines,
+        {
+            "type", "id", "river_scale", "river_frequency", "river_branch_chance",
+            "river_branch_remerge_chance", "river_branch_scale_decrease",
+        },
+        todo_count,
+    )
+
+
+def render_region_settings_forest_mapgen(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    forest_mapgen_id = value.get("id")
+    if not bounded_platform_id(forest_mapgen_id):
+        result.partial.append(f"{source.location}: region settings forest mapgen <invalid id>")
+        result.todos.append(f"{source.location}: region settings forest mapgen needs a stable native id")
+        return None
+    todo_count = len(result.todos)
+
+    biomes_raw = value.get("biomes", [])
+    biomes = []
+    seen_biomes: set[str] = set()
+    if isinstance(biomes_raw, list):
+        for entry in biomes_raw:
+            if bounded_platform_id(entry) and entry not in seen_biomes:
+                biomes.append(entry)
+                seen_biomes.add(entry)
+            else:
+                result.todos.append(f"{source.location}: region settings forest mapgen {forest_mapgen_id} biomes entry needs review")
+    else:
+        result.todos.append(f"{source.location}: region settings forest mapgen {forest_mapgen_id} biomes must be a list")
+
+    lines = [
+        "local definition = content.RegionSettingsForestMapgen {",
+        f"    id = {lua_quote(forest_mapgen_id)},",
+    ]
+    if biomes:
+        lines.append(f"    biomes = {lua_string_table(biomes)},")
+    lines.append("}")
+
+    return finish_catalog(
+        source,
+        result,
+        "region settings forest mapgen",
+        forest_mapgen_id,
+        lines,
+        {"type", "id", "biomes"},
+        todo_count,
+    )
+
+
+def render_region_settings_map_extras(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    map_extras_id = value.get("id")
+    if not bounded_platform_id(map_extras_id):
+        result.partial.append(f"{source.location}: region settings map extras <invalid id>")
+        result.todos.append(f"{source.location}: region settings map extras needs a stable native id")
+        return None
+    todo_count = len(result.todos)
+
+    extras_raw = value.get("extras", [])
+    extras = []
+    seen_extras: set[str] = set()
+    if isinstance(extras_raw, list):
+        for entry in extras_raw:
+            if bounded_platform_id(entry) and entry not in seen_extras:
+                extras.append(entry)
+                seen_extras.add(entry)
+            else:
+                result.todos.append(f"{source.location}: region settings map extras {map_extras_id} extras entry needs review")
+    else:
+        result.todos.append(f"{source.location}: region settings map extras {map_extras_id} extras must be a list")
+
+    lines = [
+        "local definition = content.RegionSettingsMapExtras {",
+        f"    id = {lua_quote(map_extras_id)},",
+    ]
+    if extras:
+        lines.append(f"    extras = {lua_string_table(extras)},")
+    lines.append("}")
+
+    return finish_catalog(
+        source,
+        result,
+        "region settings map extras",
+        map_extras_id,
+        lines,
+        {"type", "id", "extras"},
+        todo_count,
+    )
+
+
+def render_region_settings_terrain_furniture(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    tf_id = value.get("id")
+    if not bounded_platform_id(tf_id):
+        result.partial.append(f"{source.location}: region settings terrain furniture <invalid id>")
+        result.todos.append(f"{source.location}: region settings terrain furniture needs a stable native id")
+        return None
+    todo_count = len(result.todos)
+
+    tf_raw = value.get("ter_furn", [])
+    ter_furn = []
+    seen_ter_furn: set[str] = set()
+    if isinstance(tf_raw, list):
+        for entry in tf_raw:
+            if bounded_platform_id(entry) and entry not in seen_ter_furn:
+                ter_furn.append(entry)
+                seen_ter_furn.add(entry)
+            else:
+                result.todos.append(f"{source.location}: region settings terrain furniture {tf_id} ter_furn entry needs review")
+    else:
+        result.todos.append(f"{source.location}: region settings terrain furniture {tf_id} ter_furn must be a list")
+
+    lines = [
+        "local definition = content.RegionSettingsTerrainFurniture {",
+        f"    id = {lua_quote(tf_id)},",
+    ]
+    if ter_furn:
+        lines.append(f"    ter_furn = {lua_string_table(ter_furn)},")
+    lines.append("}")
+
+    return finish_catalog(
+        source,
+        result,
+        "region settings terrain furniture",
+        tf_id,
+        lines,
+        {"type", "id", "ter_furn"},
+        todo_count,
+    )
+
+
+def render_region_settings_forest_trail(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    trail_id = value.get("id")
+    if not bounded_platform_id(trail_id):
+        result.partial.append(f"{source.location}: region settings forest trail <invalid id>")
+        result.todos.append(f"{source.location}: region settings forest trail needs a stable native id")
+        return None
+    todo_count = len(result.todos)
+
+    chance = native_integer(value.get("chance", 1))
+    if chance is None:
+        result.todos.append(f"{source.location}: region settings forest trail {trail_id} chance needs review")
+        chance = 1
+
+    border_point_chance = native_integer(value.get("border_point_chance", 2))
+    if border_point_chance is None:
+        result.todos.append(f"{source.location}: region settings forest trail {trail_id} border_point_chance needs review")
+        border_point_chance = 2
+
+    minimum_forest_size = native_integer(value.get("minimum_forest_size", 50))
+    if minimum_forest_size is None:
+        result.todos.append(f"{source.location}: region settings forest trail {trail_id} minimum_forest_size needs review")
+        minimum_forest_size = 50
+
+    random_point_min = native_integer(value.get("random_point_min", 4))
+    if random_point_min is None:
+        result.todos.append(f"{source.location}: region settings forest trail {trail_id} random_point_min needs review")
+        random_point_min = 4
+
+    random_point_max = native_integer(value.get("random_point_max", 50))
+    if random_point_max is None:
+        result.todos.append(f"{source.location}: region settings forest trail {trail_id} random_point_max needs review")
+        random_point_max = 50
+
+    random_point_size_scalar = native_integer(value.get("random_point_size_scalar", 100))
+    if random_point_size_scalar is None:
+        result.todos.append(f"{source.location}: region settings forest trail {trail_id} random_point_size_scalar needs review")
+        random_point_size_scalar = 100
+
+    trailhead_chance = native_integer(value.get("trailhead_chance", 1))
+    if trailhead_chance is None:
+        result.todos.append(f"{source.location}: region settings forest trail {trail_id} trailhead_chance needs review")
+        trailhead_chance = 1
+
+    trailhead_road_distance = native_integer(value.get("trailhead_road_distance", 6))
+    if trailhead_road_distance is None:
+        result.todos.append(f"{source.location}: region settings forest trail {trail_id} trailhead_road_distance needs review")
+        trailhead_road_distance = 6
+
+    lines = [
+        "local definition = content.RegionSettingsForestTrail {",
+        f"    id = {lua_quote(trail_id)},",
+        f"    chance = {chance},",
+        f"    border_point_chance = {border_point_chance},",
+        f"    minimum_forest_size = {minimum_forest_size},",
+        f"    random_point_min = {random_point_min},",
+        f"    random_point_max = {random_point_max},",
+        f"    random_point_size_scalar = {random_point_size_scalar},",
+        f"    trailhead_chance = {trailhead_chance},",
+        f"    trailhead_road_distance = {trailhead_road_distance},",
+        "}",
+    ]
+
+    trailheads = canonical_weighted_entries(value.get("trailheads", []))
+    if trailheads is None:
+        result.todos.append(f"{source.location}: region settings forest trail {trail_id} trailheads need review")
+    else:
+        for special_id, weight in trailheads:
+            lines.append(f"definition:trailhead({lua_quote(special_id)}, {weight})")
+
+    return finish_catalog(
+        source,
+        result,
+        "region settings forest trail",
+        trail_id,
+        lines,
+        {
+            "type", "id", "chance", "border_point_chance", "minimum_forest_size",
+            "random_point_min", "random_point_max", "random_point_size_scalar",
+            "trailhead_chance", "trailhead_road_distance", "trailheads",
+        },
+        todo_count,
+    )
+
+
+def render_region_settings_highway(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    highway_id = value.get("id")
+    if not bounded_platform_id(highway_id):
+        result.partial.append(f"{source.location}: region settings highway <invalid id>")
+        result.todos.append(f"{source.location}: region settings highway needs a stable native id")
+        return None
+    todo_count = len(result.todos)
+
+    width_of_segments = native_integer(value.get("width_of_segments", 2))
+    if width_of_segments is None:
+        result.todos.append(f"{source.location}: region settings highway {highway_id} width_of_segments needs review")
+        width_of_segments = 2
+
+    raw_straightness = value.get("straightness_chance", 0.6)
+    if isinstance(raw_straightness, (int, float)) and not isinstance(raw_straightness, bool) and math.isfinite(raw_straightness):
+        straightness_chance = float(raw_straightness)
+    else:
+        result.todos.append(f"{source.location}: region settings highway {highway_id} straightness_chance needs review")
+        straightness_chance = 0.6
+
+    lines = [
+        "local definition = content.RegionSettingsHighway {",
+        f"    id = {lua_quote(highway_id)},",
+        f"    width_of_segments = {width_of_segments},",
+        f"    straightness_chance = {lua_number(straightness_chance)},",
+    ]
+
+    for field in [
+        "reserved_terrain_id", "reserved_terrain_water_id", "segment_flat_special",
+        "segment_ramp_special", "segment_road_bridge_special", "segment_bridge_special",
+        "segment_bridge_supports_special", "segment_overpass_special", "clockwise_slant_special",
+        "counterclockwise_slant_special", "fallback_onramp_special", "fallback_bend_special",
+        "fallback_three_way_intersection_special", "fallback_four_way_intersection_special",
+        "fallback_supports",
+    ]:
+        if field not in value:
+            continue
+        val = value[field]
+        if bounded_platform_id(val):
+            lines.append(f"    {field} = {lua_quote(val)},")
+        else:
+            result.todos.append(
+                f"{source.location}: region settings highway {highway_id} {field} needs a bounded native id"
+            )
+
+    for required_slant in (
+        "clockwise_slant_special", "counterclockwise_slant_special"
+    ):
+        if not bounded_platform_id(value.get(required_slant)):
+            result.todos.append(
+                f"{source.location}: region settings highway {highway_id} {required_slant} is required for safe finalization"
+            )
+
+    lines.append("}")
+
+    def render_highway_bin(field_name: str, method_name: str) -> None:
+        entries = canonical_weighted_entries(value.get(field_name, []))
+        if entries is None:
+            result.todos.append(f"{source.location}: region settings highway {highway_id} {field_name} needs review")
+            return
+        for special_id, weight in entries:
+            lines.append(f"definition:{method_name}({lua_quote(special_id)}, {weight})")
+
+    render_highway_bin("four_way_intersections", "four_way_intersection")
+    render_highway_bin("three_way_intersections", "three_way_intersection")
+    render_highway_bin("bends", "bend")
+    render_highway_bin("road_connections", "road_connection")
+    render_highway_bin("interchanges", "interchange")
+
+    return finish_catalog(
+        source,
+        result,
+        "region settings highway",
+        highway_id,
+        lines,
+        {
+            "type", "id", "width_of_segments", "straightness_chance",
+            "reserved_terrain_id", "reserved_terrain_water_id", "segment_flat_special",
+            "segment_ramp_special", "segment_road_bridge_special", "segment_bridge_special",
+            "segment_bridge_supports_special", "segment_overpass_special", "clockwise_slant_special",
+            "counterclockwise_slant_special", "fallback_onramp_special", "fallback_bend_special",
+            "fallback_three_way_intersection_special", "fallback_four_way_intersection_special",
+            "fallback_supports", "four_way_intersections", "three_way_intersections",
+            "bends", "road_connections", "interchanges",
+        },
+        todo_count,
+    )
+
+
+def render_region_terrain_furniture(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    rtf_id = value.get("id")
+    if not bounded_platform_id(rtf_id):
+        result.partial.append(f"{source.location}: region terrain furniture <invalid id>")
+        result.todos.append(f"{source.location}: region terrain furniture needs a stable native id")
+        return None
+    todo_count = len(result.todos)
+
+    lines = [
+        "local definition = content.RegionTerrainFurniture {",
+        f"    id = {lua_quote(rtf_id)},",
+    ]
+
+    ter_id = value.get("ter_id")
+    if bounded_platform_id(ter_id):
+        lines.append(f"    ter_id = {lua_quote(ter_id)},")
+    elif "ter_id" in value:
+        result.todos.append(
+            f"{source.location}: region terrain furniture {rtf_id} ter_id needs a bounded native id"
+        )
+
+    furn_id = value.get("furn_id")
+    if bounded_platform_id(furn_id):
+        lines.append(f"    furn_id = {lua_quote(furn_id)},")
+    elif "furn_id" in value:
+        result.todos.append(
+            f"{source.location}: region terrain furniture {rtf_id} furn_id needs a bounded native id"
+        )
+
+    lines.append("}")
+
+    def render_rtf_pairs(field_name: str, method_name: str) -> None:
+        entries = canonical_weighted_entries(value.get(field_name, []))
+        if entries is None:
+            result.todos.append(f"{source.location}: region terrain furniture {rtf_id} {field_name} needs review")
+            return
+        for replacement_id, weight in entries:
+            lines.append(f"definition:{method_name}({lua_quote(replacement_id)}, {weight})")
+
+    render_rtf_pairs("replace_with_terrain", "replace_terrain")
+    render_rtf_pairs("replace_with_furniture", "replace_furniture")
+
+    return finish_catalog(
+        source,
+        result,
+        "region terrain furniture",
+        rtf_id,
+        lines,
+        {"type", "id", "ter_id", "furn_id", "replace_with_terrain", "replace_with_furniture"},
+        todo_count,
+    )
+
+
+def render_forest_biome_component(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    comp_id = value.get("id")
+    if not bounded_platform_id(comp_id):
+        result.partial.append(f"{source.location}: forest biome component <invalid id>")
+        result.todos.append(f"{source.location}: forest biome component needs a stable native id")
+        return None
+    todo_count = len(result.todos)
+
+    chance = native_integer(value.get("chance", 0))
+    if chance is None:
+        result.todos.append(f"{source.location}: forest biome component {comp_id} chance needs review")
+        chance = 0
+
+    sequence = native_integer(value.get("sequence", 0))
+    if sequence is None:
+        result.todos.append(f"{source.location}: forest biome component {comp_id} sequence needs review")
+        sequence = 0
+
+    lines = [
+        "local definition = content.ForestBiomeComponent {",
+        f"    id = {lua_quote(comp_id)},",
+        f"    chance = {chance},",
+        f"    sequence = {sequence},",
+        "}",
+    ]
+
+    types = canonical_weighted_entries(value.get("types", []))
+    if types is None:
+        result.todos.append(f"{source.location}: forest biome component {comp_id} types need review")
+    else:
+        for type_id, weight in types:
+            lines.append(f"definition:type({lua_quote(type_id)}, {weight})")
+
+    return finish_catalog(
+        source,
+        result,
+        "forest biome component",
+        comp_id,
+        lines,
+        {"type", "id", "chance", "sequence", "types"},
+        todo_count,
+    )
+
+
+def render_city(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    city_id = value.get("id")
+    if not safe_platform_id(city_id):
+        result.partial.append(f"{source.location}: city <invalid id>")
+        result.todos.append(f"{source.location}: city needs a stable native id")
+        return None
+    todo_count = len(result.todos)
+
+    database_id = native_integer(value.get("database_id"))
+    if database_id is None:
+        result.todos.append(f"{source.location}: city {city_id} database_id needs review")
+        database_id = 0
+
+    name = value.get("name", "")
+    if not isinstance(name, str):
+        result.todos.append(f"{source.location}: city {city_id} name needs review")
+        name = ""
+
+    population = native_integer(value.get("population", 0))
+    if population is None or population < 0:
+        result.todos.append(f"{source.location}: city {city_id} population needs review")
+        population = 0
+
+    size = native_integer(value.get("size", -1))
+    if size is None or size < -1:
+        result.todos.append(f"{source.location}: city {city_id} size needs review")
+        size = -1
+
+    pos_om = value.get("pos_om")
+    pos_om_x, pos_om_y = 0, 0
+    if isinstance(pos_om, list) and len(pos_om) == 2:
+        x = native_integer(pos_om[0])
+        y = native_integer(pos_om[1])
+        if x is not None and y is not None:
+            pos_om_x, pos_om_y = x, y
+        else:
+            result.todos.append(f"{source.location}: city {city_id} pos_om coordinates need review")
+    else:
+        result.todos.append(f"{source.location}: city {city_id} pos_om needs review")
+
+    pos = value.get("pos")
+    pos_x, pos_y = 0, 0
+    if isinstance(pos, list) and len(pos) == 2:
+        x = native_integer(pos[0])
+        y = native_integer(pos[1])
+        if x is not None and y is not None:
+            pos_x, pos_y = x, y
+        else:
+            result.todos.append(f"{source.location}: city {city_id} pos coordinates need review")
+    else:
+        result.todos.append(f"{source.location}: city {city_id} pos needs review")
+
+    lines = [
+        "local definition = content.City {",
+        f"    id = {lua_quote(city_id)},",
+        f"    database_id = {database_id},",
+        f"    name = {lua_quote(name)},",
+        f"    population = {population},",
+        f"    size = {size},",
+        f"    pos_om = {{ {pos_om_x}, {pos_om_y} }},",
+        f"    pos = {{ {pos_x}, {pos_y} }},",
+        "}",
+    ]
+
+    return finish_catalog(
+        source,
+        result,
+        "city",
+        city_id,
+        lines,
+        {"type", "id", "database_id", "name", "population", "size", "pos_om", "pos"},
+        todo_count,
+    )
+
+
+def render_faction_mission(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    mission_id = value.get("id")
+    if not safe_platform_id(mission_id):
+        result.partial.append(f"{source.location}: faction mission <invalid id>")
+        result.todos.append(f"{source.location}: faction mission needs a stable native id")
+        return None
+    todo_count = len(result.todos)
+
+    name = display_text(value.get("name"), "")
+    if not name:
+        result.todos.append(
+            f"{source.location}: faction mission {mission_id} name needs review"
+        )
+    desc = display_text(value.get("desc", value.get("description")), "")
+    if not desc:
+        result.todos.append(
+            f"{source.location}: faction mission {mission_id} description needs review"
+        )
+    skill = value.get("skill", "")
+    if not isinstance(skill, str):
+        result.todos.append(f"{source.location}: faction mission {mission_id} skill needs review")
+        skill = ""
+
+    difficulty = value.get("difficulty", "")
+    risk_levels = {"NONE", "VERY_LOW", "LOW", "MEDIUM", "HIGH", "VERY_HIGH"}
+    if not isinstance(difficulty, str) or (
+        difficulty and difficulty not in risk_levels
+    ):
+        result.todos.append(f"{source.location}: faction mission {mission_id} difficulty needs review")
+        difficulty = ""
+
+    risk = value.get("risk", "")
+    if not isinstance(risk, str) or (risk and risk not in risk_levels):
+        result.todos.append(f"{source.location}: faction mission {mission_id} risk needs review")
+        risk = ""
+
+    activity = value.get("activity", "")
+    activity_levels = {
+        "SLEEP_EXERCISE", "NO_EXERCISE", "LIGHT_EXERCISE",
+        "MODERATE_EXERCISE", "BRISK_EXERCISE", "ACTIVE_EXERCISE",
+        "EXTRA_EXERCISE",
+    }
+    if not isinstance(activity, str) or (
+        activity and activity not in activity_levels
+    ):
+        result.todos.append(f"{source.location}: faction mission {mission_id} activity needs review")
+        activity = ""
+
+    time_str = display_text(value.get("time", ""), "")
+    positions = native_integer(value.get("positions", 0))
+    if positions is None or not 0 <= positions <= 65535:
+        result.todos.append(f"{source.location}: faction mission {mission_id} positions needs review")
+        positions = 0
+
+    items_label = display_text(value.get("items_label", ""), "")
+    footer = display_text(value.get("footer", ""), "")
+
+    lines = [
+        "local definition = content.FactionMission {",
+        f"    id = {lua_quote(mission_id)},",
+        f"    name = {lua_quote(name)},",
+        f"    desc = {lua_quote(desc)},",
+        f"    skill = {lua_quote(skill)},",
+        f"    difficulty = {lua_quote(difficulty)},",
+        f"    risk = {lua_quote(risk)},",
+        f"    activity = {lua_quote(activity)},",
+        f"    time = {lua_quote(time_str)},",
+        f"    positions = {positions},",
+        f"    items_label = {lua_quote(items_label)},",
+        f"    footer = {lua_quote(footer)},",
+        "}",
+    ]
+
+    items_possibilities = value.get("items_possibilities", [])
+    if isinstance(items_possibilities, list):
+        for item in items_possibilities:
+            if isinstance(item, str) and item:
+                lines.append(f"definition:add_items_possibility({lua_quote(item)})")
+            elif (
+                isinstance(item, dict) and
+                isinstance(item.get("str"), str) and
+                item["str"]
+            ):
+                lines.append(f"definition:add_items_possibility({lua_quote(item['str'])})")
+            else:
+                result.todos.append(f"{source.location}: faction mission {mission_id} item possibility needs review")
+    else:
+        result.todos.append(
+            f"{source.location}: faction mission {mission_id} items_possibilities need review"
+        )
+
+    effects = value.get("effects", [])
+    if isinstance(effects, list):
+        for eff in effects:
+            if isinstance(eff, str) and eff:
+                lines.append(f"definition:add_effect({lua_quote(eff)})")
+            elif (
+                isinstance(eff, dict) and
+                isinstance(eff.get("str"), str) and
+                eff["str"]
+            ):
+                lines.append(f"definition:add_effect({lua_quote(eff['str'])})")
+            else:
+                result.todos.append(f"{source.location}: faction mission {mission_id} effect needs review")
+    else:
+        result.todos.append(
+            f"{source.location}: faction mission {mission_id} effects need review"
+        )
+
+    return finish_catalog(
+        source,
+        result,
+        "faction mission",
+        mission_id,
+        lines,
+        {"type", "id", "name", "desc", "description", "skill", "difficulty", "risk", "activity", "time", "positions", "items_label", "items_possibilities", "effects", "footer"},
+        todo_count,
+    )
+
+
+def render_region_settings_city(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    rsc_id = value.get("id")
+    if not bounded_platform_id(rsc_id):
+        result.partial.append(f"{source.location}: region settings city <invalid id>")
+        result.todos.append(f"{source.location}: region settings city needs a stable native id")
+        return None
+    todo_count = len(result.todos)
+
+    is_megacity = value.get("is_megacity", False)
+    if not isinstance(is_megacity, bool):
+        result.todos.append(
+            f"{source.location}: region settings city {rsc_id} is_megacity needs review"
+        )
+        is_megacity = False
+    city_size = native_integer(value.get("city_size"))
+    if city_size is None or not 0 <= city_size <= 16:
+        result.todos.append(f"{source.location}: region settings city {rsc_id} city_size needs review")
+        city_size = 8
+
+    city_spacing = native_integer(value.get("city_spacing", 4))
+    if city_spacing is None or not 0 <= city_spacing <= 8:
+        result.todos.append(f"{source.location}: region settings city {rsc_id} city_spacing needs review")
+        city_spacing = 4
+
+    shop_radius = native_integer(value.get("shop_radius", 30))
+    if shop_radius is None or shop_radius < 0:
+        result.todos.append(f"{source.location}: region settings city {rsc_id} shop_radius needs review")
+        shop_radius = 30
+
+    shop_sigma = native_integer(value.get("shop_sigma", 20))
+    if shop_sigma is None or shop_sigma < 0:
+        result.todos.append(f"{source.location}: region settings city {rsc_id} shop_sigma needs review")
+        shop_sigma = 20
+
+    park_radius = native_integer(value.get("park_radius", 30))
+    if park_radius is None or park_radius < 0:
+        result.todos.append(f"{source.location}: region settings city {rsc_id} park_radius needs review")
+        park_radius = 30
+
+    park_sigma = native_integer(value.get("park_sigma", 70))
+    if park_sigma is None or park_sigma < 0:
+        result.todos.append(f"{source.location}: region settings city {rsc_id} park_sigma needs review")
+        park_sigma = 70
+
+    name_snippet = value.get("name_snippet", "<city_name>")
+    if not isinstance(name_snippet, str):
+        result.todos.append(f"{source.location}: region settings city {rsc_id} name_snippet needs review")
+        name_snippet = "<city_name>"
+
+    lines = [
+        "local definition = content.RegionSettingsCity {",
+        f"    id = {lua_quote(rsc_id)},",
+        f"    is_megacity = {lua_boolean(is_megacity)},",
+        f"    city_size = {city_size},",
+        f"    city_spacing = {city_spacing},",
+        f"    shop_radius = {shop_radius},",
+        f"    shop_sigma = {shop_sigma},",
+        f"    park_radius = {park_radius},",
+        f"    park_sigma = {park_sigma},",
+        f"    name_snippet = {lua_quote(name_snippet)},",
+        "}",
+    ]
+
+    def render_weighted_bin(field_name: str, method_name: str) -> None:
+        entries = canonical_weighted_entries(value.get(field_name, []))
+        if entries is None:
+            result.todos.append(f"{source.location}: region settings city {rsc_id} {field_name} needs review")
+            return
+        for special_id, weight in entries:
+            lines.append(f"definition:{method_name}({lua_quote(special_id)}, {weight})")
+
+    render_weighted_bin("houses", "add_house")
+    render_weighted_bin("shops", "add_shop")
+    render_weighted_bin("parks", "add_park")
+
+    return finish_catalog(
+        source,
+        result,
+        "region settings city",
+        rsc_id,
+        lines,
+        {"type", "id", "is_megacity", "city_size", "city_spacing", "shop_radius", "shop_sigma", "park_radius", "park_sigma", "name_snippet", "houses", "shops", "parks"},
+        todo_count,
+    )
+
+
+def render_forest_biome_mapgen(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    fbm_id = value.get("id")
+    if not bounded_platform_id(fbm_id):
+        result.partial.append(f"{source.location}: forest biome mapgen <invalid id>")
+        result.todos.append(f"{source.location}: forest biome mapgen needs a stable native id")
+        return None
+    todo_count = len(result.todos)
+
+    sparseness_adjacency_factor = native_integer(value.get("sparseness_adjacency_factor", 0))
+    if sparseness_adjacency_factor is None:
+        result.todos.append(f"{source.location}: forest biome mapgen {fbm_id} sparseness_adjacency_factor needs review")
+        sparseness_adjacency_factor = 0
+
+    item_group = value.get("item_group", "")
+    if not isinstance(item_group, str) or (
+        item_group and not bounded_platform_id(item_group)
+    ):
+        result.todos.append(f"{source.location}: forest biome mapgen {fbm_id} item_group needs review")
+        item_group = ""
+
+    item_group_chance = native_integer(value.get("item_group_chance", 0))
+    if item_group_chance is None or item_group_chance < 0:
+        result.todos.append(f"{source.location}: forest biome mapgen {fbm_id} item_group_chance needs review")
+        item_group_chance = 0
+
+    item_spawn_iterations = native_integer(value.get("item_spawn_iterations", 0))
+    if item_spawn_iterations is None or item_spawn_iterations < 0:
+        result.todos.append(f"{source.location}: forest biome mapgen {fbm_id} item_spawn_iterations needs review")
+        item_spawn_iterations = 0
+
+    lines = [
+        "local definition = content.ForestBiomeMapgen {",
+        f"    id = {lua_quote(fbm_id)},",
+        f"    sparseness_adjacency_factor = {sparseness_adjacency_factor},",
+        f"    item_group = {lua_quote(item_group)},",
+        f"    item_group_chance = {item_group_chance},",
+        f"    item_spawn_iterations = {item_spawn_iterations},",
+        "}",
+    ]
+
+    terrains = value.get("terrains", [])
+    if isinstance(terrains, list):
+        for ter in terrains:
+            if isinstance(ter, str) and bounded_platform_id(ter):
+                lines.append(f"definition:add_terrain({lua_quote(ter)})")
+            else:
+                result.todos.append(f"{source.location}: forest biome mapgen {fbm_id} terrain needs review")
+    elif isinstance(terrains, str) and bounded_platform_id(terrains):
+        lines.append(f"definition:add_terrain({lua_quote(terrains)})")
+    else:
+        result.todos.append(
+            f"{source.location}: forest biome mapgen {fbm_id} terrains need review"
+        )
+
+    components = value.get("components", [])
+    if isinstance(components, list):
+        for comp in components:
+            if isinstance(comp, str) and bounded_platform_id(comp):
+                lines.append(f"definition:add_component({lua_quote(comp)})")
+            else:
+                result.todos.append(f"{source.location}: forest biome mapgen {fbm_id} component needs review")
+    elif isinstance(components, str) and bounded_platform_id(components):
+        lines.append(f"definition:add_component({lua_quote(components)})")
+    else:
+        result.todos.append(
+            f"{source.location}: forest biome mapgen {fbm_id} components need review"
+        )
+
+    groundcover = canonical_weighted_entries(value.get("groundcover", []))
+    if groundcover is None:
+        result.todos.append(f"{source.location}: forest biome mapgen {fbm_id} groundcover needs review")
+    else:
+        for ter_id, weight in groundcover:
+            lines.append(f"definition:add_groundcover({lua_quote(ter_id)}, {weight})")
+
+    tf = value.get("terrain_furniture", {})
+    if isinstance(tf, dict):
+        for ter_id, tdata in tf.items():
+            if bounded_platform_id(ter_id) and isinstance(tdata, dict):
+                chance = native_integer(tdata.get("chance", 0))
+                if chance is None or chance < 0:
+                    result.todos.append(f"{source.location}: forest biome mapgen {fbm_id} terrain_furniture chance needs review")
+                    chance = 0
+                furniture_entries = canonical_weighted_entries(tdata.get("furniture", []))
+                if furniture_entries is None:
+                    result.todos.append(f"{source.location}: forest biome mapgen {fbm_id} terrain_furniture entries need review")
+                else:
+                    lua_furn = ", ".join(f"{{ {lua_quote(furn_id)}, {weight} }}" for furn_id, weight in furniture_entries)
+                    lines.append(f"definition:add_terrain_furniture({lua_quote(ter_id)}, {chance}, {{ {lua_furn} }})")
+            else:
+                result.todos.append(f"{source.location}: forest biome mapgen {fbm_id} terrain_furniture needs review")
+    else:
+        result.todos.append(f"{source.location}: forest biome mapgen {fbm_id} terrain_furniture must be an object")
+
+    return finish_catalog(
+        source,
+        result,
+        "forest biome mapgen",
+        fbm_id,
+        lines,
+        {"type", "id", "sparseness_adjacency_factor", "item_group", "item_group_chance", "item_spawn_iterations", "terrains", "components", "groundcover", "terrain_furniture"},
+        todo_count,
+    )
+
+
 def render_tool_quality(source: SourceObject, result: MigrationResult) -> str | None:
     value = source.value
     quality_id = value.get("id")
@@ -12574,8 +14041,11 @@ def render_eoc(source: SourceObject, result: MigrationResult) -> str:
                 lines.append(f"    services.items.set_random_fault(actor, {lua_quote(effect[key])})")
                 converted_effect = True
             elif isinstance(effect, dict) and "transform_item" in effect:
-                lines.append(f"    services.items.transform(actor, {lua_quote(effect['transform_item'])})")
-                converted_effect = True
+                result.todos.append(
+                    f"{source.location}: EOC {eoc_id} transform_item needs "
+                    "a native item-talker transform service"
+                )
+                all_effects_converted = False
             elif isinstance(effect, dict) and "transform_line" in effect:
                 lines.append("    services.world.transform_line(services.characters.snapshot(actor).creature.position)")
                 converted_effect = True
@@ -12941,55 +14411,6 @@ def migrate(objects: list[SourceObject], mod_id: str,
         "spell_migration": [],
         "camp_migration": [],
         "mod_migration": [],
-        "jmath_function": [],
-        "event_statistic": [],
-        "event_transformation": [],
-        "widget": [],
-        "option_slider": [],
-        "palette": [],
-        "ter_furn_transform": [],
-        "profession_item_substitutions": [],
-        "relic_procgen_data": [],
-        "dimension": [],
-        "dimension_region_layout": [],
-        "city": [],
-        "city_building": [],
-        "omt_placeholder": [],
-        "pp_generator": [],
-        "mod_tileset": [],
-        "region_settings": [],
-        "region_settings_city": [],
-        "region_settings_forest": [],
-        "region_settings_forest_mapgen": [],
-        "region_settings_forest_trail": [],
-        "region_settings_highway": [],
-        "region_settings_lake": [],
-        "region_settings_map_extras": [],
-        "region_settings_ocean": [],
-        "region_settings_ravine": [],
-        "region_settings_river": [],
-        "region_settings_terrain_furniture": [],
-        "region_terrain_furniture": [],
-        "forest_biome_component": [],
-        "forest_biome_mapgen": [],
-        "enchantment": [],
-        "SPELL": [],
-        "bionic": [],
-        "faction": [],
-        "faction_mission": [],
-        "mapgen": [],
-        "mission_definition": [],
-        "mutation": [],
-        "npc": [],
-        "npc_class": [],
-        "overmap_special": [],
-        "overmap_terrain": [],
-        "profession": [],
-        "talk_topic": [],
-        "vehicle": [],
-        "vehicle_part": [],
-        "vehicle_placement": [],
-        "vehicle_spawn": [],
         "trait_group": [],
         "monster_adjustment": [],
         "shopkeeper_blacklist": [],
@@ -12997,6 +14418,22 @@ def migrate(objects: list[SourceObject], mod_id: str,
         "shopkeeper_consumption_rates": [],
         "magic_type": [],
         "movement_mode": [],
+        "region_settings_ravine": [],
+        "region_settings_lake": [],
+        "region_settings_ocean": [],
+        "region_settings_forest": [],
+        "region_settings_river": [],
+        "region_settings_forest_mapgen": [],
+        "region_settings_map_extras": [],
+        "region_settings_terrain_furniture": [],
+        "region_settings_forest_trail": [],
+        "region_settings_highway": [],
+        "region_terrain_furniture": [],
+        "forest_biome_component": [],
+        "city": [],
+        "faction_mission": [],
+        "region_settings_city": [],
+        "forest_biome_mapgen": [],
         "named_color": [],
         "rotatable_symbol": [],
         "requirement": [],
@@ -13020,10 +14457,30 @@ def migrate(objects: list[SourceObject], mod_id: str,
             entry_id = source.value.get("id")
             if isinstance(entry_id, str) and entry_id:
                 inheritance_corpora.setdefault(kind, {})[entry_id] = source.value
+    regional_sources, regional_failures = resolve_regional_inheritance_corpus(
+        objects, exclude_types
+    )
     for source in objects:
         kind = source.value.get("type")
         if kind in exclude_types:
             continue
+        if kind in REGIONAL_INHERITANCE_LABELS:
+            original_source = source
+            source_key = (original_source.path, original_source.index)
+            inheritance_todos = regional_failures.get(source_key)
+            if inheritance_todos is not None:
+                object_id = (
+                    original_source.value.get("id") or
+                    original_source.value.get("abstract") or
+                    "<invalid id>"
+                )
+                result.partial.append(
+                    f"{original_source.location}: "
+                    f"{REGIONAL_INHERITANCE_LABELS[kind]} {object_id}"
+                )
+                result.todos.extend(inheritance_todos)
+                continue
+            source = regional_sources[source_key]
         if kind == "MOD_INFO" and metadata is None:
             metadata = source
         elif kind == "MOD_INFO":
@@ -13550,16 +15007,78 @@ def migrate(objects: list[SourceObject], mod_id: str,
             rendered = render_migration(source, result)
             if rendered:
                 catalog_chunks[kind].append(rendered)
-        elif kind in GENERIC_CONTENT_TYPES:
-            rendered = render_generic_content(source, result, GENERIC_CONTENT_TYPES[kind])
-            if rendered:
-                catalog_chunks[kind].append(rendered)
+        elif kind in UNREGISTERED_CONTENT_TYPES:
+            report_missing_content_registrar(source, result)
         elif kind == "magic_type":
             rendered = render_magic_type(source, result)
             if rendered:
                 catalog_chunks[kind].append(rendered)
         elif kind == "movement_mode":
             rendered = render_movement_mode(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "region_settings_ravine":
+            rendered = render_region_settings_ravine(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "region_settings_lake":
+            rendered = render_region_settings_lake(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "region_settings_ocean":
+            rendered = render_region_settings_ocean(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "region_settings_forest":
+            rendered = render_region_settings_forest(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "region_settings_river":
+            rendered = render_region_settings_river(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "region_settings_forest_mapgen":
+            rendered = render_region_settings_forest_mapgen(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "region_settings_map_extras":
+            rendered = render_region_settings_map_extras(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "region_settings_terrain_furniture":
+            rendered = render_region_settings_terrain_furniture(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "region_settings_forest_trail":
+            rendered = render_region_settings_forest_trail(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "region_settings_highway":
+            rendered = render_region_settings_highway(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "region_terrain_furniture":
+            rendered = render_region_terrain_furniture(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "forest_biome_component":
+            rendered = render_forest_biome_component(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "city":
+            rendered = render_city(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "faction_mission":
+            rendered = render_faction_mission(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "region_settings_city":
+            rendered = render_region_settings_city(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "forest_biome_mapgen":
+            rendered = render_forest_biome_mapgen(source, result)
             if rendered:
                 catalog_chunks[kind].append(rendered)
         elif kind == "named_color":
@@ -13579,10 +15098,7 @@ def migrate(objects: list[SourceObject], mod_id: str,
             if rendered:
                 catalog_chunks[kind].append(rendered)
         else:
-            object_id = stable_id(source.value, "<no stable id>")
-            result.todos.append(
-                f"{source.location}: {kind or '<missing type>'} {object_id} has no native Platform registrar"
-            )
+            report_missing_content_registrar(source, result)
 
     for speaker in sorted(speech_pools):
         lines = [
@@ -13906,55 +15422,6 @@ def migrate(objects: list[SourceObject], mod_id: str,
         "spell_migration": "Native spell migrations",
         "camp_migration": "Native camp migrations",
         "mod_migration": "Native mod migrations",
-        "jmath_function": "Native math functions",
-        "event_statistic": "Native event statistics",
-        "event_transformation": "Native event transformations",
-        "widget": "Native UI widgets",
-        "option_slider": "Native option sliders",
-        "palette": "Native mapgen palettes",
-        "ter_furn_transform": "Native terrain/furniture transforms",
-        "profession_item_substitutions": "Native profession substitutions",
-        "relic_procgen_data": "Native relic procgen data",
-        "dimension": "Native dimensions",
-        "dimension_region_layout": "Native dimension region layouts",
-        "city": "Native cities",
-        "city_building": "Native city buildings",
-        "omt_placeholder": "Native overmap terrain placeholders",
-        "pp_generator": "Native procedural generation blueprints",
-        "mod_tileset": "Native mod tileset overlays",
-        "region_settings": "Native regional settings",
-        "region_settings_city": "Native regional city settings",
-        "region_settings_forest": "Native regional forest settings",
-        "region_settings_forest_mapgen": "Native regional forest mapgen",
-        "region_settings_forest_trail": "Native regional forest trails",
-        "region_settings_highway": "Native regional highway settings",
-        "region_settings_lake": "Native regional lake settings",
-        "region_settings_map_extras": "Native regional map extras",
-        "region_settings_ocean": "Native regional ocean settings",
-        "region_settings_ravine": "Native regional ravine settings",
-        "region_settings_river": "Native regional river settings",
-        "region_settings_terrain_furniture": "Native regional terrain furniture",
-        "region_terrain_furniture": "Native regional terrain furniture sets",
-        "forest_biome_component": "Native forest biome components",
-        "forest_biome_mapgen": "Native forest biome mapgen",
-        "enchantment": "Native item enchantments",
-        "SPELL": "Native spells",
-        "bionic": "Native bionics",
-        "faction": "Native factions",
-        "faction_mission": "Native faction missions",
-        "mapgen": "Native mapgen definitions",
-        "mission_definition": "Native mission definitions",
-        "mutation": "Native mutations and traits",
-        "npc": "Native NPCs",
-        "npc_class": "Native NPC classes",
-        "overmap_special": "Native overmap specials",
-        "overmap_terrain": "Native overmap terrains",
-        "profession": "Native professions",
-        "talk_topic": "Native talk topics",
-        "vehicle": "Native vehicles",
-        "vehicle_part": "Native vehicle parts",
-        "vehicle_placement": "Native vehicle placements",
-        "vehicle_spawn": "Native vehicle spawns",
         "trait_group": "Native trait groups",
         "monster_adjustment": "Native monster adjustments",
         "shopkeeper_blacklist": "Native shopkeeper blacklists",
@@ -13962,6 +15429,22 @@ def migrate(objects: list[SourceObject], mod_id: str,
         "shopkeeper_consumption_rates": "Native shopkeeper consumption rates",
         "magic_type": "Native magic types and named Lua policies",
         "movement_mode": "Native composable movement modes",
+        "region_settings_ravine": "Native region settings ravines",
+        "region_settings_lake": "Native region settings lakes",
+        "region_settings_ocean": "Native region settings oceans",
+        "region_settings_forest": "Native region settings forests",
+        "region_settings_river": "Native region settings rivers",
+        "region_settings_forest_mapgen": "Native region settings forest mapgens",
+        "region_settings_map_extras": "Native region settings map extras",
+        "region_settings_terrain_furniture": "Native region settings terrain furnitures",
+        "region_settings_forest_trail": "Native region settings forest trails",
+        "region_settings_highway": "Native region settings highways",
+        "region_terrain_furniture": "Native region terrain furnitures",
+        "forest_biome_component": "Native forest biome components",
+        "city": "Native city definitions",
+        "faction_mission": "Native faction missions",
+        "region_settings_city": "Native region settings cities",
+        "forest_biome_mapgen": "Native forest biome mapgens",
         "named_color": "Native named colors",
         "rotatable_symbol": "Native rotatable-symbol groups",
         "requirement": "Native reusable requirements",

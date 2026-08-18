@@ -1,7 +1,12 @@
 import unittest
 
 from check_lua_first_replacement_ledger import check
-from generate_lua_first_replacement_ledger import OUTPUT, build_ledger, render
+from generate_lua_first_replacement_ledger import (
+    OUTPUT,
+    PLANNED_JSON,
+    build_ledger,
+    render,
+)
 
 
 class LuaFirstReplacementLedgerTest(unittest.TestCase):
@@ -14,9 +19,9 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 "implemented_verified": 67,
                 "implemented_unverified": 0,
                 "bounded_implemented_verified": 14,
-                "bounded_implemented_unverified": 672,
+                "bounded_implemented_unverified": 638,
                 "primitive_available_unverified": 4,
-                "planned": 0,
+                "planned": 34,
                 "private_adapter": 0,
                 "reviewed_not_applicable": 18,
             },
@@ -2193,6 +2198,14 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 "services.items",
             ),
         }:
+            if (
+                inventory == "json-object-types" and
+                selector in PLANNED_JSON
+            ) or (
+                inventory == "eoc-effects" and
+                selector == "transform_item"
+            ):
+                continue
             predicate_entry = entries[(inventory, selector)]
             self.assertEqual(predicate_entry["status"], status)
             self.assertEqual(predicate_entry["target"], target)
@@ -2243,6 +2256,36 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                     for entry in matches
                 )
             )
+
+    def test_missing_native_registrars_and_item_transform_are_planned(self):
+        expected_content = {
+            "jmath_function", "event_statistic", "event_transformation",
+            "widget", "option_slider", "palette", "ter_furn_transform",
+            "profession_item_substitutions", "relic_procgen_data",
+            "dimension", "dimension_region_layout",
+            "city_building", "omt_placeholder", "pp_generator",
+            "mod_tileset", "region_settings",
+            "enchantment", "SPELL", "bionic",
+            "faction", "mapgen", "mission_definition",
+            "mutation", "npc", "npc_class", "overmap_special",
+            "overmap_terrain", "profession", "talk_topic", "vehicle",
+            "vehicle_part", "vehicle_placement", "vehicle_spawn",
+        }
+        self.assertEqual(set(PLANNED_JSON), expected_content)
+
+        generated = build_ledger()
+        entries = {
+            (entry["inventory"], entry["selector"]): entry
+            for entry in generated["entries"]
+        }
+        for selector in expected_content:
+            entry = entries[("json-object-types", selector)]
+            self.assertEqual(entry["status"], "planned")
+            self.assertEqual(entry["legacy_dependency"], "public_legacy")
+
+        transform = entries[("eoc-effects", "transform_item")]
+        self.assertEqual(transform["status"], "planned")
+        self.assertEqual(transform["legacy_dependency"], "public_legacy")
 
 
 

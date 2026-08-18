@@ -101,6 +101,22 @@ struct oter_type_t;
 class overmap_special;
 class vpart_info;
 struct vehicle_prototype;
+struct region_settings_ravine;
+struct region_settings_lake;
+struct region_settings_ocean;
+struct region_settings_forest;
+struct region_settings_river;
+struct region_settings_forest_mapgen;
+struct region_settings_map_extras;
+struct region_settings_terrain_furniture;
+struct region_settings_forest_trail;
+struct region_settings_highway;
+struct region_terrain_furniture;
+struct forest_biome_component;
+struct city;
+class faction_mission;
+struct region_settings_city;
+struct forest_biome_mapgen;
 
 namespace behavior
 {
@@ -199,10 +215,10 @@ void insert_platform_trait_group(
     const std::vector<platform_trait_group_entry> &entries );
 void erase_platform_trait_group( const std::string &id );
 void append_platform_monster_adjustment( const std::string &species,
-                                         const std::string &stat,
-                                         double stat_adjust,
-                                         const std::string &flag, bool flag_val,
-                                         const std::string &special );
+        const std::string &stat,
+        double stat_adjust,
+        const std::string &flag, bool flag_val,
+        const std::string &special );
 std::size_t platform_monster_adjustment_count();
 void truncate_platform_monster_adjustments( std::size_t count );
 void erase_platform_scenario_blacklist( const platform_blacklist_data &value );
@@ -306,6 +322,22 @@ void vehicle_part_category_registry_finalize();
 bool mutation_type_registry_contains( const std::string &id );
 void mutation_type_registry_set( const std::string &id );
 void mutation_type_registry_erase( const std::string &id );
+generic_factory<region_settings_ravine> &region_settings_ravine_registry();
+generic_factory<region_settings_lake> &region_settings_lake_registry();
+generic_factory<region_settings_ocean> &region_settings_ocean_registry();
+generic_factory<region_settings_forest> &region_settings_forest_registry();
+generic_factory<region_settings_river> &region_settings_river_registry();
+generic_factory<region_settings_forest_mapgen> &region_settings_forest_mapgen_registry();
+generic_factory<region_settings_map_extras> &region_settings_map_extras_registry();
+generic_factory<region_settings_terrain_furniture> &region_settings_terrain_furniture_registry();
+generic_factory<region_settings_forest_trail> &region_settings_forest_trail_registry();
+generic_factory<region_settings_highway> &region_settings_highway_registry();
+generic_factory<region_terrain_furniture> &region_terrain_furniture_registry();
+generic_factory<forest_biome_component> &forest_biome_component_registry();
+generic_factory<city> &city_registry();
+generic_factory<faction_mission> &faction_mission_registry();
+generic_factory<region_settings_city> &region_settings_city_registry();
+generic_factory<forest_biome_mapgen> &forest_biome_mapgen_registry();
 
 const VehicleGroup *vehicle_group_registry_find( const std::string &id );
 void vehicle_group_registry_set( const std::string &id, const VehicleGroup &value );

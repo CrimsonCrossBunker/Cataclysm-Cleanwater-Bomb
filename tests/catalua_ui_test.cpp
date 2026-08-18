@@ -46,6 +46,7 @@
 #include "clothing_mod.h"
 #include "climbing.h"
 #include "clzones.h"
+#include "city.h"
 #include "creature_tracker.h"
 #include "construction_category.h"
 #include "construction_group.h"
@@ -63,6 +64,7 @@
 #include "explosion_light.h"
 #include "explosion.h"
 #include "faction.h"
+#include "faction_camp.h"
 #include "flag.h"
 #include "fault.h"
 #include "field_type.h"
@@ -948,8 +950,7 @@ return ccb.ModDefinition {
            std::string::npos );
 }
 
-SECTION( "dependency metadata must be a unique dense array" )
-{
+    SECTION( "dependency metadata must be a unique dense array" ) {
     scoped_platform_test_mod sparse( "ccb_platform_sparse_dependencies" );
     sparse.write( "main.lua", "return true\n" );
     sparse.write( "mod.lua", R"lua(
@@ -997,8 +998,7 @@ return ccb.ModDefinition { id = "reserved#id" }
     CHECK_FALSE( mod_id( reserved_id.root_name() )->lua_platform_error.empty() );
 }
 
-SECTION( "absolute entries are rejected" )
-{
+    SECTION( "absolute entries are rejected" ) {
     scoped_platform_test_mod test_mod( "ccb_platform_absolute_entry_test" );
     test_mod.write( "mod.lua", R"lua(
 local ccb = require("ccb")
@@ -1010,8 +1010,7 @@ return ccb.ModDefinition { entry = "/outside.lua" }
            std::string::npos );
 }
 
-SECTION( "parent traversal entries are rejected" )
-{
+    SECTION( "parent traversal entries are rejected" ) {
     scoped_platform_test_mod target( "ccb_platform_escape_target" );
     scoped_platform_test_mod test_mod( "ccb_platform_escape_test" );
     target.write( "main.lua", "return true\n" );
@@ -1026,8 +1025,7 @@ return ccb.ModDefinition { entry = "../ccb_platform_escape_target/main.lua" }
     CHECK( mod_id( target.root_name() ).is_valid() );
 }
 
-SECTION( "the first deterministically discovered duplicate id wins" )
-{
+    SECTION( "the first deterministically discovered duplicate id wins" ) {
     scoped_platform_test_mod first( "ccb_platform_duplicate_a" );
     scoped_platform_test_mod second( "ccb_platform_duplicate_b" );
     const std::string metadata = R"lua(
@@ -1773,6 +1771,60 @@ movement:messages("mech", {
 })
 ccb.content.add(movement)
 
+local ravine = ccb.content.RegionSettingsRavine {
+    id = "ccb_platform_test_ravine",
+    num_ravines = 2,
+    ravine_range = 50,
+    ravine_width = 3,
+    ravine_depth = -4,
+}
+ccb.content.add(ravine)
+
+local lake = ccb.content.RegionSettingsLake {
+    id = "ccb_platform_test_lake",
+    noise_threshold_lake = 0.35,
+    lake_size_min = 25,
+    lake_depth = -6,
+    invert_lakes = true,
+    surface_ter = "lake_surface",
+    shore_ter = "lake_shore",
+    interior_ter = "lake_water_cube",
+    bed_ter = "lake_bed",
+    shore_extendable_overmap_terrain = { "forest", "field" },
+    shore_extendable_overmap_terrain_aliases = {
+        {
+            om_terrain = "swamp",
+            alias = "lake_shore",
+            om_terrain_match_type = "prefix",
+        },
+    },
+}
+ccb.content.add(lake)
+
+local ocean = ccb.content.RegionSettingsOcean {
+    id = "ccb_platform_test_ocean",
+    noise_threshold_ocean = 0.4,
+    ocean_size_min = 120,
+    ocean_depth = -12,
+    ocean_start_north = 10,
+    ocean_start_east = 20,
+    sandy_beach_width = 3,
+}
+ccb.content.add(ocean)
+
+local forest = ccb.content.RegionSettingsForest {
+    id = "ccb_platform_test_forest",
+    noise_threshold_forest = 0.28,
+    noise_threshold_forest_thick = 0.33,
+    noise_threshold_swamp_adjacent_water = 0.32,
+    noise_threshold_swamp_isolated = 0.65,
+    river_floodplain_buffer_distance_min = 4,
+    river_floodplain_buffer_distance_max = 18,
+    forest_threshold_limit = 0.42,
+    forest_threshold_increase = { 0.01, 0.02, 0.03, 0.04 },
+}
+ccb.content.add(forest)
+
 local overmap_location = ccb.content.OvermapLocation {
     id = "ccb_platform_test_overmap_location",
 }
@@ -2236,6 +2288,60 @@ ccb.content.add(recipe_group)
     CHECK( move_modes_by_speed().size() == previous_movement_mode_count + 1 );
     cata::lua_platform::detail::refresh_movement_mode_registry();
     CHECK( move_modes_by_speed().size() == previous_movement_mode_count + 1 );
+
+    REQUIRE( region_settings_ravine_id( "ccb_platform_test_ravine" ).is_valid() );
+    CHECK( region_settings_ravine_id( "ccb_platform_test_ravine" )->num_ravines == 2 );
+    CHECK( region_settings_ravine_id( "ccb_platform_test_ravine" )->ravine_range == 50 );
+    CHECK( region_settings_ravine_id( "ccb_platform_test_ravine" )->ravine_width == 3 );
+    CHECK( region_settings_ravine_id( "ccb_platform_test_ravine" )->ravine_depth == -4 );
+
+    REQUIRE( region_settings_lake_id( "ccb_platform_test_lake" ).is_valid() );
+    CHECK( region_settings_lake_id( "ccb_platform_test_lake" )->noise_threshold_lake == 0.35 );
+    CHECK( region_settings_lake_id( "ccb_platform_test_lake" )->lake_size_min == 25 );
+    CHECK( region_settings_lake_id( "ccb_platform_test_lake" )->lake_depth == -6 );
+    CHECK( region_settings_lake_id( "ccb_platform_test_lake" )->invert_lakes );
+    CHECK( region_settings_lake_id( "ccb_platform_test_lake" )->surface.str() == "lake_surface" );
+    CHECK( region_settings_lake_id( "ccb_platform_test_lake" )->shore.str() == "lake_shore" );
+    CHECK( region_settings_lake_id( "ccb_platform_test_lake" )->interior.str() == "lake_water_cube" );
+    CHECK( region_settings_lake_id( "ccb_platform_test_lake" )->bed.str() == "lake_bed" );
+    CHECK( region_settings_lake_id( "ccb_platform_test_lake" )->shore_extendable_overmap_terrain ==
+           std::vector<oter_str_id> { oter_str_id( "forest" ), oter_str_id( "field" ) } );
+    REQUIRE( region_settings_lake_id( "ccb_platform_test_lake" )->shore_extendable_overmap_terrain_aliases.size()
+             == 1 );
+    CHECK( region_settings_lake_id( "ccb_platform_test_lake" )->shore_extendable_overmap_terrain_aliases.front().overmap_terrain
+           == "swamp" );
+    CHECK( region_settings_lake_id( "ccb_platform_test_lake" )->shore_extendable_overmap_terrain_aliases.front().alias.str()
+           == "lake_shore" );
+    CHECK( region_settings_lake_id( "ccb_platform_test_lake" )->shore_extendable_overmap_terrain_aliases.front().match_type
+           == ot_match_type::prefix );
+
+    REQUIRE( region_settings_ocean_id( "ccb_platform_test_ocean" ).is_valid() );
+    CHECK( region_settings_ocean_id( "ccb_platform_test_ocean" )->noise_threshold_ocean == 0.4 );
+    CHECK( region_settings_ocean_id( "ccb_platform_test_ocean" )->ocean_size_min == 120 );
+    CHECK( region_settings_ocean_id( "ccb_platform_test_ocean" )->ocean_depth == -12 );
+    REQUIRE( region_settings_ocean_id( "ccb_platform_test_ocean" )->ocean_start_north.has_value() );
+    CHECK( *region_settings_ocean_id( "ccb_platform_test_ocean" )->ocean_start_north == 10 );
+    REQUIRE( region_settings_ocean_id( "ccb_platform_test_ocean" )->ocean_start_east.has_value() );
+    CHECK( *region_settings_ocean_id( "ccb_platform_test_ocean" )->ocean_start_east == 20 );
+    CHECK_FALSE( region_settings_ocean_id( "ccb_platform_test_ocean" )->ocean_start_west.has_value() );
+    CHECK_FALSE( region_settings_ocean_id( "ccb_platform_test_ocean" )->ocean_start_south.has_value() );
+    CHECK( region_settings_ocean_id( "ccb_platform_test_ocean" )->sandy_beach_width == 3 );
+
+    REQUIRE( region_settings_forest_id( "ccb_platform_test_forest" ).is_valid() );
+    CHECK( region_settings_forest_id( "ccb_platform_test_forest" )->noise_threshold_forest == 0.28 );
+    CHECK( region_settings_forest_id( "ccb_platform_test_forest" )->noise_threshold_forest_thick ==
+           0.33 );
+    CHECK( region_settings_forest_id( "ccb_platform_test_forest" )->noise_threshold_swamp_adjacent_water
+           == 0.32 );
+    CHECK( region_settings_forest_id( "ccb_platform_test_forest" )->noise_threshold_swamp_isolated ==
+           0.65 );
+    CHECK( region_settings_forest_id( "ccb_platform_test_forest" )->river_floodplain_buffer_distance_min
+           == 4 );
+    CHECK( region_settings_forest_id( "ccb_platform_test_forest" )->river_floodplain_buffer_distance_max
+           == 18 );
+    CHECK( region_settings_forest_id( "ccb_platform_test_forest" )->max_forest == 0.42f );
+    CHECK( region_settings_forest_id( "ccb_platform_test_forest" )->forest_increase ==
+           std::array<float, 4> { 0.01f, 0.02f, 0.03f, 0.04f } );
     REQUIRE( overmap_location_id(
                  "ccb_platform_test_overmap_location" ).is_valid() );
     CHECK( overmap_location_id( "ccb_platform_test_overmap_location" )->
@@ -2398,6 +2504,10 @@ ccb.content.add(recipe_group)
     CHECK_FALSE( magic_type_id( "ccb_platform_test_magic" ).is_valid() );
     CHECK_FALSE( move_mode_id( "ccb_platform_test_movement" ).is_valid() );
     CHECK( move_modes_by_speed().size() == previous_movement_mode_count );
+    CHECK_FALSE( region_settings_ravine_id( "ccb_platform_test_ravine" ).is_valid() );
+    CHECK_FALSE( region_settings_lake_id( "ccb_platform_test_lake" ).is_valid() );
+    CHECK_FALSE( region_settings_ocean_id( "ccb_platform_test_ocean" ).is_valid() );
+    CHECK_FALSE( region_settings_forest_id( "ccb_platform_test_forest" ).is_valid() );
     CHECK_FALSE( overmap_location_id(
                      "ccb_platform_test_overmap_location" ).is_valid() );
     CHECK_FALSE( profession_group_id(
@@ -2715,8 +2825,10 @@ ccb.content.add(monster)
     CHECK( mtype_id( "mon_ccb_platform_creature" )->special_attacks.count(
                "ccb_platform_creature_attack" ) == 1 );
     CHECK( mtype_id( "mon_ccb_platform_creature" )->weakpoints.weakpoint_list.size() == 1 );
-    REQUIRE( mtype_id( "mon_ccb_platform_creature" )->weakpoints.weakpoint_list.front().effects.size() == 1 );
-    CHECK( mtype_id( "mon_ccb_platform_creature" )->weakpoints.weakpoint_list.front().effects.front().damage_required ==
+    REQUIRE( mtype_id( "mon_ccb_platform_creature" )->weakpoints.weakpoint_list.front().effects.size()
+             == 1 );
+    CHECK( mtype_id( "mon_ccb_platform_creature" )->weakpoints.weakpoint_list.front().effects.front().damage_required
+           ==
            std::pair<float, float>( 0.0f, 100.0f ) );
 
     cata::lua_platform::discard_prepared_mods();
@@ -7097,6 +7209,1906 @@ ccb.content.add(extra)
     cata::lua_platform::shutdown();
 }
 
+TEST_CASE( "lua_first_regional_leaf_settings_stage_native_configurations",
+           "[lua][platform][content][regional]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_regional_leaf" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local ravine = ccb.content.RegionSettingsRavine {
+    id = "ccb_platform_test_ravine_stage",
+    num_ravines = 3,
+    ravine_range = 60,
+    ravine_width = 2,
+    ravine_depth = -5,
+}
+ccb.content.add(ravine)
+
+local lake = ccb.content.RegionSettingsLake {
+    id = "ccb_platform_test_lake_stage",
+    noise_threshold_lake = 0.28,
+    lake_size_min = 30,
+    lake_depth = -7,
+    invert_lakes = false,
+    surface = "lake_surface",
+    shore = "lake_shore",
+    interior = "lake_water_cube",
+    bed = "lake_bed",
+}
+lake:shore_extendable_terrain("field")
+lake:shore_extendable_alias {
+    om_terrain = "forest",
+    alias = "lake_shore",
+    om_terrain_match_type = "TYPE",
+}
+ccb.content.add(lake)
+
+local ocean = ccb.content.RegionSettingsOcean {
+    id = "ccb_platform_test_ocean_stage",
+    noise_threshold_ocean = 0.3,
+    ocean_size_min = 150,
+    ocean_depth = -10,
+    ocean_start_north = 5,
+    ocean_start_east = 15,
+    ocean_start_west = 25,
+    ocean_start_south = 35,
+    sandy_beach_width = 4,
+}
+ccb.content.add(ocean)
+
+local forest = ccb.content.RegionSettingsForest {
+    id = "ccb_platform_test_forest_stage",
+    noise_threshold_forest = 0.22,
+    noise_threshold_forest_thick = 0.35,
+    noise_threshold_swamp_adjacent_water = 0.29,
+    noise_threshold_swamp_isolated = 0.58,
+    river_floodplain_buffer_distance_min = 5,
+    river_floodplain_buffer_distance_max = 20,
+    forest_threshold_limit = 0.45,
+    forest_threshold_increase = { 0.02, 0.03, 0.04, 0.05 },
+}
+ccb.content.add(forest)
+)lua" );
+
+    std::string error;
+    const bool prepared = cata::lua_platform::prepare_mods(
+    { test_mod.source( "ccb_platform_regional_leaf" ) }, error );
+    INFO( error );
+    REQUIRE( prepared );
+    const bool applied = cata::lua_platform::apply_prepared_content( error );
+    INFO( error );
+    REQUIRE( applied );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    const region_settings_ravine_id ravine( "ccb_platform_test_ravine_stage" );
+    REQUIRE( ravine.is_valid() );
+    CHECK( ravine->num_ravines == 3 );
+    CHECK( ravine->ravine_range == 60 );
+    CHECK( ravine->ravine_width == 2 );
+    CHECK( ravine->ravine_depth == -5 );
+
+    const region_settings_lake_id lake( "ccb_platform_test_lake_stage" );
+    REQUIRE( lake.is_valid() );
+    CHECK( lake->noise_threshold_lake == 0.28 );
+    CHECK( lake->lake_size_min == 30 );
+    CHECK( lake->lake_depth == -7 );
+    CHECK_FALSE( lake->invert_lakes );
+    CHECK( lake->surface.str() == "lake_surface" );
+    CHECK( lake->shore.str() == "lake_shore" );
+    CHECK( lake->interior.str() == "lake_water_cube" );
+    CHECK( lake->bed.str() == "lake_bed" );
+    REQUIRE( lake->shore_extendable_overmap_terrain.size() == 1 );
+    CHECK( lake->shore_extendable_overmap_terrain.front() == oter_str_id( "field" ) );
+    REQUIRE( lake->shore_extendable_overmap_terrain_aliases.size() == 1 );
+    CHECK( lake->shore_extendable_overmap_terrain_aliases.front().overmap_terrain == "forest" );
+    CHECK( lake->shore_extendable_overmap_terrain_aliases.front().alias.str() == "lake_shore" );
+    CHECK( lake->shore_extendable_overmap_terrain_aliases.front().match_type == ot_match_type::type );
+
+    const region_settings_ocean_id ocean( "ccb_platform_test_ocean_stage" );
+    REQUIRE( ocean.is_valid() );
+    CHECK( ocean->noise_threshold_ocean == 0.3 );
+    CHECK( ocean->ocean_size_min == 150 );
+    CHECK( ocean->ocean_depth == -10 );
+    REQUIRE( ocean->ocean_start_north.has_value() );
+    CHECK( *ocean->ocean_start_north == 5 );
+    REQUIRE( ocean->ocean_start_east.has_value() );
+    CHECK( *ocean->ocean_start_east == 15 );
+    REQUIRE( ocean->ocean_start_west.has_value() );
+    CHECK( *ocean->ocean_start_west == 25 );
+    REQUIRE( ocean->ocean_start_south.has_value() );
+    CHECK( *ocean->ocean_start_south == 35 );
+    CHECK( ocean->sandy_beach_width == 4 );
+
+    const region_settings_forest_id forest( "ccb_platform_test_forest_stage" );
+    REQUIRE( forest.is_valid() );
+    CHECK( forest->noise_threshold_forest == 0.22 );
+    CHECK( forest->noise_threshold_forest_thick == 0.35 );
+    CHECK( forest->noise_threshold_swamp_adjacent_water == 0.29 );
+    CHECK( forest->noise_threshold_swamp_isolated == 0.58 );
+    CHECK( forest->river_floodplain_buffer_distance_min == 5 );
+    CHECK( forest->river_floodplain_buffer_distance_max == 20 );
+    CHECK( forest->max_forest == 0.45f );
+    CHECK( forest->forest_increase == std::array<float, 4> { 0.02f, 0.03f, 0.04f, 0.05f } );
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_regional_leaf_settings_reject_lossy_native_conversions",
+           "[lua][platform][content][regional][validation]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+
+    SECTION( "native integers cannot overflow" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_regional_int_overflow" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsRavine {
+    id = "ccb_platform_regional_int_overflow",
+    num_ravines = 2147483648,
+})
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_regional_int_overflow" ) }, error ) );
+        CHECK( error.find( "outside the native integer range" ) != std::string::npos );
+    }
+
+    SECTION( "constructor aliases cannot silently fall back to exact matching" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_regional_bad_alias" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsLake {
+    id = "ccb_platform_regional_bad_alias",
+    shore_extendable_overmap_terrain_aliases = {
+        {
+            om_terrain = "forest",
+            alias = "lake_shore",
+            om_terrain_match_type = "sideways",
+        },
+    },
+})
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_regional_bad_alias" ) }, error ) );
+        CHECK( error.find( "invalid shore terrain alias" ) != std::string::npos );
+    }
+
+    SECTION( "double thresholds must remain representable as native floats" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_regional_float_overflow" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsForest {
+    id = "ccb_platform_regional_float_overflow",
+    forest_threshold_limit = 1e300,
+})
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_regional_float_overflow" ) }, error ) );
+        CHECK( error.find( "outside native ranges" ) != std::string::npos );
+    }
+}
+
+TEST_CASE( "lua_first_regional_leaf_fingerprint_tracks_optional_ocean_edges",
+           "[lua][platform][content][regional][fingerprint]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+    scoped_platform_test_mod test_mod( "ccb_platform_regional_fingerprint" );
+
+    const auto fingerprint_for = [&test_mod]( const std::string &edge ) {
+        test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsOcean {
+    id = "ccb_platform_regional_fingerprint",
+    %s = 5,
+})
+)lua", edge ) );
+        std::string error;
+        const bool prepared = cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_regional_fingerprint" ) }, error );
+        INFO( error );
+        REQUIRE( prepared );
+        const std::string fingerprint = cata::lua_platform::prepared_content_fingerprint();
+        REQUIRE_FALSE( fingerprint.empty() );
+        cata::lua_platform::discard_prepared_mods();
+        return fingerprint;
+    };
+
+    CHECK( fingerprint_for( "ocean_start_north" ) !=
+           fingerprint_for( "ocean_start_east" ) );
+}
+
+TEST_CASE( "lua_first_regional_batch_g2_settings_stage_native_configurations",
+           "[lua][platform][content][regional][batch_g2]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+    scoped_platform_test_mod test_mod( "ccb_platform_regional_batch_g2" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local river = ccb.content.RegionSettingsRiver {
+    id = "ccb_platform_test_river_stage",
+    river_scale = 2,
+    river_frequency = 2.25,
+    river_branch_chance = 48.0,
+    river_branch_remerge_chance = 6.0,
+    river_branch_scale_decrease = 1.25,
+}
+ccb.content.add(river)
+local edited_river = ccb.content.edit_region_settings_river(
+    "ccb_platform_test_river_stage")
+edited_river:river_scale(3)
+ccb.content.edit(edited_river)
+
+local forest_mapgen = ccb.content.RegionSettingsForestMapgen {
+    id = "ccb_platform_test_forest_mapgen_stage",
+    biomes = { "biome_forest_default" },
+}
+ccb.content.add(forest_mapgen)
+
+local staged_extra_collection = ccb.content.MapExtraCollection {
+    id = "ccb_platform_test_staged_extra_collection",
+    chance = 1,
+}
+staged_extra_collection:extra("mx_crater", 1)
+ccb.content.add(staged_extra_collection)
+
+local map_extras = ccb.content.RegionSettingsMapExtras {
+    id = "ccb_platform_test_map_extras_stage",
+    extras = { "forest", "ccb_platform_test_staged_extra_collection" },
+}
+ccb.content.add(map_extras)
+
+local ter_furn = ccb.content.RegionSettingsTerrainFurniture {
+    id = "ccb_platform_test_terrain_furniture_stage",
+    ter_furn = { "default_t_region_groundcover" },
+}
+ccb.content.add(ter_furn)
+)lua" );
+
+    std::string error;
+    const bool prepared = cata::lua_platform::prepare_mods(
+    { test_mod.source( "ccb_platform_regional_batch_g2" ) }, error );
+    INFO( error );
+    REQUIRE( prepared );
+    const bool applied = cata::lua_platform::apply_prepared_content( error );
+    INFO( error );
+    REQUIRE( applied );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    const region_settings_river_id river( "ccb_platform_test_river_stage" );
+    REQUIRE( river.is_valid() );
+    CHECK( river->river_scale == 3 );
+    CHECK( river->river_frequency == 2.25 );
+    CHECK( river->river_branch_chance == 48.0 );
+    CHECK( river->river_branch_remerge_chance == 6.0 );
+    CHECK( river->river_branch_scale_decrease == 1.25 );
+
+    const region_settings_forest_mapgen_id forest_mapgen( "ccb_platform_test_forest_mapgen_stage" );
+    REQUIRE( forest_mapgen.is_valid() );
+    CHECK( forest_mapgen->biomes.count( forest_biome_mapgen_id( "biome_forest_default" ) ) == 1 );
+    CHECK_FALSE( forest_mapgen->oter_to_biomes.empty() );
+
+    const region_settings_map_extras_id map_extras( "ccb_platform_test_map_extras_stage" );
+    REQUIRE( map_extras.is_valid() );
+    CHECK( map_extras->extras.count( map_extra_collection_id( "forest" ) ) == 1 );
+    CHECK( map_extras->extras.count(
+               map_extra_collection_id( "ccb_platform_test_staged_extra_collection" ) ) == 1 );
+
+    const region_settings_terrain_furniture_id ter_furn( "ccb_platform_test_terrain_furniture_stage" );
+    REQUIRE( ter_furn.is_valid() );
+    CHECK( ter_furn->ter_furn.count( region_terrain_furniture_id( "default_t_region_groundcover" ) ) == 1 );
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_regional_batch_g2_replace_and_rollback_restore_legacy_objects",
+           "[lua][platform][content][regional][batch_g2][transaction]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+    const region_settings_river_id default_river( "default" );
+    REQUIRE( default_river.is_valid() );
+    const region_settings_river baseline = default_river.obj();
+
+    scoped_platform_test_mod test_mod( "ccb_platform_regional_g2_replace" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.replace(ccb.content.RegionSettingsRiver {
+    id = "default",
+    river_scale = 17,
+    river_frequency = 3.5,
+    river_branch_chance = 19.0,
+    river_branch_remerge_chance = 7.0,
+    river_branch_scale_decrease = 0.75,
+})
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_regional_g2_replace" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( default_river.is_valid() );
+    CHECK( default_river->river_scale == 17 );
+    CHECK( default_river->river_frequency == 3.5 );
+
+    cata::lua_platform::discard_prepared_mods();
+    REQUIRE( default_river.is_valid() );
+    CHECK( default_river->river_scale == baseline.river_scale );
+    CHECK( default_river->river_frequency == baseline.river_frequency );
+    CHECK( default_river->river_branch_chance == baseline.river_branch_chance );
+    CHECK( default_river->river_branch_remerge_chance ==
+           baseline.river_branch_remerge_chance );
+    CHECK( default_river->river_branch_scale_decrease ==
+           baseline.river_branch_scale_decrease );
+}
+
+TEST_CASE( "lua_first_regional_batch_g2_settings_reject_invalid_native_configurations",
+           "[lua][platform][content][regional][batch_g2][validation]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+
+    SECTION( "river integers cannot overflow" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_river_overflow" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsRiver {
+    id = "ccb_platform_river_overflow",
+    river_scale = 2147483648,
+})
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_river_overflow" ) }, error ) );
+        CHECK( error.find( "outside the native integer range" ) != std::string::npos );
+    }
+
+    SECTION( "forest mapgen rejects unknown biomes" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_unknown_biome" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsForestMapgen {
+    id = "ccb_platform_unknown_biome",
+    biomes = { "nonexistent_forest_biome_xyz" },
+})
+)lua" );
+
+        std::string error;
+        REQUIRE( cata::lua_platform::prepare_mods(
+                     { test_mod.source( "ccb_platform_unknown_biome" ) }, error ) );
+        CHECK_FALSE( cata::lua_platform::apply_prepared_content( error ) );
+        CHECK( error.find( "references unknown forest biome mapgen" ) != std::string::npos );
+    }
+
+    SECTION( "forest mapgen rejects duplicate biomes" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_duplicate_biome" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsForestMapgen {
+    id = "ccb_platform_duplicate_biome",
+    biomes = { "biome_forest_default", "biome_forest_default" },
+})
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+                         { test_mod.source( "ccb_platform_duplicate_biome" ) }, error ) );
+        CHECK( error.find( "duplicate biome" ) != std::string::npos );
+    }
+
+    SECTION( "forest mapgen rejects sparse biome arrays" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_sparse_biome" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsForestMapgen {
+    id = "ccb_platform_sparse_biome",
+    biomes = { [2] = "biome_forest_default" },
+})
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+                         { test_mod.source( "ccb_platform_sparse_biome" ) }, error ) );
+        CHECK( error.find( "dense array" ) != std::string::npos );
+    }
+
+    SECTION( "forest mapgen rejects overlong reference ids" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_overlong_biome" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsForestMapgen {
+    id = "ccb_platform_overlong_biome",
+    biomes = { string.rep("b", 257) },
+})
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+                         { test_mod.source( "ccb_platform_overlong_biome" ) }, error ) );
+        CHECK( error.find( "invalid forest biome mapgen reference id" ) != std::string::npos );
+    }
+
+    SECTION( "map extras rejects duplicate extras" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_dup_extras" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsMapExtras {
+    id = "ccb_platform_dup_extras",
+    extras = { "forest", "forest" },
+})
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_dup_extras" ) }, error ) );
+        CHECK( error.find( "duplicate extra" ) != std::string::npos );
+    }
+
+    SECTION( "map extras rejects unknown extra collections" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_unknown_extra_collection" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsMapExtras {
+    id = "ccb_platform_unknown_extra_collection",
+    extras = { "nonexistent_extra_collection_xyz" },
+})
+)lua" );
+
+        std::string error;
+        REQUIRE( cata::lua_platform::prepare_mods(
+                     { test_mod.source( "ccb_platform_unknown_extra_collection" ) }, error ) );
+        CHECK_FALSE( cata::lua_platform::apply_prepared_content( error ) );
+        CHECK( error.find( "references unknown map extra collection" ) != std::string::npos );
+    }
+
+    SECTION( "terrain furniture rejects unknown terrain furniture ids" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_unknown_tf" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsTerrainFurniture {
+    id = "ccb_platform_unknown_tf",
+    ter_furn = { "nonexistent_region_tf_xyz" },
+})
+)lua" );
+
+        std::string error;
+        REQUIRE( cata::lua_platform::prepare_mods(
+                     { test_mod.source( "ccb_platform_unknown_tf" ) }, error ) );
+        CHECK_FALSE( cata::lua_platform::apply_prepared_content( error ) );
+        CHECK( error.find( "references unknown region terrain furniture" ) != std::string::npos );
+    }
+
+    SECTION( "terrain furniture rejects duplicate ids" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_duplicate_tf" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsTerrainFurniture {
+    id = "ccb_platform_duplicate_tf",
+    ter_furn = { "default_t_region_groundcover", "default_t_region_groundcover" },
+})
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+                         { test_mod.source( "ccb_platform_duplicate_tf" ) }, error ) );
+        CHECK( error.find( "duplicate terrain furniture" ) != std::string::npos );
+    }
+
+    SECTION( "river floating point values must be finite" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_river_nonfinite" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsRiver {
+    id = "ccb_platform_river_nonfinite",
+    river_frequency = math.huge,
+})
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+                         { test_mod.source( "ccb_platform_river_nonfinite" ) }, error ) );
+        CHECK( error.find( "non-finite properties" ) != std::string::npos );
+    }
+}
+
+TEST_CASE( "lua_first_regional_batch_g2_fingerprint_sensitivity",
+           "[lua][platform][content][regional][batch_g2][fingerprint]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+    scoped_platform_test_mod test_mod( "ccb_platform_g2_fingerprint" );
+
+    const auto fingerprint_for = [&test_mod]( const std::string &script ) {
+        test_mod.write( "main.lua", script );
+        std::string error;
+        const bool prepared = cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g2_fingerprint" ) }, error );
+        INFO( error );
+        REQUIRE( prepared );
+        const std::string fingerprint = cata::lua_platform::prepared_content_fingerprint();
+        REQUIRE_FALSE( fingerprint.empty() );
+        cata::lua_platform::discard_prepared_mods();
+        return fingerprint;
+    };
+
+    const std::string fp1 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsRiver {
+    id = "ccb_platform_g2_fingerprint",
+    river_scale = 1,
+})
+)lua" );
+
+    const std::string fp2 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsRiver {
+    id = "ccb_platform_g2_fingerprint",
+    river_scale = 2,
+})
+)lua" );
+
+    CHECK( fp1 != fp2 );
+
+    const std::string forest_fp1 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsForestMapgen {
+    id = "ccb_platform_g2_fingerprint",
+    biomes = { "biome_forest_default" },
+})
+)lua" );
+    const std::string forest_fp2 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsForestMapgen {
+    id = "ccb_platform_g2_fingerprint",
+    biomes = { "biome_forest_thick_default" },
+})
+)lua" );
+    CHECK( forest_fp1 != forest_fp2 );
+
+    const std::string extras_fp1 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsMapExtras {
+    id = "ccb_platform_g2_fingerprint",
+    extras = { "forest" },
+})
+)lua" );
+    const std::string extras_fp2 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsMapExtras {
+    id = "ccb_platform_g2_fingerprint",
+    extras = { "field" },
+})
+)lua" );
+    CHECK( extras_fp1 != extras_fp2 );
+
+    const std::string ter_furn_fp1 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsTerrainFurniture {
+    id = "ccb_platform_g2_fingerprint",
+    ter_furn = { "default_t_region_groundcover" },
+})
+)lua" );
+    const std::string ter_furn_fp2 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsTerrainFurniture {
+    id = "ccb_platform_g2_fingerprint",
+    ter_furn = { "default_t_region_groundcover_urban" },
+})
+)lua" );
+    CHECK( ter_furn_fp1 != ter_furn_fp2 );
+}
+
+TEST_CASE( "lua_first_regional_batch_g3_definitions_stage_native_settings",
+           "[lua][platform][content][regional][batch_g3][stage]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+    scoped_platform_test_mod test_mod( "ccb_platform_regional_batch_g3" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local trail = ccb.content.RegionSettingsForestTrail {
+    id = "ccb_platform_test_trail_stage",
+    chance = 3,
+    border_point_chance = 4,
+    minimum_forest_size = 75,
+    random_point_min = 6,
+    random_point_max = 48,
+    random_point_size_scalar = 95,
+    trailhead_chance = 2,
+    trailhead_road_distance = 7,
+}
+trail:trailhead("trailhead_basic", 3)
+trail:add_trailhead("trailhead_outhouse", 1)
+ccb.content.add(trail)
+local edited_trail = ccb.content.edit_region_settings_forest_trail(
+    "ccb_platform_test_trail_stage")
+edited_trail:chance(4)
+edited_trail:trailhead("trailhead_basic", 5)
+ccb.content.edit(edited_trail)
+
+local highway = ccb.content.RegionSettingsHighway {
+    id = "ccb_platform_test_highway_stage",
+    width_of_segments = 3,
+    straightness_chance = 0.7,
+    reserved_terrain_id = "hw_reserved",
+    reserved_terrain_water_id = "hw_reserved_water",
+    segment_flat_special = "highway_segment_flat",
+    segment_ramp_special = "highway_segment_ramp",
+    segment_road_bridge_special = "highway_segment_road_bridge",
+    segment_bridge_special = "highway_segment_bridge",
+    segment_bridge_supports_special = "highway_support_mutable",
+    segment_overpass_special = "highway_segment_overpass",
+    clockwise_slant_special = "Highway Slant Minor Clockwise",
+    counterclockwise_slant_special = "Highway Slant Minor Counterclockwise",
+    fallback_onramp_special = "Highway Fallback Onramp",
+    fallback_bend_special = "Highway Bend",
+    fallback_three_way_intersection_special = "Highway Fallback Tee",
+    fallback_four_way_intersection_special = "Highway Fallback Four-Way Intersection",
+    fallback_supports = "hw_fb_supports",
+}
+highway:four_way_intersection("Highway Clover Leaf", 2)
+highway:three_way_intersection("Highway Trumpet Interchange", 1)
+highway:bend("Highway Bend", 3)
+highway:road_connection("Highway Diamond Interchange", 1)
+highway:interchange("Highway Diamond Interchange", 2)
+ccb.content.add(highway)
+local edited_highway = ccb.content.edit_region_settings_highway(
+    "ccb_platform_test_highway_stage")
+edited_highway:width_of_segments(4)
+edited_highway:straightness_chance(0.8)
+edited_highway:road_connection("Highway Diamond Interchange", 6)
+ccb.content.edit(edited_highway)
+
+local rtf = ccb.content.RegionTerrainFurniture {
+    id = "ccb_platform_test_rtf_stage",
+    ter_id = "t_region_groundcover",
+    furn_id = "f_region_flower",
+}
+rtf:replace_terrain("t_grass", 50)
+rtf:replace_furniture("f_flower_tulip", 10)
+ccb.content.add(rtf)
+local edited_rtf = ccb.content.edit_region_terrain_furniture(
+    "ccb_platform_test_rtf_stage")
+edited_rtf:ter_id("t_grass")
+edited_rtf:replace_terrain("t_grass", 75)
+ccb.content.edit(edited_rtf)
+
+local fbc = ccb.content.ForestBiomeComponent {
+    id = "ccb_platform_test_fbc_stage",
+    chance = 25,
+    sequence = 3,
+}
+fbc:type("t_region_tree_forest", 100)
+fbc:add_type("t_tree_young", 20)
+ccb.content.add(fbc)
+local edited_fbc = ccb.content.edit_forest_biome_component(
+    "ccb_platform_test_fbc_stage")
+edited_fbc:chance(26)
+edited_fbc:type("t_region_tree_forest", 125)
+ccb.content.edit(edited_fbc)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_regional_batch_g3" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+
+    const region_settings_forest_trail_id trail( "ccb_platform_test_trail_stage" );
+    REQUIRE( trail.is_valid() );
+    CHECK( trail->chance == 4 );
+    CHECK( trail->border_point_chance == 4 );
+    CHECK( trail->minimum_forest_size == 75 );
+    CHECK( trail->random_point_min == 6 );
+    CHECK( trail->random_point_max == 48 );
+    CHECK( trail->random_point_size_scalar == 95 );
+    CHECK( trail->trailhead_chance == 2 );
+    CHECK( trail->trailhead_road_distance == 7 );
+    const weighted_int_list<overmap_special_id> trailheads = trail->trailheads.get_all_buildings();
+    CHECK( trailheads.size() == 2 );
+    CHECK( trailheads.get_specific_weight( overmap_special_id( "trailhead_basic" ) ) == 5 );
+
+    const region_settings_highway_id highway( "ccb_platform_test_highway_stage" );
+    REQUIRE( highway.is_valid() );
+    CHECK( highway->width_of_segments == 4 );
+    CHECK( highway->straightness_chance == Approx( 0.8 ) );
+    CHECK( highway->reserved_terrain_id.str() == "hw_reserved" );
+    CHECK( highway->reserved_terrain_water_id.str() == "hw_reserved_water" );
+    CHECK( highway->segment_flat.str() == "highway_segment_flat" );
+    const weighted_int_list<overmap_special_id> road_connections =
+        highway->road_connections.get_all_buildings();
+    CHECK( road_connections.size() == 1 );
+    CHECK( road_connections.get_specific_weight(
+               overmap_special_id( "Highway Diamond Interchange" ) ) == 6 );
+
+    const region_terrain_furniture_id rtf( "ccb_platform_test_rtf_stage" );
+    REQUIRE( rtf.is_valid() );
+    CHECK( rtf->replaced_ter_id == ter_id( "t_grass" ) );
+    CHECK( rtf->replaced_furn_id == furn_id( "f_region_flower" ) );
+    CHECK( rtf->terrain.size() == 1 );
+    CHECK( rtf->terrain.get_specific_weight( ter_id( "t_grass" ) ) == 75 );
+
+    const forest_biome_component_id fbc( "ccb_platform_test_fbc_stage" );
+    REQUIRE( fbc.is_valid() );
+    CHECK( fbc->chance == 26 );
+    CHECK( fbc->sequence == 3 );
+    CHECK( fbc->types.size() == 2 );
+    CHECK( fbc->types.get_specific_weight( ter_furn_id( "t_region_tree_forest" ) ) == 125 );
+
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_regional_batch_g3_replace_and_rollback_restore_legacy_objects",
+           "[lua][platform][content][regional][batch_g3][transaction]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+    const region_settings_forest_trail_id default_trail( "default" );
+    REQUIRE( default_trail.is_valid() );
+    const region_settings_forest_trail trail_baseline = default_trail.obj();
+
+    const region_settings_highway_id default_highway( "default" );
+    REQUIRE( default_highway.is_valid() );
+    const region_settings_highway highway_baseline = default_highway.obj();
+
+    const region_terrain_furniture_id default_rtf( "default_t_region_groundcover" );
+    REQUIRE( default_rtf.is_valid() );
+    const region_terrain_furniture rtf_baseline = default_rtf.obj();
+
+    const forest_biome_component_id default_fbc( "trees_forest" );
+    REQUIRE( default_fbc.is_valid() );
+    const forest_biome_component fbc_baseline = default_fbc.obj();
+
+    scoped_platform_test_mod test_mod( "ccb_platform_regional_g3_replace" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.replace(ccb.content.RegionSettingsForestTrail {
+    id = "default",
+    chance = 99,
+    border_point_chance = 98,
+    minimum_forest_size = 97,
+    random_point_min = 96,
+    random_point_max = 95,
+    random_point_size_scalar = 94,
+    trailhead_chance = 93,
+    trailhead_road_distance = 92,
+})
+
+ccb.content.replace(ccb.content.RegionSettingsHighway {
+    id = "default",
+    width_of_segments = 5,
+    straightness_chance = 0.95,
+    clockwise_slant_special = "Highway Slant Minor Clockwise",
+    counterclockwise_slant_special = "Highway Slant Minor Counterclockwise",
+})
+
+ccb.content.replace(ccb.content.RegionTerrainFurniture {
+    id = "default_t_region_groundcover",
+    ter_id = "t_region_groundcover",
+})
+
+ccb.content.replace(ccb.content.ForestBiomeComponent {
+    id = "trees_forest",
+    chance = 77,
+    sequence = 88,
+})
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_regional_g3_replace" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+
+    REQUIRE( default_trail.is_valid() );
+    CHECK( default_trail->chance == 99 );
+    CHECK( default_trail->minimum_forest_size == 97 );
+
+    REQUIRE( default_highway.is_valid() );
+    CHECK( default_highway->width_of_segments == 5 );
+    CHECK( default_highway->straightness_chance == Approx( 0.95 ) );
+
+    REQUIRE( default_rtf.is_valid() );
+    CHECK( default_rtf->replaced_ter_id == ter_id( "t_region_groundcover" ) );
+
+    REQUIRE( default_fbc.is_valid() );
+    CHECK( default_fbc->chance == 77 );
+    CHECK( default_fbc->sequence == 88 );
+
+    cata::lua_platform::discard_prepared_mods();
+
+    REQUIRE( default_trail.is_valid() );
+    CHECK( default_trail->chance == trail_baseline.chance );
+    CHECK( default_trail->minimum_forest_size == trail_baseline.minimum_forest_size );
+
+    REQUIRE( default_highway.is_valid() );
+    CHECK( default_highway->width_of_segments == highway_baseline.width_of_segments );
+    CHECK( default_highway->straightness_chance == Approx( highway_baseline.straightness_chance ) );
+
+    REQUIRE( default_rtf.is_valid() );
+    CHECK( default_rtf->replaced_ter_id == rtf_baseline.replaced_ter_id );
+
+    REQUIRE( default_fbc.is_valid() );
+    CHECK( default_fbc->chance == fbc_baseline.chance );
+    CHECK( default_fbc->sequence == fbc_baseline.sequence );
+}
+
+TEST_CASE( "lua_first_regional_batch_g3_accepts_same_transaction_reference_chain",
+           "[lua][platform][content][regional][batch_g3][references]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+    scoped_platform_test_mod test_mod( "ccb_platform_regional_g3_references" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local terrain = ccb.content.Terrain {
+    id = "t_ccb_platform_g3_reference",
+    name = "G3 terrain",
+    description = "Same-transaction terrain reference.",
+    color = "green",
+    symbol = ".",
+    move_cost = 2,
+    trap = "tr_bubblewrap",
+}
+ccb.content.add(terrain)
+
+local furniture = ccb.content.Furniture {
+    id = "f_ccb_platform_g3_reference",
+    name = "G3 furniture",
+    description = "Same-transaction furniture reference.",
+    color = "green",
+    symbol = "#",
+    move_cost_mod = 1,
+}
+ccb.content.add(furniture)
+
+local mapping = ccb.content.RegionTerrainFurniture {
+    id = "ccb_platform_g3_reference_mapping",
+    ter_id = "t_ccb_platform_g3_reference",
+    furn_id = "f_ccb_platform_g3_reference",
+    replace_with_terrain = { { "t_ccb_platform_g3_reference", 3 } },
+    replace_with_furniture = { { "f_ccb_platform_g3_reference", 4 } },
+}
+ccb.content.add(mapping)
+
+ccb.content.add(ccb.content.RegionSettingsTerrainFurniture {
+    id = "ccb_platform_g3_reference_settings",
+    ter_furn = { "ccb_platform_g3_reference_mapping" },
+})
+
+ccb.content.add(ccb.content.ForestBiomeComponent {
+    id = "ccb_platform_g3_reference_component",
+    chance = 1,
+    types = {
+        { "t_ccb_platform_g3_reference", 1 },
+        { "f_ccb_platform_g3_reference", 2 },
+        { "ccb_platform_g3_reference_mapping", 3 },
+    },
+})
+)lua" );
+
+    std::string error;
+    const bool prepared = cata::lua_platform::prepare_mods(
+    { test_mod.source( "ccb_platform_regional_g3_references" ) }, error );
+    INFO( error );
+    REQUIRE( prepared );
+    const bool applied = cata::lua_platform::apply_prepared_content( error );
+    INFO( error );
+    REQUIRE( applied );
+
+    const region_terrain_furniture_id mapping( "ccb_platform_g3_reference_mapping" );
+    REQUIRE( mapping.is_valid() );
+    CHECK( mapping->replaced_ter_id == ter_id( "t_ccb_platform_g3_reference" ) );
+    CHECK( mapping->replaced_furn_id == furn_id( "f_ccb_platform_g3_reference" ) );
+
+    const region_settings_terrain_furniture_id settings(
+        "ccb_platform_g3_reference_settings" );
+    REQUIRE( settings.is_valid() );
+    CHECK( settings->ter_furn.count( mapping ) == 1 );
+
+    const forest_biome_component_id component( "ccb_platform_g3_reference_component" );
+    REQUIRE( component.is_valid() );
+    CHECK( component->types.get_specific_weight(
+               ter_furn_id( "t_ccb_platform_g3_reference" ) ) == 1 );
+    CHECK( component->types.get_specific_weight(
+               ter_furn_id( "f_ccb_platform_g3_reference" ) ) == 2 );
+    CHECK( component->types.get_specific_weight(
+               ter_furn_id( "ccb_platform_g3_reference_mapping" ) ) == 3 );
+}
+
+TEST_CASE( "lua_first_regional_batch_g3_settings_reject_invalid_native_configurations",
+           "[lua][platform][content][regional][batch_g3][validation]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+
+    SECTION( "forest trail chance cannot overflow integer" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_trail_overflow" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsForestTrail {
+    id = "ccb_platform_trail_overflow",
+    chance = 2147483648,
+})
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_trail_overflow" ) }, error ) );
+        CHECK( error.find( "outside the native integer range" ) != std::string::npos );
+    }
+
+    SECTION( "forest trail rejects non-positive trailhead weight" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_trail_bad_weight" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+local trail = ccb.content.RegionSettingsForestTrail {
+    id = "ccb_platform_trail_bad_weight",
+}
+trail:trailhead("trailhead_basic", 0)
+ccb.content.add(trail)
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_trail_bad_weight" ) }, error ) );
+        CHECK( error.find( "positive weight" ) != std::string::npos );
+    }
+
+    SECTION( "forest trail rejects unknown overmap special" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_trail_unknown_spec" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+local trail = ccb.content.RegionSettingsForestTrail {
+    id = "ccb_platform_trail_unknown_spec",
+}
+trail:trailhead("nonexistent_special_xyz", 1)
+ccb.content.add(trail)
+)lua" );
+
+        std::string error;
+        REQUIRE( cata::lua_platform::prepare_mods(
+                     { test_mod.source( "ccb_platform_trail_unknown_spec" ) }, error ) );
+        CHECK_FALSE( cata::lua_platform::apply_prepared_content( error ) );
+        CHECK( error.find( "references unknown overmap special" ) != std::string::npos );
+    }
+
+    SECTION( "highway straightness chance must be finite" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_hw_nonfinite" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsHighway {
+    id = "ccb_platform_hw_nonfinite",
+    straightness_chance = math.huge,
+})
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_hw_nonfinite" ) }, error ) );
+        CHECK( error.find( "non-finite properties" ) != std::string::npos );
+    }
+
+    SECTION( "highway rejects unknown reserved terrain id" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_hw_bad_oter" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsHighway {
+    id = "ccb_platform_hw_bad_oter",
+    reserved_terrain_id = "nonexistent_oter_type_xyz",
+    clockwise_slant_special = "Highway Slant Minor Clockwise",
+    counterclockwise_slant_special = "Highway Slant Minor Counterclockwise",
+})
+)lua" );
+
+        std::string error;
+        REQUIRE( cata::lua_platform::prepare_mods(
+                     { test_mod.source( "ccb_platform_hw_bad_oter" ) }, error ) );
+        CHECK_FALSE( cata::lua_platform::apply_prepared_content( error ) );
+        CHECK( error.find( "references unknown reserved terrain id" ) != std::string::npos );
+    }
+
+    SECTION( "highway requires both slants before native finalization" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_hw_missing_slant" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsHighway {
+    id = "ccb_platform_hw_missing_slant",
+    clockwise_slant_special = "Highway Slant Minor Clockwise",
+})
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+                         { test_mod.source( "ccb_platform_hw_missing_slant" ) }, error ) );
+        CHECK( error.find( "requires clockwise and counterclockwise slant specials" ) !=
+               std::string::npos );
+    }
+
+    SECTION( "weighted constructor options require dense arrays" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_weighted_map" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.ForestBiomeComponent {
+    id = "ccb_platform_weighted_map",
+    types = { t_grass = 1 },
+})
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+                         { test_mod.source( "ccb_platform_weighted_map" ) }, error ) );
+        CHECK( error.find( "dense array" ) != std::string::npos );
+    }
+
+    SECTION( "region terrain furniture rejects unknown terrain" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_rtf_bad_ter" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionTerrainFurniture {
+    id = "ccb_platform_rtf_bad_ter",
+    ter_id = "nonexistent_terrain_xyz",
+})
+)lua" );
+
+        std::string error;
+        REQUIRE( cata::lua_platform::prepare_mods(
+                     { test_mod.source( "ccb_platform_rtf_bad_ter" ) }, error ) );
+        CHECK_FALSE( cata::lua_platform::apply_prepared_content( error ) );
+        CHECK( error.find( "references unknown terrain" ) != std::string::npos );
+    }
+
+    SECTION( "forest biome component rejects unknown component type" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_fbc_bad_type" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+local fbc = ccb.content.ForestBiomeComponent {
+    id = "ccb_platform_fbc_bad_type",
+}
+fbc:type("nonexistent_ter_furn_type_xyz", 1)
+ccb.content.add(fbc)
+)lua" );
+
+        std::string error;
+        REQUIRE( cata::lua_platform::prepare_mods(
+                     { test_mod.source( "ccb_platform_fbc_bad_type" ) }, error ) );
+        CHECK_FALSE( cata::lua_platform::apply_prepared_content( error ) );
+        CHECK( error.find( "references unknown type" ) != std::string::npos );
+    }
+}
+
+TEST_CASE( "lua_first_regional_batch_g3_fingerprint_sensitivity",
+           "[lua][platform][content][regional][batch_g3][fingerprint]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+    scoped_platform_test_mod test_mod( "ccb_platform_g3_fingerprint" );
+
+    const auto fingerprint_for = [&test_mod]( const std::string &script ) {
+        test_mod.write( "main.lua", script );
+        std::string error;
+        const bool prepared = cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g3_fingerprint" ) }, error );
+        INFO( error );
+        REQUIRE( prepared );
+        const std::string fingerprint = cata::lua_platform::prepared_content_fingerprint();
+        REQUIRE_FALSE( fingerprint.empty() );
+        cata::lua_platform::discard_prepared_mods();
+        return fingerprint;
+    };
+
+    const std::string trail_fp1 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsForestTrail {
+    id = "ccb_platform_g3_fingerprint",
+    chance = 1,
+})
+)lua" );
+
+    const std::string trail_fp2 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsForestTrail {
+    id = "ccb_platform_g3_fingerprint",
+    chance = 2,
+})
+)lua" );
+    CHECK( trail_fp1 != trail_fp2 );
+
+    const std::string hw_fp1 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsHighway {
+    id = "ccb_platform_g3_fingerprint",
+    width_of_segments = 2,
+    clockwise_slant_special = "Highway Slant Minor Clockwise",
+    counterclockwise_slant_special = "Highway Slant Minor Counterclockwise",
+})
+)lua" );
+
+    const std::string hw_fp2 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsHighway {
+    id = "ccb_platform_g3_fingerprint",
+    width_of_segments = 4,
+    clockwise_slant_special = "Highway Slant Minor Clockwise",
+    counterclockwise_slant_special = "Highway Slant Minor Counterclockwise",
+})
+)lua" );
+    CHECK( hw_fp1 != hw_fp2 );
+
+    const std::string rtf_fp1 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionTerrainFurniture {
+    id = "ccb_platform_g3_fingerprint",
+    ter_id = "t_grass",
+})
+)lua" );
+
+    const std::string rtf_fp2 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionTerrainFurniture {
+    id = "ccb_platform_g3_fingerprint",
+    ter_id = "t_dirt",
+})
+)lua" );
+    CHECK( rtf_fp1 != rtf_fp2 );
+
+    const std::string fbc_fp1 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.ForestBiomeComponent {
+    id = "ccb_platform_g3_fingerprint",
+    chance = 10,
+})
+)lua" );
+
+    const std::string fbc_fp2 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.ForestBiomeComponent {
+    id = "ccb_platform_g3_fingerprint",
+    chance = 20,
+})
+)lua" );
+    CHECK( fbc_fp1 != fbc_fp2 );
+}
+
+TEST_CASE( "lua_first_regional_batch_g4_definitions_stage_native_objects",
+           "[lua][platform][content][regional][batch_g4][stage]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+    scoped_platform_test_mod test_mod( "ccb_platform_regional_batch_g4" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local city = ccb.content.City {
+    id = "ccb_platform_g4_city_stage",
+    database_id = 41,
+    name = "Initial Lua city",
+    population = 100,
+    size = 5,
+    pos_om = { 1, 2 },
+    pos = { x = 3, y = 4 },
+}
+ccb.content.add(city)
+local edited_city = ccb.content.edit_city("ccb_platform_g4_city_stage")
+edited_city:database_id(42):name("Edited Lua city"):population(101):size(6)
+edited_city:pos_om({ x = 5, y = 6 }):pos(7, 8)
+ccb.content.edit(edited_city)
+
+local mission = ccb.content.FactionMission {
+    id = "ccb_platform_g4_mission_stage",
+    name = "Initial mission",
+    desc = "Initial description",
+    skill = "survival",
+    difficulty = "LOW",
+    risk = "VERY_LOW",
+    activity = "LIGHT_EXERCISE",
+    time = "Initial time",
+    positions = 2,
+    items_label = "Initial items",
+    items_possibilities = { "old item", "discarded item" },
+    effects = { "old effect", "discarded effect" },
+    footer = "Initial footer",
+}
+ccb.content.add(mission)
+local edited_mission = ccb.content.edit_faction_mission(
+    "ccb_platform_g4_mission_stage")
+edited_mission:name("Edited mission"):description("Edited description")
+edited_mission:skill("survival"):difficulty("HIGH"):risk("MEDIUM")
+edited_mission:activity("MODERATE_EXERCISE"):time("Edited time"):positions(4)
+edited_mission:items_label("Edited items"):items_possibilities({ "new item" })
+edited_mission:add_items_possibility("second item")
+edited_mission:effects({ "new effect" }):add_effect("second effect")
+edited_mission:footer("Edited footer")
+ccb.content.edit(edited_mission)
+
+local settings = ccb.content.RegionSettingsCity {
+    id = "ccb_platform_g4_city_settings_stage",
+    is_megacity = true,
+    city_size = 9,
+    city_spacing = 5,
+    shop_radius = 31,
+    shop_sigma = 21,
+    park_radius = 32,
+    park_sigma = 68,
+    name_snippet = "<g4_city_name>",
+    houses = {
+        { "2storyModern01", 1 },
+        { "house_01", 2 },
+        { "house_01", 3 },
+    },
+    shops = { { "2storyModern01", 4 } },
+    parks = { { "park", 5 } },
+}
+ccb.content.add(settings)
+local edited_settings = ccb.content.edit_region_settings_city(
+    "ccb_platform_g4_city_settings_stage")
+edited_settings:is_megacity(false):city_size(10):city_spacing(6)
+edited_settings:shop_radius(33):shop_sigma(22):park_radius(34):park_sigma(66)
+edited_settings:name_snippet("<edited_g4_city_name>")
+edited_settings:houses({ { "house_01", 6 } }):add_house("house_01", 7)
+edited_settings:shops({ { "2storyModern01", 8 } })
+edited_settings:parks({ { "park", 9 } })
+ccb.content.edit(edited_settings)
+
+local biome = ccb.content.ForestBiomeMapgen {
+    id = "ccb_platform_g4_biome_stage",
+    sparseness_adjacency_factor = 3,
+    item_group = "forest",
+    item_group_chance = 60,
+    item_spawn_iterations = 1,
+    terrains = { "forest_thick", "forest", "forest" },
+    components = { "shrubs_and_flowers_forest", "trees_forest", "trees_forest" },
+    groundcover = { { "t_dirt", 1 }, { "t_grass", 2 } },
+    terrain_furniture = {
+        t_dirt = {
+            chance = 10,
+            furniture = { { "f_flower_tulip", 1 } },
+        },
+        t_grass = {
+            chance = 11,
+            furniture = { { "f_flower_tulip", 2 }, { "f_boulder_small", 3 } },
+        },
+    },
+}
+ccb.content.add(biome)
+local edited_biome = ccb.content.edit_forest_biome_mapgen(
+    "ccb_platform_g4_biome_stage")
+edited_biome:sparseness_adjacency_factor(4):item_group("forest")
+edited_biome:item_group_chance(61):item_spawn_iterations(2)
+edited_biome:terrains({ "forest" }):components({ "trees_forest" })
+edited_biome:groundcover({ { "t_grass", 9 } })
+edited_biome:terrain_furniture({
+    t_grass = {
+        chance = 12,
+        furniture = { { "f_boulder_small", 4 } },
+    },
+})
+edited_biome:add_terrain_furniture(
+    "t_grass", 13, { { "f_flower_tulip", 7 } })
+ccb.content.edit(edited_biome)
+)lua" );
+
+    std::string error;
+    const bool prepared = cata::lua_platform::prepare_mods(
+    { test_mod.source( "ccb_platform_regional_batch_g4" ) }, error );
+    INFO( error );
+    REQUIRE( prepared );
+    const bool applied = cata::lua_platform::apply_prepared_content( error );
+    INFO( error );
+    REQUIRE( applied );
+
+    const city_id city_entry( "ccb_platform_g4_city_stage" );
+    REQUIRE( city_entry.is_valid() );
+    CHECK( city_entry->database_id == 42 );
+    CHECK( city_entry->name == "Edited Lua city" );
+    CHECK( city_entry->population == 101 );
+    CHECK( city_entry->size == 6 );
+    CHECK( city_entry->pos_om.x() == 5 );
+    CHECK( city_entry->pos_om.y() == 6 );
+    CHECK( city_entry->pos.x() == 7 );
+    CHECK( city_entry->pos.y() == 8 );
+
+    const faction_mission_id mission_entry( "ccb_platform_g4_mission_stage" );
+    REQUIRE( mission_entry.is_valid() );
+    CHECK( mission_entry->name.translated() == "Edited mission" );
+    CHECK( mission_entry->description.translated() == "Edited description" );
+    CHECK( mission_entry->skill_used == skill_id( "survival" ) );
+    CHECK( mission_entry->difficulty == risk_diff_level::HIGH );
+    CHECK( mission_entry->risk == risk_diff_level::MEDIUM );
+    CHECK( mission_entry->activity_level == Approx( 4.0f ) );
+    CHECK( mission_entry->time.translated() == "Edited time" );
+    CHECK( mission_entry->positions == 4 );
+    CHECK( mission_entry->items_label.translated() == "Edited items" );
+    REQUIRE( mission_entry->items_possibilities.size() == 2 );
+    CHECK( mission_entry->items_possibilities[0].translated() == "new item" );
+    CHECK( mission_entry->items_possibilities[1].translated() == "second item" );
+    REQUIRE( mission_entry->effects.size() == 2 );
+    CHECK( mission_entry->effects[0].translated() == "new effect" );
+    CHECK( mission_entry->effects[1].translated() == "second effect" );
+    CHECK( mission_entry->footer.translated() == "Edited footer" );
+
+    const region_settings_city_id settings_entry(
+        "ccb_platform_g4_city_settings_stage" );
+    REQUIRE( settings_entry.is_valid() );
+    CHECK_FALSE( settings_entry->is_megacity );
+    CHECK( settings_entry->city_size == 10 );
+    CHECK( settings_entry->city_spacing == 6 );
+    CHECK( settings_entry->shop_radius == 33 );
+    CHECK( settings_entry->shop_sigma == 22 );
+    CHECK( settings_entry->park_radius == 34 );
+    CHECK( settings_entry->park_sigma == 66 );
+    CHECK( settings_entry->name_snippet == "<edited_g4_city_name>" );
+    const weighted_int_list<overmap_special_id> houses =
+        settings_entry->houses.get_all_buildings();
+    CHECK( houses.size() == 1 );
+    CHECK( houses.get_specific_weight( overmap_special_id( "house_01" ) ) == 7 );
+    const weighted_int_list<overmap_special_id> shops =
+        settings_entry->shops.get_all_buildings();
+    CHECK( shops.size() == 1 );
+    CHECK( shops.get_specific_weight( overmap_special_id( "2storyModern01" ) ) == 8 );
+    const weighted_int_list<overmap_special_id> parks =
+        settings_entry->parks.get_all_buildings();
+    CHECK( parks.size() == 1 );
+    CHECK( parks.get_specific_weight( overmap_special_id( "park" ) ) == 9 );
+
+    const forest_biome_mapgen_id biome_entry( "ccb_platform_g4_biome_stage" );
+    REQUIRE( biome_entry.is_valid() );
+    CHECK( biome_entry->sparseness_adjacency_factor == 4 );
+    CHECK( biome_entry->item_group == item_group_id( "forest" ) );
+    CHECK( biome_entry->item_group_chance == 61 );
+    CHECK( biome_entry->item_spawn_iterations == 2 );
+    CHECK( biome_entry->terrains.size() == 1 );
+    CHECK( biome_entry->terrains.count( oter_type_str_id( "forest" ) ) == 1 );
+    CHECK( biome_entry->biome_components.size() == 1 );
+    CHECK( biome_entry->biome_components.count(
+               forest_biome_component_id( "trees_forest" ) ) == 1 );
+    CHECK( biome_entry->groundcover.size() == 1 );
+    CHECK( biome_entry->groundcover.get_specific_weight( ter_id( "t_grass" ) ) == 9 );
+    REQUIRE( biome_entry->terrain_dependent_furniture.size() == 1 );
+    const auto furniture_entry = biome_entry->terrain_dependent_furniture.find(
+                                     ter_id( "t_grass" ) );
+    REQUIRE( furniture_entry != biome_entry->terrain_dependent_furniture.end() );
+    CHECK( furniture_entry->second.chance == 13 );
+    CHECK( furniture_entry->second.furniture.size() == 1 );
+    CHECK( furniture_entry->second.furniture.get_specific_weight(
+               furn_id( "f_flower_tulip" ) ) == 7 );
+}
+
+TEST_CASE( "lua_first_regional_batch_g4_accepts_same_transaction_reference_chain",
+           "[lua][platform][content][regional][batch_g4][references]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+    scoped_platform_test_mod test_mod( "ccb_platform_regional_g4_references" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+ccb.content.add(ccb.content.Terrain {
+    id = "t_ccb_platform_g4_reference",
+    name = "G4 terrain",
+    description = "Same-transaction terrain reference.",
+    color = "green",
+    symbol = ".",
+    move_cost = 2,
+    trap = "tr_bubblewrap",
+})
+
+ccb.content.add(ccb.content.Furniture {
+    id = "f_ccb_platform_g4_reference",
+    name = "G4 furniture",
+    description = "Same-transaction furniture reference.",
+    color = "green",
+    symbol = "#",
+    move_cost_mod = 1,
+})
+
+ccb.content.add(ccb.content.ForestBiomeComponent {
+    id = "ccb_platform_g4_reference_component",
+    chance = 1,
+    types = { { "t_ccb_platform_g4_reference", 1 } },
+})
+
+ccb.content.add(ccb.content.ForestBiomeMapgen {
+    id = "ccb_platform_g4_reference_biome",
+    terrains = { "forest" },
+    components = { "ccb_platform_g4_reference_component" },
+    groundcover = { { "t_ccb_platform_g4_reference", 3 } },
+    terrain_furniture = {
+        t_ccb_platform_g4_reference = {
+            chance = 4,
+            furniture = { { "f_ccb_platform_g4_reference", 5 } },
+        },
+    },
+})
+)lua" );
+
+    std::string error;
+    const bool prepared = cata::lua_platform::prepare_mods(
+    { test_mod.source( "ccb_platform_regional_g4_references" ) }, error );
+    INFO( error );
+    REQUIRE( prepared );
+    const bool applied = cata::lua_platform::apply_prepared_content( error );
+    INFO( error );
+    REQUIRE( applied );
+
+    const forest_biome_mapgen_id biome( "ccb_platform_g4_reference_biome" );
+    REQUIRE( biome.is_valid() );
+    CHECK( biome->biome_components.count(
+               forest_biome_component_id( "ccb_platform_g4_reference_component" ) ) == 1 );
+    CHECK( biome->groundcover.get_specific_weight(
+               ter_id( "t_ccb_platform_g4_reference" ) ) == 3 );
+    const auto furniture = biome->terrain_dependent_furniture.find(
+                               ter_id( "t_ccb_platform_g4_reference" ) );
+    REQUIRE( furniture != biome->terrain_dependent_furniture.end() );
+    CHECK( furniture->second.chance == 4 );
+    CHECK( furniture->second.furniture.get_specific_weight(
+               furn_id( "f_ccb_platform_g4_reference" ) ) == 5 );
+}
+
+TEST_CASE( "lua_first_regional_batch_g4_rejects_invalid_native_configurations",
+           "[lua][platform][content][regional][batch_g4][validation]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+
+    SECTION( "city requires database and both coordinates" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g4_city_required" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.City {
+    id = "ccb_platform_g4_city_required",
+    pos_om = { 1, 2 },
+    pos = { 3, 4 },
+})
+)lua" );
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g4_city_required" ) }, error ) );
+        CHECK( error.find( "requires database_id, pos_om, and pos" ) != std::string::npos );
+    }
+
+    SECTION( "city rejects coordinate tables with extra keys" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g4_city_coordinate" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.City {
+    id = "ccb_platform_g4_city_coordinate",
+    database_id = 1,
+    pos_om = { x = 1, y = 2, z = 3 },
+    pos = { 3, 4 },
+})
+)lua" );
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g4_city_coordinate" ) }, error ) );
+        CHECK( error.find( "unknown coordinate member" ) != std::string::npos );
+    }
+
+    SECTION( "city rejects integer overflow" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g4_city_overflow" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.City {
+    id = "ccb_platform_g4_city_overflow",
+    database_id = 2147483648,
+    pos_om = { 1, 2 },
+    pos = { 3, 4 },
+})
+)lua" );
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g4_city_overflow" ) }, error ) );
+        CHECK( error.find( "outside the native range" ) != std::string::npos );
+    }
+
+    SECTION( "faction mission requires name and description" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g4_mission_required" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.FactionMission {
+    id = "ccb_platform_g4_mission_required",
+    name = "Missing description",
+})
+)lua" );
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g4_mission_required" ) }, error ) );
+        CHECK( error.find( "requires name and description" ) != std::string::npos );
+    }
+
+    SECTION( "faction mission rejects invalid difficulty" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g4_mission_difficulty" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.FactionMission {
+    id = "ccb_platform_g4_mission_difficulty",
+    name = "Invalid difficulty",
+    desc = "Invalid enum values must fail closed.",
+    difficulty = "IMPOSSIBLE",
+})
+)lua" );
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g4_mission_difficulty" ) }, error ) );
+        CHECK( error.find( "invalid difficulty" ) != std::string::npos );
+    }
+
+    SECTION( "faction mission rejects invalid risk" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g4_mission_risk" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.FactionMission {
+    id = "ccb_platform_g4_mission_risk",
+    name = "Invalid risk",
+    desc = "Invalid enum values must fail closed.",
+    risk = "UNKNOWN",
+})
+)lua" );
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g4_mission_risk" ) }, error ) );
+        CHECK( error.find( "invalid risk" ) != std::string::npos );
+    }
+
+    SECTION( "faction mission rejects invalid activity" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g4_mission_activity" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.FactionMission {
+    id = "ccb_platform_g4_mission_activity",
+    name = "Invalid activity",
+    desc = "Invalid enum values must fail closed.",
+    activity = "INVALID_EXERCISE",
+})
+)lua" );
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g4_mission_activity" ) }, error ) );
+        CHECK( error.find( "invalid activity level" ) != std::string::npos );
+    }
+
+    SECTION( "region settings city requires city_size" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g4_city_settings_required" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsCity {
+    id = "ccb_platform_g4_city_settings_required",
+})
+)lua" );
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g4_city_settings_required" ) }, error ) );
+        CHECK( error.find( "requires city_size" ) != std::string::npos );
+    }
+
+    SECTION( "region settings city rejects sparse weighted arrays" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g4_city_settings_sparse" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsCity {
+    id = "ccb_platform_g4_city_settings_sparse",
+    city_size = 8,
+    houses = {
+        [1] = { "house_01", 1 },
+        [3] = { "2storyModern01", 2 },
+    },
+})
+)lua" );
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g4_city_settings_sparse" ) }, error ) );
+        CHECK( error.find( "dense array" ) != std::string::npos );
+    }
+
+    SECTION( "forest biome rejects unknown component" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g4_biome_component" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.ForestBiomeMapgen {
+    id = "ccb_platform_g4_biome_component",
+    terrains = { "forest" },
+    components = { "ccb_platform_g4_missing_component" },
+})
+)lua" );
+        std::string error;
+        REQUIRE( cata::lua_platform::prepare_mods(
+                     { test_mod.source( "ccb_platform_g4_biome_component" ) }, error ) );
+        CHECK_FALSE( cata::lua_platform::apply_prepared_content( error ) );
+        CHECK( error.find( "unknown forest biome component" ) != std::string::npos );
+    }
+
+    SECTION( "forest biome rejects unknown terrain" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g4_biome_terrain" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.ForestBiomeMapgen {
+    id = "ccb_platform_g4_biome_terrain",
+    terrains = { "ccb_platform_g4_missing_oter" },
+})
+)lua" );
+        std::string error;
+        REQUIRE( cata::lua_platform::prepare_mods(
+                     { test_mod.source( "ccb_platform_g4_biome_terrain" ) }, error ) );
+        CHECK_FALSE( cata::lua_platform::apply_prepared_content( error ) );
+        CHECK( error.find( "unknown overmap terrain" ) != std::string::npos );
+    }
+
+    SECTION( "forest biome rejects unknown furniture" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g4_biome_furniture" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.ForestBiomeMapgen {
+    id = "ccb_platform_g4_biome_furniture",
+    terrain_furniture = {
+        t_grass = {
+            chance = 1,
+            furniture = { { "ccb_platform_g4_missing_furniture", 1 } },
+        },
+    },
+})
+)lua" );
+        std::string error;
+        REQUIRE( cata::lua_platform::prepare_mods(
+                     { test_mod.source( "ccb_platform_g4_biome_furniture" ) }, error ) );
+        CHECK_FALSE( cata::lua_platform::apply_prepared_content( error ) );
+        CHECK( error.find( "unknown furniture" ) != std::string::npos );
+    }
+
+    SECTION( "forest biome rejects non-positive weight" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g4_biome_weight" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.ForestBiomeMapgen {
+    id = "ccb_platform_g4_biome_weight",
+    groundcover = { { "t_grass", 0 } },
+})
+)lua" );
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g4_biome_weight" ) }, error ) );
+        CHECK( error.find( "positive weight" ) != std::string::npos );
+    }
+}
+
+TEST_CASE( "lua_first_regional_batch_g4_replace_and_rollback_restore_legacy_objects",
+           "[lua][platform][content][regional][batch_g4][transaction]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+
+    const faction_mission_id mission_id( "camp_gathering" );
+    REQUIRE( mission_id.is_valid() );
+    const faction_mission mission_baseline = mission_id.obj();
+
+    const region_settings_city_id settings_id( "default" );
+    REQUIRE( settings_id.is_valid() );
+    const region_settings_city settings_baseline = settings_id.obj();
+
+    const forest_biome_mapgen_id biome_id( "biome_forest_default" );
+    REQUIRE( biome_id.is_valid() );
+    const forest_biome_mapgen biome_baseline = biome_id.obj();
+
+    const city_id added_city_id( "ccb_platform_g4_transaction_city" );
+    REQUIRE_FALSE( added_city_id.is_valid() );
+
+    scoped_platform_test_mod test_mod( "ccb_platform_regional_g4_transaction" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+ccb.content.add(ccb.content.City {
+    id = "ccb_platform_g4_transaction_city",
+    database_id = 9001,
+    name = "Temporary city",
+    population = 10,
+    size = 2,
+    pos_om = { 9, 10 },
+    pos = { 11, 12 },
+})
+
+ccb.content.replace(ccb.content.FactionMission {
+    id = "camp_gathering",
+    name = "Lua replacement mission",
+    desc = "Temporary replacement description.",
+    skill = "survival",
+    risk = "HIGH",
+    positions = 5,
+})
+
+ccb.content.replace(ccb.content.RegionSettingsCity {
+    id = "default",
+    city_size = 2,
+    city_spacing = 1,
+    houses = { { "house_01", 3 } },
+})
+
+ccb.content.replace(ccb.content.ForestBiomeMapgen {
+    id = "biome_forest_default",
+    terrains = { "forest" },
+    components = { "trees_forest" },
+    groundcover = { { "t_grass", 4 } },
+    sparseness_adjacency_factor = 9,
+    item_group = "forest",
+    item_group_chance = 8,
+    item_spawn_iterations = 7,
+})
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_regional_g4_transaction" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+
+    REQUIRE( added_city_id.is_valid() );
+    CHECK( added_city_id->database_id == 9001 );
+    REQUIRE( mission_id.is_valid() );
+    CHECK( mission_id->name.translated() == "Lua replacement mission" );
+    CHECK( mission_id->risk == risk_diff_level::HIGH );
+    REQUIRE( settings_id.is_valid() );
+    CHECK( settings_id->city_size == 2 );
+    CHECK( settings_id->houses.get_all_buildings().get_specific_weight(
+               overmap_special_id( "house_01" ) ) == 3 );
+    REQUIRE( biome_id.is_valid() );
+    CHECK( biome_id->sparseness_adjacency_factor == 9 );
+    CHECK( biome_id->groundcover.get_specific_weight( ter_id( "t_grass" ) ) == 4 );
+
+    cata::lua_platform::discard_prepared_mods();
+
+    CHECK_FALSE( added_city_id.is_valid() );
+    REQUIRE( mission_id.is_valid() );
+    CHECK( mission_id->name.translated() == mission_baseline.name.translated() );
+    CHECK( mission_id->description.translated() ==
+           mission_baseline.description.translated() );
+    CHECK( mission_id->risk == mission_baseline.risk );
+    CHECK( mission_id->positions == mission_baseline.positions );
+    REQUIRE( settings_id.is_valid() );
+    CHECK( settings_id->city_size == settings_baseline.city_size );
+    CHECK( settings_id->city_spacing == settings_baseline.city_spacing );
+    CHECK( settings_id->houses.get_all_buildings().size() ==
+           settings_baseline.houses.get_all_buildings().size() );
+    REQUIRE( biome_id.is_valid() );
+    CHECK( biome_id->sparseness_adjacency_factor ==
+           biome_baseline.sparseness_adjacency_factor );
+    CHECK( biome_id->item_group_chance == biome_baseline.item_group_chance );
+    CHECK( biome_id->terrains == biome_baseline.terrains );
+    CHECK( biome_id->biome_components == biome_baseline.biome_components );
+}
+
+TEST_CASE( "lua_first_regional_batch_g4_fingerprint_sensitivity",
+           "[lua][platform][content][regional][batch_g4][fingerprint]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+    scoped_platform_test_mod test_mod( "ccb_platform_g4_fingerprint" );
+
+    const auto fingerprint_for = [&test_mod]( const std::string &script ) {
+        test_mod.write( "main.lua", script );
+        std::string error;
+        const bool prepared = cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g4_fingerprint" ) }, error );
+        INFO( error );
+        REQUIRE( prepared );
+        const std::string fingerprint = cata::lua_platform::prepared_content_fingerprint();
+        REQUIRE_FALSE( fingerprint.empty() );
+        cata::lua_platform::discard_prepared_mods();
+        return fingerprint;
+    };
+
+    const std::string city_fp1 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.City {
+    id = "ccb_platform_g4_fingerprint",
+    database_id = 1,
+    pos_om = { 1, 2 },
+    pos = { 3, 4 },
+})
+)lua" );
+    const std::string city_fp2 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.City {
+    id = "ccb_platform_g4_fingerprint",
+    database_id = 2,
+    pos_om = { 1, 2 },
+    pos = { 3, 4 },
+})
+)lua" );
+    CHECK( city_fp1 != city_fp2 );
+
+    const std::string mission_fp1 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.FactionMission {
+    id = "ccb_platform_g4_fingerprint",
+    name = "Fingerprint mission",
+    desc = "First description",
+})
+)lua" );
+    const std::string mission_fp2 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.FactionMission {
+    id = "ccb_platform_g4_fingerprint",
+    name = "Fingerprint mission",
+    desc = "Second description",
+})
+)lua" );
+    CHECK( mission_fp1 != mission_fp2 );
+
+    const std::string settings_fp1 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsCity {
+    id = "ccb_platform_g4_fingerprint",
+    city_size = 1,
+})
+)lua" );
+    const std::string settings_fp2 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettingsCity {
+    id = "ccb_platform_g4_fingerprint",
+    city_size = 2,
+})
+)lua" );
+    CHECK( settings_fp1 != settings_fp2 );
+
+    const std::string biome_fp1 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.ForestBiomeMapgen {
+    id = "ccb_platform_g4_fingerprint",
+    sparseness_adjacency_factor = 1,
+})
+)lua" );
+    const std::string biome_fp2 = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.ForestBiomeMapgen {
+    id = "ccb_platform_g4_fingerprint",
+    sparseness_adjacency_factor = 2,
+})
+)lua" );
+    CHECK( biome_fp1 != biome_fp2 );
+}
+
 TEST_CASE( "lua_first_weather_generator_definitions_stage_native_generators",
            "[lua][platform][content][catalog][weather_generator]" )
 {
@@ -7547,11 +9559,14 @@ TEST_CASE( "lua_first_migrated_core_content_loads_without_json",
         const damage_info_order &legacy = id.obj();
         legacy_damage_info_orders.push_back( damage_info_order_snapshot{
             id, legacy.dmg_type, legacy.info_display, legacy.verb.translated(),
-            { { std::make_pair( legacy.bionic_info.order, legacy.bionic_info.show_type ),
+            {   {
+                    std::make_pair( legacy.bionic_info.order, legacy.bionic_info.show_type ),
                 std::make_pair( legacy.protection_info.order, legacy.protection_info.show_type ),
                 std::make_pair( legacy.pet_prot_info.order, legacy.pet_prot_info.show_type ),
                 std::make_pair( legacy.melee_combat_info.order, legacy.melee_combat_info.show_type ),
-                std::make_pair( legacy.ablative_info.order, legacy.ablative_info.show_type ) } }
+                    std::make_pair( legacy.ablative_info.order, legacy.ablative_info.show_type )
+                }
+            }
         } );
     }
 
@@ -7900,10 +9915,14 @@ TEST_CASE( "lua_first_migrated_core_content_loads_without_json",
     std::vector<butchery_probe> legacy_butchery_probes;
     const string_id<butchery_requirements> legacy_butchery( "default" );
     REQUIRE( legacy_butchery.is_valid() );
-    for( const creature_size size : { creature_size::tiny, creature_size::medium,
-                                      creature_size::huge } ) {
-        for( const butcher_type butcher : { butcher_type::BLEED, butcher_type::FULL,
-                                            butcher_type::DISSECT } ) {
+    for( const creature_size size : {
+             creature_size::tiny, creature_size::medium,
+             creature_size::huge
+         } ) {
+        for( const butcher_type butcher : {
+                 butcher_type::BLEED, butcher_type::FULL,
+                 butcher_type::DISSECT
+             } ) {
             legacy_butchery_probes.push_back( butchery_probe{
                 size, butcher,
                 legacy_butchery->get_fastest_requirements( get_avatar(), size, butcher )
@@ -8339,8 +10358,8 @@ TEST_CASE( "lua_first_migrated_core_content_loads_without_json",
         PATH_INFO::datadir() / fs::u8path( "mods" ) / fs::u8path( "Migrated_Core" );
 
     std::string error;
-    const bool prepared = cata::lua_platform::prepare_mods(
-                              { cata::lua_platform::mod_source{
+    const bool prepared = cata::lua_platform::prepare_mods( {
+        cata::lua_platform::mod_source{
                                   "Migrated_Core", migrated_root,
                                   migrated_root / fs::u8path( "main.lua" )
                               } }, error );
@@ -8530,7 +10549,8 @@ TEST_CASE( "lua_first_migrated_core_content_loads_without_json",
                 std::make_pair( native.pet_prot_info.order, native.pet_prot_info.show_type ),
                 std::make_pair( native.melee_combat_info.order, native.melee_combat_info.show_type ),
                 std::make_pair( native.ablative_info.order, native.ablative_info.show_type )
-            } };
+            }
+        };
         CHECK( native_sections == legacy.sections );
     }
 
@@ -10167,7 +12187,8 @@ ccb.runtime.on("game:game_begin", "reject_positional_item_fallback")
                                    nullptr, true, false );
     REQUIRE( event_item );
     on_out_of_scope cleanup( [event_item]() mutable {
-        if( event_item ) {
+        if( event_item )
+    {
             event_item.remove_item();
         }
     } );
