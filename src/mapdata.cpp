@@ -698,7 +698,7 @@ furn_t null_furniture_t()
     new_furniture.transparent = true;
     new_furniture.set_flag( ter_furn_flag::TFLAG_TRANSPARENT );
     new_furniture.examine_func.emplace_back( iexamine_functions_from_string( "none" ) );
-    new_furniture.max_volume = DEFAULT_TILE_VOLUME;
+    new_furniture.max_volume = units::from_liter( get_option<int>( "DEFAULT_TILE_VOLUME" ) );
     return new_furniture;
 }
 
@@ -720,7 +720,7 @@ ter_t null_terrain_t()
     new_terrain.set_flag( ter_furn_flag::TFLAG_TRANSPARENT );
     new_terrain.set_flag( ter_furn_flag::TFLAG_DIGGABLE );
     new_terrain.examine_func.emplace_back( iexamine_functions_from_string( "none" ) );
-    new_terrain.max_volume = DEFAULT_TILE_VOLUME;
+    new_terrain.max_volume = units::from_liter( get_option<int>( "DEFAULT_TILE_VOLUME" ) );
     return new_terrain;
 }
 
@@ -1452,7 +1452,8 @@ void ter_t::load( const JsonObject &jo, const std::string &src )
 {
     map_data_common_t::load( jo, src );
     optional( jo, was_loaded, "move_cost", movecost );
-    optional( jo, was_loaded, "max_volume", max_volume, DEFAULT_TILE_VOLUME );
+    optional( jo, was_loaded, "max_volume", max_volume,
+              units::from_liter( get_option<int>( "DEFAULT_TILE_VOLUME" ) ) );
     optional( jo, was_loaded, "trap", trap_id_str );
     optional( jo, was_loaded, "heat_radiation", heat_radiation );
 
@@ -1740,7 +1741,8 @@ void furn_t::load( const JsonObject &jo, const std::string &src )
     optional( jo, was_loaded, "bonus_fire_warmth_feet", legacy_bonus_fire_warmth_feet, 300 );
     bonus_fire_warmth_feet = units::from_legacy_bodypart_temp_delta( legacy_bonus_fire_warmth_feet );
     optional( jo, was_loaded, "keg_capacity", keg_capacity, volume_reader(), 0_ml );
-    optional( jo, was_loaded, "max_volume", max_volume, volume_reader(), DEFAULT_TILE_VOLUME );
+    optional( jo, was_loaded, "max_volume", max_volume, volume_reader(),
+              units::from_liter( get_option<int>( "DEFAULT_TILE_VOLUME" ) ) );
     optional( jo, was_loaded, "crafting_pseudo_item", crafting_pseudo_item, itype_id() );
     optional( jo, was_loaded, "deployed_item", deployed_item );
     load_symbol_color( jo, "furniture " + id.str() );

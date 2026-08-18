@@ -302,7 +302,7 @@ void run_test_case( Character &u )
         here.build_map_cache( u.posz() );
         tripoint_bub_ms const tri_door( tripoint::south );
         construction const build =
-            setup_testcase( u, "test_constr_door_peep", tri_door, { 0, PICKUP_RANGE * 2 + 1, 0 } );
+            setup_testcase( u, "test_constr_door_peep", tri_door, { 0, get_option<int>( "PICKUP_RANGE" ) * 2 + 1, 0 } );
         run_activities( u, build.time * 100 );
         REQUIRE( here.ter( tri_door ) == ter_id( build.post_terrain ) );
     }

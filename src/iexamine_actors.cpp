@@ -346,7 +346,7 @@ void mortar_examine_actor::call( Character &you, const tripoint_bub_ms &examp ) 
         return false;
     } );
     inventory_pick_selector inv_s( you, preset );
-    inv_s.add_nearby_items( PICKUP_RANGE );
+    inv_s.add_nearby_items( get_option<int>( "PICKUP_RANGE" ) );
     inv_s.add_character_items( you );
     inv_s.set_title( _( "Pick a projectile to be used." ) );
 

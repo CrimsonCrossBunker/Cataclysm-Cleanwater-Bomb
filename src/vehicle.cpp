@@ -216,7 +216,7 @@ void vehicle_stack::insert( map &here, const item &newitem )
 
 int vehicle_stack::count_limit() const
 {
-    return MAX_ITEM_IN_VEHICLE_STORAGE;
+    return get_option<int>( "MAX_ITEM_IN_SQUARE" );
 }
 
 units::volume vehicle_stack::max_volume() const

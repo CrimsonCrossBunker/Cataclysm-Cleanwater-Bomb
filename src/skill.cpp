@@ -51,7 +51,7 @@ std::vector<cata::lua_platform::detail::skill_snapshot_entry>
 cata::lua_platform::detail::skill_registry_snapshot()
 {
     std::vector<skill_snapshot_entry> result;
-    const auto collect = [&result]( const Skill &sk ) {
+    const auto collect = [&result]( const Skill & sk ) {
         skill_snapshot_entry entry;
         entry.id = sk.ident().str();
         entry.name = sk.name();
@@ -77,7 +77,7 @@ cata::lua_platform::detail::skill_registry_snapshot()
         entry.survival_rank = sk.companion_survival_rank_factor();
         entry.industry_rank = sk.companion_industry_rank_factor();
         entry.requires_all.assign( sk._requires_all_traits.begin(),
-                                  sk._requires_all_traits.end() );
+                                   sk._requires_all_traits.end() );
         entry.requires_any.assign( sk._requires_any_traits.begin(),
                                    sk._requires_any_traits.end() );
         result.emplace_back( std::move( entry ) );
@@ -89,7 +89,7 @@ cata::lua_platform::detail::skill_registry_snapshot()
         collect( sk );
     }
     std::sort( result.begin(), result.end(),
-    []( const skill_snapshot_entry &left, const skill_snapshot_entry &right ) {
+    []( const skill_snapshot_entry & left, const skill_snapshot_entry & right ) {
         return left.id < right.id;
     } );
     return result;

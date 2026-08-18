@@ -27,21 +27,9 @@ constexpr int EXPLOSION_MULTIPLIER = 7;
 
 constexpr int fov_3d_z_range = 10;
 
-// Really just a sanity check for functions not tested beyond this. in theory 4096 works (`InvletInvlet).
-constexpr int MAX_ITEM_IN_SQUARE = 4096;
-// no reason to differ.
-constexpr int MAX_ITEM_IN_VEHICLE_STORAGE = MAX_ITEM_IN_SQUARE;
-// Sanity checks for volume
-constexpr units::volume DEFAULT_TILE_VOLUME = units::from_liter( 1000 );
-constexpr units::volume MAX_ITEM_VOLUME = DEFAULT_TILE_VOLUME;
+
 // only can wear a maximum of two of any type of clothing.
 constexpr int MAX_WORN_PER_TYPE = 2;
-
-/**
- * Items on the map with at most this distance to the player are considered available for crafting,
- * see inventory::form_from_map
-*/
-constexpr int PICKUP_RANGE = 6;
 
 // Maximum move cost when handling an item.
 constexpr int MAX_HANDLING_COST = 400;

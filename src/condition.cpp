@@ -742,7 +742,8 @@ conditional_t::func f_has_items_sum( const JsonObject &jo, std::string_view memb
         double charges_present;
         double total_present;
         const Character *you = d.const_actor( is_npc )->get_const_character();
-        inventory inventory_and_around = you->crafting_inventory( you->pos_bub(), PICKUP_RANGE );
+        inventory inventory_and_around = you->crafting_inventory( you->pos_bub(),
+                                         get_option<int>( "PICKUP_RANGE" ) );
 
         for( const auto &pair : item_and_amount ) {
             item_to_find = itype_id( pair.first.evaluate( d ) );

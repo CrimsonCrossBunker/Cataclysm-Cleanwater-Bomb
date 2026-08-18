@@ -90,7 +90,7 @@ void advanced_inv_area::init()
                 vstor = vp->part_index();
                 desc[0] = veh->name;
                 canputitemsloc = true;
-                max_size = MAX_ITEM_IN_VEHICLE_STORAGE;
+                max_size = get_option<int>( "MAX_ITEM_IN_SQUARE" );
             } else {
                 canputitemsloc = false;
                 desc[0] = _( "No dragged vehicle!" );
@@ -125,7 +125,7 @@ void advanced_inv_area::init()
                 vstor = vp->part_index();
             }
             canputitemsloc = can_store_in_vehicle() || here.can_put_items_ter_furn( pos );
-            max_size = MAX_ITEM_IN_SQUARE;
+            max_size = get_option<int>( "MAX_ITEM_IN_SQUARE" );
             if( can_store_in_vehicle() ) {
                 std::string part_name = vp->info().name();
                 desc[1] = vp->get_label().value_or( part_name );

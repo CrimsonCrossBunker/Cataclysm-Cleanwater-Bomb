@@ -43,7 +43,7 @@ class item_action_generator
         friend const item_action *cata::lua_platform::detail::item_action_registry_find(
             const item_action_id &id );
         friend std::vector<std::pair<item_action_id, item_action>>
-        cata::lua_platform::detail::item_action_registry_snapshot();
+                cata::lua_platform::detail::item_action_registry_snapshot();
         friend void cata::lua_platform::detail::item_action_registry_set(
             const item_action &value );
         friend void cata::lua_platform::detail::item_action_registry_erase(

@@ -42,8 +42,8 @@ cata::lua_platform::detail::item_category_snapshot()
         result.emplace_back( std::move( entry ) );
     }
     std::sort( result.begin(), result.end(),
-    []( const item_category_snapshot_entry &left,
-        const item_category_snapshot_entry &right ) {
+               []( const item_category_snapshot_entry & left,
+    const item_category_snapshot_entry & right ) {
         return left.id < right.id;
     } );
     return result;

@@ -198,7 +198,6 @@ bool availability::check_can_craft_nested( Character &_crafter, const recipe &r 
 craft_confirm_result can_start_craft(
     const recipe &rec,
     const availability &avail,
-    // Cleanwater: 撤销 PR #87043 — 移除 batch_size 参数及 4096 物品限制
     const Character &crafter )
 {
     if( !avail.can_craft || !avail.crafter_has_primary_skill ) {

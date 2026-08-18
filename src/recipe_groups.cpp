@@ -109,8 +109,8 @@ cata::lua_platform::detail::recipe_group_snapshot()
         result.emplace_back( convert_recipe_group( value ) );
     }
     std::sort( result.begin(), result.end(),
-    []( const cata::lua_platform::detail::recipe_group_native_definition &left,
-        const cata::lua_platform::detail::recipe_group_native_definition &right ) {
+               []( const cata::lua_platform::detail::recipe_group_native_definition & left,
+    const cata::lua_platform::detail::recipe_group_native_definition & right ) {
         return left.id < right.id;
     } );
     return result;

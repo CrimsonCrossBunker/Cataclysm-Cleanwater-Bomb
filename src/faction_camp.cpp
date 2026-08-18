@@ -5178,7 +5178,7 @@ drop_locations basecamp::give_equipment( Character *pc, const inventory_filter_p
                                    make_raw_stats, /*allow_select_contained =*/ true );
 
     inv_s.add_character_items( *pc );
-    inv_s.add_nearby_items( PICKUP_RANGE );
+    inv_s.add_nearby_items( get_option<int>( "PICKUP_RANGE" ) );
     inv_s.set_title( title );
     inv_s.set_hint( _( "To select items, type a number before selecting." ) );
 

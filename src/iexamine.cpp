@@ -702,7 +702,7 @@ void iexamine::nanofab( Character &you, const tripoint_bub_ms &examp )
             [&e]( const itype_id itid ) {
                 return e.typeId() == itid;
             } );
-        }, _( "Introduce a compatible template." ), PICKUP_RANGE,
+        }, _( "Introduce a compatible template." ), get_option<int>( "PICKUP_RANGE" ),
         _( "You don't have any usable templates.\n\nCompatible templates are: " ) + name_list );
 
         if( !nanofab_template ) {
@@ -4203,7 +4203,8 @@ void iexamine::fireplace( Character &you, const tripoint_bub_ms &examp )
         add_firestarter( it, firestarters, you, examp );
     }
 
-    for( const tripoint_bub_ms &pos : closest_points_first( you.pos_bub(), PICKUP_RANGE ) ) {
+    for( const tripoint_bub_ms &pos : closest_points_first( you.pos_bub(),
+            get_option<int>( "PICKUP_RANGE" ) ) ) {
         if( pos == examp ) {
             // stuff in the fireplace can't light or quench itself
             continue;
@@ -5131,7 +5132,7 @@ static item_location maple_tree_sap_container()
     const item maple_sap = item( itype_maple_sap, calendar::turn_zero );
     return g->inv_map_splice( [&]( const item & it ) {
         return it.get_remaining_capacity_for_liquid( maple_sap, true ) > 0;
-    }, _( "Use which container to collect sap?" ), PICKUP_RANGE,
+    }, _( "Use which container to collect sap?" ), get_option<int>( "PICKUP_RANGE" ),
     _( "You don't have a container at hand." ) );
 }
 
@@ -5153,7 +5154,8 @@ void iexamine::tree_maple( Character &you, const tripoint_bub_ms &examp )
     item_location spile_loc = g->inv_map_splice( [&here]( const item_location & it ) {
         return it->get_quality_nonrecursive( qual_TREE_TAP ) > 0 &&
                !( here.ter( it.pos_bub( here ) ) == ter_t_tree_maple_tapped );
-    }, _( "Use which tapping tool?" ), PICKUP_RANGE, _( "You don't have a tapping tool at hand." ) );
+    }, _( "Use which tapping tool?" ), get_option<int>( "PICKUP_RANGE" ),
+    _( "You don't have a tapping tool at hand." ) );
 
     item *spile = spile_loc.get_item();
     if( !spile ) {
@@ -5271,7 +5273,7 @@ void iexamine::tree_maple_tapped( Character &you, const tripoint_bub_ms &examp )
 
         case HARVEST_SAP: {
             item_location loc( map_cursor( examp ), container );
-            liquid_handler::handle_all_liquids_from_container( loc, PICKUP_RANGE );
+            liquid_handler::handle_all_liquids_from_container( loc, get_option<int>( "PICKUP_RANGE" ) );
             return;
         }
 
@@ -7535,7 +7537,8 @@ static void mill_load_food( Character &you, const tripoint_bub_ms &examp,
 
     Character &player_character = get_player_character();
     // select from where to get the items from and place them
-    inv.form_from_map( player_character.pos_bub(), PICKUP_RANGE, &player_character );
+    inv.form_from_map( player_character.pos_bub(), get_option<int>( "PICKUP_RANGE" ),
+                       &player_character );
     inv.remove_items_with( []( const item & it ) {
         return it.rotten();
     } );

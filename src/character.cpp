@@ -2871,7 +2871,7 @@ units::mass Character::best_nearby_lifting_assist( const tripoint_bub_ms &world_
         }
     }
     int lift_quality = std::max( { this->max_quality( qual_LIFT ), mech_lift,
-                                   map_selector( this->pos_bub(), PICKUP_RANGE ).max_quality( qual_LIFT ),
+                                   map_selector( this->pos_bub(), get_option<int>( "PICKUP_RANGE" ) ).max_quality( qual_LIFT ),
                                    vehicle_selector( here, world_pos, 4, true, true ).max_quality( qual_LIFT )
                                  } );
     return lifting_quality_to_mass( lift_quality );

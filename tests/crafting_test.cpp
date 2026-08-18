@@ -1517,7 +1517,7 @@ TEST_CASE( "craft_step_consume_requires_selected_noncharged_tool",
         u.invalidate_crafting_inventory();
 
         THEN( "the verifier fails and clears tools_to_continue" ) {
-            CHECK_FALSE( u.verify_step_tools( craft, 0, u.pos_bub(), PICKUP_RANGE,
+            CHECK_FALSE( u.verify_step_tools( craft, 0, u.pos_bub(), get_option<int>( "PICKUP_RANGE" ),
                                               /*pin_to_map=*/false ) );
             CHECK_FALSE( craft.has_tools_to_continue() );
         }

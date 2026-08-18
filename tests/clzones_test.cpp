@@ -442,7 +442,7 @@ TEST_CASE( "zone_sorting_skips_source_when_all_destinations_count_full",
 
     std::optional<vpart_reference> dest_vp;
 
-    SECTION( "vehicle cargo destination at MAX_ITEM_IN_VEHICLE_STORAGE" ) {
+    SECTION( "vehicle cargo destination at MAX_ITEM_IN_SQUARE" ) {
         vehicle *cart = here.add_vehicle( vehicle_prototype_test_shopping_cart,
                                           dest_pos, 0_degrees, 0, veh_spawn_status::UNDAMAGED );
         REQUIRE( cart != nullptr );
@@ -450,7 +450,7 @@ TEST_CASE( "zone_sorting_skips_source_when_all_destinations_count_full",
         dest_vp = here.veh_at( dest_pos ).cargo();
         REQUIRE( dest_vp );
 
-        const int cargo_fill_target = MAX_ITEM_IN_VEHICLE_STORAGE;
+        const int cargo_fill_target = get_option<int>( "MAX_ITEM_IN_SQUARE" );
         int inserted = 0;
         for( int i = 0; i < cargo_fill_target; ++i ) {
             item filler( itype_test_rod_14cm );
@@ -468,7 +468,7 @@ TEST_CASE( "zone_sorting_skips_source_when_all_destinations_count_full",
 
     SECTION( "ground destination at MAX_ITEM_IN_SQUARE" ) {
         int inserted = 0;
-        for( int i = 0; i < MAX_ITEM_IN_SQUARE; ++i ) {
+        for( int i = 0; i < get_option<int>( "MAX_ITEM_IN_SQUARE" ); ++i ) {
             item *added = here.add_item_or_charges_ret_loc( dest_pos, item( itype_test_rod_14cm ),
                           false ).get_item();
             if( added == nullptr ) {
@@ -476,7 +476,7 @@ TEST_CASE( "zone_sorting_skips_source_when_all_destinations_count_full",
             }
             ++inserted;
         }
-        REQUIRE( inserted >= MAX_ITEM_IN_SQUARE - 1 );
+        REQUIRE( inserted >= get_option<int>( "MAX_ITEM_IN_SQUARE" ) - 1 );
 
         create_tile_zone( "Food", zone_type_LOOT_FOOD, dest_abs );
     }
@@ -533,7 +533,7 @@ TEST_CASE( "zone_sorting_activity_terminates_with_count_full_vehicle_destination
     REQUIRE( vp );
 
     int inserted = 0;
-    for( int i = 0; i < MAX_ITEM_IN_VEHICLE_STORAGE; ++i ) {
+    for( int i = 0; i < get_option<int>( "MAX_ITEM_IN_SQUARE" ); ++i ) {
         item filler( itype_test_rod_14cm );
         if( vp->vehicle().add_item( here, vp->part(), filler ) ) {
             ++inserted;
@@ -541,7 +541,7 @@ TEST_CASE( "zone_sorting_activity_terminates_with_count_full_vehicle_destination
             break;
         }
     }
-    REQUIRE( inserted >= MAX_ITEM_IN_VEHICLE_STORAGE - 1 );
+    REQUIRE( inserted >= get_option<int>( "MAX_ITEM_IN_SQUARE" ) - 1 );
 
     create_tile_zone( "Food", zone_type_LOOT_FOOD, dest_abs, /*veh=*/true );
     create_tile_zone( "Unsorted", zone_type_LOOT_UNSORTED, src_abs );

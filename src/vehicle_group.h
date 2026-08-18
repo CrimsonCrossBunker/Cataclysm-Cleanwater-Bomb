@@ -27,7 +27,7 @@ namespace cata::lua_platform
 namespace detail
 {
 std::vector<std::pair<std::string, int>> vehicle_group_weighted_entries(
-    const vgroup_id &id );
+        const vgroup_id &id );
 } // namespace detail
 } // namespace cata::lua_platform
 
@@ -59,8 +59,8 @@ class VehicleGroup
 
     private:
         friend std::vector<std::pair<std::string, int>>
-        cata::lua_platform::detail::vehicle_group_weighted_entries(
-            const vgroup_id &id );
+                cata::lua_platform::detail::vehicle_group_weighted_entries(
+                    const vgroup_id &id );
         weighted_int_list<vproto_id> vehicles;
 };
 

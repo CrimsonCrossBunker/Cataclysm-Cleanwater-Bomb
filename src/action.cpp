@@ -643,8 +643,9 @@ bool can_butcher_at( map &here, const tripoint_bub_ms &p )
     }
     Character &player_character = get_player_character();
     // TODO: unify this with game::butcher
-    const int factor = player_character.max_quality( qual_BUTCHER, PICKUP_RANGE );
-    const int factorD = player_character.max_quality( qual_CUT_FINE, PICKUP_RANGE );
+    const int factor = player_character.max_quality( qual_BUTCHER, get_option<int>( "PICKUP_RANGE" ) );
+    const int factorD = player_character.max_quality( qual_CUT_FINE,
+                        get_option<int>( "PICKUP_RANGE" ) );
     bool has_item = false;
     bool has_corpse = false;
 

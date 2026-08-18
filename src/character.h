@@ -44,6 +44,7 @@
 #include "item_pocket.h"
 #include "memory_fast.h"
 #include "monster.h"
+#include "options.h"
 #include "pimpl.h"
 #include "player_activity.h"
 #include "pocket_type.h"
@@ -3652,15 +3653,16 @@ class Character : public Creature, public visitable
         * @returns Craftable inventory items found.
         * */
         const inventory &crafting_inventory( const tripoint_bub_ms &src_pos = tripoint_bub_ms::zero,
-                                             int radius = PICKUP_RANGE, bool clear_path = true ) const;
+                                             int radius = get_option<int>( "PICKUP_RANGE" ), bool clear_path = true ) const;
         const inventory &crafting_inventory( map *here,
                                              const tripoint_bub_ms &src_pos = tripoint_bub_ms::zero,
-                                             int radius = PICKUP_RANGE, bool clear_path = true ) const;
+                                             int radius = get_option<int>( "PICKUP_RANGE" ), bool clear_path = true ) const;
         void invalidate_crafting_inventory();
         // Efficiently query book proficiency bonuses from nearby items
         // without rebuilding the full crafting inventory.
         // Walks map tiles and vehicle cargo in range, plus character inventory.
-        book_proficiency_bonuses book_bonuses_nearby( int radius = PICKUP_RANGE ) const;
+        book_proficiency_bonuses book_bonuses_nearby( int radius = get_option<int>( "PICKUP_RANGE" ) )
+        const;
 
         /** Returns a value from 1.0 to 11.0 that acts as a multiplier
          * for the time taken to perform tasks that require detail vision,
@@ -3904,7 +3906,7 @@ class Character : public Creature, public visitable
                                 const tripoint_bub_ms &origin, int radius, bool pin_to_map );
         void consume_tools( const comp_selection<tool_comp> &tool, int batch );
         void consume_tools( map &m, const comp_selection<tool_comp> &tool, int batch,
-                            const tripoint_bub_ms &origin = tripoint_bub_ms::zero, int radius = PICKUP_RANGE,
+                            const tripoint_bub_ms &origin, int radius,
                             basecamp *bcp = nullptr );
         void consume_tools( map &m, const comp_selection<tool_comp> &tool, int batch,
                             const std::vector<tripoint_bub_ms> &reachable_pts = {},   basecamp *bcp = nullptr );

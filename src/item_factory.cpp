@@ -2676,8 +2676,9 @@ void Item_factory::check_definitions() const
         if( type->volume < 0_ml ) {
             msg += "negative volume\n";
         }
-        if( type->volume > MAX_ITEM_VOLUME ) {
-            msg += string_format( "exceeds max volume(%s L)\n", units::to_liter( MAX_ITEM_VOLUME ) );
+        if( type->volume > units::from_liter( get_option<int>( "DEFAULT_TILE_VOLUME" ) ) ) {
+            msg += string_format( "exceeds max volume(%s L)\n",
+                                  units::to_liter( units::from_liter( get_option<int>( "DEFAULT_TILE_VOLUME" ) ) ) );
         }
         if( type->stack_size <= 0 ) {
             if( type->count_by_charges() ) {

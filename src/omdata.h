@@ -865,7 +865,7 @@ struct overmap_special_migration {
     public:
         friend class cata::lua_platform::content_transaction;
         friend std::vector<std::pair<std::string, std::string>>
-        cata::lua_platform::detail::overmap_special_migration_snapshot();
+                cata::lua_platform::detail::overmap_special_migration_snapshot();
         static void load_migrations( const JsonObject &jo, const std::string &src );
         static void finalize_all();
         static void reset();

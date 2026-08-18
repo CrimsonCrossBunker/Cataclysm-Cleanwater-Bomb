@@ -1300,7 +1300,7 @@ void install_overmap_api(
     overmap.set_function(
         "is_safe",
         [require_read](
-            const script_tripoint_coord & position ) {
+    const script_tripoint_coord & position ) {
         require_read();
         return overmap_buffer.is_safe(
                    require_absolute_omt(
@@ -1309,7 +1309,7 @@ void install_overmap_api(
     overmap.set_function(
         "is_in_city",
         [require_read](
-            const script_tripoint_coord & position ) {
+    const script_tripoint_coord & position ) {
         require_read();
         if( position.native_origin() != coords::origin::abs ||
             position.native_scale() != coords::scale::map_square ) {

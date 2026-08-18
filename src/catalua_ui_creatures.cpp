@@ -951,7 +951,7 @@ void install_creature_api(
     creatures.set_function(
         "can_see",
         [current_runtime_generation, current_world_generation, require_read](
-    sol::this_state lua_state, const game_handle & observer,
+            sol::this_state lua_state, const game_handle & observer,
     const game_handle & target ) {
         require_read();
         sol::state_view state( lua_state );
@@ -1057,7 +1057,7 @@ void install_creature_api(
     characters.set_function(
         "has_flag",
         [current_runtime_generation, current_world_generation, require_read](
-    sol::this_state lua_state, const game_handle & handle,
+            sol::this_state lua_state, const game_handle & handle,
     const script_game_id & flag ) {
         require_read();
         if( flag.kind() != "json_flag" ) {
@@ -1082,7 +1082,7 @@ void install_creature_api(
     characters.set_function(
         "has_profession",
         [current_runtime_generation, current_world_generation, require_read](
-    sol::this_state lua_state, const game_handle & handle,
+            sol::this_state lua_state, const game_handle & handle,
     const std::string & profession_id_string ) {
         require_read();
         sol::state_view state( lua_state );
@@ -1101,7 +1101,7 @@ void install_creature_api(
     characters.set_function(
         "add_wet",
         [current_runtime_generation, current_world_generation, require_write](
-    sol::this_state lua_state, const game_handle & handle,
+            sol::this_state lua_state, const game_handle & handle,
     const std::int64_t amount ) {
         require_write();
         if( amount < -1000000 || amount > 1000000 ) {
