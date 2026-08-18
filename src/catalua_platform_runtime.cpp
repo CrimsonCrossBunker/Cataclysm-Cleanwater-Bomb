@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <charconv>
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
@@ -49,6 +50,7 @@
 #include "cata_variant.h"
 #include "catalua_platform_content.h"
 #include "catalua_platform_world_content.h"
+#include "catalua_dialogue_common.h"
 #include "catalua_ui_state.h"
 #include "catalua_bindings_coords.h"
 #include "catalua_bindings_values.h"
@@ -76,6 +78,7 @@
 #include "catalua_ui_npcs.h"
 #include "catalua_ui_overmap.h"
 #include "catalua_ui_proficiencies.h"
+#include "catalua_ui_registry.h"
 #include "catalua_ui_skills.h"
 #include "catalua_ui_statistics.h"
 #include "catalua_ui_time.h"
@@ -156,6 +159,7 @@
 #include "mtype.h"
 #include "mutation.h"
 #include "npc.h"
+#include "npctrade.h"
 #include "omdata.h"
 #include "overmap_location.h"
 #include "overmap_connection.h"
@@ -679,6 +683,8 @@ struct item_group_entry_definition_data {
     std::string variant;
     std::int64_t count_min = 1;
     std::int64_t count_max = 1;
+    std::int64_t charges_min = -1;
+    std::int64_t charges_max = -1;
 };
 
 struct item_group_definition_data {
@@ -4177,10 +4183,20 @@ struct item_group_definition_handle {
                 value.count_min = count->raw_get<std::int64_t>( 1 );
                 value.count_max = count->raw_get<std::int64_t>( 2 );
             }
+            if( const sol::optional<sol::table> charges =
+                    options.get<sol::optional<sol::table>>( "charges" ) ) {
+                require_dense_array( *charges, "item-group charges", 2, 2 );
+                value.charges_min = charges->raw_get<std::int64_t>( 1 );
+                value.charges_max = charges->raw_get<std::int64_t>( 2 );
+            }
             if( value.probability <= 0 || value.count_min < 0 ||
                 value.count_max < value.count_min ||
-                value.count_max > std::numeric_limits<int>::max() ) {
-                throw std::runtime_error( "item-group entry has invalid probability or count" );
+                value.count_max > std::numeric_limits<int>::max() ||
+                value.charges_min < -1 || value.charges_max < value.charges_min ||
+                value.charges_max > std::numeric_limits<int>::max() ||
+                ( value.group && value.charges_min != -1 ) ) {
+                throw std::runtime_error(
+                    "item-group entry has invalid probability, count, or charges" );
             }
             require_building_handle( token, *definition, "item group" );
             definition->entries.push_back( std::move( value ) );
@@ -6961,6 +6977,19 @@ persistent_state read_typed_values( const JsonObject &values )
 class runtime : public std::enable_shared_from_this<runtime>
 {
     public:
+        struct declarative_dialogue_topic {
+            std::uint64_t registration_id = 0;
+            sol::object dynamic_line;
+            sol::object responses;
+        };
+
+        struct declarative_dialogue_extension {
+            std::uint64_t registration_id = 0;
+            std::string id;
+            bool insert_before_standard_exits = false;
+            sol::object responses;
+        };
+
         runtime( std::string id, std::size_t candidate_generation,
                  sol::state &state ) : mod_id( std::move( id ) ),
             generation( candidate_generation ), lua( &state ),
@@ -6979,6 +7008,9 @@ class runtime : public std::enable_shared_from_this<runtime>
         std::unordered_map<std::string, std::vector<std::string>> subscriptions;
         std::unordered_map<std::string, std::vector<std::string>> hooks;
         std::map<std::string, std::string> dialogue_topics;
+        std::map<std::string, declarative_dialogue_topic> declarative_dialogue_topics;
+        std::vector<declarative_dialogue_extension> declarative_dialogue_extensions;
+        std::uint64_t next_dialogue_registration_id = 1;
         struct mapgen_registration {
             std::string handler_id;
             std::vector<std::string> terrain_ids;
@@ -7268,6 +7300,10 @@ struct content_transaction::impl {
     bool applied = false;
 };
 
+talk_topic invoke_platform_dialogue_response_callback(
+    std::weak_ptr<runtime> owner, std::string topic_id,
+    sol::protected_function callback, dialogue &d, const talk_topic &fallback );
+
 namespace
 {
 
@@ -7308,6 +7344,156 @@ class callback_scope
     private:
         runtime &owner_;
 };
+
+bool valid_platform_dialogue_id( const std::string &value )
+{
+    return cata::lua_dialogue::valid_topic_id( value );
+}
+
+void require_platform_dialogue_text( const std::string &value,
+                                    const std::string_view field )
+{
+    cata::lua_dialogue::require_text( value, "ccb.dialogue", field );
+}
+
+using platform_dialogue_context = cata::lua_dialogue::context;
+
+std::shared_ptr<platform_dialogue_context> make_platform_dialogue_context(
+    runtime &owner, dialogue &d, const std::string &topic_id )
+{
+    if( owner.lua == nullptr ) {
+        throw std::runtime_error( "Platform dialogue runtime has no Lua state" );
+    }
+    return std::make_shared<platform_dialogue_context>(
+               owner.lua->lua_state(), d, topic_id, true,
+               "Platform dialogue context is no longer valid" );
+}
+
+void validate_platform_dialogue_descriptor_keys( const sol::table &descriptor,
+        const std::set<std::string> &allowed, const std::string_view operation )
+{
+    for( const auto &entry : descriptor ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument( "ccb.dialogue " + std::string( operation ) +
+                                         " option keys must be strings" );
+        }
+        const std::string key = entry.first.as<std::string>();
+        if( allowed.count( key ) == 0 ) {
+            throw std::invalid_argument( "ccb.dialogue " + std::string( operation ) +
+                                         " received unknown option '" + key + "'" );
+        }
+    }
+}
+
+std::uint64_t next_platform_dialogue_registration_id( runtime &owner )
+{
+    if( owner.next_dialogue_registration_id == 0 ) {
+        throw std::runtime_error( "ccb.dialogue registration id space is exhausted" );
+    }
+    return owner.next_dialogue_registration_id++;
+}
+
+std::uint64_t register_platform_dialogue_topic( runtime &owner,
+        const sol::table &descriptor )
+{
+    if( owner.world_is_ready ) {
+        throw std::runtime_error(
+            "ccb.dialogue register_topic is only available during Platform bootstrap" );
+    }
+    validate_platform_dialogue_descriptor_keys( descriptor,
+    { "id", "dynamic_line", "responses" }, "register_topic" );
+    const std::string id = descriptor.get_or( "id", std::string() );
+    if( !valid_platform_dialogue_id( id ) ) {
+        throw std::invalid_argument(
+            "ccb.dialogue register_topic id must contain 1 to 256 non-NUL bytes" );
+    }
+    if( owner.dialogue_topics.count( id ) != 0 ) {
+        throw std::invalid_argument(
+            "ccb.dialogue register_topic conflicts with ccb.runtime.dialogue_topic '" +
+            id + "'" );
+    }
+    const sol::object dynamic_line = descriptor.raw_get<sol::object>( "dynamic_line" );
+    if( !dynamic_line.valid() || dynamic_line.get_type() == sol::type::nil ) {
+        throw std::invalid_argument( "ccb.dialogue register_topic requires dynamic_line" );
+    }
+    if( dynamic_line.get_type() == sol::type::string ) {
+        require_platform_dialogue_text( dynamic_line.as<std::string>(), "dynamic_line" );
+    } else if( dynamic_line.get_type() != sol::type::function ) {
+        throw std::invalid_argument(
+            "ccb.dialogue register_topic dynamic_line must be a string or function" );
+    }
+    const sol::object responses = descriptor.raw_get<sol::object>( "responses" );
+    if( !responses.valid() ||
+        ( responses.get_type() != sol::type::table &&
+          responses.get_type() != sol::type::function ) ) {
+        throw std::invalid_argument(
+            "ccb.dialogue register_topic requires table or function responses" );
+    }
+
+    runtime::declarative_dialogue_topic replacement;
+    replacement.dynamic_line = dynamic_line;
+    replacement.responses = responses;
+    const auto existing = owner.declarative_dialogue_topics.find( id );
+    if( existing != owner.declarative_dialogue_topics.end() ) {
+        replacement.registration_id = existing->second.registration_id;
+        existing->second = std::move( replacement );
+        return existing->second.registration_id;
+    }
+    if( owner.declarative_dialogue_topics.size() >= 256 ) {
+        throw std::runtime_error( "ccb.dialogue topic registration limit reached" );
+    }
+    replacement.registration_id = next_platform_dialogue_registration_id( owner );
+    const std::uint64_t registration_id = replacement.registration_id;
+    owner.declarative_dialogue_topics.emplace( id, std::move( replacement ) );
+    return registration_id;
+}
+
+std::uint64_t extend_platform_dialogue_topic( runtime &owner,
+        const sol::table &descriptor )
+{
+    if( owner.world_is_ready ) {
+        throw std::runtime_error(
+            "ccb.dialogue extend_topic is only available during Platform bootstrap" );
+    }
+    validate_platform_dialogue_descriptor_keys( descriptor,
+    { "id", "insert_before_standard_exits", "responses" }, "extend_topic" );
+    const std::string id = descriptor.get_or( "id", std::string() );
+    if( !valid_platform_dialogue_id( id ) ) {
+        throw std::invalid_argument(
+            "ccb.dialogue extend_topic id must contain 1 to 256 non-NUL bytes" );
+    }
+    const sol::object responses = descriptor.raw_get<sol::object>( "responses" );
+    if( !responses.valid() ||
+        ( responses.get_type() != sol::type::table &&
+          responses.get_type() != sol::type::function ) ) {
+        throw std::invalid_argument(
+            "ccb.dialogue extend_topic requires table or function responses" );
+    }
+
+    runtime::declarative_dialogue_extension replacement;
+    replacement.id = id;
+    replacement.insert_before_standard_exits =
+        descriptor.get_or( "insert_before_standard_exits", false );
+    replacement.responses = responses;
+    const auto existing = std::find_if(
+                              owner.declarative_dialogue_extensions.begin(),
+                              owner.declarative_dialogue_extensions.end(),
+    [&id]( const runtime::declarative_dialogue_extension & entry ) {
+        return entry.id == id;
+    } );
+    if( existing != owner.declarative_dialogue_extensions.end() ) {
+        replacement.registration_id = existing->registration_id;
+        *existing = std::move( replacement );
+        return existing->registration_id;
+    }
+    if( owner.declarative_dialogue_extensions.size() >= 256 ) {
+        throw std::runtime_error( "ccb.dialogue extension registration limit reached" );
+    }
+    replacement.registration_id = next_platform_dialogue_registration_id( owner );
+    const std::uint64_t registration_id = replacement.registration_id;
+    owner.declarative_dialogue_extensions.emplace_back( std::move( replacement ) );
+    return registration_id;
+}
 
 class platform_event_dispatch_scope
 {
@@ -14453,7 +14639,12 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 if( group_entry.id.empty() || !probability_valid ||
                     group_entry.variant.size() > 256 ||
                     group_entry.variant.find( '\0' ) != std::string::npos ||
-                    ( group_entry.group && !group_entry.variant.empty() ) ) {
+                    ( group_entry.group && ( !group_entry.variant.empty() ||
+                                             group_entry.charges_min != -1 ||
+                                             group_entry.charges_max != -1 ) ) ||
+                    group_entry.charges_min < -1 ||
+                    group_entry.charges_max < group_entry.charges_min ||
+                    group_entry.charges_max > std::numeric_limits<int>::max() ) {
                     throw std::runtime_error( "item group '" + definition.id +
                                               "' contains an invalid entry" );
                 }
@@ -14468,11 +14659,6 @@ bool content_transaction::validate( const runtime &owner_runtime,
                     if( item_group_ids.count( group_entry.id ) != 0 ) {
                         item_group_children[definition.id].push_back( group_entry.id );
                     }
-                } else if( declared_item_ids.count( group_entry.id ) == 0 &&
-                           !item::type_is_defined( itype_id( group_entry.id ) ) ) {
-                    throw std::runtime_error( "item group '" + definition.id +
-                                              "' references unknown item '" +
-                                              group_entry.id + "'" );
                 }
             }
         }
@@ -18772,18 +18958,44 @@ bool content_transaction::apply( std::string &error )
             for( const item_group_entry_definition_data &source_entry : source.entries ) {
                 const Single_item_creator::Type entry_type = source_entry.group ?
                         Single_item_creator::S_ITEM_GROUP : Single_item_creator::S_ITEM;
+                std::string entry_id = source_entry.id;
+                if( !source_entry.group ) {
+                    const bool declared_in_transaction = std::any_of(
+                            pimpl_->items.begin(), pimpl_->items.end(),
+                    [&source_entry]( const item_registration & entry ) {
+                        return entry.definition->id == source_entry.id;
+                    } );
+                    if( !declared_in_transaction ) {
+                        // Match native item groups: resolve legacy IDs after all
+                        // ordinary Mod data is present, and omit unavailable items
+                        // rather than rejecting the complete group.
+                        const itype_id migrated_item = item_controller->migrate_id(
+                                itype_id( source_entry.id ) );
+                        if( !item::type_is_defined( migrated_item ) ) {
+                            DebugLog( D_WARNING, D_MAIN ) << "Lua-first item group '" << source.id
+                                                          << "' skipped unavailable item '"
+                                                          << source_entry.id << "'";
+                            continue;
+                        }
+                        entry_id = migrated_item.str();
+                    }
+                }
                 auto native_entry = std::make_unique<Single_item_creator>(
-                                        source_entry.id, entry_type,
+                                        entry_id, entry_type,
                                         static_cast<int>( source_entry.probability ),
                                         "Lua-first item-group entry " + source.id );
                 if( source_entry.count_min != 1 || source_entry.count_max != 1 ||
-                    !source_entry.variant.empty() ) {
+                    !source_entry.variant.empty() || source_entry.charges_min != -1 ) {
                     native_entry->modifier.emplace();
                     native_entry->modifier->count = {
                         static_cast<int>( source_entry.count_min ),
                         static_cast<int>( source_entry.count_max )
                     };
                     native_entry->modifier->variant = source_entry.variant;
+                    native_entry->modifier->charges = {
+                        static_cast<int>( source_entry.charges_min ),
+                        static_cast<int>( source_entry.charges_max )
+                    };
                 }
                 native->add_entry( std::move( native_entry ) );
             }
@@ -23087,6 +23299,8 @@ std::string content_transaction::fingerprint() const
             hash_part( state, group_entry.variant );
             hash_part( state, std::to_string( group_entry.count_min ) );
             hash_part( state, std::to_string( group_entry.count_max ) );
+            hash_part( state, std::to_string( group_entry.charges_min ) );
+            hash_part( state, std::to_string( group_entry.charges_max ) );
         }
     }
     for( const harvest_drop_type_registration &entry : pimpl_->harvest_drop_types ) {
@@ -24014,6 +24228,16 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         "position", sol::property( &use_context_data::use_position ),
         "charges", sol::property( &use_context_data::charges,
                                   &use_context_data::set_charges ) );
+    ccb.new_usertype<platform_dialogue_context>(
+        "PlatformDialogueContext", sol::no_constructor,
+        "valid", &platform_dialogue_context::valid,
+        "topic", &platform_dialogue_context::topic,
+        "get", &platform_dialogue_context::get,
+        "set", &platform_dialogue_context::set,
+        "remove", &platform_dialogue_context::remove,
+        "quote_trade_item", &platform_dialogue_context::quote_trade_item,
+        "buy_quoted_item", &platform_dialogue_context::buy_quoted_item );
+    ccb["PlatformDialogueContext"] = sol::lua_nil;
 
     const std::weak_ptr<runtime> weak = value;
     sol::table runtime_api = lua.create_table();
@@ -24129,6 +24353,11 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         if( handler_id.empty() ) {
             throw std::runtime_error( "dialogue topic handler id cannot be empty" );
         }
+        if( owner->declarative_dialogue_topics.count( topic_id ) != 0 ) {
+            throw std::runtime_error(
+                "dialogue topic conflicts with ccb.dialogue.register_topic '" +
+                topic_id + "'" );
+        }
         if( owner->dialogue_topics.size() >= 256 ) {
             throw std::runtime_error( "dialogue topic registration limit reached" );
         }
@@ -24137,6 +24366,32 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         }
     } );
     ccb["runtime"] = std::move( runtime_api );
+
+    sol::table dialogue_api = lua.create_table();
+    dialogue_api.set_function( "register_topic", [weak]( const sol::table & descriptor ) {
+        const std::shared_ptr<runtime> owner = weak.lock();
+        if( !owner ) {
+            throw std::runtime_error( "stale Platform runtime" );
+        }
+        return register_platform_dialogue_topic( *owner, descriptor );
+    } );
+    dialogue_api.set_function( "extend_topic", [weak]( const sol::table & descriptor ) {
+        const std::shared_ptr<runtime> owner = weak.lock();
+        if( !owner ) {
+            throw std::runtime_error( "stale Platform runtime" );
+        }
+        return extend_platform_dialogue_topic( *owner, descriptor );
+    } );
+    dialogue_api.set_function( "limits", []( sol::this_state state ) {
+        sol::state_view lua_state( state );
+        return lua_state.create_table_with(
+                   "topics", 256,
+                   "extensions", 256,
+                   "responses_per_topic", 256,
+                   "id_bytes", 256,
+                   "text_bytes", 4096 );
+    } );
+    ccb["dialogue"] = std::move( dialogue_api );
 
     auto install_state_scope = [&lua, weak]( persistent_state runtime::*member,
     const std::string & name ) {
@@ -24444,6 +24699,11 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     };
 
     cata::lua_ui::install_value_type_api( lua, services, require_read );
+    cata::lua_ui::install_registry_api( lua, services, require_read, require_read );
+    // install_registry_api retains its v5 global `registry` surface.  Platform
+    // exposes that same bounded native snapshot through ccb.services instead.
+    sol::table registry = lua["registry"];
+    services["registry"] = std::move( registry );
     cata::lua_ui::install_time_api( services, require_read, require_write );
     cata::lua_ui::install_game_handle_api( lua, services, runtime_generation,
                                            world_generation, require_read );
@@ -25824,6 +26084,154 @@ bool runtime_has_primary_mapgen_for( const std::shared_ptr<runtime> &value,
 namespace
 {
 
+struct declarative_platform_dialogue_topic_registration {
+    std::shared_ptr<runtime> owner;
+    const runtime::declarative_dialogue_topic *definition = nullptr;
+};
+
+std::optional<declarative_platform_dialogue_topic_registration>
+find_declarative_platform_dialogue_topic( const std::string_view topic_id )
+{
+    for( const std::shared_ptr<runtime> &owner : active_runtimes ) {
+        if( !owner || !owner->world_is_ready || owner->lua == nullptr ) {
+            continue;
+        }
+        const auto found = owner->declarative_dialogue_topics.find(
+                               std::string( topic_id ) );
+        if( found != owner->declarative_dialogue_topics.end() ) {
+            return declarative_platform_dialogue_topic_registration{ owner, &found->second };
+        }
+    }
+    return std::nullopt;
+}
+
+void report_declarative_platform_dialogue_error(
+    const declarative_platform_dialogue_topic_registration &registration,
+    const std::string_view topic_id, const std::string &error )
+{
+    DebugLog( D_ERROR, D_MAIN ) << "Lua-first Mod '" << registration.owner->mod_id
+                                << "' declarative dialogue topic '" << topic_id
+                                << "': " << error;
+}
+
+std::string evaluate_declarative_platform_dialogue_line(
+    const declarative_platform_dialogue_topic_registration &registration,
+    dialogue &d, const talk_topic &topic )
+{
+    const sol::object &source = registration.definition->dynamic_line;
+    if( source.get_type() == sol::type::string ) {
+        const std::string line = source.as<std::string>();
+        require_platform_dialogue_text( line, "dynamic_line" );
+        return line;
+    }
+    const std::shared_ptr<platform_dialogue_context> context =
+        make_platform_dialogue_context( *registration.owner, d, topic.id );
+    try {
+        if( registration.owner->callback_depth >= 16 ) {
+            throw std::runtime_error( "dialogue callback recursion limit reached" );
+        }
+        const sol::protected_function callback = source.as<sol::protected_function>();
+        callback_scope scope( *registration.owner );
+        const sol::protected_function_result result = callback( context );
+        context->invalidate();
+        if( !result.valid() ) {
+            const sol::error error = result;
+            throw std::runtime_error( error.what() );
+        }
+        if( result.get_type() != sol::type::string ) {
+            throw std::invalid_argument( "dynamic_line callback must return a string" );
+        }
+        const std::string line = result.get<std::string>();
+        require_platform_dialogue_text( line, "dynamic_line" );
+        return line;
+    } catch( ... ) {
+        context->invalidate();
+        throw;
+    }
+}
+
+sol::object evaluate_declarative_platform_dialogue_responses(
+    const std::shared_ptr<runtime> &owner, const sol::object &source,
+    dialogue &d, const std::string &topic_id )
+{
+    if( source.get_type() == sol::type::table ) {
+        return source;
+    }
+    const std::shared_ptr<platform_dialogue_context> context =
+        make_platform_dialogue_context( *owner, d, topic_id );
+    try {
+        if( owner->callback_depth >= 16 ) {
+            throw std::runtime_error( "dialogue callback recursion limit reached" );
+        }
+        const sol::protected_function callback = source.as<sol::protected_function>();
+        callback_scope scope( *owner );
+        const sol::protected_function_result result = callback( context );
+        context->invalidate();
+        if( !result.valid() ) {
+            const sol::error error = result;
+            throw std::runtime_error( error.what() );
+        }
+        if( result.get_type() != sol::type::table ) {
+            throw std::invalid_argument(
+                "dialogue responses callback must return an array table" );
+        }
+        return result.get<sol::object>();
+    } catch( ... ) {
+        context->invalidate();
+        throw;
+    }
+}
+
+talk_response declarative_platform_dialogue_response_from_table(
+    const std::shared_ptr<runtime> &owner, const std::string &topic_id,
+    const sol::table &descriptor )
+{
+    return cata::lua_dialogue::response_from_table( descriptor, {
+        "dialogue", "response descriptor", "has", true,
+        []( const std::string & text, const std::string_view field ) {
+            require_platform_dialogue_text( text, field );
+        },
+        []( const std::string & id ) {
+            return valid_platform_dialogue_id( id );
+        },
+        [weak_owner = std::weak_ptr<runtime>( owner ), topic_id](
+    sol::protected_function callback ) {
+            return cata::lua_dialogue::register_response_callback(
+                       cata::lua_dialogue::response_callback_origin::platform,
+            [weak_owner, topic_id, callback = std::move( callback )]( dialogue & d,
+            const talk_topic & fallback ) mutable {
+                return invoke_platform_dialogue_response_callback(
+                           weak_owner, topic_id, std::move( callback ), d, fallback );
+            } );
+        }
+    } );
+}
+
+void add_declarative_platform_dialogue_responses(
+    dialogue &d, const std::shared_ptr<runtime> &owner,
+    const std::string &topic_id, const sol::object &responses_object,
+    const bool insert_before_standard_exits )
+{
+    if( responses_object.get_type() != sol::type::table ) {
+        throw std::invalid_argument( "dialogue responses must be an array table" );
+    }
+    const sol::table responses = responses_object.as<sol::table>();
+    const std::size_t count = require_dense_array(
+                                  responses, "dialogue responses", 0, 256 );
+    for( std::size_t index = 1; index <= count; ++index ) {
+        const sol::object raw_response = responses.raw_get<sol::object>( index );
+        if( !raw_response.valid() || raw_response.get_type() != sol::type::table ) {
+            throw std::invalid_argument(
+                "dialogue responses must contain descriptor tables" );
+        }
+        const talk_response response = declarative_platform_dialogue_response_from_table(
+                                           owner, topic_id,
+                                           raw_response.as<sol::table>() );
+        d.add_gen_response( response, false, true, true,
+                            insert_before_standard_exits );
+    }
+}
+
 struct platform_dialogue_handler {
     std::shared_ptr<runtime> owner;
     std::string handler_id;
@@ -25895,6 +26303,18 @@ void add_platform_dialogue_response( dialogue &d, const std::string &text,
 std::optional<std::string> platform_dialogue_dynamic_line( dialogue &d,
         const talk_topic &topic )
 {
+    const std::optional<declarative_platform_dialogue_topic_registration>
+    declarative_registration = find_declarative_platform_dialogue_topic( topic.id );
+    if( declarative_registration ) {
+        try {
+            return evaluate_declarative_platform_dialogue_line(
+                       *declarative_registration, d, topic );
+        } catch( const std::exception &exception ) {
+            report_declarative_platform_dialogue_error(
+                *declarative_registration, topic.id, exception.what() );
+            return "&This dialogue is unavailable because its Lua handler failed.";
+        }
+    }
     const std::optional<platform_dialogue_handler> registration =
         find_platform_dialogue_handler( topic.id );
     if( !registration ) {
@@ -25924,6 +26344,25 @@ std::optional<std::string> platform_dialogue_dynamic_line( dialogue &d,
 
 bool gen_platform_dialogue_responses( dialogue &d, const talk_topic &topic )
 {
+    const std::optional<declarative_platform_dialogue_topic_registration>
+    declarative_registration = find_declarative_platform_dialogue_topic( topic.id );
+    if( declarative_registration ) {
+        try {
+            const sol::object responses =
+                evaluate_declarative_platform_dialogue_responses(
+                    declarative_registration->owner,
+                    declarative_registration->definition->responses,
+                    d, topic.id );
+            add_declarative_platform_dialogue_responses(
+                d, declarative_registration->owner, topic.id, responses, false );
+            return true;
+        } catch( const std::exception &exception ) {
+            report_declarative_platform_dialogue_error(
+                *declarative_registration, topic.id, exception.what() );
+            add_platform_dialogue_response( d, "End the conversation.", "TALK_DONE" );
+            return true;
+        }
+    }
     const std::optional<platform_dialogue_handler> registration =
         find_platform_dialogue_handler( topic.id );
     if( !registration ) {
@@ -25992,6 +26431,94 @@ bool gen_platform_dialogue_responses( dialogue &d, const talk_topic &topic )
     }
 }
 
+void extend_platform_dialogue_responses( dialogue &d, const talk_topic &topic )
+{
+    const std::vector<std::shared_ptr<runtime>> runtimes = active_runtimes;
+    for( const std::shared_ptr<runtime> &owner : runtimes ) {
+        if( !owner || !owner->world_is_ready || owner->lua == nullptr ) {
+            continue;
+        }
+        for( const runtime::declarative_dialogue_extension &extension :
+             owner->declarative_dialogue_extensions ) {
+            if( extension.id != topic.id ) {
+                continue;
+            }
+            try {
+                const sol::object responses =
+                    evaluate_declarative_platform_dialogue_responses(
+                        owner, extension.responses, d, topic.id );
+                add_declarative_platform_dialogue_responses(
+                    d, owner, topic.id, responses,
+                    extension.insert_before_standard_exits );
+            } catch( const std::exception &exception ) {
+                DebugLog( D_ERROR, D_MAIN ) << "Lua-first Mod '" << owner->mod_id
+                                            << "' declarative dialogue extension '"
+                                            << topic.id << "': " << exception.what();
+            }
+        }
+    }
+}
+
+talk_topic invoke_platform_dialogue_response_callback(
+    const std::weak_ptr<runtime> weak_owner, const std::string topic_id,
+    sol::protected_function callback, dialogue &d, const talk_topic &fallback )
+{
+    const std::shared_ptr<runtime> owner = weak_owner.lock();
+    if( !owner || !owner->world_is_ready || owner->lua == nullptr ) {
+        return fallback;
+    }
+    const std::shared_ptr<platform_dialogue_context> context =
+        make_platform_dialogue_context( *owner, d, topic_id );
+    try {
+        if( owner->callback_depth >= 16 ) {
+            throw std::runtime_error( "dialogue callback recursion limit reached" );
+        }
+        callback_scope scope( *owner );
+        const sol::protected_function_result result = callback( context );
+        context->invalidate();
+        if( !result.valid() ) {
+            const sol::error error = result;
+            throw std::runtime_error( error.what() );
+        }
+        if( result.return_count() == 0 || result.get_type() == sol::type::nil ) {
+            return fallback;
+        }
+        if( result.get_type() == sol::type::string ) {
+            const std::string next_topic = result.get<std::string>();
+            if( valid_platform_dialogue_id( next_topic ) ) {
+                return talk_topic( next_topic );
+            }
+            throw std::invalid_argument(
+                "dialogue on_select returned an invalid topic id" );
+        }
+        if( result.get_type() == sol::type::table ) {
+            const sol::table table = result.get<sol::table>();
+            const sol::object raw_topic = table.raw_get<sol::object>( "topic" );
+            if( raw_topic.valid() && raw_topic.get_type() != sol::type::nil ) {
+                if( raw_topic.get_type() != sol::type::string ) {
+                    throw std::invalid_argument(
+                        "dialogue on_select result topic must be a string" );
+                }
+                const std::string next_topic = raw_topic.as<std::string>();
+                if( valid_platform_dialogue_id( next_topic ) ) {
+                    return talk_topic( next_topic );
+                }
+                throw std::invalid_argument(
+                    "dialogue on_select returned an invalid topic id" );
+            }
+            return fallback;
+        }
+        throw std::invalid_argument(
+            "dialogue on_select must return nil, a string, or a table" );
+    } catch( const std::exception &exception ) {
+        context->invalidate();
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first Mod '" << owner->mod_id
+                                    << "' dialogue on_select '" << topic_id
+                                    << "': " << exception.what();
+        return fallback;
+    }
+}
+
 bool dispatch_platform_mapgen_generate( mapgendata &data )
 {
     return dispatch_platform_mapgen_phase( data, true );
@@ -26052,12 +26579,16 @@ std::string runtime_fingerprint( const std::shared_ptr<runtime> &value )
 
 void set_active_runtimes( const std::vector<std::shared_ptr<runtime>> &values )
 {
+    cata::lua_dialogue::clear_response_callbacks(
+        cata::lua_dialogue::response_callback_origin::platform );
     active_runtimes = values;
 }
 
 void hot_swap_active_runtimes(
     const std::vector<std::shared_ptr<runtime>> &values )
 {
+    cata::lua_dialogue::clear_response_callbacks(
+        cata::lua_dialogue::response_callback_origin::platform );
     std::unordered_map<std::string, std::shared_ptr<runtime>> previous;
     std::set<std::string> previously_ready;
     for( const std::shared_ptr<runtime> &owner : active_runtimes ) {
@@ -26108,6 +26639,8 @@ void hot_swap_active_runtimes(
 
 void clear_active_runtimes()
 {
+    cata::lua_dialogue::clear_response_callbacks(
+        cata::lua_dialogue::response_callback_origin::platform );
     const bool had_active_world = !active_runtimes.empty();
     for( auto owner = active_runtimes.rbegin(); owner != active_runtimes.rend(); ++owner ) {
         const std::shared_ptr<runtime> &value = *owner;

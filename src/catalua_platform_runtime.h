@@ -149,6 +149,7 @@ bool runtime_has_primary_mapgen_for( const std::shared_ptr<runtime> &value,
 std::optional<std::string> platform_dialogue_dynamic_line( dialogue &d,
         const talk_topic &topic );
 bool gen_platform_dialogue_responses( dialogue &d, const talk_topic &topic );
+void extend_platform_dialogue_responses( dialogue &d, const talk_topic &topic );
 
 std::optional<int> invoke_use_handler( std::string_view mod_id,
                                        std::string_view handler_id,

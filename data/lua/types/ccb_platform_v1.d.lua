@@ -745,6 +745,7 @@ function ItemGroupDefinition:group(group_id, probability) end
 ---@field group? string Exactly one of item or group is required.
 ---@field probability? integer Positive distribution weight or collection percentage.
 ---@field count? integer[] Two-element inclusive count interval.
+---@field charges? integer[] Two-element inclusive item charge interval; group entries may not set it.
 ---@field variant? string Native item variant id.
 
 ---@param options ItemGroupEntryOptions
@@ -3956,8 +3957,9 @@ function CcbPlatformRuntime.on(event_name, handler_id) end
 ---@param handler_id string Named Platform handler.
 function CcbPlatformRuntime.hook(hook_name, handler_id) end
 
----Render a Lua-owned topic inside the native NPC dialogue window. The named
----handler receives CcbPlatformDialogueRenderHook for both phases.
+---Render a low-level Lua-owned topic inside the native NPC dialogue window.
+---The named handler receives CcbPlatformDialogueRenderHook for both phases.
+---A topic id cannot also be registered with ccb.dialogue.register_topic.
 ---@param topic_id string Native dialogue topic id.
 ---@param handler_id string Named Platform handler returning a line or response array.
 function CcbPlatformRuntime.dialogue_topic(topic_id, handler_id) end
@@ -3965,6 +3967,74 @@ function CcbPlatformRuntime.dialogue_topic(topic_id, handler_id) end
 ---@class CcbPlatformDialogueResponse
 ---@field text string Player response displayed by the native dialogue window.
 ---@field topic? string Next native or Lua-owned topic; defaults to `TALK_NONE`.
+
+---@class PlatformDialogueContext
+local PlatformDialogueContext = {}
+
+---@return boolean Whether this callback-scoped context can still be used.
+function PlatformDialogueContext:valid() end
+
+---@return string Native dialogue topic currently being rendered or selected.
+function PlatformDialogueContext:topic() end
+
+---@param key string
+---@return boolean|number|string|nil value
+function PlatformDialogueContext:get(key) end
+
+---@param key string
+---@param value boolean|number|string|nil
+function PlatformDialogueContext:set(key, value) end
+
+---@param key string
+function PlatformDialogueContext:remove(key) end
+
+---@param item_id string
+---@param count integer
+---@param prefix string
+---@return boolean quoted
+function PlatformDialogueContext:quote_trade_item(item_id, count, prefix) end
+
+---@param prefix string
+---@return boolean purchased
+function PlatformDialogueContext:buy_quoted_item(prefix) end
+
+---@class CcbPlatformDialogueResponseDescriptor
+---@field text string Player response displayed by the native dialogue window.
+---@field topic? string Next native or Lua-owned topic; defaults to `TALK_NONE`.
+---@field on_select? fun(context: PlatformDialogueContext): string|{ topic?: string }|nil Runs after the native response effect and may override its next topic.
+
+---@alias CcbPlatformDialogueResponses CcbPlatformDialogueResponseDescriptor[]|fun(context: PlatformDialogueContext): CcbPlatformDialogueResponseDescriptor[]
+
+---@class CcbPlatformDialogueTopicDescriptor
+---@field id string Native dialogue topic id.
+---@field dynamic_line string|fun(context: PlatformDialogueContext): string
+---@field responses CcbPlatformDialogueResponses
+
+---@class CcbPlatformDialogueExtensionDescriptor
+---@field id string Native dialogue topic id to extend.
+---@field insert_before_standard_exits? boolean Insert responses before the native standard exits.
+---@field responses CcbPlatformDialogueResponses
+
+---@class CcbPlatformDialogueLimits
+---@field topics integer
+---@field extensions integer
+---@field responses_per_topic integer
+---@field id_bytes integer
+---@field text_bytes integer
+
+---@class CcbPlatformDialogueApi
+local CcbPlatformDialogueApi = {}
+
+---@param descriptor CcbPlatformDialogueTopicDescriptor
+---@return integer registration_id
+function CcbPlatformDialogueApi.register_topic(descriptor) end
+
+---@param descriptor CcbPlatformDialogueExtensionDescriptor
+---@return integer registration_id
+function CcbPlatformDialogueApi.extend_topic(descriptor) end
+
+---@return CcbPlatformDialogueLimits
+function CcbPlatformDialogueApi.limits() end
 
 ---@class CcbPlatformDialogueRenderHook
 ---@field avatar GameHandle The avatar participating in the dialogue.
@@ -4108,6 +4178,7 @@ function CcbPlatformMapgenApi.on_postprocess(handler_id, options) end
 ---@field recipes CcbPlatformRecipesApi
 ---@field relocation CcbRelocationApi
 ---@field requirements CcbRequirementsApi
+---@field registry CcbRegistryApi Read-only native definition registry.
 ---@field serde CcbSerdeApi
 ---@field skills CcbSkillsApi
 ---@field sound CcbSoundApi
@@ -4532,6 +4603,7 @@ function CcbPlatformServices.nearby_creatures_snapshot(radius, limit) end
 ---@field ModDefinition fun(options: ModDefinitionOptions): ModDefinition
 ---@field content CcbPlatformContent
 ---@field runtime CcbPlatformRuntime
+---@field dialogue CcbPlatformDialogueApi
 ---@field state CcbPlatformState
 ---@field tasks CcbPlatformTasks
 ---@field presentation CcbPlatformPresentation

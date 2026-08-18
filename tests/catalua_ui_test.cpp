@@ -22553,6 +22553,214 @@ game.dialogue.register_topic({
     CHECK( error.find( "game.dialogue" ) != std::string::npos );
 }
 
+TEST_CASE( "lua_first_dialogue_composes_native_topics_and_preserves_order_trade",
+           "[lua][platform][dialogue][integration]" )
+{
+    using namespace cata::lua_ui;
+
+    cata::lua_platform::shutdown();
+    JsonObject base_topic = json_loader::from_string( R"json({
+        "id": "TALK_PLATFORM_DIALOGUE_BASE",
+        "type": "talk_topic",
+        "dynamic_line": "Platform base JSON line.",
+        "responses": [
+            { "text": "Original platform response.", "topic": "TALK_NONE" },
+            { "text": "<end_talking_leave>", "topic": "TALK_DONE" }
+        ]
+    })json" );
+    load_talk_topic( base_topic, "platform dialogue test" );
+
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    standard_npc test_npc(
+        "Lua-first dialogue NPC",
+        player.pos_bub( here ) + tripoint_rel_ms::east * 2 );
+
+    scoped_platform_test_mod platform_mod( "ccb_platform_declarative_dialogue" );
+    platform_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local stock = ccb.content.ItemGroup {
+    id = "ccb_platform_dialogue_charged_ammo",
+    kind = "distribution",
+}
+stock:entry {
+    item = "9mm",
+    probability = 100,
+    charges = { 400, 500 },
+}
+ccb.content.add(stock)
+
+local migrated_stock = ccb.content.ItemGroup {
+    id = "ccb_platform_dialogue_migrated_ammo",
+    kind = "distribution",
+}
+migrated_stock:entry {
+    item = "shot_he",
+    probability = 100,
+}
+ccb.content.add(migrated_stock)
+
+ccb.dialogue.extend_topic {
+    id = "TALK_PLATFORM_DIALOGUE_BASE",
+    insert_before_standard_exits = true,
+    responses = function(ctx)
+        assert(ctx:valid())
+        assert(ctx:topic() == "TALK_PLATFORM_DIALOGUE_BASE")
+        return {
+            { text = "Platform extension response.", topic = "TALK_PLATFORM_DIALOGUE_TOPIC" }
+        }
+    end,
+}
+
+ccb.dialogue.register_topic {
+    id = "TALK_PLATFORM_DIALOGUE_TOPIC",
+    dynamic_line = function(ctx)
+        ctx:set("platform_dialogue_seen", "yes")
+        return "Platform generated line " .. ctx:get("platform_dialogue_seen")
+    end,
+    responses = function(ctx)
+        assert(ctx:get("platform_dialogue_seen") == "yes")
+        local definition = ccb.services.registry.get("item", "bottle_glass")
+        assert(definition and definition.name)
+        assert(ctx:quote_trade_item("bottle_glass", 2, "platform_quote"))
+        assert(ctx:get("platform_quote_item_id") == "bottle_glass")
+        assert(ctx:get("platform_quote_count") == 2)
+        assert(tonumber(ctx:get("platform_quote_cost")) > 0)
+        assert(ctx:quote_trade_item("shot_he", 2, "platform_migrated_quote"))
+        assert(ctx:get("platform_migrated_quote_item_id") == "shot_dragon")
+        return {
+            {
+                text = "Platform generated response.",
+                topic = "TALK_DONE",
+                on_select = function(select_ctx)
+                    select_ctx:set("platform_dialogue_choice", "picked")
+                    return { topic = "TALK_PLATFORM_DIALOGUE_AFTER_SELECT" }
+                end,
+            }
+        }
+    end,
+}
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { platform_mod.source( "ccb_platform_declarative_dialogue" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    const item_group::ItemList stock = item_group::items_from(
+                                           item_group_id(
+                                               "ccb_platform_dialogue_charged_ammo" ) );
+    REQUIRE( stock.size() == 1 );
+    CHECK( stock.front().typeId() == itype_id( "9mm" ) );
+    CHECK( stock.front().charges >= 400 );
+    CHECK( stock.front().charges <= 500 );
+
+    const item_group::ItemList migrated_stock = item_group::items_from(
+            item_group_id( "ccb_platform_dialogue_migrated_ammo" ) );
+    REQUIRE( migrated_stock.size() == 1 );
+    CHECK( migrated_stock.front().typeId() == itype_id( "shot_dragon" ) );
+
+    dialogue base_dialogue( get_talker_for( player ), get_talker_for( test_npc ) );
+    const talk_topic base_topic_id( "TALK_PLATFORM_DIALOGUE_BASE" );
+    CHECK( base_dialogue.dynamic_line( base_topic_id ) == "Platform base JSON line." );
+    base_dialogue.gen_responses( base_topic_id );
+    REQUIRE( base_dialogue.responses.size() == 3 );
+    CHECK( base_dialogue.responses[0].success.next_topic.id ==
+           "TALK_PLATFORM_DIALOGUE_TOPIC" );
+    CHECK( base_dialogue.responses[1].success.next_topic.id == "TALK_NONE" );
+    CHECK( base_dialogue.responses[2].success.next_topic.id == "TALK_DONE" );
+
+    dialogue platform_dialogue( get_talker_for( player ), get_talker_for( test_npc ) );
+    const talk_topic platform_topic_id( "TALK_PLATFORM_DIALOGUE_TOPIC" );
+    CHECK( platform_dialogue.dynamic_line( platform_topic_id ) ==
+           "Platform generated line yes" );
+    platform_dialogue.gen_responses( platform_topic_id );
+    REQUIRE( platform_dialogue.responses.size() == 1 );
+    talk_response &response = platform_dialogue.responses.front();
+    response.create_option_line( platform_dialogue, input_event() );
+    CHECK( response.text == "Platform generated response." );
+    REQUIRE( response.lua_response_id.has_value() );
+    talk_topic next_topic = response.success.apply( platform_dialogue );
+    next_topic = apply_lua_dialogue_response(
+                     platform_dialogue, *response.lua_response_id, next_topic );
+    CHECK( next_topic.id == "TALK_PLATFORM_DIALOGUE_AFTER_SELECT" );
+    CHECK( platform_dialogue.get_value( "platform_dialogue_choice" ).str() == "picked" );
+}
+
+TEST_CASE( "lua_first_dialogue_rejects_mixed_topic_registration_styles",
+           "[lua][platform][dialogue]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod platform_mod( "ccb_platform_dialogue_conflict" );
+    SECTION( "declarative registration after named handler" ) {
+        platform_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+ccb.runtime.dialogue_topic("TALK_PLATFORM_DIALOGUE_CONFLICT", "legacy_handler")
+ccb.dialogue.register_topic {
+    id = "TALK_PLATFORM_DIALOGUE_CONFLICT",
+    dynamic_line = "This must not register.",
+    responses = {},
+}
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+                         { platform_mod.source( "ccb_platform_dialogue_conflict" ) }, error ) );
+        CHECK( error.find( "conflicts with ccb.runtime.dialogue_topic" ) != std::string::npos );
+    }
+    SECTION( "named handler registration after declarative" ) {
+        platform_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+ccb.dialogue.register_topic {
+    id = "TALK_PLATFORM_DIALOGUE_CONFLICT",
+    dynamic_line = "This must not register.",
+    responses = {},
+}
+ccb.runtime.dialogue_topic("TALK_PLATFORM_DIALOGUE_CONFLICT", "legacy_handler")
+)lua" );
+
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+                         { platform_mod.source( "ccb_platform_dialogue_conflict" ) }, error ) );
+        CHECK( error.find( "conflicts with ccb.dialogue.register_topic" ) != std::string::npos );
+    }
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_item_groups_skip_unavailable_items_without_rejecting_the_group",
+           "[lua][platform][content][item_group][validation]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod platform_mod( "ccb_platform_deferred_item_group" );
+    platform_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local stock = ccb.content.ItemGroup {
+    id = "ccb_platform_deferred_item_group",
+    kind = "distribution",
+}
+stock:entry { item = "ccb_platform_unknown_item", probability = 100 }
+ccb.content.add(stock)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { platform_mod.source( "ccb_platform_deferred_item_group" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    CHECK( item_group::items_from(
+               item_group_id( "ccb_platform_deferred_item_group" ) ).empty() );
+    cata::lua_platform::discard_prepared_mods();
+}
+
 TEST_CASE( "lua_v5_craft_and_explosion_hooks_run_at_native_boundaries",
            "[lua][bindings][hooks][craft][explosion][integration]" )
 {
