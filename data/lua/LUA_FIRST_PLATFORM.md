@@ -999,14 +999,16 @@ handles, characters, creatures, effects, bionics, mutations, skills,
 proficiencies, vitamins, addictions, needs, martial arts, items, inventory,
 vehicles, NPCs, factions, camps, zones, spells, missions, recipes, crafting,
 map/world/overmap/hordes, weather, statistics, variables, sound, targeting,
-spawning, followers, and relocation.  These are shared C++ implementations,
+spawning, followers, relocation, and the read-only native definition snapshot
+registry at `ccb.services.registry`.  These are shared C++ implementations,
 not calls into a v5 Lua state.  Platform deliberately does not install the v5
 EOC table, authored JSON registry, or capability surface.  Reads require
 `world_ready`; mutations additionally require an active Platform callback.
 
-当前 Platform state 已在 `ccb.services` 下安装上述原生领域服务。它们共享的是 C++
-实现，不会调用另一个 v5 Lua state；Platform 明确不安装 v5 的 EOC table、作者 JSON
-registry 或 capability 表。读取要求世界已就绪，修改还要求当前处于 Platform 回调。
+当前 Platform state 已在 `ccb.services` 下安装上述原生领域服务，其中
+`ccb.services.registry` 是只读的原生定义快照 registry。它们共享的是 C++ 实现，
+不会调用另一个 v5 Lua state；Platform 明确不安装 v5 的 EOC table、作者 JSON registry
+或 capability 表。读取要求世界已就绪，修改还要求当前处于 Platform 回调。
 
 Coordinates embedded in definition-policy and event callback payloads are
 detached plain Lua tables, not borrowed native coordinate objects and not
@@ -1059,15 +1061,26 @@ Lua API v5 dispatcher keeps its own compatibility payload unchanged and runs
 before Platform, so its candidate result is visible through
 `payload.results` without becoming Platform's authoring vocabulary.
 
-Lua-owned dialogue topics use `ccb.runtime.dialogue_topic(topic_id, handler_id)`
-to render inside the native NPC dialogue window.  The named
+Lua-owned dialogue topics may use `ccb.runtime.dialogue_topic(topic_id,
+handler_id)` to render inside the native NPC dialogue window.  The named
 handler receives generation-bound `avatar` and `interlocutor` handles plus the
 current `topic`.  It is called with `phase = "line"` to return one non-empty
 string and with `phase = "responses"` to return a bounded dense array of
-`{ text = string, topic = string? }` descriptors.  Topic transitions and
-selection-side effects remain explicit native dialogue hooks; this API does
-not expose borrowed `dialogue` pointers, JSON talk-topic objects, or EOC
-execution.
+`{ text = string, topic = string? }` descriptors.  This is the low-level
+named-handler interface; a topic ID cannot also be registered through
+`ccb.dialogue.register_topic`.
+
+For normal authored dialogue, `ccb.dialogue.register_topic` and
+`ccb.dialogue.extend_topic` use the established Lua dialogue descriptor shape:
+`dynamic_line` and `responses` may be static values or functions receiving a
+callback-scoped `PlatformDialogueContext`; each response may use
+`on_select(context)` to change context values or override its next topic.
+The context offers bounded value access plus `quote_trade_item` and
+`buy_quoted_item`, which preserve native NPC order pricing, payment, and item
+delivery semantics without exposing a borrowed `dialogue` pointer.  Extensions
+compose with native responses in Mod dependency order and may opt into
+`insert_before_standard_exits`.  Neither dialogue API publishes JSON
+talk-topic objects or an EOC execution entry point.
 
 `ccb.runtime.hook` 将命名 handler 接到受检的同步 Hook 目录；payload 中的活对象只以
 代次绑定 handle 或快照跨界。只有 Hook 契约声明过的否决、文本、替换值或菜单结果才会
@@ -1087,12 +1100,20 @@ execution.
 Platform 运行；它产生的候选结果只通过 `payload.results` 进入 Platform，不会成为新的
 作者词汇。
 
-Lua 自有对话主题通过 `ccb.runtime.dialogue_topic(topic_id, handler_id)` 在原生 NPC
+Lua 自有对话主题可通过 `ccb.runtime.dialogue_topic(topic_id, handler_id)` 在原生 NPC
 对话窗口中渲染。命名 handler 得到受代次约束的 `avatar`、`interlocutor` handle 与当前
 `topic`；`phase = "line"` 时返回一个非空字符串，`phase = "responses"` 时返回有界、
-从 1 开始且无空洞的 `{ text = string, topic = string? }` 数组。主题跳转和选项副作用仍
-由显式原生对话 Hook 处理；该 API 不暴露借用的 `dialogue` 指针、JSON talk-topic 对象，
-也不提供 EOC 执行入口。
+从 1 开始且无空洞的 `{ text = string, topic = string? }` 数组。这是底层的命名 handler
+接口；同一 topic ID 不可再通过 `ccb.dialogue.register_topic` 注册。
+
+常规作者对话使用 `ccb.dialogue.register_topic` 与
+`ccb.dialogue.extend_topic`，其 `dynamic_line` 和 `responses` 沿用既有 Lua 对话描述符
+形状：既可为静态值，也可为接收回调作用域 `PlatformDialogueContext` 的函数；每个
+response 可用 `on_select(context)` 修改上下文或覆盖下一主题。该上下文提供有界值访问及
+`quote_trade_item` / `buy_quoted_item`，并在不暴露借用 `dialogue` 指针的前提下保持原生
+NPC 订单定价、付款和物品交付语义。扩展按 Mod 依赖顺序与原生 response 合成，并可设
+`insert_before_standard_exits`。两套对话 API 都不发布 JSON talk-topic 对象，也不提供
+EOC 执行入口。
 
 Dialogue predicate queries are ordinary bounded snapshots over the same
 domain services instead of per-key condition functions.  A character

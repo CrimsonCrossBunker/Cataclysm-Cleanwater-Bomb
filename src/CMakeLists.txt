@@ -47,6 +47,7 @@ file(GLOB CATACLYSM_DDA_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/cata_allocator_c.c)
 
 set(CATALUA_UI_ENABLED_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_dialogue_common.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_actions.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_events.cpp
