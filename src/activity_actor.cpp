@@ -10961,7 +10961,7 @@ void firstaid_activity_actor::finish( player_activity &act, Character &who )
     act.set_to_null();
     act.values.clear();
 
-    if( who.is_avatar() ) {
+    if( who.is_avatar() && patient->is_avatar() ) {
         uistate.open_menu = []() {
             avatar_action::eat_or_use( get_avatar(),
                                        game_menus::inv::consume( uistate.consume_uistate.consume_menu_comestype ) );
