@@ -163,8 +163,11 @@
 #include "npc.h"
 #include "npctrade.h"
 #include "omdata.h"
+#include "options.h"
 #include "overmap_location.h"
+#include "overmap_map_data_cache.h"
 #include "overmap_connection.h"
+#include "overmap_worldgen.h"
 #include "output.h"
 #include "overlay_ordering.h"
 #include "proficiency.h"
@@ -7267,6 +7270,218 @@ struct region_settings_definition_handle {
     }
 };
 
+detail::option_slider_native_level read_option_slider_level(
+    const sol::table &value )
+{
+    detail::option_slider_native_level result;
+    const sol::object level_value = value.raw_get<sol::object>( "level" );
+    const sol::object name_value = value.raw_get<sol::object>( "name" );
+    if( !level_value.is<lua_Integer>() || !name_value.is<std::string>() ) {
+        throw std::runtime_error(
+            "option slider levels require a native integer level and string name" );
+    }
+    result.level = level_value.as<std::int64_t>();
+    result.name = name_value.as<std::string>();
+    result.description = value.get_or( "description", std::string() );
+
+    const sol::optional<sol::table> options =
+        value.get<sol::optional<sol::table>>( "options" );
+    if( !options ) {
+        return result;
+    }
+    const std::size_t count = require_dense_array(
+                                  *options, "option slider level options", 0, 512 );
+    result.options.reserve( count );
+    for( std::size_t index = 1; index <= count; ++index ) {
+        const sol::object entry = options->raw_get<sol::object>( index );
+        if( !entry.is<sol::table>() ) {
+            throw std::runtime_error( "option slider options must be tables" );
+        }
+        const sol::table option = entry.as<sol::table>();
+        detail::option_slider_native_option native_option;
+        native_option.option = option.get_or( "option", std::string() );
+        native_option.type = option.get_or( "type", std::string() );
+        const sol::object option_value = option.raw_get<sol::object>( "value" );
+        if( native_option.type == "int" ) {
+            if( !option_value.is<lua_Integer>() ) {
+                throw std::runtime_error(
+                    "option slider int values must be native integers" );
+            }
+            const std::int64_t integer = option_value.as<std::int64_t>();
+            if( !fits_native_int( integer ) ) {
+                throw std::runtime_error(
+                    "option slider int value is outside the native range" );
+            }
+            native_option.value = std::to_string( integer );
+        } else if( native_option.type == "float" ) {
+            if( !option_value.is<double>() ) {
+                throw std::runtime_error( "option slider float values must be numbers" );
+            }
+            const double number = option_value.as<double>();
+            if( !std::isfinite( number ) ) {
+                throw std::runtime_error( "option slider float values must be finite" );
+            }
+            std::ostringstream stream;
+            stream << std::setprecision( std::numeric_limits<double>::max_digits10 ) << number;
+            native_option.value = stream.str();
+        } else if( native_option.type == "bool" ) {
+            if( !option_value.is<bool>() ) {
+                throw std::runtime_error( "option slider bool values must be booleans" );
+            }
+            native_option.value = option_value.as<bool>() ? "true" : "false";
+        } else if( native_option.type == "string" ) {
+            if( !option_value.is<std::string>() ) {
+                throw std::runtime_error( "option slider string values must be strings" );
+            }
+            native_option.value = option_value.as<std::string>();
+        } else {
+            throw std::runtime_error( "option slider option has unknown value type '" +
+                                      native_option.type + "'" );
+        }
+        result.options.push_back( std::move( native_option ) );
+    }
+    return result;
+}
+
+struct option_slider_definition_handle {
+    std::shared_ptr<detail::option_slider_native_definition> definition;
+    std::shared_ptr<owner_token> token;
+
+    option_slider_definition_handle &name( const std::string &value ) {
+        require_building_handle( token, *definition, "option slider" );
+        definition->name = value;
+        return *this;
+    }
+
+    option_slider_definition_handle &context( const std::string &value ) {
+        require_building_handle( token, *definition, "option slider" );
+        definition->context = value;
+        return *this;
+    }
+
+    option_slider_definition_handle &default_level( const std::int64_t value ) {
+        require_building_handle( token, *definition, "option slider" );
+        definition->default_level = value;
+        return *this;
+    }
+
+    option_slider_definition_handle &levels( const sol::table &values ) {
+        require_building_handle( token, *definition, "option slider" );
+        const std::size_t count = require_dense_array(
+                                      values, "option slider levels", 1, 256 );
+        definition->levels.clear();
+        definition->levels.reserve( count );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            const sol::object value = values.raw_get<sol::object>( index );
+            if( !value.is<sol::table>() ) {
+                throw std::runtime_error( "option slider levels must be tables" );
+            }
+            definition->levels.push_back(
+                read_option_slider_level( value.as<sol::table>() ) );
+        }
+        return *this;
+    }
+
+    option_slider_definition_handle &level( const sol::table &value ) {
+        require_building_handle( token, *definition, "option slider" );
+        detail::option_slider_native_level replacement = read_option_slider_level( value );
+        const auto found = std::find_if(
+                               definition->levels.begin(), definition->levels.end(),
+        [&replacement]( const detail::option_slider_native_level & existing ) {
+            return existing.level == replacement.level;
+        } );
+        if( found == definition->levels.end() ) {
+            if( definition->levels.size() >= 256 ) {
+                throw std::runtime_error( "option slider exceeds the Platform level limit" );
+            }
+            definition->levels.push_back( std::move( replacement ) );
+        } else {
+            *found = std::move( replacement );
+        }
+        return *this;
+    }
+
+    std::string id() const {
+        require_readable_handle( token, *definition, "option slider" );
+        return definition->id;
+    }
+};
+
+struct dimension_definition_handle {
+    std::shared_ptr<detail::dimension_native_definition> definition;
+    std::shared_ptr<owner_token> token;
+
+    dimension_definition_handle &region_layout( const std::string &value ) {
+        require_building_handle( token, *definition, "dimension" );
+        definition->region_layout = value;
+        return *this;
+    }
+
+    std::string id() const {
+        require_readable_handle( token, *definition, "dimension" );
+        return definition->id;
+    }
+};
+
+struct dimension_region_layout_definition_handle {
+    std::shared_ptr<detail::dimension_region_layout_native_definition> definition;
+    std::shared_ptr<owner_token> token;
+
+    dimension_region_layout_definition_handle &generation_mode(
+        const std::string &value ) {
+        require_building_handle( token, *definition, "dimension region layout" );
+        definition->generation_mode = value;
+        return *this;
+    }
+
+    dimension_region_layout_definition_handle &uniform_region(
+        const std::string &value ) {
+        require_building_handle( token, *definition, "dimension region layout" );
+        definition->uniform_region = value;
+        return *this;
+    }
+
+    std::string id() const {
+        require_readable_handle( token, *definition, "dimension region layout" );
+        return definition->id;
+    }
+};
+
+struct omt_placeholder_definition_data {
+    std::string id;
+    std::array<std::string, 24> grid;
+    bool grid_set = false;
+    bool registered = false;
+};
+
+struct omt_placeholder_definition_handle {
+    std::shared_ptr<omt_placeholder_definition_data> definition;
+    std::shared_ptr<owner_token> token;
+
+    omt_placeholder_definition_handle &grid( const sol::table &values ) {
+        require_building_handle( token, *definition, "overmap terrain placeholder" );
+        require_dense_array( values, "overmap terrain placeholder grid", 24, 24 );
+        for( std::size_t index = 1; index <= definition->grid.size(); ++index ) {
+            const std::string row = values.get<std::string>( index );
+            if( row.size() != 24 ||
+                std::any_of( row.begin(), row.end(), []( const char value ) {
+                return value != '0' && value != '1';
+            } ) ) {
+                throw std::runtime_error(
+                    "overmap terrain placeholder grid rows need exactly 24 binary cells" );
+            }
+            definition->grid[index - 1] = row;
+        }
+        definition->grid_set = true;
+        return *this;
+    }
+
+    std::string id() const {
+        require_readable_handle( token, *definition, "overmap terrain placeholder" );
+        return definition->id;
+    }
+};
+
 struct region_terrain_furniture_definition_data {
     std::string id;
     std::string ter_id;
@@ -8150,6 +8365,14 @@ using region_settings_highway_registration =
     catalog_registration<region_settings_highway_definition_data>;
 using region_settings_registration =
     catalog_registration<region_settings_definition_data>;
+using option_slider_registration =
+    catalog_registration<detail::option_slider_native_definition>;
+using dimension_registration =
+    catalog_registration<detail::dimension_native_definition>;
+using dimension_region_layout_registration =
+    catalog_registration<detail::dimension_region_layout_native_definition>;
+using omt_placeholder_registration =
+    catalog_registration<omt_placeholder_definition_data>;
 using region_terrain_furniture_registration =
     catalog_registration<region_terrain_furniture_definition_data>;
 using forest_biome_component_registration =
@@ -9008,6 +9231,10 @@ struct content_transaction::impl {
     std::vector<region_settings_forest_trail_registration> region_settings_forest_trails;
     std::vector<region_settings_highway_registration> region_settings_highways;
     std::vector<region_settings_registration> region_settings;
+    std::vector<option_slider_registration> option_sliders;
+    std::vector<dimension_region_layout_registration> dimension_region_layouts;
+    std::vector<dimension_registration> dimensions;
+    std::vector<omt_placeholder_registration> omt_placeholders;
     std::vector<region_terrain_furniture_registration> region_terrain_furnitures;
     std::vector<forest_biome_component_registration> forest_biome_components;
     std::vector<city_registration> cities;
@@ -9180,6 +9407,14 @@ struct content_transaction::impl {
     region_settings_highway_undo;
     std::vector<std::pair<region_settings_id, std::optional<::region_settings>>>
     region_settings_undo;
+    std::vector<std::pair<option_slider_id, std::optional<option_slider>>>
+    option_slider_undo;
+    std::vector<std::pair<dimension_region_layout_id,
+        std::optional<dimension_region_layout>>> dimension_region_layout_undo;
+    std::vector<std::pair<dimension_id, std::optional<dimension_world>>>
+    dimension_undo;
+    std::vector<std::pair<string_id<map_data_summary>,
+        std::optional<map_data_summary>>> omt_placeholder_undo;
     std::vector<std::pair<region_terrain_furniture_id, std::optional<region_terrain_furniture>>>
     region_terrain_furniture_undo;
     std::vector<std::pair<forest_biome_component_id, std::optional<forest_biome_component>>>
@@ -11007,6 +11242,27 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         "neighbor_connections", &region_settings_definition_handle::neighbor_connections,
         "max_urbanity", &region_settings_definition_handle::max_urbanity,
         "urbanity_increase", &region_settings_definition_handle::urbanity_increase );
+    ccb.new_usertype<option_slider_definition_handle>(
+        "OptionSliderDefinition", sol::no_constructor,
+        "id", sol::property( &option_slider_definition_handle::id ),
+        "name", &option_slider_definition_handle::name,
+        "context", &option_slider_definition_handle::context,
+        "default_level", &option_slider_definition_handle::default_level,
+        "levels", &option_slider_definition_handle::levels,
+        "level", &option_slider_definition_handle::level );
+    ccb.new_usertype<dimension_region_layout_definition_handle>(
+        "DimensionRegionLayoutDefinition", sol::no_constructor,
+        "id", sol::property( &dimension_region_layout_definition_handle::id ),
+        "generation_mode", &dimension_region_layout_definition_handle::generation_mode,
+        "uniform_region", &dimension_region_layout_definition_handle::uniform_region );
+    ccb.new_usertype<dimension_definition_handle>(
+        "DimensionDefinition", sol::no_constructor,
+        "id", sol::property( &dimension_definition_handle::id ),
+        "region_layout", &dimension_definition_handle::region_layout );
+    ccb.new_usertype<omt_placeholder_definition_handle>(
+        "OmtPlaceholderDefinition", sol::no_constructor,
+        "id", sol::property( &omt_placeholder_definition_handle::id ),
+        "grid", &omt_placeholder_definition_handle::grid );
     ccb.new_usertype<region_terrain_furniture_definition_handle>(
         "RegionTerrainFurnitureDefinition", sol::no_constructor,
         "id", sol::property( &region_terrain_furniture_definition_handle::id ),
@@ -13323,6 +13579,58 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         }
         return handle;
     } );
+    content.set_function( "OptionSlider", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<detail::option_slider_native_definition>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->name = options.get_or( "name", std::string() );
+        definition->context = options.get_or( "context", std::string() );
+        definition->default_level = options.get_or<std::int64_t>( "default_level", 0 );
+        option_slider_definition_handle handle{ definition, transaction->token };
+        if( const sol::optional<sol::table> levels =
+                options.get<sol::optional<sol::table>>( "levels" ) ) {
+            handle.levels( *levels );
+        }
+        return handle;
+    } );
+    content.set_function( "DimensionRegionLayout", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition =
+            std::make_shared<detail::dimension_region_layout_native_definition>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->generation_mode = options.get_or(
+                                          "generation_mode", std::string( "UNIFORM" ) );
+        definition->uniform_region = options.get_or( "uniform_region", std::string() );
+        return dimension_region_layout_definition_handle{
+            std::move( definition ), transaction->token
+        };
+    } );
+    content.set_function( "Dimension", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<detail::dimension_native_definition>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->region_layout = options.get_or( "region_layout", std::string() );
+        return dimension_definition_handle{ std::move( definition ), transaction->token };
+    } );
+    content.set_function( "OmtPlaceholder", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<omt_placeholder_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        omt_placeholder_definition_handle handle{ definition, transaction->token };
+        if( const sol::optional<sol::table> grid =
+                options.get<sol::optional<sol::table>>( "grid" ) ) {
+            handle.grid( *grid );
+        }
+        return handle;
+    } );
     content.set_function( "RegionTerrainFurniture", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
@@ -14235,6 +14543,30 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
                               "region settings" );
             return;
         }
+        if( value.is<option_slider_definition_handle>() ) {
+            register_catalog( value.as<option_slider_definition_handle>(),
+                              transaction->option_sliders, operation,
+                              "option slider" );
+            return;
+        }
+        if( value.is<dimension_region_layout_definition_handle>() ) {
+            register_catalog( value.as<dimension_region_layout_definition_handle>(),
+                              transaction->dimension_region_layouts, operation,
+                              "dimension region layout" );
+            return;
+        }
+        if( value.is<dimension_definition_handle>() ) {
+            register_catalog( value.as<dimension_definition_handle>(),
+                              transaction->dimensions, operation,
+                              "dimension" );
+            return;
+        }
+        if( value.is<omt_placeholder_definition_handle>() ) {
+            register_catalog( value.as<omt_placeholder_definition_handle>(),
+                              transaction->omt_placeholders, operation,
+                              "overmap terrain placeholder" );
+            return;
+        }
         if( value.is<region_terrain_furniture_definition_handle>() ) {
             register_catalog( value.as<region_terrain_furniture_definition_handle>(),
                               transaction->region_terrain_furnitures, operation,
@@ -14918,6 +15250,35 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
     const std::string & id ) {
         return region_settings_definition_handle{
             edit_catalog( id, transaction->region_settings, "region_settings" ),
+            transaction->token
+        };
+    } );
+    content.set_function( "edit_option_slider", [transaction, edit_catalog](
+    const std::string & id ) {
+        return option_slider_definition_handle{
+            edit_catalog( id, transaction->option_sliders, "option_slider" ),
+            transaction->token
+        };
+    } );
+    content.set_function( "edit_dimension_region_layout", [transaction, edit_catalog](
+    const std::string & id ) {
+        return dimension_region_layout_definition_handle{
+            edit_catalog( id, transaction->dimension_region_layouts,
+                          "dimension_region_layout" ),
+            transaction->token
+        };
+    } );
+    content.set_function( "edit_dimension", [transaction, edit_catalog](
+    const std::string & id ) {
+        return dimension_definition_handle{
+            edit_catalog( id, transaction->dimensions, "dimension" ),
+            transaction->token
+        };
+    } );
+    content.set_function( "edit_omt_placeholder", [transaction, edit_catalog](
+    const std::string & id ) {
+        return omt_placeholder_definition_handle{
+            edit_catalog( id, transaction->omt_placeholders, "omt_placeholder" ),
             transaction->token
         };
     } );
@@ -20353,6 +20714,112 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                 definition.id, "region settings" );
         }
 
+        std::set<std::string> option_slider_ids;
+        for( const option_slider_registration &entry : pimpl_->option_sliders ) {
+            const detail::option_slider_native_definition &definition = *entry.definition;
+            require_valid_id( definition.id, "option slider" );
+            if( definition.name.empty() ||
+                !option_slider_ids.insert( definition.id ).second ) {
+                throw std::runtime_error( "option slider '" + definition.id +
+                                          "' requires a name and one registration per transaction" );
+            }
+            if( definition.levels.empty() || definition.levels.size() > 256 ||
+                !native_int( definition.default_level ) ) {
+                throw std::runtime_error( "option slider '" + definition.id +
+                                          "' has invalid levels or default level" );
+            }
+            std::set<std::int64_t> levels;
+            for( const detail::option_slider_native_level &level : definition.levels ) {
+                if( !native_int( level.level ) || level.level < 0 ||
+                    static_cast<std::size_t>( level.level ) >= definition.levels.size() ||
+                    level.name.empty() || !levels.insert( level.level ).second ) {
+                    throw std::runtime_error( "option slider '" + definition.id +
+                                              "' needs unique dense numbered levels with names" );
+                }
+                if( level.options.size() > 512 ) {
+                    throw std::runtime_error( "option slider '" + definition.id +
+                                              "' exceeds the Platform option limit" );
+                }
+                for( const detail::option_slider_native_option &option : level.options ) {
+                    if( option.option.empty() ||
+                        ( option.type != "int" && option.type != "float" &&
+                          option.type != "bool" && option.type != "string" ) ) {
+                        throw std::runtime_error( "option slider '" + definition.id +
+                                                  "' has an invalid option entry" );
+                    }
+                }
+            }
+            if( levels.count( definition.default_level ) == 0 ) {
+                throw std::runtime_error( "option slider '" + definition.id +
+                                          "' default level is not defined" );
+            }
+            validate_operation( entry.operation,
+                                option_slider_id( definition.id ).is_valid(),
+                                definition.id, "option slider" );
+        }
+
+        std::set<std::string> dimension_region_layout_ids;
+        for( const dimension_region_layout_registration &entry :
+             pimpl_->dimension_region_layouts ) {
+            const detail::dimension_region_layout_native_definition &definition =
+                *entry.definition;
+            require_valid_id( definition.id, "dimension region layout" );
+            if( !dimension_region_layout_ids.insert( definition.id ).second ) {
+                throw std::runtime_error( "dimension region layout '" + definition.id +
+                                          "' is registered more than once per transaction" );
+            }
+            if( definition.generation_mode != "UNIFORM" ) {
+                throw std::runtime_error( "dimension region layout '" + definition.id +
+                                          "' only supports the native UNIFORM mode" );
+            }
+            require_valid_id( definition.uniform_region, "uniform region" );
+            if( check_engine_state &&
+                region_settings_ids.count( definition.uniform_region ) == 0 &&
+                !region_settings_id( definition.uniform_region ).is_valid() ) {
+                throw std::runtime_error( "dimension region layout '" + definition.id +
+                                          "' references unknown region settings '" +
+                                          definition.uniform_region + "'" );
+            }
+            validate_operation( entry.operation,
+                                dimension_region_layout_id( definition.id ).is_valid(),
+                                definition.id, "dimension region layout" );
+        }
+
+        std::set<std::string> dimension_ids;
+        for( const dimension_registration &entry : pimpl_->dimensions ) {
+            const detail::dimension_native_definition &definition = *entry.definition;
+            require_valid_id( definition.id, "dimension" );
+            if( !dimension_ids.insert( definition.id ).second ) {
+                throw std::runtime_error( "dimension '" + definition.id +
+                                          "' is registered more than once per transaction" );
+            }
+            require_valid_id( definition.region_layout, "dimension region layout" );
+            if( check_engine_state &&
+                dimension_region_layout_ids.count( definition.region_layout ) == 0 &&
+                !dimension_region_layout_id( definition.region_layout ).is_valid() ) {
+                throw std::runtime_error( "dimension '" + definition.id +
+                                          "' references unknown region layout '" +
+                                          definition.region_layout + "'" );
+            }
+            validate_operation( entry.operation,
+                                dimension_id( definition.id ).is_valid(),
+                                definition.id, "dimension" );
+        }
+
+        std::set<std::string> omt_placeholder_ids;
+        for( const omt_placeholder_registration &entry : pimpl_->omt_placeholders ) {
+            const omt_placeholder_definition_data &definition = *entry.definition;
+            require_valid_id( definition.id, "overmap terrain placeholder" );
+            if( !definition.grid_set ||
+                !omt_placeholder_ids.insert( definition.id ).second ) {
+                throw std::runtime_error( "overmap terrain placeholder '" + definition.id +
+                                          "' requires a 24 by 24 grid and one registration per transaction" );
+            }
+            validate_operation( entry.operation,
+                                string_id<map_data_summary>( definition.id ).is_valid(),
+                                definition.id, "overmap terrain placeholder" );
+        }
+
         error.clear();
         return true;
     } catch( const std::exception &exception ) {
@@ -24406,6 +24873,61 @@ bool content_transaction::apply( std::string &error )
             detail::region_settings_registry().finalize();
         }
 
+        for( const option_slider_registration &entry : pimpl_->option_sliders ) {
+            const option_slider_id id( entry.definition->id );
+            pimpl_->option_slider_undo.emplace_back(
+                id, id.is_valid() ? std::optional<option_slider>( id.obj() ) : std::nullopt );
+            detail::option_slider_registry().insert(
+                detail::make_option_slider_native( *entry.definition ) );
+        }
+        if( !pimpl_->option_sliders.empty() ) {
+            detail::option_slider_registry().finalize();
+        }
+
+        for( const dimension_region_layout_registration &entry :
+             pimpl_->dimension_region_layouts ) {
+            const dimension_region_layout_id id( entry.definition->id );
+            pimpl_->dimension_region_layout_undo.emplace_back(
+                id, id.is_valid() ? std::optional<dimension_region_layout>( id.obj() ) :
+                std::nullopt );
+            detail::dimension_region_layout_registry().insert(
+                detail::make_dimension_region_layout_native( *entry.definition ) );
+        }
+        if( !pimpl_->dimension_region_layouts.empty() ) {
+            detail::dimension_region_layout_registry().finalize();
+        }
+
+        for( const dimension_registration &entry : pimpl_->dimensions ) {
+            const dimension_id id( entry.definition->id );
+            pimpl_->dimension_undo.emplace_back(
+                id, id.is_valid() ? std::optional<dimension_world>( id.obj() ) : std::nullopt );
+            detail::dimension_registry().insert(
+                detail::make_dimension_native( *entry.definition ) );
+        }
+        if( !pimpl_->dimensions.empty() ) {
+            detail::dimension_registry().finalize();
+        }
+
+        for( const omt_placeholder_registration &entry : pimpl_->omt_placeholders ) {
+            const string_id<map_data_summary> id( entry.definition->id );
+            pimpl_->omt_placeholder_undo.emplace_back(
+                id, id.is_valid() ? std::optional<map_data_summary>( id.obj() ) : std::nullopt );
+            map_data_summary native;
+            native.id = id;
+            native.placeholder = true;
+            std::size_t cell = 0;
+            for( const std::string &row : entry.definition->grid ) {
+                for( const char value : row ) {
+                    native.passable.set( cell++, value == '1' );
+                }
+            }
+            native.was_loaded = true;
+            detail::omt_placeholder_registry().insert( native );
+        }
+        if( !pimpl_->omt_placeholders.empty() ) {
+            detail::omt_placeholder_registry().finalize();
+        }
+
         for( const region_terrain_furniture_registration &entry :
              pimpl_->region_terrain_furnitures ) {
             const region_terrain_furniture_id id( entry.definition->id );
@@ -25443,6 +25965,35 @@ for( const region_settings_ocean_registration &entry : pimpl_->region_settings_o
             return false;
         }
     }
+    for( const option_slider_registration &entry : pimpl_->option_sliders ) {
+        if( !option_slider_id( entry.definition->id ).is_valid() ) {
+            error = "Lua-first option slider '" + entry.definition->id +
+                    "' did not survive global finalization";
+            return false;
+        }
+    }
+    for( const dimension_region_layout_registration &entry :
+         pimpl_->dimension_region_layouts ) {
+        if( !dimension_region_layout_id( entry.definition->id ).is_valid() ) {
+            error = "Lua-first dimension region layout '" + entry.definition->id +
+                    "' did not survive global finalization";
+            return false;
+        }
+    }
+    for( const dimension_registration &entry : pimpl_->dimensions ) {
+        if( !dimension_id( entry.definition->id ).is_valid() ) {
+            error = "Lua-first dimension '" + entry.definition->id +
+                    "' did not survive global finalization";
+            return false;
+        }
+    }
+    for( const omt_placeholder_registration &entry : pimpl_->omt_placeholders ) {
+        if( !string_id<map_data_summary>( entry.definition->id ).is_valid() ) {
+            error = "Lua-first overmap terrain placeholder '" + entry.definition->id +
+                    "' did not survive global finalization";
+            return false;
+        }
+    }
     for( const region_terrain_furniture_registration &entry :
          pimpl_->region_terrain_furnitures ) {
         if( !region_terrain_furniture_id( entry.definition->id ).is_valid() ) {
@@ -26331,6 +26882,58 @@ void content_transaction::rollback()
     }
     pimpl_->map_extra_collection_undo.clear();
 
+    for( auto it = pimpl_->omt_placeholder_undo.rbegin();
+         it != pimpl_->omt_placeholder_undo.rend(); ++it ) {
+        if( it->second ) {
+            detail::omt_placeholder_registry().restore( *it->second );
+        } else {
+            detail::omt_placeholder_registry().erase( it->first );
+        }
+    }
+    if( !pimpl_->omt_placeholder_undo.empty() ) {
+        detail::omt_placeholder_registry().finalize();
+    }
+    pimpl_->omt_placeholder_undo.clear();
+
+    for( auto it = pimpl_->dimension_undo.rbegin();
+         it != pimpl_->dimension_undo.rend(); ++it ) {
+        if( it->second ) {
+            detail::dimension_registry().restore( *it->second );
+        } else {
+            detail::dimension_registry().erase( it->first );
+        }
+    }
+    if( !pimpl_->dimension_undo.empty() ) {
+        detail::dimension_registry().finalize();
+    }
+    pimpl_->dimension_undo.clear();
+
+    for( auto it = pimpl_->dimension_region_layout_undo.rbegin();
+         it != pimpl_->dimension_region_layout_undo.rend(); ++it ) {
+        if( it->second ) {
+            detail::dimension_region_layout_registry().restore( *it->second );
+        } else {
+            detail::dimension_region_layout_registry().erase( it->first );
+        }
+    }
+    if( !pimpl_->dimension_region_layout_undo.empty() ) {
+        detail::dimension_region_layout_registry().finalize();
+    }
+    pimpl_->dimension_region_layout_undo.clear();
+
+    for( auto it = pimpl_->option_slider_undo.rbegin();
+         it != pimpl_->option_slider_undo.rend(); ++it ) {
+        if( it->second ) {
+            detail::option_slider_registry().restore( *it->second );
+        } else {
+            detail::option_slider_registry().erase( it->first );
+        }
+    }
+    if( !pimpl_->option_slider_undo.empty() ) {
+        detail::option_slider_registry().finalize();
+    }
+    pimpl_->option_slider_undo.clear();
+
     for( auto it = pimpl_->region_settings_undo.rbegin();
          it != pimpl_->region_settings_undo.rend(); ++it ) {
         if( it->second ) {
@@ -27053,6 +27656,10 @@ void content_transaction::commit()
     pimpl_->region_settings_forest_trail_undo.clear();
     pimpl_->region_settings_highway_undo.clear();
     pimpl_->region_settings_undo.clear();
+    pimpl_->option_slider_undo.clear();
+    pimpl_->dimension_region_layout_undo.clear();
+    pimpl_->dimension_undo.clear();
+    pimpl_->omt_placeholder_undo.clear();
     pimpl_->region_terrain_furniture_undo.clear();
     pimpl_->forest_biome_component_undo.clear();
     pimpl_->token->lifecycle = handle_lifecycle::committed;
@@ -28233,6 +28840,50 @@ std::string content_transaction::fingerprint() const
         hash_part( state, std::to_string( value.max_urbanity ) );
         for( const float increase : value.urbanity_increase ) {
             hash_part( state, std::to_string( increase ) );
+        }
+    }
+    for( const option_slider_registration &entry : pimpl_->option_sliders ) {
+        const detail::option_slider_native_definition &value = *entry.definition;
+        hash_part( state, "option_slider" );
+        hash_part( state, operation_name( entry.operation ) );
+        hash_part( state, value.id );
+        hash_part( state, value.name );
+        hash_part( state, value.context );
+        hash_part( state, std::to_string( value.default_level ) );
+        hash_part( state, std::to_string( value.levels.size() ) );
+        for( const detail::option_slider_native_level &level : value.levels ) {
+            hash_part( state, std::to_string( level.level ) );
+            hash_part( state, level.name );
+            hash_part( state, level.description );
+            hash_part( state, std::to_string( level.options.size() ) );
+            for( const detail::option_slider_native_option &option : level.options ) {
+                hash_part( state, option.option );
+                hash_part( state, option.type );
+                hash_part( state, option.value );
+            }
+        }
+    }
+    for( const dimension_region_layout_registration &entry :
+         pimpl_->dimension_region_layouts ) {
+        hash_part( state, "dimension_region_layout" );
+        hash_part( state, operation_name( entry.operation ) );
+        hash_part( state, entry.definition->id );
+        hash_part( state, entry.definition->generation_mode );
+        hash_part( state, entry.definition->uniform_region );
+    }
+    for( const dimension_registration &entry : pimpl_->dimensions ) {
+        hash_part( state, "dimension" );
+        hash_part( state, operation_name( entry.operation ) );
+        hash_part( state, entry.definition->id );
+        hash_part( state, entry.definition->region_layout );
+    }
+    for( const omt_placeholder_registration &entry : pimpl_->omt_placeholders ) {
+        hash_part( state, "omt_placeholder" );
+        hash_part( state, operation_name( entry.operation ) );
+        hash_part( state, entry.definition->id );
+        hash_part( state, entry.definition->grid_set ? "set" : "unset" );
+        for( const std::string &row : entry.definition->grid ) {
+            hash_part( state, row );
         }
     }
     for( const region_terrain_furniture_registration &entry :

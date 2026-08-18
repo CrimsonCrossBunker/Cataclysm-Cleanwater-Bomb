@@ -2788,20 +2788,282 @@ def render_achievement(source: SourceObject, result: MigrationResult) -> str | N
     return "\n".join(lines)
 
 
+def render_option_slider(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    slider_id = value.get("id")
+    if not bounded_platform_id(slider_id):
+        result.partial.append(f"{source.location}: option slider <invalid id>")
+        result.todos.append(
+            f"{source.location}: option slider needs a stable native id"
+        )
+        return None
+    todo_count = len(result.todos)
+    name = display_text(value.get("name"))
+    if not name:
+        result.todos.append(
+            f"{source.location}: option slider {slider_id} name needs review"
+        )
+        name = slider_id
+    context = value.get("context", "")
+    if not isinstance(context, str) or "\0" in context:
+        result.todos.append(
+            f"{source.location}: option slider {slider_id} context needs review"
+        )
+        context = ""
+    default_level = native_integer(value.get("default", 0), 0)
+    if default_level is None:
+        result.todos.append(
+            f"{source.location}: option slider {slider_id} default needs review"
+        )
+        default_level = 0
+
+    lines = [
+        "local definition = content.OptionSlider {",
+        f"    id = {lua_quote(slider_id)},",
+        f"    name = {lua_quote(name)},",
+    ]
+    if context:
+        lines.append(f"    context = {lua_quote(context)},")
+    lines.append(f"    default_level = {default_level},")
+    lines.append("    levels = {")
+
+    levels = value.get("levels")
+    if not isinstance(levels, list) or not levels:
+        result.todos.append(
+            f"{source.location}: option slider {slider_id} levels need review"
+        )
+        levels = []
+    for level_index, raw_level in enumerate(levels):
+        if not isinstance(raw_level, dict):
+            result.todos.append(
+                f"{source.location}: option slider {slider_id} level #{level_index} needs review"
+            )
+            continue
+        level = native_integer(raw_level.get("level"), 0)
+        level_name = display_text(raw_level.get("name"))
+        if level is None or not level_name:
+            result.todos.append(
+                f"{source.location}: option slider {slider_id} level #{level_index} needs review"
+            )
+            continue
+        unknown_level = unresolved_fields(
+            raw_level, {"level", "name", "description", "options"}
+        )
+        if unknown_level:
+            result.todos.append(
+                f"{source.location}: option slider {slider_id} level {level} unresolved fields: "
+                + ", ".join(unknown_level)
+            )
+        lines.extend((
+            "        {",
+            f"            level = {level},",
+            f"            name = {lua_quote(level_name)},",
+        ))
+        description = display_text(raw_level.get("description"))
+        if description:
+            lines.append(f"            description = {lua_quote(description)},")
+        elif "description" in raw_level:
+            result.todos.append(
+                f"{source.location}: option slider {slider_id} level {level} description needs review"
+            )
+
+        raw_options = raw_level.get("options", [])
+        if not isinstance(raw_options, list):
+            result.todos.append(
+                f"{source.location}: option slider {slider_id} level {level} options need review"
+            )
+            raw_options = []
+        lines.append("            options = {")
+        for option_index, raw_option in enumerate(raw_options):
+            if not isinstance(raw_option, dict):
+                result.todos.append(
+                    f"{source.location}: option slider {slider_id} level {level} option #{option_index} needs review"
+                )
+                continue
+            option_id = raw_option.get("option")
+            option_type = raw_option.get("type")
+            option_value = raw_option.get("val")
+            valid_value = (
+                option_type == "int" and
+                native_integer(option_value) is not None
+            ) or (
+                option_type == "float" and
+                finite_number_literal(option_value) is not None
+            ) or (
+                option_type == "bool" and isinstance(option_value, bool)
+            ) or (
+                option_type == "string" and isinstance(option_value, str)
+            )
+            if (
+                not isinstance(option_id, str) or not option_id or
+                option_type not in {"int", "float", "bool", "string"} or
+                not valid_value
+            ):
+                result.todos.append(
+                    f"{source.location}: option slider {slider_id} level {level} option #{option_index} needs review"
+                )
+                continue
+            unknown_option = unresolved_fields(
+                raw_option, {"option", "type", "val"}
+            )
+            if unknown_option:
+                result.todos.append(
+                    f"{source.location}: option slider {slider_id} level {level} option {option_id} unresolved fields: "
+                    + ", ".join(unknown_option)
+                )
+            literal = lua_scalar_literal(option_value)
+            assert literal is not None
+            lines.append(
+                "                { "
+                f"option = {lua_quote(option_id)}, type = {lua_quote(option_type)}, "
+                f"value = {literal} "
+                "},"
+            )
+        lines.extend(("            },", "        },"))
+    lines.extend(("    },", "}"))
+    return finish_catalog(
+        source,
+        result,
+        "option slider",
+        slider_id,
+        lines,
+        {"type", "id", "name", "context", "default", "levels"},
+        todo_count,
+    )
+
+
+def render_dimension_region_layout(
+    source: SourceObject, result: MigrationResult
+) -> str | None:
+    value = source.value
+    layout_id = value.get("id")
+    if not bounded_platform_id(layout_id):
+        result.partial.append(
+            f"{source.location}: dimension region layout <invalid id>"
+        )
+        result.todos.append(
+            f"{source.location}: dimension region layout needs a stable native id"
+        )
+        return None
+    todo_count = len(result.todos)
+    generation_mode = value.get("generation_mode")
+    uniform_region = value.get("uniform_region")
+    if generation_mode != "UNIFORM":
+        result.todos.append(
+            f"{source.location}: dimension region layout {layout_id} generation_mode needs review"
+        )
+        generation_mode = "UNIFORM"
+    if not bounded_platform_id(uniform_region):
+        result.todos.append(
+            f"{source.location}: dimension region layout {layout_id} uniform_region needs review"
+        )
+        uniform_region = "default"
+    lines = [
+        "local definition = content.DimensionRegionLayout {",
+        f"    id = {lua_quote(layout_id)},",
+        f"    generation_mode = {lua_quote(generation_mode)},",
+        f"    uniform_region = {lua_quote(uniform_region)},",
+        "}",
+    ]
+    return finish_catalog(
+        source,
+        result,
+        "dimension region layout",
+        layout_id,
+        lines,
+        {"type", "id", "generation_mode", "uniform_region"},
+        todo_count,
+    )
+
+
+def render_dimension(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    dimension_id = value.get("id")
+    if not bounded_platform_id(dimension_id):
+        result.partial.append(f"{source.location}: dimension <invalid id>")
+        result.todos.append(
+            f"{source.location}: dimension needs a stable native id"
+        )
+        return None
+    todo_count = len(result.todos)
+    region_layout = value.get("region_layout")
+    if not bounded_platform_id(region_layout):
+        result.todos.append(
+            f"{source.location}: dimension {dimension_id} region_layout needs review"
+        )
+        region_layout = "default"
+    lines = [
+        "local definition = content.Dimension {",
+        f"    id = {lua_quote(dimension_id)},",
+        f"    region_layout = {lua_quote(region_layout)},",
+        "}",
+    ]
+    return finish_catalog(
+        source,
+        result,
+        "dimension",
+        dimension_id,
+        lines,
+        {"type", "id", "region_layout"},
+        todo_count,
+    )
+
+
+def render_omt_placeholder(
+    source: SourceObject, result: MigrationResult
+) -> str | None:
+    value = source.value
+    placeholder_id = value.get("id")
+    if not bounded_platform_id(placeholder_id):
+        result.partial.append(
+            f"{source.location}: overmap terrain placeholder <invalid id>"
+        )
+        result.todos.append(
+            f"{source.location}: overmap terrain placeholder needs a stable native id"
+        )
+        return None
+    todo_count = len(result.todos)
+    grid = value.get("grid")
+    if (
+        not isinstance(grid, list) or len(grid) != 24 or
+        not all(
+            isinstance(row, str) and len(row) == 24 and
+            set(row).issubset({"0", "1"})
+            for row in grid
+        )
+    ):
+        result.todos.append(
+            f"{source.location}: overmap terrain placeholder {placeholder_id} grid needs review"
+        )
+        grid = []
+    lines = [
+        "local definition = content.OmtPlaceholder {",
+        f"    id = {lua_quote(placeholder_id)},",
+        "    grid = {",
+    ]
+    lines.extend(f"        {lua_quote(row)}," for row in grid)
+    lines.extend(("    },", "}"))
+    return finish_catalog(
+        source,
+        result,
+        "overmap terrain placeholder",
+        placeholder_id,
+        lines,
+        {"type", "id", "grid"},
+        todo_count,
+    )
+
+
 UNREGISTERED_CONTENT_TYPES = frozenset({
     "jmath_function",
     "event_statistic",
     "event_transformation",
     "widget",
-    "option_slider",
     "palette",
     "ter_furn_transform",
     "profession_item_substitutions",
     "relic_procgen_data",
-    "dimension",
-    "dimension_region_layout",
     "city_building",
-    "omt_placeholder",
     "pp_generator",
     "mod_tileset",
     "enchantment",
@@ -14685,6 +14947,10 @@ def migrate(objects: list[SourceObject], mod_id: str,
         "region_settings_forest_trail": [],
         "region_settings_highway": [],
         "region_settings": [],
+        "option_slider": [],
+        "dimension_region_layout": [],
+        "dimension": [],
+        "omt_placeholder": [],
         "region_terrain_furniture": [],
         "forest_biome_component": [],
         "city": [],
@@ -15318,6 +15584,22 @@ def migrate(objects: list[SourceObject], mod_id: str,
             rendered = render_region_settings(source, result)
             if rendered:
                 catalog_chunks[kind].append(rendered)
+        elif kind == "option_slider":
+            rendered = render_option_slider(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "dimension_region_layout":
+            rendered = render_dimension_region_layout(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "dimension":
+            rendered = render_dimension(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "omt_placeholder":
+            rendered = render_omt_placeholder(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
         elif kind == "region_terrain_furniture":
             rendered = render_region_terrain_furniture(source, result)
             if rendered:
@@ -15701,6 +15983,10 @@ def migrate(objects: list[SourceObject], mod_id: str,
         "region_settings_forest_trail": "Native region settings forest trails",
         "region_settings_highway": "Native region settings highways",
         "region_settings": "Native region settings",
+        "option_slider": "Native option sliders",
+        "dimension_region_layout": "Native dimension region layouts",
+        "dimension": "Native dimensions",
+        "omt_placeholder": "Native overmap terrain placeholders",
         "region_terrain_furniture": "Native region terrain furnitures",
         "forest_biome_component": "Native forest biome components",
         "city": "Native city definitions",

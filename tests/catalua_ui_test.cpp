@@ -107,9 +107,12 @@
 #include "mutation.h"
 #include "npc.h"
 #include "omdata.h"
+#include "options.h"
 #include "overmap.h"
 #include "overmap_connection.h"
 #include "overmap_location.h"
+#include "overmap_map_data_cache.h"
+#include "overmap_worldgen.h"
 #include "overmapbuffer.h"
 #include "overlay_ordering.h"
 #include "options_helpers.h"
@@ -9448,6 +9451,318 @@ ccb.content.add(ccb.content.RegionSettings {
     id = "ccb_platform_g5_fingerprint",
     cities = "default",
     max_urbanity = 2,
+})
+)lua" );
+    CHECK( first != second );
+}
+
+TEST_CASE( "lua_first_generic_batch_g6_stages_native_dimensions_sliders_and_placeholders",
+           "[lua][platform][content][generic][batch_g6][stage]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+    scoped_platform_test_mod test_mod( "ccb_platform_generic_batch_g6" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local slider = ccb.content.OptionSlider {
+    id = "ccb_platform_g6_slider",
+    name = "G6 difficulty",
+    context = "WORLDGEN",
+    default_level = 0,
+    levels = {
+        {
+            level = 1,
+            name = "Hard",
+            options = {
+                { option = "MONSTER_SPEED", type = "int", value = 110 },
+            },
+        },
+        {
+            level = 0,
+            name = "Normal",
+            description = "Normal settings",
+            options = {
+                { option = "MONSTER_SPEED", type = "int", value = 100 },
+                { option = "SPAWN_DENSITY", type = "float", value = 1.0 },
+                { option = "ETERNAL_SEASON", type = "bool", value = false },
+                { option = "ETERNAL_TIME_OF_DAY", type = "string", value = "normal" },
+            },
+        },
+    },
+}
+ccb.content.add(slider)
+local edited_slider = ccb.content.edit_option_slider("ccb_platform_g6_slider")
+edited_slider:default_level(1)
+edited_slider:level {
+    level = 1,
+    name = "Very hard",
+    options = {
+        { option = "MONSTER_SPEED", type = "int", value = 111 },
+        { option = "ETERNAL_TIME_OF_DAY", type = "string", value = "day" },
+    },
+}
+ccb.content.edit(edited_slider)
+
+ccb.content.add(ccb.content.RegionSettings {
+    id = "ccb_platform_g6_region",
+    cities = "default",
+})
+ccb.content.add(ccb.content.DimensionRegionLayout {
+    id = "ccb_platform_g6_layout",
+    generation_mode = "UNIFORM",
+    uniform_region = "ccb_platform_g6_region",
+})
+ccb.content.add(ccb.content.Dimension {
+    id = "ccb_platform_g6_dimension",
+    region_layout = "ccb_platform_g6_layout",
+})
+
+local rows = {}
+for index = 1, 24 do
+    rows[index] = "101010101010101010101010"
+end
+ccb.content.add(ccb.content.OmtPlaceholder {
+    id = "ccb_platform_g6_placeholder",
+    grid = rows,
+})
+)lua" );
+
+    std::string error;
+    const bool prepared = cata::lua_platform::prepare_mods(
+    { test_mod.source( "ccb_platform_generic_batch_g6" ) }, error );
+    INFO( error );
+    REQUIRE( prepared );
+    const bool applied = cata::lua_platform::apply_prepared_content( error );
+    INFO( error );
+    REQUIRE( applied );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+
+    const option_slider_id slider( "ccb_platform_g6_slider" );
+    REQUIRE( slider.is_valid() );
+    CHECK( slider->name().translated() == "G6 difficulty" );
+    CHECK( slider->context() == "WORLDGEN" );
+    CHECK( slider->default_level() == 1 );
+    REQUIRE( slider->count() == 2 );
+    CHECK( slider->level_name( 0 ).translated() == "Normal" );
+    CHECK( slider->level_name( 1 ).translated() == "Very hard" );
+    options_manager::options_container options = get_options().get_world_defaults();
+    slider->apply_opts( 1, options );
+    CHECK( options.at( "MONSTER_SPEED" ).getValue() == "111%" );
+    CHECK( options.at( "ETERNAL_TIME_OF_DAY" ).getValue() == "day" );
+
+    const region_settings_id region( "ccb_platform_g6_region" );
+    const dimension_region_layout_id layout( "ccb_platform_g6_layout" );
+    const dimension_id dimension( "ccb_platform_g6_dimension" );
+    REQUIRE( region.is_valid() );
+    REQUIRE( layout.is_valid() );
+    REQUIRE( layout->get_generator() );
+    REQUIRE( dimension.is_valid() );
+    CHECK( dimension->get_region_layout() == layout );
+
+    const string_id<map_data_summary> placeholder( "ccb_platform_g6_placeholder" );
+    REQUIRE( placeholder.is_valid() );
+    CHECK( placeholder->placeholder );
+    CHECK( placeholder->passable.test( 0 ) );
+    CHECK_FALSE( placeholder->passable.test( 1 ) );
+    CHECK( placeholder->passable.test( 24 ) );
+    CHECK_FALSE( placeholder->passable.test( 575 ) );
+}
+
+TEST_CASE( "lua_first_generic_batch_g6_rejects_invalid_native_configurations",
+           "[lua][platform][content][generic][batch_g6][validation]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+
+    SECTION( "slider levels must be dense and uniquely numbered" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g6_bad_slider_levels" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.OptionSlider {
+    id = "ccb_platform_g6_bad_slider_levels",
+    name = "Bad slider",
+    levels = {
+        { level = 0, name = "First" },
+        { level = 0, name = "Duplicate" },
+    },
+})
+)lua" );
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g6_bad_slider_levels" ) }, error ) );
+        CHECK( error.find( "unique dense numbered levels" ) != std::string::npos );
+    }
+
+    SECTION( "slider values must match their declared native type" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g6_bad_slider_value" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.OptionSlider {
+    id = "ccb_platform_g6_bad_slider_value",
+    name = "Bad slider",
+    levels = {
+        {
+            level = 0,
+            name = "Bad",
+            options = {
+                { option = "MONSTER_SPEED", type = "int", value = 1.5 },
+            },
+        },
+    },
+})
+)lua" );
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g6_bad_slider_value" ) }, error ) );
+        CHECK( error.find( "int values must be native integers" ) != std::string::npos );
+    }
+
+    SECTION( "only the engine implemented uniform layout mode is accepted" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g6_bad_layout_mode" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.DimensionRegionLayout {
+    id = "ccb_platform_g6_bad_layout_mode",
+    generation_mode = "RANDOM",
+    uniform_region = "default",
+})
+)lua" );
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g6_bad_layout_mode" ) }, error ) );
+        CHECK( error.find( "only supports the native UNIFORM mode" ) != std::string::npos );
+    }
+
+    SECTION( "unknown dimension references fail before native insertion" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g6_bad_references" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.DimensionRegionLayout {
+    id = "ccb_platform_g6_bad_reference_layout",
+    uniform_region = "ccb_platform_g6_missing_region",
+})
+ccb.content.add(ccb.content.Dimension {
+    id = "ccb_platform_g6_bad_reference_dimension",
+    region_layout = "ccb_platform_g6_bad_reference_layout",
+})
+)lua" );
+        std::string error;
+        REQUIRE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g6_bad_references" ) }, error ) );
+        CHECK_FALSE( cata::lua_platform::apply_prepared_content( error ) );
+        CHECK( error.find( "references unknown region settings" ) != std::string::npos );
+    }
+
+    SECTION( "placeholder rows are exactly 24 binary cells" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g6_bad_placeholder" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+local rows = {}
+for index = 1, 24 do
+    rows[index] = "222222222222222222222222"
+end
+ccb.content.add(ccb.content.OmtPlaceholder {
+    id = "ccb_platform_g6_bad_placeholder",
+    grid = rows,
+})
+)lua" );
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g6_bad_placeholder" ) }, error ) );
+        CHECK( error.find( "exactly 24 binary cells" ) != std::string::npos );
+    }
+}
+
+TEST_CASE( "lua_first_generic_batch_g6_rollback_removes_new_native_entries",
+           "[lua][platform][content][generic][batch_g6][transaction]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+    scoped_platform_test_mod test_mod( "ccb_platform_g6_rollback" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.OptionSlider {
+    id = "ccb_platform_g6_rollback_slider",
+    name = "Rollback slider",
+    levels = { { level = 0, name = "Only" } },
+})
+ccb.content.add(ccb.content.DimensionRegionLayout {
+    id = "ccb_platform_g6_rollback_layout",
+    uniform_region = "default",
+})
+ccb.content.add(ccb.content.Dimension {
+    id = "ccb_platform_g6_rollback_dimension",
+    region_layout = "ccb_platform_g6_rollback_layout",
+})
+local rows = {}
+for index = 1, 24 do rows[index] = "000000000000000000000000" end
+ccb.content.add(ccb.content.OmtPlaceholder {
+    id = "ccb_platform_g6_rollback_placeholder",
+    grid = rows,
+})
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+    { test_mod.source( "ccb_platform_g6_rollback" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( option_slider_id( "ccb_platform_g6_rollback_slider" ).is_valid() );
+    REQUIRE( dimension_region_layout_id( "ccb_platform_g6_rollback_layout" ).is_valid() );
+    REQUIRE( dimension_id( "ccb_platform_g6_rollback_dimension" ).is_valid() );
+    REQUIRE( string_id<map_data_summary>(
+                 "ccb_platform_g6_rollback_placeholder" ).is_valid() );
+
+    cata::lua_platform::discard_prepared_mods();
+
+    CHECK_FALSE( option_slider_id( "ccb_platform_g6_rollback_slider" ).is_valid() );
+    CHECK_FALSE( dimension_region_layout_id(
+                     "ccb_platform_g6_rollback_layout" ).is_valid() );
+    CHECK_FALSE( dimension_id( "ccb_platform_g6_rollback_dimension" ).is_valid() );
+    CHECK_FALSE( string_id<map_data_summary>(
+                     "ccb_platform_g6_rollback_placeholder" ).is_valid() );
+}
+
+TEST_CASE( "lua_first_generic_batch_g6_fingerprint_sensitivity",
+           "[lua][platform][content][generic][batch_g6][fingerprint]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+    scoped_platform_test_mod test_mod( "ccb_platform_g6_fingerprint" );
+
+    const auto fingerprint_for = [&test_mod]( const std::string &script ) {
+        test_mod.write( "main.lua", script );
+        std::string error;
+        const bool prepared = cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g6_fingerprint" ) }, error );
+        INFO( error );
+        REQUIRE( prepared );
+        const std::string fingerprint = cata::lua_platform::prepared_content_fingerprint();
+        REQUIRE_FALSE( fingerprint.empty() );
+        cata::lua_platform::discard_prepared_mods();
+        return fingerprint;
+    };
+
+    const std::string first = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.DimensionRegionLayout {
+    id = "ccb_platform_g6_fingerprint",
+    uniform_region = "default",
+})
+)lua" );
+    const std::string second = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.DimensionRegionLayout {
+    id = "ccb_platform_g6_fingerprint",
+    uniform_region = "ccb_platform_g6_other_region",
 })
 )lua" );
     CHECK( first != second );

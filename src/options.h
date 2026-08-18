@@ -18,6 +18,14 @@
 
 class JsonArray;
 class JsonObject;
+struct option_slider;
+
+namespace cata::lua_platform::detail
+{
+struct option_slider_native_definition;
+option_slider make_option_slider_native(
+    const option_slider_native_definition &definition );
+} // namespace cata::lua_platform::detail
 class JsonOut;
 class cata_path;
 
@@ -380,6 +388,9 @@ class options_manager
 
 struct option_slider {
     private:
+        friend option_slider cata::lua_platform::detail::make_option_slider_native(
+            const cata::lua_platform::detail::option_slider_native_definition &definition );
+
         struct option_slider_level {
             private:
                 struct opt_slider_option {

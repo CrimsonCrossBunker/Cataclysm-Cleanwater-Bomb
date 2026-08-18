@@ -27,11 +27,11 @@ class CcbInventoryCheckTest(unittest.TestCase):
                 "json_types": 190,
                 "event_types": 113,
                 "native_domains": 39,
-                "export_roots": 151,
+                "export_roots": 155,
                 "api_v5_roots": 16,
-                "platform_v1_roots": 148,
+                "platform_v1_roots": 152,
                 "shared_roots": 13,
-                "member_dispositions": 1134,
+                "member_dispositions": 1155,
             },
         )
 

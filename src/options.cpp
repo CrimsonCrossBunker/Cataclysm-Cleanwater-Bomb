@@ -13,6 +13,7 @@
 #include "android_ui_mode.h"
 #include "cached_options.h"
 #include "calendar.h"
+#include "catalua_platform_content.h"
 #include "catalua_ui.h"
 #include "cata_utility.h"
 #include "catacharset.h"
@@ -472,6 +473,34 @@ class options_imgui_page : public cataimgui::window
 #endif
 
 } // namespace
+
+generic_factory<option_slider> &cata::lua_platform::detail::option_slider_registry()
+{
+    return option_slider_factory;
+}
+
+option_slider cata::lua_platform::detail::make_option_slider_native(
+    const option_slider_native_definition &definition )
+{
+    option_slider result;
+    result.id = option_slider_id( definition.id );
+    result._name = to_translation( definition.name );
+    result._context = definition.context;
+    result._default_level = static_cast<int>( definition.default_level );
+    result._levels.reserve( definition.levels.size() );
+    for( const option_slider_native_level &source_level : definition.levels ) {
+        result._levels.emplace_back(
+            to_translation( source_level.name ),
+            to_translation( source_level.description ),
+            static_cast<int>( source_level.level ) );
+        option_slider::option_slider_level &native_level = result._levels.back();
+        for( const option_slider_native_option &source_option : source_level.options ) {
+            native_level.add( source_option.option, source_option.type, source_option.value );
+        }
+    }
+    result.was_loaded = true;
+    return result;
+}
 
 /** @relates string_id */
 template<>

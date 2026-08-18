@@ -6,6 +6,7 @@
 #include <string>
 
 #include "cata_assert.h"
+#include "catalua_platform_content.h"
 #include "debug.h"
 #include "generic_factory.h"
 #include "string_id.h"
@@ -17,6 +18,11 @@ namespace
 {
 generic_factory<map_data_summary> placeholder_map_data( "placeholder map data" );
 } // namespace
+
+generic_factory<map_data_summary> &cata::lua_platform::detail::omt_placeholder_registry()
+{
+    return placeholder_map_data;
+}
 
 template<>
 const map_data_summary &string_id<map_data_summary>::obj() const

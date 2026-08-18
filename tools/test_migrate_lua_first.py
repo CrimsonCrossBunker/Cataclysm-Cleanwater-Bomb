@@ -7527,6 +7527,131 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn('from = "old_mod"', main)
             self.assertNotIn("needs review", report)
 
+    def test_translates_dimension_slider_and_omt_placeholder_types(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "option_slider",
+                            "id": "test_slider",
+                            "name": "Test slider",
+                            "context": "WORLDGEN",
+                            "default": 1,
+                            "levels": [
+                                {
+                                    "level": 0,
+                                    "name": "Low",
+                                    "description": "Low values",
+                                    "options": [
+                                        {"option": "MONSTER_SPEED", "type": "int", "val": 90},
+                                        {"option": "SPAWN_DENSITY", "type": "float", "val": 0.5},
+                                    ],
+                                },
+                                {
+                                    "level": 1,
+                                    "name": "Normal",
+                                    "options": [
+                                        {"option": "ETERNAL_SEASON", "type": "bool", "val": False},
+                                        {"option": "ETERNAL_TIME_OF_DAY", "type": "string", "val": "normal"},
+                                    ],
+                                },
+                            ],
+                        },
+                        {
+                            "type": "dimension_region_layout",
+                            "id": "test_layout",
+                            "generation_mode": "UNIFORM",
+                            "uniform_region": "default",
+                        },
+                        {
+                            "type": "dimension",
+                            "id": "test_dimension",
+                            "region_layout": "test_layout",
+                        },
+                        {
+                            "type": "omt_placeholder",
+                            "id": "test_placeholder",
+                            "grid": ["01" * 12 for _ in range(24)],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "generic_content_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 4)
+            self.assertEqual(len(result.partial), 0)
+            self.assertEqual(len(result.todos), 0)
+            self.assertIn("content.OptionSlider", main)
+            self.assertIn("default_level = 1", main)
+            self.assertIn('type = "float", value = 0.5', main)
+            self.assertIn("content.DimensionRegionLayout", main)
+            self.assertIn('uniform_region = "default"', main)
+            self.assertIn("content.Dimension", main)
+            self.assertIn('region_layout = "test_layout"', main)
+            self.assertIn("content.OmtPlaceholder", main)
+            self.assertIn('"010101010101010101010101"', main)
+            self.assertNotIn("needs review", report)
+
+    def test_rejects_invalid_dimension_slider_and_placeholder_values(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "option_slider",
+                            "id": "bad_slider",
+                            "name": "Bad slider",
+                            "levels": [
+                                {
+                                    "level": 0,
+                                    "name": "Broken",
+                                    "options": [
+                                        {"option": "MONSTER_SPEED", "type": "int", "val": 1.5},
+                                    ],
+                                },
+                            ],
+                        },
+                        {
+                            "type": "dimension_region_layout",
+                            "id": "bad_layout",
+                            "generation_mode": "RANDOM",
+                            "uniform_region": "default",
+                        },
+                        {
+                            "type": "dimension",
+                            "id": "bad_dimension",
+                            "region_layout": "",
+                        },
+                        {
+                            "type": "omt_placeholder",
+                            "id": "bad_placeholder",
+                            "grid": ["2" * 24 for _ in range(24)],
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "generic_content_mod"
+            )
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 4)
+            self.assertGreaterEqual(len(result.todos), 4)
+            self.assertIn("option #0 needs review", report)
+            self.assertIn("generation_mode needs review", report)
+            self.assertIn("region_layout needs review", report)
+            self.assertIn("grid needs review", report)
+
     def test_reports_unregistered_generic_json_content_types(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -7537,15 +7662,11 @@ class LuaFirstMigrationTest(unittest.TestCase):
                         {"type": "event_statistic", "id": "test_event_stat"},
                         {"type": "event_transformation", "id": "test_event_trans"},
                         {"type": "widget", "id": "test_widget"},
-                        {"type": "option_slider", "id": "test_slider"},
                         {"type": "palette", "id": "test_palette"},
                         {"type": "ter_furn_transform", "id": "test_transform"},
                         {"type": "profession_item_substitutions", "id": "test_subst"},
                         {"type": "relic_procgen_data", "id": "test_relic"},
-                        {"type": "dimension", "id": "test_dim"},
-                        {"type": "dimension_region_layout", "id": "test_dim_layout"},
                         {"type": "city_building", "id": "test_building"},
-                        {"type": "omt_placeholder", "id": "test_placeholder"},
                         {"type": "pp_generator", "id": "test_pp"},
                         {"type": "mod_tileset", "id": "test_tileset"},
                     ]
@@ -7559,8 +7680,8 @@ class LuaFirstMigrationTest(unittest.TestCase):
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.converted), 0)
-            self.assertEqual(len(result.partial), 15)
-            self.assertEqual(len(result.todos), 15)
+            self.assertEqual(len(result.partial), 11)
+            self.assertEqual(len(result.todos), 11)
             self.assertNotIn("local definition = content.", main)
             self.assertIn("has no native Platform registrar", report)
 

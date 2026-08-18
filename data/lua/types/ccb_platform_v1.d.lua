@@ -3128,6 +3128,91 @@ function RegionSettingsDefinition:max_urbanity(value) end
 ---@return RegionSettingsDefinition self
 function RegionSettingsDefinition:urbanity_increase(values) end
 
+---@alias OptionSliderValueType "int"|"float"|"bool"|"string"
+
+---@class OptionSliderOption
+---@field option string Engine option id.
+---@field type OptionSliderValueType Native option value type.
+---@field value integer|number|boolean|string Typed option value.
+
+---@class OptionSliderLevel
+---@field level integer Dense zero-based level number.
+---@field name string Display name.
+---@field description? string Optional display description.
+---@field options? OptionSliderOption[] Options applied by this level.
+
+---@class OptionSliderDefinitionOptions
+---@field id string Stable option slider id.
+---@field name string Display name.
+---@field context? string Option-page context.
+---@field default_level? integer Default level; defaults to zero.
+---@field levels OptionSliderLevel[] One or more densely numbered levels.
+
+---@class OptionSliderDefinition
+---@field id string
+local OptionSliderDefinition = {}
+
+---@param value string
+---@return OptionSliderDefinition self
+function OptionSliderDefinition:name(value) end
+
+---@param value string
+---@return OptionSliderDefinition self
+function OptionSliderDefinition:context(value) end
+
+---@param value integer
+---@return OptionSliderDefinition self
+function OptionSliderDefinition:default_level(value) end
+
+---@param values OptionSliderLevel[]
+---@return OptionSliderDefinition self
+function OptionSliderDefinition:levels(values) end
+
+---@param value OptionSliderLevel Adds or replaces the matching numeric level.
+---@return OptionSliderDefinition self
+function OptionSliderDefinition:level(value) end
+
+---@class DimensionRegionLayoutDefinitionOptions
+---@field id string Stable dimension region-layout id.
+---@field generation_mode? "UNIFORM" The currently supported native generation mode.
+---@field uniform_region string Region-settings id used by every generated overmap.
+
+---@class DimensionRegionLayoutDefinition
+---@field id string
+local DimensionRegionLayoutDefinition = {}
+
+---@param value "UNIFORM"
+---@return DimensionRegionLayoutDefinition self
+function DimensionRegionLayoutDefinition:generation_mode(value) end
+
+---@param value string Region-settings id.
+---@return DimensionRegionLayoutDefinition self
+function DimensionRegionLayoutDefinition:uniform_region(value) end
+
+---@class DimensionDefinitionOptions
+---@field id string Stable dimension id.
+---@field region_layout string Dimension region-layout id.
+
+---@class DimensionDefinition
+---@field id string
+local DimensionDefinition = {}
+
+---@param value string Dimension region-layout id.
+---@return DimensionDefinition self
+function DimensionDefinition:region_layout(value) end
+
+---@class OmtPlaceholderDefinitionOptions
+---@field id string Stable overmap terrain placeholder id.
+---@field grid string[] Exactly 24 strings of 24 binary cells (`0` or `1`).
+
+---@class OmtPlaceholderDefinition
+---@field id string
+local OmtPlaceholderDefinition = {}
+
+---@param values string[] Exactly 24 strings of 24 binary cells (`0` or `1`).
+---@return OmtPlaceholderDefinition self
+function OmtPlaceholderDefinition:grid(values) end
+
 ---@class RegionTerrainFurnitureDefinitionOptions
 ---@field id string Stable region terrain furniture id.
 ---@field ter_id? string Target terrain id.
@@ -4598,6 +4683,22 @@ function CcbPlatformContent.RegionSettingsHighway(options) end
 ---@return RegionSettingsDefinition
 function CcbPlatformContent.RegionSettings(options) end
 
+---@param options OptionSliderDefinitionOptions
+---@return OptionSliderDefinition
+function CcbPlatformContent.OptionSlider(options) end
+
+---@param options DimensionRegionLayoutDefinitionOptions
+---@return DimensionRegionLayoutDefinition
+function CcbPlatformContent.DimensionRegionLayout(options) end
+
+---@param options DimensionDefinitionOptions
+---@return DimensionDefinition
+function CcbPlatformContent.Dimension(options) end
+
+---@param options OmtPlaceholderDefinitionOptions
+---@return OmtPlaceholderDefinition
+function CcbPlatformContent.OmtPlaceholder(options) end
+
 ---@param options RegionTerrainFurnitureDefinitionOptions
 ---@return RegionTerrainFurnitureDefinition
 function CcbPlatformContent.RegionTerrainFurniture(options) end
@@ -4622,7 +4723,7 @@ function CcbPlatformContent.RegionSettingsCity(options) end
 ---@return ForestBiomeMapgenDefinition
 function CcbPlatformContent.ForestBiomeMapgen(options) end
 
----@alias PlatformContentDefinition FactionDefinition|NpcClassDefinition|NpcDefinition|OvermapTerrainDefinition|OvermapSpecialDefinition|VehiclePartDefinition|VehicleDefinition|ItemDefinition|RecipeDefinition|NestedRecipeCategoryDefinition|ToolQualityDefinition|SkillDisplayDefinition|SkillDefinition|VitaminDefinition|JsonFlagDefinition|DamageTypeDefinition|MaterialDefinition|AmmunitionTypeDefinition|ItemCategoryDefinition|RecipeCategoryDefinition|ProficiencyCategoryDefinition|ProficiencyDefinition|WeaponCategoryDefinition|RequirementDefinition|RecipeGroupDefinition|ScentTypeDefinition|SpeedDescriptionDefinition|HarvestDropTypeDefinition|HarvestDefinition|BehaviorDefinition|MonsterAttackDefinition|EffectTypeDefinition|WeakpointSetDefinition|FieldTypeDefinition|ItemGroupDefinition|SubBodyPartDefinition|WoundDefinition|BodyPartDefinition|WoundFixDefinition|AnatomyDefinition|BodyGraphDefinition|MonsterDefinition|MoraleTypeDefinition|DiseaseTypeDefinition|MonsterFlagDefinition|SpeciesDefinition|EmissionDefinition|MonsterFactionDefinition|MutationTypeDefinition|ConnectGroupDefinition|MutationCategoryDefinition|ConstructionCategoryDefinition|ConstructionGroupDefinition|VehiclePartLocationDefinition|MoodFaceDefinition|DamageInfoOrderDefinition|VehiclePartCategoryDefinition|NamedColorDefinition|RotatableSymbolDefinition|AsciiArtDefinition|LimbScoreDefinition|HitRangeDefinition|BashDamageProfileDefinition|ClothingModDefinition|OvermapLandUseCodeDefinition|OvermapVisionDefinition|OvermapLocationDefinition|ProfessionGroupDefinition|MapExtraCollectionDefinition|VehicleGroupDefinition|FaultGroupDefinition|ExplosionLightDefinition|AmmoEffectDefinition|AddictionTypeDefinition|CharacterModifierDefinition|StartLocationDefinition|ClimbingAidDefinition|WeatherTypeDefinition|ScoreDefinition|OverlayOrderDefinition|ZoneTypeDefinition|SpeechPoolDefinition|EndScreenDefinition|ActivityTypeDefinition|HelpTopicDefinition|SnippetCategoryDefinition|PlaylistDefinition|AttackVectorDefinition|MagicTypeDefinition|MovementModeDefinition|RegionSettingsRavineDefinition|RegionSettingsLakeDefinition|RegionSettingsOceanDefinition|RegionSettingsForestDefinition|RegionSettingsRiverDefinition|RegionSettingsForestMapgenDefinition|RegionSettingsMapExtrasDefinition|RegionSettingsTerrainFurnitureDefinition|RegionSettingsForestTrailDefinition|RegionSettingsHighwayDefinition|RegionSettingsDefinition|RegionTerrainFurnitureDefinition|ForestBiomeComponentDefinition|CityDefinition|FactionMissionDefinition|RegionSettingsCityDefinition|ForestBiomeMapgenDefinition
+---@alias PlatformContentDefinition FactionDefinition|NpcClassDefinition|NpcDefinition|OvermapTerrainDefinition|OvermapSpecialDefinition|VehiclePartDefinition|VehicleDefinition|ItemDefinition|RecipeDefinition|NestedRecipeCategoryDefinition|ToolQualityDefinition|SkillDisplayDefinition|SkillDefinition|VitaminDefinition|JsonFlagDefinition|DamageTypeDefinition|MaterialDefinition|AmmunitionTypeDefinition|ItemCategoryDefinition|RecipeCategoryDefinition|ProficiencyCategoryDefinition|ProficiencyDefinition|WeaponCategoryDefinition|RequirementDefinition|RecipeGroupDefinition|ScentTypeDefinition|SpeedDescriptionDefinition|HarvestDropTypeDefinition|HarvestDefinition|BehaviorDefinition|MonsterAttackDefinition|EffectTypeDefinition|WeakpointSetDefinition|FieldTypeDefinition|ItemGroupDefinition|SubBodyPartDefinition|WoundDefinition|BodyPartDefinition|WoundFixDefinition|AnatomyDefinition|BodyGraphDefinition|MonsterDefinition|MoraleTypeDefinition|DiseaseTypeDefinition|MonsterFlagDefinition|SpeciesDefinition|EmissionDefinition|MonsterFactionDefinition|MutationTypeDefinition|ConnectGroupDefinition|MutationCategoryDefinition|ConstructionCategoryDefinition|ConstructionGroupDefinition|VehiclePartLocationDefinition|MoodFaceDefinition|DamageInfoOrderDefinition|VehiclePartCategoryDefinition|NamedColorDefinition|RotatableSymbolDefinition|AsciiArtDefinition|LimbScoreDefinition|HitRangeDefinition|BashDamageProfileDefinition|ClothingModDefinition|OvermapLandUseCodeDefinition|OvermapVisionDefinition|OvermapLocationDefinition|ProfessionGroupDefinition|MapExtraCollectionDefinition|VehicleGroupDefinition|FaultGroupDefinition|ExplosionLightDefinition|AmmoEffectDefinition|AddictionTypeDefinition|CharacterModifierDefinition|StartLocationDefinition|ClimbingAidDefinition|WeatherTypeDefinition|ScoreDefinition|OverlayOrderDefinition|ZoneTypeDefinition|SpeechPoolDefinition|EndScreenDefinition|ActivityTypeDefinition|HelpTopicDefinition|SnippetCategoryDefinition|PlaylistDefinition|AttackVectorDefinition|MagicTypeDefinition|MovementModeDefinition|RegionSettingsRavineDefinition|RegionSettingsLakeDefinition|RegionSettingsOceanDefinition|RegionSettingsForestDefinition|RegionSettingsRiverDefinition|RegionSettingsForestMapgenDefinition|RegionSettingsMapExtrasDefinition|RegionSettingsTerrainFurnitureDefinition|RegionSettingsForestTrailDefinition|RegionSettingsHighwayDefinition|RegionSettingsDefinition|OptionSliderDefinition|DimensionRegionLayoutDefinition|DimensionDefinition|OmtPlaceholderDefinition|RegionTerrainFurnitureDefinition|ForestBiomeComponentDefinition|CityDefinition|FactionMissionDefinition|RegionSettingsCityDefinition|ForestBiomeMapgenDefinition
 
 ---@param definition PlatformContentDefinition
 function CcbPlatformContent.add(definition) end
@@ -5001,6 +5102,22 @@ function CcbPlatformContent.edit_region_settings_highway(id) end
 ---@param id string Region-settings id staged earlier by this Mod.
 ---@return RegionSettingsDefinition
 function CcbPlatformContent.edit_region_settings(id) end
+
+---@param id string Option-slider id staged earlier by this Mod.
+---@return OptionSliderDefinition
+function CcbPlatformContent.edit_option_slider(id) end
+
+---@param id string Dimension-region-layout id staged earlier by this Mod.
+---@return DimensionRegionLayoutDefinition
+function CcbPlatformContent.edit_dimension_region_layout(id) end
+
+---@param id string Dimension id staged earlier by this Mod.
+---@return DimensionDefinition
+function CcbPlatformContent.edit_dimension(id) end
+
+---@param id string Overmap-terrain-placeholder id staged earlier by this Mod.
+---@return OmtPlaceholderDefinition
+function CcbPlatformContent.edit_omt_placeholder(id) end
 
 ---@param id string Region-terrain-furniture id staged earlier by this Mod.
 ---@return RegionTerrainFurnitureDefinition

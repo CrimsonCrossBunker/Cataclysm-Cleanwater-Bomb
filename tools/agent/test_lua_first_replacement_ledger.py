@@ -19,9 +19,9 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 "implemented_verified": 67,
                 "implemented_unverified": 0,
                 "bounded_implemented_verified": 14,
-                "bounded_implemented_unverified": 639,
+                "bounded_implemented_unverified": 643,
                 "primitive_available_unverified": 4,
-                "planned": 33,
+                "planned": 29,
                 "private_adapter": 0,
                 "reviewed_not_applicable": 18,
             },
@@ -1319,7 +1319,7 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 "json-object-types",
                 "omt_placeholder",
                 "bounded_implemented_unverified",
-                "content.gameplay",
+                "content.map",
             ),
             (
                 "json-object-types",
@@ -2260,10 +2260,9 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
     def test_missing_native_registrars_and_item_transform_are_planned(self):
         expected_content = {
             "jmath_function", "event_statistic", "event_transformation",
-            "widget", "option_slider", "palette", "ter_furn_transform",
+            "widget", "palette", "ter_furn_transform",
             "profession_item_substitutions", "relic_procgen_data",
-            "dimension", "dimension_region_layout",
-            "city_building", "omt_placeholder", "pp_generator",
+            "city_building", "pp_generator",
             "mod_tileset",
             "enchantment", "SPELL", "bionic",
             "faction", "mapgen", "mission_definition",

@@ -1090,6 +1090,62 @@ BOUNDED_IMPLEMENTED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
+    "option_slider": {
+        "target": "content.gameplay",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/catalua_platform_content.h",
+            "src/options.cpp",
+            "src/options.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "tools/test_migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "dimension": {
+        "target": "content.gameplay",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/catalua_platform_content.h",
+            "src/overmap_worldgen.cpp",
+            "src/overmap_worldgen.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "tools/test_migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "dimension_region_layout": {
+        "target": "content.gameplay",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/catalua_platform_content.h",
+            "src/overmap_worldgen.cpp",
+            "src/overmap_worldgen.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "tools/test_migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
+    "omt_placeholder": {
+        "target": "content.map",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/catalua_platform_content.h",
+            "src/overmap_map_data_cache.cpp",
+            "src/overmap_map_data_cache.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "tools/test_migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
     "region_terrain_furniture": {
         "target": "content.map",
         "evidence": [
@@ -1304,17 +1360,6 @@ PLANNED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
-    "option_slider": {
-        "target": "content.gameplay",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "tools/test_migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
     "palette": {
         "target": "content.gameplay",
         "evidence": [
@@ -1359,40 +1404,7 @@ PLANNED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
-    "dimension": {
-        "target": "content.gameplay",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "tools/test_migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "dimension_region_layout": {
-        "target": "content.gameplay",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "tools/test_migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
     "city_building": {
-        "target": "content.gameplay",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "tools/test_migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "omt_placeholder": {
         "target": "content.gameplay",
         "evidence": [
             "src/catalua_platform_runtime.cpp",

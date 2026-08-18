@@ -27,9 +27,9 @@ summary:
   implemented_verified: 67
   implemented_unverified: 0
   bounded_implemented_verified: 14
-  bounded_implemented_unverified: 639
+  bounded_implemented_unverified: 643
   primitive_available_unverified: 4
-  planned: 33
+  planned: 29
   private_adapter: 0
   reviewed_not_applicable: 18
 entries:
@@ -8644,10 +8644,13 @@ entries:
   selector: dimension
   target_kind: platform_domain
   target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
+  - src/catalua_platform_content.h
+  - src/overmap_worldgen.cpp
+  - src/overmap_worldgen.h
   - data/lua/types/ccb_platform_v1.d.lua
   - tests/catalua_ui_test.cpp
   - tools/migrate_lua_first.py
@@ -8657,10 +8660,13 @@ entries:
   selector: dimension_region_layout
   target_kind: platform_domain
   target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
+  - src/catalua_platform_content.h
+  - src/overmap_worldgen.cpp
+  - src/overmap_worldgen.h
   - data/lua/types/ccb_platform_v1.d.lua
   - tests/catalua_ui_test.cpp
   - tools/migrate_lua_first.py
@@ -9396,11 +9402,14 @@ entries:
 - inventory: json-object-types
   selector: omt_placeholder
   target_kind: platform_domain
-  target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  target: content.map
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
+  - src/catalua_platform_content.h
+  - src/overmap_map_data_cache.cpp
+  - src/overmap_map_data_cache.h
   - data/lua/types/ccb_platform_v1.d.lua
   - tests/catalua_ui_test.cpp
   - tools/migrate_lua_first.py
@@ -9410,10 +9419,13 @@ entries:
   selector: option_slider
   target_kind: platform_domain
   target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
+  - src/catalua_platform_content.h
+  - src/options.cpp
+  - src/options.h
   - data/lua/types/ccb_platform_v1.d.lua
   - tests/catalua_ui_test.cpp
   - tools/migrate_lua_first.py

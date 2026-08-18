@@ -96,9 +96,13 @@ class wound_fix;
 class wound_type;
 class faction_template;
 class npc_class;
+struct option_slider;
 struct oter_t;
 struct oter_type_t;
 class overmap_special;
+class dimension_world;
+class dimension_region_layout;
+struct map_data_summary;
 class vpart_info;
 struct vehicle_prototype;
 struct region_settings_ravine;
@@ -340,6 +344,45 @@ generic_factory<faction_mission> &faction_mission_registry();
 generic_factory<region_settings_city> &region_settings_city_registry();
 generic_factory<forest_biome_mapgen> &forest_biome_mapgen_registry();
 generic_factory<region_settings> &region_settings_registry();
+generic_factory<option_slider> &option_slider_registry();
+generic_factory<dimension_world> &dimension_registry();
+generic_factory<dimension_region_layout> &dimension_region_layout_registry();
+generic_factory<map_data_summary> &omt_placeholder_registry();
+
+struct option_slider_native_option {
+    std::string option;
+    std::string type;
+    std::string value;
+};
+
+struct option_slider_native_level {
+    std::int64_t level = 0;
+    std::string name;
+    std::string description;
+    std::vector<option_slider_native_option> options;
+};
+
+struct option_slider_native_definition {
+    std::string id;
+    std::string name;
+    std::string context;
+    std::int64_t default_level = 0;
+    std::vector<option_slider_native_level> levels;
+    bool registered = false;
+};
+
+struct dimension_native_definition {
+    std::string id;
+    std::string region_layout;
+    bool registered = false;
+};
+
+struct dimension_region_layout_native_definition {
+    std::string id;
+    std::string generation_mode = "UNIFORM";
+    std::string uniform_region;
+    bool registered = false;
+};
 
 const VehicleGroup *vehicle_group_registry_find( const std::string &id );
 void vehicle_group_registry_set( const std::string &id, const VehicleGroup &value );
