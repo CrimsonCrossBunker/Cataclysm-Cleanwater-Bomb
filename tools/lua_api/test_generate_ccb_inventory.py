@@ -133,11 +133,11 @@ class CcbInventoryGeneratorTest(unittest.TestCase):
             entry["id"]: set(entry["roots"])
             for entry in inventory["export_surfaces"]
         }
-        self.assertEqual(len(inventory["export_roots"]), 142)
+        self.assertEqual(len(inventory["export_roots"]), 150)
         self.assertEqual(len(surfaces["api_v5"]), 16)
-        self.assertEqual(len(surfaces["platform_v1"]), 138)
+        self.assertEqual(len(surfaces["platform_v1"]), 147)
         self.assertEqual(
-            len(surfaces["api_v5"] & surfaces["platform_v1"]), 12
+            len(surfaces["api_v5"] & surfaces["platform_v1"]), 13
         )
 
     def test_repository_inventory_records_alias_and_dispositions(self) -> None:

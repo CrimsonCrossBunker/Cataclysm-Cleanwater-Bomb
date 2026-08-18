@@ -21506,6 +21506,19 @@ bool content_transaction::apply( std::string &error )
                 id, id.is_valid() ? std::optional<construction>( id.obj() ) :
                 std::nullopt );
             const construction_definition_data &source = *entry.definition;
+            const requirement_id inline_requirement(
+                "inline_construction_" + source.id );
+            const auto previous_requirement =
+                requirement_data::registry().find( inline_requirement );
+            pimpl_->requirement_undo.emplace_back(
+                inline_requirement,
+                previous_requirement == requirement_data::registry().end() ?
+                std::optional<requirement_data>() :
+                std::optional<requirement_data>( previous_requirement->second ) );
+            requirement_data empty_requirement;
+            empty_requirement.id_ = inline_requirement;
+            requirement_data::registry()[inline_requirement] =
+                std::move( empty_requirement );
             construction native;
             native.id = id;
             native.group = construction_group_str_id( source.group );
@@ -21532,7 +21545,7 @@ bool content_transaction::apply( std::string &error )
                 native.reqs_using.emplace_back( requirement_id( requirement ),
                                                 static_cast<int>( multiplier ) );
             }
-            native.requirements = requirement_id::NULL_ID();
+            native.requirements = inline_requirement;
             native.was_loaded = true;
             detail::construction_registry().insert( native );
         }

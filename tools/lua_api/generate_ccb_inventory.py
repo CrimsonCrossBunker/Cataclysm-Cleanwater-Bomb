@@ -94,6 +94,16 @@ INSTALLER_SPECS = (
         "namespace": "ccb",
     },
     {
+        "id": "platform_v1.world_content_transaction.install_lua_api",
+        "function": "world_content_transaction::install_lua_api",
+        "path": "src/catalua_platform_world_content.cpp",
+        "signature": (
+            "void world_content_transaction::install_lua_api( "
+            "sol::state &lua, sol::table &ccb,"
+        ),
+        "namespace": "ccb",
+    },
+    {
         "id": "shared.install_value_type_api",
         "function": "install_value_type_api",
         "path": "src/catalua_bindings_values.cpp",
@@ -136,6 +146,13 @@ INSTALLER_SPECS = (
         "namespace": "global",
     },
     {
+        "id": "shared.install_script_mapgen_context_api",
+        "function": "install_script_mapgen_context_api",
+        "path": "src/catalua_ui_mapgen.cpp",
+        "signature": "void install_script_mapgen_context_api(",
+        "namespace": "global",
+    },
+    {
         "id": "shared.install_zone_api",
         "function": "install_zone_api",
         "path": "src/catalua_ui_zones.cpp",
@@ -171,6 +188,11 @@ INSTALLER_EDGE_SPECS = (
         "install_horde_api(",
     ),
     (
+        "api_v5.initialize_state",
+        "shared.install_script_mapgen_context_api",
+        "install_script_mapgen_context_api(",
+    ),
+    (
         "platform_v1.initialize_state",
         "platform_v1.install_mod_definition",
         "install_mod_definition(",
@@ -184,6 +206,11 @@ INSTALLER_EDGE_SPECS = (
         "platform_v1.install_runtime_api",
         "platform_v1.content_transaction.install_lua_api",
         "content.install_lua_api(",
+    ),
+    (
+        "platform_v1.content_transaction.install_lua_api",
+        "platform_v1.world_content_transaction.install_lua_api",
+        "world.install_lua_api(",
     ),
     (
         "platform_v1.install_runtime_api",
@@ -204,6 +231,11 @@ INSTALLER_EDGE_SPECS = (
         "platform_v1.install_runtime_api",
         "shared.install_horde_api",
         "install_horde_api(",
+    ),
+    (
+        "platform_v1.install_runtime_api",
+        "shared.install_script_mapgen_context_api",
+        "install_script_mapgen_context_api(",
     ),
     (
         "platform_v1.install_runtime_api",

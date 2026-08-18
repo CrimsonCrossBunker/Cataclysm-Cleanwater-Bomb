@@ -199,10 +199,10 @@ def validate_contract(contract: dict[str, object]) -> dict[str, int]:
     counts = {section: len(values) for section, values in seen.items()}
     expected_counts = {
         "modules": 3,
-        "namespaces": 70,
-        "classes": 269,
-        "functions": 502,
-        "methods": 149,
+        "namespaces": 71,
+        "classes": 274,
+        "functions": 513,
+        "methods": 162,
         "properties": 51,
         "operators": 47,
         "enums": 26,

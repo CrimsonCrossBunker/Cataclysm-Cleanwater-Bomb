@@ -6874,7 +6874,7 @@ local ccb = require("ccb")
 
 local construction = ccb.content.Construction {
     id = "con_ccb_platform_sample",
-    group = "dig_channel",
+    group = "dig_a_water_channel",
     category = "DIG",
     duration_moves = 1800,
     post_terrain = "t_pit_shallow",
@@ -6894,7 +6894,7 @@ ccb.content.add(construction)
 
     const construction_str_id construction( "con_ccb_platform_sample" );
     REQUIRE( construction.is_valid() );
-    CHECK( construction->group == construction_group_str_id( "dig_channel" ) );
+    CHECK( construction->group == construction_group_str_id( "dig_a_water_channel" ) );
     CHECK( construction->category == construction_category_id( "DIG" ) );
     CHECK( construction->time == 1800 );
     REQUIRE( construction->required_skills.count( skill_id( "fabrication" ) ) == 1 );
@@ -24582,7 +24582,6 @@ TEST_CASE( "lua_first_dialogue_composes_native_topics_and_preserves_order_trade"
     cata::lua_platform::shutdown();
     JsonObject base_topic = json_loader::from_string( R"json({
         "id": "TALK_PLATFORM_DIALOGUE_BASE",
-        "type": "talk_topic",
         "dynamic_line": "Platform base JSON line.",
         "responses": [
             { "text": "Original platform response.", "topic": "TALK_NONE" },
