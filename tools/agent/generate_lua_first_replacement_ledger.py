@@ -1076,6 +1076,20 @@ BOUNDED_IMPLEMENTED_JSON = {
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
     },
+    "region_settings": {
+        "target": "content.gameplay",
+        "evidence": [
+            "src/catalua_platform_runtime.cpp",
+            "src/regional_settings.cpp",
+            "src/regional_settings.h",
+            "src/catalua_platform_content.h",
+            "data/lua/types/ccb_platform_v1.d.lua",
+            "tests/catalua_ui_test.cpp",
+            "tools/migrate_lua_first.py",
+            "tools/test_migrate_lua_first.py",
+            "data/lua/LUA_FIRST_PLATFORM.md",
+        ],
+    },
     "region_terrain_furniture": {
         "target": "content.map",
         "evidence": [
@@ -1401,17 +1415,6 @@ PLANNED_JSON = {
         ],
     },
     "mod_tileset": {
-        "target": "content.gameplay",
-        "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
-            "tools/migrate_lua_first.py",
-            "tools/test_migrate_lua_first.py",
-            "data/lua/LUA_FIRST_PLATFORM.md",
-        ],
-    },
-    "region_settings": {
         "target": "content.gameplay",
         "evidence": [
             "src/catalua_platform_runtime.cpp",

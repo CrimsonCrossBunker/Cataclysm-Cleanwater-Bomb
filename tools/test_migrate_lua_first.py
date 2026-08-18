@@ -8955,6 +8955,201 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn('definition:road_connection("Highway Diamond Interchange", 1)', main)
             self.assertIn('definition:interchange("Highway Diamond Interchange", 2)', main)
 
+    def test_migrates_top_level_region_settings(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "region_settings",
+                        "id": "test_region",
+                        "cities": "test_cities",
+                        "default_oter": [f"oter_{index}" for index in range(21)],
+                        "default_groundcover": [
+                            ["t_grass", 2], ["t_dirt", 1], ["t_grass", 7]
+                        ],
+                        "forest_composition": "test_composition",
+                        "forest_trails": "test_trails",
+                        "weather": "test_weather",
+                        "forests": "test_forests",
+                        "rivers": None,
+                        "lakes": "test_lakes",
+                        "ocean": "test_ocean",
+                        "highways": "test_highways",
+                        "ravines": "test_ravines",
+                        "map_extras": "test_extras",
+                        "terrain_furniture": "test_terrain_furniture",
+                        "feature_flag_settings": {
+                            "blacklist": ["BLACK", "BLACK"],
+                            "whitelist": ["WHITE", "BLACK"],
+                        },
+                        "connections": {
+                            "trail_connection": "trail_connection",
+                            "sewer_connection": "sewer_connection",
+                            "subway_connection": "subway_connection",
+                            "rail_connection": "rail_connection",
+                            "intra_city_road_connection": "intra_road",
+                            "inter_city_road_connection": "inter_road",
+                        },
+                        "place_swamps": False,
+                        "place_roads": False,
+                        "place_railroads": True,
+                        "place_railroads_before_roads": True,
+                        "place_specials": False,
+                        "neighbor_connections": False,
+                        "max_urbanity": 12.5,
+                        "urbanity_increase": [-1, 2.5, 3, 4],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "region_settings_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
+            self.assertEqual(result.todos, [])
+            self.assertIn("content.RegionSettings {", main)
+            self.assertIn('id = "test_region"', main)
+            self.assertIn('cities = "test_cities"', main)
+            self.assertIn('definition:default_oter({ "oter_0",', main)
+            self.assertEqual(main.count('definition:groundcover("t_grass",'), 1)
+            self.assertIn('definition:groundcover("t_grass", 7)', main)
+            self.assertIn('definition:forest_composition("test_composition")', main)
+            self.assertNotIn("definition:rivers", main)
+            self.assertEqual(main.count('definition:feature_blacklisted("BLACK")'), 1)
+            self.assertIn('definition:feature_whitelisted("BLACK")', main)
+            self.assertIn('definition:inter_city_road_connection("inter_road")', main)
+            self.assertIn("definition:place_railroads(true)", main)
+            self.assertIn("definition:max_urbanity(12.5)", main)
+            self.assertIn("definition:urbanity_increase({ -1, 2.5, 3, 4 })", main)
+
+    def test_region_settings_inheritance_flattens_nested_and_weighted_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "region_settings",
+                            "id": "base_region",
+                            "cities": "base_cities",
+                            "default_groundcover": [
+                                ["t_grass", 2], ["t_dirt", 1]
+                            ],
+                            "feature_flag_settings": {
+                                "blacklist": ["BASE_BLACK"],
+                                "whitelist": ["BASE_WHITE"],
+                            },
+                            "connections": {
+                                "trail_connection": "base_trail",
+                                "sewer_connection": "base_sewer",
+                            },
+                        },
+                        {
+                            "type": "region_settings",
+                            "id": "child_region",
+                            "copy-from": "base_region",
+                            "extend": {
+                                "default_groundcover": [
+                                    ["t_grass", 9], ["t_sand", 3]
+                                ]
+                            },
+                            "delete": {"default_groundcover": ["t_dirt"]},
+                            "feature_flag_settings": {
+                                "whitelist": ["CHILD_WHITE"],
+                                "extend": {"blacklist": ["CHILD_BLACK"]},
+                            },
+                            "connections": {"trail_connection": "child_trail"},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "region_inheritance_mod"
+            )
+            main = result.files[Path("main.lua")]
+            child = main.split('id = "child_region"', 1)[1]
+
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(result.partial, [])
+            self.assertEqual(result.todos, [])
+            self.assertIn('cities = "base_cities"', child)
+            self.assertIn('definition:groundcover("t_grass", 9)', child)
+            self.assertIn('definition:groundcover("t_sand", 3)', child)
+            self.assertNotIn('definition:groundcover("t_dirt", 1)', child)
+            self.assertIn('definition:feature_blacklisted("BASE_BLACK")', child)
+            self.assertIn('definition:feature_blacklisted("CHILD_BLACK")', child)
+            self.assertIn('definition:feature_whitelisted("CHILD_WHITE")', child)
+            self.assertIn('definition:trail_connection("child_trail")', child)
+            self.assertIn('definition:sewer_connection("base_sewer")', child)
+
+    def test_region_settings_preserves_explicit_empty_groundcover(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "region_settings",
+                        "id": "empty_groundcover",
+                        "cities": "default",
+                        "default_groundcover": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "empty_groundcover_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
+            self.assertIn("definition:default_groundcover({})", main)
+
+    def test_invalid_region_settings_native_values_are_partial(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "region_settings",
+                            "id": "invalid_region",
+                            "cities": "valid_cities",
+                            "default_oter": ["oter"] * 20,
+                            "default_groundcover": [["t_grass", 0]],
+                            "feature_flag_settings": {"blacklist": 7},
+                            "connections": {"trail_connection": 7},
+                            "max_urbanity": float("inf"),
+                            "urbanity_increase": [0, 1, 2],
+                        },
+                        {
+                            "type": "region_settings",
+                            "id": "missing_cities",
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "invalid_region_mod"
+            )
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 2)
+            self.assertIn("default_oter needs exactly 21", report)
+            self.assertIn("default_groundcover needs review", report)
+            self.assertIn("feature_flag_settings.blacklist needs review", report)
+            self.assertIn("connections.trail_connection needs", report)
+            self.assertIn("max_urbanity needs a native float", report)
+            self.assertIn("urbanity_increase needs exactly four", report)
+            self.assertIn("cities needs a bounded native id", report)
+
     def test_migrates_region_terrain_furniture(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"

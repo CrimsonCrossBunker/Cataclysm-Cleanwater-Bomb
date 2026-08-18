@@ -148,6 +148,12 @@ cata::lua_platform::detail::forest_biome_mapgen_registry()
     return forest_biome_mapgen_factory;
 }
 
+generic_factory<region_settings> &
+cata::lua_platform::detail::region_settings_registry()
+{
+    return region_settings_factory;
+}
+
 /** OBJ */
 template<>
 const region_settings_river &string_id<region_settings_river>::obj() const
@@ -699,6 +705,7 @@ void map_extra_collection::load( const JsonObject &jo, std::string_view )
 
 void region_settings::load( const JsonObject &jo, std::string_view )
 {
+    finalized = false;
     optional( jo, was_loaded, "default_oter", default_oter );
 
     optional( jo, was_loaded, "default_groundcover", default_groundcover, ter_reader );
@@ -731,8 +738,12 @@ void region_settings::load( const JsonObject &jo, std::string_view )
 
 void region_settings::finalize()
 {
+    if( finalized ) {
+        return;
+    }
     // So the data definition goes from z = OVERMAP_HEIGHT to z = OVERMAP_DEPTH
     std::reverse( default_oter.begin(), default_oter.end() );
+    finalized = true;
 }
 
 void region_settings::finalize_all()

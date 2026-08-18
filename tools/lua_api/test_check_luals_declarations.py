@@ -66,11 +66,11 @@ class LuaLsDeclarationTest(unittest.TestCase):
         )
         self.assertIn("ModDefinition", platform_source_usertypes())
         result = check_platform(PLATFORM_DECLARATIONS)
-        self.assertEqual(result["usertypes"], 134)
+        self.assertEqual(result["usertypes"], 135)
         self.assertEqual(result["properties"], 9)
-        self.assertEqual(result["methods"], 312)
-        self.assertEqual(result["migration_content_methods"], 130)
-        self.assertEqual(result["usertype_members"], 547)
+        self.assertEqual(result["methods"], 314)
+        self.assertEqual(result["migration_content_methods"], 131)
+        self.assertEqual(result["usertype_members"], 579)
 
         contents = PLATFORM_DECLARATIONS.read_text(encoding="utf-8")
         with tempfile.TemporaryDirectory() as directory:

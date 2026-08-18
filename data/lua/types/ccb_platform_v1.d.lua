@@ -2960,6 +2960,174 @@ function RegionSettingsHighwayDefinition:road_connection(special_id, weight) end
 ---@return RegionSettingsHighwayDefinition self
 function RegionSettingsHighwayDefinition:interchange(special_id, weight) end
 
+---@class RegionSettingsFeatureFlagOptions
+---@field blacklist? string[] Overmap feature flags excluded in this region.
+---@field whitelist? string[] Overmap feature flags allowed in this region.
+
+---@class RegionSettingsConnectionOptions
+---@field trail_connection? string Overmap connection id used for trails.
+---@field sewer_connection? string Overmap connection id used for sewers.
+---@field subway_connection? string Overmap connection id used for subways.
+---@field rail_connection? string Overmap connection id used for rails.
+---@field intra_city_road_connection? string Overmap connection id used within cities.
+---@field inter_city_road_connection? string Overmap connection id used between cities.
+
+---@class RegionSettingsDefinitionOptions
+---@field id string Stable region settings id.
+---@field default_oter? string[] Exactly 21 overmap terrain ids ordered from highest z-level to lowest.
+---@field default_groundcover? PlatformWeightedEntry[] Weighted terrain ids.
+---@field cities string Region settings city id.
+---@field forest_composition? string Region settings forest mapgen id.
+---@field forest_trails? string Region settings forest trail id.
+---@field weather? string Weather generator id.
+---@field forests? string Region settings forest id.
+---@field rivers? string Region settings river id.
+---@field lakes? string Region settings lake id.
+---@field ocean? string Region settings ocean id.
+---@field highways? string Region settings highway id.
+---@field ravines? string Region settings ravine id.
+---@field map_extras? string Region settings map extras id.
+---@field terrain_furniture? string Region settings terrain furniture id.
+---@field feature_flag_settings? RegionSettingsFeatureFlagOptions
+---@field connections? RegionSettingsConnectionOptions
+---@field place_swamps? boolean Whether swamp placement is enabled; defaults to true.
+---@field place_roads? boolean Whether road placement is enabled; defaults to true.
+---@field place_railroads? boolean Whether railroad placement is enabled; defaults to false.
+---@field place_railroads_before_roads? boolean Whether railroads are placed before roads; defaults to false.
+---@field place_specials? boolean Whether overmap special placement is enabled; defaults to true.
+---@field neighbor_connections? boolean Whether connections may continue into neighboring overmaps; defaults to true.
+---@field max_urbanity? number Maximum urbanity; defaults to 8.
+---@field urbanity_increase? number[] Exactly four north/east/south/west increases.
+
+---@class RegionSettingsDefinition
+---@field id string
+local RegionSettingsDefinition = {}
+
+---@param values string[] Exactly 21 overmap terrain ids ordered from highest z-level to lowest.
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:default_oter(values) end
+
+---@param values PlatformWeightedEntry[]
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:default_groundcover(values) end
+
+---@param terrain_id string
+---@param weight integer
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:groundcover(terrain_id, weight) end
+
+---@param flag string
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:feature_blacklisted(flag) end
+
+---@param flag string
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:feature_whitelisted(flag) end
+
+---@param value string
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:cities(value) end
+
+---@param value string
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:forest_composition(value) end
+
+---@param value string
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:forest_trails(value) end
+
+---@param value string
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:weather(value) end
+
+---@param value string
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:forests(value) end
+
+---@param value string
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:rivers(value) end
+
+---@param value string
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:lakes(value) end
+
+---@param value string
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:ocean(value) end
+
+---@param value string
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:highways(value) end
+
+---@param value string
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:ravines(value) end
+
+---@param value string
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:map_extras(value) end
+
+---@param value string
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:terrain_furniture(value) end
+
+---@param value string
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:trail_connection(value) end
+
+---@param value string
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:sewer_connection(value) end
+
+---@param value string
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:subway_connection(value) end
+
+---@param value string
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:rail_connection(value) end
+
+---@param value string
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:intra_city_road_connection(value) end
+
+---@param value string
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:inter_city_road_connection(value) end
+
+---@param value boolean
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:place_swamps(value) end
+
+---@param value boolean
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:place_roads(value) end
+
+---@param value boolean
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:place_railroads(value) end
+
+---@param value boolean
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:place_railroads_before_roads(value) end
+
+---@param value boolean
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:place_specials(value) end
+
+---@param value boolean
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:neighbor_connections(value) end
+
+---@param value number
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:max_urbanity(value) end
+
+---@param values number[] Exactly four north/east/south/west increases.
+---@return RegionSettingsDefinition self
+function RegionSettingsDefinition:urbanity_increase(values) end
+
 ---@class RegionTerrainFurnitureDefinitionOptions
 ---@field id string Stable region terrain furniture id.
 ---@field ter_id? string Target terrain id.
@@ -4426,6 +4594,10 @@ function CcbPlatformContent.RegionSettingsForestTrail(options) end
 ---@return RegionSettingsHighwayDefinition
 function CcbPlatformContent.RegionSettingsHighway(options) end
 
+---@param options RegionSettingsDefinitionOptions
+---@return RegionSettingsDefinition
+function CcbPlatformContent.RegionSettings(options) end
+
 ---@param options RegionTerrainFurnitureDefinitionOptions
 ---@return RegionTerrainFurnitureDefinition
 function CcbPlatformContent.RegionTerrainFurniture(options) end
@@ -4450,7 +4622,7 @@ function CcbPlatformContent.RegionSettingsCity(options) end
 ---@return ForestBiomeMapgenDefinition
 function CcbPlatformContent.ForestBiomeMapgen(options) end
 
----@alias PlatformContentDefinition FactionDefinition|NpcClassDefinition|NpcDefinition|OvermapTerrainDefinition|OvermapSpecialDefinition|VehiclePartDefinition|VehicleDefinition|ItemDefinition|RecipeDefinition|NestedRecipeCategoryDefinition|ToolQualityDefinition|SkillDisplayDefinition|SkillDefinition|VitaminDefinition|JsonFlagDefinition|DamageTypeDefinition|MaterialDefinition|AmmunitionTypeDefinition|ItemCategoryDefinition|RecipeCategoryDefinition|ProficiencyCategoryDefinition|ProficiencyDefinition|WeaponCategoryDefinition|RequirementDefinition|RecipeGroupDefinition|ScentTypeDefinition|SpeedDescriptionDefinition|HarvestDropTypeDefinition|HarvestDefinition|BehaviorDefinition|MonsterAttackDefinition|EffectTypeDefinition|WeakpointSetDefinition|FieldTypeDefinition|ItemGroupDefinition|SubBodyPartDefinition|WoundDefinition|BodyPartDefinition|WoundFixDefinition|AnatomyDefinition|BodyGraphDefinition|MonsterDefinition|MoraleTypeDefinition|DiseaseTypeDefinition|MonsterFlagDefinition|SpeciesDefinition|EmissionDefinition|MonsterFactionDefinition|MutationTypeDefinition|ConnectGroupDefinition|MutationCategoryDefinition|ConstructionCategoryDefinition|ConstructionGroupDefinition|VehiclePartLocationDefinition|MoodFaceDefinition|DamageInfoOrderDefinition|VehiclePartCategoryDefinition|NamedColorDefinition|RotatableSymbolDefinition|AsciiArtDefinition|LimbScoreDefinition|HitRangeDefinition|BashDamageProfileDefinition|ClothingModDefinition|OvermapLandUseCodeDefinition|OvermapVisionDefinition|OvermapLocationDefinition|ProfessionGroupDefinition|MapExtraCollectionDefinition|VehicleGroupDefinition|FaultGroupDefinition|ExplosionLightDefinition|AmmoEffectDefinition|AddictionTypeDefinition|CharacterModifierDefinition|StartLocationDefinition|ClimbingAidDefinition|WeatherTypeDefinition|ScoreDefinition|OverlayOrderDefinition|ZoneTypeDefinition|SpeechPoolDefinition|EndScreenDefinition|ActivityTypeDefinition|HelpTopicDefinition|SnippetCategoryDefinition|PlaylistDefinition|AttackVectorDefinition|MagicTypeDefinition|MovementModeDefinition|RegionSettingsRavineDefinition|RegionSettingsLakeDefinition|RegionSettingsOceanDefinition|RegionSettingsForestDefinition|RegionSettingsRiverDefinition|RegionSettingsForestMapgenDefinition|RegionSettingsMapExtrasDefinition|RegionSettingsTerrainFurnitureDefinition|RegionSettingsForestTrailDefinition|RegionSettingsHighwayDefinition|RegionTerrainFurnitureDefinition|ForestBiomeComponentDefinition|CityDefinition|FactionMissionDefinition|RegionSettingsCityDefinition|ForestBiomeMapgenDefinition
+---@alias PlatformContentDefinition FactionDefinition|NpcClassDefinition|NpcDefinition|OvermapTerrainDefinition|OvermapSpecialDefinition|VehiclePartDefinition|VehicleDefinition|ItemDefinition|RecipeDefinition|NestedRecipeCategoryDefinition|ToolQualityDefinition|SkillDisplayDefinition|SkillDefinition|VitaminDefinition|JsonFlagDefinition|DamageTypeDefinition|MaterialDefinition|AmmunitionTypeDefinition|ItemCategoryDefinition|RecipeCategoryDefinition|ProficiencyCategoryDefinition|ProficiencyDefinition|WeaponCategoryDefinition|RequirementDefinition|RecipeGroupDefinition|ScentTypeDefinition|SpeedDescriptionDefinition|HarvestDropTypeDefinition|HarvestDefinition|BehaviorDefinition|MonsterAttackDefinition|EffectTypeDefinition|WeakpointSetDefinition|FieldTypeDefinition|ItemGroupDefinition|SubBodyPartDefinition|WoundDefinition|BodyPartDefinition|WoundFixDefinition|AnatomyDefinition|BodyGraphDefinition|MonsterDefinition|MoraleTypeDefinition|DiseaseTypeDefinition|MonsterFlagDefinition|SpeciesDefinition|EmissionDefinition|MonsterFactionDefinition|MutationTypeDefinition|ConnectGroupDefinition|MutationCategoryDefinition|ConstructionCategoryDefinition|ConstructionGroupDefinition|VehiclePartLocationDefinition|MoodFaceDefinition|DamageInfoOrderDefinition|VehiclePartCategoryDefinition|NamedColorDefinition|RotatableSymbolDefinition|AsciiArtDefinition|LimbScoreDefinition|HitRangeDefinition|BashDamageProfileDefinition|ClothingModDefinition|OvermapLandUseCodeDefinition|OvermapVisionDefinition|OvermapLocationDefinition|ProfessionGroupDefinition|MapExtraCollectionDefinition|VehicleGroupDefinition|FaultGroupDefinition|ExplosionLightDefinition|AmmoEffectDefinition|AddictionTypeDefinition|CharacterModifierDefinition|StartLocationDefinition|ClimbingAidDefinition|WeatherTypeDefinition|ScoreDefinition|OverlayOrderDefinition|ZoneTypeDefinition|SpeechPoolDefinition|EndScreenDefinition|ActivityTypeDefinition|HelpTopicDefinition|SnippetCategoryDefinition|PlaylistDefinition|AttackVectorDefinition|MagicTypeDefinition|MovementModeDefinition|RegionSettingsRavineDefinition|RegionSettingsLakeDefinition|RegionSettingsOceanDefinition|RegionSettingsForestDefinition|RegionSettingsRiverDefinition|RegionSettingsForestMapgenDefinition|RegionSettingsMapExtrasDefinition|RegionSettingsTerrainFurnitureDefinition|RegionSettingsForestTrailDefinition|RegionSettingsHighwayDefinition|RegionSettingsDefinition|RegionTerrainFurnitureDefinition|ForestBiomeComponentDefinition|CityDefinition|FactionMissionDefinition|RegionSettingsCityDefinition|ForestBiomeMapgenDefinition
 
 ---@param definition PlatformContentDefinition
 function CcbPlatformContent.add(definition) end
@@ -4825,6 +4997,10 @@ function CcbPlatformContent.edit_region_settings_forest_trail(id) end
 ---@param id string Region-settings-highway id staged earlier by this Mod.
 ---@return RegionSettingsHighwayDefinition
 function CcbPlatformContent.edit_region_settings_highway(id) end
+
+---@param id string Region-settings id staged earlier by this Mod.
+---@return RegionSettingsDefinition
+function CcbPlatformContent.edit_region_settings(id) end
 
 ---@param id string Region-terrain-furniture id staged earlier by this Mod.
 ---@return RegionTerrainFurnitureDefinition

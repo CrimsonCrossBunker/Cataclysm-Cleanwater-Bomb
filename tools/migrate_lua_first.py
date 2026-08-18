@@ -121,6 +121,7 @@ REGIONAL_INHERITANCE_LABELS = {
     "region_settings_terrain_furniture": "region settings terrain furniture",
     "region_settings_forest_trail": "region settings forest trail",
     "region_settings_highway": "region settings highway",
+    "region_settings": "region settings",
     "region_settings_city": "region settings city",
     "region_terrain_furniture": "region terrain furniture",
     "forest_biome_component": "forest biome component",
@@ -145,6 +146,7 @@ REGIONAL_INHERITANCE_CONTAINER_FIELDS = {
         "four_way_intersections", "three_way_intersections", "bends",
         "road_connections", "interchanges",
     }),
+    "region_settings": frozenset({"default_groundcover"}),
     "region_settings_city": frozenset({"houses", "shops", "parks"}),
     "region_terrain_furniture": frozenset({
         "replace_with_terrain", "replace_with_furniture",
@@ -159,12 +161,17 @@ REGIONAL_INHERITANCE_WEIGHTED_FIELDS = {
         "four_way_intersections", "three_way_intersections", "bends",
         "road_connections", "interchanges",
     }),
+    "region_settings": frozenset({"default_groundcover"}),
     "region_settings_city": frozenset({"houses", "shops", "parks"}),
     "region_terrain_furniture": frozenset({
         "replace_with_terrain", "replace_with_furniture",
     }),
     "forest_biome_component": frozenset({"types"}),
     "forest_biome_mapgen": frozenset({"groundcover"}),
+}
+
+REGIONAL_INHERITANCE_NESTED_FIELDS = {
+    "region_settings": frozenset({"feature_flag_settings", "connections"}),
 }
 
 PROVEN_NPC_ACTOR_EVENTS = frozenset({
@@ -2797,7 +2804,6 @@ UNREGISTERED_CONTENT_TYPES = frozenset({
     "omt_placeholder",
     "pp_generator",
     "mod_tileset",
-    "region_settings",
     "enchantment",
     "SPELL",
     "bionic",
@@ -4827,10 +4833,68 @@ def resolve_regional_inheritance(
     if has_copy_from:
         for key, item in value.items():
             if key not in inheritance_keys:
-                resolved[key] = copy.deepcopy(item)
+                if (
+                    key in REGIONAL_INHERITANCE_NESTED_FIELDS.get(kind, frozenset()) and
+                    isinstance(resolved.get(key), dict) and
+                    isinstance(item, dict)
+                ):
+                    merged = copy.deepcopy(resolved[key])
+                    merged.update(copy.deepcopy(item))
+                    resolved[key] = merged
+                else:
+                    resolved[key] = copy.deepcopy(item)
 
     allowed_fields = REGIONAL_INHERITANCE_CONTAINER_FIELDS[kind]
     todos: list[str] = []
+    if kind == "region_settings":
+        feature_settings = resolved.get("feature_flag_settings")
+        direct_feature_settings = value.get("feature_flag_settings")
+        if isinstance(feature_settings, dict):
+            for operation in ("extend", "delete"):
+                patch = feature_settings.get(operation)
+                if patch is None:
+                    continue
+                if not isinstance(patch, dict):
+                    todos.append(
+                        f"{prefix} feature_flag_settings.{operation} must be an object"
+                    )
+                    continue
+                for member, raw_entries in patch.items():
+                    if member not in {"blacklist", "whitelist"}:
+                        todos.append(
+                            f"{prefix} feature_flag_settings.{operation}.{member} is not supported"
+                        )
+                        continue
+                    if isinstance(direct_feature_settings, dict) and \
+                            member in direct_feature_settings:
+                        continue
+                    current = feature_settings.get(member, [])
+                    entries = raw_entries if isinstance(raw_entries, list) else [raw_entries]
+                    if (
+                        not isinstance(current, list) or
+                        not all(isinstance(entry, str) and entry for entry in current) or
+                        not all(isinstance(entry, str) and entry for entry in entries)
+                    ):
+                        todos.append(
+                            f"{prefix} feature_flag_settings.{operation}.{member} has malformed flags"
+                        )
+                        continue
+                    updated = list(dict.fromkeys(current))
+                    if operation == "extend":
+                        for entry in entries:
+                            if entry not in updated:
+                                updated.append(entry)
+                    else:
+                        missing = [entry for entry in entries if entry not in updated]
+                        if missing:
+                            todos.append(
+                                f"{prefix} feature_flag_settings.delete.{member} references absent flags"
+                            )
+                            continue
+                        updated = [entry for entry in updated if entry not in entries]
+                    feature_settings[member] = updated
+            feature_settings.pop("extend", None)
+            feature_settings.pop("delete", None)
     for operation in ("extend", "delete"):
         patch = value.get(operation)
         if patch is None:
@@ -10520,6 +10584,198 @@ def render_region_settings_highway(source: SourceObject, result: MigrationResult
     )
 
 
+def render_region_settings(source: SourceObject, result: MigrationResult) -> str | None:
+    value = source.value
+    settings_id = value.get("id")
+    if not bounded_platform_id(settings_id):
+        result.partial.append(f"{source.location}: region settings <invalid id>")
+        result.todos.append(
+            f"{source.location}: region settings needs a stable native id"
+        )
+        return None
+    city_settings = value.get("cities")
+    if not bounded_platform_id(city_settings):
+        result.partial.append(f"{source.location}: region settings {settings_id}")
+        result.todos.append(
+            f"{source.location}: region settings {settings_id} cities needs a bounded native id"
+        )
+        return None
+    todo_count = len(result.todos)
+    lines = [
+        "local definition = content.RegionSettings {",
+        f"    id = {lua_quote(settings_id)},",
+        f"    cities = {lua_quote(city_settings)},",
+        "}",
+    ]
+
+    default_oter = value.get("default_oter")
+    if default_oter is not None:
+        if (
+            isinstance(default_oter, list) and
+            len(default_oter) == 21 and
+            all(bounded_platform_id(entry) for entry in default_oter)
+        ):
+            lines.append(
+                f"definition:default_oter({lua_string_table(default_oter)})"
+            )
+        else:
+            result.todos.append(
+                f"{source.location}: region settings {settings_id} default_oter needs exactly 21 bounded native ids"
+            )
+
+    if "default_groundcover" in value:
+        groundcover = canonical_weighted_entries(value.get("default_groundcover"))
+        if groundcover is None:
+            result.todos.append(
+                f"{source.location}: region settings {settings_id} default_groundcover needs review"
+            )
+        elif not groundcover:
+            lines.append("definition:default_groundcover({})")
+        else:
+            for terrain_id, weight in groundcover:
+                lines.append(
+                    f"definition:groundcover({lua_quote(terrain_id)}, {weight})"
+                )
+
+    optional_ids = (
+        "forest_composition", "forest_trails", "weather", "forests",
+        "rivers", "lakes", "ocean", "highways", "ravines", "map_extras",
+        "terrain_furniture",
+    )
+    for field_name in optional_ids:
+        entry = value.get(field_name)
+        if entry is None:
+            continue
+        if bounded_platform_id(entry):
+            lines.append(f"definition:{field_name}({lua_quote(entry)})")
+        else:
+            result.todos.append(
+                f"{source.location}: region settings {settings_id} {field_name} needs a bounded native id or null"
+            )
+
+    feature_settings = value.get("feature_flag_settings")
+    if feature_settings is not None:
+        if not isinstance(feature_settings, dict):
+            result.todos.append(
+                f"{source.location}: region settings {settings_id} feature_flag_settings needs review"
+            )
+        else:
+            for member, method in (
+                ("blacklist", "feature_blacklisted"),
+                ("whitelist", "feature_whitelisted"),
+            ):
+                raw_flags = feature_settings.get(member, [])
+                if (
+                    isinstance(raw_flags, list) and
+                    all(isinstance(flag, str) and flag for flag in raw_flags)
+                ):
+                    for flag in dict.fromkeys(raw_flags):
+                        lines.append(f"definition:{method}({lua_quote(flag)})")
+                else:
+                    result.todos.append(
+                        f"{source.location}: region settings {settings_id} feature_flag_settings.{member} needs review"
+                    )
+            unresolved = unresolved_fields(
+                feature_settings, {"blacklist", "whitelist"}
+            )
+            if unresolved:
+                result.todos.append(
+                    f"{source.location}: region settings {settings_id} feature_flag_settings unresolved fields: " +
+                    ", ".join(unresolved)
+                )
+
+    connection_fields = (
+        "trail_connection", "sewer_connection", "subway_connection",
+        "rail_connection", "intra_city_road_connection",
+        "inter_city_road_connection",
+    )
+    connections = value.get("connections")
+    if connections is not None:
+        if not isinstance(connections, dict):
+            result.todos.append(
+                f"{source.location}: region settings {settings_id} connections needs review"
+            )
+        else:
+            for field_name in connection_fields:
+                entry = connections.get(field_name)
+                if entry is None:
+                    continue
+                if bounded_platform_id(entry):
+                    lines.append(f"definition:{field_name}({lua_quote(entry)})")
+                else:
+                    result.todos.append(
+                        f"{source.location}: region settings {settings_id} connections.{field_name} needs a bounded native id or null"
+                    )
+            unresolved = unresolved_fields(connections, set(connection_fields))
+            if unresolved:
+                result.todos.append(
+                    f"{source.location}: region settings {settings_id} connections unresolved fields: " +
+                    ", ".join(unresolved)
+                )
+
+    boolean_fields = (
+        "place_swamps", "place_roads", "place_railroads",
+        "place_railroads_before_roads", "place_specials",
+        "neighbor_connections",
+    )
+    for field_name in boolean_fields:
+        if field_name not in value:
+            continue
+        entry = value[field_name]
+        if isinstance(entry, bool):
+            lines.append(f"definition:{field_name}({lua_boolean(entry)})")
+        else:
+            result.todos.append(
+                f"{source.location}: region settings {settings_id} {field_name} needs a boolean"
+            )
+
+    if "max_urbanity" in value:
+        maximum = finite_number(value["max_urbanity"], -NATIVE_FLOAT_MAX, NATIVE_FLOAT_MAX)
+        if maximum is None:
+            result.todos.append(
+                f"{source.location}: region settings {settings_id} max_urbanity needs a native float"
+            )
+        else:
+            lines.append(f"definition:max_urbanity({lua_number(maximum)})")
+
+    if "urbanity_increase" in value:
+        raw_increases = value["urbanity_increase"]
+        increases = (
+            [finite_number(entry, -NATIVE_FLOAT_MAX, NATIVE_FLOAT_MAX)
+             for entry in raw_increases]
+            if isinstance(raw_increases, list) and len(raw_increases) == 4
+            else []
+        )
+        if len(increases) == 4 and all(entry is not None for entry in increases):
+            lines.append(
+                "definition:urbanity_increase({ " +
+                ", ".join(lua_number(entry) for entry in increases if entry is not None) +
+                " })"
+            )
+        else:
+            result.todos.append(
+                f"{source.location}: region settings {settings_id} urbanity_increase needs exactly four native floats"
+            )
+
+    return finish_catalog(
+        source,
+        result,
+        "region settings",
+        settings_id,
+        lines,
+        {
+            "type", "id", "cities", "default_oter", "default_groundcover",
+            "forest_composition", "forest_trails", "weather", "forests",
+            "rivers", "lakes", "ocean", "highways", "ravines", "map_extras",
+            "terrain_furniture", "feature_flag_settings", "connections",
+            "place_swamps", "place_roads", "place_railroads",
+            "place_railroads_before_roads", "place_specials",
+            "neighbor_connections", "max_urbanity", "urbanity_increase",
+        },
+        todo_count,
+    )
+
+
 def render_region_terrain_furniture(source: SourceObject, result: MigrationResult) -> str | None:
     value = source.value
     rtf_id = value.get("id")
@@ -14428,6 +14684,7 @@ def migrate(objects: list[SourceObject], mod_id: str,
         "region_settings_terrain_furniture": [],
         "region_settings_forest_trail": [],
         "region_settings_highway": [],
+        "region_settings": [],
         "region_terrain_furniture": [],
         "forest_biome_component": [],
         "city": [],
@@ -15057,6 +15314,10 @@ def migrate(objects: list[SourceObject], mod_id: str,
             rendered = render_region_settings_highway(source, result)
             if rendered:
                 catalog_chunks[kind].append(rendered)
+        elif kind == "region_settings":
+            rendered = render_region_settings(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
         elif kind == "region_terrain_furniture":
             rendered = render_region_terrain_furniture(source, result)
             if rendered:
@@ -15439,6 +15700,7 @@ def migrate(objects: list[SourceObject], mod_id: str,
         "region_settings_terrain_furniture": "Native region settings terrain furnitures",
         "region_settings_forest_trail": "Native region settings forest trails",
         "region_settings_highway": "Native region settings highways",
+        "region_settings": "Native region settings",
         "region_terrain_furniture": "Native region terrain furnitures",
         "forest_biome_component": "Native forest biome components",
         "city": "Native city definitions",

@@ -117,6 +117,7 @@ struct city;
 class faction_mission;
 struct region_settings_city;
 struct forest_biome_mapgen;
+struct region_settings;
 
 namespace behavior
 {
@@ -338,6 +339,7 @@ generic_factory<city> &city_registry();
 generic_factory<faction_mission> &faction_mission_registry();
 generic_factory<region_settings_city> &region_settings_city_registry();
 generic_factory<forest_biome_mapgen> &forest_biome_mapgen_registry();
+generic_factory<region_settings> &region_settings_registry();
 
 const VehicleGroup *vehicle_group_registry_find( const std::string &id );
 void vehicle_group_registry_set( const std::string &id, const VehicleGroup &value );

@@ -27,9 +27,9 @@ summary:
   implemented_verified: 67
   implemented_unverified: 0
   bounded_implemented_verified: 14
-  bounded_implemented_unverified: 638
+  bounded_implemented_unverified: 639
   primitive_available_unverified: 4
-  planned: 34
+  planned: 33
   private_adapter: 0
   reviewed_not_applicable: 18
 entries:
@@ -9723,10 +9723,13 @@ entries:
   selector: region_settings
   target_kind: platform_domain
   target: content.gameplay
-  status: planned
-  legacy_dependency: public_legacy
+  status: bounded_implemented_unverified
+  legacy_dependency: none
   evidence:
   - src/catalua_platform_runtime.cpp
+  - src/regional_settings.cpp
+  - src/regional_settings.h
+  - src/catalua_platform_content.h
   - data/lua/types/ccb_platform_v1.d.lua
   - tests/catalua_ui_test.cpp
   - tools/migrate_lua_first.py

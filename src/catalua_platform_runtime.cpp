@@ -7090,6 +7090,183 @@ struct region_settings_highway_definition_handle {
     }
 };
 
+struct region_settings_definition_data {
+    std::string id;
+    std::vector<std::string> default_oter;
+    std::vector<std::pair<std::string, std::int64_t>> default_groundcover;
+    bool default_groundcover_set = false;
+    std::string cities;
+    std::string forest_composition;
+    std::string forest_trails;
+    std::string weather;
+    std::string forests;
+    std::string rivers;
+    std::string lakes;
+    std::string ocean;
+    std::string highways;
+    std::string ravines;
+    std::string map_extras;
+    std::string terrain_furniture;
+    std::vector<std::string> feature_blacklist;
+    std::vector<std::string> feature_whitelist;
+    std::string trail_connection;
+    std::string sewer_connection;
+    std::string subway_connection;
+    std::string rail_connection;
+    std::string intra_city_road_connection;
+    std::string inter_city_road_connection;
+    bool place_swamps = true;
+    bool place_roads = true;
+    bool place_railroads = false;
+    bool place_railroads_before_roads = false;
+    bool place_specials = true;
+    bool neighbor_connections = true;
+    double max_urbanity = 8.0;
+    std::array<float, 4> urbanity_increase = { 0.0f, 0.0f, 0.0f, 0.0f };
+    bool registered = false;
+};
+
+struct region_settings_definition_handle {
+    std::shared_ptr<region_settings_definition_data> definition;
+    std::shared_ptr<owner_token> token;
+
+    region_settings_definition_handle &default_oter( const sol::table &values ) {
+        require_building_handle( token, *definition, "region settings" );
+        const std::size_t count = require_dense_array(
+                                      values, "region settings default_oter",
+                                      OVERMAP_LAYERS, OVERMAP_LAYERS );
+        definition->default_oter.clear();
+        definition->default_oter.reserve( count );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            definition->default_oter.push_back( values.get<std::string>( index ) );
+        }
+        return *this;
+    }
+
+    region_settings_definition_handle &default_groundcover( const sol::table &values ) {
+        require_building_handle( token, *definition, "region settings" );
+        definition->default_groundcover.clear();
+        definition->default_groundcover_set = true;
+        parse_weighted_table_entries( values, "region settings default_groundcover",
+                                      definition->default_groundcover );
+        return *this;
+    }
+
+    region_settings_definition_handle &groundcover( const std::string &terrain_id,
+            const std::int64_t weight ) {
+        require_building_handle( token, *definition, "region settings" );
+        if( terrain_id.empty() || weight <= 0 ) {
+            throw std::runtime_error(
+                "region settings groundcover needs a terrain id and positive weight" );
+        }
+        definition->default_groundcover_set = true;
+        add_or_replace_weighted_entry( definition->default_groundcover,
+                                       terrain_id, weight );
+        return *this;
+    }
+
+    region_settings_definition_handle &feature_blacklisted( const std::string &flag ) {
+        require_building_handle( token, *definition, "region settings" );
+        if( flag.empty() ) {
+            throw std::runtime_error( "region settings feature flag cannot be empty" );
+        }
+        if( std::find( definition->feature_blacklist.begin(),
+                      definition->feature_blacklist.end(), flag ) ==
+            definition->feature_blacklist.end() ) {
+            definition->feature_blacklist.push_back( flag );
+        }
+        return *this;
+    }
+
+    region_settings_definition_handle &feature_whitelisted( const std::string &flag ) {
+        require_building_handle( token, *definition, "region settings" );
+        if( flag.empty() ) {
+            throw std::runtime_error( "region settings feature flag cannot be empty" );
+        }
+        if( std::find( definition->feature_whitelist.begin(),
+                      definition->feature_whitelist.end(), flag ) ==
+            definition->feature_whitelist.end() ) {
+            definition->feature_whitelist.push_back( flag );
+        }
+        return *this;
+    }
+
+#define CCB_REGION_SETTINGS_STRING_SETTER( name ) \
+    region_settings_definition_handle &name( const std::string &value ) { \
+        require_building_handle( token, *definition, "region settings" ); \
+        definition->name = value; \
+        return *this; \
+    }
+
+    CCB_REGION_SETTINGS_STRING_SETTER( cities )
+    CCB_REGION_SETTINGS_STRING_SETTER( forest_composition )
+    CCB_REGION_SETTINGS_STRING_SETTER( forest_trails )
+    CCB_REGION_SETTINGS_STRING_SETTER( weather )
+    CCB_REGION_SETTINGS_STRING_SETTER( forests )
+    CCB_REGION_SETTINGS_STRING_SETTER( rivers )
+    CCB_REGION_SETTINGS_STRING_SETTER( lakes )
+    CCB_REGION_SETTINGS_STRING_SETTER( ocean )
+    CCB_REGION_SETTINGS_STRING_SETTER( highways )
+    CCB_REGION_SETTINGS_STRING_SETTER( ravines )
+    CCB_REGION_SETTINGS_STRING_SETTER( map_extras )
+    CCB_REGION_SETTINGS_STRING_SETTER( terrain_furniture )
+    CCB_REGION_SETTINGS_STRING_SETTER( trail_connection )
+    CCB_REGION_SETTINGS_STRING_SETTER( sewer_connection )
+    CCB_REGION_SETTINGS_STRING_SETTER( subway_connection )
+    CCB_REGION_SETTINGS_STRING_SETTER( rail_connection )
+    CCB_REGION_SETTINGS_STRING_SETTER( intra_city_road_connection )
+    CCB_REGION_SETTINGS_STRING_SETTER( inter_city_road_connection )
+
+#undef CCB_REGION_SETTINGS_STRING_SETTER
+
+#define CCB_REGION_SETTINGS_BOOL_SETTER( name ) \
+    region_settings_definition_handle &name( const bool value ) { \
+        require_building_handle( token, *definition, "region settings" ); \
+        definition->name = value; \
+        return *this; \
+    }
+
+    CCB_REGION_SETTINGS_BOOL_SETTER( place_swamps )
+    CCB_REGION_SETTINGS_BOOL_SETTER( place_roads )
+    CCB_REGION_SETTINGS_BOOL_SETTER( place_railroads )
+    CCB_REGION_SETTINGS_BOOL_SETTER( place_railroads_before_roads )
+    CCB_REGION_SETTINGS_BOOL_SETTER( place_specials )
+    CCB_REGION_SETTINGS_BOOL_SETTER( neighbor_connections )
+
+#undef CCB_REGION_SETTINGS_BOOL_SETTER
+
+    region_settings_definition_handle &max_urbanity( const double value ) {
+        require_building_handle( token, *definition, "region settings" );
+        if( !std::isfinite( value ) ) {
+            throw std::runtime_error( "region settings max urbanity must be finite" );
+        }
+        definition->max_urbanity = value;
+        return *this;
+    }
+
+    region_settings_definition_handle &urbanity_increase( const sol::table &values ) {
+        require_building_handle( token, *definition, "region settings" );
+        const std::size_t count = require_dense_array(
+                                      values, "region settings urbanity_increase", 4, 4 );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            const double value = values.get<double>( index );
+            if( !std::isfinite( value ) ||
+                value < std::numeric_limits<float>::lowest() ||
+                value > std::numeric_limits<float>::max() ) {
+                throw std::runtime_error(
+                    "region settings urbanity increase must contain finite native floats" );
+            }
+            definition->urbanity_increase[index - 1] = static_cast<float>( value );
+        }
+        return *this;
+    }
+
+    std::string id() const {
+        require_readable_handle( token, *definition, "region settings" );
+        return definition->id;
+    }
+};
+
 struct region_terrain_furniture_definition_data {
     std::string id;
     std::string ter_id;
@@ -7971,6 +8148,8 @@ using region_settings_forest_trail_registration =
     catalog_registration<region_settings_forest_trail_definition_data>;
 using region_settings_highway_registration =
     catalog_registration<region_settings_highway_definition_data>;
+using region_settings_registration =
+    catalog_registration<region_settings_definition_data>;
 using region_terrain_furniture_registration =
     catalog_registration<region_terrain_furniture_definition_data>;
 using forest_biome_component_registration =
@@ -8828,6 +9007,7 @@ struct content_transaction::impl {
     std::vector<region_settings_terrain_furniture_registration> region_settings_terrain_furnitures;
     std::vector<region_settings_forest_trail_registration> region_settings_forest_trails;
     std::vector<region_settings_highway_registration> region_settings_highways;
+    std::vector<region_settings_registration> region_settings;
     std::vector<region_terrain_furniture_registration> region_terrain_furnitures;
     std::vector<forest_biome_component_registration> forest_biome_components;
     std::vector<city_registration> cities;
@@ -8998,6 +9178,8 @@ struct content_transaction::impl {
     region_settings_forest_trail_undo;
     std::vector<std::pair<region_settings_highway_id, std::optional<region_settings_highway>>>
     region_settings_highway_undo;
+    std::vector<std::pair<region_settings_id, std::optional<::region_settings>>>
+    region_settings_undo;
     std::vector<std::pair<region_terrain_furniture_id, std::optional<region_terrain_furniture>>>
     region_terrain_furniture_undo;
     std::vector<std::pair<forest_biome_component_id, std::optional<forest_biome_component>>>
@@ -10788,6 +10970,43 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         "bend", &region_settings_highway_definition_handle::bend,
         "road_connection", &region_settings_highway_definition_handle::road_connection,
         "interchange", &region_settings_highway_definition_handle::interchange );
+    ccb.new_usertype<region_settings_definition_handle>(
+        "RegionSettingsDefinition", sol::no_constructor,
+        "id", sol::property( &region_settings_definition_handle::id ),
+        "default_oter", &region_settings_definition_handle::default_oter,
+        "default_groundcover", &region_settings_definition_handle::default_groundcover,
+        "groundcover", &region_settings_definition_handle::groundcover,
+        "feature_blacklisted", &region_settings_definition_handle::feature_blacklisted,
+        "feature_whitelisted", &region_settings_definition_handle::feature_whitelisted,
+        "cities", &region_settings_definition_handle::cities,
+        "forest_composition", &region_settings_definition_handle::forest_composition,
+        "forest_trails", &region_settings_definition_handle::forest_trails,
+        "weather", &region_settings_definition_handle::weather,
+        "forests", &region_settings_definition_handle::forests,
+        "rivers", &region_settings_definition_handle::rivers,
+        "lakes", &region_settings_definition_handle::lakes,
+        "ocean", &region_settings_definition_handle::ocean,
+        "highways", &region_settings_definition_handle::highways,
+        "ravines", &region_settings_definition_handle::ravines,
+        "map_extras", &region_settings_definition_handle::map_extras,
+        "terrain_furniture", &region_settings_definition_handle::terrain_furniture,
+        "trail_connection", &region_settings_definition_handle::trail_connection,
+        "sewer_connection", &region_settings_definition_handle::sewer_connection,
+        "subway_connection", &region_settings_definition_handle::subway_connection,
+        "rail_connection", &region_settings_definition_handle::rail_connection,
+        "intra_city_road_connection",
+        &region_settings_definition_handle::intra_city_road_connection,
+        "inter_city_road_connection",
+        &region_settings_definition_handle::inter_city_road_connection,
+        "place_swamps", &region_settings_definition_handle::place_swamps,
+        "place_roads", &region_settings_definition_handle::place_roads,
+        "place_railroads", &region_settings_definition_handle::place_railroads,
+        "place_railroads_before_roads",
+        &region_settings_definition_handle::place_railroads_before_roads,
+        "place_specials", &region_settings_definition_handle::place_specials,
+        "neighbor_connections", &region_settings_definition_handle::neighbor_connections,
+        "max_urbanity", &region_settings_definition_handle::max_urbanity,
+        "urbanity_increase", &region_settings_definition_handle::urbanity_increase );
     ccb.new_usertype<region_terrain_furniture_definition_handle>(
         "RegionTerrainFurnitureDefinition", sol::no_constructor,
         "id", sol::property( &region_terrain_furniture_definition_handle::id ),
@@ -13020,6 +13239,90 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             std::move( definition ), transaction->token
         };
     } );
+    content.set_function( "RegionSettings", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<region_settings_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->cities = options.get_or( "cities", std::string() );
+        definition->forest_composition = options.get_or(
+                                             "forest_composition", std::string() );
+        definition->forest_trails = options.get_or( "forest_trails", std::string() );
+        definition->weather = options.get_or( "weather", std::string() );
+        definition->forests = options.get_or( "forests", std::string() );
+        definition->rivers = options.get_or( "rivers", std::string() );
+        definition->lakes = options.get_or( "lakes", std::string() );
+        definition->ocean = options.get_or( "ocean", std::string() );
+        definition->highways = options.get_or( "highways", std::string() );
+        definition->ravines = options.get_or( "ravines", std::string() );
+        definition->map_extras = options.get_or( "map_extras", std::string() );
+        definition->terrain_furniture = options.get_or(
+                                            "terrain_furniture", std::string() );
+        definition->place_swamps = options.get_or( "place_swamps", true );
+        definition->place_roads = options.get_or( "place_roads", true );
+        definition->place_railroads = options.get_or( "place_railroads", false );
+        definition->place_railroads_before_roads = options.get_or(
+                    "place_railroads_before_roads", false );
+        definition->place_specials = options.get_or( "place_specials", true );
+        definition->neighbor_connections = options.get_or(
+                                               "neighbor_connections", true );
+        definition->max_urbanity = options.get_or( "max_urbanity", 8.0 );
+
+        region_settings_definition_handle handle{ definition, transaction->token };
+        if( const sol::optional<sol::table> default_oter =
+                options.get<sol::optional<sol::table>>( "default_oter" ) ) {
+            handle.default_oter( *default_oter );
+        }
+        if( const sol::optional<sol::table> groundcover =
+                options.get<sol::optional<sol::table>>( "default_groundcover" ) ) {
+            handle.default_groundcover( *groundcover );
+        }
+        if( const sol::optional<sol::table> increases =
+                options.get<sol::optional<sol::table>>( "urbanity_increase" ) ) {
+            handle.urbanity_increase( *increases );
+        }
+        if( const sol::optional<sol::table> features =
+                options.get<sol::optional<sol::table>>( "feature_flag_settings" ) ) {
+            const auto read_flags = [&features]( const char *member,
+            std::vector<std::string> &destination ) {
+                if( const sol::optional<sol::table> values =
+                        features->get<sol::optional<sol::table>>( member ) ) {
+                    const std::size_t count = require_dense_array(
+                                                  *values, "region settings feature flags", 0, 1024 );
+                    for( std::size_t index = 1; index <= count; ++index ) {
+                        const std::string flag = values->get<std::string>( index );
+                        if( flag.empty() ) {
+                            throw std::runtime_error(
+                                "region settings feature flags must be non-empty" );
+                        }
+                        if( std::find( destination.begin(), destination.end(), flag ) ==
+                            destination.end() ) {
+                            destination.push_back( flag );
+                        }
+                    }
+                }
+            };
+            read_flags( "blacklist", definition->feature_blacklist );
+            read_flags( "whitelist", definition->feature_whitelist );
+        }
+        if( const sol::optional<sol::table> connections =
+                options.get<sol::optional<sol::table>>( "connections" ) ) {
+            definition->trail_connection = connections->get_or(
+                                               "trail_connection", std::string() );
+            definition->sewer_connection = connections->get_or(
+                                               "sewer_connection", std::string() );
+            definition->subway_connection = connections->get_or(
+                                                "subway_connection", std::string() );
+            definition->rail_connection = connections->get_or(
+                                              "rail_connection", std::string() );
+            definition->intra_city_road_connection = connections->get_or(
+                        "intra_city_road_connection", std::string() );
+            definition->inter_city_road_connection = connections->get_or(
+                        "inter_city_road_connection", std::string() );
+        }
+        return handle;
+    } );
     content.set_function( "RegionTerrainFurniture", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
@@ -13926,6 +14229,12 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
                               "region settings highway" );
             return;
         }
+        if( value.is<region_settings_definition_handle>() ) {
+            register_catalog( value.as<region_settings_definition_handle>(),
+                              transaction->region_settings, operation,
+                              "region settings" );
+            return;
+        }
         if( value.is<region_terrain_furniture_definition_handle>() ) {
             register_catalog( value.as<region_terrain_furniture_definition_handle>(),
                               transaction->region_terrain_furnitures, operation,
@@ -14602,6 +14911,13 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         return region_settings_highway_definition_handle{
             edit_catalog( id, transaction->region_settings_highways,
                           "region_settings_highway" ),
+            transaction->token
+        };
+    } );
+    content.set_function( "edit_region_settings", [transaction, edit_catalog](
+    const std::string & id ) {
+        return region_settings_definition_handle{
+            edit_catalog( id, transaction->region_settings, "region_settings" ),
             transaction->token
         };
     } );
@@ -19885,6 +20201,158 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                 definition.id, "forest_biome_mapgen" );
         }
 
+        std::set<std::string> region_settings_ids;
+        for( const region_settings_registration &entry : pimpl_->region_settings ) {
+            const region_settings_definition_data &definition = *entry.definition;
+            require_valid_id( definition.id, "region settings" );
+            if( !region_settings_ids.insert( definition.id ).second ) {
+                throw std::runtime_error( "region settings '" + definition.id +
+                                          "' is registered more than once per transaction" );
+            }
+            if( !definition.default_oter.empty() &&
+                definition.default_oter.size() != OVERMAP_LAYERS ) {
+                throw std::runtime_error( "region settings '" + definition.id +
+                                          "' requires exactly " +
+                                          std::to_string( OVERMAP_LAYERS ) +
+                                          " default overmap terrains" );
+            }
+            for( const std::string &terrain : definition.default_oter ) {
+                require_valid_id( terrain, "default overmap terrain" );
+                if( check_engine_state && !oter_str_id( terrain ).is_valid() ) {
+                    throw std::runtime_error( "region settings '" + definition.id +
+                                              "' references unknown default overmap terrain '" +
+                                              terrain + "'" );
+                }
+            }
+            for( const auto &[terrain, weight] : definition.default_groundcover ) {
+                require_valid_id( terrain, "default groundcover terrain" );
+                if( !native_int( weight ) || weight <= 0 ||
+                    ( check_engine_state && terrain_ids.count( terrain ) == 0 &&
+                      !ter_str_id( terrain ).is_valid() ) ) {
+                    throw std::runtime_error( "region settings '" + definition.id +
+                                              "' has unknown or invalidly weighted groundcover '" +
+                                              terrain + "'" );
+                }
+            }
+            const auto require_reference = [&]( const std::string &reference,
+            const std::set<std::string> &staged, const bool native_valid,
+            const char *label, const bool required ) {
+                if( reference.empty() ) {
+                    if( required ) {
+                        throw std::runtime_error( "region settings '" + definition.id +
+                                                  "' requires " + label );
+                    }
+                    return;
+                }
+                require_valid_id( reference, label );
+                if( check_engine_state && staged.count( reference ) == 0 && !native_valid ) {
+                    throw std::runtime_error( "region settings '" + definition.id +
+                                              "' references unknown " + label + " '" +
+                                              reference + "'" );
+                }
+            };
+            require_reference( definition.cities, region_settings_city_ids,
+                               region_settings_city_id( definition.cities ).is_valid(),
+                               "city settings", true );
+            require_reference( definition.forest_composition,
+                               region_settings_forest_mapgen_ids,
+                               region_settings_forest_mapgen_id(
+                                   definition.forest_composition ).is_valid(),
+                               "forest composition", false );
+            require_reference( definition.forest_trails,
+                               region_settings_forest_trail_ids,
+                               region_settings_forest_trail_id(
+                                   definition.forest_trails ).is_valid(),
+                               "forest trail settings", false );
+            require_reference( definition.weather, weather_generator_ids,
+                               weather_generator_id( definition.weather ).is_valid(),
+                               "weather generator", false );
+            require_reference( definition.forests, region_settings_forest_ids,
+                               region_settings_forest_id( definition.forests ).is_valid(),
+                               "forest settings", false );
+            require_reference( definition.rivers, region_settings_river_ids,
+                               region_settings_river_id( definition.rivers ).is_valid(),
+                               "river settings", false );
+            require_reference( definition.lakes, region_settings_lake_ids,
+                               region_settings_lake_id( definition.lakes ).is_valid(),
+                               "lake settings", false );
+            require_reference( definition.ocean, region_settings_ocean_ids,
+                               region_settings_ocean_id( definition.ocean ).is_valid(),
+                               "ocean settings", false );
+            require_reference( definition.highways, region_settings_highway_ids,
+                               region_settings_highway_id( definition.highways ).is_valid(),
+                               "highway settings", false );
+            require_reference( definition.ravines, region_settings_ravine_ids,
+                               region_settings_ravine_id( definition.ravines ).is_valid(),
+                               "ravine settings", false );
+            require_reference( definition.map_extras, region_settings_map_extras_ids,
+                               region_settings_map_extras_id(
+                                   definition.map_extras ).is_valid(),
+                               "map extras settings", false );
+            require_reference( definition.terrain_furniture,
+                               region_settings_terrain_furniture_ids,
+                               region_settings_terrain_furniture_id(
+                                   definition.terrain_furniture ).is_valid(),
+                               "terrain furniture settings", false );
+
+            std::set<std::string> feature_flags;
+            for( const std::string &flag : definition.feature_blacklist ) {
+                if( flag.empty() || !feature_flags.insert( flag ).second ) {
+                    throw std::runtime_error( "region settings '" + definition.id +
+                                              "' has an empty or repeated feature flag" );
+                }
+            }
+            feature_flags.clear();
+            for( const std::string &flag : definition.feature_whitelist ) {
+                if( flag.empty() || !feature_flags.insert( flag ).second ) {
+                    throw std::runtime_error( "region settings '" + definition.id +
+                                              "' has an empty or repeated feature flag" );
+                }
+            }
+            const auto check_connection = [&]( const char *label,
+            const std::string &connection, const bool require_resolved = true ) {
+                if( connection.empty() ) {
+                    return;
+                }
+                require_valid_id( connection, label );
+                if( check_engine_state && require_resolved &&
+                    overmap_connection_ids.count( connection ) == 0 &&
+                    !overmap_connection_id( connection ).is_valid() ) {
+                    throw std::runtime_error( "region settings '" + definition.id +
+                                              "' references unknown " + std::string( label ) +
+                                              " '" + connection + "'" );
+                }
+            };
+            check_connection( "trail connection", definition.trail_connection );
+            check_connection( "sewer connection", definition.sewer_connection );
+            check_connection( "subway connection", definition.subway_connection );
+            // Core region settings intentionally name the optional Railroads
+            // Mod connection while railroad placement is disabled.  Preserve
+            // that native soft-reference behavior, but require a live or
+            // same-transaction connection when the region will use it.
+            check_connection( "rail connection", definition.rail_connection,
+                              definition.place_railroads );
+            check_connection( "intra-city road connection",
+                              definition.intra_city_road_connection );
+            check_connection( "inter-city road connection",
+                              definition.inter_city_road_connection );
+            if( !std::isfinite( definition.max_urbanity ) ||
+                definition.max_urbanity < std::numeric_limits<float>::lowest() ||
+                definition.max_urbanity > std::numeric_limits<float>::max() ) {
+                throw std::runtime_error( "region settings '" + definition.id +
+                                          "' has max urbanity outside the native float range" );
+            }
+            for( const float increase : definition.urbanity_increase ) {
+                if( !std::isfinite( increase ) ) {
+                    throw std::runtime_error( "region settings '" + definition.id +
+                                              "' has non-finite urbanity increase" );
+                }
+            }
+            validate_operation( entry.operation,
+                                region_settings_id( definition.id ).is_valid(),
+                                definition.id, "region settings" );
+        }
+
         error.clear();
         return true;
     } catch( const std::exception &exception ) {
@@ -23836,6 +24304,108 @@ bool content_transaction::apply( std::string &error )
             detail::region_settings_highway_registry().insert( native );
         }
 
+        for( const region_settings_registration &entry : pimpl_->region_settings ) {
+            const region_settings_id id( entry.definition->id );
+            pimpl_->region_settings_undo.emplace_back(
+                id, id.is_valid() ? std::optional<::region_settings>( id.obj() ) : std::nullopt );
+            ::region_settings native;
+            native.id = id;
+            if( !entry.definition->default_oter.empty() ) {
+                for( std::size_t index = 0; index < OVERMAP_LAYERS; ++index ) {
+                    native.default_oter[index] = oter_str_id( entry.definition->default_oter[index] );
+                }
+            }
+            if( entry.definition->default_groundcover_set ) {
+                native.default_groundcover.clear();
+                for( const auto &[terrain, weight] : entry.definition->default_groundcover ) {
+                    native.default_groundcover.add( ter_id( terrain ), static_cast<int>( weight ) );
+                }
+            }
+            if( !entry.definition->cities.empty() ) {
+                native.city_spec = region_settings_city_id( entry.definition->cities );
+            }
+            if( !entry.definition->forest_composition.empty() ) {
+                native.forest_composition = region_settings_forest_mapgen_id(
+                                                entry.definition->forest_composition );
+            }
+            if( !entry.definition->forest_trails.empty() ) {
+                native.forest_trail = region_settings_forest_trail_id(
+                                          entry.definition->forest_trails );
+            }
+            if( !entry.definition->weather.empty() ) {
+                native.weather = weather_generator_id( entry.definition->weather );
+            }
+            if( !entry.definition->forests.empty() ) {
+                native.overmap_forest = region_settings_forest_id( entry.definition->forests );
+            }
+            if( !entry.definition->rivers.empty() ) {
+                native.overmap_river = region_settings_river_id( entry.definition->rivers );
+            }
+            if( !entry.definition->lakes.empty() ) {
+                native.overmap_lake = region_settings_lake_id( entry.definition->lakes );
+            }
+            if( !entry.definition->ocean.empty() ) {
+                native.overmap_ocean = region_settings_ocean_id( entry.definition->ocean );
+            }
+            if( !entry.definition->highways.empty() ) {
+                native.overmap_highway = region_settings_highway_id( entry.definition->highways );
+            }
+            if( !entry.definition->ravines.empty() ) {
+                native.overmap_ravine = region_settings_ravine_id( entry.definition->ravines );
+            }
+            if( !entry.definition->map_extras.empty() ) {
+                native.region_extras = region_settings_map_extras_id(
+                                           entry.definition->map_extras );
+            }
+            if( !entry.definition->terrain_furniture.empty() ) {
+                native.region_terrain_and_furniture = region_settings_terrain_furniture_id(
+                            entry.definition->terrain_furniture );
+            }
+            native.overmap_feature_flag.blacklist.insert(
+                entry.definition->feature_blacklist.begin(),
+                entry.definition->feature_blacklist.end() );
+            native.overmap_feature_flag.whitelist.insert(
+                entry.definition->feature_whitelist.begin(),
+                entry.definition->feature_whitelist.end() );
+            if( !entry.definition->trail_connection.empty() ) {
+                native.overmap_connection.trail_connection = overmap_connection_id(
+                            entry.definition->trail_connection );
+            }
+            if( !entry.definition->sewer_connection.empty() ) {
+                native.overmap_connection.sewer_connection = overmap_connection_id(
+                            entry.definition->sewer_connection );
+            }
+            if( !entry.definition->subway_connection.empty() ) {
+                native.overmap_connection.subway_connection = overmap_connection_id(
+                            entry.definition->subway_connection );
+            }
+            if( !entry.definition->rail_connection.empty() ) {
+                native.overmap_connection.rail_connection = overmap_connection_id(
+                            entry.definition->rail_connection );
+            }
+            if( !entry.definition->intra_city_road_connection.empty() ) {
+                native.overmap_connection.intra_city_road_connection = overmap_connection_id(
+                            entry.definition->intra_city_road_connection );
+            }
+            if( !entry.definition->inter_city_road_connection.empty() ) {
+                native.overmap_connection.inter_city_road_connection = overmap_connection_id(
+                            entry.definition->inter_city_road_connection );
+            }
+            native.place_swamps = entry.definition->place_swamps;
+            native.place_roads = entry.definition->place_roads;
+            native.place_railroads = entry.definition->place_railroads;
+            native.place_railroads_before_roads = entry.definition->place_railroads_before_roads;
+            native.place_specials = entry.definition->place_specials;
+            native.neighbor_connections = entry.definition->neighbor_connections;
+            native.max_urban = static_cast<float>( entry.definition->max_urbanity );
+            native.urban_increase = entry.definition->urbanity_increase;
+            native.was_loaded = true;
+            detail::region_settings_registry().insert( native );
+        }
+        if( !pimpl_->region_settings.empty() ) {
+            detail::region_settings_registry().finalize();
+        }
+
         for( const region_terrain_furniture_registration &entry :
              pimpl_->region_terrain_furnitures ) {
             const region_terrain_furniture_id id( entry.definition->id );
@@ -24866,6 +25436,13 @@ for( const region_settings_ocean_registration &entry : pimpl_->region_settings_o
             return false;
         }
     }
+    for( const region_settings_registration &entry : pimpl_->region_settings ) {
+        if( !region_settings_id( entry.definition->id ).is_valid() ) {
+            error = "Lua-first region settings '" + entry.definition->id +
+                    "' did not survive global finalization";
+            return false;
+        }
+    }
     for( const region_terrain_furniture_registration &entry :
          pimpl_->region_terrain_furnitures ) {
         if( !region_terrain_furniture_id( entry.definition->id ).is_valid() ) {
@@ -25754,6 +26331,19 @@ void content_transaction::rollback()
     }
     pimpl_->map_extra_collection_undo.clear();
 
+    for( auto it = pimpl_->region_settings_undo.rbegin();
+         it != pimpl_->region_settings_undo.rend(); ++it ) {
+        if( it->second ) {
+            detail::region_settings_registry().restore( *it->second );
+        } else {
+            detail::region_settings_registry().erase( it->first );
+        }
+    }
+    if( !pimpl_->region_settings_undo.empty() ) {
+        detail::region_settings_registry().finalize();
+    }
+    pimpl_->region_settings_undo.clear();
+
     for( auto it = pimpl_->region_settings_ravine_undo.rbegin();
          it != pimpl_->region_settings_ravine_undo.rend(); ++it ) {
         if( it->second ) {
@@ -26462,6 +27052,7 @@ void content_transaction::commit()
     pimpl_->region_settings_terrain_furniture_undo.clear();
     pimpl_->region_settings_forest_trail_undo.clear();
     pimpl_->region_settings_highway_undo.clear();
+    pimpl_->region_settings_undo.clear();
     pimpl_->region_terrain_furniture_undo.clear();
     pimpl_->forest_biome_component_undo.clear();
     pimpl_->token->lifecycle = handle_lifecycle::committed;
@@ -27587,6 +28178,62 @@ std::string content_transaction::fingerprint() const
         hash_building_bin( "bends", entry.definition->bends );
         hash_building_bin( "road_connections", entry.definition->road_connections );
         hash_building_bin( "interchanges", entry.definition->interchanges );
+    }
+    for( const region_settings_registration &entry : pimpl_->region_settings ) {
+        const region_settings_definition_data &value = *entry.definition;
+        hash_part( state, "region_settings" );
+        hash_part( state, operation_name( entry.operation ) );
+        hash_part( state, value.id );
+        hash_part( state, "default_oter" );
+        hash_part( state, std::to_string( value.default_oter.size() ) );
+        for( const std::string &terrain : value.default_oter ) {
+            hash_part( state, terrain );
+        }
+        hash_part( state, "default_groundcover" );
+        hash_part( state, value.default_groundcover_set ? "set" : "default" );
+        hash_part( state, std::to_string( value.default_groundcover.size() ) );
+        for( const auto &[terrain, weight] : value.default_groundcover ) {
+            hash_part( state, terrain );
+            hash_part( state, std::to_string( weight ) );
+        }
+        hash_part( state, value.cities );
+        hash_part( state, value.forest_composition );
+        hash_part( state, value.forest_trails );
+        hash_part( state, value.weather );
+        hash_part( state, value.forests );
+        hash_part( state, value.rivers );
+        hash_part( state, value.lakes );
+        hash_part( state, value.ocean );
+        hash_part( state, value.highways );
+        hash_part( state, value.ravines );
+        hash_part( state, value.map_extras );
+        hash_part( state, value.terrain_furniture );
+        hash_part( state, "feature_blacklist" );
+        hash_part( state, std::to_string( value.feature_blacklist.size() ) );
+        for( const std::string &flag : value.feature_blacklist ) {
+            hash_part( state, flag );
+        }
+        hash_part( state, "feature_whitelist" );
+        hash_part( state, std::to_string( value.feature_whitelist.size() ) );
+        for( const std::string &flag : value.feature_whitelist ) {
+            hash_part( state, flag );
+        }
+        hash_part( state, value.trail_connection );
+        hash_part( state, value.sewer_connection );
+        hash_part( state, value.subway_connection );
+        hash_part( state, value.rail_connection );
+        hash_part( state, value.intra_city_road_connection );
+        hash_part( state, value.inter_city_road_connection );
+        hash_part( state, value.place_swamps ? "true" : "false" );
+        hash_part( state, value.place_roads ? "true" : "false" );
+        hash_part( state, value.place_railroads ? "true" : "false" );
+        hash_part( state, value.place_railroads_before_roads ? "true" : "false" );
+        hash_part( state, value.place_specials ? "true" : "false" );
+        hash_part( state, value.neighbor_connections ? "true" : "false" );
+        hash_part( state, std::to_string( value.max_urbanity ) );
+        for( const float increase : value.urbanity_increase ) {
+            hash_part( state, std::to_string( increase ) );
+        }
     }
     for( const region_terrain_furniture_registration &entry :
          pimpl_->region_terrain_furnitures ) {

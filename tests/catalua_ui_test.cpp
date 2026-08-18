@@ -9109,6 +9109,350 @@ ccb.content.add(ccb.content.ForestBiomeMapgen {
     CHECK( biome_fp1 != biome_fp2 );
 }
 
+TEST_CASE( "lua_first_regional_batch_g5_region_settings_stage_native_root",
+           "[lua][platform][content][regional][batch_g5][stage]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+    scoped_platform_test_mod test_mod( "ccb_platform_regional_batch_g5" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local settings = ccb.content.RegionSettings {
+    id = "ccb_platform_test_region_stage",
+    default_oter = {
+        "open_air", "open_air", "open_air", "open_air", "open_air",
+        "open_air", "open_air", "open_air", "open_air", "open_air",
+        "field",
+        "deep_rock", "deep_rock", "deep_rock", "deep_rock", "deep_rock",
+        "deep_rock", "deep_rock", "deep_rock", "deep_rock", "deep_rock",
+    },
+    default_groundcover = { { "t_grass", 3 }, { "t_dirt", 1 } },
+    cities = "default",
+    forest_composition = "default",
+    forest_trails = "default",
+    weather = "default",
+    forests = "default",
+    rivers = "default",
+    lakes = "default",
+    ocean = "default",
+    highways = "default",
+    ravines = "default",
+    map_extras = "default",
+    terrain_furniture = "default",
+    feature_flag_settings = {
+        blacklist = { "G5_BLACKLIST" },
+        whitelist = { "G5_WHITELIST", "G5_BLACKLIST" },
+    },
+    connections = {
+        trail_connection = "forest_trail",
+        sewer_connection = "sewer_tunnel",
+        subway_connection = "subway_tunnel",
+        rail_connection = "local_road",
+        intra_city_road_connection = "local_road",
+        inter_city_road_connection = "local_road",
+    },
+    place_swamps = false,
+    place_roads = false,
+    place_railroads = true,
+    place_railroads_before_roads = true,
+    place_specials = false,
+    neighbor_connections = false,
+    max_urbanity = 12.5,
+    urbanity_increase = { -1, 2, 3.5, 4 },
+}
+ccb.content.add(settings)
+
+local edited = ccb.content.edit_region_settings("ccb_platform_test_region_stage")
+edited:groundcover("t_grass", 9)
+edited:feature_whitelisted("G5_EDITED")
+edited:max_urbanity(13.5)
+ccb.content.edit(edited)
+)lua" );
+
+    std::string error;
+    const bool prepared = cata::lua_platform::prepare_mods(
+    { test_mod.source( "ccb_platform_regional_batch_g5" ) }, error );
+    INFO( error );
+    REQUIRE( prepared );
+    const bool applied = cata::lua_platform::apply_prepared_content( error );
+    INFO( error );
+    REQUIRE( applied );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+
+    const region_settings_id settings( "ccb_platform_test_region_stage" );
+    REQUIRE( settings.is_valid() );
+    CHECK( settings->finalized );
+    CHECK( settings->default_oter.front() == oter_str_id( "deep_rock" ) );
+    CHECK( settings->default_oter[10] == oter_str_id( "field" ) );
+    CHECK( settings->default_oter.back() == oter_str_id( "open_air" ) );
+    CHECK( settings->default_groundcover.size() == 2 );
+    CHECK( settings->default_groundcover.get_specific_weight( ter_id( "t_grass" ) ) == 9 );
+    REQUIRE( settings->city_spec );
+    CHECK( *settings->city_spec == region_settings_city_id( "default" ) );
+    CHECK( settings->forest_composition == region_settings_forest_mapgen_id( "default" ) );
+    REQUIRE( settings->forest_trail );
+    CHECK( *settings->forest_trail == region_settings_forest_trail_id( "default" ) );
+    CHECK( settings->weather == weather_generator_id( "default" ) );
+    REQUIRE( settings->overmap_forest );
+    REQUIRE( settings->overmap_river );
+    REQUIRE( settings->overmap_lake );
+    REQUIRE( settings->overmap_ocean );
+    REQUIRE( settings->overmap_highway );
+    REQUIRE( settings->overmap_ravine );
+    CHECK( settings->region_extras == region_settings_map_extras_id( "default" ) );
+    CHECK( settings->region_terrain_and_furniture ==
+           region_settings_terrain_furniture_id( "default" ) );
+    CHECK( settings->overmap_feature_flag.blacklist.count( "G5_BLACKLIST" ) == 1 );
+    CHECK( settings->overmap_feature_flag.whitelist.count( "G5_BLACKLIST" ) == 1 );
+    CHECK( settings->overmap_feature_flag.whitelist.count( "G5_EDITED" ) == 1 );
+    CHECK( settings->overmap_connection.trail_connection ==
+           overmap_connection_id( "forest_trail" ) );
+    CHECK( settings->overmap_connection.inter_city_road_connection ==
+           overmap_connection_id( "local_road" ) );
+    CHECK_FALSE( settings->place_swamps );
+    CHECK_FALSE( settings->place_roads );
+    CHECK( settings->place_railroads );
+    CHECK( settings->place_railroads_before_roads );
+    CHECK_FALSE( settings->place_specials );
+    CHECK_FALSE( settings->neighbor_connections );
+    CHECK( settings->max_urban == Approx( 13.5f ) );
+    CHECK( settings->urban_increase[0] == Approx( -1.0f ) );
+    CHECK( settings->urban_increase[2] == Approx( 3.5f ) );
+}
+
+TEST_CASE( "lua_first_regional_batch_g5_accepts_same_transaction_references",
+           "[lua][platform][content][regional][batch_g5][references]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+    scoped_platform_test_mod test_mod( "ccb_platform_regional_g5_references" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+ccb.content.add(ccb.content.Terrain {
+    id = "t_ccb_platform_g5_groundcover",
+    name = "G5 groundcover",
+    description = "Same-transaction region groundcover.",
+    color = "green",
+    symbol = ".",
+    move_cost = 2,
+    trap = "tr_bubblewrap",
+})
+local connection = ccb.content.OvermapConnection {
+    id = "ccb_platform_g5_connection",
+}
+connection:subtype("road", 0, { "road" }, true, false)
+ccb.content.add(connection)
+ccb.content.add(ccb.content.RegionSettingsCity {
+    id = "ccb_platform_g5_city_settings",
+    city_size = 8,
+})
+ccb.content.add(ccb.content.RegionSettings {
+    id = "ccb_platform_g5_reference_region",
+    cities = "ccb_platform_g5_city_settings",
+    default_groundcover = { { "t_ccb_platform_g5_groundcover", 4 } },
+    connections = {
+        trail_connection = "ccb_platform_g5_connection",
+    },
+})
+)lua" );
+
+    std::string error;
+    const bool prepared = cata::lua_platform::prepare_mods(
+    { test_mod.source( "ccb_platform_regional_g5_references" ) }, error );
+    INFO( error );
+    REQUIRE( prepared );
+    const bool applied = cata::lua_platform::apply_prepared_content( error );
+    INFO( error );
+    REQUIRE( applied );
+
+    const region_settings_id settings( "ccb_platform_g5_reference_region" );
+    REQUIRE( settings.is_valid() );
+    REQUIRE( settings->city_spec );
+    CHECK( settings->city_spec->is_valid() );
+    CHECK( settings->default_groundcover.get_specific_weight(
+               ter_id( "t_ccb_platform_g5_groundcover" ) ) == 4 );
+    CHECK( settings->overmap_connection.trail_connection ==
+           overmap_connection_id( "ccb_platform_g5_connection" ) );
+}
+
+TEST_CASE( "lua_first_regional_batch_g5_rejects_invalid_native_configurations",
+           "[lua][platform][content][regional][batch_g5][validation]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+
+    SECTION( "region settings requires city settings" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g5_missing_cities" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettings {
+    id = "ccb_platform_g5_missing_cities",
+})
+)lua" );
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g5_missing_cities" ) }, error ) );
+        CHECK( error.find( "requires city settings" ) != std::string::npos );
+    }
+
+    SECTION( "default overmap terrain requires exactly 21 layers" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g5_bad_layers" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettings {
+    id = "ccb_platform_g5_bad_layers",
+    cities = "default",
+    default_oter = { "open_air" },
+})
+)lua" );
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g5_bad_layers" ) }, error ) );
+        CHECK( error.find( "invalid number of entries" ) != std::string::npos );
+    }
+
+    SECTION( "unknown native references fail during apply" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g5_bad_reference" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettings {
+    id = "ccb_platform_g5_bad_reference",
+    cities = "ccb_platform_g5_missing_city",
+})
+)lua" );
+        std::string error;
+        REQUIRE( cata::lua_platform::prepare_mods(
+                     { test_mod.source( "ccb_platform_g5_bad_reference" ) }, error ) );
+        CHECK_FALSE( cata::lua_platform::apply_prepared_content( error ) );
+        CHECK( error.find( "references unknown city settings" ) != std::string::npos );
+    }
+
+    SECTION( "groundcover weight must be positive" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g5_bad_weight" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettings {
+    id = "ccb_platform_g5_bad_weight",
+    cities = "default",
+    default_groundcover = { { "t_grass", 0 } },
+})
+)lua" );
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g5_bad_weight" ) }, error ) );
+        CHECK( error.find( "positive weight" ) != std::string::npos );
+    }
+
+    SECTION( "urban values must fit native floats" ) {
+        scoped_platform_test_mod test_mod( "ccb_platform_g5_bad_urbanity" );
+        test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettings {
+    id = "ccb_platform_g5_bad_urbanity",
+    cities = "default",
+    max_urbanity = math.huge,
+})
+)lua" );
+        std::string error;
+        CHECK_FALSE( cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g5_bad_urbanity" ) }, error ) );
+        CHECK( error.find( "max urbanity outside the native float range" ) !=
+               std::string::npos );
+    }
+}
+
+TEST_CASE( "lua_first_regional_batch_g5_replace_and_rollback_restore_root",
+           "[lua][platform][content][regional][batch_g5][transaction]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+    const region_settings_id default_settings( "default" );
+    REQUIRE( default_settings.is_valid() );
+    const region_settings baseline = default_settings.obj();
+
+    scoped_platform_test_mod test_mod( "ccb_platform_regional_g5_replace" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.replace(ccb.content.RegionSettings {
+    id = "default",
+    cities = "default",
+    default_groundcover = {},
+    place_roads = false,
+    max_urbanity = 99,
+})
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_regional_g5_replace" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( default_settings.is_valid() );
+    CHECK( default_settings->default_groundcover.empty() );
+    CHECK_FALSE( default_settings->place_roads );
+    CHECK( default_settings->max_urban == Approx( 99.0f ) );
+
+    cata::lua_platform::discard_prepared_mods();
+
+    REQUIRE( default_settings.is_valid() );
+    CHECK( default_settings->place_roads == baseline.place_roads );
+    CHECK( default_settings->max_urban == Approx( baseline.max_urban ) );
+    CHECK( default_settings->default_oter == baseline.default_oter );
+    CHECK( default_settings->default_groundcover.size() ==
+           baseline.default_groundcover.size() );
+    CHECK( default_settings->finalized == baseline.finalized );
+}
+
+TEST_CASE( "lua_first_regional_batch_g5_fingerprint_sensitivity",
+           "[lua][platform][content][regional][batch_g5][fingerprint]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope reset_platform( []() {
+        cata::lua_platform::shutdown();
+    } );
+    scoped_platform_test_mod test_mod( "ccb_platform_g5_fingerprint" );
+
+    const auto fingerprint_for = [&test_mod]( const std::string &script ) {
+        test_mod.write( "main.lua", script );
+        std::string error;
+        const bool prepared = cata::lua_platform::prepare_mods(
+        { test_mod.source( "ccb_platform_g5_fingerprint" ) }, error );
+        INFO( error );
+        REQUIRE( prepared );
+        const std::string fingerprint = cata::lua_platform::prepared_content_fingerprint();
+        REQUIRE_FALSE( fingerprint.empty() );
+        cata::lua_platform::discard_prepared_mods();
+        return fingerprint;
+    };
+
+    const std::string first = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettings {
+    id = "ccb_platform_g5_fingerprint",
+    cities = "default",
+    max_urbanity = 1,
+})
+)lua" );
+    const std::string second = fingerprint_for( R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.RegionSettings {
+    id = "ccb_platform_g5_fingerprint",
+    cities = "default",
+    max_urbanity = 2,
+})
+)lua" );
+    CHECK( first != second );
+}
+
 TEST_CASE( "lua_first_weather_generator_definitions_stage_native_generators",
            "[lua][platform][content][catalog][weather_generator]" )
 {
