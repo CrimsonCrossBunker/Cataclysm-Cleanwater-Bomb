@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <list>
 #include <map>
@@ -334,6 +335,12 @@ void suffer::mutation_power( Character &you, const trait_id &mut_id )
                 { "mutation", cata::lua_ui::native_callback_id{ "mutation", mut_id.str() } }
             } );
         }
+        cata::lua_ui::dispatch_native_hook( "on_mutation_processed", {
+            { "character", static_cast<const Character *>( &you ) },
+            { "mutation", cata::lua_ui::native_callback_id{ "mutation", mut_id.str() } },
+            { "activation_cost", static_cast<std::int64_t>( mut_id->cost ) },
+            { "cooldown_turns", static_cast<std::int64_t>( to_turns<int>( mut_id->cooldown ) ) }
+        } );
     }
 }
 

@@ -35,6 +35,7 @@ bool icg_entry::matches( item const &it, npc const &beta ) const
 {
     const_dialogue temp( get_const_talker_for( get_avatar() ), get_const_talker_for( beta ) );
     return ( !condition || condition( temp ) ) &&
+           ( !platform_condition || platform_condition( it, beta ) ) &&
            ( itype.is_empty() || it.typeId() == itype ) &&
            ( category.is_empty() || it.get_category_shallow().id == category ) &&
            ( item_group.is_empty() ||

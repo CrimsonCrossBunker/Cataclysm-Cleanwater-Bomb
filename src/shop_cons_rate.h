@@ -35,6 +35,7 @@ struct icg_entry {
     translation message;
 
     std::function<bool( const_dialogue const & )> condition;
+    std::function<bool( item const &, npc const & )> platform_condition;
 
     bool operator==( icg_entry const &rhs ) const;
     bool matches( item const &it, npc const &beta ) const;
