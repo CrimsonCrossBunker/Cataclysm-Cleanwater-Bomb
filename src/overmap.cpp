@@ -1,4 +1,5 @@
 #include "catalua_platform_content.h"
+#include "catalua_platform_runtime.h"
 
 #include "cube_direction.h" // IWYU pragma: associated
 #include "omdata.h" // IWYU pragma: associated
@@ -3008,6 +3009,16 @@ bool overmap::can_place_special( const overmap_special &special, const tripoint_
         if( !special.get_eoc()->test_condition( d ) ) {
             return false;
         }
+    }
+    const point_abs_omt base = coords::project_to<coords::omt>( this->pos() );
+    const tripoint_abs_omt absolute_position =
+        tripoint_abs_omt{ base, p.z() } + point_rel_omt{ p.x(), p.y() };
+    const std::optional<bool> lua_condition =
+        cata::lua_platform::invoke_overmap_special_condition_handler(
+            special.id.str(), absolute_position, static_cast<int>( dir ),
+            cit.name, cit.size, cit.population );
+    if( lua_condition && !*lua_condition ) {
+        return false;
     }
 
     // Don't spawn monster areas over locations designated as safe.

@@ -255,6 +255,7 @@ class overmap_land_use_code
 };
 
 struct overmap_spawns {
+        friend class cata::lua_platform::world_content_transaction;
         overmap_spawns() : group( mongroup_id::NULL_ID() ) {}
 
         string_id<MonsterGroup> group;
