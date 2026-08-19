@@ -47,6 +47,21 @@ by `data/lua/LUA_FIRST_PLATFORM.md`, with implementation status in
 `ai/lua-first-roadmap.yml`; it is independent of the currently shipped Lua
 API v5 contract.
 
+Lua-first EOC capability work follows
+`data/lua/LUA_FIRST_EOC_WORKFLOW.md`.  Its active objective is to finish a
+composable, domain-shaped Lua alternative for every EOC capability before
+migrating shipped JSON/EOC content.  Group implementation by complete domain
+batches, write tests with the code, and defer builds and test execution to the
+batch acceptance gate instead of validating every selector or small edit.
+`ai/test-matrix.yml` selects commands for that gate; it does not require them
+to be rerun during the high-throughput implementation loop.
+
+Lua-first 的 EOC 能力开发遵循 `data/lua/LUA_FIRST_EOC_WORKFLOW.md`。当前目标是先让
+Lua 以领域化、可组合的 API 覆盖 EOC 的全部能力，再迁移现有 JSON/EOC 语料。实现时按
+完整领域批量推进，测试随代码编写但集中到批次验收执行；不得为每个 selector 或小改动
+重复编译、加载游戏数据和运行测试。`ai/test-matrix.yml` 负责选择验收命令，不代表开发
+循环中必须反复执行这些命令。
+
 ## Modification boundaries / 修改边界
 
 - Keep changes scoped to the requested behaviour.  Do not reorganize unrelated
