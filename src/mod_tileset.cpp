@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <string>
+#include <utility>
 
 #include "flexbuffer_json.h"
 
@@ -33,6 +34,34 @@ void load_mod_tileset( const JsonObject &jsobj, std::string_view, const cata_pat
 void reset_mod_tileset()
 {
     all_mod_tilesets.clear();
+}
+
+void add_native_mod_tileset( const cata_path &base_path,
+                             const std::string &owner,
+                             const std::size_t generation,
+                             const mod_tileset_definition &definition )
+{
+    all_mod_tilesets.emplace_back( base_path, owner, generation, definition );
+}
+
+void remove_native_mod_tilesets( const std::string &owner,
+                                 const std::size_t generation )
+{
+    all_mod_tilesets.erase(
+        std::remove_if( all_mod_tilesets.begin(), all_mod_tilesets.end(),
+    [&owner, generation]( const mod_tileset & entry ) {
+        return entry.is_native() && entry.owner() == owner &&
+               entry.generation() == generation;
+    } ), all_mod_tilesets.end() );
+}
+
+mod_tileset::mod_tileset( const cata_path &new_base_path, std::string owner,
+                          const std::size_t generation,
+                          const mod_tileset_definition &definition ) :
+    base_path_( new_base_path ), num_in_file_( 0 ), owner_( std::move( owner ) ),
+    generation_( generation ), native_definition_( definition )
+{
+    compatibility = definition.compatibility;
 }
 
 bool mod_tileset::is_compatible( const std::string &tileset_id ) const
