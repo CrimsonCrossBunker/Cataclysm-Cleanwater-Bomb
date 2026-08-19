@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include "avatar.h"
 #include "calendar.h"
 #include "character.h"
 #include "item.h"
@@ -26,14 +27,55 @@ struct context::state {
     std::string topic_id;
     bool allow_write = false;
     std::string invalid_context_message;
+    actor_converter convert_actor;
 
     dialogue &dialogue_ref() const {
         return *d;
     }
 };
 
+namespace
+{
+
+talk_trial make_native_dialogue_trial(
+    const std::string &kind, const int difficulty,
+    const std::string &requested_skill )
+{
+    talk_trial result;
+    result.difficulty = difficulty;
+    if( kind == "none" ) {
+        result.type = TALK_TRIAL_NONE;
+    } else if( kind == "lie" ) {
+        result.type = TALK_TRIAL_LIE;
+    } else if( kind == "persuade" ) {
+        result.type = TALK_TRIAL_PERSUADE;
+    } else if( kind == "intimidate" ) {
+        result.type = TALK_TRIAL_INTIMIDATE;
+    } else if( kind == "skill_check" ) {
+        const skill_id skill( requested_skill );
+        if( requested_skill.empty() || !skill.is_valid() ) {
+            throw std::invalid_argument(
+                "dialogue skill trial requires a valid skill id" );
+        }
+        result.type = TALK_TRIAL_SKILL_CHECK;
+        result.skill_required = requested_skill;
+        return result;
+    } else {
+        throw std::invalid_argument(
+            "dialogue trial kind must be none, lie, persuade, intimidate, or skill_check" );
+    }
+    if( !requested_skill.empty() ) {
+        throw std::invalid_argument(
+            "dialogue trial skill is only valid for skill_check" );
+    }
+    return result;
+}
+
+} // namespace
+
 context::context( lua_State *const lua_state, dialogue &d, std::string topic_id,
-                  const bool allow_write, std::string invalid_context_message )
+                  const bool allow_write, std::string invalid_context_message,
+                  actor_converter convert_actor )
     : state_( std::make_shared<state>() )
 {
     state_->lua_state = lua_state;
@@ -41,6 +83,7 @@ context::context( lua_State *const lua_state, dialogue &d, std::string topic_id,
     state_->topic_id = std::move( topic_id );
     state_->allow_write = allow_write;
     state_->invalid_context_message = std::move( invalid_context_message );
+    state_->convert_actor = std::move( convert_actor );
 }
 
 bool context::valid() const noexcept
@@ -78,6 +121,103 @@ context::state &context::require_write_state() const
 std::string context::topic() const
 {
     return require_state().topic_id;
+}
+
+std::string context::topic_item() const
+{
+    return require_state().dialogue_ref().cur_item.str();
+}
+
+bool context::has_alpha() const
+{
+    return require_state().dialogue_ref().has_alpha;
+}
+
+bool context::has_beta() const
+{
+    return require_state().dialogue_ref().has_beta;
+}
+
+bool context::by_radio() const
+{
+    return require_state().dialogue_ref().by_radio;
+}
+
+bool context::has_reason() const
+{
+    return !require_state().dialogue_ref().reason.empty();
+}
+
+std::string context::reason() const
+{
+    return require_state().dialogue_ref().reason;
+}
+
+int context::trial_chance( const std::string &kind, const int difficulty,
+                           const std::string &skill ) const
+{
+    const talk_trial trial = make_native_dialogue_trial(
+                                 kind, difficulty, skill );
+    return trial.calc_chance( require_state().dialogue_ref() );
+}
+
+bool context::roll_trial( const std::string &kind, const int difficulty,
+                          const std::string &skill ) const
+{
+    talk_trial trial = make_native_dialogue_trial(
+                           kind, difficulty, skill );
+    return trial.roll( require_write_state().dialogue_ref() );
+}
+
+std::string context::expand_text( const std::string &text,
+                                  const std::string &item_id ) const
+{
+    if( text.size() > 32768 || text.find( '\0' ) != std::string::npos ||
+        item_id.size() > 256 || item_id.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument(
+            "dialogue text expansion exceeds its native string limit" );
+    }
+    dialogue &d = require_state().dialogue_ref();
+    std::unique_ptr<const_talker> fallback =
+        get_const_talker_for( get_player_character() );
+    const const_talker &alpha = d.has_alpha ? *d.const_actor( false ) : *fallback;
+    const const_talker &beta = d.has_beta ? *d.const_actor( true ) : *fallback;
+    std::string result = text;
+    parse_tags( result, alpha, beta, d,
+                item_id.empty() ? itype_id::NULL_ID() : itype_id( item_id ) );
+    return result;
+}
+
+sol::object context::alpha() const
+{
+    state &current = require_state();
+    dialogue &d = current.dialogue_ref();
+    if( !d.has_alpha ) {
+        return sol::make_object(
+                   sol::state_view( current.lua_state ),
+                   sol::lua_nil );
+    }
+    if( !current.convert_actor ) {
+        throw std::runtime_error(
+            "Lua dialogue actor conversion is unavailable" );
+    }
+    return current.convert_actor( *d.const_actor( false ) );
+}
+
+sol::object context::beta() const
+{
+    state &current = require_state();
+    dialogue &d = current.dialogue_ref();
+    if( !d.has_beta ) {
+        return sol::make_object(
+                   sol::state_view( current.lua_state ),
+                   sol::lua_nil );
+    }
+    if( !current.convert_actor ) {
+        throw std::runtime_error(
+            "Lua dialogue actor conversion is unavailable" );
+    }
+    return current.convert_actor( *d.const_actor( true ) );
 }
 
 sol::object context::get( const std::string &key ) const
@@ -287,7 +427,7 @@ void clear_response_callbacks( const response_callback_origin origin )
 }
 
 talk_topic apply_response_callback( dialogue &d, const std::uint64_t response_id,
-                                    const talk_topic &fallback )
+                                    const talk_topic &fallback, const bool trial_success )
 {
     const auto found = response_callbacks.find( response_id );
     if( found == response_callbacks.end() ) {
@@ -295,7 +435,7 @@ talk_topic apply_response_callback( dialogue &d, const std::uint64_t response_id
     }
     response_callback callback = std::move( found->second.callback );
     response_callbacks.erase( found );
-    return callback( d, fallback );
+    return callback( d, fallback, trial_success );
 }
 
 talk_response response_from_table( const sol::table &descriptor,
@@ -311,7 +451,8 @@ talk_response response_from_table( const sol::table &descriptor,
             continue;
         }
         const std::string key = entry.first.as<std::string>();
-        if( key != "text" && key != "topic" && key != "on_select" ) {
+        if( key != "text" && key != "topic" && key != "on_select" &&
+            options.additional_fields.count( key ) == 0 ) {
             throw std::invalid_argument( std::string( options.api_name ) + " " +
                                          std::string( options.descriptor_name ) + " " +
                                          std::string( options.unknown_field_verb ) +
