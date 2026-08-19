@@ -149,6 +149,8 @@ struct trap {
         update_mapgen_id map_regen;
         trap_function act;
         translation name_;
+        std::string lua_platform_mod;
+        std::string lua_platform_trigger_handler;
 
         std::optional<translation> memorial_male;
         std::optional<translation> memorial_female;

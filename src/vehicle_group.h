@@ -69,6 +69,8 @@ class VehicleGroup
  */
 struct VehicleFacings {
     VehicleFacings( const JsonObject &jo, std::string_view key );
+    explicit VehicleFacings( std::vector<units::angle> values )
+        : values( std::move( values ) ) {}
 
     units::angle pick() const {
         return random_entry( values );
@@ -148,6 +150,9 @@ class VehicleFunction_json : public VehicleFunction
 {
     public:
         explicit VehicleFunction_json( const JsonObject &jo );
+        VehicleFunction_json( const vgroup_id &vehicle, const jmapgen_int &number,
+                              int fuel, int status, std::string placement,
+                              std::optional<VehicleLocation> location );
         ~VehicleFunction_json() override = default;
 
         /**
@@ -197,6 +202,8 @@ class VehicleSpawn
 
         static void load( const JsonObject &jo );
         static void reset();
+        static bool has_builtin( const std::string &id );
+        static std::shared_ptr<VehicleFunction> make_builtin( const std::string &id );
 
     private:
         weighted_float_list<std::shared_ptr<VehicleFunction>> types;

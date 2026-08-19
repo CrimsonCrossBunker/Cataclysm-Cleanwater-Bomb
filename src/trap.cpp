@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "bodypart.h"
+#include "catalua_platform_runtime.h"
 #include "catalua_ui.h"
 #include "character.h"
 #include "coordinates.h"
@@ -368,7 +369,12 @@ void trap::trigger( const tripoint_bub_ms &pos, Creature *creature,
     cata::lua_ui::dispatch_native_callback(
         "trap", id.str(), "on_trigger", payload );
 
-    const bool triggered = act( pos, creature, triggering_item );
+    const std::optional<bool> continue_native =
+        cata::lua_platform::invoke_trap_trigger_handler(
+            id.str(), lua_platform_mod, lua_platform_trigger_handler,
+            get_map().get_abs( pos ), creature, triggering_item );
+    const bool triggered = continue_native && !*continue_native ?
+                           true : act( pos, creature, triggering_item );
     if( !triggered ) {
         return;
     }
