@@ -297,6 +297,8 @@ struct monster_death_effect {
     std::optional<effect_on_condition_id> eoc;
     translation death_message;
     mdeath_type corpse_type = mdeath_type::NORMAL;
+    std::string lua_platform_mod;
+    std::string lua_platform_handler;
 
     void load( const JsonObject &jo );
     void deserialize( const JsonObject &data );
@@ -443,6 +445,8 @@ struct mtype {
     public:
         // special attack frequencies and function pointers
         std::map<std::string, mtype_special_attack> special_attacks;
+        std::string lua_platform_attack_mod;
+        std::map<std::string, std::string> lua_platform_attack_handlers;
         /** Emission sources that cycle each turn the monster remains alive */
         std::map<emit_id, time_duration> emit_fields;
         std::optional<resistances> armor_proportional; /**load-time only*/

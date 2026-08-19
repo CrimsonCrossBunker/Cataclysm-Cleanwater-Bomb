@@ -18,6 +18,7 @@
 #include "cached_options.h"
 #include "cata_imgui.h"
 #include "catacharset.h"
+#include "catalua_platform_runtime.h"
 #include "catalua_ui.h"
 #include "character.h"
 #include "coordinates.h"
@@ -3213,6 +3214,10 @@ void monster::die( map *here, Creature *nkiller )
             debugmsg( "eoc id %s is not valid", type->mdeath_effect.eoc.value().str() );
         }
     }
+
+    cata::lua_platform::invoke_monster_death_handler(
+        type->id.str(), type->mdeath_effect.lua_platform_mod,
+        type->mdeath_effect.lua_platform_handler, *this, killer, pos_abs() );
 
     // scale overkill damage by enchantments
     if( nkiller && ( nkiller->is_npc() || nkiller->is_avatar() ) ) {
