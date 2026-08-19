@@ -9,6 +9,7 @@
 
 #include "calendar.h"
 #include "catalua_platform_content.h"
+#include "catalua_platform_runtime.h"
 #include "character.h"
 #include "condition.h"
 #include "creature.h"
@@ -320,6 +321,10 @@ void weakpoint_effect::apply_to( Creature &target, int total_damage,
                     get_talker_for( target ) );
         eoc->activate( d );
     }
+    cata::lua_platform::invoke_weakpoint_effect_handler(
+        lua_platform_set_id, lua_platform_weakpoint_id,
+        lua_platform_mod, lua_platform_handler,
+        target, total_damage, attack );
 
     if( x_in_y( rng( instant_death_chance.first, instant_death_chance.second ), 100 ) ) {
         target.die( &get_map(), attack.source == nullptr ? nullptr : attack.source );

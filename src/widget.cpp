@@ -35,6 +35,7 @@
 #include "talker.h"
 #include "translations.h"
 #include "units.h"
+#include "catalua_platform_content.h"
 
 const static flag_id json_flag_W_DISABLED_BY_DEFAULT( "W_DISABLED_BY_DEFAULT" );
 const static flag_id json_flag_W_DISABLED_WHEN_EMPTY( "W_DISABLED_WHEN_EMPTY" );
@@ -144,6 +145,11 @@ std::string trim_hud_trailing_spaces( const std::string_view line )
     return clip_hud_column_line( line, utf8_width( plain ) );
 }
 } // namespace
+
+generic_factory<widget> &cata::lua_platform::detail::widget_registry()
+{
+    return widget_factory;
+}
 
 template<>
 const widget &string_id<widget>::obj() const
@@ -879,7 +885,11 @@ void widget::set_default_var_range( const avatar &ava )
             _var_max = ava.weary_threshold();
             break;
         case widget_var::custom:
-            _custom_var.set_widget_var_range( ava, *this );
+            if( platform_custom_range ) {
+                platform_custom_range( ava, *this );
+            } else {
+                _custom_var.set_widget_var_range( ava, *this );
+            }
             break;
 
         // Base stats
@@ -1063,7 +1073,8 @@ int widget::get_var_value( const avatar &ava ) const
             value = ( 100 * ava.weight_carried() ) / ava.weight_capacity();
             break;
         case widget_var::custom:
-            value = _custom_var.get_var_value( ava );
+            value = platform_custom_value ?
+                    platform_custom_value( ava ) : _custom_var.get_var_value( ava );
             break;
 
         // TODO

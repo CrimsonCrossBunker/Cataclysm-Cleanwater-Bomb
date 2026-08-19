@@ -204,9 +204,15 @@ class window_panel;
 template<typename T>
 class generic_factory;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+}
+
 struct widget_clause {
     private:
         friend class widget;
+        friend class cata::lua_platform::content_transaction;
         std::string id;
         std::string sym;
         translation text;
@@ -273,6 +279,7 @@ class widget
 {
     private:
         friend class generic_factory<widget>;
+        friend class cata::lua_platform::content_transaction;
         friend struct mod_tracker;
 
         struct label_layout_override {
@@ -298,6 +305,8 @@ class widget
         widget_id id;
         std::vector<std::pair<widget_id, mod_id>> src;
         bool was_loaded = false;
+        std::function<int( const avatar & )> platform_custom_value;
+        std::function<void( const avatar &, widget & )> platform_custom_range;
         const widget_clause *get_clause( const std::string &clause_id = "" ) const;
         std::vector<const widget_clause *> get_clauses() const;
         int maximum_separator_width( std::set<widget_id> &visited,

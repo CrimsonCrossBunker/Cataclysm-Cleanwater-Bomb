@@ -70,6 +70,10 @@ struct weakpoint_effect {
     efftype_id effect;
     // Effect on condition, that would be run.
     std::vector<effect_on_condition_id> effect_on_conditions;
+    std::string lua_platform_mod;
+    std::string lua_platform_handler;
+    std::string lua_platform_set_id;
+    std::string lua_platform_weakpoint_id;
     // The percent chance of causing the effect.
     float chance;
     // Whether the effect is permanent.
