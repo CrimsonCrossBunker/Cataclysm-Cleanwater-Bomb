@@ -4,6 +4,7 @@
 #include <climits>
 #include <memory>
 #include <random>
+#include <utility>
 
 #include "flexbuffer_json.h"
 #include "memory_fast.h"
@@ -123,6 +124,28 @@ int_distribution::int_distribution()
 int_distribution::int_distribution( int v )
     : impl_( make_shared_fast<fixed_distribution>( v ) )
 {}
+
+int_distribution::int_distribution( shared_ptr_fast<int_distribution_impl> implementation )
+    : impl_( std::move( implementation ) )
+{}
+
+int_distribution int_distribution::uniform( const int minimum, const int maximum )
+{
+    return int_distribution( make_shared_fast<uniform_distribution>( minimum, maximum ) );
+}
+
+int_distribution int_distribution::poisson( const double mean, const int minimum,
+        const int maximum )
+{
+    return int_distribution( make_shared_fast<poisson_distribution>( minimum, maximum, mean ) );
+}
+
+int_distribution int_distribution::binomial( const int trials, const double probability,
+        const int minimum, const int maximum )
+{
+    return int_distribution( make_shared_fast<binomial_distribution>( minimum, maximum,
+                             trials, probability ) );
+}
 
 int int_distribution::minimum() const
 {
