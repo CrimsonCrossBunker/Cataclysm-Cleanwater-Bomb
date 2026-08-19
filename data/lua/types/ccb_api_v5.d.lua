@@ -448,6 +448,13 @@ function CcbTimeApi.set_now(point, expected) end
 ---@return CcbResult
 function CcbTimeApi.advance(duration, expected) end
 
+---Reschedule all native timed events carrying the exact bounded key.
+---This is a Platform world mutation and does not expose the legacy event tree.
+---@param key string Key to match; an empty key matches unkeyed events.
+---@param duration TimeDuration Relative time from the current turn, within +/- one year.
+---@return CcbResult result `value` contains key, duration, matched, and changed.
+function CcbTimeApi.reschedule(key, duration) end
+
 ---@class CcbCoordsApi
 ---@field max_range_points integer
 ---@field point_rel_ms fun(x: integer, y: integer): PointCoord
@@ -2234,6 +2241,29 @@ function CcbRelocationApi.local_at(position) end
 ---@return CcbResult
 function CcbRelocationApi.overmap_at(position) end
 
+---@class CcbDimensionTravelOptions
+---@field npc_travel_radius? integer Bring NPCs within 0..60 map squares; zero brings none.
+---@field npc_travel_filter? string One of "all", "follower", "enemy", or "none".
+---@field item_travel_radius? integer Bring map items within -1..60 map squares; -1 brings none.
+---@field take_vehicle? boolean Bring the vehicle at the avatar's current position.
+
+---@param dimension string Valid dimension id; the current dimension is a no-op.
+---@param options? CcbDimensionTravelOptions
+---@return CcbResult result `value` reports before/after dimensions and carried entities.
+function CcbRelocationApi.travel_to_dimension(dimension, options) end
+
+---@class CcbCreatureRelocationOptions
+---@field safe? boolean Use the native safe-teleport collision policy; defaults to true.
+---@field add_teleglow? boolean Add the native temporary teleglow effect.
+---@field force? boolean Bypass dimensional-anchor and teleport-lock checks.
+---@field force_safe? boolean Allow safe teleporting through otherwise protected destinations.
+
+---@param creature GameHandle Creature handle to relocate.
+---@param position TripointCoord Absolute map-square destination; loaded and unloaded map targets are supported.
+---@param options? CcbCreatureRelocationOptions
+---@return CcbResult result `value` contains the changed flag, refreshed handle, and new positions.
+function CcbRelocationApi.creature_at(creature, position, options) end
+
 ---@class CcbNearbyOptions
 ---@field radius? integer
 ---@field limit? integer
@@ -2252,6 +2282,64 @@ function CcbRelocationApi.overmap_at(position) end
 ---@field radiation? integer
 ---@field painkiller? integer
 ---@field stored_kcal? integer
+
+---@class CcbCharacterBodyPartPickOptions
+---@field wounded? boolean Restrict the native main-body-part pool to wounded or healthy parts.
+
+---@class CcbCharacterDamageOptions
+---@field body_part? GameId GameId<body_part>; omitted selects a native weighted body part.
+---@field armor_penetration? number Finite armor penetration in -1000000..1000000.
+---@field armor_penetration_multiplier? number Finite multiplier in -1000..1000.
+---@field damage_multiplier? number Finite multiplier in -1000..1000.
+---@field min_hit? integer Minimum native hit-size filter, or -1 for no lower bound.
+---@field max_hit? integer Maximum native hit-size filter, or -1 for no upper bound.
+---@field hit_roll? integer Native hit-roll exponent input in -1000000..1000000.
+---@field can_attack_high? boolean Whether upper limbs remain eligible during native selection.
+
+---@class CcbCharacterAttackOptions
+---@field allow_special? boolean Allow native special attacks; defaults to true.
+---@field allow_unarmed? boolean Always use the wielded weapon; defaults to true.
+---@field forced_movecost? integer Native forced move cost, or -1 for the normal cost.
+
+---@class CcbCharacterKnockbackOptions
+---@field force? integer Knockback force from -1000 through 1000; defaults to 0.
+---@field stun? integer Stun duration from -1000 through 1000; defaults to 0.
+---@field dam_mult? integer Impact damage multiplier from -1000 through 1000; defaults to 0.
+---@field target? TripointCoord Absolute map-square target; defaults to the character position.
+---@field direction? TripointCoord Absolute map-square source/direction; defaults to the character position.
+
+---@class CcbCharacterExplosionShrapnelOptions
+---@field casing_mass integer Non-negative native casing mass.
+---@field fragment_mass? number Non-negative fragment mass; defaults to 0.005.
+---@field recovery? integer Recovery percentage from 0 through 100.
+---@field drop? string Valid item id, or `null`; defaults to `null`.
+
+---@class CcbCharacterExplosionOptions
+---@field power? number Finite power in -1000000..1000000; defaults to 0.
+---@field distance_factor? number Non-negative distance factor up to 1000; defaults to 0.75.
+---@field max_noise? integer Native noise cap from 0 through 1000000000.
+---@field fire? boolean Whether the blast starts fires.
+---@field target? TripointCoord Absolute map-square target; defaults to the character position.
+---@field shrapnel? CcbCharacterExplosionShrapnelOptions Optional fragment/casing settings.
+---@field emp_blast? boolean Trigger an EMP blast at the target.
+---@field scrambler_blast? boolean Trigger a scrambler blast at the target.
+---@field flashbang? boolean Trigger a flashbang at the target.
+---@field flashbang_avatar_is_immune? boolean Make the avatar immune to that flashbang.
+---@field flashbang_radius? integer Flashbang radius from 0 through 1000; defaults to 8.
+
+---@class CcbCharacterCastSpellOptions
+---@field hit_self? boolean Native fake-spell self flag; defaults to false.
+---@field min_level? integer Minimum spell level from 0 through 1000.
+---@field max_level? integer Maximum spell level, or -1 for no limit.
+---@field message? string Optional player trigger message.
+---@field npc_message? string Optional NPC trigger message.
+---@field target? TripointCoord Explicit absolute map-square target; omitted targets the caster.
+---@field targeted? boolean Interactive target selection is unsupported and rejected.
+
+---@class CcbCharacterDieOptions
+---@field remove_corpse? boolean NPC-only corpse suppression toggle.
+---@field suppress_message? boolean NPC-only quiet-death toggle.
+---@field supress_message? boolean Legacy spelling accepted for migration compatibility.
 
 ---@class CcbCreaturesApi
 local CcbCreaturesApi = {}
@@ -2308,6 +2396,78 @@ function CcbCharactersApi.adjust(handle, adjustments) end
 ---@return CcbResult
 function CcbCharactersApi.heal(handle, body_part, amount) end
 
+---@param attacker GameHandle Character handle performing the attack.
+---@param target GameHandle Any live Creature handle to attack.
+---@param technique string Literal martial-art technique id; empty means no forced technique.
+---@param options? CcbCharacterAttackOptions
+---@return CcbResult result `value.accepted` reports the native melee result.
+function CcbCharactersApi.attack(attacker, target, technique, options) end
+
+---@param attacker GameHandle Character handle with the wielded firearm.
+---@param target GameHandle Any live Creature handle at which to fire.
+---@return CcbResult result `value.fired` reports the number of native shots fired; no gun/ammo is a safe no-op.
+function CcbCharactersApi.ranged_attack(attacker, target) end
+
+---@param character GameHandle Character to knock back.
+---@param options? CcbCharacterKnockbackOptions
+---@return CcbResult result `value` reports the resolved target and direction.
+function CcbCharactersApi.knockback(character, options) end
+
+---@param character GameHandle Character supplying the explosion source and default position.
+---@param options? CcbCharacterExplosionOptions
+---@return CcbResult result `value.queued` is true after native queueing.
+function CcbCharactersApi.explosion(character, options) end
+
+---@param character GameHandle Character whose tile receives the emission.
+---@param emission string Valid native emission id.
+---@param chance? number Finite multiplier from 0 through 1000; defaults to 1.
+---@return CcbResult result `value` reports emission and position.
+function CcbCharactersApi.emit(character, emission, chance) end
+
+---@param character GameHandle Character caster.
+---@param spell GameId GameId<spell> to construct as a native fake spell.
+---@param options? CcbCharacterCastSpellOptions
+---@return CcbResult result `value` reports spell and explicit/default target.
+function CcbCharactersApi.cast_spell(character, spell, options) end
+
+---@param character GameHandle Character to kill through native death rules.
+---@param options? CcbCharacterDieOptions
+---@return CcbResult result `value.dead` reports the resulting dead state.
+function CcbCharactersApi.die(character, options) end
+
+---@param character GameHandle Character whose vital parts should be restored through the virtual hook.
+---@return CcbResult result `value.alive` reports the resulting live state.
+function CcbCharactersApi.prevent_death(character) end
+
+---@param character GameHandle Character whose native enchantment cache should be rebuilt.
+---@return CcbResult result `value.refreshed` is true after native recalculation.
+function CcbCharactersApi.recalculate_enchantments(character) end
+
+---@param handle GameHandle Character handle.
+---@param options? CcbCharacterBodyPartPickOptions
+---@return CcbResult result `value.body_part` is a randomly selected main body-part GameId.
+function CcbCharactersApi.pick_body_part(handle, options) end
+
+---@param handle GameHandle Character handle.
+---@param damage_type GameId GameId<damage_type>
+---@param amount number Finite damage amount in -1000000..1000000.
+---@param options? CcbCharacterDamageOptions
+---@return CcbResult result `value` reports the selected body part, requested amount, and native dealt damage.
+function CcbCharactersApi.damage(handle, damage_type, amount, options) end
+
+---@param handle GameHandle Character whose faction trust is adjusted.
+---@param amount integer Integer delta within -1000000..1000000.
+---@return CcbResult result `value` reports the faction id and before/after trust.
+function CcbCharactersApi.add_faction_trust(handle, amount) end
+
+---@param source GameHandle Character whose faction is the relationship source.
+---@param target GameHandle Character whose faction relationship is changed.
+---@param relationship string One of the native relationship names, such as
+---`kill on sight`, `watch your back`, or `knows your voice`.
+---@param enabled boolean Whether the relationship bit should be set.
+---@return CcbResult result `value` reports the before/after relationship bit.
+function CcbCharactersApi.set_faction_relationship(source, target, relationship, enabled) end
+
 ---@param handle GameHandle
 ---@param mode GameId
 ---@return CcbResult
@@ -2319,6 +2479,20 @@ function CcbCharactersApi.set_movement_mode(handle, mode) end
 ---avatars and other characters are always safe, matching legacy dialogue
 ---semantics.
 function CcbCharactersApi.is_safe(handle) end
+
+---@param handle GameHandle Character handle.
+---@return CcbResult result `value` is true when the native Character is not in a dead state.
+function CcbCharactersApi.is_alive(handle) end
+
+---@param handle GameHandle Character handle.
+---@return CcbResult result `value` mirrors the legacy `u_is_underwater`/`npc_is_underwater` tile-divability query.
+function CcbCharactersApi.is_underwater(handle) end
+
+---@param handle GameHandle Character handle.
+---@param body_part GameId GameId<body_part>
+---@param minimum number Legacy body-part temperature threshold, finite and within -1000000..1000000.
+---@return CcbResult result `value` is true when the conventional temperature of the exact body part is at least `minimum` in legacy units.
+function CcbCharactersApi.has_part_temp(handle, body_part, minimum) end
 
 ---@param handle GameHandle
 ---@param flag GameId A `json_flag` id; the legacy sentinel `MUTATION_THRESHOLD`
@@ -2402,6 +2576,23 @@ function CcbEffectsApi.update(handle, id, options) end
 ---@field show_sprite? boolean
 ---@field safe_fuel_threshold? number
 
+---@class CcbBionicLimbRepairItem
+---@field body_part GameId
+---@field before integer
+---@field after integer
+---@field maximum integer
+---@field missing integer
+---@field had_bite boolean
+---@field had_bleed boolean
+
+---@class CcbBionicLimbRepairResult
+---@field items CcbBionicLimbRepairItem[]
+---@field limbs integer
+---@field missing_hp integer
+---@field price integer Native doctor-price basis in cents; payment and activity scheduling remain explicit composition steps.
+---@field needed boolean
+---@field repaired boolean
+
 ---@class CcbBionicsApi
 local CcbBionicsApi = {}
 
@@ -2459,6 +2650,14 @@ function CcbBionicsApi.deactivate(character, uid) end
 ---@return CcbResult
 function CcbBionicsApi.configure(character, uid, options) end
 
+---@param character GameHandle
+---@return CcbResult result `value` is a CcbBionicLimbRepairResult without mutation.
+function CcbBionicsApi.quote_limb_repairs(character) end
+
+---@param character GameHandle
+---@return CcbResult result `value` is a CcbBionicLimbRepairResult after native healing and bite/bleed cleanup.
+function CcbBionicsApi.repair_limbs(character) end
+
 ---@class CcbItemPocketOptions: CcbPageOptions
 
 ---@class CcbItemContentsOptions: CcbPageOptions
@@ -2469,6 +2668,57 @@ function CcbBionicsApi.configure(character, uid, options) end
 ---@field charges? integer
 ---@field damage? integer
 ---@field favorite? boolean
+---@field active? boolean Temperature-tracked items remain active even when false is requested.
+---@field browsed? boolean Electronic-file browsing state.
+
+---@class CcbItemTransformOptions
+---@field carrier? GameHandle Character that owns the item, used for native acquisition bookkeeping.
+---@field active? boolean Optional post-transform activity state; temperature-tracked items remain active.
+---@field browsed? boolean Optional post-transform electronic-file browsing state.
+
+---@class CcbItemMutableState
+---@field uid integer
+---@field id GameId GameId<item>
+---@field charges integer
+---@field damage integer
+---@field damage_level integer
+---@field max_damage integer
+---@field favorite boolean
+---@field active boolean
+---@field browsed boolean
+---@field temperature_tracked boolean
+
+---@class CcbItemMutation
+---@field before CcbItemMutableState
+---@field after CcbItemMutableState
+
+---@class CcbItemTransformMutation: CcbItemMutation
+---@field changed boolean
+
+---@class CcbItemFaultOptions
+---@field force? boolean Bypass the item's native can-have-fault check.
+---@field message? boolean Show the native fault message through the holder; defaults to true.
+---@field holder? GameHandle Character that owns the item, required when message is enabled.
+
+---@class CcbItemActivateOptions
+---@field target? TripointCoord Optional absolute map-square target for the use action; it must be inside the loaded map.
+
+---@class CcbItemFaultMutation
+---@field fault GameId GameId<fault> requested by the caller.
+---@field accepted boolean Whether the native fault operation accepted the request.
+---@field before boolean Whether the item had the fault before the operation.
+---@field after boolean Whether the item has the fault after the operation.
+---@field changed boolean Whether the item's fault membership changed.
+---@field force boolean Effective force option.
+---@field message boolean Whether native messaging was requested.
+
+---@class CcbItemRandomFaultMutation
+---@field fault_type string Native fault type selected by the caller.
+---@field changed boolean Whether the fault set changed.
+---@field before_count integer Fault count before the operation.
+---@field after_count integer Fault count after the operation.
+---@field force boolean Effective force option.
+---@field message boolean Whether native messaging was requested.
 
 ---@class CcbItemsApi
 local CcbItemsApi = {}
@@ -2492,6 +2742,38 @@ function CcbItemsApi.contents(handle, options) end
 ---@param updates CcbItemUpdates
 ---@return CcbResult
 function CcbItemsApi.update(handle, updates) end
+
+---Invoke one explicit native use method on an item owned by a character.
+---The operation runs the item's normal can-use/on-use callbacks and native
+---consumption rules; it never opens an interactive method picker.
+---@param item GameHandle Item handle owned by `character`.
+---@param character GameHandle Character that invokes the item.
+---@param method string Non-empty native use method name.
+---@param options? CcbItemActivateOptions
+---@return CcbResult result `value` reports acceptance, destruction, and the remaining item snapshot.
+function CcbItemsApi.activate(item, character, method, options) end
+
+---Convert an existing item instance in place while preserving its stable
+---GameHandle and native contents/rot conversion rules.
+---@param handle GameHandle
+---@param target GameId GameId<item>
+---@param options? CcbItemTransformOptions
+---@return CcbResult result `value` is CcbItemTransformMutation.
+function CcbItemsApi.transform(handle, target, options) end
+
+---Apply one native item fault, preserving native eligibility and messaging rules.
+---@param handle GameHandle
+---@param fault GameId GameId<fault>
+---@param options? CcbItemFaultOptions
+---@return CcbResult result `value` is CcbItemFaultMutation.
+function CcbItemsApi.set_fault(handle, fault, options) end
+
+---Apply one random native item fault of a bounded fault type.
+---@param handle GameHandle
+---@param fault_type string
+---@param options? CcbItemFaultOptions
+---@return CcbResult result `value` is CcbItemRandomFaultMutation.
+function CcbItemsApi.set_random_fault(handle, fault_type, options) end
 
 ---@param handle GameHandle
 ---@param key string
@@ -2616,6 +2898,26 @@ function CcbMutationsApi.has(character, id) end
 ---@param id GameId
 ---@return CcbResult
 function CcbMutationsApi.get(character, id) end
+
+---@param character GameHandle
+---@param true_random_chance? integer One-in chance for a true-random mutation; nil uses the highest available category.
+---@param use_vitamins? boolean Defaults to true.
+---@return CcbResult
+function CcbMutationsApi.mutate(character, true_random_chance, use_vitamins) end
+
+---@param character GameHandle
+---@param category? GameId Nil (or the explicit "ANY" value); expected GameId<mutation_category>.
+---@param use_vitamins? boolean Defaults to true.
+---@param true_random? boolean Defaults to false.
+---@return CcbResult
+function CcbMutationsApi.mutate_category(character, category, use_vitamins, true_random) end
+
+---@param character GameHandle
+---@param id GameId Expected GameId<mutation>.
+---@param category? GameId Nil (or the explicit "ANY" value); expected GameId<mutation_category>.
+---@param use_vitamins? boolean Defaults to true.
+---@return CcbResult
+function CcbMutationsApi.mutate_towards(character, id, category, use_vitamins) end
 
 ---@param character GameHandle
 ---@param id GameId
@@ -2964,6 +3266,13 @@ function CcbWorldApi.set_terrain(position, terrain) end
 ---@return CcbResult
 function CcbWorldApi.set_furniture(position, furniture) end
 
+---@param first TripointCoord Absolute map-square start position in the loaded map.
+---@param second TripointCoord Absolute map-square end position in the loaded map.
+---@param transform GameId GameId<ter_furn_transform>.
+---@return CcbResult result `value` contains `first`, `second`, `tiles`,
+--- `changed`, and `transform`.
+function CcbWorldApi.transform_line(first, second, transform) end
+
 ---@param position TripointCoord
 ---@param trap GameId?
 ---@return CcbResult
@@ -3026,6 +3335,14 @@ function CcbOvermapApi.search(origin, options) end
 ---@param options? CcbOvermapSearchOptions
 ---@return table?
 function CcbOvermapApi.closest(origin, options) end
+
+---@param origin TripointCoord Absolute map-square coordinate used as the
+--- search center.
+---@param known? boolean Restrict the search to cities known to the player;
+--- defaults to true, matching the legacy effect.
+---@return CcbResult result `value` contains `position`, `overmap_position`,
+--- `name`, `size`, `distance`, and `known`.
+function CcbOvermapApi.closest_city(origin, known) end
 
 ---@param origin TripointCoord
 ---@param options? CcbOvermapSearchOptions
@@ -4284,6 +4601,65 @@ function CcbNpcsApi.set_attitude(handle, attitude) end
 ---@return CcbResult
 function CcbNpcsApi.modify_opinion(handle, deltas) end
 
+---@param handle GameHandle NPC handle.
+---@param amount integer Raw native debt delta, bounded to -1000000..1000000.
+---@return CcbResult result `value` reports amount, before/after debt, and changed.
+function CcbNpcsApi.add_debt(handle, amount) end
+
+---@param handle GameHandle NPC handle.
+---@param npc_class GameId GameId<npc_class>
+---@return CcbResult
+function CcbNpcsApi.set_class(handle, npc_class) end
+
+---@param handle GameHandle NPC handle.
+---@param faction GameId GameId<faction>
+---@return CcbResult
+function CcbNpcsApi.set_faction(handle, faction) end
+
+---@param handle GameHandle NPC handle.
+---@param topic string Native first dialogue topic id.
+---@return CcbResult
+function CcbNpcsApi.set_first_topic(handle, topic) end
+
+---@param handle GameHandle NPC handle.
+---@param enabled boolean
+---@return CcbResult
+function CcbNpcsApi.set_radio_representative(handle, enabled) end
+
+---@return table<string, string[]> Dense sorted valid ids for aim, engagement, CBM, and ally-rule families.
+function CcbNpcsApi.ai_rule_catalog() end
+
+---@param handle GameHandle NPC handle.
+---@param family "aim"|"engagement"|"cbm_recharge"|"cbm_reserve"
+---@param rule string Native rule id from `ai_rule_catalog()`.
+---@return CcbResult
+function CcbNpcsApi.set_ai_policy(handle, family, rule) end
+
+---@param handle GameHandle NPC handle.
+---@param rule string Native ally-rule id.
+---@param enabled? boolean Explicit state; omitted toggles the raw rule flag.
+---@return CcbResult
+function CcbNpcsApi.set_ally_rule(handle, rule, enabled) end
+
+---@param target GameHandle NPC receiving the copied rules.
+---@param source GameHandle NPC supplying the rules.
+---@return CcbResult
+function CcbNpcsApi.copy_ai_rules(target, source) end
+
+---@param handle GameHandle NPC handle.
+---@return CcbResult Native thankful/de-escalation transition result.
+function CcbNpcsApi.make_thankful(handle) end
+
+---@param handle GameHandle NPC handle.
+---@param goal TripointCoord Absolute overmap-terrain destination.
+---@return CcbResult result `value` reports path acceptance and mission state.
+function CcbNpcsApi.set_goal(handle, goal) end
+
+---@param handle GameHandle NPC handle.
+---@param position TripointCoord Absolute map-square guard post.
+---@return CcbResult result `value` reports the changed flag and guard position.
+function CcbNpcsApi.set_guard_position(handle, position) end
+
 ---@param handle GameHandle
 ---@return CcbResult result `value` is a snapshot with `aim`, `engagement`,
 ---`cbm_recharge`, and `cbm_reserve` string ids, a dense one-based `allies`
@@ -4761,6 +5137,12 @@ function CcbWeatherApi.clear_overrides() end
 
 ---@return CcbResult
 function CcbWeatherApi.refresh() end
+
+---Arm the native lightning strike flag when the player is above ground.
+---This mirrors the legacy `lightning` EOC and leaves the flag unchanged
+---underground.
+---@return CcbResult result `value` is the detached current-weather snapshot.
+function CcbWeatherApi.activate_lightning() end
 
 ---@class CcbRuntimeStatus
 ---@field loaded boolean

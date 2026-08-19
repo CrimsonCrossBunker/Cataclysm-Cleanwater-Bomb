@@ -5178,6 +5178,20 @@ function CcbPlatformContent.edit_forest_biome_mapgen(id) end
 ---@field by_radio? boolean Present and true only when the dialogue runs over radio contact.
 ---@field reason? string Present only when the dialogue was opened with a reason string.
 
+---@class CcbPlatformAvatarFatalHook
+---@field hook 'on_avatar_fatal'
+---@field character GameHandle Avatar at the synchronous fatal-damage boundary.
+---@field killer? GameHandle Creature credited with the fatal damage, when still available.
+---@field cancellable true Returning false prevents death by restoring each vital body part to at least one HP.
+---@field results table Aggregate results from earlier handlers; `allowed` is false after a veto.
+
+---@class CcbPlatformNpcFatalHook
+---@field hook 'on_npc_fatal'
+---@field character GameHandle NPC at the synchronous fatal-damage boundary.
+---@field killer? GameHandle Creature credited with the fatal damage, when available.
+---@field cancellable true Returning false prevents death by restoring each vital body part to at least one HP.
+---@field results table Aggregate results from earlier handlers; `allowed` is false after a veto.
+
 ---@class CcbPlatformRuntime
 local CcbPlatformRuntime = {}
 
@@ -5380,6 +5394,58 @@ function CcbPlatformMapgenApi.on_generate(handler_id, options) end
 ---@param handler_id string Registered Platform handler receiving `{ context = ScriptMapgenContext }`.
 ---@param options? CcbPlatformMapgenRegistrationOptions
 function CcbPlatformMapgenApi.on_postprocess(handler_id, options) end
+
+-- Shared character combat methods are installed under `ccb.services.characters`
+-- by the same generation-safe native layer used by `game.characters`.
+---@class CcbCharactersApi
+local CcbCharactersApi = {}
+
+---@param attacker GameHandle Character handle performing the attack.
+---@param target GameHandle Any live Creature handle to attack.
+---@param technique string Literal martial-art technique id; empty means no forced technique.
+---@param options? CcbCharacterAttackOptions
+---@return CcbResult
+function CcbCharactersApi.attack(attacker, target, technique, options) end
+
+---@param attacker GameHandle Character handle with the wielded firearm.
+---@param target GameHandle Any live Creature handle at which to fire.
+---@return CcbResult
+function CcbCharactersApi.ranged_attack(attacker, target) end
+
+---@param character GameHandle Character to knock back.
+---@param options? CcbCharacterKnockbackOptions
+---@return CcbResult
+function CcbCharactersApi.knockback(character, options) end
+
+---@param character GameHandle Character supplying the explosion source and default position.
+---@param options? CcbCharacterExplosionOptions
+---@return CcbResult
+function CcbCharactersApi.explosion(character, options) end
+
+---@param character GameHandle Character whose tile receives the emission.
+---@param emission string Valid native emission id.
+---@param chance? number Finite multiplier from 0 through 1000; defaults to 1.
+---@return CcbResult
+function CcbCharactersApi.emit(character, emission, chance) end
+
+---@param character GameHandle Character caster.
+---@param spell GameId GameId<spell> to construct as a native fake spell.
+---@param options? CcbCharacterCastSpellOptions
+---@return CcbResult
+function CcbCharactersApi.cast_spell(character, spell, options) end
+
+---@param character GameHandle Character to kill through native death rules.
+---@param options? CcbCharacterDieOptions
+---@return CcbResult
+function CcbCharactersApi.die(character, options) end
+
+---@param character GameHandle Character whose vital parts should be restored through the virtual hook.
+---@return CcbResult
+function CcbCharactersApi.prevent_death(character) end
+
+---@param character GameHandle Character whose native enchantment cache should be rebuilt.
+---@return CcbResult
+function CcbCharactersApi.recalculate_enchantments(character) end
 
 ---@class CcbPlatformServices
 ---@field achievements CcbPlatformAchievementsApi
@@ -5708,6 +5774,15 @@ local CcbPlatformEnvironmentQueries = {}
 
 ---@return string dimension_id Stable id of the currently active dimension.
 function CcbPlatformEnvironmentQueries.dimension() end
+
+---Schedule a native custom-light override using the same timed-event boundary
+---as the legacy world-light effect.  The override becomes active after the
+---current turn and lasts for the requested duration.
+---@param level integer Ambient level in 0..125.
+---@param duration TimeDuration Non-negative duration, at most one year.
+---@param key? string Optional bounded key for later timed-event coordination.
+---@return CcbResult result `value` reports level, duration, key, and changed.
+function CcbPlatformEnvironmentQueries.set_light_override(level, duration, key) end
 
 ---@return boolean is_night True while the sun is at or below civil dawn (i.e. it is not
 --- the legacy EOC "is_day" state); ordinary Lua code may negate it directly.
