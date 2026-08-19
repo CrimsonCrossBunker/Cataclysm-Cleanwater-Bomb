@@ -177,6 +177,7 @@ class ma_technique
         void load( const JsonObject &jo, std::string_view src );
         static void verify_ma_techniques();
         static void finalize_all();
+        static const std::vector<ma_technique> &get_all();
         void check() const;
 
         matec_id id;
@@ -245,6 +246,10 @@ class ma_technique
         bonus_container bonuses;
 
         std::vector<tech_effect_data> tech_effects;
+
+        // Lua-first post-application callback owned by the defining mod.
+        std::string lua_platform_mod;
+        std::string lua_platform_apply_handler;
 
         float damage_bonus( const Character &u, const damage_type_id &type ) const;
         float damage_multiplier( const Character &u, const damage_type_id &type ) const;

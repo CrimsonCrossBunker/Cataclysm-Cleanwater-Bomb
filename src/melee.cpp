@@ -23,6 +23,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
+#include "catalua_platform_runtime.h"
 #include "catalua_ui.h"
 #include "character.h"
 #include "character_attire.h"
@@ -1881,6 +1882,10 @@ void Character::perform_technique( const ma_technique &technique, Creature &t,
             eoc->activate_activation_only( d, "a technique activation", "technique being activated",
                                            "technique" );
         }
+        cata::lua_platform::invoke_technique_application_handler(
+            technique.id.str(), technique.lua_platform_mod,
+            technique.lua_platform_apply_handler, *this, t, i + 1, rep,
+            di.total_damage(), cur_weapon ? cur_weapon.get_item()->typeId().str() : std::string() );
     }
 
     if( technique.needs_ammo ) {
