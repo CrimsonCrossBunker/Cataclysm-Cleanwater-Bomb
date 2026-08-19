@@ -96,17 +96,17 @@ void require_style_id(
     }
 }
 
-template<typename Id>
+template<typename Range>
 sol::table id_page(
     sol::state_view lua, const std::string_view kind,
-    const std::set<Id> &ids )
+    const Range &ids )
 {
     const std::size_t returned = std::min(
                                      ids.size(), maximum_nested_ids );
     sol::table items = lua.create_table(
                            static_cast<int>( returned ), 0 );
     std::size_t index = 0;
-    for( const Id &id : ids ) {
+    for( const auto &id : ids ) {
         if( index >= returned ) {
             break;
         }
@@ -119,6 +119,73 @@ sol::table id_page(
     result["total"] = ids.size();
     result["returned"] = returned;
     result["truncated"] = returned < ids.size();
+    return result;
+}
+
+template<typename Range>
+sol::table string_page( sol::state_view lua, const Range &values )
+{
+    const std::size_t returned = std::min(
+                                     values.size(), maximum_nested_ids );
+    sol::table items = lua.create_table(
+                           static_cast<int>( returned ), 0 );
+    std::size_t index = 0;
+    for( const auto &value : values ) {
+        if( index >= returned ) {
+            break;
+        }
+        items[index + 1] = value;
+        ++index;
+    }
+    sol::table result = lua.create_table();
+    result["items"] = std::move( items );
+    result["total"] = values.size();
+    result["returned"] = returned;
+    result["truncated"] = returned < values.size();
+    return result;
+}
+
+sol::table snapshot_technique_definition(
+    sol::state_view lua, const ma_technique &definition )
+{
+    sol::table result = lua.create_table();
+    result["id"] = script_game_id(
+                       "martial_art_technique", definition.id.str() );
+    result["name"] = definition.name.translated();
+    result["description"] = definition.get_description();
+    result["goal"] = definition.goal;
+    result["avatar_message"] = definition.avatar_message.translated();
+    result["npc_message"] = definition.npc_message.translated();
+    result["defensive"] = definition.defensive;
+    result["side_switch"] = definition.side_switch;
+    result["dummy"] = definition.dummy;
+    result["critical_only"] = definition.crit_tec;
+    result["critical_compatible"] = definition.crit_ok;
+    result["reach_only"] = definition.reach_tec;
+    result["reach_compatible"] = definition.reach_ok;
+    result["dodge_counter"] = definition.dodge_counter;
+    result["block_counter"] = definition.block_counter;
+    result["miss_recovery"] = definition.miss_recovery;
+    result["grab_break"] = definition.grab_break;
+    result["disarms"] = definition.disarms;
+    result["take_weapon"] = definition.take_weapon;
+    result["needs_ammo"] = definition.needs_ammo;
+    result["wall_adjacent"] = definition.wall_adjacent;
+    result["weight"] = definition.weighting;
+    result["repeat_min"] = definition.repeat_min;
+    result["repeat_max"] = definition.repeat_max;
+    result["down_duration"] = definition.down_dur;
+    result["stun_duration"] = definition.stun_dur;
+    result["knockback_distance"] = definition.knockback_dist;
+    result["knockback_spread"] = definition.knockback_spread;
+    result["knockback_follow"] = definition.knockback_follow;
+    result["area"] = definition.aoe;
+    result["flags"] = string_page( lua, definition.flags );
+    result["attack_vectors"] = id_page(
+                                   lua, "attack_vector",
+                                   definition.attack_vectors );
+    result["eocs"] = id_page(
+                         lua, "effect_on_condition", definition.eocs );
     return result;
 }
 
@@ -194,6 +261,29 @@ std::vector<matype_id> matching_definitions(
     return result;
 }
 
+std::vector<matec_id> matching_technique_definitions(
+    const std::string &requested_query )
+{
+    const std::string query = lowercase_ascii( requested_query );
+    std::vector<matec_id> result;
+    result.reserve( ma_technique::get_all().size() );
+    for( const ma_technique &definition : ma_technique::get_all() ) {
+        if( query.empty() ||
+            lowercase_ascii( definition.id.str() ).find( query ) !=
+            std::string::npos ||
+            lowercase_ascii( definition.name.translated() ).find( query ) !=
+            std::string::npos ) {
+            result.push_back( definition.id );
+        }
+    }
+    std::sort(
+        result.begin(), result.end(),
+    []( const matec_id & lhs, const matec_id & rhs ) {
+        return lhs.str() < rhs.str();
+    } );
+    return result;
+}
+
 sol::table list_definitions(
     sol::this_state lua,
     const sol::optional<sol::table> &requested )
@@ -232,6 +322,47 @@ sol::table get_definition(
     return snapshot_definition(
                sol::state_view( lua ),
                matype_id( id.value() ).obj() );
+}
+
+sol::table list_technique_definitions(
+    sol::this_state lua,
+    const sol::optional<sol::table> &requested )
+{
+    const definition_options options =
+        read_definition_options( requested );
+    const std::vector<matec_id> definitions =
+        matching_technique_definitions( options.query );
+    const std::size_t first = std::min<std::size_t>(
+                                  options.offset, definitions.size() );
+    const std::size_t last = std::min<std::size_t>(
+                                 first + options.limit, definitions.size() );
+    sol::state_view state( lua );
+    sol::table items = state.create_table(
+                           static_cast<int>( last - first ), 0 );
+    for( std::size_t index = first; index < last; ++index ) {
+        items[index - first + 1] = snapshot_technique_definition(
+                                       state, definitions[index].obj() );
+    }
+    sol::table result = state.create_table();
+    result["items"] = std::move( items );
+    result["offset"] = options.offset;
+    result["limit"] = options.limit;
+    result["total"] = definitions.size();
+    result["returned"] = last - first;
+    result["has_more"] = last < definitions.size();
+    return result;
+}
+
+sol::table get_technique_definition(
+    sol::this_state lua, const script_game_id &id )
+{
+    if( id.kind() != "martial_art_technique" || !id.is_valid() ) {
+        throw std::invalid_argument(
+            "game.martial_arts.technique_definition requires a valid "
+            "GameId<martial_art_technique>" );
+    }
+    return snapshot_technique_definition(
+               sol::state_view( lua ), matec_id( id.value() ).obj() );
 }
 
 Character *resolve_character(
@@ -647,6 +778,20 @@ void install_martial_art_api(
     const script_game_id & id ) {
         require_read();
         return get_definition( lua_state, id );
+    } );
+    martial_arts.set_function(
+        "technique_definitions",
+        [require_read]( sol::this_state lua_state,
+    const sol::optional<sol::table> &options ) {
+        require_read();
+        return list_technique_definitions( lua_state, options );
+    } );
+    martial_arts.set_function(
+        "technique_definition",
+        [require_read]( sol::this_state lua_state,
+    const script_game_id &id ) {
+        require_read();
+        return get_technique_definition( lua_state, id );
     } );
     martial_arts.set_function(
         "list",
