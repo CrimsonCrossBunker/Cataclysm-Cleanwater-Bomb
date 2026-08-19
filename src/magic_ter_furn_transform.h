@@ -14,6 +14,11 @@ class Creature;
 class JsonObject;
 struct tripoint;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+}
+
 // this is a small class that contains the "results" of a terrain transform.
 // T can be either ter_str_id, furn_str_id, trap_str_id, or field_type_id
 template<class T>
@@ -36,6 +41,7 @@ class ter_furn_data
 class ter_furn_transform
 {
     private:
+        friend class cata::lua_platform::content_transaction;
         std::map<ter_str_id, ter_furn_data<ter_str_id>> ter_transform;
         std::map<std::string, ter_furn_data<ter_str_id>> ter_flag_transform;
 

@@ -1534,12 +1534,9 @@ void spell_effect::fertilize_plant( const spell &sp, Creature &caster,
                 { "reduction_turns", static_cast<double>( to_turns<int>( advance ) ) },
                 { "actor_is_npc", planter->is_npc() ? 1.0 : 0.0 }
             };
-            if( furn.plant ) {
-                iexamine::run_plant_eocs( furn.plant->eoc_on_fertilize, *planter, here, tile,
-                                          *synced_seed, stage, stage, string_ctx, num_ctx );
-            }
-            iexamine::run_plant_eocs( synced_seed->type->seed->eoc_on_fertilize, *planter, here,
-                                      tile, *synced_seed, stage, stage, string_ctx, num_ctx );
+            iexamine::run_plant_lifecycle_event(
+                "fertilize", *planter, here, tile, *synced_seed,
+                stage, stage, string_ctx, num_ctx );
         }
 
     }
