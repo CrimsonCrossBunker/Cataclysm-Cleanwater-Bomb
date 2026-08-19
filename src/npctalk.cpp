@@ -1952,6 +1952,7 @@ std::string dialogue::dynamic_line( const talk_topic &the_topic )
 
 void dialogue::apply_speaker_effects( const talk_topic &the_topic )
 {
+    cata::lua_ui::apply_lua_dialogue_speaker_effects( *this, the_topic );
     const std::string &topic = the_topic.id;
     const auto iter = json_talk_topics.find( topic );
     if( iter == json_talk_topics.end() ) {
@@ -3241,7 +3242,7 @@ talk_topic dialogue::opt( dialogue_window &d_win, const talk_topic &topic )
     talk_topic ret_topic =  effects.apply( *this );
     if( chosen.lua_response_id ) {
         ret_topic = cata::lua_ui::apply_lua_dialogue_response(
-                        *this, *chosen.lua_response_id, ret_topic );
+                        *this, *chosen.lua_response_id, ret_topic, success );
     }
     talk_effect_t::update_missions( *this );
     return ret_topic;
