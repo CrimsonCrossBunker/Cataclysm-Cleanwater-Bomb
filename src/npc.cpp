@@ -19,6 +19,7 @@
 #include "basecamp.h"
 #include "bodypart.h"
 #include "catacharset.h"
+#include "catalua_platform_runtime.h"
 #include "catalua_ui.h"
 #include "character.h"
 #include "character_attire.h"
@@ -621,6 +622,8 @@ void npc::load_npc_template( const string_id<npc_template> &ident )
         add_new_mission( mission::reserve_new( miss_id, getID() ) );
     }
     death_eocs = tguy.death_eocs;
+    lua_platform_death_mod = tguy.lua_platform_death_mod;
+    lua_platform_death_handler = tguy.lua_platform_death_handler;
 }
 
 npc::~npc() = default;
@@ -3253,6 +3256,9 @@ void npc::die( map *here, Creature *nkiller )
         return;
     }
     prevent_death_reminder = false;
+    if( !cata::lua_ui::dispatch_npc_fatal( *this, nkiller ) ) {
+        return;
+    }
     dialogue d( get_talker_for( this ), nkiller == nullptr ? nullptr : get_talker_for( nkiller ) );
     for( effect_on_condition_id &eoc : death_eocs ) {
         if( eoc->type == eoc_type::NPC_DEATH ) {
@@ -3260,6 +3266,13 @@ void npc::die( map *here, Creature *nkiller )
         } else {
             debugmsg( "Tried to use non NPC_DEATH eoc_type %s for an NPC death.", eoc.c_str() );
         }
+    }
+    const std::optional<bool> continue_death =
+        cata::lua_platform::invoke_npc_death_handler(
+            idz.str(), lua_platform_death_mod, lua_platform_death_handler,
+            *this, nkiller, pos_abs() );
+    if( continue_death && !*continue_death ) {
+        return;
     }
     get_event_bus().send<event_type::character_dies>( getID() );
     // Check if npc doesn't die due to EoC as a result
@@ -4354,4 +4367,3 @@ std::unique_ptr<talker> get_talker_for( npc *guy )
 {
     return std::make_unique<talker_npc>( guy );
 }
-

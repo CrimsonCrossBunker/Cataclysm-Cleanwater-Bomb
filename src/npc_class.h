@@ -64,6 +64,7 @@ struct shopkeeper_item_group {
     bool strict = false;
     translation refusal;
     std::function<bool( const_dialogue const & )> condition;
+    std::function<bool( npc const & )> platform_condition;
 
     // Rigid shopkeeper groups will be processed a single time. Default groups are not rigid, and will be processed until the shopkeeper has no more room or remaining value to populate goods with.
     bool rigid = false;

@@ -207,7 +207,8 @@ bool shopkeeper_item_group::can_sell( npc const &guy ) const
     faction *const fac = guy.get_faction();
 
     return ( fac == nullptr || trust <= guy.get_faction()->trusts_u ) &&
-           ( !condition || condition( temp ) );
+           ( !condition || condition( temp ) ) &&
+           ( !platform_condition || platform_condition( guy ) );
 }
 
 bool shopkeeper_item_group::can_restock( npc const &guy ) const
