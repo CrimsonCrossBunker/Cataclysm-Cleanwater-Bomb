@@ -424,8 +424,8 @@ def parse_luals(path: Path = DECLARATIONS) -> dict[str, object]:
             ],
         }
 
-    if len(classes) != 274:
-        raise RuntimeError(f"expected 274 LuaLS classes, found {len(classes)}")
+    if len(classes) != 286:
+        raise RuntimeError(f"expected 286 LuaLS classes, found {len(classes)}")
     result = {"classes": classes, "functions": functions, "contents": contents}
     validate_confirmed_declaration_contracts(result)
     return result
@@ -1082,8 +1082,8 @@ def parse_hooks() -> list[dict[str, object]]:
             }
         )
     hooks.sort(key=lambda entry: str(entry["id"]))
-    if len(hooks) != 52:
-        raise RuntimeError(f"expected 52 hooks, found {len(hooks)}")
+    if len(hooks) != 54:
+        raise RuntimeError(f"expected 54 hooks, found {len(hooks)}")
     return hooks
 
 

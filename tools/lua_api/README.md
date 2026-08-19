@@ -15,7 +15,7 @@ Every callable contains parameter, return, error mode, API version,
 introduction-status, deprecation, capability, source, example, and generated
 documentation-id metadata. Dynamic enum values remain explicitly runtime
 generated rather than being guessed. The generator also enforces native and
-LuaLS member parity, all 113 native events and 242 fields, all 52 hooks, all
+LuaLS member parity, all 113 native events and 242 fields, all 54 hooks, all
 38 callback kind-method pairs, and Schema/runtime/LuaLS capability parity.
 
 ```sh
@@ -115,8 +115,8 @@ subsystem, which CCB does not contain.  Coordinate conversion, action-menu
 entries, native sidebar widgets, and bounded diagnostics all have CCB
 equivalents and must not be classified as exceptions.
 
-`check_luals_declarations.py` compares the API v5 LuaLS file to all 447 native
-methods across 67 registered tables, the 56 tables attached to `game`, all 16
+`check_luals_declarations.py` compares the API v5 LuaLS file to all 492 native
+methods across 69 registered tables, the 58 tables attached to `game`, all 16
 native usertypes, and all 36 generated coordinate factories. It rejects an
 unmapped newly registered table, verifies every `game.*` field's API class,
 checks that each stub's parameter annotations match its callable signature,

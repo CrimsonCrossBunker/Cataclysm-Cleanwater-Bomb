@@ -53,7 +53,7 @@ class LuaLsDeclarationTest(unittest.TestCase):
     def test_committed_declarations_cover_the_native_surface(self) -> None:
         result = check(DECLARATIONS)
         self.assertEqual(result["tables"], 69)
-        self.assertEqual(result["methods"], 469)
+        self.assertEqual(result["methods"], 492)
         self.assertEqual(result["game_tables"], 58)
         self.assertEqual(result["usertypes"], 16)
         self.assertEqual(result["coordinate_factories"], 36)
@@ -68,7 +68,7 @@ class LuaLsDeclarationTest(unittest.TestCase):
         result = check_platform(PLATFORM_DECLARATIONS)
         self.assertEqual(result["usertypes"], 139)
         self.assertEqual(result["properties"], 9)
-        self.assertEqual(result["methods"], 322)
+        self.assertEqual(result["methods"], 323)
         self.assertEqual(result["migration_content_methods"], 135)
         self.assertEqual(result["usertype_members"], 592)
 
