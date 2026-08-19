@@ -1360,7 +1360,12 @@ static void bionic_install_common( npc &p, Character &patron, Character &patient
 void talk_function::bionic_install( npc &p )
 {
     Character &pc = get_player_character();
-    bionic_install_common( p, pc, pc );
+    bionic_install( p, pc );
+}
+
+void talk_function::bionic_install( npc &p, Character &patient )
+{
+    bionic_install_common( p, get_player_character(), patient );
 }
 
 void talk_function::bionic_install_allies( npc &p )
@@ -1369,7 +1374,7 @@ void talk_function::bionic_install_allies( npc &p )
     if( !patient ) {
         return;
     }
-    bionic_install_common( p, get_player_character(), *patient );
+    bionic_install( p, *patient );
 }
 
 static void bionic_remove_common( npc &p, Character &patient )
@@ -1423,7 +1428,12 @@ static void bionic_remove_common( npc &p, Character &patient )
 
 void talk_function::bionic_remove( npc &p )
 {
-    bionic_remove_common( p, get_player_character() );
+    bionic_remove( p, get_player_character() );
+}
+
+void talk_function::bionic_remove( npc &p, Character &patient )
+{
+    bionic_remove_common( p, patient );
 }
 
 void talk_function::bionic_remove_allies( npc &p )
@@ -1432,7 +1442,7 @@ void talk_function::bionic_remove_allies( npc &p )
     if( !patient ) {
         return;
     }
-    bionic_remove_common( p, *patient );
+    bionic_remove( p, *patient );
 }
 
 void talk_function::give_equipment( npc &p )
