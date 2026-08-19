@@ -14,6 +14,11 @@
 
 class JsonObject;
 class cata_path;
+struct mod_tileset_ascii_definition;
+struct mod_tileset_atlas_definition;
+struct mod_tileset_definition;
+struct mod_tileset_sprite_variation;
+struct mod_tileset_tile_definition;
 template <typename T> struct weighted_int_list;
 
 class tileset_cache::loader
@@ -71,6 +76,8 @@ class tileset_cache::loader
         void add_ascii_subtile( tile_type &curr_tile, const std::string &t_id, int sprite_id,
                                 const std::string &s_id );
         void load_ascii_set( const JsonObject &entry );
+        void load_ascii_set( int in_image_offset, int foreground );
+        void load_native_ascii_set( const mod_tileset_ascii_definition &entry );
         // Create a new tile_type, add it to tile_ids (using id). Sets fg/bg
         // properties from the json object. Throws if either is outside [0,size)
         // and not -1.
@@ -95,6 +102,15 @@ class tileset_cache::loader
         // is true.
         void parse_atlases( const JsonObject &config, const cata_path &tileset_root,
                             const cata_path &img_path, bool pump_events );
+        void load_native_sprite_variations(
+            const std::vector<mod_tileset_sprite_variation> &source,
+            weighted_int_list<std::vector<int>> &target ) const;
+        tile_type &load_native_tile( const mod_tileset_tile_definition &entry,
+                                     const std::string &id );
+        void parse_native_mappings( const mod_tileset_atlas_definition &atlas );
+        void parse_native_atlases( const mod_tileset_definition &definition,
+                                   const cata_path &tileset_root,
+                                   bool pump_events );
 
         // Load layering data from json.
         void load_layers( const JsonObject &config );
