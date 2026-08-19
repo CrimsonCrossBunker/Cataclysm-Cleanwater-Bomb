@@ -60,6 +60,16 @@ bool dispatch_native_hook(
     return true;
 }
 
+bool dispatch_avatar_fatal( Character &, const Creature * )
+{
+    return true;
+}
+
+bool dispatch_npc_fatal( Character &, const Creature * )
+{
+    return true;
+}
+
 bool has_native_hook( std::string_view )
 {
     return false;
@@ -121,6 +131,11 @@ std::optional<std::string> dialogue_dynamic_line(
     return std::nullopt;
 }
 
+void apply_lua_dialogue_speaker_effects(
+    dialogue &, const talk_topic & )
+{
+}
+
 bool gen_lua_dialogue_responses(
     dialogue &, const talk_topic & )
 {
@@ -133,7 +148,7 @@ void extend_lua_dialogue_responses(
 }
 
 talk_topic apply_lua_dialogue_response(
-    dialogue &, std::uint64_t, const talk_topic &fallback )
+    dialogue &, std::uint64_t, const talk_topic &fallback, const bool )
 {
     return fallback;
 }
