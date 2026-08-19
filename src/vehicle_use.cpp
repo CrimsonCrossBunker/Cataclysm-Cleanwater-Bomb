@@ -15,6 +15,7 @@
 #include "activity_handlers.h"
 #include "avatar.h"
 #include "character.h"
+#include "catalua_platform_runtime.h"
 #include "clzones.h"
 #include "color.h"
 #include "creature.h"
@@ -1126,13 +1127,9 @@ void vehicle::operate_reaper( map &here )
             seed_type.get_id(), here.furn( reaper_pos ).id(),
             plant_produced, seed_produced );
 
-        const furn_t &furn = here.furn( reaper_pos ).obj();
-        if( furn.plant ) {
-            iexamine::run_plant_eocs( furn.plant->eoc_on_harvest, get_avatar(), here, reaper_pos, *seed,
-                                      stage, stage, {}, num_ctx );
-        }
-        iexamine::run_plant_eocs( seed_type.seed->eoc_on_harvest, get_avatar(), here, reaper_pos,
-                                  *seed, stage, stage, {}, num_ctx );
+        iexamine::run_plant_lifecycle_event(
+            "harvest", get_avatar(), here, reaper_pos, *seed,
+            stage, stage, {}, num_ctx );
 
         here.furn_set( reaper_pos, furn_str_id::NULL_ID() );
         here.i_clear( reaper_pos );
@@ -1204,12 +1201,9 @@ void vehicle::operate_planter( map &here )
                     const std::map<std::string, double> num_ctx = {
                         { "actor_is_npc", 0.0 }
                     };
-                    if( new_furn.plant ) {
-                        iexamine::run_plant_eocs( new_furn.plant->eoc_on_plant, get_avatar(), here, loc,
-                                                  *planted_seed, seed_stage, seed_stage, {}, num_ctx );
-                    }
-                    iexamine::run_plant_eocs( planted_seed->type->seed->eoc_on_plant, get_avatar(), here,
-                                              loc, *planted_seed, seed_stage, seed_stage, {}, num_ctx );
+                    iexamine::run_plant_lifecycle_event(
+                        "plant", get_avatar(), here, loc, *planted_seed,
+                        seed_stage, seed_stage, {}, num_ctx );
                 }
 
                 break;
@@ -2551,9 +2545,13 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
     for( const vpart_reference &vp : this->get_avail_parts( "EOC_ACTIVATION" ) ) {
         vehicle_part &part = vp.part();
         menu.add( string_format( _( "Activate  %s" ), vp.part().name() ) )
-        .on_submit( [&part] {
-            dialogue newDialog( get_talker_for( get_player_character() ), nullptr );
-            part.info().activatable_eoc.value()->activate( newDialog );
+        .on_submit( [this, &part] {
+            if( part.info().activatable_eoc ) {
+                dialogue newDialog( get_talker_for( get_player_character() ), nullptr );
+                part.info().activatable_eoc.value()->activate( newDialog );
+            }
+            cata::lua_platform::invoke_vehicle_part_activation_handler(
+                part.info().id.str(), *this, part, get_player_character() );
         } );
     }
 
