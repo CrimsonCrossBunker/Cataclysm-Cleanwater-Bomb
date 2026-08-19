@@ -1,9 +1,11 @@
 # CCB Lua 0.1 平台规范 / CCB Lua 0.1 Platform Specification
 
 Status: CCB Lua 0.1 native platform architecture; implementation is tracked in
-`ai/lua-first-roadmap.yml`.
+`ai/lua-first-roadmap.yml`.  High-throughput EOC-capability implementation and
+its deferred acceptance gate follow `data/lua/LUA_FIRST_EOC_WORKFLOW.md`.
 
-状态：CCB Lua 0.1 纯原生创作平台架构；实现进度以 `ai/lua-first-roadmap.yml` 为准。
+状态：CCB Lua 0.1 纯原生创作平台架构；实现进度以 `ai/lua-first-roadmap.yml` 为准；
+EOC 能力的高吞吐开发与集中验收流程遵循 `data/lua/LUA_FIRST_EOC_WORKFLOW.md`。
 
 ## Purpose / 目标
 
@@ -323,11 +325,13 @@ combat-hook failure recorded by earlier stash-based runs does not reproduce
 in the clean build, so the recorded current gate is green.
 
 The exact replacement ledger contains 775 dispositions; its generated summary
-is the authoritative count.  At the 2026-08-14 regeneration the split is 53
-implemented_verified, 14 bounded_implemented_verified, 14
-implemented_unverified, 113 bounded_implemented_unverified, 430
-primitive_available_unverified, 133 planned, 0 private_adapter, and 18
-reviewed_not_applicable.  The whole-selector verified catalogs are anatomy,
+is the authoritative count.  At the 2026-08-19 regeneration the split is 67
+implemented_verified, 14 bounded_implemented_verified, 0
+implemented_unverified, 468 bounded_implemented_unverified, 179
+primitive_available_unverified, 29 planned, 0 private_adapter, and 18
+reviewed_not_applicable.  A same-day audit retired legacy-name-only
+promotions whose migrator still emits TODOs; those selectors now appear as
+primitive/planned instead of overstating parity.  The whole-selector verified catalogs are anatomy,
 attack vectors, bash-damage profiles, butchery requirements, connect groups,
 construction categories and groups, damage-info ordering, disease types,
 dreams, field emissions, fault groups, gates, harvest-drop types, the global
@@ -342,12 +346,13 @@ and the checked migration and blacklist catalogs.  Bounded verified selectors
 whose exercised shapes have whole-registry parity are item categories, loot
 zones, clothing modifications, damage types, explosion lights, faults, JSON
 flags, mood faces, morale types, movement modes, recipe groups, scenarios,
-start locations, and tool qualities.  The implemented-but-unverified slice
-still covers activity types, help topics, magic types, monster adjustment,
-playlists, sound effects and preloads, trait groups, the remaining blacklists,
-and the not-yet-sliced migration kinds.  This remains far short of complete
-static-domain coverage: 430 selectors still expose only composable native
-primitives, 133 remain planned, and field-level parity work continues.  The
+start locations, and tool qualities.  No selectors are currently classified
+as implemented-but-unverified; the remaining non-verified work is represented
+by bounded slices or explicit planned targets.  This remains far short of complete
+static-domain coverage: 29 selectors remain planned, and field-level parity
+work continues.  Character-state migration now has bounded exact-part wound
+and proven-actor variable slices; dynamic and legacy-fallback shapes remain
+explicit TODOs.  The
 hit range is deliberately a replace-only singleton because it configures one
 engine-wide table rather than an id-addressed catalog.  Clothing modifiers use
 composable scaling dimensions rather than exposing the legacy object shape.
@@ -636,10 +641,12 @@ creator/migrator 单元套件 86 个用例全部通过。2026-08-14 干净重编
 migrated-core parity 门禁；早前基于 stash 的构建记录的 `landed_technique` 战斗
 Hook 失败在干净构建中不再复现，当前记录的门禁为全绿。
 
-账本当前（2026-08-14 重新生成）的分布为 53 项 implemented_verified、14 项
-bounded_implemented_verified、14 项 implemented_unverified、113 项
-bounded_implemented_unverified、430 项 primitive_available_unverified、133 项
-planned 与 18 项 reviewed_not_applicable。完整 selector 已验证的目录包括解剖、攻击
+账本当前（2026-08-19 重新生成）的分布为 67 项 implemented_verified、14 项
+bounded_implemented_verified、0 项 implemented_unverified、468 项
+bounded_implemented_unverified、179 项 primitive_available_unverified、29 项
+planned 与 18 项 reviewed_not_applicable。同日的真实性审计撤回了仍由迁移器输出 TODO
+的“仅按旧名称晋级”条目；这些 selector 现在显示为 primitive/planned，不再夸大 parity。
+完整 selector 已验证的目录包括解剖、攻击
 向量、bash 伤害配置、屠宰需求、连接组、建造分类与建造组、伤害信息显示顺序、疾病类型、
 梦境、字段排放、故障组、大门、采收掉落类型、全局命中距离配置、物品动作、肢体评分、
 怪物 flag、突变分类、命名颜色、大地图连接、大地图土地用途、大地图视野配置、突变覆盖
@@ -647,10 +654,10 @@ planned 与 18 项 reviewed_not_applicable。完整 selector 已验证的目录�
 怪物物种、语音池、速度描述、子身体部位、载具调色板、载具组、载具部件分类与位置、
 武器分类、弹药类型，以及受检的迁移与黑名单目录。已验证有界形状的 selector 包括物品
 分类、战利品区域、服装改造、伤害类型、爆炸光效、故障、JSON flag、心情表情、士气类型、
-移动模式、配方组、场景、起始位置与工具质量。已实现但未验证的切片仍覆盖活动类型、
-帮助主题、魔法类型、怪物 adjustment、播放列表、环境音效与预加载、特质组、其余黑名单
-与尚未切片的迁移类型。它仍远未达到静态内容全面覆盖：430 个 selector 仍只暴露可组合
-原生原语，133 个仍处于 planned，逐字段等价工作仍在继续。命中距离配置刻意只允许显式
+移动模式、配方组、场景、起始位置与工具质量。当前没有 implemented-but-unverified selector；
+其余非验证工作都明确标为 bounded 切片、primitive 或 planned 目标。它仍远未达到静态内容全面覆盖：29 个 selector 仍处于 planned，
+逐字段等价工作仍在继续。角色状态迁移已加入精确部位伤口与已证明 actor 的变量有界切片；
+动态值与 legacy 回退形状仍写入显式 TODO。命中距离配置刻意只允许显式
 `replace`：它是一张引擎全局表，不是假装拥有普通对象 ID 的目录。服装数值使用可组合的
 厚度/覆盖率缩放维度，而不是公开旧 JSON 对象形状。大地图视野配置使用有序的 `appearance` 与
 `blend_adjacent` 组合序列，直接表示模糊、轮廓和细节三个阶段，不公开旧 `levels` 对象
@@ -1016,11 +1023,19 @@ detached plain Lua tables, not borrowed native coordinate objects and not
 native frame explicit: `bub_ms` means reality-bubble map squares, while
 `abs_ms` means absolute map squares.  Authors must branch or convert at an
 explicit service boundary instead of treating the two spaces as interchangeable.
+Coordinate arithmetic is ordinary Lua composition: `TripointCoord:scale_by` and
+`:subtract` can mirror two stored positions around a center, with the result
+written back through `services.variables.set`.  The migration slice only
+accepts three same-scope literal Character variables (`u_val` or `npc_val`) and
+guards missing values; context/global variables and mixed scopes remain TODOs.
 
 定义策略与事件回调 payload 中携带的坐标是脱离原生对象的普通 Lua table，不是借用的
 原生坐标对象，也不冒充 `TripointCoord` userdata。必需的 `coordinate_space` 标签明确区分
 原生坐标系：`bub_ms` 表示现实气泡地图格，`abs_ms` 表示绝对地图格；两者不能隐式混用，
 需要由作者在明确的 service 边界判断或转换。
+坐标运算可以直接用普通 Lua 组合：使用 `TripointCoord:scale_by` 与 `:subtract` 围绕中心
+镜像两个位置，再通过 `services.variables.set` 写回。迁移器只接受三个同作用域的字面量
+Character 变量（`u_val` 或 `npc_val`），并保护缺失值；context/global 变量和混合作用域仍生成 TODO。
 
 `ZoneToken` also carries an unexposed runtime-owner context and native lifetime
 identity in addition to its readable snapshot.  A token cannot cross into a
@@ -1134,6 +1149,25 @@ overmap safety rule; their conjunction is the legacy `u_at_safe_space`.
 legacy `is_rotten` item-talker condition.  The migrator emits these service
 expressions, composed with plain Lua helpers, instead of a condition-table
 DSL.
+`services.npcs.add_debt(handle, amount)` applies a bounded raw debt delta to
+the NPC's native opinion record and returns detached before/after values.  It
+preserves the legacy debt field rather than routing through the clamped
+multi-opinion adjustment; the delta is limited to `-1000000..1000000` and
+native integer overflow is rejected as a structured error.  Lua authors can
+compose this with ordinary pricing or trade workflows without exposing a
+dialogue talker or EOC effect table.
+
+`services.characters.is_alive(handle)` and
+`services.characters.is_underwater(handle)` expose the exact Character status
+queries used by the legacy `u_is_alive`/`npc_is_alive` and
+`u_is_underwater`/`npc_is_underwater` predicates.  The underwater query checks
+the actor's current tile with the native `is_divable` rule, not merely the
+cached `Creature::underwater` bit.  `services.characters.has_part_temp(handle,
+body_part, minimum)` requires an explicit `GameId<body_part>` and compares the
+conventional temperature in legacy body-part units; the finite threshold is
+bounded to `-1000000..1000000`.  Migration only emits these calls for a proven
+actor, a literal body-part id, and a finite threshold.  Missing body-part
+context, dynamic ids, and unproven actor shapes remain explicit TODOs.
 
 对话条件查询同样走领域 service 的普通有界快照，而不是逐键条件函数。角色快照的
 `travel.has_path` 报告角色当前是否沿 overmap 旅行路径移动（取代 legacy 的
@@ -1148,6 +1182,19 @@ talker 返回 false 的语义一致。`services.creatures.can_see(observer, targ
 `u_at_safe_space`。`services.items.snapshot(handle).rotten` 是 legacy `is_rotten`
 物品 talker 条件的有界投影。迁移器输出的是这些 service 表达式与普通 Lua helper 的
 组合，而不是条件表 DSL。
+`services.npcs.add_debt(handle, amount)` 对 NPC 原生 opinion 记录应用有界的原始 debt
+增量，并返回脱离原生对象的前后值；它保留 legacy debt 字段语义，不经过多字段意见调整的
+夹取逻辑。增量限制在 `-1000000..1000000`，原生整数溢出会以结构化错误拒绝。Lua 作者可以
+把它与普通价格或交易 workflow 组合，不需要暴露 dialogue talker 或 EOC effect 表。
+
+`services.characters.is_alive(handle)` 与 `services.characters.is_underwater(handle)`
+分别提供 legacy `u_is_alive`/`npc_is_alive` 和
+`u_is_underwater`/`npc_is_underwater` 的精确 Character 查询。潜水判断按原生
+`is_divable` 检查角色当前地块，而不是只读取缓存的 `Creature::underwater` 位。
+`services.characters.has_part_temp(handle, body_part, minimum)` 要求显式的
+`GameId<body_part>`，并按 legacy 身体部位温度单位比较 conventional temperature；有限阈值
+限制在 `-1000000..1000000`。迁移器只有在 actor 已证明、部位 ID 为字面量且阈值有限时才生成
+这些调用；缺少部位上下文、动态 ID 与未证明 actor 仍保留显式 TODO。
 
 Ambient sound content uses the same transactional native definition model as
 every other catalog: `ccb.content.SoundEffect` stages an `id` plus optional
@@ -1198,6 +1245,39 @@ established.
 防雨衣物与保暖过滤等引擎原生淋湿规则照常生效。迁移器转换已证明 avatar 的
 `u_add_wet` effect，未证明的 `npc_add_wet` 形状保持 partial，直到 NPC actor
 上下文成立。
+
+`services.characters.damage(handle, damage_type, amount, options)` is the
+character-state damage primitive.  It constructs a native `damage_instance`,
+uses the native armor, immunity, pain, wound, and death paths, and returns a
+detached result containing the selected body part, before/after HP, requested
+amount, and dealt damage.  `damage_type` is a validated `GameId<damage_type>`;
+an omitted body part selects through native hit-size rules, while an explicit
+`GameId<body_part>` is checked against the target's current anatomy.  Numeric
+damage and hit options are finite and bounded, so untrusted Mods cannot inject
+NaN/Infinity or unbounded native values.  The migrator converts only static
+numeric `u_deal_damage`/`npc_deal_damage` shapes; context/math amounts remain
+explicit TODOs until a named Lua expression or service supplies their value.
+
+`services.characters.damage(handle, damage_type, amount, options)` 是角色状态领域的
+伤害原语：构造原生 `damage_instance`，沿用原生护甲、免疫、疼痛、伤口和死亡路径，
+并返回包含命中身体部位、前后 HP、请求值和实际伤害的脱离结果。`damage_type` 必须是
+经过校验的 `GameId<damage_type>`；省略身体部位时使用原生 hit-size 选择规则，显式
+`GameId<body_part>` 则必须存在于目标当前 anatomy。伤害与命中数值都要求有限且有界，
+防止不可信 Mod 注入 NaN/Infinity 或无界原生数值。迁移器只转换静态数值的
+`u_deal_damage`/`npc_deal_damage` 形状；context/math amount 在命名 Lua 表达式或领域
+服务提供值以前保持显式 TODO。
+
+The existing services.effects.add and services.morale.add services are the
+same shared native state path for status changes.  Static migrations now keep
+native duration units (including textual turn/minute/hour values), effect
+target parts, force/permanent flags, and morale duration/decay options in
+ordinary Lua service calls.  Dynamic math, context, and global-variable
+forms remain TODOs instead of emitting a nonexistent generic evaluator.
+
+已有的 services.effects.add 与 services.morale.add 复用同一套原生状态路径。静态迁移
+会把原生 duration 单位（包括 turn/minute/hour 文本）、效果目标身体部位、
+force/permanent 标志以及士气 duration/decay 选项保留为普通 Lua service 调用。动态的
+math、context 和 global-variable 形状保持 TODO，不再生成不存在的通用求值器。
 
 `ccb.content.Technique` stages martial-arts techniques through the same
 transactional model: `id`, `name`, optional messages, the boolean delivery and
@@ -1802,9 +1882,29 @@ returned by `ccb.services.gameplay.environment.dimension()` and compared with
 ordinary Lua operators.  `environment.is_outside` and `line_of_sight` consume
 typed absolute map-square coordinates, so callers can compose them with
 creature handles and coordinate utilities without recreating EOC variables.
+When a Mod needs to persist that id for a Character, it can write the returned
+string through `services.variables.set` in ordinary Lua.  The migration slice
+only lowers literal `u_val`/`npc_val` targets in events with a proven matching
+Character actor; context, global, and dynamic variable targets remain explicit
+TODOs.
 Native gameplay awards use `ccb.services.achievements.complete(GameId)`; it
 completes any tracked pending achievement and reports whether state changed,
 instead of exposing an EOC activation entry point.
+World light overrides use
+`ccb.services.gameplay.environment.set_light_override(level, duration, key?)`.
+The level is an explicit integer in `0..125`, the duration is a typed
+`TimeDuration` bounded to one year, and an optional bounded key is preserved for
+timed-event coordination.  The native event starts after the current turn,
+matching the legacy light effect's one-second activation delay, and the service
+returns a detached result with the requested level, duration, key, and change
+marker.  Dynamic values, duration ranges, and missing durations stay explicit
+migration TODOs; Lua authors compose those choices with ordinary control flow.
+Keyed timed-event coordination uses `ccb.services.time.reschedule(key,
+duration)`.  It moves every native event with the exact key relative to the
+current turn, reports the matched count, and accepts a bounded relative time in
+`-31536000..31536000` turns.  Empty keys intentionally target unkeyed native
+events; arbitrary event objects and dynamic keys remain outside the migration
+slice.
 Avatar and NPC gameplay changes use
 `ccb.services.bionics.grant(GameHandle, GameId)` and `remove_type`; these
 Platform operations call native character rules directly and are not capped
@@ -1834,6 +1934,29 @@ reads the item's effective flags, including type inheritance, while
 flag set.  Its `value.changed` compares `own_before` with `own_after`; therefore
 an inherited effective flag may remain true before and after a real instance
 change, or remain true while an idempotent unset correctly reports false.
+Item faults use the separate typed mutation services
+`services.items.set_fault(item, fault, options)` and
+`services.items.set_random_fault(item, fault_type, options)`.  They delegate to
+the native eligibility, force, random-type, and optional holder-message rules;
+the returned value reports acceptance, before/after membership, and whether the
+fault set changed.  `options.holder` is an explicit Character handle used only
+for the native message path, so callers never pass a legacy talker or an EOC
+effect object.  The migration extractor lowers only literal
+`npc_set_fault`/`npc_set_random_fault_of_type` in the four audited item events,
+with literal `force`/`message` flags and a nil-safe `context.actors.item`
+guard.  Dynamic fault ids/types, `u_*` aliases, and unproven actor contexts
+remain explicit TODOs.
+Explicit item use is exposed as
+`services.items.activate(item, character, method, options?)`.  The method is a
+non-empty bounded native use-method name, the item must be owned by the
+Character handle, and the call runs the normal native can-use/on-use and charge
+consumption path without opening a method picker.  An optional `target` is an
+absolute map-square `Tripoint` inside the loaded map.  The returned value
+reports whether the use was accepted, whether the item was destroyed, and a
+detached remaining-item snapshot when one still exists.  The extractor lowers
+only literal no-target `u_activate`/`npc_activate` forms in the four audited
+item events; dynamic methods, target variables, empty methods, and unproven
+item contexts remain explicit TODOs.
 
 ```lua
 local wielded = service_value(services.inventory.wielded(character))
@@ -1868,6 +1991,23 @@ to `Character::cancel_activity` only when an activity is active, preserving
 actor cleanup, resumable-backlog handling, hauling cleanup, events, and
 activity sound shutdown without mutating backlog on a no-op.  All three
 operations return the standard structured service result.
+Mutation attempts use `ccb.services.mutations.mutate(character, true_random_chance,
+use_vitamins)`, `mutate_category(character, category, use_vitamins, true_random)`,
+and `mutate_towards(character, mutation, category, use_vitamins)`.  These are
+domain operations over an explicit Character handle, not EOC-key-shaped
+wrappers.  Categories and mutations are typed `GameId` values; the native
+`ANY` category may be represented by the `ANY` category id or by `nil` where
+the operation permits an omitted category.  Random/category calls return a
+detached result with `changed`, before/after counts, and targeted calls also
+report the native `accepted` result.  The service validates finite integral
+random chances in `0..1000000`, valid mutation/category ids, generation-safe
+handles, and `game.write` capability before invoking the existing mutation
+engine.  The bounded migrator converts proven literal or `context_val`/`u_val`
+IDs and finite literal chances for the game-start avatar and proven
+`npc_becomes_hostile` NPC slices; float/math/global-variable shapes and
+unproven actor contexts remain explicit TODOs.  This preserves native
+prerequisite, cancellation, vitamin, and conflict handling without exposing a
+JSON object or an EOC runner.
 Wound state uses `ccb.services.wounds.snapshot(character, body_part)` with a
 typed `GameId<body_part>`.  It returns a detached array in native per-part
 order; every entry contains a typed wound id, base/current pain, typed healing
@@ -1897,18 +2037,25 @@ that snapshot remains an available empty read outside a callback while direct
 `add` and `remove` both fail with the callback-only diagnostic.  The focused
 service tag and the complete Platform suite both passed after compiling the
 native implementation and its test.
-This Lua-native policy is intentionally not a drop-in execution backend for
-the legacy wound selectors.  Legacy `f_add_wound` and `f_remove_wound` resolve
-the requested body part through `Creature::get_part(bodypart_id)`, whose
-default filter may choose `next_best`; the Platform service requires the exact
-current-anatomy part.  The legacy add path also calls add-or-worsen without the
-per-part-limit check that the Platform service enforces.  Therefore
-`u_add_wound`, `npc_add_wound`, `u_remove_wound`, and `npc_remove_wound` all
-remain planned migration work, even for literal ids and a proven Character
-actor.  The extractor emits a TODO instead of silently changing gameplay.
-Authors rewriting one of these selectors must choose the new exact-part and
-limit-aware policy explicitly; Platform will not add a legacy-shaped
-compatibility switch or entry point.
+This bounded Lua-native policy is intentionally not a drop-in backend for every
+legacy wound shape.  Legacy `f_add_wound` and `f_remove_wound` resolve the
+requested body part through `Creature::get_part(bodypart_id)`, whose default
+filter may choose `next_best`; the Platform service requires the exact current
+anatomy part.  The legacy add path also calls add-or-worsen without the
+per-part-limit check that the Platform service enforces.  The converted literal
+slice therefore makes that policy choice explicit in Lua, while dynamic and
+unproven shapes still receive TODOs.  Platform will not add a legacy-shaped
+compatibility switch or hidden EOC entry point.
+Non-interactive body-part selection is exposed as
+`services.characters.pick_body_part(character, options?)`.  It samples the
+native main-body-part pool and optionally restricts it to wounded or healthy
+parts, returning a typed `GameId<body_part>` and the candidate count.  It is a
+read operation with generation-safe Character handles; an empty filtered pool
+returns a structured `no_match` result.  The migrator lowers only proven
+`game_start` avatar or `npc_becomes_hostile` NPC shapes with an explicit random
+selection request and a same-scope literal variable.  Interactive selection,
+dynamic variables, flag/type filters, and unproven actors stay TODOs rather
+than pretending that a UI picker is equivalent to a deterministic Lua call.
 Creature effects reuse the typed `ccb.services.effects` domain.  The bounded
 migration slice accepts a literal effect id with either a positive literal
 duration of at most 365 days or `PERMANENT`, and accepts single literal removal
@@ -1953,14 +2100,82 @@ limits: overlong ids or text and contradictory body-part flags become explicit
 TODOs or rejected definitions, and proficiency multipliers are rejected when
 their native `float` conversion is no longer positive.
 
-This does not change the four legacy `u_*`/`npc_*` wound mutation selectors:
-they remain planned because their next-best body-part resolution and add-limit
-behaviour do not match the deliberately strict, limit-aware service.  Service
-availability and static-definition extraction are not effect-selector parity
-and do not authorize automatic conversion.
-Rain wetness, direct damage, specialized activity-actor construction,
-navigation, and general teleportation remain planned native domains because
-current Character/item primitives do not carry their complete side effects.
+The extractor now has a deliberately bounded wound-effect slice.  When the
+event proves a Character actor and both the body-part and wound ids are literal,
+`u_add_wound`/`npc_add_wound` become `services.wounds.add` and the corresponding
+remove forms become `services.wounds.remove`.  Generated Lua explicitly adopts
+the Platform policy: the named body part must exist exactly and the native
+per-part limit is authoritative.  Legacy next-best fallback, dynamic ids,
+unproven actors, and other selector shapes remain explicit TODOs.  The four
+selectors are therefore `bounded_implemented_unverified`, not full legacy
+parity; service availability alone never authorizes an unbounded conversion.
+Character variable effects follow the same fail-closed rule.  Proven avatar or
+NPC actors may set a literal string, choose from a bounded literal
+`possible_values` array, store the native turn value, perform a finite literal
+numeric assignment/increment, copy between same-actor variables, or assign a
+literal string value.  Dynamic names/values, global/context variables, mixed
+legacy shapes, and general expression evaluation remain TODOs and never emit a
+nonexistent `services.state.*` compatibility call.
+Faction effects now have a separate bounded slice.  For the proven
+`npc_becomes_hostile` event, an integer literal `u_add_faction_trust` uses
+`services.characters.add_faction_trust(actor, amount)`.  Literal
+`npc_set_fac_relation` uses
+`services.characters.set_faction_relationship(actor, services.characters.avatar(),
+relationship, enabled)`, while literal `u_set_fac_relation` reverses the
+source/target handles to preserve the legacy alpha/beta direction.  The
+service mutates the same target-faction relation bit as the legacy talker
+operation, checks both generation-safe Character handles, rejects unknown
+relationship names, and refuses native integer overflow.  Dynamic values,
+unproven event actors, and dialogue-only shapes remain explicit TODOs; these
+selectors are bounded evidence, not complete EOC parity.
+Weather and random effects have similarly narrow native slices.  Bare
+`lightning` calls `services.weather.activate_lightning()`, preserving the
+legacy above-ground gate; bare `next_weather` calls `services.weather.refresh()`
+which schedules the next native weather update.  A literal `sample_range` with
+finite bounded numbers and proven `u_val`/`npc_val` targets uses the isolated
+`services.random.sample_integers` stream and typed variable writes, including
+the native no-replacement/count clamping.  Dynamic ranges, global/context
+variables, and unproven target scopes remain TODOs.
+Literal `u_has_faction_trust` now composes
+`service_value(services.factions.player()).reputation.trusts` for the avatar's
+faction.  Proven avatar/NPC literal `u_has_effect`/`npc_has_effect` and bounded
+`u_has_any_effect`/`npc_has_any_effect` arrays use repeated
+`services.effects.has` queries; dynamic ids, empty/oversized arrays, and
+unproven actors remain explicit TODOs.
+The migrator promotes only bounded, proven shapes for coordinate mirroring,
+dimension-name writes, closest-city queries, line-of-sight conditions, and
+literal `sample_range`; dynamic values, mixed scopes, and unproven actors remain
+partial with explicit TODOs rather than invalid Lua calls.  The generated code
+uses typed coordinate arithmetic, Character variables, and the native city and
+environment services; ordinary Lua remains responsible for composing richer
+policies.
+NPC 导航的第一层原生组合面也已开放：
+`ccb.services.npcs.set_goal(npc_handle, overmap_position)` 只接受绝对
+overmap-terrain 坐标，复用 NPC 原生寻路参数，成功后设置 travelling mission、清除 guard
+post 并返回路径长度；不可达目标会清除旧 goal 并返回 `accepted = false`。
+`ccb.services.npcs.set_guard_position(npc_handle, map_position)` 则写入持久 guard post，
+要求绝对 map-square 坐标并返回幂等变更结果。两个 API 都只接受 NPC 句柄，写操作受
+Platform callback 与 `game.write` 权限保护；旧的 `om_terrain`/`om_special` mission-target
+解析、`goto_location` 工作流以及 guard 变量/`unique_id` 作用域仍不自动迁移。
+
+Rain wetness, direct damage, and specialized activity-actor construction remain
+planned native domains because current Character/item primitives do not carry
+their complete side effects.  General creature
+relocation now has a bounded native primitive:
+`ccb.services.relocation.creature_at(handle, position, options?)` accepts a
+generation-safe creature handle and an absolute map-square `TripointCoord`.
+It delegates to the native teleport collision, dimensional-anchor, map-load,
+and teleglow rules; Character-linked cable items are translated with the
+same offset as the legacy teleport effect.  `safe`, `force`, `force_safe`, and
+`add_teleglow` are explicit options, and the result is a detached position
+snapshot plus a refreshed handle.  This primitive is intentionally not yet a
+claim of full `u_teleport`/`npc_teleport` migration parity: target-variable
+provenance, failure/success message variables, item/vehicle/zone talkers, and
+Literal `game_start` avatar dimension travel is now a bounded migration slice:
+`u_travel_to_dimension` with a literal dimension id and bounded radius/filter/
+vehicle options emits `services.relocation.travel_to_dimension`.  Dynamic
+targets, NPC or unproven actors, target-location/message variables, and richer
+item/vehicle/zone semantics remain explicit TODOs.
 Character activity snapshot, plain time-based
 assignment, and cancellation are implemented, and their written local C++
 policy coverage passed; legacy selector promotion still requires exact shape
@@ -1998,8 +2213,22 @@ Platform 的玩法随机流按 Mod 隔离在 `ccb.services.random` 中；`int`�
 直接使用普通 Lua 运算符比较。`environment.is_outside` 与 `line_of_sight` 接受类型化
 绝对地图格坐标，因此事件、任务和物品行为可以把生物 handle 与坐标工具直接组合，
 无需重建 EOC 变量模型。
+如果 Mod 需要为 Character 保存该 ID，可以在普通 Lua 中把返回的字符串交给
+`services.variables.set`。迁移器只在 actor 已证明且目标是字面量 `u_val`/`npc_val` 的事件中
+转换；context、global 与动态变量目标继续生成显式 TODO。
 玩法成就使用 `ccb.services.achievements.complete(GameId)` 授予；它完成任意当前受跟踪且
 pending 的成就并报告状态是否变化，不公开 EOC 激活入口。
+世界光照覆盖使用
+`ccb.services.gameplay.environment.set_light_override(level, duration, key?)`。
+`level` 必须是 `0..125` 的整数，`duration` 是最长一年且带类型的
+`TimeDuration`，可选的有界 key 会保留给定时事件协调。原生事件在当前回合之后才生效，
+保留旧光照 effect 延迟一秒的语义；返回值是脱离原生对象的 level、duration、key 与
+changed 标记。动态值、时长范围和缺失时长继续明确生成迁移 TODO，Lua 作者可用普通控制流
+组合这些选择。
+带 key 的定时事件协调使用 `ccb.services.time.reschedule(key, duration)`：它按精确 key
+匹配所有原生事件，以当前回合为基准重新安排，并返回匹配数量；相对时长限制在
+`-31536000..31536000` 回合。空 key 有意表示无 key 的原生事件；任意事件对象和动态 key
+仍不在当前迁移切片中。
 玩家与 NPC 的玩法变更使用 `ccb.services.bionics.grant(GameHandle, GameId)` 和
 `remove_type`；这些 Platform 操作直接调用角色原生规则，不受 v5 检查清单数量上限约束，
 也不强制作者先枚举 UID。Platform 专属的 `summary(GameHandle)` 会同时返回安装数量、当前与
@@ -2020,6 +2249,22 @@ Platform 学习只改变原生流派集合，不自行显示 UI 文本，使 Mod
 `services.items.set_flag(item, flag, enabled)` 只改变实例自有 flag 集合，其
 `value.changed` 比较 `own_before` 与 `own_after`。所以继承 flag 的有效状态可以在一次真实
 实例变更前后都保持 true；幂等 unset 也会正确报告 false。
+物品故障使用独立的类型化变更服务
+`services.items.set_fault(item, fault, options)` 与
+`services.items.set_random_fault(item, fault_type, options)`。两者直接复用原生的故障资格、
+强制添加、按类型随机选择和可选持有者消息规则；返回值报告是否接受、前后是否存在以及
+故障集合是否发生变化。`options.holder` 是显式 Character handle，只用于原生消息路径，
+不会把旧 talker 或 EOC effect 表暴露给 Lua。迁移器只在四类已审计物品事件中，把字面量
+`npc_set_fault`/`npc_set_random_fault_of_type` 连同静态 `force`/`message` 转换，并保留
+`context.actors.item` 的 nil guard；动态故障 ID/类型、`u_*` 别名和未证明 actor 上下文继续
+生成明确 TODO。
+显式物品使用通过 `services.items.activate(item, character, method, options?)` 暴露。method
+必须是非空且有界的原生 use method 名称；item 必须由 Character handle 持有；调用会执行原生
+can-use/on-use、消耗 charges 等完整路径，但不会打开交互式 method 选择器。可选 target 是已
+加载地图内的绝对 map-square `Tripoint`。返回值报告是否接受、物品是否被销毁，以及仍存在时
+脱离原生对象的物品快照。迁移器只在四类已审计物品事件中转换无 target 的字面量
+`u_activate`/`npc_activate`；动态 method、target 变量、空 method 与未证明物品上下文继续
+生成明确 TODO。
 类型化士气实例使用
 `ccb.services.morale.add(GameHandle, GameId, bonus, max_bonus, options)` 与
 `remove`。`add` 直接复用原生士气叠加规则，并可接收类型化的 `duration`、
@@ -2059,14 +2304,20 @@ A（疼痛 4）、B（疼痛 7）、A（疼痛 4），快照保持原生 A/B/A �
 过程中 pain、perceived pain 与 Character morale 依次同步为 4、11、15、7、0。门禁还证明
 callback 外仍可读取空 snapshot，而直接 `add` 与 `remove` 都会以 callback-only 诊断拒绝。
 聚焦 service 标签与完整 Platform 套件都在原生实现和测试重新编译后通过。
-这套 Lua-native 策略有意不作为旧伤口 selector 的直接执行后端。旧
+这套 Lua-native 策略不是所有旧伤口形状的直接后端。旧
 `f_add_wound`/`f_remove_wound` 通过默认可采用 `next_best` 的
 `Creature::get_part(bodypart_id)` 解析身体部位，而 Platform service 只接受当前解剖中精确
 存在的部位；旧 add 路径也直接调用 add-or-worsen，不执行 Platform service 所强制的每部位
-上限检查。因此即使 id 都是字面量且 Character actor 已证明，`u_add_wound`、
-`npc_add_wound`、`u_remove_wound` 与 `npc_remove_wound` 仍是 planned 迁移工作。迁移器会
-生成 TODO，不会静默改变玩法。作者重写时必须显式选择新的“精确部位、上限生效”策略；
-Platform 不会增加旧字段形状的兼容开关或入口。
+上限检查。因此转换的字面量切片会在 Lua 中明确选择新策略，动态和未证明形状仍生成 TODO；
+Platform 不会增加旧字段形状的兼容开关或隐藏 EOC 入口。
+非交互身体部位选择通过
+`services.characters.pick_body_part(character, options?)` 暴露：它从原生主身体部位池
+随机选择，可用 `wounded = true/false` 限制受伤或健康部位，并返回类型化的
+`GameId<body_part>` 与候选数量；过滤后没有候选时返回结构化 `no_match`。这是带代际检查的
+Character 读操作。迁移器只在已证明的 `game_start` avatar 或
+`npc_becomes_hostile` NPC 事件中，且明确要求随机选择、目标变量为同作用域字面量时生成调用。
+交互式选择、动态变量、flag/type 过滤和未证明 actor 仍生成 TODO，不把 UI picker 伪装成可组合
+Lua 调用。
 生物效果复用类型化的 `ccb.services.effects` 领域。当前有界迁移只接受字面量效果 ID，
 其 duration 必须是正整数且不超过 365 天，或为 `PERMANENT`；移除只接受不带身体部位
 选择器的单个字面量 ID。动态 ID/时长、随机范围、intensity/force/身体部位扩展、数组、
@@ -2098,11 +2349,53 @@ service 证据见上文。静态提取器现在可把有界、具体的 `wound` 
 提取会按 Platform 的 UTF-8 字节上限安全失败：超长 id/文本及互相冲突的身体部位 flag 会
 生成明确 TODO 或拒绝该定义，熟练度倍率转成原生 `float` 后不再为正时也会被拒绝。
 
-四个旧 `u_*`/`npc_*` 伤口变更 selector 仍保持 planned，因为它们的 next-best 身体部位解析
-和 add 上限行为与这套有意采用严格部位、上限生效的 service 不一致。具备领域 service 或
-静态定义提取器不等于 effect selector 等价，也不能据此自动转换。淋雨湿润、直接伤害、专用 activity actor 构造、
-导航和通用传送仍是 planned 原生领域，因为当前
-Character/物品原语没有保留它们的完整副作用。Character activity 快照、普通 time-based
+迁移器现在提供有意限定的伤口 effect 切片：当事件已经证明 Character actor，且身体部位与
+伤口 ID 都是字面量时，`u_add_wound`/`npc_add_wound` 及对应 remove 形式会转换为类型化
+`services.wounds` 调用。生成的 Lua 明确采用 Platform 策略：身体部位必须精确存在，原生每部位
+上限生效。旧的 next-best 回退、动态 ID、未证明 actor 以及其他形状仍保留显式 TODO。因此
+四个 selector 是 `bounded_implemented_unverified`，不是完整 legacy parity；仅有 service
+存在并不能授权无界转换。
+角色变量 effect 也遵循 fail-closed 规则。已证明的 avatar/NPC actor 可以写入字面量字符串、
+从有界字面量 `possible_values` 选择、保存原生回合值、执行有限字面量数值赋值/增量、在同一
+actor 的变量之间复制，或设置字面量字符串。动态名称/值、全局/context 变量、混合旧形状和
+通用表达式求值仍为 TODO，绝不会生成不存在的 `services.state.*` 兼容调用。
+阵营 effect 现在有独立的有界切片：在已证明的 `npc_becomes_hostile` 事件中，整数
+字面量 `u_add_faction_trust` 使用 `services.characters.add_faction_trust(actor, amount)`；
+字面量 `npc_set_fac_relation` 使用
+`services.characters.set_faction_relationship(actor, services.characters.avatar(), relationship, enabled)`，
+字面量 `u_set_fac_relation` 则反转 source/target handle，以保持旧 alpha/beta 的方向。
+该 service 与旧 talker 操作一样修改目标 faction 对来源 faction 的关系位，同时检查
+代际安全 Character handle、拒绝未知关系名并拒绝原生整数溢出。动态值、未证明的事件
+actor 与对话专属形状仍明确生成 TODO；这些 selector 只是有界证据，不是完整 EOC parity。
+天气和随机 effect 也加入了同样窄的原生切片：裸 `lightning` 调用
+`services.weather.activate_lightning()` 并保留旧的地面高度门槛；裸 `next_weather` 调用
+`services.weather.refresh()`，安排下一次原生天气更新。有限且有界的字面量
+`sample_range`，在目标为已证明的 `u_val`/`npc_val` 时，使用隔离的
+`services.random.sample_integers` 与类型化变量写入，并保留无放回/数量截断规则。动态范围、
+global/context 变量和未证明目标作用域仍输出 TODO。
+字面量 `u_has_faction_trust` 现在通过
+`services.factions.player().reputation.trusts` 组合 avatar faction 查询；已证明的 avatar/NPC
+字面量 `u_has_effect`/`npc_has_effect` 及有界 `u_has_any_effect`/`npc_has_any_effect` 数组则
+组合重复的 `services.effects.has` 查询。动态 ID、空/超长数组和未证明 actor 仍输出显式 TODO。
+迁移器现在会把同一角色的字面量位置变量 `closest_city` 形状转换为
+`services.overmap.closest_city`，并回写城市中心以及 `city_name`/`city_size` 上下文；
+动态、global/context、混合作用域和未证明 actor 仍保留显式 TODO。坐标镜像、动态采样、
+维度名写入与视线条件仍按各自的有界规则处理；同一角色的两个字面量位置变量和
+合法 `ter_furn_transform` ID 现在还可组合 `services.world.transform_line`，但仅限当前
+已加载地图内的有限线段，不会生成无效 Lua 调用。
+淋雨湿润、直接伤害和专用 activity actor 构造仍是 planned 原生领域，因为当前
+Character/物品原语没有保留它们的完整副作用。NPC 导航现在提供第一层原生组合面：
+`ccb.services.npcs.set_goal` 复用 NPC overmap 寻路并设置 travelling mission，
+`set_guard_position` 写入持久 guard post；两者都要求类型化绝对坐标和 NPC 句柄，但旧
+mission-target/guard 变量解析仍不自动迁移。通用生物传送现在提供一个有界原生原语
+`ccb.services.relocation.creature_at(handle, position, options?)`：接受代际安全的生物
+句柄和绝对 map-square `TripointCoord`，复用原生安全碰撞、维度锚、跨地图加载和 teleglow
+规则，并按同样偏移更新 Character 携带的 cable link 物品。`safe`、`force`、`force_safe`
+和 `add_teleglow` 都必须显式传入；返回值是脱离原生对象的位置快照和刷新后的句柄。这还
+不是 `u_teleport`/`npc_teleport` 的完整迁移承诺：目标变量来源证明、成功/失败消息变量、
+物品/载具/区域 talker 仍需单独的迁移切片。字面量 `game_start` avatar 的
+`u_travel_to_dimension` 已可通过 `services.relocation.travel_to_dimension` 转换，动态目标、
+NPC/未证明 actor 与实体携带语义仍明确生成 TODO。Character activity 快照、普通 time-based
 分配与取消已经实现，其书面本地 C++ 策略覆盖也已通过；旧 selector 仍需完成精确形状转换后
 才能晋级。在已证明为
 `game_start` actor 的形状中，
@@ -2116,6 +2409,21 @@ Character/物品原语没有保留它们的完整副作用。Character activity 
 `u_set_flag`/`u_unset_flag`、动态 flag、其他角色来源、任务预留与有界 moves 扣减仍保持
 primitive-only 或 planned。账本 target 只描述领域归属，不能证明未列出的 selector 形状
 已经可互换。
+迁移器对其余 EOC effect 族也遵循“生成代码必须可执行”的约束。有界的 NPC 命名活动只会以
+带类型的 `time.duration` 调用 `activities.assign_timed`，不会把人类可读的时长字符串传给
+原生绑定。导航、物品 talker 激活/故障修改的动态或未证明形状、任务/营地编排、载具服务选择
+以及宽泛物品栏/地图调整在对应的类型化 service 和 actor 契约出现前都只生成明确 TODO；已有
+有界字面量物品激活/故障切片会生成对应 typed service 调用。迁移测试会审计完整生成的
+Lua 骨架中的 `services.*` 调用；不支持的形状 fail-closed，不会生成看似合理但实际不存在的 API。
+The extractor applies the same executable-output invariant to the remaining
+EOC effect families.  A bounded named NPC activity is emitted only as
+`activities.assign_timed` with a typed `time.duration` value; it never passes a
+human-readable duration string to the native binding.  Navigation and dynamic
+or unproven item-talker activation/fault mutation, mission/camp orchestration, vehicle service
+selection, and broad inventory/map adjustments remain explicit TODOs until a
+matching typed service and actor contract exist.  Migration tests audit the
+generated Lua skeleton for unknown `services.*` calls, so unsupported shapes
+fail closed instead of producing a plausible but non-existent API.
 类型化角色谓词复用同一批带结果的 service：`mutations.has` 查询单个或任一突变，
 `martial_arts.get` 查询武术知识和当前选中状态，`proficiencies.get` 查询熟练度知识，
 `bionics.has` 查询指定已安装仿生装置，`bionics.summary` 查询安装数量与容量事实，
@@ -2302,8 +2610,9 @@ bounded avatar helpers against `context.actors.npc`, the bare
 and literal `npc_has_class` composes
 `service_value(services.npcs.get(actor)).class.value`,
 while literal `u_lose_var`/`npc_lose_var` effects compose
-`services.variables.remove(actor, name)` (`u_add_var` stays primitive because
-the variables API has no native adjust), literal `u_message` composes the same
+`services.variables.remove(actor, name)`, while bounded literal `u_add_var`/
+`npc_add_var` forms use `services.variables.set` (general adjust semantics stay
+partial), literal `u_message` composes the same
 `services.message(text)` player message as the bare `message` effect (the
 avatar target is the player), and literal `npc_message` is a deliberate no-op
 under `npc_becomes_hostile` (the legacy handler returns early for NPC
@@ -2336,12 +2645,13 @@ partial until their actor and value semantics are represented explicitly.
 Bounded literal avatar `u_add_effect` and `u_lose_effect` shapes become typed
 effect-service calls; effect options, dynamic values, body-part selectors, and
 batch removal remain partial.
-All legacy `u_add_wound`, `npc_add_wound`, `u_remove_wound`, and
-`npc_remove_wound` shapes remain explicit TODOs.  This includes literal ids,
-non-empty literal removal arrays, and proven Character actors: the old path
-may select a next-best body part and its add bypasses the per-part limit, while
-the Lua-native wound service is exact-part and limit-aware.  Emitting service
-calls would therefore be a behavioural rewrite rather than extraction.
+The proven Character slice converts literal body-part and wound ids for
+`u_add_wound`/`npc_add_wound` and their remove forms into the typed wound
+service.  The generated code intentionally chooses exact-part, limit-aware
+semantics; dynamic ids, unproven actors, and shapes that depend on legacy
+next-best fallback remain explicit TODOs.  These selectors are bounded
+implemented, not full legacy parity, and no hidden compatibility call is
+generated.
 The extractor emits normal Lua composition and
 writes `MIGRATION_REPORT.md` with a source location for every unresolved
 field.  It accepts the comments and trailing commas used by game data;
@@ -2416,8 +2726,8 @@ game-start 设置阶段绝不会死亡、敌对、骑乘或身处载具中），
 白名单查询，字面量 `npc_has_class` 组合
 `service_value(services.npcs.get(actor)).class.value`，
 字面量 `u_lose_var`/`npc_lose_var` 效果则组合
-`services.variables.remove(actor, name)`（`u_add_var` 保持 primitive，因为变量
-API 没有原生 adjust），字面量 `u_message` 组合与裸 `message` 效果相同的
+`services.variables.remove(actor, name)`；有界字面量 `u_add_var`/`npc_add_var` 形状使用
+`services.variables.set`（通用 adjust 语义仍保持 partial），字面量 `u_message` 组合与裸 `message` 效果相同的
 `services.message(text)` 玩家消息（avatar 目标即玩家），字面量 `npc_message` 在
 `npc_becomes_hostile` 下是刻意的空操作（legacy handler 对 NPC 目标直接提前返回），
 字面量 `u_activate_trait`/`u_deactivate_trait` 及其 `npc_*` 镜像则组合
@@ -2447,11 +2757,10 @@ NPC 目标与未证明 actor 上下文仍保持 partial；字面量玩家 `u_lea
 字面量玩家 `u_add_morale` 与单字段字面量玩家 `u_lose_morale` 会生成类型化士气 service
 调用，动态值和扩展计时形状在角色与取值语义被显式建模前仍保持 partial；有界的字面量
 玩家 `u_add_effect` 与 `u_lose_effect` 会生成类型化效果 service 调用，效果选项、动态值、
-身体部位选择器与批量移除仍保持 partial。所有旧 `u_add_wound`、`npc_add_wound`、
-`u_remove_wound` 与 `npc_remove_wound` 形状都会生成显式 TODO；即使 id 是字面量、remove
-数组非空且 Character actor 已证明也不会自动转换，因为旧路径可能选择 next-best 身体部位，
-且旧 add 绕过每部位上限，而 Lua-native 伤口 service 要求精确部位并执行上限。生成 service
-调用会成为行为重写而不是提取；其余字段全部以
+身体部位选择器与批量移除仍保持 partial。已证明的 Character 切片会把字面量身体部位与伤口
+ID 的 `u_add_wound`/`npc_add_wound` 及其 remove 形式转换为类型化伤口 service。生成代码有意
+选择精确部位、上限生效的语义；动态 ID、未证明 actor 和依赖 legacy next-best 回退的形状仍会
+生成显式 TODO。它们属于 bounded implemented，不是完整 legacy parity，也不会生成隐藏兼容调用；其余字段全部以
 带来源位置的 TODO 写入报告；`--check` 只比较
 现有输出。它支持游戏数据使用的注释与尾逗号；继承、匿名定义、拆解配方、混合 effect
 以及有损字段形状、畸形数字和超出原生整数/技能范围的值都会保持 partial 并写明 TODO。
