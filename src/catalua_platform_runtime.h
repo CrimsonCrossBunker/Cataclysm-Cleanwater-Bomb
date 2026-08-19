@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <string>
@@ -45,7 +46,8 @@ class runtime;
 class content_transaction
 {
     public:
-        content_transaction( std::string owner, std::size_t generation );
+        content_transaction( std::string owner, std::size_t generation,
+                             std::filesystem::path source_root );
         ~content_transaction();
 
         content_transaction( const content_transaction & ) = delete;
@@ -99,6 +101,10 @@ class content_transaction
                                    std::string &category_id,
                                    std::string &handler_id ) const;
 
+        /** Find the named examine policy owned by a Lua-first furniture definition. */
+        bool find_furniture_examine_handler( std::string_view furniture_id,
+                                             std::string &handler_id ) const;
+
         /** Find a named evaluator or failure callback owned by this magic type. */
         bool find_magic_type_handler( std::string_view magic_type_id,
                                       std::string_view phase,
@@ -122,7 +128,8 @@ class content_transaction
 
 std::shared_ptr<runtime> make_runtime( const std::string &mod_id,
                                        std::size_t generation,
-                                       sol::state &lua );
+                                       sol::state &lua,
+                                       const std::filesystem::path &source_root );
 void install_runtime_api( const std::shared_ptr<runtime> &value,
                           sol::state &lua, sol::table &ccb );
 
@@ -249,6 +256,11 @@ bool invoke_activity_type_handler( std::string_view activity_type_id,
 bool invoke_snippet_examine_handler( std::string_view snippet_id,
                                      std::string_view item_type_id,
                                      Character &character );
+
+/** Dispatch one Lua-authored furniture examine policy; true means Lua owns it. */
+bool invoke_furniture_examine_handler( std::string_view furniture_id,
+                                       Character &character,
+                                       const tripoint_bub_ms &position );
 
 /** Evaluate a native Lua magic-type policy; no handler yields std::nullopt. */
 std::optional<double> invoke_magic_type_number_handler(

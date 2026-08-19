@@ -34,7 +34,8 @@ enum class script_ui_capability : std::uint32_t {
     tooltips = 1U << 13,
     virtualization = 1U << 14,
     radial_selection = 1U << 15,
-    action_slots = 1U << 16
+    action_slots = 1U << 16,
+    sprite_canvas = 1U << 17
 };
 
 struct script_ui_radial_option {
@@ -150,6 +151,20 @@ class script_ui_renderer
         virtual void tooltip( const std::string &text ) = 0;
         virtual void virtual_list( int item_count, double item_height,
                                    const std::function<void( int, int )> &draw_range ) = 0;
+
+        // A bounded pixel-coordinate scene layered on the current native UI
+        // window.  It is intentionally backed by the already-loaded tileset,
+        // never by Lua-owned textures or file paths.
+        virtual void canvas_begin( double width, double height ) = 0;
+        virtual void canvas_rect( double x, double y, double width, double height,
+                                  double red, double green, double blue, double alpha ) = 0;
+        virtual void canvas_text( double x, double y, const std::string &value,
+                                  double red, double green, double blue, double alpha ) = 0;
+        virtual bool canvas_sprite( const std::string &tile_id, double x, double y,
+                                    double width, double height ) = 0;
+        virtual bool canvas_button( const std::string &id, const std::string &label,
+                                    double x, double y, double width, double height,
+                                    bool request_focus ) = 0;
 };
 
 // Safe facade exposed to Lua.  It owns no platform UI state and simply
@@ -233,6 +248,16 @@ class script_ui_context
                            const std::function<void( int, int )> &draw_range ) const;
         void virtual_list_rows( int item_count, const std::string &row_token,
                                 const std::function<void( int, int )> &draw_range ) const;
+        void canvas_begin( double width, double height ) const;
+        void canvas_rect( double x, double y, double width, double height,
+                          double red, double green, double blue, double alpha ) const;
+        void canvas_text( double x, double y, const std::string &value,
+                          double red, double green, double blue, double alpha ) const;
+        bool canvas_sprite( const std::string &tile_id, double x, double y,
+                            double width, double height ) const;
+        bool canvas_button( const std::string &id, const std::string &label,
+                            double x, double y, double width, double height,
+                            bool request_focus = false ) const;
 
     private:
         script_ui_renderer &renderer() const;

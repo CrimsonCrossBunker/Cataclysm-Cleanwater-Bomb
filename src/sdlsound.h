@@ -13,6 +13,8 @@ bool init_sound();
 void initSDLAudioOnly();
 void shutdown_sound();
 void play_music( std::string_view playlist );
+void set_temporary_music( std::string_view playlist );
+void clear_temporary_music();
 void stop_music();
 void update_music_volume();
 void load_soundset();
@@ -26,6 +28,12 @@ inline bool init_sound()
 }
 inline void shutdown_sound() { }
 inline void play_music( std::string_view /*playlist*/ )
+{
+}
+inline void set_temporary_music( std::string_view /*playlist*/ )
+{
+}
+inline void clear_temporary_music()
 {
 }
 inline void update_music_volume() { }

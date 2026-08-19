@@ -47,6 +47,8 @@ script_ui_capability capability_from_name( std::string_view name )
         return script_ui_capability::radial_selection;
     } else if( name == "action_slots" ) {
         return script_ui_capability::action_slots;
+    } else if( name == "sprite_canvas" ) {
+        return script_ui_capability::sprite_canvas;
     }
     return static_cast<script_ui_capability>( 0 );
 }
@@ -486,6 +488,39 @@ void script_ui_context::virtual_list_rows(
             "ctx:virtual_list_rows token must be compact, normal, or wide" );
     }
     virtual_list( item_count, profile_.row_height( parsed ), draw_range );
+}
+
+void script_ui_context::canvas_begin( const double width, const double height ) const
+{
+    renderer().canvas_begin( width, height );
+}
+
+void script_ui_context::canvas_rect( const double x, const double y, const double width,
+                                     const double height, const double red, const double green,
+                                     const double blue, const double alpha ) const
+{
+    renderer().canvas_rect( x, y, width, height, red, green, blue, alpha );
+}
+
+void script_ui_context::canvas_text( const double x, const double y, const std::string &value,
+                                     const double red, const double green, const double blue,
+                                     const double alpha ) const
+{
+    renderer().canvas_text( x, y, value, red, green, blue, alpha );
+}
+
+bool script_ui_context::canvas_sprite( const std::string &tile_id, const double x,
+                                       const double y, const double width,
+                                       const double height ) const
+{
+    return renderer().canvas_sprite( tile_id, x, y, width, height );
+}
+
+bool script_ui_context::canvas_button( const std::string &id, const std::string &label,
+                                       const double x, const double y, const double width,
+                                       const double height, const bool request_focus ) const
+{
+    return renderer().canvas_button( id, label, x, y, width, height, request_focus );
 }
 
 } // namespace cata::lua_ui

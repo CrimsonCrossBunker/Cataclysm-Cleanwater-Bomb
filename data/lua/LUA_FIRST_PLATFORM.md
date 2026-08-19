@@ -1281,23 +1281,44 @@ Mod 暂存的 `ccb.content.Requirement` 并通过 `:using_requirement` 引用，
 回调与 `dark_craftable` 保持作者自有的 Lua 行为，迁移器将其列为显式 TODO。
 
 `ccb.content.Furniture` stages map furniture through the same transactional
-model: `id`, `name`, `description`, `color`, `symbol`, move-cost and required
-strength, `light_emitted`, `comfort`, `max_volume_ml`, `mass_grams`,
+model: `id`, `name`, `description`, `color`, `symbol`, a non-negative move-cost
+modifier (or `-10` for impassable furniture) and required strength,
+`light_emitted`, `comfort`, `max_volume_ml`, `mass_grams`,
 `keg_capacity_ml`, `transparent`, open/close/lockpick transformations,
 `crafting_pseudo_item`, and `deployed_item` are plain options, while
 `:flag(id)` appends bounded furniture flags.  Finalization inserts a native
 `furn_t` into the shared furniture registry; rollback restores or erases the
 exact ids.  Legacy `bash`, `deconstruct`, `workbench`, plant data, examine
 actions, and emissions stay author-owned Lua behaviour and the migrator
-reports them as explicit TODOs.
+reports them as explicit TODOs.  A named `on_examine` handler is the one
+exception: it is validated against the same runtime handler registry and is
+installed through the native `iexamine_actor` chain, so normal Examine (`E`)
+dispatch, character ownership, and map coordinates remain engine-owned.
 
 `ccb.content.Furniture` 通过同样的事务模型暂存地图家具：`id`、`name`、
-`description`、`color`、`symbol`、移动代价与所需力量、`light_emitted`、
+`description`、`color`、`symbol`、非负的移动代价修正（或用 `-10` 表示不可通行）与所需力量、`light_emitted`、
 `comfort`、`max_volume_ml`、`mass_grams`、`keg_capacity_ml`、`transparent`、
 开关与撬锁变换、`crafting_pseudo_item` 与 `deployed_item` 都是普通 options，
 `:flag(id)` 追加有界家具标志。Finalize 时把原生 `furn_t` 插入共享家具注册表；
 回滚精确恢复或擦除对应 id。legacy `bash`、`deconstruct`、`workbench`、植物
 数据、examine 动作与排放保持作者自有的 Lua 行为，迁移器将其列为显式 TODO。
+命名 `on_examine` 是唯一例外：它先在同一 runtime handler 注册表中校验，再经原生
+`iexamine_actor` 链安装，因此常规 Examine（`E`）分发、角色归属与地图坐标仍由引擎掌管。
+
+`ccb.content.SpriteSheet` registers a PNG relative to the owning Platform Mod,
+together with bounded source-frame dimensions and stable frame ids.  Paths are
+contained within the mod root and the descriptor is consumed by the existing
+`mod_tileset`/`tileset_loader` atlas path; it does not create a Lua texture
+cache or a separate renderer.  Reload and GPU-reset behaviour therefore stay
+identical to other tileset sprites.  An optional bounded `pixelscale` (0.01 to
+16, default 1) reuses native tile scaling for world rendering; Canvas callers
+still choose their destination rectangle directly.
+
+`ccb.content.SpriteSheet` 注册相对所属 Platform Mod 的 PNG，并提供有界的源帧
+尺寸与稳定帧 id。路径必须位于 Mod 根目录内，描述符由既有
+`mod_tileset`/`tileset_loader` 图集链消费；它不会创建 Lua 纹理缓存或第二个渲染器，
+因此重载和 GPU 重置行为与其他 tileset 精灵一致。可选的有界 `pixelscale`（0.01 至
+16，默认为 1）复用原生地图精灵缩放；Canvas 调用仍直接指定目标矩形。
 
 `ccb.content.Terrain` stages map terrain through the same transactional model:
 `id`, `name`, `description`, `color`, `symbol`, `move_cost`, `light_emitted`,
@@ -1469,11 +1490,39 @@ string keys or holes are an error rather than silently ignored content.  Mods
 compose these primitives with ordinary Lua functions, coroutines, handlers,
 and state machines.
 
+`ccb.presentation.canvas` is a synchronous graphical modal for a bounded
+two-dimensional canvas.  Its draw callback receives elapsed/frame time and
+can issue rectangles, text, registered tile sprites, and positioned buttons,
+and can query/request its close state;
+the call returns `false` without invoking Lua when the graphical tiles backend
+is unavailable.  It reuses `script_ui_context`/`script_ui_renderer` and the
+current UI frame loop, rather than exposing textures or a second windowing
+stack.  An optional `music` path is limited to a regular audio file below the
+active Mod root; it is registered through the existing playlist backend as a
+temporary looping track for the modal, and the prior game playlist resumes
+when the modal closes.  `ccb.presentation.play_sound` plays a validated
+Mod-local file through the existing one-shot SFX backend without interrupting
+that music.  A positioned button's optional `request_focus` argument assigns
+the native keyboard/navigation focus only for that frame, so state-machine UIs
+can choose an initial action without overriding later player navigation.
+`allow_quit = false` is available for an intentionally
+unskippable animation, which must still offer its own terminal close control.
+
 面向玩家的交互使用独立的 `ccb.presentation` 领域，而不是照抄 EOC effect 键。活动
 回调内可调用 `notice`、`confirm`、`choose` 与 `input_text`；选项的稳定 ID 与显示文本
 分离，取消返回 nil，打开界面前会检查数量、大小、重复 ID，以及列表是否为从 1 开始
 且没有空洞的连续整数数组；额外字符串键也会被拒绝。复杂流程由普通 Lua 函数、协程、
 handler 和状态机组合。
+
+`ccb.presentation.canvas` 是有界二维画布的同步图形模态窗口。其 draw 回调获得经过
+时间和帧时间，可绘制矩形、文字、已注册 tile 精灵与定位按钮，并可查询或请求关闭状态；图形 tiles 后端不可用时，
+它不调用 Lua 而返回 `false`。该接口复用 `script_ui_context`/`script_ui_renderer` 和当前
+UI 帧循环，不暴露纹理或第二套窗口栈。可选的 `music` 路径只能指向当前 Mod 根目录内的
+常规音频文件；它通过既有播放列表后端作为模态窗口期间循环播放的临时曲目登记，并在窗口
+关闭时恢复之前的游戏播放列表。`ccb.presentation.play_sound` 通过既有一次性 SFX 后端播放
+经过校验的 Mod 本地文件，不会中断这段音乐。定位按钮的可选 `request_focus` 参数仅在当前帧请求原生键盘/导航
+焦点，使状态机 UI 能设定初始操作而不干扰之后玩家自行导航。需要完整播放的动画可设 `allow_quit = false`，但必须在其
+最终状态提供自己的关闭控件。
 
 ### Creature content as a native graph / 原生怪物内容图
 

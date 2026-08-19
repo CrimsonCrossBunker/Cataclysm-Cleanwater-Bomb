@@ -61,6 +61,7 @@ struct sfx_args {
 };
 struct sound_effect_resource {
     std::string path;
+    bool absolute_path = false;
     struct deleter {
         void operator()( sound_backend::sfx_audio *const a ) const {
             sound_backend::free_sfx( a );
@@ -70,7 +71,7 @@ struct sound_effect_resource {
 };
 } // namespace
 
-static int add_sfx_path( const std::string &path );
+static int add_sfx_path( const std::string &path, bool absolute_path = false );
 
 namespace
 {
@@ -307,10 +308,12 @@ struct sfx_resources_t {
 };
 
 struct music_playlist {
-    // list of filenames relative to the soundpack location
+    // Entries normally name files relative to the soundpack location.  Platform-owned
+    // playlists may instead use a validated absolute Mod asset path.
     struct entry {
         std::string file;
         int volume;
+        bool absolute_path = false;
     };
     std::vector<entry> entries;
     bool shuffle;
@@ -323,6 +326,7 @@ struct music_playlist {
 static sound_backend::music_source *current_music = nullptr;
 static int current_music_track_volume = 0;
 static std::string current_playlist;
+static std::optional<std::string> temporary_music_playlist;
 static size_t current_playlist_at = 0;
 static size_t absolute_playlist_at = 0;
 static std::vector<std::size_t> playlist_indexes;
@@ -331,6 +335,7 @@ static std::map<std::string, music_playlist> playlists;
 static cata_path current_soundpack_path;
 
 static std::unordered_map<std::string, int> unique_paths;
+static std::unordered_map<std::string, int> direct_sfx_paths;
 static sfx_resources_t sfx_resources;
 static std::vector<sfx_args> sfx_preload;
 
@@ -388,13 +393,15 @@ void shutdown_sound()
 {
     sfx_resources.resource.clear();
     sfx_resources.sound_effects.clear();
+    direct_sfx_paths.clear();
     playlists.clear();
+    temporary_music_playlist.reset();
     sound_backend::shutdown();
 }
 
 static void musicFinished();
 
-static void play_music_file( const std::string &filename, int volume )
+static void play_music_file( const std::string &filename, int volume, const bool absolute_path )
 {
     if( test_mode ) {
         return;
@@ -404,7 +411,8 @@ static void play_music_file( const std::string &filename, int volume )
         return;
     }
 
-    const std::string path = ( current_soundpack_path / filename ).get_unrelative_path().u8string();
+    const std::string path = absolute_path ? filename :
+                             ( current_soundpack_path / filename ).get_unrelative_path().u8string();
     current_music = sound_backend::load_music( path );
     if( current_music == nullptr ) {
         return;
@@ -428,7 +436,8 @@ void musicFinished()
     sound_backend::free_music( current_music );
     current_music = nullptr;
 
-    std::string new_playlist = music::get_music_id_string();
+    const std::string new_playlist = temporary_music_playlist.value_or(
+                                         music::get_music_id_string() );
 
     if( current_playlist != new_playlist ) {
         play_music( new_playlist );
@@ -455,7 +464,7 @@ void musicFinished()
     current_playlist_at = playlist_indexes.at( absolute_playlist_at );
 
     const music_playlist::entry &next = list.entries[current_playlist_at];
-    play_music_file( next.file, next.volume );
+    play_music_file( next.file, next.volume, next.absolute_path );
 }
 
 void play_music( std::string_view playlist )
@@ -493,7 +502,18 @@ void play_music( std::string_view playlist )
 
     const music_playlist::entry &next = list.entries[current_playlist_at];
     current_music_track_volume = next.volume;
-    play_music_file( next.file, next.volume );
+    play_music_file( next.file, next.volume, next.absolute_path );
+}
+
+void set_temporary_music( const std::string_view playlist )
+{
+    temporary_music_playlist = std::string( playlist );
+    play_music( playlist );
+}
+
+void clear_temporary_music()
+{
+    temporary_music_playlist.reset();
 }
 
 void stop_music()
@@ -540,26 +560,47 @@ static sound_backend::sfx_audio *get_sfx_resource( int resource_id )
 {
     sound_effect_resource &resource = sfx_resources.resource[ resource_id ];
     if( !resource.chunk ) {
-        cata_path path = current_soundpack_path / resource.path;
+        const std::filesystem::path path = resource.absolute_path ?
+                                           std::filesystem::u8path( resource.path ) :
+                                           ( current_soundpack_path / resource.path ).get_unrelative_path();
         resource.chunk.reset( sound_backend::load_sfx( path.generic_u8string() ) );
     }
     return resource.chunk.get();
 }
 
-static int add_sfx_path( const std::string &path )
+static int add_sfx_path( const std::string &path, const bool absolute_path )
 {
-    auto find_result = unique_paths.find( path );
+    const std::string key = absolute_path ? "\x01" + path : path;
+    auto find_result = unique_paths.find( key );
     if( find_result != unique_paths.end() ) {
         return find_result->second;
     } else {
         int result = sfx_resources.resource.size();
         sound_effect_resource new_resource;
         new_resource.path = path;
+        new_resource.absolute_path = absolute_path;
         new_resource.chunk.reset();
         sfx_resources.resource.push_back( std::move( new_resource ) );
-        unique_paths[ path ] = result;
+        unique_paths[ key ] = result;
         return result;
     }
+}
+
+void sfx::play_sound_file( const std::string_view file, const int volume,
+                           const bool absolute_path )
+{
+    if( test_mode || !check_sound( volume ) ) {
+        return;
+    }
+    const std::string path( file );
+    const std::string key = absolute_path ? "\x01" + path : path;
+    const auto found = direct_sfx_paths.find( key );
+    const int resource_id = found == direct_sfx_paths.end() ?
+                            add_sfx_path( path, absolute_path ) : found->second;
+    direct_sfx_paths.emplace( key, resource_id );
+    sound_backend::play_opts options;
+    options.volume = get_option<int>( "SOUND_EFFECT_VOLUME" ) * volume / 100;
+    sound_backend::play_oneshot( get_sfx_resource( resource_id ), options );
 }
 
 void sfx::load_sound_effects( const JsonObject &jsobj )
@@ -731,7 +772,9 @@ std::optional<sfx::playlist_definition> sfx::playlist_registry_get(
     result.id = std::string( id );
     result.shuffle = found->second.shuffle;
     for( const music_playlist::entry &entry : found->second.entries ) {
-        result.entries.push_back( playlist_entry_definition{ entry.file, entry.volume } );
+        result.entries.push_back( playlist_entry_definition{
+            entry.file, entry.volume, entry.absolute_path
+        } );
     }
     return result;
 }
@@ -741,7 +784,9 @@ void sfx::playlist_registry_set( const playlist_definition &value )
     music_playlist native;
     native.shuffle = value.shuffle;
     for( const playlist_entry_definition &entry : value.entries ) {
-        native.entries.push_back( music_playlist::entry{ entry.file, entry.volume } );
+        native.entries.push_back( music_playlist::entry{
+            entry.file, entry.volume, entry.absolute_path
+        } );
     }
     playlists[value.id] = std::move( native );
     if( value.id == "mp3" || value.id == "instrument" || value.id == "sound" ||

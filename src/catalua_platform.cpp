@@ -401,7 +401,7 @@ runtime_state load_source( const mod_source &source )
     result.entry = resolved.entry;
     result.lua = std::make_unique<sol::state>();
     result.platform = make_runtime( resolved.id, generation_counter + 1,
-                                    *result.lua );
+                                    *result.lua, resolved.root );
     initialize_state( *result.lua, resolved.root, result.platform );
     execute_file( *result.lua, resolved.entry );
     return result;

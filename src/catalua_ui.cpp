@@ -3620,7 +3620,12 @@ void initialize_state( runtime_state &state )
     "modal", &script_ui_context::modal,
     "tooltip", &script_ui_context::tooltip,
     "virtual_list", &script_ui_context::virtual_list,
-    "virtual_list_rows", &script_ui_context::virtual_list_rows );
+    "virtual_list_rows", &script_ui_context::virtual_list_rows,
+    "canvas_begin", &script_ui_context::canvas_begin,
+    "canvas_rect", &script_ui_context::canvas_rect,
+    "canvas_text", &script_ui_context::canvas_text,
+    "canvas_sprite", &script_ui_context::canvas_sprite,
+    "canvas_button", &script_ui_context::canvas_button );
 
     sol::table ui = state.lua.create_named_table( "ui" );
     ui.set_function( "page", [&state]( const std::string & id, const sol::object & descriptor,

@@ -73,6 +73,7 @@
 #include "help.h"
 #include "hsv_color.h"
 #include "vehicle_palette.h"
+#include "iexamine.h"
 #include "input_context_actions.h"
 #include "item.h"
 #include "item_category.h"
@@ -101,6 +102,7 @@
 #include "monster.h"
 #include "monstergenerator.h"
 #include "mod_manager.h"
+#include "mod_tileset.h"
 #include "mtype.h"
 #include "mutation.h"
 #include "npc.h"
@@ -217,7 +219,8 @@ class recording_ui_renderer final : public cata::lua_ui::script_ui_renderer
                 static_cast<std::uint32_t>( capability::tooltips ) |
                 static_cast<std::uint32_t>( capability::virtualization ) |
                 static_cast<std::uint32_t>( capability::radial_selection ) |
-                static_cast<std::uint32_t>( capability::action_slots ),
+                static_cast<std::uint32_t>( capability::action_slots ) |
+                static_cast<std::uint32_t>( capability::sprite_canvas ),
                 false, true
             };
         }
@@ -376,12 +379,36 @@ class recording_ui_renderer final : public cata::lua_ui::script_ui_renderer
             calls.emplace_back( "virtual_list" );
             draw_range( 0, item_count );
         }
+        void canvas_begin( double width, double height ) override {
+            calls.push_back( "canvas_begin:" + std::to_string( width ) + ":" +
+                             std::to_string( height ) );
+        }
+        void canvas_rect( double, double, double, double, double, double, double,
+                          double ) override {
+            calls.emplace_back( "canvas_rect" );
+        }
+        void canvas_text( double, double, const std::string &text, double, double,
+                          double, double ) override {
+            calls.push_back( "canvas_text:" + text );
+        }
+        bool canvas_sprite( const std::string &tile_id, double, double, double,
+                            double ) override {
+            calls.push_back( "canvas_sprite:" + tile_id );
+            return true;
+        }
+        bool canvas_button( const std::string &id, const std::string &label,
+                            double, double, double, double, bool request_focus ) override {
+            calls.push_back( "canvas_button:" + id + ":" + label );
+            last_canvas_focus_requested = request_focus;
+            return true;
+        }
 
         std::vector<std::string> calls;
         double item_width = 0.0;
         double progress = 0.0;
         std::optional<std::string> progress_overlay;
         std::string last_widget_id;
+        bool last_canvas_focus_requested = false;
 };
 
 class scoped_lua_user_script
@@ -4641,7 +4668,22 @@ ccb.content.add(playlist)
     REQUIRE( playlist->entries.size() == 2 );
     CHECK( playlist->entries[0].file == "music/first.ogg" );
     CHECK( playlist->entries[0].volume == 96 );
+    CHECK_FALSE( playlist->entries[0].absolute_path );
     CHECK( playlist->entries[1].volume == 100 );
+    CHECK_FALSE( playlist->entries[1].absolute_path );
+
+    sfx::playlist_definition temporary_playlist;
+    temporary_playlist.id = "ccb_platform_absolute_playlist";
+    temporary_playlist.entries.push_back( sfx::playlist_entry_definition{
+        "C:/validated-mod-assets/bgm.ogg", 100, true
+    } );
+    sfx::playlist_registry_set( temporary_playlist );
+    const std::optional<sfx::playlist_definition> restored_temporary_playlist =
+        sfx::playlist_registry_get( "ccb_platform_absolute_playlist" );
+    REQUIRE( restored_temporary_playlist );
+    REQUIRE( restored_temporary_playlist->entries.size() == 1 );
+    CHECK( restored_temporary_playlist->entries[0].absolute_path );
+    sfx::playlist_registry_erase( "ccb_platform_absolute_playlist" );
     cata::lua_platform::shutdown();
 }
 
@@ -6450,7 +6492,7 @@ ccb.runtime.hook("on_player_try_move", "destroyed")
     sol::table gate_ccb = gate_lua.create_named_table( "ccb" );
     const std::shared_ptr<cata::lua_platform::runtime> gate_runtime =
         cata::lua_platform::make_runtime(
-            "ccb_platform_wound_write_gate", 424242, gate_lua );
+            "ccb_platform_wound_write_gate", 424242, gate_lua, {} );
     cata::lua_platform::install_runtime_api(
         gate_runtime, gate_lua, gate_ccb );
     cata::lua_platform::set_active_runtimes( { gate_runtime } );
@@ -6814,6 +6856,13 @@ local furniture = ccb.content.Furniture {
 }
 furniture:flag("FLAMMABLE_ASH")
 ccb.content.add(furniture)
+ccb.content.add(ccb.content.Furniture {
+    id = "f_ccb_platform_impassable",
+    name = "Impassable Platform Furniture",
+    color = "blue",
+    symbol = "#",
+    move_cost_mod = -10,
+})
 )lua" );
 
     std::string error;
@@ -6830,8 +6879,224 @@ ccb.content.add(furniture)
     CHECK( furniture->comfort == 4 );
     CHECK( furniture->has_flag( "FLAMMABLE_ASH" ) );
     CHECK( furniture->name() == "Platform Sample Furniture" );
+    const furn_str_id impassable( "f_ccb_platform_impassable" );
+    REQUIRE( impassable.is_valid() );
+    CHECK( impassable->movecost == -10 );
 
     cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_furniture_rejects_unsupported_negative_move_cost",
+           "[lua][platform][content][catalog][furniture]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_furniture_negative_move_cost" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.Furniture {
+    id = "f_ccb_platform_invalid_move_cost",
+    name = "Invalid Platform Furniture",
+    color = "blue",
+    symbol = "#",
+    move_cost_mod = -1,
+})
+)lua" );
+
+    std::string error;
+    CHECK_FALSE( cata::lua_platform::prepare_mods(
+                     { test_mod.source( "ccb_platform_furniture_negative_move_cost" ) }, error ) );
+    CHECK( error.find( "invalid ranges" ) != std::string::npos );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_furniture_examine_handlers_use_native_examine_dispatch",
+           "[lua][platform][content][furniture][examine]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_furniture_examine" );
+    const tripoint_bub_ms position( 31, 32, 0 );
+    test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+
+ccb.runtime.handler("inspect_furniture", function(payload)
+    assert(payload.furniture_id == "f_ccb_platform_examine")
+    assert(payload.character.kind == "creature")
+    assert(payload.character:is_valid())
+    assert(payload.position.origin == "bub")
+    assert(payload.position.scale == "ms")
+    assert(payload.position.x == %d)
+    assert(payload.position.y == %d)
+    assert(payload.position.z == %d)
+    furniture_examine_seen = true
+end, 1)
+
+ccb.content.add(ccb.content.Furniture {
+    id = "f_ccb_platform_examine",
+    name = "Examine furniture",
+    color = "blue",
+    symbol = "#",
+    on_examine = "inspect_furniture",
+})
+)lua", position.x(), position.y(), position.z() ) );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_furniture_examine" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    const furn_str_id furniture( "f_ccb_platform_examine" );
+    REQUIRE( furniture.is_valid() );
+    CHECK( furniture->has_examine( "lua_platform_furniture" ) );
+    debug_reset_error_observed();
+    furniture->examine( get_avatar(), position );
+    CHECK_FALSE( debug_has_error_been_observed() );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_furniture_examine_rejects_unknown_handler",
+           "[lua][platform][content][furniture][examine]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_furniture_examine_invalid" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.Furniture {
+    id = "f_ccb_platform_examine_invalid",
+    name = "Invalid examine furniture",
+    color = "blue",
+    symbol = "#",
+    on_examine = "missing_handler",
+})
+)lua" );
+
+    std::string error;
+    CHECK_FALSE( cata::lua_platform::prepare_mods(
+                     { test_mod.source( "ccb_platform_furniture_examine_invalid" ) }, error ) );
+    CHECK( error.find( "missing examine handler" ) != std::string::npos );
+}
+
+#if !defined(TILES)
+TEST_CASE( "lua_first_canvas_rejects_without_graphical_tiles",
+           "[lua][platform][presentation][canvas]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_canvas_without_tiles" );
+    test_mod.write( "assets/win.ogg", "placeholder audio fixture" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+ccb.runtime.handler("open_canvas", function()
+    assert(pcall(ccb.presentation.play_sound, "assets/win.ogg"))
+    assert(not pcall(ccb.presentation.play_sound, "../outside.mp3"))
+    local drawn = false
+    local available = ccb.presentation.canvas({
+        title = "Canvas test",
+        width = 64,
+        height = 64,
+    }, function()
+        drawn = true
+    end)
+    assert(available == false)
+    assert(drawn == false)
+end, 1)
+
+ccb.content.add(ccb.content.Furniture {
+    id = "f_ccb_platform_canvas_without_tiles",
+    name = "Canvas fallback furniture",
+    color = "blue",
+    symbol = "#",
+    on_examine = "open_canvas",
+})
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_canvas_without_tiles" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    debug_reset_error_observed();
+    CHECK( cata::lua_platform::invoke_furniture_examine_handler(
+               "f_ccb_platform_canvas_without_tiles", get_avatar(), get_avatar().pos_bub() ) );
+    CHECK_FALSE( debug_has_error_been_observed() );
+    cata::lua_platform::shutdown();
+}
+#endif
+
+TEST_CASE( "lua_first_sprite_sheets_are_rooted_and_transactional",
+           "[lua][platform][content][sprites]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_sprite_sheet" );
+    test_mod.write( "assets/sheet.png", "placeholder png fixture" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.SpriteSheet {
+    id = "ccb_platform_sprite_sheet",
+    file = "assets/sheet.png",
+    frame_width = 16,
+    frame_height = 16,
+    pixelscale = 0.5,
+    frame_ids = { "ccb_platform_sprite_zero", "ccb_platform_sprite_one" },
+})
+)lua" );
+
+    std::string error;
+    const uint64_t generation_before_apply = platform_sprite_sheet_generation();
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_sprite_sheet" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    CHECK( platform_sprite_sheet_generation() != generation_before_apply );
+    const platform_sprite_sheet *sheet = find_platform_sprite_sheet( "ccb_platform_sprite_sheet" );
+    REQUIRE( sheet );
+    CHECK( sheet->frame_width == 16 );
+    CHECK( sheet->frame_height == 16 );
+    CHECK( sheet->pixelscale == 0.5F );
+    REQUIRE( sheet->frame_ids.size() == 2 );
+    CHECK( sheet->frame_ids[0] == "ccb_platform_sprite_zero" );
+    CHECK( sheet->frame_ids[1] == "ccb_platform_sprite_one" );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    const uint64_t generation_before_discard = platform_sprite_sheet_generation();
+    cata::lua_platform::discard_prepared_mods();
+    CHECK( find_platform_sprite_sheet( "ccb_platform_sprite_sheet" ) == nullptr );
+    CHECK( platform_sprite_sheet_generation() != generation_before_discard );
+
+    scoped_platform_test_mod escaped( "ccb_platform_sprite_sheet_escape" );
+    escaped.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.SpriteSheet {
+    id = "ccb_platform_sprite_sheet_escape",
+    file = "../outside.png",
+    frame_width = 16,
+    frame_height = 16,
+    frame_ids = { "ccb_platform_sprite_escape" },
+})
+)lua" );
+    CHECK_FALSE( cata::lua_platform::prepare_mods(
+                     { escaped.source( "ccb_platform_sprite_sheet_escape" ) }, error ) );
+    CHECK( error.find( "unsafe image path" ) != std::string::npos );
+
+    scoped_platform_test_mod invalid_scale( "ccb_platform_sprite_sheet_scale" );
+    invalid_scale.write( "assets/sheet.png", "placeholder png fixture" );
+    invalid_scale.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.content.add(ccb.content.SpriteSheet {
+    id = "ccb_platform_sprite_sheet_scale",
+    file = "assets/sheet.png",
+    frame_width = 16,
+    frame_height = 16,
+    pixelscale = 0,
+    frame_ids = { "ccb_platform_sprite_scale" },
+})
+)lua" );
+    CHECK_FALSE( cata::lua_platform::prepare_mods(
+                     { invalid_scale.source( "ccb_platform_sprite_sheet_scale" ) }, error ) );
+    CHECK( error.find( "invalid geometry" ) != std::string::npos );
 }
 
 TEST_CASE( "lua_first_terrain_definitions_stage_native_terrain",
@@ -10436,6 +10701,7 @@ TEST_CASE( "lua_ui_context_uses_a_platform_neutral_renderer", "[lua][ui][rendere
     CHECK( context.supports( "virtualization" ) );
     CHECK( context.supports( "radial_selection" ) );
     CHECK( context.supports( "action_slots" ) );
+    CHECK( context.supports( "sprite_canvas" ) );
     CHECK_FALSE( context.supports( "text_input" ) );
     CHECK_FALSE( context.supports( "unknown" ) );
 
@@ -10535,6 +10801,20 @@ TEST_CASE( "lua_ui_context_uses_a_platform_neutral_renderer", "[lua][ui][rendere
     CHECK_THROWS_AS( context.table( "bad", 0, []() {} ), std::invalid_argument );
     CHECK_THROWS_AS( context.virtual_list( -1, 1.0, []( int, int ) {} ),
     std::invalid_argument );
+
+    context.canvas_begin( 320.0, 240.0 );
+    context.canvas_rect( 4.0, 8.0, 32.0, 16.0, 0.1, 0.2, 0.3, 1.0 );
+    context.canvas_text( 12.0, 24.0, "canvas", 1.0, 1.0, 1.0, 1.0 );
+    CHECK( context.canvas_sprite( "ccb_platform_sprite", 40.0, 32.0, 16.0, 16.0 ) );
+    CHECK( context.canvas_button( "canvas_close", "Close", 16.0, 64.0, 80.0, 28.0 ) );
+    CHECK_FALSE( renderer.last_canvas_focus_requested );
+    CHECK( context.canvas_button( "canvas_default", "Default", 16.0, 96.0, 80.0, 28.0,
+                                  true ) );
+    CHECK( renderer.last_canvas_focus_requested );
+    CHECK( std::find( renderer.calls.begin(), renderer.calls.end(),
+                      "canvas_text:canvas" ) != renderer.calls.end() );
+    CHECK( std::find( renderer.calls.begin(), renderer.calls.end(),
+                      "canvas_sprite:ccb_platform_sprite" ) != renderer.calls.end() );
 
     const std::size_t call_count = renderer.calls.size();
     context.invalidate();
@@ -11678,10 +11958,10 @@ TEST_CASE( "lua_first_game_handles_reject_same_generation_foreign_runtime_owners
         std::numeric_limits<std::size_t>::max();
     const std::shared_ptr<runtime> first =
         cata::lua_platform::make_runtime(
-            "ccb_platform_handle_owner_first", shared_generation, first_lua );
+            "ccb_platform_handle_owner_first", shared_generation, first_lua, {} );
     const std::shared_ptr<runtime> second =
         cata::lua_platform::make_runtime(
-            "ccb_platform_handle_owner_second", shared_generation, second_lua );
+            "ccb_platform_handle_owner_second", shared_generation, second_lua, {} );
     cata::lua_platform::install_runtime_api( first, first_lua, first_ccb );
     cata::lua_platform::install_runtime_api( second, second_lua, second_ccb );
     cata::lua_platform::set_active_runtimes( { first, second } );

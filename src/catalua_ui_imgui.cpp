@@ -1,6 +1,7 @@
 #include "catalua_ui_imgui.h"
 
 #include <algorithm>
+#include <cmath>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -11,6 +12,11 @@
 #include "imgui/imgui_stdlib.h"
 #include "input_context_actions.h"
 #include "ui_profile.h"
+
+#if defined(TILES)
+#include "cata_tiles.h"
+#include "sdltiles.h"
+#endif
 
 namespace cata::lua_ui
 {
@@ -35,7 +41,11 @@ constexpr std::uint32_t capability_mask =
     static_cast<std::uint32_t>( script_ui_capability::tooltips ) |
     static_cast<std::uint32_t>( script_ui_capability::virtualization ) |
     static_cast<std::uint32_t>( script_ui_capability::radial_selection ) |
-    static_cast<std::uint32_t>( script_ui_capability::action_slots );
+    static_cast<std::uint32_t>( script_ui_capability::action_slots )
+#if defined(TILES)
+    | static_cast<std::uint32_t>( script_ui_capability::sprite_canvas )
+#endif
+    ;
 
 constexpr std::string_view platform_name()
 {
@@ -455,12 +465,157 @@ class imgui_script_ui_renderer final : public script_ui_renderer
             }
         }
 
+        void canvas_begin( const double width, const double height ) override {
+            if( !valid_canvas_extent( width, height ) ) {
+                throw std::invalid_argument( "canvas dimensions must be finite and within 1..4096" );
+            }
+            canvas_origin_ = ImGui::GetCursorScreenPos();
+            canvas_width_ = static_cast<float>( width );
+            canvas_height_ = static_cast<float>( height );
+            canvas_active_ = true;
+            ImGui::Dummy( ImVec2( canvas_width_, canvas_height_ ) );
+        }
+
+        void canvas_rect( const double x, const double y, const double width, const double height,
+                          const double red, const double green, const double blue,
+                          const double alpha ) override {
+            require_canvas_rect( x, y, width, height );
+#if defined(TILES)
+            ImGui::GetWindowDrawList()->AddRectFilled(
+                canvas_point( x, y ), canvas_point( x + width, y + height ),
+                ImGui::ColorConvertFloat4ToU32( canvas_color( red, green, blue, alpha ) ) );
+#else
+            static_cast<void>( red );
+            static_cast<void>( green );
+            static_cast<void>( blue );
+            static_cast<void>( alpha );
+#endif
+        }
+
+        void canvas_text( const double x, const double y, const std::string &value,
+                          const double red, const double green, const double blue,
+                          const double alpha ) override {
+            require_canvas_point( x, y );
+            if( value.size() > 4096 || value.find( '\0' ) != std::string::npos ) {
+                throw std::invalid_argument( "canvas text exceeds its native bound" );
+            }
+#if defined(TILES)
+            ImGui::GetWindowDrawList()->AddText(
+                canvas_point( x, y ),
+                ImGui::ColorConvertFloat4ToU32( canvas_color( red, green, blue, alpha ) ),
+                value.c_str() );
+#else
+            static_cast<void>( red );
+            static_cast<void>( green );
+            static_cast<void>( blue );
+            static_cast<void>( alpha );
+#endif
+        }
+
+        bool canvas_sprite( const std::string &tile_id, const double x, const double y,
+                            const double width, const double height ) override {
+            require_canvas_rect( x, y, width, height );
+#if defined(TILES)
+            if( tilecontext == nullptr || tile_id.empty() || tile_id.size() > 256 ) {
+                return false;
+            }
+            const texture *sprite = tilecontext->ui_sprite( tile_id );
+            if( sprite == nullptr || !sprite->get_texture_ptr() ) {
+                return false;
+            }
+            const SDL_Rect &source = sprite->get_source_rect();
+#if SDL_MAJOR_VERSION >= 3
+            float atlas_width = 0.0F;
+            float atlas_height = 0.0F;
+            if( !SDL_GetTextureSize( sprite->get_texture_ptr().get(), &atlas_width, &atlas_height ) ||
+                atlas_width <= 0.0F || atlas_height <= 0.0F ) {
+                return false;
+            }
+#else
+            int atlas_width = 0;
+            int atlas_height = 0;
+            if( SDL_QueryTexture( sprite->get_texture_ptr().get(), nullptr, nullptr,
+                                  &atlas_width, &atlas_height ) != 0 ||
+                atlas_width <= 0 || atlas_height <= 0 ) {
+                return false;
+            }
+#endif
+            ImGui::GetWindowDrawList()->AddImage(
+                reinterpret_cast<ImTextureID>( sprite->get_texture_ptr().get() ),
+                canvas_point( x, y ), canvas_point( x + width, y + height ),
+                ImVec2( static_cast<float>( source.x ) / atlas_width,
+                        static_cast<float>( source.y ) / atlas_height ),
+                ImVec2( static_cast<float>( source.x + source.w ) / atlas_width,
+                        static_cast<float>( source.y + source.h ) / atlas_height ) );
+            return true;
+#else
+            static_cast<void>( tile_id );
+            return false;
+#endif
+        }
+
+        bool canvas_button( const std::string &id, const std::string &label, const double x,
+                            const double y, const double width, const double height,
+                            const bool request_focus ) override {
+            require_canvas_rect( x, y, width, height );
+            if( id.empty() || id.size() > 256 || label.empty() || label.size() > 1024 ) {
+                throw std::invalid_argument( "canvas button id or label is outside its native bound" );
+            }
+            ImGui::SetCursorScreenPos( canvas_point( x, y ) );
+            if( request_focus ) {
+                ImGui::SetKeyboardFocusHere();
+            }
+            const bool activated = ImGui::Button(
+                                       widget_label( id, label ).c_str(),
+                                       ImVec2( static_cast<float>( width ),
+                                               static_cast<float>( height ) ) );
+            return activated && !cataimgui::interaction_suppressed();
+        }
+
     private:
+        static bool valid_canvas_extent( const double width, const double height ) {
+            return std::isfinite( width ) && std::isfinite( height ) &&
+                   width >= 1.0 && height >= 1.0 && width <= 4096.0 && height <= 4096.0;
+        }
+
+        ImVec2 canvas_point( const double x, const double y ) const {
+            return { canvas_origin_.x + static_cast<float>( x ),
+                     canvas_origin_.y + static_cast<float>( y ) };
+        }
+
+        static ImVec4 canvas_color( const double red, const double green, const double blue,
+                                    const double alpha ) {
+            return { static_cast<float>( std::clamp( red, 0.0, 1.0 ) ),
+                     static_cast<float>( std::clamp( green, 0.0, 1.0 ) ),
+                     static_cast<float>( std::clamp( blue, 0.0, 1.0 ) ),
+                     static_cast<float>( std::clamp( alpha, 0.0, 1.0 ) ) };
+        }
+
+        void require_canvas_point( const double x, const double y ) const {
+            if( !canvas_active_ || !std::isfinite( x ) || !std::isfinite( y ) ||
+                x < 0.0 || y < 0.0 || x > canvas_width_ || y > canvas_height_ ) {
+                throw std::invalid_argument( "canvas point is outside the active canvas" );
+            }
+        }
+
+        void require_canvas_rect( const double x, const double y, const double width,
+                                  const double height ) const {
+            require_canvas_point( x, y );
+            if( !valid_canvas_extent( width, height ) || x + width > canvas_width_ ||
+                y + height > canvas_height_ ) {
+                throw std::invalid_argument( "canvas rectangle is outside the active canvas" );
+            }
+        }
+
         float touch_target_height() const {
             return profile_.is_touch() ? profile_.minimum_target : 0.0F;
         }
 
         const cata::ui::profile profile_;
+        ImVec2 canvas_origin_ = {};
+        float canvas_width_ = 0.0F;
+        float canvas_height_ = 0.0F;
+        bool canvas_active_ = false;
         int table_depth_ = 0;
         int tab_depth_ = 0;
 };
