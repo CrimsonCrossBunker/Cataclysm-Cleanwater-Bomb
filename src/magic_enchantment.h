@@ -304,10 +304,14 @@ class enchantment
             std::vector<special_vision_descriptions> special_vision_descriptions_vector;
             std::function<bool( const_dialogue const & )> condition;
             dbl_or_var range;
+            std::function<double( const_dialogue const & )> platform_range;
             bool precise = false;
             bool ignores_aiming_cone = false;
+            double range_value( const_dialogue const &d ) const {
+                return platform_range ? platform_range( d ) : range.evaluate( d );
+            }
             bool is_empty( const_dialogue &d ) const {
-                return range.evaluate( d ) <= 0;
+                return range_value( d ) <= 0;
             }
         };
 
@@ -320,6 +324,15 @@ class enchantment
             const enchantment::special_vision &vision_struct, const_dialogue &d ) const;
 
         std::map<time_duration, std::vector<fake_spell>> intermittent_activation;
+
+        struct platform_modifier {
+            std::string kind;
+            std::string target;
+            std::string part;
+            std::function<double( const_dialogue const & )> add;
+            std::function<double( const_dialogue const & )> multiply;
+        };
+        std::vector<platform_modifier> platform_modifiers;
 
         std::pair<has, condition> active_conditions;
         std::function<bool( const_dialogue const & )> dialog_condition; // NOLINT(cata-serialize)
