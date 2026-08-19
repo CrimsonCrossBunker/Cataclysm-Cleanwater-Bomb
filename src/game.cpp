@@ -70,6 +70,7 @@
 #include "cata_utility.h"
 #include "cata_variant.h"
 #include "catalua_platform.h"
+#include "catalua_platform_runtime.h"
 #include "catalua_ui.h"
 #include "catacharset.h"
 #include "character.h"
@@ -3148,6 +3149,10 @@ bool game::is_game_over()
     }
     // is_dead_state() already checks hp_torso && hp_head, no need to for loop it
     if( u.is_dead_state() ) {
+        cata::lua_ui::dispatch_avatar_fatal( u, u.get_killer() );
+        if( !u.is_dead_state() ) {
+            return false;
+        }
         effect_on_conditions::prevent_death();
         if( !u.is_dead_state() ) {
             return false;
@@ -4671,6 +4676,11 @@ void game::use_computer( const tripoint_bub_ms &p )
                            p.x() << ", " << p.y() << ", " << p.z() << ") - none there";
             debugmsg( "Tried to use computer at (%d, %d, %d) - none there", p.x(), p.y(), p.z() );
         }
+        return;
+    }
+    if( used->has_platform_access_handler() &&
+        !cata::lua_platform::invoke_computer_access_handler(
+            *used, get_player_character() ).value_or( false ) ) {
         return;
     }
     if( used->eocs.empty() ) {
@@ -12152,12 +12162,16 @@ void avatar_moves( const tripoint_abs_ms &old_abs_pos, const avatar &u, const ma
             effect_on_condition_id eoc = cur_ter->get_exit_EOC();
             eoc->activate_activation_only( d, "OMT movement" );
         }
+        cata::lua_platform::invoke_overmap_terrain_handler(
+            past_ter->get_type_id().str(), "exit", old_abs_omt, new_abs_omt, u );
 
         if( !cur_ter->get_entry_EOC().is_null() ) {
             dialogue d( get_talker_for( get_avatar() ), nullptr );
             effect_on_condition_id eoc = cur_ter->get_entry_EOC();
             eoc->activate_activation_only( d, "OMT movement" );
         }
+        cata::lua_platform::invoke_overmap_terrain_handler(
+            cur_ter->get_type_id().str(), "entry", old_abs_omt, new_abs_omt, u );
 
     }
 }
