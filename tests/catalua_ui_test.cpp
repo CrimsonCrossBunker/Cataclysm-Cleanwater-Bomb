@@ -15,6 +15,7 @@
 #include "bodygraph.h"
 #include "bodypart.h"
 #include "calendar.h"
+#include "timed_event.h"
 #include "cata_scope_helpers.h"
 #include "catacharset.h"
 #include "catalua_platform.h"
@@ -5932,6 +5933,211 @@ ccb.runtime.hook("on_player_try_move", "deny_move")
     cata::lua_platform::shutdown();
 }
 
+TEST_CASE( "lua_first_environment_light_override_uses_native_timed_event",
+           "[lua][platform][runtime][services][environment][light]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_light_override" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+ccb.runtime.handler("ready", function()
+    local result = ccb.services.gameplay.environment.set_light_override(
+        100, ccb.services.time.duration(2, "turn"), "ccb_light_test")
+    assert(result.ok)
+    assert(result.value.level == 100)
+    assert(result.value.duration.turns == 2)
+    assert(result.value.key == "ccb_light_test")
+    assert(result.value.changed == true)
+    local rescheduled = ccb.services.time.reschedule(
+        "ccb_light_test", ccb.services.time.duration(5, "turn"))
+    assert(rescheduled.ok)
+    assert(rescheduled.value.key == "ccb_light_test")
+    assert(rescheduled.value.duration.turns == 5)
+    assert(rescheduled.value.matched == 1)
+    assert(rescheduled.value.changed == true)
+    assert(not pcall(function()
+        ccb.services.gameplay.environment.set_light_override(
+            126, ccb.services.time.duration(1, "turn"))
+    end))
+    assert(not pcall(function()
+        ccb.services.gameplay.environment.set_light_override(
+            10, ccb.services.time.duration(-1, "turn"))
+    end))
+end)
+ccb.runtime.on("world_ready", "ready")
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_light_override" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    timed_event *override_event =
+        get_timed_events().get( timed_event_type::CUSTOM_LIGHT_LEVEL );
+    REQUIRE( override_event != nullptr );
+    CHECK( override_event->strength == 100 );
+    CHECK( override_event->key == "ccb_light_test" );
+    CHECK( override_event->when == calendar::turn + 5_turns );
+    override_event->when = calendar::turn;
+    get_timed_events().process();
+    CHECK( get_timed_events().get(
+               timed_event_type::CUSTOM_LIGHT_LEVEL ) == nullptr );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_mutation_services_cover_random_category_and_targeted_paths",
+           "[lua][platform][runtime][services][mutations]" )
+{
+    cata::lua_platform::shutdown();
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &player = get_avatar();
+    const trait_id target( "DEBUG_SPEED" );
+    REQUIRE( target.is_valid() );
+    const bool originally_present = player.has_permanent_trait( target );
+    if( originally_present ) {
+        player.unset_mutation( target );
+    }
+    on_out_of_scope cleanup( [&player, target, originally_present]() {
+        if( player.has_permanent_trait( target ) ) {
+            player.unset_mutation( target );
+        }
+        if( originally_present ) {
+            player.set_mutation( target );
+        }
+        cata::lua_platform::shutdown();
+        clear_avatar();
+        clear_map_without_vision();
+    } );
+
+    scoped_platform_test_mod test_mod( "ccb_platform_mutation_services" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+local services = ccb.services
+
+ccb.runtime.handler("ready", function()
+    local actor = services.characters.avatar()
+    local target = services.types.id("mutation", "DEBUG_SPEED")
+    local any = services.types.id("mutation_category", "ANY")
+
+    local random = services.mutations.mutate(actor, 0, true)
+    assert(random.ok and type(random.value.changed) == "boolean")
+    local category = services.mutations.mutate_category(actor, any, true, false)
+    assert(category.ok and type(category.value.changed) == "boolean")
+
+    local targeted = services.mutations.mutate_towards(actor, target, nil, false)
+    assert(targeted.ok and targeted.value.accepted == true)
+    assert(targeted.value.changed == true)
+    assert(services.mutations.has(actor, target).value == true)
+    local removed = services.mutations.remove(actor, target)
+    assert(removed.ok and removed.value.present == false)
+
+    assert(not pcall(function()
+        services.mutations.mutate(actor, -1, true)
+    end))
+    assert(not pcall(function()
+        services.mutations.mutate(actor, 1.5, true)
+    end))
+    assert(not pcall(function()
+        services.mutations.mutate_category(
+            actor, services.types.id("item", "rock"), true, false)
+    end))
+    assert(not pcall(function()
+        services.mutations.mutate_towards(
+            actor, services.types.id("item", "rock"), nil, false)
+    end))
+end)
+
+ccb.runtime.on("world_ready", "ready")
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_mutation_services" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+}
+
+TEST_CASE( "lua_first_character_fatal_hooks_can_prevent_death_without_eoc",
+           "[lua][platform][runtime][hooks][fatal]" )
+{
+    cata::lua_platform::shutdown();
+    clear_avatar();
+    clear_map_without_vision();
+    on_out_of_scope cleanup( []() {
+        cata::lua_platform::shutdown();
+        clear_avatar();
+        clear_map_without_vision();
+    } );
+
+    scoped_platform_test_mod test_mod( "ccb_platform_avatar_fatal" );
+    const fs::path marker = test_mod.root() / "avatar-fatal.txt";
+    test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+
+ccb.runtime.handler("prevent_fatal", function(payload)
+    assert(payload.hook == "on_avatar_fatal" or
+           payload.hook == "on_npc_fatal")
+    assert(payload.cancellable)
+    assert(payload.character.kind == "creature")
+    local snapshot = ccb.services.characters.snapshot(payload.character)
+    assert(snapshot.ok)
+    local output = assert(io.open([[%s]], "ab"))
+    output:write(payload.hook == "on_avatar_fatal" and "a" or "n")
+    output:close()
+    return false
+end)
+
+ccb.runtime.hook("on_avatar_fatal", "prevent_fatal")
+ccb.runtime.hook("on_npc_fatal", "prevent_fatal")
+)lua", marker.generic_u8string() ) );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_avatar_fatal" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    const bodypart_id torso = bodypart_str_id( "torso" ).id();
+    player.set_part_hp_cur( torso, 0 );
+    REQUIRE( player.is_dead_state() );
+    CHECK_FALSE( cata::lua_ui::dispatch_avatar_fatal( player, nullptr ) );
+    CHECK_FALSE( player.is_dead_state() );
+    CHECK( player.get_part_hp_cur( torso ) == 1 );
+
+    npc &test_npc = spawn_npc(
+                        ( player.pos_bub( here ) +
+                          tripoint_rel_ms::east * 3 ).xy(),
+                        "test_talker" );
+    const character_id npc_id = test_npc.getID();
+    on_out_of_scope cleanup_npc( [npc_id]() {
+        g->remove_npc_follower( npc_id );
+        g->remove_npc( npc_id );
+        overmap_buffer.remove_npc( npc_id );
+    } );
+    test_npc.set_part_hp_cur( torso, 0 );
+    REQUIRE( test_npc.is_dead_state() );
+    test_npc.die( &here, &player );
+    CHECK_FALSE( test_npc.is_dead() );
+    CHECK( test_npc.get_part_hp_cur( torso ) == 1 );
+
+    std::ifstream input( marker, std::ios::binary );
+    std::string contents;
+    input >> contents;
+    REQUIRE( input );
+    CHECK( contents == "an" );
+}
+
 TEST_CASE( "lua_first_bionic_and_recipe_services_expose_composable_character_facts",
            "[lua][platform][runtime][services][bionics][recipes]" )
 {
@@ -6142,6 +6348,39 @@ ccb.runtime.handler("ready", function()
     local item = created.items[1].handle
     local wrong_kind = services.inventory.wielded(item)
     assert(not wrong_kind.ok and wrong_kind.error.code == "wrong_kind")
+
+    local stick = services.types.id("item", "stick")
+    local wrong_owner = services.items.transform(item, stick, {
+        carrier = npc_page.items[1].handle,
+    })
+    assert(not wrong_owner.ok and wrong_owner.error.code == "not_owned")
+    assert(not pcall(function()
+        services.items.transform(
+            item, services.types.id("json_flag", "NO_UNWIELD"))
+    end))
+    local source_locator = item:locator()
+    local transformed = value(services.items.transform(item, stick, {
+        carrier = character,
+        active = true,
+        browsed = true,
+    }))
+    assert(transformed.changed)
+    assert(transformed.before.id == services.types.id("item", "rock"))
+    assert(transformed.after.id == stick)
+    assert(transformed.after.active and transformed.after.browsed)
+    assert(item:locator().stable_id == source_locator.stable_id)
+    local updated = value(services.items.update(item, {
+        active = false,
+        browsed = false,
+    }))
+    assert(not updated.after.active and not updated.after.browsed)
+    local restored = value(services.items.transform(
+        item, services.types.id("item", "rock"), {
+            carrier = character,
+            active = false,
+            browsed = false,
+        }))
+    assert(restored.after.id == services.types.id("item", "rock"))
 
     local source_uid = item:locator().stable_id
     local wield_result = value(services.inventory.wield(character, item))
@@ -6626,7 +6865,18 @@ TEST_CASE( "lua_first_dialogue_predicate_services_cover_legacy_conditions",
     npc &native_npc = spawn_npc( npc_position.xy(), "test_talker" );
     native_npc.name = "Lua predicate service NPC";
     const character_id native_npc_id = native_npc.getID();
-    on_out_of_scope cleanup_creatures( [native_npc_id]() {
+    faction *native_npc_faction = native_npc.get_faction();
+    faction *native_avatar_faction = player.get_faction();
+    REQUIRE( native_npc_faction != nullptr );
+    REQUIRE( native_avatar_faction != nullptr );
+    const int original_npc_trust = native_npc_faction->trusts_u;
+    const auto original_avatar_relations = native_avatar_faction->relations;
+    on_out_of_scope cleanup_creatures( [native_npc_id, native_npc_faction,
+                                       native_avatar_faction,
+                                       original_npc_trust,
+                                       original_avatar_relations]() {
+        native_npc_faction->trusts_u = original_npc_trust;
+        native_avatar_faction->relations = original_avatar_relations;
         g->remove_npc_follower( native_npc_id );
         g->remove_npc( native_npc_id );
         overmap_buffer.remove_npc( native_npc_id );
@@ -6659,6 +6909,43 @@ ccb.runtime.handler("ready", function()
     local npcs = value(services.npcs.list())
     assert(#npcs.items == 1)
     local npc = npcs.items[1].handle
+
+    -- Character status predicates use the same typed actor handle for both
+    -- avatar and NPC, while preserving the legacy tile-divability and
+    -- conventional body-part-temperature semantics.
+    assert(value(services.characters.is_alive(avatar)) == true)
+    assert(value(services.characters.is_alive(npc)) == true)
+    assert(value(services.characters.is_underwater(avatar)) == false)
+    assert(value(services.characters.is_underwater(npc)) == false)
+    local torso = services.types.id("body_part", "torso")
+    assert(value(services.characters.has_part_temp(
+        avatar, torso, -1000000)) == true)
+    assert(value(services.characters.has_part_temp(
+        npc, torso, -1000000)) == true)
+    assert(not pcall(services.characters.has_part_temp,
+        avatar, services.types.id("item", "rock"), 0))
+
+    -- Bounded faction effects: the trust write targets the NPC's faction,
+    -- while the relation write changes the avatar faction's view of it,
+    -- matching talker_character::set_fac_relation.
+    local trust = value(services.characters.add_faction_trust(npc, 3))
+    assert(trust.applied == 3)
+    assert(trust.after == trust.before + 3)
+    local relation_reset = value(services.characters.set_faction_relationship(
+        npc, avatar, "knows your voice", false))
+    assert(relation_reset.after == false)
+    local relation = value(services.characters.set_faction_relationship(
+        npc, avatar, "knows your voice", true))
+    assert(relation.relationship == "knows your voice")
+    assert(relation.before == false and relation.after == true)
+    assert(relation.changed == true)
+    local relation_again = value(services.characters.set_faction_relationship(
+        npc, avatar, "knows your voice", true))
+    assert(relation_again.changed == false)
+    assert(not pcall(services.characters.set_faction_relationship,
+        npc, avatar, "ally", true))
+    assert(not pcall(services.characters.add_faction_trust,
+        npc, 1000001))
 
     -- u_is_travelling: the travel snapshot projection defaults to no path.
     local snapshot = value(services.characters.snapshot(avatar))
@@ -13880,7 +14167,7 @@ TEST_CASE( "lua_v5_hook_and_callback_catalogs_are_complete_and_bounded",
     using namespace cata::lua_ui;
 
     const std::vector<script_hook_spec> &hooks = script_hook_specs();
-    REQUIRE( hooks.size() == 52 );
+    REQUIRE( hooks.size() == 54 );
     std::vector<std::string_view> hook_names;
     hook_names.reserve( hooks.size() );
     for( const script_hook_spec &hook : hooks ) {
@@ -13901,6 +14188,18 @@ TEST_CASE( "lua_v5_hook_and_callback_catalogs_are_complete_and_bounded",
            script_hook_mode::intercept );
     CHECK( script_hook_supports_result(
                *find_script_hook_spec( "on_character_try_move" ),
+               "allow" ) );
+    REQUIRE( find_script_hook_spec( "on_avatar_fatal" ) != nullptr );
+    CHECK( find_script_hook_spec( "on_avatar_fatal" )->mode ==
+           script_hook_mode::intercept );
+    CHECK( script_hook_supports_result(
+               *find_script_hook_spec( "on_avatar_fatal" ),
+               "allow" ) );
+    REQUIRE( find_script_hook_spec( "on_npc_fatal" ) != nullptr );
+    CHECK( find_script_hook_spec( "on_npc_fatal" )->mode ==
+           script_hook_mode::intercept );
+    CHECK( script_hook_supports_result(
+               *find_script_hook_spec( "on_npc_fatal" ),
                "allow" ) );
     REQUIRE( find_script_hook_spec( "on_monster_try_move" ) != nullptr );
     CHECK( find_script_hook_spec( "on_monster_try_move" )->mode ==
@@ -14618,6 +14917,24 @@ assert(restored.ok == true)
 assert(restored.value.after.moves == adjusted.value.before.moves)
 
 local torso = game.types.id("body_part", "torso")
+local pure = game.types.id("damage_type", "pure")
+local damaged = game.characters.damage(avatar, pure, 1, {
+    body_part = torso,
+    armor_penetration = 999,
+    armor_penetration_multiplier = 1,
+    damage_multiplier = 1,
+})
+assert(damaged.ok == true)
+assert(damaged.value.damage_type == pure)
+assert(damaged.value.body_part == torso)
+assert(damaged.value.requested == 1)
+assert(math.type(damaged.value.before) == "integer")
+assert(math.type(damaged.value.after) == "integer")
+assert(math.type(damaged.value.dealt) == "integer")
+assert(damaged.value.after <= damaged.value.before)
+local restored_damage = game.characters.heal(avatar, torso, 1)
+assert(restored_damage.ok == true)
+
 local healed = game.characters.heal(avatar, torso, 1)
 assert(healed.ok == true)
 assert(healed.value.body_part == torso)
@@ -14647,6 +14964,18 @@ end) == false)
 assert(pcall(function()
     game.characters.heal(
         avatar, game.types.id("effect", "downed"), 1)
+end) == false)
+assert(pcall(function()
+    game.characters.damage(avatar, torso, 1)
+end) == false)
+assert(pcall(function()
+    game.characters.damage(avatar, pure, math.huge)
+end) == false)
+assert(pcall(function()
+    game.characters.damage(avatar, pure, 1, { body_part = pure })
+end) == false)
+assert(pcall(function()
+    game.characters.damage(avatar, pure, 1, { unknown = 1 })
 end) == false)
 )lua" );
 
@@ -16576,6 +16905,13 @@ assert(changed.value.after.sold == 0)
 assert(math.type(changed.value.effective.trust) ==
     "integer")
 
+local debt = game.npcs.add_debt(handle, -4)
+assert(debt.ok == true)
+assert(debt.value.amount == -4)
+assert(debt.value.before == 13)
+assert(debt.value.after == 9)
+assert(debt.value.changed == true)
+
 assert(pcall(function()
     game.npcs.rename(handle, "")
 end) == false)
@@ -16608,6 +16944,9 @@ assert(pcall(function()
         [1] = 1
     })
 end) == false)
+assert(pcall(function()
+    game.npcs.add_debt(handle, 1000001)
+end) == false)
 )lua" );
 
     std::string error;
@@ -16620,7 +16959,7 @@ end) == false)
     CHECK( native_npc.op_of_u.fear == -15 );
     CHECK( native_npc.op_of_u.value == 9 );
     CHECK( native_npc.op_of_u.anger == 1 );
-    CHECK( native_npc.op_of_u.owed == 13 );
+    CHECK( native_npc.op_of_u.owed == 9 );
     CHECK( native_npc.op_of_u.sold == 0 );
 
     script.write_manifest( R"json({
@@ -16641,6 +16980,77 @@ game.npcs.rename(handle, "unauthorized")
     CHECK_FALSE( cata::lua_ui::reload_scripts( error ) );
     CHECK( error.find( "game.write" ) != std::string::npos );
     CHECK( native_npc.name == "Lua renamed NPC" );
+}
+
+TEST_CASE( "lua_v5_npc_navigation_services_use_native_goal_and_guard_rules",
+           "[lua][bindings][npcs][navigation][integration]" )
+{
+    clear_map_without_vision();
+    on_out_of_scope restore_map( []() {
+        clear_map_without_vision();
+    } );
+    map &here = get_map();
+    avatar &player = get_avatar();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    npc &native_npc = spawn_npc(
+                          ( player.pos_bub( here ) +
+                            tripoint_rel_ms::east * 3 ).xy(),
+                          "test_talker" );
+    native_npc.name = "Lua navigation NPC";
+    const character_id native_npc_id = native_npc.getID();
+    on_out_of_scope cleanup_npc( [native_npc_id]() {
+        g->remove_npc_follower( native_npc_id );
+        g->remove_npc( native_npc_id );
+        overmap_buffer.remove_npc( native_npc_id );
+    } );
+
+    scoped_lua_user_script script;
+    script.write_manifest( R"json({
+        "id": "user",
+        "version": "5.0.0",
+        "api_version": 5,
+        "capabilities": [ "game.read", "game.write" ],
+        "dependencies": [ "builtin" ]
+    })json" );
+    script.write( R"lua(
+local page = game.npcs.list({ query = "Lua navigation NPC", limit = 1 })
+assert(page.ok == true)
+local handle = page.value.items[1].handle
+local position = page.value.items[1].position
+
+local guard = game.npcs.set_guard_position(handle, position)
+assert(guard.ok == true)
+assert(guard.value.changed == true)
+assert(guard.value.position == position)
+local guard_again = game.npcs.set_guard_position(handle, position)
+assert(guard_again.ok == true)
+assert(guard_again.value.changed == false)
+
+local goal = position:project_to("overmap_terrain"):add(
+    game.coords.tripoint_abs_omt(1, 0, 0))
+local travelling = game.npcs.set_goal(handle, goal)
+assert(travelling.ok == true)
+assert(travelling.value.accepted == true)
+assert(travelling.value.goal == goal)
+assert(travelling.value.path_length > 0)
+assert(travelling.value.mission == "TRAVELLING")
+assert(travelling.value.attitude == "NPCATT_NULL")
+
+assert(pcall(function()
+    game.npcs.set_goal(handle, position)
+end) == false)
+assert(pcall(function()
+    game.npcs.set_guard_position(
+        game.characters.avatar(), position)
+end) == false)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_ui::reload_scripts( error ) );
+    CHECK( error.empty() );
+    CHECK( native_npc.mission == NPC_MISSION_TRAVELLING );
+    CHECK( native_npc.get_attitude() == NPCATT_NULL );
+    CHECK( native_npc.goal != npc::no_goal_point );
 }
 
 TEST_CASE( "lua_v5_faction_state_members_and_relations_are_bounded",
@@ -18615,6 +19025,9 @@ TEST_CASE( "lua_v5_native_weather_overrides_are_checked_and_reversible",
     script.write( R"lua(
 local clear_id = game.types.id(
     "weather_type", "clear")
+local lightning = game.weather.activate_lightning()
+assert(lightning.ok == true)
+assert(lightning.value.lightning_active == true)
 local forced = game.weather.set_override(clear_id)
 assert(forced.ok == true)
 assert(forced.value.weather == clear_id)
@@ -20921,6 +21334,27 @@ assert(inherited_removed.value.own_before == true)
 assert(inherited_removed.value.own_after == false)
 assert(inherited_removed.value.changed == true)
 
+local fault = game.types.id("fault", "fault_armor_lc_dented")
+local fault_result = game.items.set_fault(rock.handle, fault, {
+    force = true,
+    message = false,
+})
+assert(fault_result.ok == true)
+assert(fault_result.value.fault == fault)
+assert(fault_result.value.accepted == true)
+assert(fault_result.value.after == true)
+assert(fault_result.value.changed == true)
+local random_fault = game.items.set_random_fault(
+    rock.handle, "mechanical_damage", {
+        force = true,
+        message = false,
+    })
+assert(random_fault.ok == true)
+assert(random_fault.value.fault_type == "mechanical_damage")
+assert(math.type(random_fault.value.before_count) == "integer")
+assert(math.type(random_fault.value.after_count) == "integer")
+assert(type(random_fault.value.changed) == "boolean")
+
 local feint = game.types.id(
     "martial_art_technique", "tec_feint")
 assert(game.items.set_technique(
@@ -20942,6 +21376,16 @@ end) == false)
 assert(pcall(function()
     game.items.set_flag(
         rock.handle, game.types.id("item", "rock"), true)
+end) == false)
+assert(pcall(function()
+    game.items.set_fault(
+        rock.handle, game.types.id("item", "rock"))
+end) == false)
+assert(pcall(function()
+    game.items.set_fault(rock.handle, fault, { unknown = true })
+end) == false)
+assert(pcall(function()
+    game.items.set_random_fault(rock.handle, string.rep("x", 257))
 end) == false)
 )lua" );
 
