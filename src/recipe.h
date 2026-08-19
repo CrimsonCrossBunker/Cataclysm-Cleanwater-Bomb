@@ -275,6 +275,8 @@ class recipe
         /// @param decorated whether the result includes decoration (favorite mark, etc).
         std::string result_name( bool decorated = false ) const;
         std::vector<effect_on_condition_id> result_eocs;
+        std::string lua_platform_mod;
+        std::string lua_platform_result_handler;
         std::pair<int, time_duration> morale_modifier;
         skill_id skill_used;
         std::map<skill_id, int> required_skills;

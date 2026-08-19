@@ -26,8 +26,14 @@ class relic;
 struct relic_charge_info;
 struct relic_charge_template;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+}
+
 class relic_procgen_data
 {
+    friend class cata::lua_platform::content_transaction;
     public:
 
         /*
