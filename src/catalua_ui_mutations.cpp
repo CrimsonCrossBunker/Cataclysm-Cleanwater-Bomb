@@ -3,6 +3,7 @@
 #include "catalua_ui_mutations.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <map>
@@ -35,6 +36,7 @@ constexpr std::size_t maximum_definition_offset = 1000000;
 constexpr std::size_t maximum_relation_values = 128;
 constexpr int default_state_limit = 128;
 constexpr int maximum_state_limit = 256;
+constexpr int maximum_random_mutation_chance = 1000000;
 
 void require_mutation_id(
     const script_game_id &id, const std::string &api_name )
@@ -47,6 +49,60 @@ void require_mutation_id(
         throw std::invalid_argument(
             api_name + " requires a valid GameId<mutation>" );
     }
+}
+
+mutation_category_id resolve_mutation_category(
+    const sol::optional<script_game_id> &requested,
+    const std::string &api_name )
+{
+    // The native mutation API uses the private ANY sentinel for an omitted
+    // category.  Lua represents that sentinel as nil (and accepts the
+    // explicit string ID only for migration ergonomics).
+    if( !requested || requested->is_null() ) {
+        return mutation_category_id( "ANY" );
+    }
+    if( requested->kind() != "mutation_category" ) {
+        throw std::invalid_argument(
+            api_name + " requires GameId<mutation_category> or nil" );
+    }
+    if( requested->value() == "ANY" ) {
+        return mutation_category_id( "ANY" );
+    }
+    if( !requested->is_valid() ) {
+        throw std::invalid_argument(
+            api_name + " requires a valid GameId<mutation_category>" );
+    }
+    return mutation_category_id( requested->value() );
+}
+
+std::vector<trait_and_var> mutation_state( const Character &character )
+{
+    std::vector<trait_and_var> result = character.get_mutations_variants(
+                                            true, false );
+    std::sort(
+        result.begin(), result.end(),
+        []( const trait_and_var &lhs, const trait_and_var &rhs ) {
+            if( lhs.trait.str() != rhs.trait.str() ) {
+                return lhs.trait.str() < rhs.trait.str();
+            }
+            return lhs.variant < rhs.variant;
+        } );
+    return result;
+}
+
+sol::table mutation_operation_result(
+    sol::state_view lua, const std::vector<trait_and_var> &before,
+    const std::vector<trait_and_var> &after,
+    const std::optional<bool> &accepted = std::nullopt )
+{
+    sol::table value = lua.create_table();
+    value["changed"] = before != after;
+    value["before_count"] = before.size();
+    value["after_count"] = after.size();
+    if( accepted ) {
+        value["accepted"] = *accepted;
+    }
+    return value;
 }
 
 Character *resolve_character(
@@ -665,6 +721,201 @@ sol::table has_state(
                state, sol::make_object( state, present ) );
 }
 
+mut_count_type mutation_count_type(
+    const sol::optional<std::string> &requested,
+    const std::string &api_name )
+{
+    const std::string value = requested.value_or( "ALL" );
+    if( value == "POSITIVE" ) {
+        return mut_count_type::POSITIVE;
+    }
+    if( value == "NEGATIVE" ) {
+        return mut_count_type::NEGATIVE;
+    }
+    if( value == "ALL" ) {
+        return mut_count_type::ALL;
+    }
+    throw std::invalid_argument(
+        api_name + " type must be POSITIVE, NEGATIVE, or ALL" );
+}
+
+sol::table category_count(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_category,
+    const sol::optional<std::string> &requested_type,
+    const sol::optional<bool> &requested_permanent_only,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    if( requested_category.kind() != "mutation_category" ||
+        !requested_category.is_valid() ) {
+        throw std::invalid_argument(
+            "game.mutations.category_count requires a valid GameId<mutation_category>" );
+    }
+    const mut_count_type count_type = mutation_count_type(
+                                          requested_type,
+                                          "game.mutations.category_count" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const mutation_category_id category(
+        requested_category.value() );
+    const bool permanent_only =
+        requested_permanent_only.value_or( false );
+    const int count = permanent_only ?
+                      character->get_total_in_category_char_has(
+                          category, count_type ) :
+                      character->get_total_in_category(
+                          category, count_type );
+    return make_game_value_result(
+               state, sol::make_object( state, count ) );
+}
+
+sol::table is_visible_to(
+    sol::this_state lua, const game_handle &observed_handle,
+    const game_handle &observer_handle,
+    const script_game_id &requested_id,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    require_mutation_id(
+        requested_id, "game.mutations.is_visible_to" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *observed = resolve_character(
+                              observed_handle, runtime_generation,
+                              world_generation, error );
+    if( observed == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    Character *observer = resolve_character(
+                              observer_handle, runtime_generation,
+                              world_generation, error );
+    if( observer == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const trait_id id( requested_id.value() );
+    const mutation_branch &definition = id.obj();
+    const int visibility_cap =
+        observer->get_mutation_visibility_cap( observed );
+    const bool visible = observed->has_trait( id ) &&
+                         definition.visibility > 0 &&
+                         definition.visibility >= visibility_cap;
+    return make_game_value_result(
+               state, sol::make_object( state, visible ) );
+}
+
+sol::table is_purifiable(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    require_mutation_id(
+        requested_id, "game.mutations.is_purifiable" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, character->purifiable(
+                       trait_id( requested_id.value() ) ) ) );
+}
+
+sol::table set_purifiable(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id, const bool purifiable,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    require_mutation_id(
+        requested_id, "game.mutations.set_purifiable" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const trait_id id( requested_id.value() );
+    const bool before = character->purifiable( id );
+    if( character->has_trait( id ) ) {
+        if( purifiable ) {
+            character->my_intrinsic_mutations.erase( id );
+        } else {
+            character->my_intrinsic_mutations.insert( id );
+        }
+    }
+    const bool after = character->purifiable( id );
+    sol::table value = state.create_table();
+    value["present"] = character->has_trait( id );
+    value["before"] = before;
+    value["after"] = after;
+    value["changed"] = before != after;
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table remove_category(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_category,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    if( requested_category.kind() != "mutation_category" ||
+        !requested_category.is_valid() ) {
+        throw std::invalid_argument(
+            "game.mutations.remove_category requires a valid "
+            "GameId<mutation_category>" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const mutation_category_id category(
+        requested_category.value() );
+    std::vector<trait_id> to_remove;
+    for( const trait_id &id : character->get_mutations() ) {
+        const std::vector<mutation_category_id> &categories =
+            id.obj().category;
+        if( std::find(
+                categories.begin(), categories.end(), category ) !=
+            categories.end() ) {
+            to_remove.push_back( id );
+        }
+    }
+    sol::table removed = state.create_table(
+                             static_cast<int>( to_remove.size() ), 0 );
+    for( std::size_t index = 0; index < to_remove.size(); ++index ) {
+        removed[index + 1] = script_game_id(
+                                 "mutation", to_remove[index].str() );
+        character->unset_mutation( to_remove[index] );
+    }
+    sol::table value = state.create_table();
+    value["category"] = requested_category;
+    value["removed"] = std::move( removed );
+    value["removed_count"] = to_remove.size();
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 sol::table get_state(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
@@ -697,6 +948,103 @@ sol::table get_state(
     return make_game_value_result(
                state,
                sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table mutate_state(
+    sol::this_state lua, const game_handle &handle,
+    const sol::optional<double> &requested_chance,
+    const sol::optional<bool> &requested_use_vitamins,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const double raw_chance = requested_chance.value_or( 0.0 );
+    if( !std::isfinite( raw_chance ) ||
+        std::trunc( raw_chance ) != raw_chance ||
+        raw_chance < 0 || raw_chance > maximum_random_mutation_chance ) {
+        throw std::invalid_argument(
+            "game.mutations.mutate true_random_chance must be within 0..1000000" );
+    }
+    const int chance = static_cast<int>( raw_chance );
+    const bool use_vitamins = requested_use_vitamins.value_or( true );
+    const std::vector<trait_and_var> before = mutation_state( *character );
+    character->mutate( chance, use_vitamins );
+    const std::vector<trait_and_var> after = mutation_state( *character );
+    return make_game_value_result(
+               state,
+               sol::make_object( state,
+                                 mutation_operation_result( state, before, after ) ) );
+}
+
+sol::table mutate_category_state(
+    sol::this_state lua, const game_handle &handle,
+    const sol::optional<script_game_id> &requested_category,
+    const sol::optional<bool> &requested_use_vitamins,
+    const sol::optional<bool> &requested_true_random,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const mutation_category_id category = resolve_mutation_category(
+                                              requested_category,
+                                              "game.mutations.mutate_category" );
+    const bool use_vitamins = requested_use_vitamins.value_or( true );
+    const bool true_random = requested_true_random.value_or( false );
+    const std::vector<trait_and_var> before = mutation_state( *character );
+    character->mutate_category( category, use_vitamins, true_random );
+    const std::vector<trait_and_var> after = mutation_state( *character );
+    return make_game_value_result(
+               state,
+               sol::make_object( state,
+                                 mutation_operation_result( state, before, after ) ) );
+}
+
+sol::table mutate_towards_state(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_mutation,
+    const sol::optional<script_game_id> &requested_category,
+    const sol::optional<bool> &requested_use_vitamins,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    require_mutation_id(
+        requested_mutation, "game.mutations.mutate_towards" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const mutation_category_id category = resolve_mutation_category(
+                                              requested_category,
+                                              "game.mutations.mutate_towards" );
+    const bool use_vitamins = requested_use_vitamins.value_or( true );
+    const std::vector<trait_and_var> before = mutation_state( *character );
+    const bool accepted = character->mutate_towards(
+                              trait_id( requested_mutation.value() ),
+                              category, nullptr, use_vitamins );
+    const std::vector<trait_and_var> after = mutation_state( *character );
+    return make_game_value_result(
+               state,
+               sol::make_object( state,
+                                 mutation_operation_result(
+                                     state, before, after, accepted ) ) );
 }
 
 const mutation_variant *requested_variant(
@@ -975,6 +1323,43 @@ void install_mutation_api(
                    current_world_generation() );
     } );
     mutations.set_function(
+        "category_count",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle &handle,
+            const script_game_id &category,
+            const sol::optional<std::string> &type,
+    const sol::optional<bool> &permanent_only ) {
+        require_read();
+        return category_count(
+                   lua_state, handle, category, type, permanent_only,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    mutations.set_function(
+        "is_visible_to",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state,
+            const game_handle &observed,
+            const game_handle &observer,
+            const script_game_id &id ) {
+        require_read();
+        return is_visible_to(
+                   lua_state, observed, observer, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    mutations.set_function(
+        "is_purifiable",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle &handle,
+            const script_game_id &id ) {
+        require_read();
+        return is_purifiable(
+                   lua_state, handle, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    mutations.set_function(
         "get",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle & handle,
@@ -982,6 +1367,44 @@ void install_mutation_api(
         require_read();
         return get_state(
                    lua_state, handle, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    mutations.set_function(
+        "mutate",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle &handle,
+            const sol::optional<double> &chance,
+            const sol::optional<bool> &use_vitamins ) {
+        require_write();
+        return mutate_state(
+                   lua_state, handle, chance, use_vitamins,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    mutations.set_function(
+        "mutate_category",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle &handle,
+            const sol::optional<script_game_id> &category,
+            const sol::optional<bool> &use_vitamins,
+            const sol::optional<bool> &true_random ) {
+        require_write();
+        return mutate_category_state(
+                   lua_state, handle, category, use_vitamins, true_random,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    mutations.set_function(
+        "mutate_towards",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle &handle,
+            const script_game_id &id,
+            const sol::optional<script_game_id> &category,
+            const sol::optional<bool> &use_vitamins ) {
+        require_write();
+        return mutate_towards_state(
+                   lua_state, handle, id, category, use_vitamins,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
@@ -1005,6 +1428,28 @@ void install_mutation_api(
         require_write();
         return remove_state(
                    lua_state, handle, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    mutations.set_function(
+        "set_purifiable",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle &handle,
+            const script_game_id &id, const bool purifiable ) {
+        require_write();
+        return set_purifiable(
+                   lua_state, handle, id, purifiable,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    mutations.set_function(
+        "remove_category",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle &handle,
+            const script_game_id &category ) {
+        require_write();
+        return remove_category(
+                   lua_state, handle, category,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
