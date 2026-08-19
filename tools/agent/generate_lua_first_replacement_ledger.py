@@ -2340,8 +2340,33 @@ NATIVE_PRIMITIVE_EVIDENCE = [
 BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-conditions", "at_safe_space"): (
         "services.overmap-safety-and-characters"
-    ),    ("eoc-effects", "npc_add_wet"): "services.wetness",
+    ),
+    ("eoc-effects", "npc_add_wet"): "services.wetness",
+    ("eoc-effects", "npc_add_wound"): "services.wounds",
+    ("eoc-effects", "npc_remove_wound"): "services.wounds",
+    ("eoc-effects", "u_add_wound"): "services.wounds",
+    ("eoc-effects", "u_remove_wound"): "services.wounds",
     ("eoc-effects", "npc_cancel_activity"): "services.activities",
+    ("eoc-effects", "u_add_faction_trust"): "services.characters",
+    ("eoc-effects", "npc_set_fac_relation"): "services.characters",
+    ("eoc-effects", "u_set_fac_relation"): "services.characters",
+    ("eoc-effects", "lightning"): "services.weather",
+    ("eoc-effects", "next_weather"): "services.weather",
+    ("eoc-effects", "sample_range"): "services.random",
+    ("eoc-effects", "npc_set_fault"): "services.items",
+    ("eoc-effects", "npc_set_random_fault_of_type"): "services.items",
+    ("eoc-effects", "u_set_fault"): "services.items",
+    ("eoc-effects", "u_set_random_fault_of_type"): "services.items",
+    ("eoc-effects", "u_pick_bodypart"): "services.body-parts-and-wounds",
+    ("eoc-effects", "npc_pick_bodypart"): "services.body-parts-and-wounds",
+    ("eoc-effects", "u_travel_to_dimension"): "workflows.dimension-travel",
+    ("eoc-effects", "u_activate"): "services.items",
+    ("eoc-effects", "npc_activate"): "services.items",
+    ("eoc-effects", "custom_light_level"): "services.gameplay.environment",
+    ("eoc-effects", "alter_timed_events"): "services.time",
+    ("eoc-effects", "dimension_name"): "services.gameplay.environment",
+    ("eoc-effects", "mirror_coordinates"): "services.coords",
+    ("eoc-effects", "closest_city"): "services.overmap",
     ("eoc-conditions", "npc_is_travelling"): "services.character-navigation",
     ("eoc-conditions", "has_pickup_list"): "services.npcs.ai-rules",
     ("eoc-conditions", "player_see_npc"): "services.creatures.perception",
@@ -2350,7 +2375,10 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-conditions", "compare_string_match_all"): (
         "services.gameplay.strings"
     ),
+    ("eoc-conditions", "line_of_sight"): "services.gameplay.environment",
     ("eoc-conditions", "current_dimension"): "services.gameplay.environment",
+    ("eoc-conditions", "expects_vars"): "services.lua-context",
+    ("eoc-conditions", "math"): "native-lua-expression",
     ("eoc-conditions", "is_day"): "services.gameplay.environment",
     ("eoc-conditions", "is_season"): "services.time",
     ("eoc-conditions", "is_weather"): "services.weather",
@@ -2408,6 +2436,11 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-conditions", "u_is_deaf"): "services.characters",
     ("eoc-conditions", "npc_is_deaf"): "services.characters",
     ("eoc-conditions", "u_is_alive"): "services.characters",
+    ("eoc-conditions", "npc_is_alive"): "services.characters",
+    ("eoc-conditions", "u_is_underwater"): "services.characters",
+    ("eoc-conditions", "npc_is_underwater"): "services.characters",
+    ("eoc-conditions", "u_has_part_temp"): "services.characters",
+    ("eoc-conditions", "npc_has_part_temp"): "services.characters",
     ("eoc-conditions", "u_is_avatar"): "services.characters",
     ("eoc-conditions", "u_female"): "services.characters",
     ("eoc-conditions", "u_has_cash"): "services.characters",
@@ -2682,7 +2715,8 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "u_pick_bodypart"): "services.characters",
     ("eoc-effects", "npc_pick_bodypart"): "services.characters",
     ("eoc-effects", "trigger_event"): "services.gameplay",
-    ("eoc-effects", "set_browsed"): "services.dialogue",
+    ("eoc-effects", "set_browsed"): "services.items",
+    ("eoc-effects", "transform_item"): "services.items",
     ("eoc-effects", "clear_dimension"): "services.dialogue",
     ("eoc-effects", "clear_overrides"): "services.dialogue",
     ("eoc-effects", "place_override"): "services.dialogue",
@@ -2698,23 +2732,12 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "u_assign_activity"): "services.activities",
     ("eoc-effects", "npc_assign_activity"): "services.activities",
     ("eoc-conditions", "npc_has_activity"): "services.activities",
-    ("eoc-effects", "math"): "services.state-and-values",
-    ("eoc-effects", "copy_var"): "services.state-and-values",
-    ("eoc-effects", "add_debt"): "services.state-and-values",
-    ("eoc-effects", "set_string_var"): "services.state-and-values",
-    ("eoc-conditions", "expects_vars"): "services.state-and-values",
-    ("eoc-conditions", "math"): "services.state-and-values",
-    ("eoc-effects", "alter_timed_events"): "services.time-weather",
-    ("eoc-effects", "lightning"): "services.time-weather",
-    ("eoc-effects", "next_weather"): "services.time-weather",
-    ("eoc-effects", "mirror_coordinates"): "services.coords",
-    ("eoc-effects", "sample_range"): "services.random",
-    ("eoc-effects", "dimension_name"): "services.gameplay.environment",
-    ("eoc-effects", "u_add_faction_trust"): "services.factions",
-    ("eoc-effects", "u_set_fac_relation"): "services.factions",
-    ("eoc-effects", "npc_set_fac_relation"): "services.factions",
-    ("eoc-conditions", "line_of_sight"): "services.gameplay.environment",
-    ("eoc-effects", "closest_city"): "services.overmap",
+    # These selectors are bounded only where the migrator can prove a typed
+    # actor variable and a finite literal.  The target is the real variable
+    # service; unsupported legacy shapes remain explicit TODOs.
+    ("eoc-effects", "math"): "services.variables",
+    ("eoc-effects", "copy_var"): "services.variables",
+    ("eoc-effects", "set_string_var"): "services.variables",
     ("eoc-effects", "take_control_menu"): "services.presentation",
     ("eoc-effects", "add_mission"): "services.missions",
     ("eoc-effects", "basecamp_mission"): "services.missions",
@@ -2806,6 +2829,10 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "u_set_field"): "services.map",
     ("eoc-effects", "u_set_flag"): "services.items",
     ("eoc-effects", "u_unset_flag"): "services.items",
+    ("eoc-effects", "u_set_goal"): "services.npcs",
+    ("eoc-effects", "npc_set_goal"): "services.npcs",
+    ("eoc-effects", "u_set_guard_pos"): "services.npcs",
+    ("eoc-effects", "npc_set_guard_pos"): "services.npcs",
     ("eoc-conditions", "npc_allies"): "services.characters",
     ("eoc-conditions", "npc_allies_global"): "services.characters",
     ("eoc-conditions", "npc_has_any_effect"): "services.characters",
@@ -2838,7 +2865,7 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "clear_npc_rule"): "services.characters",
     ("eoc-effects", "copy_npc_rules"): "services.characters",
     ("eoc-effects", "give_aid"): "services.characters-and-effects",
-    ("eoc-effects", "npc_add_var"): "services.characters",
+    ("eoc-effects", "npc_add_var"): "services.variables",
     ("eoc-effects", "npc_attack"): "services.characters",
     ("eoc-effects", "npc_bulk_donate"): "services.characters",
     ("eoc-effects", "npc_bulk_trade_accept"): "services.characters",
@@ -2859,7 +2886,7 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "npc_mutate"): "services.characters",
     ("eoc-effects", "npc_mutate_category"): "services.characters",
     ("eoc-effects", "npc_mutate_towards"): "services.characters",
-    ("eoc-effects", "npc_prevent_death"): "services.characters",
+    ("eoc-effects", "npc_prevent_death"): "runtime.hooks.character-fatal",
     ("eoc-effects", "npc_query_omt"): "services.characters",
     ("eoc-effects", "npc_query_tile"): "services.characters",
     ("eoc-effects", "npc_ranged_attack"): "services.characters",
@@ -2884,7 +2911,7 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "set_npc_rule"): "services.characters",
     ("eoc-effects", "start_training_npc"): "services.characters",
     ("eoc-effects", "toggle_npc_rule"): "services.characters",
-    ("eoc-effects", "u_add_var"): "services.characters",
+    ("eoc-effects", "u_add_var"): "services.variables",
     ("eoc-effects", "u_attack"): "services.characters",
     ("eoc-effects", "u_bulk_donate"): "services.characters",
     ("eoc-effects", "u_bulk_trade_accept"): "services.characters",
@@ -2903,7 +2930,7 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "u_mutate"): "services.characters",
     ("eoc-effects", "u_mutate_category"): "services.characters",
     ("eoc-effects", "u_mutate_towards"): "services.characters",
-    ("eoc-effects", "u_prevent_death"): "services.characters",
+    ("eoc-effects", "u_prevent_death"): "runtime.hooks.character-fatal",
     ("eoc-effects", "u_query_omt"): "services.characters",
     ("eoc-effects", "u_query_tile"): "services.characters",
     ("eoc-effects", "u_ranged_attack"): "services.characters",
@@ -2919,6 +2946,12 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "u_spawn_npc"): "services.characters",
     ("eoc-effects", "u_spend_cash"): "services.characters",
     ("eoc-effects", "u_transform_radius"): "services.characters",
+    ("eoc-effects", "npc_mutate"): "services.mutations",
+    ("eoc-effects", "npc_mutate_category"): "services.mutations",
+    ("eoc-effects", "npc_mutate_towards"): "services.mutations",
+    ("eoc-effects", "u_mutate"): "services.mutations",
+    ("eoc-effects", "u_mutate_category"): "services.mutations",
+    ("eoc-effects", "u_mutate_towards"): "services.mutations",
 }
 
 BOUNDED_IMPLEMENTED_EOC_EVIDENCE = [
@@ -2930,15 +2963,331 @@ BOUNDED_IMPLEMENTED_EOC_EVIDENCE = [
     "data/lua/LUA_FIRST_PLATFORM.md",
 ]
 
+# These selectors were historically promoted when a domain name or a legacy
+# implementation reference existed, even though the migrator still emits an
+# explicit TODO for every shape.  Keeping them in the bounded bucket makes the
+# ledger claim selector-level parity that the Lua contract does not provide.
+# Retire them until a typed service, a bounded renderer, and focused evidence
+# land together.  The disposition function below will then classify an
+# explicitly planned/primitive selector according to its real status.
+RETIRED_BOUNDED_IMPLEMENTED_EOC = {
+    # Mission/camp workflows are still orchestration-only TODOs.
+    *{
+        ("eoc-effects", selector)
+        for selector in {
+            "add_mission", "basecamp_mission", "clear_mission",
+            "companion_mission", "finish_mission", "mission_failure",
+            "assign_mission", "mission_reward", "mission_success",
+            "offer_mission", "remove_active_mission",
+            "abandon_camp", "assign_camp", "start_camp",
+        }
+    },
+    # Bionic and vehicle service workflows need explicit plans and ownership
+    # rules; the generic names are not a safe substitute for those APIs.
+    *{
+        ("eoc-effects", selector)
+        for selector in {
+            "bionic_install", "bionic_install_allies", "bionic_remove",
+            "bionic_remove_allies", "repair_bionic_limbs",
+            "quote_vehicle_full_repair", "select_vehicle_part_service",
+            "start_vehicle_full_repair", "npc_run_vehicle_eocs",
+            "u_run_vehicle_eocs",
+        }
+    },
+    # Location/map mutation and item/inventory workflows are intentionally
+    # fail-closed in migrate_lua_first.py until their handles are typed.
+    *{
+        ("eoc-effects", selector)
+        for selector in {
+            "copy_location", "location_variable_adjust", "mapgen_update",
+            "npc_location_variable", "npc_map_run_eocs", "npc_set_field",
+            "reveal_map", "revert_location", "set_furniture", "set_terrain",
+            "u_location_variable", "u_map_run_eocs", "u_set_field",
+            "drop_stolen_item", "drop_weapon", "give_equipment",
+            "npc_consume_item", "npc_consume_item_sum", "npc_gets_item",
+            "npc_gets_item_to_use", "npc_map_run_item_eocs", "npc_pickup_items",
+            "npc_remove_item_with", "player_weapon_drop", "quote_npc_trade_item",
+            "set_item_category_spawn_rates", "u_buy_item", "u_consume_item",
+            "u_consume_item_sum", "u_map_run_item_eocs", "u_pickup_items",
+            "u_remove_item_with", "u_sell_item",
+        }
+    },
+    # Generic character/NPC orchestration has no typed Lua replacement yet.
+    *{
+        ("eoc-effects", selector)
+        for selector in {
+            "clear_npc_rule", "copy_npc_rules", "give_aid",
+            "npc_attack", "npc_bulk_donate", "npc_bulk_trade_accept",
+            "npc_cast_spell", "npc_change_class", "npc_change_faction",
+            "npc_choose_adjacent_highlight", "npc_die", "npc_emit",
+            "npc_explosion", "npc_first_topic", "npc_knockback",
+            "npc_level_spell_class", "npc_lose_category", "npc_lose_effect",
+            "npc_make_radio_representative", "npc_make_sound", "npc_prevent_death",
+            "npc_query_omt", "npc_query_tile", "npc_ranged_attack",
+            "npc_recalculate_enchantment_cache", "npc_roll_remainder",
+            "npc_rules_menu", "npc_run_fixed_zone_eocs", "npc_run_inv_eocs",
+            "npc_run_monster_eocs", "npc_run_npc_eocs", "npc_set_talker",
+            "npc_set_trait_purifiability", "npc_spawn_monster", "npc_spawn_npc",
+            "npc_thankful", "npc_transform_radius", "set_npc_aim_rule",
+            "set_npc_cbm_recharge_rule", "set_npc_cbm_reserve_rule",
+            "set_npc_engagement_rule", "set_npc_pickup", "set_npc_rule",
+            "start_training_npc", "toggle_npc_rule", "u_attack",
+            "u_bulk_donate", "u_bulk_trade_accept", "u_buy_monster",
+            "u_cast_spell", "u_choose_adjacent_highlight", "u_die", "u_emit",
+            "u_explosion", "u_faction_rep", "u_knockback", "u_level_spell_class",
+            "u_lose_category", "u_make_radio_representative", "u_make_sound",
+            "u_query_omt",
+            "u_query_tile", "u_ranged_attack", "u_recalculate_enchantment_cache",
+            "u_roll_remainder", "u_run_fixed_zone_eocs", "u_run_inv_eocs",
+            "u_run_monster_eocs", "u_run_npc_eocs", "u_set_talker",
+            "u_set_trait_purifiability", "u_spawn_monster", "u_spawn_npc",
+            "u_spend_cash", "u_transform_radius",
+        }
+    },
+    # Navigation, item activation/fault mutation, and dimension travel are
+    # named workflows, not generic character calls.
+    *{
+        ("eoc-effects", selector)
+        for selector in {
+            "goto_location", "u_set_goal", "npc_set_goal", "u_set_guard_pos",
+            "npc_set_guard_pos",
+            "transform_item",
+        }
+    },
+    # Condition selectors with no corresponding typed query.  Constant or
+    # snapshot-backed predicates elsewhere in this file remain bounded.
+    *{
+        ("eoc-conditions", selector)
+        for selector in {
+            "npc_allies", "npc_allies_global",
+            "npc_has_software", "npc_has_visible_trait", "npc_has_worn_with_flag",
+            "npc_query", "npc_role_nearby",
+            "npc_see_u", "npc_see_u_loc", "npc_service",
+            "u_has_software",
+            "u_has_visible_trait", "u_has_worn_with_flag",
+            "u_monsters_in_direction", "u_query", "u_see_npc", "u_see_npc_loc",
+            "u_service", "npc_at_om_location", "npc_can_see_location",
+            "npc_near_om_location", "overmap_at_point", "u_at_om_location",
+            "u_can_see_location", "u_near_om_location", "has_ammo", "is_rotten",
+            "npc_has_item_category", "npc_has_item_with_flag", "npc_has_items",
+            "npc_has_items_sum", "npc_has_wielded_with_ammotype",
+            "npc_has_wielded_with_skill", "npc_has_wielded_with_weapon_category",
+            "u_has_item_category", "u_has_item_with_flag", "u_has_items",
+            "u_has_items_sum", "u_has_wielded_with_ammotype",
+            "u_has_wielded_with_skill", "u_has_wielded_with_weapon_category",
+        }
+    },
+}
+
 BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
+    ("eoc-effects", "alter_timed_events"): [
+        "src/timed_event.cpp", "src/catalua_ui_time.cpp",
+    ],
+    ("eoc-effects", "dimension_name"): [
+        "src/npctalk.cpp", "src/catalua_platform_runtime.cpp",
+    ],
+    ("eoc-effects", "mirror_coordinates"): [
+        "src/npctalk.cpp", "src/catalua_bindings_values.cpp",
+    ],
+    ("eoc-effects", "closest_city"): [
+        "src/npctalk.cpp", "src/overmapbuffer.cpp",
+        "src/catalua_ui_overmap.cpp",
+    ],
+    ("eoc-effects", "transform_line"): [
+        "src/npctalk.cpp", "src/map.cpp", "src/catalua_ui_world.cpp",
+    ],
+    ("eoc-effects", "npc_teleport"): [
+        "src/npctalk.cpp", "src/catalua_ui_world_services.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "u_teleport"): [
+        "src/npctalk.cpp", "src/catalua_ui_world_services.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-conditions", "line_of_sight"): ["src/condition.cpp"],
+    ("eoc-conditions", "u_is_alive"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "npc_is_alive"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "u_is_underwater"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "npc_is_underwater"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "u_has_part_temp"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "npc_has_part_temp"): [
+        "src/condition.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-conditions", "u_has_faction_trust"): [
+        "src/condition.cpp",
+        "src/catalua_ui_factions.cpp",
+    ],
+    ("eoc-conditions", "u_has_effect"): [
+        "src/condition.cpp",
+        "src/catalua_ui_effects.cpp",
+    ],
+    ("eoc-conditions", "u_has_any_effect"): [
+        "src/condition.cpp",
+        "src/catalua_ui_effects.cpp",
+    ],
+    ("eoc-conditions", "npc_has_effect"): [
+        "src/condition.cpp",
+        "src/catalua_ui_effects.cpp",
+    ],
+    ("eoc-conditions", "npc_has_any_effect"): [
+        "src/condition.cpp",
+        "src/catalua_ui_effects.cpp",
+    ],
+    ("eoc-conditions", "expects_vars"): [
+        "src/condition.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+    ],
+    ("eoc-conditions", "math"): [
+        "src/condition.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+    ],
+    ("eoc-effects", "npc_add_wound"): [
+        "src/npctalk.cpp",
+        "src/bodypart.cpp",
+        "src/wound.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+        "tests/catalua_ui_test.cpp",
+    ],
+    ("eoc-effects", "npc_remove_wound"): [
+        "src/npctalk.cpp",
+        "src/bodypart.cpp",
+        "src/wound.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+        "tests/catalua_ui_test.cpp",
+    ],
+    ("eoc-effects", "u_add_wound"): [
+        "src/npctalk.cpp",
+        "src/bodypart.cpp",
+        "src/wound.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+        "tests/catalua_ui_test.cpp",
+    ],
+    ("eoc-effects", "u_remove_wound"): [
+        "src/npctalk.cpp",
+        "src/bodypart.cpp",
+        "src/wound.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+        "tests/catalua_ui_test.cpp",
+    ],
+    ("eoc-effects", "npc_add_var"): [
+        "src/catalua_ui_eocs.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+    ],
+    ("eoc-effects", "u_add_var"): [
+        "src/catalua_ui_eocs.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+    ],
+    ("eoc-effects", "math"): [
+        "src/catalua_ui_eocs.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+    ],
+    ("eoc-effects", "copy_var"): [
+        "src/catalua_ui_eocs.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+    ],
+    ("eoc-effects", "set_string_var"): [
+        "src/catalua_ui_eocs.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+    ],
+    ("eoc-effects", "npc_deal_damage"): [
+        "src/npctalk.cpp",
+        "src/creature.cpp",
+        "src/character_health.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+        "tests/catalua_ui_test.cpp",
+    ],
+    ("eoc-effects", "u_deal_damage"): [
+        "src/npctalk.cpp",
+        "src/creature.cpp",
+        "src/character_health.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+        "tests/catalua_ui_test.cpp",
+    ],
     ("eoc-effects", "assign_mission"): [
         "src/npctalk.cpp",
     ],
     ("eoc-effects", "npc_set_fac_relation"): [
-        "src/catalua_ui_factions.cpp",
+        "src/npctalk.cpp",
+        "src/talker_character.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+        "tests/catalua_ui_test.cpp",
     ],
     ("eoc-effects", "u_add_faction_trust"): [
-        "src/catalua_ui_factions.cpp",
+        "src/npctalk.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+        "tests/catalua_ui_test.cpp",
     ],
     ("eoc-effects", "u_set_fac_relation"): [
         "src/catalua_ui_factions.cpp",
@@ -2948,6 +3297,26 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
     ],
     ("eoc-effects", "u_unset_flag"): [
         "src/catalua_ui_items.cpp",
+    ],
+    ("eoc-effects", "set_browsed"): [
+        "src/npctalk.cpp",
+        "src/catalua_ui_items.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "transform_item"): [
+        "src/npctalk.cpp",
+        "src/catalua_ui_items.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "npc_prevent_death"): [
+        "src/npc.cpp",
+        "src/catalua_ui.cpp",
+        "src/catalua_ui_callbacks.cpp",
+    ],
+    ("eoc-effects", "u_prevent_death"): [
+        "src/game.cpp",
+        "src/catalua_ui.cpp",
+        "src/catalua_ui_callbacks.cpp",
     ],
     ("eoc-conditions", "u_has_cash"): [
         "src/condition.cpp",
@@ -3717,11 +4086,47 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/catalua_ui_mutations.cpp",
         "data/lua/types/ccb_api_v5.d.lua",
     ],
+    ("eoc-effects", "npc_mutate"): [
+        "src/npctalk.cpp",
+        "src/mutation.cpp",
+        "src/catalua_ui_mutations.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "npc_mutate_category"): [
+        "src/npctalk.cpp",
+        "src/mutation.cpp",
+        "src/catalua_ui_mutations.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "npc_mutate_towards"): [
+        "src/npctalk.cpp",
+        "src/mutation.cpp",
+        "src/catalua_ui_mutations.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "u_mutate"): [
+        "src/npctalk.cpp",
+        "src/mutation.cpp",
+        "src/catalua_ui_mutations.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "u_mutate_category"): [
+        "src/npctalk.cpp",
+        "src/mutation.cpp",
+        "src/catalua_ui_mutations.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "u_mutate_towards"): [
+        "src/npctalk.cpp",
+        "src/mutation.cpp",
+        "src/catalua_ui_mutations.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
 }
 
 EXPLICIT_PRIMITIVE_EOC = {
+    ("eoc-effects", "add_debt"): "services.npcs",
     ("eoc-conditions", "is_rotten"): "services.items",
-    ("eoc-conditions", "line_of_sight"): "services.gameplay.environment",
     ("eoc-conditions", "npc_can_drop_weapon"): (
         "services.inventory-and-martial-arts"
     ),
@@ -3734,56 +4139,31 @@ EXPLICIT_PRIMITIVE_EOC = {
     ("eoc-conditions", "npc_has_wielded_with_flag"): (
         "services.inventory-and-items"
     ),
-    ("eoc-effects", "closest_city"): "services.overmap",
     ("eoc-effects", "assign_mission"): "services.missions-and-dialogue",
-    ("eoc-effects", "dimension_name"): "services.gameplay.environment",
     ("eoc-effects", "give_aid"): "services.characters-and-effects",
     ("eoc-effects", "give_equipment"): "services.inventory-and-presentation",
-    ("eoc-effects", "mirror_coordinates"): "services.coords",
-    ("eoc-effects", "npc_add_wound"): "services.wounds",
     ("eoc-effects", "npc_assign_activity"): "services.activities",
-    ("eoc-effects", "npc_remove_wound"): "services.wounds",
-    ("eoc-effects", "npc_set_fac_relation"): "services.factions",
-    ("eoc-effects", "sample_range"): "services.random",
-    ("eoc-effects", "u_add_faction_trust"): "services.factions",
-    ("eoc-effects", "u_add_wound"): "services.wounds",
     ("eoc-effects", "u_assign_activity"): "services.activities",
-    ("eoc-effects", "u_remove_wound"): "services.wounds",
     ("eoc-effects", "u_set_flag"): "services.items",
-    ("eoc-effects", "u_set_fac_relation"): "services.factions",
     ("eoc-effects", "u_unset_flag"): "services.items",
+    ("eoc-effects", "u_set_goal"): "services.npcs",
+    ("eoc-effects", "npc_set_goal"): "services.npcs",
+    ("eoc-effects", "u_set_guard_pos"): "services.npcs",
+    ("eoc-effects", "npc_set_guard_pos"): "services.npcs",
 }
 
 EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
+    ("eoc-effects", "add_debt"): [
+        "src/npctalk.cpp",
+        "src/talker_npc.cpp",
+        "src/catalua_ui_npcs.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
     ("eoc-effects", "npc_add_wet"): [
         "src/npctalk.cpp",
         "src/weather.cpp",
         "src/catalua_ui_creatures.cpp",
         "data/lua/types/ccb_api_v5.d.lua",
-    ],
-    ("eoc-effects", "npc_add_wound"): [
-        "src/npctalk.cpp",
-        "src/catalua_platform_runtime.cpp",
-        "data/lua/types/ccb_platform_v1.d.lua",
-        "tests/catalua_ui_test.cpp",
-    ],
-    ("eoc-effects", "npc_remove_wound"): [
-        "src/npctalk.cpp",
-        "src/catalua_platform_runtime.cpp",
-        "data/lua/types/ccb_platform_v1.d.lua",
-        "tests/catalua_ui_test.cpp",
-    ],
-    ("eoc-effects", "u_add_wound"): [
-        "src/npctalk.cpp",
-        "src/catalua_platform_runtime.cpp",
-        "data/lua/types/ccb_platform_v1.d.lua",
-        "tests/catalua_ui_test.cpp",
-    ],
-    ("eoc-effects", "u_remove_wound"): [
-        "src/npctalk.cpp",
-        "src/catalua_platform_runtime.cpp",
-        "data/lua/types/ccb_platform_v1.d.lua",
-        "tests/catalua_ui_test.cpp",
     ],
     ("eoc-effects", "npc_assign_activity"): [
         "src/npctalk.cpp",
@@ -3794,6 +4174,30 @@ EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
         "src/npctalk.cpp",
         "src/catalua_platform_runtime.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
+    ],
+    ("eoc-effects", "u_set_goal"): [
+        "src/npctalk.cpp", "src/catalua_ui_npcs.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "npc_set_goal"): [
+        "src/npctalk.cpp", "src/catalua_ui_npcs.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "u_set_guard_pos"): [
+        "src/npctalk.cpp", "src/catalua_ui_npcs.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "npc_set_guard_pos"): [
+        "src/npctalk.cpp", "src/catalua_ui_npcs.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
     ],
     ("eoc-conditions", "at_safe_space"): [
         "src/condition.cpp",
@@ -3879,10 +4283,6 @@ EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
         "src/talker_character.cpp", "src/catalua_ui_items.cpp",
         "data/lua/types/ccb_api_v5.d.lua",
     ],
-    ("eoc-effects", "closest_city"): [
-        "src/catalua_ui_overmap.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
-    ],
     ("eoc-effects", "assign_mission"): [
         "src/npctalk.cpp", "src/catalua_ui_missions.cpp",
         "data/lua/types/ccb_api_v5.d.lua",
@@ -3915,6 +4315,37 @@ EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
         "src/catalua_ui_factions.cpp",
         "data/lua/types/ccb_api_v5.d.lua",
     ],
+    ("eoc-effects", "u_set_fac_relation"): [
+        "src/npctalk.cpp",
+        "src/talker_character.cpp",
+        "src/catalua_ui_creatures.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "lightning"): [
+        "src/npctalk.cpp",
+        "src/catalua_ui_weather.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "next_weather"): [
+        "src/npctalk.cpp",
+        "src/catalua_ui_weather.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "sample_range"): [
+        "src/npctalk.cpp",
+        "src/catalua_platform_runtime.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+    ],
+    ("eoc-effects", "npc_set_fault"): [
+        "src/npctalk.cpp",
+        "src/catalua_ui_items.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
+    ("eoc-effects", "npc_set_random_fault_of_type"): [
+        "src/npctalk.cpp",
+        "src/catalua_ui_items.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+    ],
     ("eoc-effects", "u_add_faction_trust"): [
         "src/npctalk.cpp",
         "src/talker_character.cpp",
@@ -3943,22 +4374,14 @@ EXPLICIT_PLANNED_EOC = {
     ("eoc-effects", "npc_activate"): "services.items-and-characters",
     ("eoc-effects", "npc_deal_damage"): "services.combat",
     ("eoc-effects", "npc_pick_bodypart"): "services.body-parts-and-wounds",
-    ("eoc-effects", "npc_set_goal"): "services.npc-navigation",
-    ("eoc-effects", "npc_set_guard_pos"): "services.npc-navigation",
     ("eoc-effects", "npc_set_fault"): "services.items",
     ("eoc-effects", "npc_set_random_fault_of_type"): "services.items",
-    ("eoc-effects", "set_browsed"): "services.items",
-    ("eoc-effects", "transform_item"): "services.items",
     ("eoc-effects", "u_activate"): "services.items-and-characters",
     ("eoc-effects", "u_deal_damage"): "services.combat",
     ("eoc-effects", "u_pick_bodypart"): "services.body-parts-and-wounds",
-    ("eoc-effects", "u_set_goal"): "services.npc-navigation",
-    ("eoc-effects", "u_set_guard_pos"): "services.npc-navigation",
     ("eoc-effects", "u_set_fault"): "services.items",
     ("eoc-effects", "u_set_random_fault_of_type"): "services.items",
-    ("eoc-effects", "npc_teleport"): "services.relocation",
     ("eoc-effects", "revert_activity"): "services.npc-work",
-    ("eoc-effects", "u_teleport"): "services.relocation",
     ("eoc-effects", "u_travel_to_dimension"): "workflows.dimension-travel",
 }
 
@@ -3979,44 +4402,6 @@ EXPLICIT_PLANNED_EOC_EXTRA_EVIDENCE = {
     ],
     ("eoc-effects", "npc_add_wet"): ["src/weather.cpp", "src/suffer.cpp"],
     ("eoc-effects", "u_add_wet"): ["src/weather.cpp", "src/suffer.cpp"],
-    ("eoc-effects", "npc_add_wound"): [
-        "src/npctalk.cpp",
-        "src/bodypart.cpp",
-        "src/wound.cpp",
-        "src/catalua_platform_runtime.cpp",
-        "data/lua/types/ccb_platform_v1.d.lua",
-        "data/lua/LUA_FIRST_PLATFORM.md",
-    ],
-    ("eoc-effects", "npc_remove_wound"): [
-        "src/npctalk.cpp",
-        "src/bodypart.cpp",
-        "src/wound.cpp",
-        "src/catalua_platform_runtime.cpp",
-        "data/lua/types/ccb_platform_v1.d.lua",
-        "data/lua/LUA_FIRST_PLATFORM.md",
-    ],
-    ("eoc-effects", "u_add_wound"): [
-        "src/npctalk.cpp",
-        "src/bodypart.cpp",
-        "src/wound.cpp",
-        "src/catalua_platform_runtime.cpp",
-        "data/lua/types/ccb_platform_v1.d.lua",
-        "data/lua/LUA_FIRST_PLATFORM.md",
-    ],
-    ("eoc-effects", "u_remove_wound"): [
-        "src/npctalk.cpp",
-        "src/bodypart.cpp",
-        "src/wound.cpp",
-        "src/catalua_platform_runtime.cpp",
-        "data/lua/types/ccb_platform_v1.d.lua",
-        "data/lua/LUA_FIRST_PLATFORM.md",
-    ],
-    ("eoc-effects", "npc_deal_damage"): [
-        "src/creature.cpp", "src/character_health.cpp",
-    ],
-    ("eoc-effects", "u_deal_damage"): [
-        "src/creature.cpp", "src/character_health.cpp",
-    ],
     ("eoc-effects", "npc_pick_bodypart"): [
         "src/bodypart.cpp", "src/npctalk.cpp",
     ],
@@ -4032,27 +4417,37 @@ EXPLICIT_PLANNED_EOC_EXTRA_EVIDENCE = {
     ("eoc-effects", "npc_set_random_fault_of_type"): [
         "src/npctalk.cpp", "src/catalua_ui_items.cpp",
     ],
+    ("eoc-effects", "u_pick_bodypart"): [
+        "src/npctalk.cpp", "src/catalua_ui_creatures.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
+    ],
+    ("eoc-effects", "npc_pick_bodypart"): [
+        "src/npctalk.cpp", "src/catalua_ui_creatures.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
+    ],
+    ("eoc-effects", "u_travel_to_dimension"): [
+        "src/npctalk.cpp", "src/game.cpp",
+        "src/catalua_ui_world_services.cpp",
+        "data/lua/types/ccb_api_v5.d.lua",
+        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
+    ],
+    ("eoc-effects", "u_activate"): [
+        "src/npctalk.cpp", "src/catalua_ui_items.cpp",
+        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
+    ("eoc-effects", "npc_activate"): [
+        "src/npctalk.cpp", "src/catalua_ui_items.cpp",
+        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
+    ],
     ("eoc-effects", "u_set_random_fault_of_type"): [
         "src/npctalk.cpp", "src/catalua_ui_items.cpp",
     ],
-    ("eoc-effects", "npc_set_goal"): ["src/npctalk.cpp"],
-    ("eoc-effects", "u_set_goal"): ["src/npctalk.cpp"],
-    ("eoc-effects", "npc_set_guard_pos"): ["src/npctalk.cpp"],
-    ("eoc-effects", "u_set_guard_pos"): ["src/npctalk.cpp"],
-    ("eoc-effects", "npc_teleport"): [
-        "src/npctalk.cpp", "src/catalua_ui_world_services.cpp",
-    ],
-    ("eoc-effects", "u_teleport"): [
-        "src/npctalk.cpp", "src/catalua_ui_world_services.cpp",
-    ],
     ("eoc-effects", "revert_activity"): ["src/npc.cpp"],
     ("eoc-effects", "u_travel_to_dimension"): ["src/npctalk.cpp"],
-    ("eoc-effects", "set_browsed"): [
-        "src/npctalk.cpp", "src/catalua_ui_items.cpp",
-    ],
-    ("eoc-effects", "transform_item"): [
-        "src/npctalk.cpp", "src/catalua_ui_items.cpp",
-    ],
 }
 
 
@@ -4162,7 +4557,10 @@ def disposition(inventory: str, selector: str, entry: dict) -> dict:
         }
 
     bounded_target = BOUNDED_IMPLEMENTED_EOC.get((inventory, selector))
-    if bounded_target:
+    if (
+        bounded_target and
+        (inventory, selector) not in RETIRED_BOUNDED_IMPLEMENTED_EOC
+    ):
         return {
             "inventory": inventory,
             "selector": selector,

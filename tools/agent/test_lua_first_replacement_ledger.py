@@ -4,6 +4,7 @@ from check_lua_first_replacement_ledger import check
 from generate_lua_first_replacement_ledger import (
     OUTPUT,
     PLANNED_JSON,
+    RETIRED_BOUNDED_IMPLEMENTED_EOC,
     build_ledger,
     render,
 )
@@ -19,8 +20,8 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 "implemented_verified": 67,
                 "implemented_unverified": 0,
                 "bounded_implemented_verified": 14,
-                "bounded_implemented_unverified": 643,
-                "primitive_available_unverified": 4,
+                "bounded_implemented_unverified": 468,
+                "primitive_available_unverified": 179,
                 "planned": 29,
                 "private_adapter": 0,
                 "reviewed_not_applicable": 18,
@@ -364,11 +365,14 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
         )
         self.assertEqual(cancelled_activity["target"], "services.activities")
 
-        for selector in {"u_add_wound", "u_remove_wound"}:
+        for selector in {
+            "u_add_wound", "u_remove_wound",
+            "npc_add_wound", "npc_remove_wound",
+        }:
             wound_effect = entries[("eoc-effects", selector)]
             self.assertEqual(
                 wound_effect["status"],
-                "primitive_available_unverified",
+                "bounded_implemented_unverified",
             )
             self.assertEqual(wound_effect["target"], "services.wounds")
             self.assertEqual(
@@ -379,21 +383,26 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 "src/catalua_platform_runtime.cpp", wound_effect["evidence"]
             )
 
-        for selector in {
-            "npc_set_fac_relation",
-            "u_add_faction_trust",
-            "u_set_fac_relation",
-        }:
+        for selector in {"npc_set_fac_relation", "u_add_faction_trust"}:
             faction_effect = entries[("eoc-effects", selector)]
             self.assertEqual(
                 faction_effect["status"],
                 "bounded_implemented_unverified",
             )
-            self.assertEqual(faction_effect["target"], "services.factions")
+            self.assertEqual(faction_effect["target"], "services.characters")
             self.assertIn(
-                "src/catalua_ui_factions.cpp",
+                "src/catalua_ui_creatures.cpp",
                 faction_effect["evidence"],
             )
+
+        faction_effect = entries[("eoc-effects", "u_set_fac_relation")]
+        self.assertEqual(
+            faction_effect["status"], "bounded_implemented_unverified"
+        )
+        self.assertEqual(faction_effect["target"], "services.characters")
+        self.assertIn(
+            "src/catalua_ui_factions.cpp", faction_effect["evidence"]
+        )
 
         for selector, target in {
             "npc_add_wound": "services.wounds",
@@ -401,7 +410,7 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
         }.items():
             wound_effect = entries[("eoc-effects", selector)]
             self.assertEqual(
-                wound_effect["status"], "primitive_available_unverified"
+                wound_effect["status"], "bounded_implemented_unverified"
             )
             self.assertEqual(wound_effect["target"], target)
 
@@ -1121,7 +1130,7 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 "eoc-effects",
                 "set_browsed",
                 "bounded_implemented_unverified",
-                "services.dialogue",
+                "services.items",
             ),
             (
                 "eoc-effects",
@@ -1553,55 +1562,55 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 "eoc-effects",
                 "math",
                 "bounded_implemented_unverified",
-                "services.state-and-values",
+                "services.variables",
             ),
             (
                 "eoc-effects",
                 "copy_var",
                 "bounded_implemented_unverified",
-                "services.state-and-values",
+                "services.variables",
             ),
             (
                 "eoc-effects",
                 "add_debt",
-                "bounded_implemented_unverified",
-                "services.state-and-values",
+                "primitive_available_unverified",
+                "services.npcs",
             ),
             (
                 "eoc-effects",
                 "set_string_var",
                 "bounded_implemented_unverified",
-                "services.state-and-values",
+                "services.variables",
             ),
             (
                 "eoc-conditions",
                 "expects_vars",
                 "bounded_implemented_unverified",
-                "services.state-and-values",
+                "services.lua-context",
             ),
             (
                 "eoc-conditions",
                 "math",
                 "bounded_implemented_unverified",
-                "services.state-and-values",
+                "native-lua-expression",
             ),
             (
                 "eoc-effects",
                 "alter_timed_events",
                 "bounded_implemented_unverified",
-                "services.time-weather",
+                "services.time",
             ),
             (
                 "eoc-effects",
                 "lightning",
                 "bounded_implemented_unverified",
-                "services.time-weather",
+                "services.weather",
             ),
             (
                 "eoc-effects",
                 "next_weather",
                 "bounded_implemented_unverified",
-                "services.time-weather",
+                "services.weather",
             ),
             (
                 "eoc-effects",
@@ -1625,19 +1634,19 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 "eoc-effects",
                 "u_add_faction_trust",
                 "bounded_implemented_unverified",
-                "services.factions",
+                "services.characters",
             ),
             (
                 "eoc-effects",
                 "u_set_fac_relation",
                 "bounded_implemented_unverified",
-                "services.factions",
+                "services.characters",
             ),
             (
                 "eoc-effects",
                 "npc_set_fac_relation",
                 "bounded_implemented_unverified",
-                "services.factions",
+                "services.characters",
             ),
             (
                 "eoc-conditions",
@@ -2198,37 +2207,39 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 "services.items",
             ),
         }:
+            if (inventory, selector) in RETIRED_BOUNDED_IMPLEMENTED_EOC:
+                continue
             if (
                 inventory == "json-object-types" and
                 selector in PLANNED_JSON
-            ) or (
-                inventory == "eoc-effects" and
-                selector == "transform_item"
             ):
                 continue
             predicate_entry = entries[(inventory, selector)]
-            self.assertEqual(predicate_entry["status"], status)
+            self.assertEqual(
+                predicate_entry["status"], status,
+                f"unexpected status for {inventory}/{selector}",
+            )
             self.assertEqual(predicate_entry["target"], target)
 
         for selector, status, target in {
             (
                 "u_add_wound",
-                "primitive_available_unverified",
+                "bounded_implemented_unverified",
                 "services.wounds",
             ),
             (
                 "npc_add_wound",
-                "primitive_available_unverified",
+                "bounded_implemented_unverified",
                 "services.wounds",
             ),
             (
                 "u_remove_wound",
-                "primitive_available_unverified",
+                "bounded_implemented_unverified",
                 "services.wounds",
             ),
             (
                 "npc_remove_wound",
-                "primitive_available_unverified",
+                "bounded_implemented_unverified",
                 "services.wounds",
             ),
         }:
@@ -2257,7 +2268,51 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 )
             )
 
-    def test_missing_native_registrars_and_item_transform_are_planned(self):
+    def test_retired_bounded_selectors_are_not_reported_as_parity(self):
+        generated = build_ledger()
+        entries = {
+            (entry["inventory"], entry["selector"]): entry
+            for entry in generated["entries"]
+        }
+        for key in RETIRED_BOUNDED_IMPLEMENTED_EOC:
+            entry = entries.get(key)
+            if entry is None:
+                continue
+            self.assertNotIn(
+                entry["status"],
+                {"bounded_implemented_verified", "bounded_implemented_unverified"},
+                key,
+            )
+            if entry["status"] == "planned":
+                self.assertEqual(entry["legacy_dependency"], "public_legacy")
+            else:
+                self.assertEqual(
+                    entry["status"], "primitive_available_unverified", key
+                )
+                self.assertEqual(entry["legacy_dependency"], "none")
+
+    def test_effect_and_faction_predicates_have_typed_bounded_evidence(self):
+        generated = build_ledger()
+        entries = {
+            (entry["inventory"], entry["selector"]): entry
+            for entry in generated["entries"]
+        }
+        for selector in {
+            "u_has_effect", "u_has_any_effect",
+            "npc_has_effect", "npc_has_any_effect",
+        }:
+            entry = entries[("eoc-conditions", selector)]
+            self.assertEqual(entry["status"], "bounded_implemented_unverified")
+            self.assertEqual(entry["target"], "services.characters")
+            self.assertIn("src/catalua_ui_effects.cpp", entry["evidence"])
+            self.assertIn("src/condition.cpp", entry["evidence"])
+
+        trust = entries[("eoc-conditions", "u_has_faction_trust")]
+        self.assertEqual(trust["status"], "bounded_implemented_unverified")
+        self.assertEqual(trust["target"], "services.characters")
+        self.assertIn("src/catalua_ui_factions.cpp", trust["evidence"])
+
+    def test_missing_native_registrars_are_planned(self):
         expected_content = {
             "jmath_function", "event_statistic", "event_transformation",
             "widget", "palette", "ter_furn_transform",
@@ -2283,8 +2338,9 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
             self.assertEqual(entry["legacy_dependency"], "public_legacy")
 
         transform = entries[("eoc-effects", "transform_item")]
-        self.assertEqual(transform["status"], "planned")
-        self.assertEqual(transform["legacy_dependency"], "public_legacy")
+        self.assertEqual(
+            transform["status"], "primitive_available_unverified")
+        self.assertEqual(transform["legacy_dependency"], "none")
 
 
 
