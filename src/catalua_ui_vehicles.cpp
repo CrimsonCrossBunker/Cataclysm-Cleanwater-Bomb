@@ -47,6 +47,7 @@ constexpr int maximum_part_limit = 256;
 constexpr int maximum_part_offset = 1000000;
 constexpr std::size_t maximum_fuel_entries = 128;
 constexpr std::size_t maximum_vehicle_name_bytes = 256;
+constexpr std::size_t maximum_vehicle_part_flag_bytes = 128;
 constexpr int maximum_requested_velocity = 1000000;
 constexpr int minimum_spawn_fuel = -1;
 constexpr int maximum_spawn_fuel = 100;
@@ -422,6 +423,15 @@ sol::table snapshot_live_vehicle(
     result["parts"] = entry.part_count();
     result["real_parts"] =
         entry.part_count_real();
+    result["unloaded_mass"] =
+        script_unit_value::from_canonical_integer(
+            "mass", "milligram",
+            units::to_milligram(
+                entry.unloaded_mass() ) );
+    result["friendly_passengers"] =
+        entry.get_passenger_count( false );
+    result["hostile_passengers"] =
+        entry.get_passenger_count( true );
     if( entry.owner.is_null() ) {
         result["owner"] = sol::nil;
     } else {
@@ -469,6 +479,24 @@ sol::table snapshot_live_vehicle(
     state["precollision_on"] =
         entry.precollision_on;
     state["falling"] = entry.is_falling;
+    state["driven"] =
+        entry.player_in_control( here, get_avatar() );
+    state["remote_controlled"] =
+        entry.remote_controlled( get_avatar() );
+    state["driver_present"] =
+        entry.has_driver( here );
+    state["avatar_passenger"] =
+        entry.is_passenger( get_player_character() );
+    state["watercraft"] =
+        entry.is_watercraft();
+    state["can_float"] =
+        entry.can_float( here );
+    state["floating"] =
+        entry.is_watercraft() && entry.can_float( here );
+    state["sinking"] =
+        entry.is_in_water( true ) && !entry.can_float( here );
+    state["on_rails"] =
+        entry.can_use_rails( here );
     result["state"] = std::move( state );
     return result;
 }
@@ -1214,6 +1242,34 @@ sol::table set_vehicle_owner(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table vehicle_has_part_flag(
+    sol::this_state lua, const game_handle &handle,
+    const std::string &flag, const bool enabled,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    if( flag.empty() ||
+        flag.size() > maximum_vehicle_part_flag_bytes ||
+        std::any_of( flag.begin(), flag.end(),
+    []( const unsigned char ch ) {
+        return ch < 0x20U || ch == 0x7fU;
+    } ) ) {
+        throw std::invalid_argument(
+            "game.vehicles.has_part_flag requires 1 to 128 non-control bytes" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    const vehicle *entry = resolve_vehicle(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, entry->has_part( flag, enabled ) ) );
+}
+
 void mark_vehicle_for_service( vehicle &target, const double repair_multiplier,
                                const double install_multiplier )
 {
@@ -1505,6 +1561,19 @@ void install_vehicle_api(
         require_read();
         return is_player_controlling_vehicle(
                    lua_state, handle, current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    vehicles_api.set_function(
+        "has_part_flag",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle &handle,
+            const std::string &flag,
+    const sol::optional<bool> &enabled ) {
+        require_read();
+        return vehicle_has_part_flag(
+                   lua_state, handle, flag,
+                   enabled.value_or( false ),
+                   current_runtime_generation(),
                    current_world_generation() );
     } );
     vehicles_api.set_function(
