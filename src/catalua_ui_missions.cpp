@@ -946,6 +946,38 @@ sol::table assign_instance(
                sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table set_instance_deadline(
+    sol::this_state lua, const mission_token &token,
+    const sol::optional<script_time_point> &deadline,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    mission *entry = resolve_mission(
+                         token, runtime_generation,
+                         world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    sol::table before = snapshot_instance(
+                            state, *entry,
+                            runtime_generation,
+                            world_generation );
+    entry->set_deadline(
+        deadline ? deadline->to_native() : calendar::turn_zero );
+    sol::table value = state.create_table();
+    value["before"] = std::move( before );
+    value["after"] = snapshot_instance(
+                         state, *entry,
+                         runtime_generation,
+                         world_generation );
+    value["cleared"] = !deadline.has_value();
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
 bool assigned_to_avatar( const mission &entry )
 {
     return entry.get_assigned_player_id() ==
@@ -1377,6 +1409,17 @@ void install_mission_api(
         require_write();
         return assign_instance(
                    lua_state, token,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    missions.set_function(
+        "set_deadline",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const mission_token & token,
+    const sol::optional<script_time_point> &deadline ) {
+        require_write();
+        return set_instance_deadline(
+                   lua_state, token, deadline,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
