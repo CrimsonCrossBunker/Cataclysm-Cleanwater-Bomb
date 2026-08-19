@@ -18,7 +18,8 @@ void install_npc_api(
     std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
-    std::function<void()> require_write );
+    std::function<void()> require_write,
+    std::function<void()> invalidate_handles );
 
 } // namespace cata::lua_ui
 
