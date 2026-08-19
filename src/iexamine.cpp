@@ -22,6 +22,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
+#include "catalua_platform_runtime.h"
 #include "catalua_ui.h"
 #include "character.h"
 #include "color.h"
@@ -3017,12 +3018,8 @@ void iexamine::harvest_plant( Character &you, const tripoint_bub_ms &examp, bool
                 { "seed_count", static_cast<double>( seedCount ) },
                 { "actor_is_npc", you.is_npc() ? 1.0 : 0.0 }
             };
-            if( fp ) {
-                run_plant_eocs( fp->eoc_on_harvest, you, here, examp, *seed, stage, stage, string_ctx,
-                                num_ctx );
-            }
-            run_plant_eocs( type.seed->eoc_on_harvest, you, here, examp, *seed, stage, stage, string_ctx,
-                            num_ctx );
+            run_plant_lifecycle_event(
+                "harvest", you, here, examp, *seed, stage, stage, string_ctx, num_ctx );
 
             player_activity act( ACT_HARVEST, to_moves<int>( 60_seconds ) );
             you.assign_activity( act );
@@ -3318,12 +3315,9 @@ void iexamine::water_plant( Character &you, const tripoint_bub_ms &examp )
     const int stage_idx = get_plant_current_stage_idx_from_effective( here, examp );
     const std::string stage = stage_idx >= 0 ?
                               seed->type->seed->get_growth_stages()[stage_idx].first.str() : "";
-    if( furn.plant ) {
-        run_plant_eocs( furn.plant->eoc_on_water, you, here, examp, *seed, stage, stage,
-        {}, { { "water_added", static_cast<double>( irrigation::WATER_PER_POUR ) } } );
-    }
-    run_plant_eocs( seed->type->seed->eoc_on_water, you, here, examp, *seed, stage, stage,
-    {}, { { "water_added", static_cast<double>( irrigation::WATER_PER_POUR ) } } );
+    run_plant_lifecycle_event(
+        "water", you, here, examp, *seed, stage, stage, {},
+    { { "water_added", static_cast<double>( irrigation::WATER_PER_POUR ) } } );
 
     you.add_msg_if_player( m_good, _( "You pour some water on the %s." ), seed->get_plant_name() );
 }
@@ -3600,6 +3594,67 @@ void iexamine::run_plant_eocs(
     for( const effect_on_condition_id &eoc : eocs ) {
         eoc->activate_activation_only( d, "a plant lifecycle event", "plant event", "plant" );
     }
+}
+
+void iexamine::run_plant_lifecycle_event(
+    const std::string_view phase,
+    Character &alpha,
+    map &here,
+    const tripoint_bub_ms &plant_pos,
+    const item &seed,
+    const std::string &old_stage,
+    const std::string &new_stage,
+    const std::map<std::string, std::string> &string_context,
+    const std::map<std::string, double> &num_context )
+{
+    const auto select_eocs = [phase]( const auto &source ) ->
+    const std::vector<effect_on_condition_id> * {
+        if( phase == "plant" ) {
+            return &source.eoc_on_plant;
+        }
+        if( phase == "grow" ) {
+            return &source.eoc_on_grow;
+        }
+        if( phase == "mature" ) {
+            return &source.eoc_on_mature;
+        }
+        if( phase == "overgrow" ) {
+            return &source.eoc_on_overgrow;
+        }
+        if( phase == "harvest" ) {
+            return &source.eoc_on_harvest;
+        }
+        if( phase == "fertilize" ) {
+            return &source.eoc_on_fertilize;
+        }
+        if( phase == "water" ) {
+            return &source.eoc_on_water;
+        }
+        return nullptr;
+    };
+    if( !seed.type->seed ) {
+        debugmsg( "plant lifecycle event '%s' has no seed data", phase );
+        return;
+    }
+    const std::vector<effect_on_condition_id> *seed_eocs =
+        select_eocs( *seed.type->seed );
+    if( seed_eocs == nullptr ) {
+        debugmsg( "unknown plant lifecycle phase '%s'", phase );
+        return;
+    }
+    const std::string seed_id = seed.typeId().str();
+    const int effective_growth_turns = get_plant_effective_growth_turns( seed );
+    const int water = get_plant_water( seed );
+    const furn_t &furniture = here.furn( plant_pos ).obj();
+    if( furniture.plant ) {
+        run_plant_eocs( *select_eocs( *furniture.plant ), alpha, here, plant_pos,
+                        seed, old_stage, new_stage, string_context, num_context );
+    }
+    run_plant_eocs( *seed_eocs, alpha, here, plant_pos, seed,
+                    old_stage, new_stage, string_context, num_context );
+    cata::lua_platform::invoke_plant_lifecycle_handlers(
+        phase, alpha, here, plant_pos, seed_id, old_stage, new_stage,
+        effective_growth_turns, water, string_context, num_context );
 }
 
 static void add_firestarter( item *it, std::multimap<int, item *> &firestarters, Character &you,
