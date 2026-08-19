@@ -13,7 +13,10 @@
 #include <vector>
 
 #include "bionics.h"
+#include "bodypart.h"
 #include "catalua_bindings_values.h"
+#include "enum_conversions.h"
+#include "flag.h"
 #include "item_factory.h"
 #include "itype.h"
 #include "mapdata.h"
@@ -41,8 +44,8 @@ constexpr std::size_t maximum_query_bytes = 128;
 const std::vector<std::string> &registry_kinds()
 {
     static const std::vector<std::string> kinds = {
-        "bionic", "furniture", "item", "monster",
-        "mutation", "recipe", "skill", "terrain"
+        "bionic", "body_part", "furniture", "item", "json_flag",
+        "monster", "mutation", "recipe", "skill", "terrain"
     };
     return kinds;
 }
@@ -52,6 +55,13 @@ const std::vector<std::string> &snapshot_fields( const std::string_view kind )
     static const std::vector<std::string> bionic = {
         "activated", "description", "duplicates_allowed", "included", "name"
     };
+    static const std::vector<std::string> body_part = {
+        "base_hp", "bionic_slots", "connected_to", "drench_max",
+        "env_protection", "flags", "heal_bonus", "hit_difficulty",
+        "hit_size", "is_limb", "is_vital", "legacy_id", "main_part",
+        "mend_rate", "name", "name_multiple", "opposite_part", "side",
+        "sub_parts", "techniques"
+    };
     static const std::vector<std::string> furniture = {
         "coverage", "description", "flags", "movable", "move_cost", "name",
         "transparent"
@@ -60,9 +70,13 @@ const std::vector<std::string> &snapshot_fields( const std::string_view kind )
         "count_by_charges", "description", "flags", "name", "stackable",
         "volume_ml", "weight_grams"
     };
+    static const std::vector<std::string> json_flag = {
+        "craft_inherit", "info", "inherit", "item_prefix", "item_suffix",
+        "name", "requires_flag", "restriction", "taste_mod"
+    };
     static const std::vector<std::string> monster = {
-        "description", "difficulty", "hp", "name", "speed", "volume_ml",
-        "weight_grams"
+        "default_faction", "description", "difficulty", "hp", "name",
+        "speed", "volume_ml", "weight_grams"
     };
     static const std::vector<std::string> mutation = {
         "activated", "description", "name", "points", "purifiable",
@@ -83,11 +97,17 @@ const std::vector<std::string> &snapshot_fields( const std::string_view kind )
     if( kind == "bionic" ) {
         return bionic;
     }
+    if( kind == "body_part" ) {
+        return body_part;
+    }
     if( kind == "furniture" ) {
         return furniture;
     }
     if( kind == "item" ) {
         return item;
+    }
+    if( kind == "json_flag" ) {
+        return json_flag;
     }
     if( kind == "monster" ) {
         return monster;
@@ -198,6 +218,9 @@ sol::table monster_snapshot( sol::state_view lua, const mtype &definition )
     result["name"] = definition.nname();
     result["description"] = definition.get_description();
     result["difficulty"] = definition.get_total_difficulty();
+    result["default_faction"] = script_game_id(
+                                    "monster_faction",
+                                    definition.default_faction.str() );
     result["hp"] = definition.hp;
     result["speed"] = definition.speed;
     result["weight_grams"] = units::to_gram( definition.weight );
@@ -281,6 +304,60 @@ sol::table bionic_snapshot( sol::state_view lua, const bionic_data &definition )
     result["activated"] = definition.activated;
     result["included"] = definition.included;
     result["duplicates_allowed"] = definition.dupes_allowed;
+    return result;
+}
+
+sol::table body_part_snapshot( sol::state_view lua, const body_part_type &definition )
+{
+    sol::table result = lua.create_table();
+    result["kind"] = "body_part";
+    result["id"] = definition.id.str();
+    result["name"] = definition.name.translated();
+    result["name_multiple"] = definition.name_multiple.translated();
+    result["legacy_id"] = definition.legacy_id;
+    result["main_part"] = script_game_id( "body_part", definition.main_part.str() );
+    result["connected_to"] = script_game_id( "body_part", definition.connected_to.str() );
+    result["opposite_part"] = script_game_id( "body_part", definition.opposite_part.str() );
+    result["side"] = io::enum_to_string( definition.part_side );
+    result["hit_size"] = definition.hit_size;
+    result["hit_difficulty"] = definition.hit_difficulty;
+    result["base_hp"] = definition.base_hp;
+    result["env_protection"] = definition.env_protection;
+    result["heal_bonus"] = definition.heal_bonus;
+    result["mend_rate"] = definition.mend_rate;
+    result["drench_max"] = definition.drench_max;
+    result["bionic_slots"] = definition.bionic_slots();
+    result["is_vital"] = definition.is_vital;
+    result["is_limb"] = definition.is_limb;
+    result["flags"] = converted_array(
+    lua, definition.flags, []( const json_character_flag & flag ) {
+        return script_game_id( "json_flag", flag.str() );
+    } );
+    result["sub_parts"] = converted_array(
+    lua, definition.sub_parts, []( const sub_bodypart_str_id & part ) {
+        return script_game_id( "sub_body_part", part.str() );
+    } );
+    result["techniques"] = converted_array(
+    lua, definition.techniques, []( const matec_id & technique ) {
+        return script_game_id( "martial_art_technique", technique.str() );
+    } );
+    return result;
+}
+
+sol::table json_flag_snapshot( sol::state_view lua, const json_flag &definition )
+{
+    sol::table result = lua.create_table();
+    result["kind"] = "json_flag";
+    result["id"] = definition.id.str();
+    result["name"] = definition.name();
+    result["info"] = definition.info();
+    result["restriction"] = definition.restriction();
+    result["item_prefix"] = definition.item_prefix().translated();
+    result["item_suffix"] = definition.item_suffix().translated();
+    result["inherit"] = definition.inherit();
+    result["craft_inherit"] = definition.craft_inherit();
+    result["requires_flag"] = definition.requires_flag();
+    result["taste_mod"] = definition.taste_mod();
     return result;
 }
 
@@ -372,6 +449,24 @@ class script_registry_catalog
                 []( const bionic_data & entry ) {
                     return entry.name.translated();
                 } );
+            } else if( kind == "body_part" ) {
+                built = make_index(
+                            body_part_type::get_all(),
+                []( const body_part_type & entry ) {
+                    return entry.id.str();
+                },
+                []( const body_part_type & entry ) {
+                    return entry.name.translated();
+                } );
+            } else if( kind == "json_flag" ) {
+                built = make_index(
+                            json_flag::get_all(),
+                []( const json_flag & entry ) {
+                    return entry.id.str();
+                },
+                []( const json_flag & entry ) {
+                    return entry.name();
+                } );
             } else if( kind == "skill" ) {
                 built = make_index(
                             Skill::skills,
@@ -447,6 +542,16 @@ sol::object definition_snapshot( sol::state_view lua, const std::string &kind,
         const bionic_id definition_id( id );
         if( definition_id.is_valid() ) {
             return sol::make_object( lua, bionic_snapshot( lua, definition_id.obj() ) );
+        }
+    } else if( kind == "body_part" ) {
+        const bodypart_str_id definition_id( id );
+        if( definition_id.is_valid() ) {
+            return sol::make_object( lua, body_part_snapshot( lua, definition_id.obj() ) );
+        }
+    } else if( kind == "json_flag" ) {
+        const flag_id definition_id( id );
+        if( definition_id.is_valid() ) {
+            return sol::make_object( lua, json_flag_snapshot( lua, definition_id.obj() ) );
         }
     } else if( kind == "skill" ) {
         const skill_id definition_id( id );
