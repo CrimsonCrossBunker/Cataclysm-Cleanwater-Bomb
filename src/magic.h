@@ -420,6 +420,14 @@ class spell_type
         std::optional<int> get_max_book_level() const;
         // the base difficulty of the spell, unmodified by character specific spell adjustments
         int get_difficulty( const Creature &caster ) const;
+        void set_platform_energy_source(
+            std::optional<magic_energy_type> source,
+            std::optional<vitamin_id> vitamin = std::nullopt,
+            std::optional<nc_color> color = std::nullopt );
+        void set_platform_progression(
+            std::optional<jmath_func_id> get_level,
+            std::optional<jmath_func_id> exp_for_level,
+            std::optional<int> maximum_book_level );
     private:
         // default values
         static const skill_id skill_default;

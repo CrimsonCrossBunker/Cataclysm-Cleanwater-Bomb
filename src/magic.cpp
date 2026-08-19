@@ -15,6 +15,7 @@
 #include "calendar.h"
 #include "cata_imgui.h"
 #include "catalua_lua_call.h"
+#include "catalua_platform_content.h"
 #include "catalua_platform_runtime.h"
 #include "cata_utility.h"
 #include "catacharset.h"
@@ -292,6 +293,11 @@ namespace
 {
 generic_factory<spell_type> spell_factory( "spell" );
 } // namespace
+
+generic_factory<spell_type> &cata::lua_platform::detail::spell_registry()
+{
+    return spell_factory;
+}
 
 template<>
 const spell_type &string_id<spell_type>::obj() const
@@ -607,6 +613,25 @@ void spell_type::reset_all()
 bool spell_type::is_valid() const
 {
     return spell_factory.is_valid( this->id );
+}
+
+void spell_type::set_platform_energy_source(
+    const std::optional<magic_energy_type> source, const std::optional<vitamin_id> vitamin,
+    const std::optional<nc_color> color )
+{
+    energy_source = source;
+    vitamin_energy_source_ = vitamin;
+    energy_color_ = color;
+}
+
+void spell_type::set_platform_progression(
+    const std::optional<jmath_func_id> get_level,
+    const std::optional<jmath_func_id> exp_for_level,
+    const std::optional<int> maximum_book_level )
+{
+    get_level_formula_id = get_level;
+    exp_for_level_formula_id = exp_for_level;
+    max_book_level = maximum_book_level;
 }
 
 // spell
