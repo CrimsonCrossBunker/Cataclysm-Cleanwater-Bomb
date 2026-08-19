@@ -23,6 +23,7 @@
 #include "enum_conversions.h"
 #include "game.h"
 #include "point.h"
+#include "timed_event.h"
 #include "units.h"
 #include "weather.h"
 #include "weather_gen.h"
@@ -46,6 +47,9 @@ constexpr time_duration maximum_forecast_step = 24_hours;
 constexpr time_duration maximum_forecast_horizon = 14_days;
 constexpr int maximum_wind_speed_mph = 300;
 constexpr double maximum_temperature_kelvin = 1000.0;
+constexpr int maximum_custom_light_level = 1000000;
+constexpr time_duration maximum_custom_light_duration = 10000_days;
+constexpr std::size_t maximum_custom_light_key_bytes = 256;
 
 std::string lowercase_ascii( std::string value )
 {
@@ -1191,6 +1195,76 @@ sol::table refresh_weather(
                lua, get_weather() );
 }
 
+sol::table activate_lightning(
+    sol::this_state lua )
+{
+    require_active_game(
+        "game.weather.activate_lightning" );
+    weather_manager &weather =
+        get_weather();
+    // Preserve the legacy lightning EOC's altitude gate.  The effect only
+    // arms lightning for an above-ground player; it never clears a pending
+    // strike when the player is underground.
+    if( get_player_character().posz() >= 0 ) {
+        weather.lightning_active = true;
+    }
+    sol::state_view state( lua );
+    return make_game_value_result(
+               state,
+               sol::make_object(
+                   state,
+                   snapshot_current_weather(
+                       lua ) ) );
+}
+
+sol::table override_light(
+    sol::this_state lua, const int level,
+    const script_time_duration &requested_duration,
+    const sol::optional<std::string> &requested_key )
+{
+    constexpr std::string_view api_name =
+        "game.weather.override_light";
+    require_active_game( api_name );
+    if( level < 0 ||
+        level > maximum_custom_light_level ) {
+        throw std::invalid_argument(
+            "game.weather.override_light level must be within 0..1000000" );
+    }
+    const time_duration duration =
+        requested_duration.to_native();
+    if( duration < 0_turns ||
+        duration > maximum_custom_light_duration ) {
+        throw std::invalid_argument(
+            "game.weather.override_light duration must be within 0 turns..10000 days" );
+    }
+    const std::string key =
+        requested_key.value_or( std::string() );
+    if( key.size() >
+            maximum_custom_light_key_bytes ||
+        key.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument(
+            "game.weather.override_light key exceeds 256 bytes" );
+    }
+    const time_point expires_at =
+        calendar::turn + duration + 1_seconds;
+    get_timed_events().add(
+        timed_event_type::CUSTOM_LIGHT_LEVEL,
+        expires_at, -1, level, key );
+
+    sol::state_view state( lua );
+    sol::table value = state.create_table();
+    value["level"] = level;
+    value["duration"] = requested_duration;
+    value["expires_at"] =
+        script_time_point::from_native(
+            expires_at );
+    value["key"] = key;
+    value["accepted"] = true;
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 sol::table weather_limits(
     sol::this_state lua )
 {
@@ -1337,6 +1411,24 @@ void install_weather_api(
         require_write();
         return refresh_weather(
                    state );
+    } );
+    weather.set_function(
+        "activate_lightning",
+        [require_write](
+    sol::this_state state ) {
+        require_write();
+        return activate_lightning(
+                   state );
+    } );
+    weather.set_function(
+        "override_light",
+        [require_write](
+            sol::this_state state, const int level,
+            const script_time_duration &duration,
+            const sol::optional<std::string> &key ) {
+        require_write();
+        return override_light(
+                   state, level, duration, key );
     } );
     game["weather"] =
         std::move( weather );
