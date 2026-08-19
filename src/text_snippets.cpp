@@ -264,7 +264,43 @@ std::string snippet_library::expand( const std::string &str ) const
            + expand( str.substr( tag_end + 1 ) );
 }
 
+std::string snippet_library::expand( const std::string &str, const unsigned int seed ) const
+{
+    // Keep all recursive selections on the caller's stream instead of
+    // falling back to the process-wide gameplay RNG.
+    std::mt19937 generator( seed );
+    std::function<std::string( const std::string & )> expand_seeded;
+    expand_seeded = [this, &generator, &expand_seeded]( const std::string & value ) {
+        const size_t tag_begin = value.find( '<' );
+        if( tag_begin == std::string::npos ) {
+            return value;
+        }
+        const size_t tag_end = value.find( '>', tag_begin + 1 );
+        if( tag_end == std::string::npos ) {
+            return value;
+        }
+
+        const std::string symbol = value.substr( tag_begin, tag_end - tag_begin + 1 );
+        const std::optional<translation> replacement =
+            random_from_category( symbol, generator() );
+        if( !replacement ) {
+            return value.substr( 0, tag_end + 1 ) +
+                   expand_seeded( value.substr( tag_end + 1 ) );
+        }
+        return value.substr( 0, tag_begin ) +
+               expand_seeded( replacement->translated() ) +
+               expand_seeded( value.substr( tag_end + 1 ) );
+    };
+    return expand_seeded( str );
+}
+
 snippet_id snippet_library::random_id_from_category( const std::string &cat ) const
+{
+    return random_id_from_category( cat, rng_bits() );
+}
+
+snippet_id snippet_library::random_id_from_category( const std::string &cat,
+        const unsigned int seed ) const
 {
     const auto it = snippets_by_category.find( cat );
     if( it == snippets_by_category.end() ) {
@@ -283,7 +319,7 @@ snippet_id snippet_library::random_id_from_category( const std::string &cat ) co
     // so std::mt19937 is used instead. This engine is deterministically seeded,
     // so acceptable.
     // NOLINTNEXTLINE(cata-determinism)
-    std::mt19937 generator( rng_bits() );
+    std::mt19937 generator( seed );
     std::uniform_int_distribution<uint64_t> dis( 0, weight_sum - 1 );
     const auto sit = std::upper_bound(
                          it->second.ids.begin(), it->second.ids.end(), dis( generator ),

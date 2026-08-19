@@ -91,12 +91,21 @@ class snippet_library
          */
         std::string expand( const std::string &str ) const;
         /**
+         * Expand snippet tags using a caller-supplied random seed.  This is
+         * intended for runtimes which own an isolated random stream.
+         */
+        std::string expand( const std::string &str, unsigned int seed ) const;
+        /**
          * Returns the id of a random snippet out of the given category.
          * Snippets without an id will NOT be returned by this function.
          * If there isn't any snippet in the category, or if none of the snippets
          * in the category has an id, snippet_id::NULL_ID() is returned.
          */
         snippet_id random_id_from_category( const std::string &cat ) const;
+        /**
+         * Select an identified snippet using a caller-supplied random seed.
+         */
+        snippet_id random_id_from_category( const std::string &cat, unsigned int seed ) const;
         /**
          * Returns a random snippet out of the given category. Both snippets with
          * or without an id may be returned.
