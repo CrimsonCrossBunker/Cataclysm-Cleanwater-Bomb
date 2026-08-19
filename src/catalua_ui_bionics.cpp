@@ -41,6 +41,12 @@ constexpr std::size_t maximum_definition_offset = 1000000;
 constexpr std::int64_t maximum_power_millijoule =
     1000000000000000LL;
 
+const efftype_id effect_bite( "bite" );
+const efftype_id effect_bleed( "bleed" );
+const json_character_flag json_flag_BIONIC_LIMB( "BIONIC_LIMB" );
+const json_character_flag json_flag_PARTIAL_BIONIC_LIMB(
+    "PARTIAL_BIONIC_LIMB" );
+
 void require_id_kind( const script_game_id &id, const std::string &kind,
                       const std::string &api_name )
 {
@@ -924,6 +930,115 @@ sol::table configure_instance(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+bool is_bionic_limb( const bodypart_id &part )
+{
+    return part->has_flag( json_flag_BIONIC_LIMB ) ||
+           part->has_flag( json_flag_PARTIAL_BIONIC_LIMB );
+}
+
+sol::table bionic_limb_repair_state(
+    sol::state_view lua, Character &character, const bool apply )
+{
+    struct limb_repair {
+        bodypart_id part;
+        int before = 0;
+        int maximum = 0;
+        bool bite = false;
+        bool bleed = false;
+    };
+    std::vector<limb_repair> limbs;
+    int total_missing = 0;
+    for( const bodypart_id &part : character.get_all_body_parts(
+             get_body_part_flags::only_main ) ) {
+        if( !is_bionic_limb( part ) ) {
+            continue;
+        }
+        limb_repair entry;
+        entry.part = part;
+        entry.before = character.get_part_hp_cur( part );
+        entry.maximum = character.get_part_hp_max( part );
+        entry.bite = character.has_effect( effect_bite, part.id() );
+        entry.bleed = character.has_effect( effect_bleed, part.id() );
+        total_missing += std::max( 0, entry.maximum - entry.before );
+        limbs.push_back( entry );
+    }
+    const bool needed = total_missing > 0;
+    if( apply && needed ) {
+        for( const limb_repair &entry : limbs ) {
+            const int missing = std::max( 0, entry.maximum - entry.before );
+            if( missing > 0 ) {
+                character.heal( entry.part, missing );
+            }
+            if( entry.bite ) {
+                character.remove_effect( effect_bite, entry.part );
+            }
+            if( entry.bleed ) {
+                character.remove_effect( effect_bleed, entry.part );
+            }
+        }
+    }
+
+    sol::table items = lua.create_table(
+                           static_cast<int>( limbs.size() ), 0 );
+    for( std::size_t index = 0; index < limbs.size(); ++index ) {
+        const limb_repair &entry = limbs[index];
+        sol::table item = lua.create_table();
+        item["body_part"] = script_game_id(
+                                "body_part", entry.part.id().str() );
+        item["before"] = entry.before;
+        item["after"] = character.get_part_hp_cur( entry.part );
+        item["maximum"] = entry.maximum;
+        item["missing"] = std::max( 0, entry.maximum - entry.before );
+        item["had_bite"] = entry.bite;
+        item["had_bleed"] = entry.bleed;
+        items[index + 1] = std::move( item );
+    }
+    sol::table result = lua.create_table();
+    result["items"] = std::move( items );
+    result["limbs"] = limbs.size();
+    result["missing_hp"] = total_missing;
+    result["price"] = total_missing * 20;
+    result["needed"] = needed;
+    result["repaired"] = apply && needed;
+    return result;
+}
+
+sol::table quote_bionic_limb_repairs(
+    sol::this_state lua, const game_handle &handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, bionic_limb_repair_state( state, *character, false ) ) );
+}
+
+sol::table repair_bionic_limbs(
+    sol::this_state lua, const game_handle &handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, bionic_limb_repair_state( state, *character, true ) ) );
+}
+
 } // namespace
 
 void install_bionic_api(
@@ -1048,6 +1163,24 @@ void install_bionic_api(
                    lua_state, handle, uid, options,
                    current_runtime_generation(),
                    current_world_generation() );
+    } );
+    bionics.set_function(
+        "quote_limb_repairs",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle &handle ) {
+        require_read();
+        return quote_bionic_limb_repairs(
+                   lua_state, handle,
+                   current_runtime_generation(), current_world_generation() );
+    } );
+    bionics.set_function(
+        "repair_limbs",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle &handle ) {
+        require_write();
+        return repair_bionic_limbs(
+                   lua_state, handle,
+                   current_runtime_generation(), current_world_generation() );
     } );
     game["bionics"] = std::move( bionics );
 }
