@@ -3,6 +3,7 @@
 #include "catalua_ui_magic.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <map>
@@ -23,6 +24,7 @@
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"
+#include "mod_manager.h"
 #include "player_activity.h"
 #include "type_id.h"
 
@@ -42,6 +44,7 @@ constexpr int maximum_spell_experience = 1000000000;
 constexpr int maximum_spell_level = 10000;
 constexpr int maximum_spell_gain = 1000000;
 constexpr int maximum_mana_value = 1000000000;
+constexpr double maximum_spell_adjustment = 1000000000.0;
 const trait_id trait_none( "NONE" );
 
 void require_spell_id(
@@ -54,6 +57,42 @@ void require_spell_id(
     if( !id.is_valid() ) {
         throw std::invalid_argument(
             api_name + " requires a valid GameId<spell>" );
+    }
+}
+
+void require_spell_school_id(
+    const script_game_id &id, const std::string &api_name )
+{
+    if( id.kind() != "mutation" ) {
+        throw std::invalid_argument(
+            api_name + " requires GameId<mutation> for the spell school" );
+    }
+    if( !id.is_valid() ) {
+        throw std::invalid_argument(
+            api_name + " requires a valid spell-school mutation id" );
+    }
+}
+
+void require_mod_id(
+    const script_game_id &id, const std::string &api_name )
+{
+    if( id.kind() != "mod" ) {
+        throw std::invalid_argument(
+            api_name + " requires GameId<mod> for the source mod" );
+    }
+    if( !id.is_valid() ) {
+        throw std::invalid_argument(
+            api_name + " requires a valid source mod id" );
+    }
+}
+
+void require_finite_spell_adjustment(
+    const double amount, const std::string &api_name )
+{
+    if( !std::isfinite( amount ) ||
+        std::abs( amount ) > maximum_spell_adjustment ) {
+        throw std::invalid_argument(
+            api_name + " amount is outside its finite limit" );
     }
 }
 
@@ -613,8 +652,14 @@ sol::table snapshot_known_spell(
     result["level"] = known.get_level();
     result["effective_level"] =
         known.get_effective_level();
+    result["temporary_level_adjustment"] =
+        known.get_temp_level_adjustment();
     result["maximum_level"] =
         known.get_max_level( character );
+    result["difficulty"] =
+        known.get_difficulty( character );
+    result["baseline_difficulty"] =
+        id->get_difficulty( character );
     result["experience_to_next_level"] =
         known.exp_to_next_level();
     result["experience_progress"] =
@@ -1032,6 +1077,439 @@ sol::table adjust_spell(
                sol::make_object( state, std::move( value ) ) );
 }
 
+std::optional<trait_id> optional_spell_school(
+    const sol::optional<script_game_id> &requested,
+    const std::string &api_name )
+{
+    if( !requested ) {
+        return std::nullopt;
+    }
+    require_spell_school_id( *requested, api_name );
+    return trait_id( requested->value() );
+}
+
+sol::table spell_count(
+    sol::this_state lua, const game_handle &handle,
+    const sol::optional<script_game_id> &requested_school,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    const std::optional<trait_id> school =
+        optional_spell_school(
+            requested_school, "game.spells.count" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    int count = 0;
+    for( const spell *known : character->magic->get_spells() ) {
+        if( !school || known->spell_class() == *school ) {
+            ++count;
+        }
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, count ) );
+}
+
+sol::table spell_level_sum(
+    sol::this_state lua, const game_handle &handle,
+    const sol::optional<script_game_id> &requested_school,
+    const sol::optional<int> &requested_minimum_level,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    const std::optional<trait_id> school =
+        optional_spell_school(
+            requested_school, "game.spells.level_sum" );
+    const int minimum_level =
+        requested_minimum_level.value_or( 0 );
+    if( minimum_level < 0 ||
+        minimum_level > maximum_spell_level ) {
+        throw std::invalid_argument(
+            "game.spells.level_sum minimum_level is outside its limit" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    std::int64_t sum = 0;
+    for( const spell *known : character->magic->get_spells() ) {
+        const int level = known->get_effective_level();
+        if( ( !school || known->spell_class() == *school ) &&
+            level >= minimum_level ) {
+            sum += level;
+        }
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, sum ) );
+}
+
+sol::table school_level(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_school,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    require_spell_school_id(
+        requested_school, "game.spells.school_level" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const trait_id school( requested_school.value() );
+    int level = -1;
+    for( const spell *known : character->magic->get_spells() ) {
+        if( known->spell_class() == school ) {
+            level = std::max(
+                        level, known->get_effective_level() );
+        }
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, level ) );
+}
+
+sol::table spell_difficulty(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const sol::optional<bool> &requested_baseline,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    require_spell_id(
+        requested_id, "game.spells.difficulty" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const spell_id id( requested_id.value() );
+    const bool baseline = requested_baseline.value_or( false );
+    const int value = baseline ||
+                      !character->magic->knows_spell( id ) ?
+                      id->get_difficulty( *character ) :
+                      character->magic->get_spell( id ).get_difficulty(
+                          *character );
+    return make_game_value_result(
+               state, sol::make_object( state, value ) );
+}
+
+int spell_experience_for_level(
+    const script_game_id &requested_id, const int level )
+{
+    require_spell_id(
+        requested_id, "game.spells.experience_for_level" );
+    if( level < 0 || level > maximum_spell_level ) {
+        throw std::invalid_argument(
+            "game.spells.experience_for_level level is outside its limit" );
+    }
+    return spell_id( requested_id.value() )->exp_for_level( level );
+}
+
+sol::table spell_level_adjustment(
+    sol::this_state lua, const game_handle &handle,
+    const sol::optional<script_game_id> &requested_id,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    if( requested_id ) {
+        require_spell_id(
+            *requested_id, "game.spells.level_adjustment" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    double value = character->magic->caster_level_adjustment;
+    if( requested_id ) {
+        const spell_id id( requested_id->value() );
+        const auto found =
+            character->magic->caster_level_adjustment_by_spell.find( id );
+        value = found ==
+                character->magic->caster_level_adjustment_by_spell.end() ?
+                0.0 : found->second;
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, value ) );
+}
+
+sol::table set_spell_level_adjustment(
+    sol::this_state lua, const game_handle &handle,
+    const double amount,
+    const sol::optional<script_game_id> &requested_id,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    const std::string api_name =
+        "game.spells.set_level_adjustment";
+    require_finite_spell_adjustment( amount, api_name );
+    if( requested_id ) {
+        require_spell_id( *requested_id, api_name );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    double before = character->magic->caster_level_adjustment;
+    if( requested_id ) {
+        const spell_id id( requested_id->value() );
+        auto &adjustments =
+            character->magic->caster_level_adjustment_by_spell;
+        const auto found = adjustments.find( id );
+        before = found == adjustments.end() ? 0.0 : found->second;
+        adjustments[id] = amount;
+    } else {
+        character->magic->caster_level_adjustment = amount;
+    }
+    sol::table value = state.create_table();
+    value["before"] = before;
+    value["after"] = amount;
+    if( requested_id ) {
+        value["spell"] = *requested_id;
+    } else {
+        value["spell"] = sol::nil;
+    }
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table school_level_adjustment(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_school,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    require_spell_school_id(
+        requested_school,
+        "game.spells.school_level_adjustment" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const trait_id school( requested_school.value() );
+    const auto &adjustments =
+        character->magic->caster_level_adjustment_by_school;
+    const auto found = adjustments.find( school );
+    const double value = found == adjustments.end() ?
+                         0.0 : found->second;
+    return make_game_value_result(
+               state, sol::make_object( state, value ) );
+}
+
+sol::table set_school_level_adjustment(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_school,
+    const double amount,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    const std::string api_name =
+        "game.spells.set_school_level_adjustment";
+    require_spell_school_id( requested_school, api_name );
+    require_finite_spell_adjustment( amount, api_name );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const trait_id school( requested_school.value() );
+    auto &adjustments =
+        character->magic->caster_level_adjustment_by_school;
+    const auto found = adjustments.find( school );
+    const double before = found == adjustments.end() ?
+                          0.0 : found->second;
+    adjustments[school] = amount;
+    sol::table value = state.create_table();
+    value["school"] = requested_school;
+    value["before"] = before;
+    value["after"] = amount;
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
+enum class spell_filter_scope : int {
+    all,
+    spell,
+    school,
+    mod
+};
+
+struct spellcasting_adjustment_options {
+    spell_filter_scope scope = spell_filter_scope::all;
+    std::optional<spell_id> spell_filter;
+    std::optional<trait_id> school_filter;
+    std::optional<mod_id> mod_filter;
+    std::string flag_whitelist;
+    std::string flag_blacklist;
+};
+
+spellcasting_adjustment_options read_spellcasting_adjustment_options(
+    const sol::optional<sol::table> &requested )
+{
+    spellcasting_adjustment_options result;
+    if( !requested ) {
+        return result;
+    }
+    int scope_filters = 0;
+    for( const auto &entry : *requested ) {
+        const sol::object key_object = entry.first;
+        if( key_object.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "game.spells.adjust_casting option keys must be strings" );
+        }
+        const std::string key = key_object.as<std::string>();
+        const sol::object value = entry.second;
+        if( key == "spell" || key == "school" || key == "mod" ) {
+            if( !value.is<script_game_id>() ) {
+                throw std::invalid_argument(
+                    "game.spells.adjust_casting filters must be typed GameIds" );
+            }
+            const script_game_id id = value.as<script_game_id>();
+            if( key == "spell" ) {
+                require_spell_id( id, "game.spells.adjust_casting" );
+                result.scope = spell_filter_scope::spell;
+                result.spell_filter = spell_id( id.value() );
+            } else if( key == "school" ) {
+                require_spell_school_id(
+                    id, "game.spells.adjust_casting" );
+                result.scope = spell_filter_scope::school;
+                result.school_filter = trait_id( id.value() );
+            } else {
+                require_mod_id( id, "game.spells.adjust_casting" );
+                result.scope = spell_filter_scope::mod;
+                result.mod_filter = mod_id( id.value() );
+            }
+            ++scope_filters;
+        } else if( key == "flag_whitelist" ||
+                   key == "flag_blacklist" ) {
+            if( value.get_type() != sol::type::string ) {
+                throw std::invalid_argument(
+                    "game.spells.adjust_casting flag filters must be strings" );
+            }
+            if( key == "flag_whitelist" ) {
+                result.flag_whitelist = value.as<std::string>();
+            } else {
+                result.flag_blacklist = value.as<std::string>();
+            }
+        } else {
+            throw std::invalid_argument(
+                "game.spells.adjust_casting received unknown option '" +
+                key + "'" );
+        }
+    }
+    if( scope_filters > 1 ) {
+        throw std::invalid_argument(
+            "game.spells.adjust_casting accepts only one of spell, school, or mod" );
+    }
+    return result;
+}
+
+bool valid_spellcasting_adjustment_property(
+    const std::string &property )
+{
+    static const std::set<std::string> properties = {
+        "caster_level", "casting_time", "damage", "cost", "aoe",
+        "range", "duration", "difficulty", "somatic_difficulty",
+        "sound", "concentration"
+    };
+    return properties.count( property ) != 0;
+}
+
+sol::table adjust_spellcasting(
+    sol::this_state lua, const game_handle &handle,
+    const std::string &property, const double amount,
+    const sol::optional<sol::table> &requested_options,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    const std::string api_name = "game.spells.adjust_casting";
+    if( !valid_spellcasting_adjustment_property( property ) ) {
+        throw std::invalid_argument(
+            api_name + " received unknown property '" + property + "'" );
+    }
+    require_finite_spell_adjustment( amount, api_name );
+    const spellcasting_adjustment_options options =
+        read_spellcasting_adjustment_options( requested_options );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    int matched = 0;
+    for( spell *known : character->magic->get_spells() ) {
+        bool selected = false;
+        switch( options.scope ) {
+            case spell_filter_scope::all:
+                selected = true;
+                break;
+            case spell_filter_scope::spell:
+                selected = known->id() == *options.spell_filter;
+                break;
+            case spell_filter_scope::school:
+                selected = known->spell_class() == *options.school_filter;
+                break;
+            case spell_filter_scope::mod:
+                selected = get_mod_base_id_from_src( known->get_src() ) ==
+                           *options.mod_filter;
+                break;
+        }
+        if( !selected ) {
+            continue;
+        }
+        if( options.scope != spell_filter_scope::spell &&
+            ( ( !options.flag_whitelist.empty() &&
+                !known->has_flag( options.flag_whitelist ) ) ||
+              ( !options.flag_blacklist.empty() &&
+                known->has_flag( options.flag_blacklist ) ) ) ) {
+            continue;
+        }
+        known->set_temp_adjustment(
+            property, static_cast<float>( amount ) );
+        ++matched;
+    }
+    sol::table value = state.create_table();
+    value["property"] = property;
+    value["amount"] = amount;
+    value["matched"] = matched;
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
 sol::table mana_snapshot(
     sol::state_view state, Character &character )
 {
@@ -1430,6 +1908,115 @@ void install_magic_api(
         return adjust_spell(
                    lua_state, handle, id, amount,
                    spell_adjustment::gain_levels,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "count",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::optional<script_game_id> &school ) {
+        require_read();
+        return spell_count(
+                   lua_state, handle, school,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "level_sum",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+            const sol::optional<script_game_id> &school,
+    const sol::optional<int> &minimum_level ) {
+        require_read();
+        return spell_level_sum(
+                   lua_state, handle, school, minimum_level,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "school_level",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & school ) {
+        require_read();
+        return school_level(
+                   lua_state, handle, school,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "difficulty",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+            const script_game_id & id,
+    const sol::optional<bool> &baseline ) {
+        require_read();
+        return spell_difficulty(
+                   lua_state, handle, id, baseline,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "experience_for_level",
+        [require_read]( const script_game_id &id, const int level ) {
+        require_read();
+        return spell_experience_for_level( id, level );
+    } );
+    spells.set_function(
+        "level_adjustment",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::optional<script_game_id> &spell_id ) {
+        require_read();
+        return spell_level_adjustment(
+                   lua_state, handle, spell_id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "set_level_adjustment",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+            const double amount,
+    const sol::optional<script_game_id> &spell_id ) {
+        require_write();
+        return set_spell_level_adjustment(
+                   lua_state, handle, amount, spell_id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "school_level_adjustment",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & school ) {
+        require_read();
+        return school_level_adjustment(
+                   lua_state, handle, school,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "set_school_level_adjustment",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+            const script_game_id & school, const double amount ) {
+        require_write();
+        return set_school_level_adjustment(
+                   lua_state, handle, school, amount,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "adjust_casting",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+            const std::string &property, const double amount,
+    const sol::optional<sol::table> &options ) {
+        require_write();
+        return adjust_spellcasting(
+                   lua_state, handle, property, amount, options,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
