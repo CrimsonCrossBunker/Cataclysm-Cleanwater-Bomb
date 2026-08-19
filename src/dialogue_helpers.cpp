@@ -131,6 +131,11 @@ bool try_deserialize_type( V &v, JsonValue const &jsin )
         }
         v = dv;
         return true;
+    } else if constexpr( std::is_same_v<T, runtime_dbl_provider> ||
+                         std::is_same_v<T, runtime_duration_provider> ) {
+        static_cast<void>( v );
+        static_cast<void>( jsin );
+        return false;
     } else if( T t; jsin.read( t, false ) ) {
         v = t;
         return true;
@@ -236,10 +241,10 @@ valueT value_or_var_pair<valueT, funcT...>::evaluate( const_dialogue const &d ) 
     return min.evaluate( d );
 }
 
-template struct value_or_var<double, eoc_math>;
-template struct value_or_var_pair<double, eoc_math>;
-template struct value_or_var<time_duration, eoc_math>;
-template struct value_or_var_pair<time_duration, eoc_math>;
+template struct value_or_var<double, eoc_math, runtime_dbl_provider>;
+template struct value_or_var_pair<double, eoc_math, runtime_dbl_provider>;
+template struct value_or_var<time_duration, eoc_math, runtime_duration_provider>;
+template struct value_or_var_pair<time_duration, eoc_math, runtime_duration_provider>;
 template struct value_or_var<std::string, string_mutator<std::string>>;
 template struct value_or_var<translation, string_mutator<translation>>;
 template struct value_or_var<diag_value, eoc_math, string_mutator<translation>>;
