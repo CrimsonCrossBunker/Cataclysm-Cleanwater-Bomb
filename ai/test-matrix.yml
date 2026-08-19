@@ -1,6 +1,6 @@
 schema_version: 1
 kind: test_matrix
-description: Narrowest-first validation routing. Expensive commands may require platform dependencies.
+description: Acceptance-gate validation routing, not a per-edit execution mandate. Expensive commands may require platform dependencies.
 entries:
   - id: agent-context
     paths: [AGENTS.md, CLAUDE.md, GEMINI.md, GOVERNANCE.md, ai/, tools/agent/, .github/copilot-instructions.md]

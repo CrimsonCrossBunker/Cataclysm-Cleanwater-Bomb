@@ -26,8 +26,8 @@ entries:
       - Schema, LuaLS declarations, native registrations, generated inventories, and runtime validation tests are authoritative.
       - Lua API v5 describes shipped behaviour and is separate from the planned Lua-first Platform v1.
   - id: lua-first-platform
-    paths: [data/lua/LUA_FIRST_PLATFORM.md, data/lua/templates/, data/lua/types/ccb_platform_v1.d.lua, data/mods/Lua_First_Example/, ai/lua-first-roadmap.yml, ai/lua-first-roadmap.schema.json, ai/lua-first-replacement-ledger.yml, ai/lua-first-replacement-ledger.schema.json, tools/agent/generate_lua_first_replacement_ledger.py, tools/agent/check_lua_first_replacement_ledger.py, tools/create_lua_mod.py, tools/migrate_lua_first.py, src/catalua_platform.cpp, src/catalua_platform.h, src/catalua_platform_runtime.cpp, src/catalua_platform_runtime.h, src/mod_manager.cpp, src/mod_manager.h, src/mod_manager_ui.cpp, src/game_io.cpp, src/game.cpp, src/do_turn.cpp]
-    purpose: Accepted pure-Lua authoring architecture, replacement boundary, and checked implementation roadmap.
+    paths: [data/lua/LUA_FIRST_PLATFORM.md, data/lua/, data/lua/templates/, data/lua/types/ccb_platform_v1.d.lua, data/mods/Lua_First_Example/, ai/lua-first-roadmap.yml, ai/lua-first-roadmap.schema.json, ai/lua-first-replacement-ledger.yml, ai/lua-first-replacement-ledger.schema.json, tools/agent/generate_lua_first_replacement_ledger.py, tools/agent/check_lua_first_replacement_ledger.py, tools/create_lua_mod.py, tools/migrate_lua_first.py, src/catalua_platform.cpp, src/catalua_platform.h, src/catalua_platform_runtime.cpp, src/catalua_platform_runtime.h, src/mod_manager.cpp, src/mod_manager.h, src/mod_manager_ui.cpp, src/game_io.cpp, src/game.cpp, src/do_turn.cpp]
+    purpose: Accepted pure-Lua authoring architecture, EOC-capability workflow, replacement boundary, and checked implementation roadmap.
     instructions: data/lua/AGENTS.md
     validation_ids: [agent-context]
     boundaries:
