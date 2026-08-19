@@ -14,6 +14,8 @@
 namespace cata::lua_platform
 {
 
+class runtime;
+
 /**
  * Transactional Platform-Lua definitions for world-facing content whose
  * native registries live outside Item_factory and DynamicDataLoader.
@@ -32,7 +34,17 @@ class world_content_transaction
         bool register_definition( const sol::object &value, int operation );
 #endif
 
-        bool validate( bool check_engine_state, std::string &error ) const;
+        bool validate( const runtime &owner_runtime, bool check_engine_state,
+                       std::string &error ) const;
+        bool find_overmap_terrain_handler( const std::string &id,
+                                           const std::string &phase,
+                                           std::string &handler_id ) const;
+        bool find_overmap_special_handler( const std::string &id,
+                                           const std::string &phase,
+                                           std::string &handler_id ) const;
+        bool find_vehicle_part_handler( const std::string &id,
+                                        const std::string &phase,
+                                        std::string &handler_id ) const;
         bool defines_overmap_terrain_type( const std::string &id ) const;
         bool apply( std::string &error );
         bool validate_finalized( std::string &error ) const;
