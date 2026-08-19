@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -16,8 +17,12 @@
 #include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
 #include "coordinates.h"
+#include "enum_conversions.h"
 #include "faction.h"
+#include "faction_camp.h"
 #include "game.h"
+#include "npc.h"
+#include "npctalk.h"
 #include "overmapbuffer.h"
 
 namespace cata::lua_ui
@@ -584,10 +589,153 @@ sol::table set_camp_board_position(
                    state, std::move( value ) ) );
 }
 
+npc *resolve_camp_npc(
+    const game_handle &handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation,
+    std::optional<game_handle_error> &error )
+{
+    const native_handle_result<Creature> resolved =
+        handle.resolve_creature(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        error = resolved.error;
+        return nullptr;
+    }
+    npc *result = resolved.value->as_npc();
+    if( result == nullptr ) {
+        error = game_handle_error{
+            "wrong_subtype",
+            "The requested camp worker handle is not an NPC"
+        };
+    }
+    return result;
+}
+
+enum class camp_npc_action {
+    start,
+    open_missions,
+    assign_resident,
+    return_to_duties,
+    abandon,
+    sort_loot,
+    distribute_food
+};
+
+std::string camp_action_name( const camp_npc_action action )
+{
+    switch( action ) {
+        case camp_npc_action::start:
+            return "start";
+        case camp_npc_action::open_missions:
+            return "open_missions";
+        case camp_npc_action::assign_resident:
+            return "assign_resident";
+        case camp_npc_action::return_to_duties:
+            return "return_to_duties";
+        case camp_npc_action::abandon:
+            return "abandon";
+        case camp_npc_action::sort_loot:
+            return "sort_loot";
+        case camp_npc_action::distribute_food:
+            return "distribute_food";
+    }
+    return "unknown";
+}
+
+void invoke_camp_action(
+    npc &worker, const camp_npc_action action )
+{
+    switch( action ) {
+        case camp_npc_action::start:
+            talk_function::start_camp( worker );
+            return;
+        case camp_npc_action::open_missions:
+            talk_function::basecamp_mission( worker );
+            return;
+        case camp_npc_action::assign_resident:
+            talk_function::assign_camp( worker );
+            return;
+        case camp_npc_action::return_to_duties:
+            talk_function::return_to_camp_duties( worker );
+            return;
+        case camp_npc_action::abandon:
+            talk_function::abandon_camp( worker );
+            return;
+        case camp_npc_action::sort_loot:
+            talk_function::sort_loot( worker );
+            return;
+        case camp_npc_action::distribute_food:
+            talk_function::distribute_food_auto( worker );
+            return;
+    }
+}
+
+sol::table run_camp_npc_action(
+    sol::this_state lua, const game_handle &worker_handle,
+    const camp_npc_action action,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *worker = resolve_camp_npc(
+                      worker_handle, runtime_generation,
+                      world_generation, error );
+    if( worker == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const tripoint_abs_omt before_position =
+        worker->pos_abs_omt();
+    const bool camp_before =
+        overmap_buffer.has_camp( before_position );
+    const npc_mission mission_before = worker->mission;
+    const std::optional<tripoint_abs_omt> assignment_before =
+        worker->assigned_camp;
+    invoke_camp_action( *worker, action );
+
+    sol::table value = state.create_table();
+    value["action"] = camp_action_name( action );
+    value["camp_before"] = camp_before;
+    value["camp_after"] =
+        overmap_buffer.has_camp( worker->pos_abs_omt() );
+    value["mission_before"] =
+        io::enum_to_string( mission_before );
+    value["mission_after"] =
+        io::enum_to_string( worker->mission );
+    if( assignment_before ) {
+        value["assignment_before"] =
+            script_tripoint_coord::from_native(
+                coords::origin::abs,
+                coords::scale::overmap_terrain,
+                assignment_before->raw() );
+    } else {
+        value["assignment_before"] = sol::nil;
+    }
+    if( worker->assigned_camp ) {
+        value["assignment_after"] =
+            script_tripoint_coord::from_native(
+                coords::origin::abs,
+                coords::scale::overmap_terrain,
+                worker->assigned_camp->raw() );
+    } else {
+        value["assignment_after"] = sol::nil;
+    }
+    value["changed"] =
+        camp_before != overmap_buffer.has_camp(
+            worker->pos_abs_omt() ) ||
+        mission_before != worker->mission ||
+        assignment_before != worker->assigned_camp;
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_camp_api(
     sol::table &game,
+    std::function<game_handle_runtime()> current_runtime_generation,
+    std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write )
 {
@@ -651,6 +799,82 @@ void install_camp_api(
         return set_camp_board_position(
                    lua_state, position,
                    board_position );
+    } );
+    camps.set_function(
+        "start_with",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle &worker ) {
+        require_write();
+        return run_camp_npc_action(
+                   lua_state, worker, camp_npc_action::start,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    camps.set_function(
+        "open_missions",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle &worker ) {
+        require_write();
+        return run_camp_npc_action(
+                   lua_state, worker,
+                   camp_npc_action::open_missions,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    camps.set_function(
+        "assign_resident",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle &worker ) {
+        require_write();
+        return run_camp_npc_action(
+                   lua_state, worker,
+                   camp_npc_action::assign_resident,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    camps.set_function(
+        "return_to_duties",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle &worker ) {
+        require_write();
+        return run_camp_npc_action(
+                   lua_state, worker,
+                   camp_npc_action::return_to_duties,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    camps.set_function(
+        "abandon_at_worker",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle &worker ) {
+        require_write();
+        return run_camp_npc_action(
+                   lua_state, worker,
+                   camp_npc_action::abandon,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    camps.set_function(
+        "sort_loot",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle &worker ) {
+        require_write();
+        return run_camp_npc_action(
+                   lua_state, worker,
+                   camp_npc_action::sort_loot,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    camps.set_function(
+        "distribute_food",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle &worker ) {
+        require_write();
+        return run_camp_npc_action(
+                   lua_state, worker,
+                   camp_npc_action::distribute_food,
+                   current_runtime_generation(),
+                   current_world_generation() );
     } );
     game["camps"] = std::move( camps );
 }
