@@ -212,14 +212,16 @@ value_or_var_pair<retT, funcT> get_value_or_var_pair( const JsonObject &jo,
 dbl_or_var get_dbl_or_var( const JsonObject &jo, std::string_view member, bool required,
                            double default_val )
 {
-    return get_value_or_var_pair<double, eoc_math>( jo, member, required, default_val );
+    return get_value_or_var_pair<double, eoc_math, runtime_dbl_provider>(
+               jo, member, required, default_val );
 }
 
 duration_or_var get_duration_or_var( const JsonObject &jo, std::string_view member,
                                      bool required,
                                      time_duration default_val )
 {
-    return get_value_or_var_pair<time_duration, eoc_math>( jo, member, required, default_val );
+    return get_value_or_var_pair<time_duration, eoc_math, runtime_duration_provider>(
+               jo, member, required, default_val );
 }
 
 str_or_var get_str_or_var( const JsonValue &jv, std::string_view /* member */, bool /* required */,
