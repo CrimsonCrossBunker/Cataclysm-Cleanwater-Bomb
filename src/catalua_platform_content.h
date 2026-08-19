@@ -30,14 +30,23 @@ struct crafting_category;
 class disease_type;
 class emit;
 class effect_type;
+class event_statistic;
+class event_transformation;
+class enchantment;
+struct bionic_data;
 class fault_group;
 class harvest_drop_type;
 class harvest_list;
 class item_category;
 class json_flag;
+struct jmath_func;
+class ter_furn_transform;
+class pp_generator;
+class relic_procgen_data;
 struct map_extra_collection;
 class map_extra;
 class weather_generator;
+class widget;
 struct shopkeeper_blacklist;
 struct shopkeeper_whitelist;
 struct shopkeeper_cons_rates;
@@ -46,6 +55,8 @@ class material_type;
 class mattack_actor;
 class monfaction;
 struct mtype;
+struct mission_type;
+struct mutation_branch;
 struct mtype_special_attack;
 struct mon_flag;
 struct mutation_category_trait;
@@ -56,6 +67,7 @@ struct overmap_location;
 class oter_vision;
 struct limb_score;
 class magic_type;
+class spell_type;
 class ma_technique;
 class martialart;
 struct trap;
@@ -69,6 +81,7 @@ struct dream;
 class achievement;
 class proficiency;
 struct proficiency_category;
+class profession;
 struct profession_group;
 struct quality;
 class butchery_requirements;
@@ -89,6 +102,8 @@ struct weather_type;
 struct end_screen;
 class morale_type_data;
 class VehicleGroup;
+struct VehiclePlacement;
+class VehicleSpawn;
 struct species_type;
 struct sub_body_part_type;
 struct weakpoints;
@@ -242,13 +257,61 @@ generic_factory<shopkeeper_cons_rates> &shopkeeper_cons_rates_registry();
 generic_factory<overmap_special_migration> &overmap_special_migration_registry();
 generic_factory<achievement> &achievement_registry();
 generic_factory<magic_type> &magic_type_registry();
+generic_factory<spell_type> &spell_registry();
+generic_factory<mission_type> &mission_type_registry();
+generic_factory<mutation_branch> &mutation_registry();
+void refresh_mutation_registry_cache();
 generic_factory<bash_damage_profile> &bash_damage_profile_registry();
 generic_factory<clothing_mod> &clothing_mod_registry();
 void refresh_clothing_mod_registry_cache();
 generic_factory<overmap_land_use_code> &overmap_land_use_code_registry();
 generic_factory<oter_vision> &overmap_vision_registry();
 generic_factory<overmap_location> &overmap_location_registry();
+generic_factory<profession> &profession_registry();
 generic_factory<profession_group> &profession_group_registry();
+generic_factory<widget> &widget_registry();
+generic_factory<enchantment> &enchantment_registry();
+generic_factory<bionic_data> &bionic_registry();
+void refresh_bionic_registry_cache();
+
+struct profession_item_substitution_native_requirement {
+    std::vector<std::string> present;
+    std::vector<std::string> absent;
+};
+
+struct profession_item_substitution_native_replacement {
+    std::string item;
+    double ratio = 1.0;
+};
+
+struct profession_item_substitution_native_rule {
+    profession_item_substitution_native_requirement requirements;
+    std::vector<profession_item_substitution_native_replacement> replacements;
+};
+
+struct profession_item_substitution_native_entry {
+    std::string item;
+    std::vector<profession_item_substitution_native_rule> rules;
+};
+
+struct profession_item_bonus_native_entry {
+    std::string group;
+    std::vector<profession_item_substitution_native_requirement> requirements;
+};
+
+struct profession_item_substitution_native_snapshot {
+    std::vector<profession_item_substitution_native_entry> substitutions;
+    std::vector<profession_item_bonus_native_entry> bonuses;
+};
+
+profession_item_substitution_native_snapshot profession_item_substitution_registry_snapshot();
+bool profession_item_substitution_registry_contains( const std::string &item );
+bool profession_item_bonus_registry_contains( const std::string &group );
+void profession_item_substitution_registry_set(
+    const profession_item_substitution_native_entry &entry );
+void profession_item_bonus_registry_set( const profession_item_bonus_native_entry &entry );
+void profession_item_substitution_registry_restore(
+    const profession_item_substitution_native_snapshot &snapshot );
 generic_factory<map_extra_collection> &map_extra_collection_registry();
 generic_factory<fault_group> &fault_group_registry();
 generic_factory<quality> &tool_quality_registry();
@@ -258,6 +321,52 @@ generic_factory<damage_type> &damage_type_registry();
 generic_factory<damage_info_order> &damage_info_order_registry();
 void refresh_damage_info_order_registry();
 generic_factory<json_flag> &json_flag_registry();
+generic_factory<jmath_func> &jmath_func_registry();
+generic_factory<ter_furn_transform> &ter_furn_transform_registry();
+generic_factory<pp_generator> &post_process_generator_registry();
+generic_factory<relic_procgen_data> &relic_procgen_registry();
+
+struct event_source_native_definition {
+    std::string kind;
+    std::string id;
+};
+
+struct event_new_field_native_definition {
+    std::string field;
+    std::string transformation;
+    std::string input_field;
+};
+
+struct event_value_constraint_native_definition {
+    std::string field;
+    std::string kind;
+    std::string value_type;
+    std::vector<std::string> values;
+    std::string statistic;
+};
+
+struct event_transformation_native_definition {
+    std::string id;
+    event_source_native_definition source;
+    std::vector<event_new_field_native_definition> new_fields;
+    std::vector<event_value_constraint_native_definition> constraints;
+    std::vector<std::string> drop_fields;
+};
+
+struct event_statistic_native_definition {
+    std::string id;
+    std::string statistic_type;
+    event_source_native_definition source;
+    std::string field;
+    std::string description;
+    std::string description_plural;
+};
+
+generic_factory<event_transformation> &event_transformation_registry();
+generic_factory<event_statistic> &event_statistic_registry();
+event_transformation make_event_transformation(
+    const event_transformation_native_definition &definition );
+event_statistic make_event_statistic( const event_statistic_native_definition &definition );
 generic_factory<item_category> &item_category_registry();
 generic_factory<crafting_category> &crafting_category_registry();
 generic_factory<weapon_category> &weapon_category_registry();
@@ -387,6 +496,12 @@ struct dimension_region_layout_native_definition {
 const VehicleGroup *vehicle_group_registry_find( const std::string &id );
 void vehicle_group_registry_set( const std::string &id, const VehicleGroup &value );
 void vehicle_group_registry_erase( const std::string &id );
+const VehiclePlacement *vehicle_placement_registry_find( const std::string &id );
+void vehicle_placement_registry_set( const std::string &id, const VehiclePlacement &value );
+void vehicle_placement_registry_erase( const std::string &id );
+const VehicleSpawn *vehicle_spawn_registry_find( const std::string &id );
+void vehicle_spawn_registry_set( const std::string &id, const VehicleSpawn &value );
+void vehicle_spawn_registry_erase( const std::string &id );
 
 struct named_color_native_definition {
     std::string name;
