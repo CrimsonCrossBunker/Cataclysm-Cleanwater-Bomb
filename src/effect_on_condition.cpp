@@ -15,6 +15,7 @@
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "cata_variant.h"
+#include "catalua_platform_runtime.h"
 #include "character.h"
 #include "character_id.h"
 #include "condition.h"
@@ -160,11 +161,21 @@ void effect_on_conditions::load_new_character( Character &you )
     const scenario *scen = get_scenario();
     if( scen ) {
         you.queue_effects( scen->eoc() );
+        if( scen->has_platform_start_handler() ) {
+            cata::lua_platform::invoke_character_start_handler(
+                "scenario", scen->ident().str(), scen->platform_start_mod(),
+                scen->platform_start_handler(), you );
+        }
     }
 
     const profession *prof = you.get_profession();
     if( prof ) {
         you.queue_effects( prof->get_eocs() );
+        if( prof->has_platform_start_handler() ) {
+            cata::lua_platform::invoke_character_start_handler(
+                "profession", prof->ident().str(), prof->platform_start_mod(),
+                prof->platform_start_handler(), you );
+        }
     }
 
     for( const effect_on_condition &eoc : get_all() ) {
