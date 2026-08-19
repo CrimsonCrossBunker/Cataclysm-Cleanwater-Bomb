@@ -55,6 +55,11 @@ namespace
 generic_factory<mutation_branch> trait_factory( "trait" );
 } // namespace
 
+generic_factory<mutation_branch> &cata::lua_platform::detail::mutation_registry()
+{
+    return trait_factory;
+}
+
 std::vector<dream> dreams;
 
 void cata::lua_platform::detail::append_dream( const dream &value )
@@ -625,6 +630,33 @@ int mutation_branch::bionic_slot_bonus( const bodypart_str_id &part ) const
     }
 }
 
+void mutation_branch::set_platform_text( const std::string &name,
+        const std::string &description )
+{
+    raw_name = no_translation( name );
+    raw_desc = no_translation( description );
+}
+
+void mutation_branch::set_platform_spawn_item( const std::string &item,
+        const std::string &message )
+{
+    spawn_item = itype_id( item );
+    raw_spawn_item_message = no_translation( message );
+}
+
+void mutation_branch::set_platform_ranged_mutation( const std::string &item,
+        const std::string &message )
+{
+    ranged_mutation = itype_id( item );
+    raw_ranged_mutation_message = no_translation( message );
+}
+
+void mutation_branch::set_platform_bionic_slot_bonus( const bodypart_str_id &part,
+        const int amount )
+{
+    bionic_slot_bonuses[part] = amount;
+}
+
 std::string mutation_branch::spawn_item_message() const
 {
     return raw_spawn_item_message.translated();
@@ -1042,7 +1074,14 @@ void mutation_branch::finalize()
 void mutation_branch::finalize_all()
 {
     trait_factory.finalize();
-    for( const mutation_branch &branch : get_all() ) {
+    cata::lua_platform::detail::refresh_mutation_registry_cache();
+    finalize_trait_blacklist();
+}
+
+void cata::lua_platform::detail::refresh_mutation_registry_cache()
+{
+    mutations_category.clear();
+    for( const mutation_branch &branch : mutation_branch::get_all() ) {
         for( const mutation_category_id &cat : branch.category ) {
             mutations_category[cat].emplace_back( branch.id );
         }
@@ -1052,7 +1091,6 @@ void mutation_branch::finalize_all()
             mutations_category[mutation_category_ANY].emplace_back( branch.id );
         }
     }
-    finalize_trait_blacklist();
 }
 
 void mutation_branch::finalize_trait_blacklist()

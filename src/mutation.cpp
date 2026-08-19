@@ -938,6 +938,10 @@ void Character::activate_cached_mutation( const trait_id &mut )
             { "mutation", cata::lua_ui::native_callback_id{ "mutation", mut.str() } }
         } );
     }
+    cata::lua_ui::dispatch_native_hook( "on_mutation_activated", {
+        { "character", static_cast<const Character *>( this ) },
+        { "mutation", cata::lua_ui::native_callback_id{ "mutation", mut.str() } }
+    } );
 
     if( mdata.transform ) {
         const cata::value_ptr<mut_transform> trans = mdata.transform;
@@ -1102,6 +1106,10 @@ void Character::deactivate_mutation( const trait_id &mut )
                     "mutation", mut.str()
                 }
             }
+        } );
+        cata::lua_ui::dispatch_native_hook( "on_mutation_deactivated", {
+            { "character", static_cast<const Character *>( this ) },
+            { "mutation", cata::lua_ui::native_callback_id{ "mutation", mut.str() } }
         } );
     }
 }
