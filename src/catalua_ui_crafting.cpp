@@ -16,7 +16,11 @@
 
 #include "avatar.h"
 #include "catalua_bindings_values.h"
+#include "catalua_game_handle.h"
 #include "catalua_ui_actions_internal.h"
+#include "character.h"
+#include "crafting_gui.h"
+#include "creature.h"
 #include "inventory.h"
 #include "item.h"
 #include "itype.h"
@@ -68,6 +72,168 @@ void require_id(
         throw std::invalid_argument(
             api_name + " requires a valid GameId<" + kind + ">" );
     }
+}
+
+Character *resolve_character(
+    const game_handle &handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation,
+    std::optional<game_handle_error> &error )
+{
+    const native_handle_result<Creature> resolved =
+        handle.resolve_creature(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        error = resolved.error;
+        return nullptr;
+    }
+    Character *character = resolved.value->as_character();
+    if( character == nullptr ) {
+        error = game_handle_error{
+            "wrong_subtype",
+            "The creature referenced by this GameHandle is not a character"
+        };
+    }
+    return character;
+}
+
+sol::table recipe_known_result(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    require_id(
+        requested_id, "recipe", "game.recipes.knows" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const recipe &definition =
+        recipe_id( requested_id.value() ).obj();
+    return make_game_value_result(
+               state, sol::make_object(
+                   state,
+                   character->knows_recipe( &definition ) ) );
+}
+
+sol::table learn_recipe_result(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const bool override_never_learn,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    require_id(
+        requested_id, "recipe", "game.recipes.learn" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const recipe &definition =
+        recipe_id( requested_id.value() ).obj();
+    const bool before =
+        character->knows_recipe( &definition );
+    character->learn_recipe(
+        &definition, override_never_learn );
+    const bool after =
+        character->knows_recipe( &definition );
+    sol::table value = state.create_table();
+    value["recipe"] = requested_id;
+    value["before"] = before;
+    value["after"] = after;
+    value["changed"] = before != after;
+    value["never_learn"] = definition.never_learn;
+    value["overrode_never_learn"] =
+        definition.never_learn && override_never_learn;
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table forget_recipe_result(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    require_id(
+        requested_id, "recipe", "game.recipes.forget" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const recipe &definition =
+        recipe_id( requested_id.value() ).obj();
+    const bool before =
+        character->knows_recipe( &definition );
+    character->forget_recipe( &definition );
+    sol::table value = state.create_table();
+    value["recipe"] = requested_id;
+    value["before"] = before;
+    value["after"] = false;
+    value["changed"] = before;
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table forget_recipe_category_result(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_category,
+    const sol::optional<std::string> &requested_subcategory,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    require_id(
+        requested_category, "crafting_category",
+        "game.recipes.forget_category" );
+    const std::string subcategory =
+        requested_subcategory.value_or( std::string() );
+    if( subcategory.size() > 256 ||
+        subcategory.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument(
+            "game.recipes.forget_category subcategory cannot exceed "
+            "256 non-NUL bytes" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const recipe_subset &known =
+        character->get_learned_recipes();
+    const std::vector<const recipe *> matches =
+        recipes_from_cat(
+            known,
+            crafting_category_id(
+                requested_category.value() ),
+            subcategory ).first;
+    for( const recipe *definition : matches ) {
+        character->forget_recipe( definition );
+    }
+    sol::table value = state.create_table();
+    value["category"] = requested_category;
+    value["subcategory"] = subcategory;
+    value["removed"] = matches.size();
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
 }
 
 int require_integer(
@@ -950,6 +1116,8 @@ craft_action_options read_craft_action_options(
 
 void install_crafting_api(
     sol::table &game,
+    const game_handle_runtime &runtime_generation,
+    std::function<std::size_t()> world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write,
     std::function<bool()> can_mutate,
@@ -1039,6 +1207,61 @@ void install_crafting_api(
                 "1 to 128 non-NUL bytes" );
         }
         return recipe_id( id.value() )->has_flag( flag );
+    } );
+    recipes.set_function(
+        "knows",
+        [require_read, &runtime_generation,
+         world_generation](
+            sol::this_state lua,
+            const game_handle & character,
+            const script_game_id & id ) {
+        require_read();
+        return recipe_known_result(
+                   lua, character, id,
+                   runtime_generation,
+                   world_generation() );
+    } );
+    recipes.set_function(
+        "learn",
+        [require_write, &runtime_generation,
+         world_generation](
+            sol::this_state lua,
+            const game_handle & character,
+            const script_game_id & id,
+            const sol::optional<bool> &override_never_learn ) {
+        require_write();
+        return learn_recipe_result(
+                   lua, character, id,
+                   override_never_learn.value_or( false ),
+                   runtime_generation,
+                   world_generation() );
+    } );
+    recipes.set_function(
+        "forget",
+        [require_write, &runtime_generation,
+         world_generation](
+            sol::this_state lua,
+            const game_handle & character,
+            const script_game_id & id ) {
+        require_write();
+        return forget_recipe_result(
+                   lua, character, id,
+                   runtime_generation,
+                   world_generation() );
+    } );
+    recipes.set_function(
+        "forget_category",
+        [require_write, &runtime_generation,
+         world_generation](
+            sol::this_state lua,
+            const game_handle & character,
+            const script_game_id & category,
+            const sol::optional<std::string> &subcategory ) {
+        require_write();
+        return forget_recipe_category_result(
+                   lua, character, category, subcategory,
+                   runtime_generation,
+                   world_generation() );
     } );
     game["recipes"] = std::move( recipes );
 
