@@ -962,6 +962,8 @@ void Character::load( const JsonObject &data )
     invalidate_pseudo_items();
     update_bionic_power_capacity();
     data.read( "death_eocs", death_eocs );
+    data.read( "lua_platform_death_mod", lua_platform_death_mod );
+    data.read( "lua_platform_death_handler", lua_platform_death_handler );
     worn.on_takeoff( *this );
     clear_worn();
     // deprecate after 0.G
@@ -1590,6 +1592,8 @@ void Character::store( JsonOut &json ) const
     // "Looks like I picked the wrong week to quit smoking." - Steve McCroskey
     json.member( "addictions", addictions );
     json.member( "death_eocs", death_eocs );
+    json.member( "lua_platform_death_mod", lua_platform_death_mod );
+    json.member( "lua_platform_death_handler", lua_platform_death_handler );
     json.member( "worn", worn ); // also saves contents
     json.member( "inv" );
     inv->json_save_items( json );

@@ -828,6 +828,21 @@ const std::vector<effect_on_condition_id> &scenario::eoc() const
 {
     return _eoc;
 }
+
+bool scenario::has_platform_start_handler() const noexcept
+{
+    return !lua_platform_mod.empty() && !lua_platform_start_handler.empty();
+}
+
+const std::string &scenario::platform_start_mod() const noexcept
+{
+    return lua_platform_mod;
+}
+
+const std::string &scenario::platform_start_handler() const noexcept
+{
+    return lua_platform_start_handler;
+}
 const std::vector<std::pair<mongroup_id, float>> &scenario::surround_groups() const
 {
     return _surround_groups;
