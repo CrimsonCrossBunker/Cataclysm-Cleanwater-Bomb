@@ -60,6 +60,10 @@ namespace catacurses
 {
 class window;
 } // namespace catacurses
+namespace cata::lua_ui
+{
+class script_mapgen_context;
+} // namespace cata::lua_ui
 class Character;
 class Creature;
 class avatar;
@@ -339,6 +343,7 @@ struct drawsq_params {
  */
 class map
 {
+        friend class cata::lua_ui::script_mapgen_context;
         friend class teleport;
         friend class editmap_ui;
         friend std::list<item> map_cursor::remove_items_with( const std::function<bool( const item & )> &,

@@ -10634,33 +10634,20 @@ void map::grow_plant( const tripoint_bub_ms &p )
 
         const std::string old_stage = growth_stages[old_stage_idx].first.str();
         const std::string new_stage = growth_stages[new_stage_idx].first.str();
-        const furn_t &new_furn = this->furn( p ).obj();
 
-        if( new_furn.plant ) {
-            iexamine::run_plant_eocs( new_furn.plant->eoc_on_grow, alpha, *this, p, *current_seed,
-                                      old_stage, new_stage );
-        }
-        iexamine::run_plant_eocs( current_seed->type->seed->eoc_on_grow, alpha, *this, p, *current_seed,
-                                  old_stage, new_stage );
+        iexamine::run_plant_lifecycle_event(
+            "grow", alpha, *this, p, *current_seed, old_stage, new_stage );
 
         if( mature_stage_idx >= 0 && old_stage_idx < mature_stage_idx &&
             new_stage_idx >= mature_stage_idx ) {
-            if( new_furn.plant ) {
-                iexamine::run_plant_eocs( new_furn.plant->eoc_on_mature, alpha, *this, p, *current_seed,
-                                          old_stage, new_stage );
-            }
-            iexamine::run_plant_eocs( current_seed->type->seed->eoc_on_mature, alpha, *this, p,
-                                      *current_seed, old_stage, new_stage );
+            iexamine::run_plant_lifecycle_event(
+                "mature", alpha, *this, p, *current_seed, old_stage, new_stage );
         }
 
         if( overgrown_stage_idx >= 0 && old_stage_idx < overgrown_stage_idx &&
             new_stage_idx >= overgrown_stage_idx ) {
-            if( new_furn.plant ) {
-                iexamine::run_plant_eocs( new_furn.plant->eoc_on_overgrow, alpha, *this, p, *current_seed,
-                                          old_stage, new_stage );
-            }
-            iexamine::run_plant_eocs( current_seed->type->seed->eoc_on_overgrow, alpha, *this, p,
-                                      *current_seed, old_stage, new_stage );
+            iexamine::run_plant_lifecycle_event(
+                "overgrow", alpha, *this, p, *current_seed, old_stage, new_stage );
         }
     }
 }
