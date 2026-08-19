@@ -3,6 +3,7 @@
 #include "catalua_ui_time.h"
 
 #include <array>
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -15,6 +16,7 @@
 #include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
 #include "game.h"
+#include "timed_event.h"
 
 namespace cata::lua_ui
 {
@@ -351,6 +353,41 @@ sol::table advance(
                expected );
 }
 
+sol::table reschedule_events(
+    sol::this_state lua,
+    const std::string &key,
+    const script_time_duration &duration )
+{
+    constexpr std::string_view api_name =
+        "services.time.reschedule";
+    require_active_game( api_name );
+    if( key.size() > 256 || key.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument(
+            "services.time.reschedule key must be at most 256 bytes" );
+    }
+    const std::int64_t turns = duration.turns();
+    if( turns < -31536000 || turns > 31536000 ) {
+        throw std::invalid_argument(
+            "services.time.reschedule duration must be within +/-31536000 turns" );
+    }
+    const std::size_t matched = static_cast<std::size_t>( std::count_if(
+        get_timed_events().get_all().begin(),
+        get_timed_events().get_all().end(),
+    [&key]( const timed_event &event ) {
+        return event.key == key;
+    } ) );
+    get_timed_events().set_all( key, duration.to_native() );
+
+    sol::state_view state( lua );
+    sol::table value = state.create_table();
+    value["key"] = key;
+    value["duration"] = duration;
+    value["matched"] = matched;
+    value["changed"] = matched != 0;
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_time_api(
@@ -404,6 +441,14 @@ void install_time_api(
         require_write();
         return advance(
                    lua, duration, expected );
+    } );
+    time.set_function(
+        "reschedule",
+        [require_write]( sol::this_state lua,
+                         const std::string &key,
+                         const script_time_duration &duration ) {
+        require_write();
+        return reschedule_events( lua, key, duration );
     } );
 }
 
