@@ -19,12 +19,14 @@
 #include "catalua_bindings_enums.h"
 #include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
+#include "city.h"
 #include "coordinates.h"
 #include "enums.h"
 #include "omdata.h"
 #include "overmap.h"
 #include "overmapbuffer.h"
 #include "point.h"
+#include "recipe_groups.h"
 #include "type_id.h"
 
 namespace cata::lua_ui
@@ -786,6 +788,55 @@ sol::table overmap_closest(
                    state, std::move( value ) ) );
 }
 
+sol::table overmap_closest_city(
+    sol::this_state lua,
+    const script_tripoint_coord &origin,
+    const sol::optional<bool> &requested_known )
+{
+    constexpr std::string_view api_name =
+        "game.overmap.closest_city";
+    if( origin.native_origin() != coords::origin::abs ||
+        origin.native_scale() != coords::scale::map_square ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " requires an absolute map-square Tripoint" );
+    }
+    const tripoint_abs_ms location( origin.to_native() );
+    const tripoint_abs_sm location_sm = project_to<coords::sm>( location );
+    const bool known = requested_known.value_or( true );
+    const city_reference reference = known ?
+                                     overmap_buffer.closest_known_city( location_sm ) :
+                                     overmap_buffer.closest_city( location_sm );
+    sol::state_view state( lua );
+    if( !reference ) {
+        return make_game_error_result(
+        state, {
+            "not_found",
+            known ? "No known city exists near the requested location" :
+            "No city exists near the requested location"
+        } );
+    }
+    const tripoint_abs_omt center =
+        project_to<coords::omt>( reference.abs_sm_pos );
+    sol::table value = state.create_table();
+    // Preserve the legacy effect's raw map-square representation for direct
+    // round-tripping through a character/context variable.  New Lua code can
+    // use the explicitly typed overmap position instead.
+    value["position"] = script_tripoint_coord::from_native(
+                             coords::origin::abs, coords::scale::map_square,
+                             center.raw() );
+    value["overmap_position"] = script_tripoint_coord::from_native(
+                                      coords::origin::abs,
+                                      coords::scale::overmap_terrain,
+                                      center.raw() );
+    value["name"] = reference.city->name;
+    value["size"] = reference.city->size;
+    value["distance"] = reference.distance;
+    value["known"] = known;
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 sol::table overmap_random(
     sol::this_state lua,
     const script_tripoint_coord &origin,
@@ -853,6 +904,39 @@ bool overmap_matches(
                selector.terrain,
                located.om->ter( located.local ),
                selector.match );
+}
+
+bool overmap_is_camp(
+    const script_tripoint_coord &position,
+    const bool include_legacy_terrain )
+{
+    const tripoint_abs_omt native_position =
+        require_absolute_omt(
+            position, "game.overmap.is_camp" );
+    if( overmap_buffer.has_camp( native_position ) ) {
+        return true;
+    }
+    if( !include_legacy_terrain ) {
+        return false;
+    }
+    return overmap_buffer.ter(
+               native_position ).id().str().find(
+               "faction_base_camp" ) != std::string::npos;
+}
+
+bool overmap_is_camp_start(
+    const script_tripoint_coord &position )
+{
+    const tripoint_abs_omt native_position =
+        require_absolute_omt(
+            position, "game.overmap.is_camp_start" );
+    const oter_id terrain =
+        overmap_buffer.ter( native_position );
+    const std::optional<mapgen_arguments> *arguments =
+        overmap_buffer.mapgen_args( native_position );
+    return !recipe_group::get_recipes_by_id(
+                "all_faction_base_types",
+                terrain, arguments ).empty();
 }
 
 sol::table set_overmap_terrain(
@@ -1231,6 +1315,40 @@ sol::table reveal_existing_overmap(
                    state, std::move( value ) ) );
 }
 
+sol::table reveal_overmap_route(
+    sol::this_state lua,
+    const script_tripoint_coord &source,
+    const script_tripoint_coord &destination,
+    const int radius, const bool road_only )
+{
+    constexpr std::string_view api_name =
+        "game.overmap.reveal_route";
+    if( radius < 0 || radius > maximum_reveal_radius ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " radius must be within 0..30" );
+    }
+    const tripoint_abs_omt native_source =
+        require_absolute_omt(
+            source, std::string( api_name ) );
+    const tripoint_abs_omt native_destination =
+        require_absolute_omt(
+            destination, std::string( api_name ) );
+    const bool revealed = overmap_buffer.reveal_route(
+                              native_source, native_destination,
+                              radius, road_only );
+    sol::state_view state( lua );
+    sol::table value = state.create_table();
+    value["revealed"] = revealed;
+    value["source"] = source;
+    value["destination"] = destination;
+    value["radius"] = radius;
+    value["road_only"] = road_only;
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 } // namespace
 
 void install_overmap_api(
@@ -1277,6 +1395,15 @@ void install_overmap_api(
                    lua_state, origin, options );
     } );
     overmap.set_function(
+        "closest_city",
+        [require_read](
+            sol::this_state lua_state,
+            const script_tripoint_coord & origin,
+            const sol::optional<bool> &known ) {
+        require_read();
+        return overmap_closest_city( lua_state, origin, known );
+    } );
+    overmap.set_function(
         "random",
         [require_read, random_index](
             sol::this_state lua_state,
@@ -1305,6 +1432,23 @@ void install_overmap_api(
         return overmap_buffer.is_safe(
                    require_absolute_omt(
                        position, "game.overmap.is_safe" ) );
+    } );
+    overmap.set_function(
+        "is_camp",
+        [require_read](
+            const script_tripoint_coord &position,
+            const sol::optional<bool> &include_legacy_terrain ) {
+        require_read();
+        return overmap_is_camp(
+                   position,
+                   include_legacy_terrain.value_or( true ) );
+    } );
+    overmap.set_function(
+        "is_camp_start",
+        [require_read](
+            const script_tripoint_coord &position ) {
+        require_read();
+        return overmap_is_camp_start( position );
     } );
     overmap.set_function(
         "is_in_city",
@@ -1384,6 +1528,20 @@ void install_overmap_api(
         require_write();
         return reveal_existing_overmap(
                    lua_state, center, radius );
+    } );
+    overmap.set_function(
+        "reveal_route",
+        [require_write](
+            sol::this_state lua_state,
+            const script_tripoint_coord &source,
+            const script_tripoint_coord &destination,
+            const sol::optional<int> &radius,
+    const sol::optional<bool> &road_only ) {
+        require_write();
+        return reveal_overmap_route(
+                   lua_state, source, destination,
+                   radius.value_or( 0 ),
+                   road_only.value_or( false ) );
     } );
     game["overmap"] = std::move( overmap );
 }
