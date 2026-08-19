@@ -23,6 +23,11 @@ class item;
 template<typename T>
 class generic_factory;
 
+namespace cata::lua_platform
+{
+class content_transaction;
+}
+
 class profession
 {
     public:
@@ -42,6 +47,7 @@ class profession
         using itypedecvec = std::vector<itypedec>;
         friend class string_id<profession>;
         friend class generic_factory<profession>;
+        friend class cata::lua_platform::content_transaction;
         friend struct mod_tracker;
 
     private:
@@ -86,6 +92,8 @@ class profession
         // the int is what level the spell starts at
         std::map<spell_id, int> _starting_spells;
         std::vector<effect_on_condition_id> effect_on_conditions;
+        std::string lua_platform_mod;
+        std::string lua_platform_start_handler;
         std::set<std::string> flags; // flags for some special properties of the profession
         StartingSkillList  _starting_skills;
         std::vector<mission_type_id> _missions; // starting missions for profession
@@ -147,6 +155,9 @@ class profession
         std::map<spell_id, int> spells() const;
         void learn_spells( Character &you ) const;
         std::vector<effect_on_condition_id> get_eocs() const;
+        bool has_platform_start_handler() const noexcept;
+        const std::string &platform_start_mod() const noexcept;
+        const std::string &platform_start_handler() const noexcept;
         //returns the profession id
         profession_id get_profession_id() const;
         bool has_hard_requirement() const;

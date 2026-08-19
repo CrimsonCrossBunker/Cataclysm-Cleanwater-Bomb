@@ -51,6 +51,11 @@ namespace
 generic_factory<profession> all_profs( "profession" );
 } // namespace
 
+generic_factory<profession> &cata::lua_platform::detail::profession_registry()
+{
+    return all_profs;
+}
+
 namespace
 {
 class json_item_substitution
@@ -59,6 +64,16 @@ class json_item_substitution
         void reset();
         void load( const JsonObject &jo );
         void check_consistency() const;
+        cata::lua_platform::detail::profession_item_substitution_native_snapshot snapshot() const;
+        bool contains_substitution( const std::string &item ) const;
+        bool contains_bonus( const std::string &group ) const;
+        void set_substitution(
+            const cata::lua_platform::detail::profession_item_substitution_native_entry &entry );
+        void set_bonus(
+            const cata::lua_platform::detail::profession_item_bonus_native_entry &entry );
+        void restore(
+            const cata::lua_platform::detail::profession_item_substitution_native_snapshot
+            &snapshot );
 
     private:
         struct trait_requirements {
@@ -857,6 +872,21 @@ std::vector<effect_on_condition_id> profession::get_eocs() const
     return effect_on_conditions;
 }
 
+bool profession::has_platform_start_handler() const noexcept
+{
+    return !lua_platform_mod.empty() && !lua_platform_start_handler.empty();
+}
+
+const std::string &profession::platform_start_mod() const noexcept
+{
+    return lua_platform_mod;
+}
+
+const std::string &profession::platform_start_handler() const noexcept
+{
+    return lua_platform_start_handler;
+}
+
 bool profession_sorter::operator()( const string_id<profession> &a,
                                     const string_id<profession> &b ) const
 {
@@ -895,6 +925,168 @@ void json_item_substitution::reset()
 {
     substitutions.clear();
     bonuses.clear();
+}
+
+cata::lua_platform::detail::profession_item_substitution_native_snapshot
+json_item_substitution::snapshot() const
+{
+    using namespace cata::lua_platform::detail;
+    profession_item_substitution_native_snapshot result;
+    result.substitutions.reserve( substitutions.size() );
+    for( const auto &[item_id, source_rules] : substitutions ) {
+        profession_item_substitution_native_entry entry;
+        entry.item = item_id.str();
+        entry.rules.reserve( source_rules.size() );
+        for( const substitution &source_rule : source_rules ) {
+            profession_item_substitution_native_rule rule;
+            for( const trait_id &trait : source_rule.trait_reqs.present ) {
+                rule.requirements.present.push_back( trait.str() );
+            }
+            for( const trait_id &trait : source_rule.trait_reqs.absent ) {
+                rule.requirements.absent.push_back( trait.str() );
+            }
+            rule.replacements.reserve( source_rule.infos.size() );
+            for( const substitution::info &source_info : source_rule.infos ) {
+                rule.replacements.push_back( { source_info.new_item.str(), source_info.ratio } );
+            }
+            entry.rules.push_back( std::move( rule ) );
+        }
+        result.substitutions.push_back( std::move( entry ) );
+    }
+    result.bonuses.reserve( bonuses.size() );
+    for( const auto &[group_id, source_requirements] : bonuses ) {
+        profession_item_bonus_native_entry entry;
+        entry.group = group_id.str();
+        profession_item_substitution_native_requirement requirements;
+        for( const trait_id &trait : source_requirements.present ) {
+            requirements.present.push_back( trait.str() );
+        }
+        for( const trait_id &trait : source_requirements.absent ) {
+            requirements.absent.push_back( trait.str() );
+        }
+        entry.requirements.push_back( std::move( requirements ) );
+        result.bonuses.push_back( std::move( entry ) );
+    }
+    return result;
+}
+
+bool json_item_substitution::contains_substitution( const std::string &item ) const
+{
+    return substitutions.count( itype_id( item ) ) != 0;
+}
+
+bool json_item_substitution::contains_bonus( const std::string &group ) const
+{
+    return std::any_of( bonuses.begin(), bonuses.end(), [&group]( const auto &entry ) {
+        return entry.first.str() == group;
+    } );
+}
+
+void json_item_substitution::set_substitution(
+    const cata::lua_platform::detail::profession_item_substitution_native_entry &entry )
+{
+    std::vector<substitution> native_rules;
+    native_rules.reserve( entry.rules.size() );
+    for( const cata::lua_platform::detail::profession_item_substitution_native_rule &source_rule :
+         entry.rules ) {
+        substitution rule;
+        for( const std::string &trait : source_rule.requirements.present ) {
+            rule.trait_reqs.present.emplace_back( trait );
+        }
+        for( const std::string &trait : source_rule.requirements.absent ) {
+            rule.trait_reqs.absent.emplace_back( trait );
+        }
+        rule.infos.reserve( source_rule.replacements.size() );
+        for( const cata::lua_platform::detail::profession_item_substitution_native_replacement
+             &source_info : source_rule.replacements ) {
+            substitution::info info;
+            info.new_item = itype_id( source_info.item );
+            info.ratio = source_info.ratio;
+            rule.infos.push_back( std::move( info ) );
+        }
+        native_rules.push_back( std::move( rule ) );
+    }
+    substitutions.insert_or_assign( itype_id( entry.item ), std::move( native_rules ) );
+}
+
+void json_item_substitution::set_bonus(
+    const cata::lua_platform::detail::profession_item_bonus_native_entry &entry )
+{
+    bonuses.erase( std::remove_if( bonuses.begin(), bonuses.end(),
+    [&entry]( const auto &existing ) {
+        return existing.first.str() == entry.group;
+    } ), bonuses.end() );
+    for( const cata::lua_platform::detail::profession_item_substitution_native_requirement
+         &source_requirements : entry.requirements ) {
+        trait_requirements requirements;
+        for( const std::string &trait : source_requirements.present ) {
+            requirements.present.emplace_back( trait );
+        }
+        for( const std::string &trait : source_requirements.absent ) {
+            requirements.absent.emplace_back( trait );
+        }
+        bonuses.emplace_back( item_group_id( entry.group ), std::move( requirements ) );
+    }
+}
+
+void json_item_substitution::restore(
+    const cata::lua_platform::detail::profession_item_substitution_native_snapshot &snapshot )
+{
+    reset();
+    for( const cata::lua_platform::detail::profession_item_substitution_native_entry &entry :
+         snapshot.substitutions ) {
+        set_substitution( entry );
+    }
+    for( const cata::lua_platform::detail::profession_item_bonus_native_entry &entry :
+         snapshot.bonuses ) {
+        for( const cata::lua_platform::detail::profession_item_substitution_native_requirement
+             &source_requirements : entry.requirements ) {
+            trait_requirements requirements;
+            for( const std::string &trait : source_requirements.present ) {
+                requirements.present.emplace_back( trait );
+            }
+            for( const std::string &trait : source_requirements.absent ) {
+                requirements.absent.emplace_back( trait );
+            }
+            bonuses.emplace_back( item_group_id( entry.group ), std::move( requirements ) );
+        }
+    }
+}
+
+cata::lua_platform::detail::profession_item_substitution_native_snapshot
+cata::lua_platform::detail::profession_item_substitution_registry_snapshot()
+{
+    return item_substitutions.snapshot();
+}
+
+bool cata::lua_platform::detail::profession_item_substitution_registry_contains(
+    const std::string &item )
+{
+    return item_substitutions.contains_substitution( item );
+}
+
+bool cata::lua_platform::detail::profession_item_bonus_registry_contains(
+    const std::string &group )
+{
+    return item_substitutions.contains_bonus( group );
+}
+
+void cata::lua_platform::detail::profession_item_substitution_registry_set(
+    const profession_item_substitution_native_entry &entry )
+{
+    item_substitutions.set_substitution( entry );
+}
+
+void cata::lua_platform::detail::profession_item_bonus_registry_set(
+    const profession_item_bonus_native_entry &entry )
+{
+    item_substitutions.set_bonus( entry );
+}
+
+void cata::lua_platform::detail::profession_item_substitution_registry_restore(
+    const profession_item_substitution_native_snapshot &snapshot )
+{
+    item_substitutions.restore( snapshot );
 }
 
 json_item_substitution::substitution::info::info( const JsonValue &value )
