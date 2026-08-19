@@ -3587,13 +3587,9 @@ std::pair<size_t, std::string> basecamp::farm_action( const point_rel_omt &dir, 
                                     { "actor_is_npc", 1.0 }
                                 };
                                 Character &actor = *comp;
-                                const furn_t &current_furn = farm_map.furn( pos ).obj();
-                                if( current_furn.plant ) {
-                                    iexamine::run_plant_eocs( current_furn.plant->eoc_on_harvest, actor,
-                                                              *farm_map_ptr, bub_pos, *seed, stage, stage, {}, num_ctx );
-                                }
-                                iexamine::run_plant_eocs( seed_type.seed->eoc_on_harvest, actor, *farm_map_ptr,
-                                                          bub_pos, *seed, stage, stage, {}, num_ctx );
+                                iexamine::run_plant_lifecycle_event(
+                                    "harvest", actor, *farm_map_ptr, bub_pos, *seed,
+                                    stage, stage, {}, num_ctx );
 
                                 for( item &i : iexamine::get_harvest_items( seed_type, plant_count,
                                         seed_cnt, true ) ) {
