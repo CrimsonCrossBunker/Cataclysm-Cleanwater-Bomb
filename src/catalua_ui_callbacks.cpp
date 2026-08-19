@@ -17,6 +17,47 @@ const std::vector<script_hook_spec> &script_hook_specs()
             { "character", "killer" }
         },
         {
+            "on_avatar_fatal", script_hook_mode::intercept,
+            { "character", "killer" }, { "allow" }
+        },
+        {
+            "on_bionic_activated", script_hook_mode::observe,
+            {
+                "character", "bionic", "bionic_uid",
+                "activation_cost_millijoules"
+            }
+        },
+        {
+            "on_bionic_deactivated", script_hook_mode::observe,
+            {
+                "character", "bionic", "bionic_uid",
+                "deactivation_cost_millijoules"
+            }
+        },
+        {
+            "on_bionic_processed", script_hook_mode::observe,
+            {
+                "character", "bionic", "bionic_uid",
+                "over_time_energy_millijoules"
+            }
+        },
+        {
+            "on_mutation_activated", script_hook_mode::observe,
+            { "character", "mutation" }
+        },
+        {
+            "on_mutation_deactivated", script_hook_mode::observe,
+            { "character", "mutation" }
+        },
+        {
+            "on_mutation_processed", script_hook_mode::observe,
+            { "character", "mutation", "activation_cost", "cooldown_turns" }
+        },
+        {
+            "on_npc_fatal", script_hook_mode::intercept,
+            { "character", "killer" }, { "allow" }
+        },
+        {
             "on_character_display_skill_action", script_hook_mode::intercept,
             { "character", "skill", "action" }, { "handled" }
         },
@@ -85,15 +126,17 @@ const std::vector<script_hook_spec> &script_hook_specs()
         },
         {
             "on_dialogue_end", script_hook_mode::observe,
-            { "alpha", "beta", "topic" }
+            { "alpha", "beta", "topic", "by_radio", "reason" }
         },
         {
             "on_dialogue_option", script_hook_mode::intercept,
-            { "alpha", "beta", "topic", "option" }, { "result" }
+            { "alpha", "beta", "topic", "option", "by_radio", "reason" },
+            { "result" }
         },
         {
             "on_dialogue_start", script_hook_mode::intercept,
-            { "alpha", "beta", "topic" }, { "result" }
+            { "alpha", "beta", "topic", "by_radio", "reason" },
+            { "result" }
         },
         {
             "on_elevator_try_use", script_hook_mode::intercept,
@@ -165,6 +208,10 @@ const std::vector<script_hook_spec> &script_hook_specs()
         {
             "on_monster_try_move", script_hook_mode::intercept,
             { "monster", "from", "to", "force" }, { "allow" }
+        },
+        {
+            "on_mortar_fired", script_hook_mode::observe,
+            { "character", "source", "target", "furniture", "ammunition" }
         },
         {
             "on_npc_do_turn", script_hook_mode::observe,
