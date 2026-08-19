@@ -56,6 +56,7 @@ ret_val<void> run_mapgen_update_func(
 ret_val<void> run_mapgen_update_func( const update_mapgen_id &, mapgendata &dat,
                                       bool cancel_on_collision = true );
 void set_queued_points();
+void queue_mapgen_point( const std::string &name, const tripoint_abs_ms &point );
 bool run_mapgen_func( const std::string &mapgen_id, mapgendata &dat );
 bool apply_construction_marker( const update_mapgen_id &update_mapgen_id,
                                 const tripoint_abs_omt &omt_pos,

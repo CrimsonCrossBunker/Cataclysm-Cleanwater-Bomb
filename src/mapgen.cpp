@@ -379,6 +379,7 @@ void map::generate( const tripoint_abs_omt &p, const time_point &when, bool save
             }
             if( any_missing || !save_results ) {
                 cata::lua_ui::dispatch_mapgen_postprocess( dat );
+                set_queued_points();
             }
         }
     }
@@ -7749,6 +7750,11 @@ void set_queued_points()
         globvars.set_global_value( queued_point.first, queued_point.second );
     }
     queued_points.clear();
+}
+
+void queue_mapgen_point( const std::string &name, const tripoint_abs_ms &point )
+{
+    queued_points[name] = point;
 }
 
 bool apply_construction_marker( const update_mapgen_id &update_mapgen_id,
