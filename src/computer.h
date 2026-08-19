@@ -4,6 +4,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -92,6 +93,9 @@ enum computer_failure_type {
     NUM_COMPUTER_FAILURES
 };
 
+std::optional<computer_action> computer_action_from_ident( const std::string &ident );
+std::optional<computer_failure_type> computer_failure_from_ident( const std::string &ident );
+
 struct computer_option {
     std::string name;
     computer_action action;
@@ -135,6 +139,11 @@ class computer
         void add_failure( computer_failure_type failure );
         void set_access_denied_msg( const std::string &new_msg );
         void set_mission( int id );
+        void set_platform_access_handler( const std::string &mod_id,
+                                          const std::string &handler_id );
+        bool has_platform_access_handler() const noexcept;
+        const std::string &platform_access_mod() const noexcept;
+        const std::string &platform_access_handler() const noexcept;
         // Save/load
         void load_legacy_data( const std::string &data );
         void serialize( JsonOut &jout ) const;
@@ -162,6 +171,10 @@ class computer
         std::string access_denied;
         std::vector<std::string> chat_topics; // What it has to say.
         std::vector<effect_on_condition_id> eocs; // Effect on conditions to run when accessed.
+        // Persisted symbolic ownership for Lua-first terminals.  Runtime pointers
+        // are deliberately never stored in world data.
+        std::string lua_platform_mod;
+        std::string lua_platform_access_handler;
         // Miscellaneous key/value pairs.
         global_variables::impl_t values;
         // Methods for setting/getting misc key/value pairs.

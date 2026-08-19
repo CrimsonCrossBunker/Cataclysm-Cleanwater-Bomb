@@ -126,6 +126,28 @@ void computer::set_mission( const int id )
     mission_id = id;
 }
 
+void computer::set_platform_access_handler( const std::string &mod_id,
+        const std::string &handler_id )
+{
+    lua_platform_mod = mod_id;
+    lua_platform_access_handler = handler_id;
+}
+
+bool computer::has_platform_access_handler() const noexcept
+{
+    return !lua_platform_mod.empty() && !lua_platform_access_handler.empty();
+}
+
+const std::string &computer::platform_access_mod() const noexcept
+{
+    return lua_platform_mod;
+}
+
+const std::string &computer::platform_access_handler() const noexcept
+{
+    return lua_platform_access_handler;
+}
+
 // Methods for setting/getting misc key/value pairs.
 void computer::set_value( const std::string &key, diag_value value )
 {
@@ -210,6 +232,10 @@ void computer::serialize( JsonOut &jout ) const
     jout.member( "access_denied", access_denied );
     jout.member( "eocs", eocs );
     jout.member( "chat_topics", chat_topics );
+    if( has_platform_access_handler() ) {
+        jout.member( "lua_platform_mod", lua_platform_mod );
+        jout.member( "lua_platform_access_handler", lua_platform_access_handler );
+    }
     jout.member( "values", values );
     jout.member( "location", loc );
     jout.end_object();
@@ -231,6 +257,8 @@ void computer::deserialize( const JsonValue &jv )
         jo.read( "access_denied", access_denied );
         jo.read( "eocs", eocs );
         jo.read( "chat_topics", chat_topics );
+        jo.read( "lua_platform_mod", lua_platform_mod );
+        jo.read( "lua_platform_access_handler", lua_platform_access_handler );
         jo.read( "values", values );
         if( !jo.read( "location", loc ) ) {
             // Backward compatibility code for change made 2025-02-19.
@@ -432,6 +460,16 @@ template<>
 struct enum_traits<computer_failure_type> {
     static constexpr computer_failure_type last = NUM_COMPUTER_FAILURES;
 };
+
+std::optional<computer_action> computer_action_from_ident( const std::string &ident )
+{
+    return io::string_to_enum_optional<computer_action>( ident );
+}
+
+std::optional<computer_failure_type> computer_failure_from_ident( const std::string &ident )
+{
+    return io::string_to_enum_optional<computer_failure_type>( ident );
+}
 
 computer_option computer_option::from_json( const JsonObject &jo )
 {
