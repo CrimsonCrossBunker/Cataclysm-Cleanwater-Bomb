@@ -6,6 +6,7 @@
 #include <array>
 #include <cctype>
 #include <charconv>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
@@ -45,6 +46,7 @@
 #include "butchery_requirements.h"
 #include "butchery.h"
 #include "cata_path.h"
+#include "cata_imgui.h"
 #include "catacharset.h"
 #include "cata_utility.h"
 #include "cata_variant.h"
@@ -52,9 +54,12 @@
 #include "catalua_platform_world_content.h"
 #include "catalua_dialogue_common.h"
 #include "catalua_ui_state.h"
+#include "catalua_ui_imgui.h"
+#include "catalua_ui_renderer.h"
 #include "catalua_bindings_coords.h"
 #include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
+#include "imgui/imgui.h"
 #include "catalua_ui_achievements.h"
 #include "catalua_ui_addictions.h"
 #include "catalua_ui_bionics.h"
@@ -131,6 +136,7 @@
 #include "item_category.h"
 #include "item_factory.h"
 #include "item_action.h"
+#include "input_context.h"
 #include "item_location.h"
 #include "itype.h"
 #include "iuse.h"
@@ -140,6 +146,8 @@
 #include "map_accessories.h"
 #include "mapgendata.h"
 #include "mapdata.h"
+#include "iexamine.h"
+#include "mod_tileset.h"
 #include "map_extras.h"
 #include "map_scale_constants.h"
 #include "magic_type.h"
@@ -147,6 +155,7 @@
 #include "material.h"
 #include "martialarts.h"
 #include "messages.h"
+#include "music.h"
 #include "morale_types.h"
 #include "mood_face.h"
 #include "mod_tracker.h"
@@ -180,6 +189,7 @@
 #include "scenario.h"
 #include "skill.h"
 #include "sounds.h"
+#include "sdlsound.h"
 #include "shop_cons_rate.h"
 #include "speech.h"
 #include "speed_description.h"
@@ -193,6 +203,7 @@
 #include "type_id.h"
 #include "units.h"
 #include "uilist.h"
+#include "ui_manager.h"
 #include "vehicle.h"
 #include "vehicle_group.h"
 #include "vehicle_part_location.h"
@@ -205,6 +216,10 @@
 #include "weakpoint.h"
 #include "wound.h"
 #include "worldfactory.h"
+
+#if defined(TILES)
+#include "sdltiles.h"
+#endif
 
 namespace cata::lua_platform
 {
@@ -256,6 +271,21 @@ std::size_t require_dense_array( const sol::table &values,
                                      " must be a dense array" );
     }
     return count;
+}
+
+bool path_is_within( const std::filesystem::path &path,
+                     const std::filesystem::path &directory )
+{
+    auto path_it = path.begin();
+    auto directory_it = directory.begin();
+    while( directory_it != directory.end() ) {
+        if( path_it == path.end() || *path_it != *directory_it ) {
+            return false;
+        }
+        ++path_it;
+        ++directory_it;
+    }
+    return true;
 }
 
 struct owner_token {
@@ -1604,6 +1634,17 @@ struct furniture_definition_data {
     std::string lockpick_result;
     std::string crafting_pseudo_item;
     std::string deployed_item;
+    std::string on_examine;
+    bool registered = false;
+};
+
+struct sprite_sheet_definition_data {
+    std::string id;
+    std::string file;
+    std::int64_t frame_width = 0;
+    std::int64_t frame_height = 0;
+    double pixelscale = 1.0;
+    std::vector<std::string> frame_ids;
     bool registered = false;
 };
 
@@ -5664,6 +5705,16 @@ struct furniture_definition_handle {
     }
 };
 
+struct sprite_sheet_definition_handle {
+    std::shared_ptr<sprite_sheet_definition_data> definition;
+    std::shared_ptr<owner_token> token;
+
+    std::string id() const {
+        require_readable_handle( token, *definition, "sprite sheet" );
+        return definition->id;
+    }
+};
+
 struct terrain_definition_handle {
     std::shared_ptr<terrain_definition_data> definition;
     std::shared_ptr<owner_token> token;
@@ -6295,6 +6346,7 @@ using martial_art_registration = catalog_registration<martial_art_definition_dat
 using trap_registration = catalog_registration<trap_definition_data>;
 using construction_registration = catalog_registration<construction_definition_data>;
 using furniture_registration = catalog_registration<furniture_definition_data>;
+using sprite_sheet_registration = catalog_registration<sprite_sheet_definition_data>;
 using terrain_registration = catalog_registration<terrain_definition_data>;
 using gate_registration = catalog_registration<gate_definition_data>;
 using fault_registration = catalog_registration<fault_definition_data>;
@@ -6640,6 +6692,29 @@ class lua_platform_iuse_actor : public iuse_actor
         std::string mod_id_;
         std::string handler_id_;
         std::string label_;
+};
+
+class lua_platform_furniture_examine_actor final : public iexamine_actor
+{
+    public:
+        explicit lua_platform_furniture_examine_actor( std::string furniture_id ) :
+            iexamine_actor( "lua_platform_furniture" ),
+            furniture_id_( std::move( furniture_id ) ) {}
+
+        void load( const JsonObject &, const std::string & ) override {}
+
+        void call( Character &character, const tripoint_bub_ms &position ) const override {
+            invoke_furniture_examine_handler( furniture_id_, character, position );
+        }
+
+        void finalize() const override {}
+
+        std::unique_ptr<iexamine_actor> clone() const override {
+            return std::make_unique<lua_platform_furniture_examine_actor>( *this );
+        }
+
+    private:
+        std::string furniture_id_;
 };
 
 struct handler_definition {
@@ -6991,9 +7066,10 @@ class runtime : public std::enable_shared_from_this<runtime>
         };
 
         runtime( std::string id, std::size_t candidate_generation,
-                 sol::state &state ) : mod_id( std::move( id ) ),
-            generation( candidate_generation ), lua( &state ),
-            content( mod_id, generation ),
+                 sol::state &state, std::filesystem::path source_root_value ) :
+            mod_id( std::move( id ) ), generation( candidate_generation ), lua( &state ),
+            source_root( std::move( source_root_value ) ),
+            content( mod_id, generation, source_root ),
             random_engine( fnv1a( mod_id ) ^ static_cast<std::uint64_t>( generation ) ) {}
 
         std::string mod_id;
@@ -7001,6 +7077,7 @@ class runtime : public std::enable_shared_from_this<runtime>
         cata::lua_ui::game_handle_runtime_owner_ptr game_handle_owner =
             cata::lua_ui::make_game_handle_runtime_owner();
         sol::state *lua = nullptr;
+        std::filesystem::path source_root;
         content_transaction content;
         std::unordered_map<std::string, handler_definition> handlers;
         std::unordered_map<std::string, std::map<int, task_payload_migration>>
@@ -7034,15 +7111,18 @@ class runtime : public std::enable_shared_from_this<runtime>
 };
 
 struct content_transaction::impl {
-    impl( std::string owner_id, std::size_t owner_generation ) :
+    impl( std::string owner_id, std::size_t owner_generation,
+          std::filesystem::path source_root ) :
         owner( std::move( owner_id ) ), generation( owner_generation ),
         token( std::make_shared<owner_token>( owner_token{ owner, generation,
                                               handle_lifecycle::building } ) ),
+        root( std::move( source_root ) ),
         world( owner, generation ) {}
 
     std::string owner;
     std::size_t generation = 0;
     std::shared_ptr<owner_token> token;
+    std::filesystem::path root;
     world_content_transaction world;
     std::vector<tool_quality_registration> tool_qualities;
     std::vector<skill_display_registration> skill_displays;
@@ -7135,6 +7215,7 @@ struct content_transaction::impl {
     std::vector<trap_registration> traps;
     std::vector<construction_registration> constructions;
     std::vector<furniture_registration> furniture;
+    std::vector<sprite_sheet_registration> sprite_sheets;
     std::vector<terrain_registration> terrain;
     std::vector<gate_registration> gates;
     std::vector<fault_registration> faults;
@@ -7277,6 +7358,8 @@ struct content_transaction::impl {
     std::vector<std::pair<construction_str_id, std::optional<construction>>>
     construction_undo;
     std::vector<std::pair<furn_str_id, std::optional<furn_t>>> furniture_undo;
+    std::vector<std::pair<std::string, std::optional<platform_sprite_sheet>>>
+    sprite_sheet_undo;
     std::vector<std::pair<ter_str_id, std::optional<ter_t>>> terrain_undo;
     std::vector<std::pair<gate_id, std::optional<gate_data>>> gate_undo;
     std::vector<std::pair<fault_id, std::optional<fault>>> fault_undo;
@@ -7343,6 +7426,262 @@ class callback_scope
 
     private:
         runtime &owner_;
+};
+
+void report_callback_error( const runtime &owner, std::string_view handler,
+                            const sol::protected_function_result &result );
+
+class platform_canvas_context
+{
+    public:
+        platform_canvas_context( std::shared_ptr<cata::lua_ui::script_ui_context> ui,
+                                 const double elapsed_ms, const double delta_ms,
+                                 const int width, const int height ) : ui_( std::move( ui ) ),
+            elapsed_ms_( elapsed_ms ), delta_ms_( delta_ms ), width_( width ), height_( height ) {}
+
+        double elapsed_ms() const {
+            require_active();
+            return elapsed_ms_;
+        }
+
+        double delta_ms() const {
+            require_active();
+            return delta_ms_;
+        }
+
+        int width() const {
+            require_active();
+            return width_;
+        }
+
+        int height() const {
+            require_active();
+            return height_;
+        }
+
+        bool is_open() const {
+            require_active();
+            return !close_requested_;
+        }
+
+        void close() {
+            require_active();
+            close_requested_ = true;
+        }
+
+        bool close_requested() const {
+            return close_requested_;
+        }
+
+        void rect( const double x, const double y, const double width, const double height,
+                   const double red, const double green, const double blue,
+                   const double alpha ) const {
+            require_active();
+            ui_->canvas_rect( x, y, width, height, red, green, blue, alpha );
+        }
+
+        void text( const double x, const double y, const std::string &value,
+                   const double red, const double green, const double blue,
+                   const double alpha ) const {
+            require_active();
+            ui_->canvas_text( x, y, value, red, green, blue, alpha );
+        }
+
+        bool sprite( const std::string &tile_id, const double x, const double y,
+                     const double width, const double height ) const {
+            require_active();
+            return ui_->canvas_sprite( tile_id, x, y, width, height );
+        }
+
+        bool button( const std::string &id, const std::string &label,
+                     const double x, const double y, const double width,
+                     const double height, const bool request_focus ) const {
+            require_active();
+            return ui_->canvas_button( id, label, x, y, width, height, request_focus );
+        }
+
+        void invalidate() noexcept {
+            active_ = false;
+            if( ui_ ) {
+                ui_->invalidate();
+            }
+        }
+
+    private:
+        void require_active() const {
+            if( !active_ || !ui_ ) {
+                throw std::runtime_error(
+                    "Platform canvas context is only valid during its current draw callback" );
+            }
+        }
+
+        std::shared_ptr<cata::lua_ui::script_ui_context> ui_;
+        double elapsed_ms_ = 0.0;
+        double delta_ms_ = 0.0;
+        int width_ = 0;
+        int height_ = 0;
+        bool active_ = true;
+        bool close_requested_ = false;
+};
+
+std::filesystem::path resolve_mod_asset( const runtime &owner, const std::string &file,
+        const std::string_view description )
+{
+    if( file.empty() || file.size() > 4096 || file.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument( std::string( description ) + " file is invalid" );
+    }
+    const std::filesystem::path relative = std::filesystem::u8path( file );
+    std::error_code error;
+    const std::filesystem::path root =
+        std::filesystem::weakly_canonical( owner.source_root, error );
+    const std::filesystem::path asset = error ? std::filesystem::path() :
+        std::filesystem::weakly_canonical( root / relative, error );
+    if( relative.is_absolute() || error || !path_is_within( asset, root ) ||
+        !std::filesystem::is_regular_file( asset, error ) || error ) {
+        throw std::invalid_argument( std::string( description ) +
+                                    " file must be a regular Mod asset" );
+    }
+    return asset;
+}
+
+class scoped_canvas_music final
+{
+    public:
+        scoped_canvas_music( const runtime &owner, const std::string &file ) :
+            playlist_id_( "ccb_platform_canvas_music_" +
+                          std::to_string( ++next_playlist_id_ ) ),
+            resume_playlist_( music::get_music_id_string() ) {
+            const std::filesystem::path asset = resolve_mod_asset( owner, file, "canvas music" );
+
+            previous_ = sfx::playlist_registry_get( playlist_id_ );
+            sfx::playlist_definition playlist;
+            playlist.id = playlist_id_;
+            playlist.entries.push_back( sfx::playlist_entry_definition{
+                asset.generic_u8string(), 100, true
+            } );
+            sfx::playlist_registry_set( playlist );
+            active_ = true;
+            set_temporary_music( playlist_id_ );
+        }
+
+        ~scoped_canvas_music() {
+            if( !active_ ) {
+                return;
+            }
+            if( previous_ ) {
+                sfx::playlist_registry_set( *previous_ );
+            } else {
+                sfx::playlist_registry_erase( playlist_id_ );
+            }
+            clear_temporary_music();
+            play_music( resume_playlist_ );
+        }
+
+        scoped_canvas_music( const scoped_canvas_music & ) = delete;
+        scoped_canvas_music &operator=( const scoped_canvas_music & ) = delete;
+
+    private:
+        static std::uint64_t next_playlist_id_;
+        std::string playlist_id_;
+        std::string resume_playlist_;
+        std::optional<sfx::playlist_definition> previous_;
+        bool active_ = false;
+};
+
+std::uint64_t scoped_canvas_music::next_playlist_id_ = 0;
+
+class platform_canvas_window final : public cataimgui::window
+{
+    public:
+        platform_canvas_window( std::shared_ptr<runtime> owner, std::string title,
+                                const int width, const int height,
+                                const bool allow_quit, sol::protected_function draw ) :
+            cataimgui::window( title, allow_quit ? 0 :
+                                ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+                                ImGuiWindowFlags_NoMove ), owner_( std::move( owner ) ),
+            width_( width ), height_( height ), allow_quit_( allow_quit ),
+            draw_( std::move( draw ) ) {}
+
+        bool run() {
+            input_context context( "HELP_KEYBINDINGS" );
+            context.register_action( "QUIT" );
+            context.register_action( "ANY_INPUT" );
+            started_ = std::chrono::steady_clock::now();
+            last_frame_ = started_;
+            ui_manager::redraw();
+            while( get_is_open() && !callback_failed_ ) {
+                ui_manager::redraw();
+                const std::string action = context.handle_input( 33 );
+                if( allow_quit_ && action == "QUIT" ) {
+                    break;
+                }
+            }
+            return !callback_failed_;
+        }
+
+    protected:
+        cataimgui::bounds get_bounds() override {
+            return { -1.0F, -1.0F, static_cast<float>( width_ + 48 ),
+                     static_cast<float>( height_ + 72 ) };
+        }
+
+        void draw_controls() override {
+            std::unique_ptr<cata::lua_ui::script_ui_renderer> renderer =
+                cata::lua_ui::make_imgui_script_ui_renderer();
+            if( !renderer->info().supports( cata::lua_ui::script_ui_capability::sprite_canvas ) ) {
+                renderer->disabled_text( "此设备需要图形界面。" );
+                callback_failed_ = true;
+                is_open = false;
+                return;
+            }
+            const auto now = std::chrono::steady_clock::now();
+            const double elapsed_ms = std::chrono::duration<double, std::milli>( now - started_ ).count();
+            const double delta_ms = std::min( 250.0,
+                std::chrono::duration<double, std::milli>( now - last_frame_ ).count() );
+            last_frame_ = now;
+            const std::shared_ptr<cata::lua_ui::script_ui_context> ui =
+                std::make_shared<cata::lua_ui::script_ui_context>( *renderer );
+            ui->canvas_begin( width_, height_ );
+            const std::shared_ptr<platform_canvas_context> canvas =
+                std::make_shared<platform_canvas_context>( ui, elapsed_ms, delta_ms,
+                                                           width_, height_ );
+            callback_scope scope( *owner_ );
+            const sol::protected_function_result result = draw_( canvas );
+            const bool close_requested = canvas->close_requested();
+            canvas->invalidate();
+            if( !result.valid() ) {
+                report_callback_error( *owner_, "presentation.canvas", result );
+                callback_failed_ = true;
+                is_open = false;
+                return;
+            }
+            if( close_requested ) {
+                is_open = false;
+                return;
+            }
+            if( result.return_count() == 0 || result.get_type() == sol::type::nil ) {
+                return;
+            }
+            if( result.return_count() == 1 && result.get_type() == sol::type::string &&
+                result.get<std::string>() == "close" ) {
+                is_open = false;
+                return;
+            }
+            DebugLog( D_ERROR, D_MAIN ) << "Platform canvas callback for '" << owner_->mod_id
+                                        << "' must return nil or 'close'";
+            callback_failed_ = true;
+            is_open = false;
+        }
+
+    private:
+        std::shared_ptr<runtime> owner_;
+        int width_ = 0;
+        int height_ = 0;
+        bool allow_quit_ = true;
+        sol::protected_function draw_;
+        std::chrono::steady_clock::time_point started_ = std::chrono::steady_clock::now();
+        std::chrono::steady_clock::time_point last_frame_ = started_;
+        bool callback_failed_ = false;
 };
 
 bool valid_platform_dialogue_id( const std::string &value )
@@ -8359,8 +8698,10 @@ void write_scope( const cata_path &path, const std::string &scope )
 
 } // namespace
 
-content_transaction::content_transaction( std::string owner, std::size_t generation ) :
-    pimpl_( std::make_unique<impl>( std::move( owner ), generation ) )
+content_transaction::content_transaction( std::string owner, std::size_t generation,
+        std::filesystem::path source_root ) :
+    pimpl_( std::make_unique<impl>( std::move( owner ), generation,
+                                    std::move( source_root ) ) )
 {
 }
 
@@ -8883,6 +9224,9 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         "FurnitureDefinition", sol::no_constructor,
         "id", sol::property( &furniture_definition_handle::id ),
         "flag", &furniture_definition_handle::flag );
+    ccb.new_usertype<sprite_sheet_definition_handle>(
+        "SpriteSheetDefinition", sol::no_constructor,
+        "id", sol::property( &sprite_sheet_definition_handle::id ) );
     ccb.new_usertype<terrain_definition_handle>(
         "TerrainDefinition", sol::no_constructor,
         "id", sol::property( &terrain_definition_handle::id ),
@@ -10466,7 +10810,41 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->crafting_pseudo_item =
             options.get_or( "crafting_pseudo_item", std::string() );
         definition->deployed_item = options.get_or( "deployed_item", std::string() );
+        definition->on_examine = options.get_or( "on_examine", std::string() );
         return furniture_definition_handle{
+            std::move( definition ), transaction->token
+        };
+    } );
+    content.set_function( "SpriteSheet", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<sprite_sheet_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->file = options.get_or( "file", std::string() );
+        definition->frame_width = options.get_or<std::int64_t>( "frame_width", 0 );
+        definition->frame_height = options.get_or<std::int64_t>( "frame_height", 0 );
+        const sol::object raw_pixelscale = options.raw_get<sol::object>( "pixelscale" );
+        if( raw_pixelscale.get_type() == sol::type::number ) {
+            definition->pixelscale = raw_pixelscale.as<double>();
+        } else if( raw_pixelscale.get_type() != sol::type::nil ) {
+            throw std::invalid_argument( "sprite sheet pixelscale must be a number" );
+        }
+        const sol::object raw_ids = options.raw_get<sol::object>( "frame_ids" );
+        if( raw_ids.get_type() != sol::type::table ) {
+            throw std::invalid_argument( "sprite sheet frame_ids must be a dense string array" );
+        }
+        const sol::table frame_ids = raw_ids.as<sol::table>();
+        const std::size_t count = require_dense_array( frame_ids, "sprite sheet frame_ids", 1, 256 );
+        definition->frame_ids.reserve( count );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            const sol::object value = frame_ids.raw_get<sol::object>( index );
+            if( value.get_type() != sol::type::string ) {
+                throw std::invalid_argument( "sprite sheet frame_ids must contain only strings" );
+            }
+            definition->frame_ids.push_back( value.as<std::string>() );
+        }
+        return sprite_sheet_definition_handle{
             std::move( definition ), transaction->token
         };
     } );
@@ -11343,6 +11721,11 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         if( value.is<furniture_definition_handle>() ) {
             register_catalog( value.as<furniture_definition_handle>(),
                               transaction->furniture, operation, "furniture" );
+            return;
+        }
+        if( value.is<sprite_sheet_definition_handle>() ) {
+            register_catalog( value.as<sprite_sheet_definition_handle>(),
+                              transaction->sprite_sheets, operation, "sprite sheet" );
             return;
         }
         if( value.is<terrain_definition_handle>() ) {
@@ -13455,7 +13838,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
             if( definition.name.empty() || definition.color.empty() ||
                 definition.symbol.empty() ||
                 !furniture_ids.insert( definition.id ).second ||
-                definition.movecost < 0 ||
+                ( definition.movecost < 0 && definition.movecost != -10 ) ||
                 definition.light_emitted < 0 ||
                 definition.max_volume_ml < 0 ||
                 definition.mass_grams < 0 ||
@@ -13485,6 +13868,46 @@ bool content_transaction::validate( const runtime &owner_runtime,
             }
             validate_operation( entry.operation, furn_str_id( definition.id ).is_valid(),
                                 definition.id, "furniture" );
+            if( !definition.on_examine.empty() &&
+                owner_runtime.handlers.count( definition.on_examine ) == 0 ) {
+                throw std::runtime_error( "furniture '" + definition.id +
+                                          "' references missing examine handler '" +
+                                          definition.on_examine + "'" );
+            }
+        }
+
+        std::set<std::string> sprite_sheet_ids;
+        std::set<std::string> sprite_frame_ids;
+        for( const sprite_sheet_registration &entry : pimpl_->sprite_sheets ) {
+            const sprite_sheet_definition_data &definition = *entry.definition;
+            require_valid_id( definition.id, "sprite sheet" );
+            const std::filesystem::path relative =
+                std::filesystem::u8path( definition.file );
+            std::error_code filesystem_error;
+            const std::filesystem::path root =
+                std::filesystem::weakly_canonical( pimpl_->root, filesystem_error );
+            const std::filesystem::path asset = filesystem_error ? std::filesystem::path() :
+                std::filesystem::weakly_canonical( root / relative, filesystem_error );
+            if( !sprite_sheet_ids.insert( definition.id ).second || definition.file.empty() ||
+                relative.is_absolute() || relative.extension() != ".png" ||
+                definition.frame_width <= 0 || definition.frame_height <= 0 ||
+                definition.frame_width > 4096 || definition.frame_height > 4096 ||
+                !std::isfinite( definition.pixelscale ) || definition.pixelscale < 0.01 ||
+                definition.pixelscale > 16.0 ||
+                filesystem_error || !path_is_within( asset, root ) ||
+                !std::filesystem::is_regular_file( asset, filesystem_error ) || filesystem_error ) {
+                throw std::runtime_error( "sprite sheet '" + definition.id +
+                                          "' has invalid geometry or an unsafe image path" );
+            }
+            for( const std::string &frame_id : definition.frame_ids ) {
+                require_valid_id( frame_id, "sprite sheet frame" );
+                if( !sprite_frame_ids.insert( frame_id ).second ) {
+                    throw std::runtime_error( "sprite sheet frame id '" + frame_id +
+                                              "' is registered more than once" );
+                }
+            }
+            validate_operation( entry.operation, find_platform_sprite_sheet( definition.id ) != nullptr,
+                                definition.id, "sprite sheet" );
         }
 
         std::set<std::string> terrain_ids;
@@ -18184,6 +18607,23 @@ bool content_transaction::apply( std::string &error )
             detail::construction_registry().finalize();
         }
 
+        for( const sprite_sheet_registration &entry : pimpl_->sprite_sheets ) {
+            const sprite_sheet_definition_data &source = *entry.definition;
+            const platform_sprite_sheet *previous = find_platform_sprite_sheet( source.id );
+            pimpl_->sprite_sheet_undo.emplace_back(
+                source.id, previous ? std::optional<platform_sprite_sheet>( *previous ) :
+                std::nullopt );
+            platform_sprite_sheet native;
+            native.id = source.id;
+            native.image_path = cata_path( cata_path::root_path::unknown,
+                                           pimpl_->root / std::filesystem::u8path( source.file ) );
+            native.frame_width = static_cast<int>( source.frame_width );
+            native.frame_height = static_cast<int>( source.frame_height );
+            native.pixelscale = static_cast<float>( source.pixelscale );
+            native.frame_ids = source.frame_ids;
+            set_platform_sprite_sheet( std::move( native ) );
+        }
+
         for( const furniture_registration &entry : pimpl_->furniture ) {
             const furn_str_id id( entry.definition->id );
             pimpl_->furniture_undo.emplace_back(
@@ -18222,6 +18662,10 @@ bool content_transaction::apply( std::string &error )
             }
             native.crafting_pseudo_item = itype_id( source.crafting_pseudo_item );
             native.deployed_item = itype_id( source.deployed_item );
+            if( !source.on_examine.empty() ) {
+                native.examine_actor.emplace_back(
+                    std::make_unique<lua_platform_furniture_examine_actor>( source.id ) );
+            }
             native.was_loaded = true;
             detail::furniture_registry().insert( native );
         }
@@ -20676,6 +21120,13 @@ bool content_transaction::validate_finalized( std::string &error ) const
             return false;
         }
     }
+    for( const sprite_sheet_registration &entry : pimpl_->sprite_sheets ) {
+        if( find_platform_sprite_sheet( entry.definition->id ) == nullptr ) {
+            error = "Lua-first sprite sheet '" + entry.definition->id +
+                    "' did not survive global finalization";
+            return false;
+        }
+    }
     for( const terrain_registration &entry : pimpl_->terrain ) {
         if( !ter_str_id( entry.definition->id ).is_valid() ) {
             error = "Lua-first terrain '" + entry.definition->id +
@@ -21407,6 +21858,16 @@ void content_transaction::rollback()
         detail::construction_registry().finalize();
     }
     pimpl_->construction_undo.clear();
+
+    for( auto it = pimpl_->sprite_sheet_undo.rbegin();
+         it != pimpl_->sprite_sheet_undo.rend(); ++it ) {
+        if( it->second ) {
+            set_platform_sprite_sheet( *it->second );
+        } else {
+            erase_platform_sprite_sheet( it->first );
+        }
+    }
+    pimpl_->sprite_sheet_undo.clear();
 
     for( auto it = pimpl_->furniture_undo.rbegin();
          it != pimpl_->furniture_undo.rend(); ++it ) {
@@ -22294,6 +22755,7 @@ void content_transaction::commit()
     pimpl_->martial_art_undo.clear();
     pimpl_->trap_undo.clear();
     pimpl_->construction_undo.clear();
+    pimpl_->sprite_sheet_undo.clear();
     pimpl_->furniture_undo.clear();
     pimpl_->terrain_undo.clear();
     pimpl_->gate_undo.clear();
@@ -24010,6 +24472,19 @@ std::string content_transaction::fingerprint() const
             hash_part( state, std::to_string( level ) );
         }
     }
+    for( const sprite_sheet_registration &entry : pimpl_->sprite_sheets ) {
+        hash_part( state, "sprite_sheet" );
+        hash_part( state, operation_name( entry.operation ) );
+        const sprite_sheet_definition_data &value = *entry.definition;
+        hash_part( state, value.id );
+        hash_part( state, value.file );
+        hash_part( state, std::to_string( value.frame_width ) );
+        hash_part( state, std::to_string( value.frame_height ) );
+        hash_part( state, std::to_string( value.pixelscale ) );
+        for( const std::string &frame_id : value.frame_ids ) {
+            hash_part( state, frame_id );
+        }
+    }
     std::ostringstream result;
     result << std::hex << state;
     return result.str();
@@ -24158,6 +24633,21 @@ bool content_transaction::find_snippet_handler( const std::string_view snippet_i
     return false;
 }
 
+bool content_transaction::find_furniture_examine_handler(
+    const std::string_view furniture_id, std::string &handler_id ) const
+{
+    const auto found = std::find_if(
+                           pimpl_->furniture.rbegin(), pimpl_->furniture.rend(),
+    [furniture_id]( const furniture_registration & entry ) {
+        return entry.definition->id == furniture_id;
+    } );
+    if( found == pimpl_->furniture.rend() ) {
+        return false;
+    }
+    handler_id = found->definition->on_examine;
+    return true;
+}
+
 bool content_transaction::find_magic_type_handler( const std::string_view magic_type_id,
         const std::string_view phase, std::string &handler_id ) const
 {
@@ -24207,9 +24697,10 @@ bool content_transaction::find_emission_handler(
 
 std::shared_ptr<runtime> make_runtime( const std::string &mod_id,
                                        std::size_t generation,
-                                       sol::state &lua )
+                                       sol::state &lua,
+                                       const std::filesystem::path &source_root )
 {
-    return std::make_shared<runtime>( mod_id, generation, lua );
+    return std::make_shared<runtime>( mod_id, generation, lua, source_root );
 }
 
 void install_runtime_api( const std::shared_ptr<runtime> &value,
@@ -24238,6 +24729,24 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         "quote_trade_item", &platform_dialogue_context::quote_trade_item,
         "buy_quoted_item", &platform_dialogue_context::buy_quoted_item );
     ccb["PlatformDialogueContext"] = sol::lua_nil;
+    ccb.new_usertype<platform_canvas_context>(
+        "PlatformCanvasContext", sol::no_constructor,
+        "elapsed_ms", sol::property( &platform_canvas_context::elapsed_ms ),
+        "delta_ms", sol::property( &platform_canvas_context::delta_ms ),
+        "width", sol::property( &platform_canvas_context::width ),
+        "height", sol::property( &platform_canvas_context::height ),
+        "is_open", &platform_canvas_context::is_open,
+        "close", &platform_canvas_context::close,
+        "rect", &platform_canvas_context::rect,
+        "text", &platform_canvas_context::text,
+        "sprite", &platform_canvas_context::sprite,
+        "button", []( const platform_canvas_context &context, const std::string &id,
+        const std::string &label, const double x, const double y, const double width,
+        const double height, const sol::optional<bool> &request_focus ) {
+            return context.button( id, label, x, y, width, height,
+                                   request_focus.value_or( false ) );
+        } );
+    ccb["PlatformCanvasContext"] = sol::lua_nil;
 
     const std::weak_ptr<runtime> weak = value;
     sol::table runtime_api = lua.create_table();
@@ -24563,6 +25072,54 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
             return sol::make_object( lua_state, sol::lua_nil );
         }
         return sol::make_object( lua_state, popup.text() );
+    } );
+    presentation.set_function( "play_sound", [require_presentation, weak](
+    const std::string &file, const sol::optional<std::int64_t> &volume ) {
+        require_presentation();
+        const std::int64_t requested_volume = volume.value_or( 100 );
+        if( requested_volume < 0 || requested_volume > 128 ) {
+            throw std::invalid_argument( "presentation sound volume must be in 0..128" );
+        }
+        const std::shared_ptr<runtime> owner = weak.lock();
+        if( !owner ) {
+            throw std::runtime_error( "stale Platform runtime" );
+        }
+        const std::filesystem::path asset = resolve_mod_asset( *owner, file,
+                                            "presentation sound" );
+        sfx::play_sound_file( asset.generic_u8string(), static_cast<int>( requested_volume ), true );
+    } );
+    presentation.set_function( "canvas", [require_presentation, weak](
+    const sol::table &options, sol::protected_function draw ) {
+        require_presentation();
+        const std::string title = options.get_or( "title", std::string() );
+        const std::string music_file = options.get_or( "music", std::string() );
+        const std::int64_t width = options.get_or<std::int64_t>( "width", 0 );
+        const std::int64_t height = options.get_or<std::int64_t>( "height", 0 );
+        const bool allow_quit = options.get_or( "allow_quit", true );
+        require_presentation_text( title, "canvas title", 256 );
+        if( width <= 0 || width > 2048 || height <= 0 || height > 2048 || !draw.valid() ) {
+            throw std::invalid_argument(
+                "canvas needs a title, dimensions in 1..2048, and a draw callback" );
+        }
+#if !defined(TILES)
+        static_cast<void>( weak );
+        return false;
+#else
+        if( tilecontext == nullptr || !tilecontext->is_valid() ) {
+            return false;
+        }
+        const std::shared_ptr<runtime> owner = weak.lock();
+        if( !owner || !owner->world_is_ready ) {
+            throw std::runtime_error( "Platform canvas is only available after world_ready" );
+        }
+        std::optional<scoped_canvas_music> music;
+        if( !music_file.empty() ) {
+            music.emplace( *owner, music_file );
+        }
+        platform_canvas_window window( owner, title, static_cast<int>( width ),
+                                       static_cast<int>( height ), allow_quit, std::move( draw ) );
+        return window.run();
+#endif
     } );
     ccb["presentation"] = std::move( presentation );
 
@@ -27470,6 +28027,45 @@ bool invoke_snippet_examine_handler( const std::string_view snippet_id_value,
     return false;
 }
 
+bool invoke_furniture_examine_handler( const std::string_view furniture_id,
+                                       Character &character,
+                                       const tripoint_bub_ms &position )
+{
+    for( auto iterator = active_runtimes.rbegin(); iterator != active_runtimes.rend(); ++iterator ) {
+        const std::shared_ptr<runtime> &owner = *iterator;
+        if( !owner ) {
+            continue;
+        }
+        std::string handler_id;
+        if( !owner->content.find_furniture_examine_handler( furniture_id, handler_id ) ) {
+            continue;
+        }
+        if( handler_id.empty() || !owner->world_is_ready ) {
+            return true;
+        }
+        const auto handler = owner->handlers.find( handler_id );
+        if( handler == owner->handlers.end() || owner->callback_depth >= 16 ) {
+            DebugLog( D_ERROR, D_MAIN ) << "Lua-first furniture examine policy unavailable for '"
+                                        << owner->mod_id << ':' << handler_id << "'";
+            return true;
+        }
+        sol::table payload = owner->lua->create_table();
+        payload["furniture_id"] = std::string( furniture_id );
+        payload["character"] = platform_creature_handle( *owner, character );
+        payload["position"] = cata::lua_ui::script_tripoint_coord::from_native(
+                                  coords::origin::reality_bubble,
+                                  coords::scale::map_square, position.raw() );
+        sol::protected_function callback = handler->second.callback;
+        callback_scope scope( *owner );
+        const sol::protected_function_result result = callback( payload );
+        if( !result.valid() ) {
+            report_callback_error( *owner, handler_id, result );
+        }
+        return true;
+    }
+    return false;
+}
+
 std::optional<double> invoke_magic_type_number_handler(
     const std::string_view magic_type_id, const std::string_view phase,
     const std::string_view spell_id, const Creature *caster, const double input )
@@ -27872,7 +28468,8 @@ namespace cata::lua_platform
 
 struct content_transaction::impl {};
 
-content_transaction::content_transaction( std::string, std::size_t ) :
+content_transaction::content_transaction( std::string, std::size_t,
+        std::filesystem::path ) :
     pimpl_( std::make_unique<impl>() )
 {
 }
@@ -27958,6 +28555,12 @@ bool content_transaction::find_snippet_handler( std::string_view,
     handler_id.clear();
     return false;
 }
+bool content_transaction::find_furniture_examine_handler( std::string_view,
+        std::string &handler_id ) const
+{
+    handler_id.clear();
+    return false;
+}
 bool content_transaction::find_magic_type_handler( std::string_view, std::string_view,
         std::string &handler_id ) const
 {
@@ -28032,6 +28635,12 @@ bool invoke_activity_type_handler( std::string_view, std::string_view,
 
 bool invoke_snippet_examine_handler( std::string_view, std::string_view,
                                      Character & )
+{
+    return false;
+}
+
+bool invoke_furniture_examine_handler( std::string_view, Character &,
+                                       const tripoint_bub_ms & )
 {
     return false;
 }

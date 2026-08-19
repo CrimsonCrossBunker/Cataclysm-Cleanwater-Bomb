@@ -103,6 +103,8 @@ namespace sfx
 struct playlist_entry_definition {
     std::string file;
     int volume = 100;
+    // Platform-owned playlists may use a validated absolute mod asset path.
+    bool absolute_path = false;
 };
 
 struct playlist_definition {
@@ -114,6 +116,9 @@ struct playlist_definition {
 std::optional<playlist_definition> playlist_registry_get( std::string_view id );
 void playlist_registry_set( const playlist_definition &value );
 void playlist_registry_erase( std::string_view id );
+
+/** Play a local one-shot effect.  Absolute paths are reserved for validated internal assets. */
+void play_sound_file( std::string_view file, int volume, bool absolute_path = false );
 
 struct sound_effect_key {
     std::string id;

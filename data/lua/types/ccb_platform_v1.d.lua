@@ -2162,7 +2162,7 @@ function ConstructionDefinition:post_flag(flag_id) end
 ---@field description? string Furniture description.
 ---@field color string Native color name.
 ---@field symbol string Single map symbol character.
----@field move_cost_mod? integer Non-negative move cost modifier.
+---@field move_cost_mod? integer Non-negative move cost modifier, or -10 for impassable furniture.
 ---@field required_str? integer Non-negative strength required to move through.
 ---@field light_emitted? integer Non-negative light emitted.
 ---@field comfort? integer Non-negative sleeping comfort.
@@ -2175,6 +2175,7 @@ function ConstructionDefinition:post_flag(flag_id) end
 ---@field lockpick_result? string Furniture id to transform into when lockpicked.
 ---@field crafting_pseudo_item? string Item id used for in-place crafting.
 ---@field deployed_item? string Item id that deploys this furniture.
+---@field on_examine? string Named runtime handler invoked when the furniture is examined.
 
 ---@class FurnitureDefinition
 ---@field id string
@@ -2183,6 +2184,18 @@ local FurnitureDefinition = {}
 ---@param flag_id string Native furniture flag id.
 ---@return FurnitureDefinition self
 function FurnitureDefinition:flag(flag_id) end
+
+---@class SpriteSheetDefinitionOptions
+---@field id string Stable sprite-sheet id.
+---@field file string Relative PNG path inside the Platform Mod.
+---@field frame_width integer Positive source-frame width in pixels.
+---@field frame_height integer Positive source-frame height in pixels.
+---@field pixelscale? number Per-frame world-tile scale, from 0.01 through 16; ignored by Canvas drawing.
+---@field frame_ids string[] Dense one-based array of stable tile ids, one per frame.
+
+---@class SpriteSheetDefinition
+---@field id string
+local SpriteSheetDefinition = {}
 
 ---@class TerrainDefinitionOptions
 ---@field id string Stable terrain id.
@@ -3499,6 +3512,10 @@ function CcbPlatformContent.Construction(options) end
 ---@return FurnitureDefinition
 function CcbPlatformContent.Furniture(options) end
 
+---@param options SpriteSheetDefinitionOptions
+---@return SpriteSheetDefinition
+function CcbPlatformContent.SpriteSheet(options) end
+
 ---@param options TerrainDefinitionOptions
 ---@return TerrainDefinition
 function CcbPlatformContent.Terrain(options) end
@@ -4110,8 +4127,70 @@ function CcbPlatformTasks.cancel(task_id) end
 ---@class CcbPlatformPresentation
 local CcbPlatformPresentation = {}
 
+---@class PlatformCanvasOptions
+---@field title string Player-facing window title.
+---@field width integer Logical canvas width from one through 2048.
+---@field height integer Logical canvas height from one through 2048.
+---@field allow_quit? boolean Whether the normal cancel key can close the modal; defaults to true.
+---@field music? string Relative audio-file path within the active Mod.  It is played as a temporary looping playlist while the canvas is open; the prior game music resumes when the canvas closes.
+
+---@class PlatformCanvasContext
+---@field elapsed_ms number Milliseconds since this canvas opened.
+---@field delta_ms number Milliseconds since the preceding draw callback, capped at 250.
+---@field width integer Logical canvas width.
+---@field height integer Logical canvas height.
+local PlatformCanvasContext = {}
+
+---Returns false after `close` is requested during the current draw callback.
+---@return boolean open
+function PlatformCanvasContext:is_open() end
+
+---Closes the canvas after the current draw callback returns.
+function PlatformCanvasContext:close() end
+
+---@param x number
+---@param y number
+---@param width number
+---@param height number
+---@param red number Color channel from zero through one.
+---@param green number Color channel from zero through one.
+---@param blue number Color channel from zero through one.
+---@param alpha? number Color channel from zero through one; defaults to one.
+function PlatformCanvasContext:rect(x, y, width, height, red, green, blue, alpha) end
+
+---@param x number
+---@param y number
+---@param value string
+---@param red? number Color channel from zero through one; defaults to one.
+---@param green? number Color channel from zero through one; defaults to one.
+---@param blue? number Color channel from zero through one; defaults to one.
+---@param alpha? number Color channel from zero through one; defaults to one.
+function PlatformCanvasContext:text(x, y, value, red, green, blue, alpha) end
+
+---@param tile_id string Registered tile id from core, a mod tileset, or `ccb.content.SpriteSheet`.
+---@param x number
+---@param y number
+---@param width number
+---@param height number
+---@return boolean drawn
+function PlatformCanvasContext:sprite(tile_id, x, y, width, height) end
+
+---@param id string Stable per-canvas control id.
+---@param label string Player-facing label.
+---@param x number
+---@param y number
+---@param width number
+---@param height number
+---@param request_focus? boolean Requests the keyboard/navigation focus for this button during the current frame only.
+---@return boolean clicked
+function PlatformCanvasContext:button(id, label, x, y, width, height, request_focus) end
+
 ---@param message string
 function CcbPlatformPresentation.notice(message) end
+
+---@param relative_file string Relative audio-file path within the active Mod.
+---@param volume? integer Native volume from 0 through 128; defaults to 100.
+function CcbPlatformPresentation.play_sound(relative_file, volume) end
 
 ---@param question string
 ---@return boolean confirmed
@@ -4126,6 +4205,11 @@ function CcbPlatformPresentation.choose(prompt, entries) end
 ---@param options? PlatformTextInputOptions
 ---@return string|nil text
 function CcbPlatformPresentation.input_text(prompt, options) end
+
+---@param options PlatformCanvasOptions
+---@param draw fun(context: PlatformCanvasContext): ('close'|nil)? Invoked once per rendered frame.
+---@return boolean available False when the active backend cannot draw sprites; no callback is invoked.
+function CcbPlatformPresentation.canvas(options, draw) end
 
 ---@class CcbPlatformMapgenRegistrationOptions
 ---@field terrain_ids? string[] Concrete directional overmap-terrain ids to match.
