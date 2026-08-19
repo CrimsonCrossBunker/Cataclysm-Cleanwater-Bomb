@@ -24,6 +24,7 @@
 #include "calendar.h"
 #include "cata_assert.h"
 #include "cata_utility.h"
+#include "catalua_platform_runtime.h"
 #include "catalua_ui.h"
 #include "character.h"
 #include "character_attire.h"
@@ -2689,6 +2690,9 @@ void Character::complete_craft( item &craft, const std::optional<tripoint_bub_ms
             eoc->activate_activation_only( d, "a recipe", "crafting", "recipe" );
         }
     }
+    cata::lua_platform::invoke_recipe_completion_handler(
+        making.ident().str(), making.lua_platform_mod,
+        making.lua_platform_result_handler, *this, batch_size );
 }
 
 bool Character::can_continue_craft( item &craft )
