@@ -1769,13 +1769,9 @@ void talk_function::field_harvest( npc &p, const std::string &place )
                         { "seed_count", static_cast<double>( seed_cnt ) },
                         { "actor_is_npc", 1.0 }
                     };
-                    const furn_t &current_furn = bay.furn( plot ).obj();
-                    if( current_furn.plant ) {
-                        iexamine::run_plant_eocs( current_furn.plant->eoc_on_harvest, p, *bay_map, bub_plot,
-                                                  *seed, stage, stage, {}, num_ctx );
-                    }
-                    iexamine::run_plant_eocs( seed_data.eoc_on_harvest, p, *bay_map, bub_plot, *seed,
-                                              stage, stage, {}, num_ctx );
+                    iexamine::run_plant_lifecycle_event(
+                        "harvest", p, *bay_map, bub_plot, *seed,
+                        stage, stage, {}, num_ctx );
 
                     // Multiply by the plant's and seed's base charges to mimic creating
                     // items similar to iexamine::harvest_plant

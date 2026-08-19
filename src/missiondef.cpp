@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "condition.h"
+#include "catalua_platform_content.h"
 #include "debug.h"
 #include "dialogue.h"
 #include "flexbuffer_json.h"
@@ -85,6 +86,11 @@ std::string enum_to_string<mission_goal>( mission_goal data )
 } // namespace io
 
 static generic_factory<mission_type> mission_type_factory( "mission_type" );
+
+generic_factory<mission_type> &cata::lua_platform::detail::mission_type_registry()
+{
+    return mission_type_factory;
+}
 
 /** @relates string_id */
 template<>
@@ -238,6 +244,11 @@ const mission_type *mission_type::get( const mission_type_id &id )
 const std::vector<mission_type> &mission_type::get_all()
 {
     return mission_type_factory.get_all();
+}
+
+void mission_type::set_platform_name( const std::string &value )
+{
+    name = no_translation( value );
 }
 
 mission_type_id mission_type::get_random_id( const mission_origin origin,
