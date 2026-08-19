@@ -158,11 +158,11 @@ constexpr std::size_t maximum_hook_result_bytes = 512;
 constexpr std::size_t maximum_hook_results_per_handler = 64;
 constexpr std::size_t maximum_hook_results_per_dispatch = 256;
 constexpr std::size_t maximum_hook_result_entry_bytes = 512;
-constexpr std::size_t maximum_dialogue_topics = 256;
-constexpr std::size_t maximum_dialogue_topics_per_source = 64;
-constexpr std::size_t maximum_dialogue_extensions = 256;
-constexpr std::size_t maximum_dialogue_extensions_per_source = 64;
-constexpr std::size_t maximum_dialogue_responses_per_topic = 256;
+constexpr std::size_t maximum_dialogue_topics = 8192;
+constexpr std::size_t maximum_dialogue_topics_per_source = 4096;
+constexpr std::size_t maximum_dialogue_extensions = 8192;
+constexpr std::size_t maximum_dialogue_extensions_per_source = 4096;
+constexpr std::size_t maximum_dialogue_responses_per_topic = 1024;
 constexpr std::size_t maximum_dialogue_id_bytes = 256;
 constexpr std::size_t maximum_dialogue_text_bytes = 4096;
 
@@ -1548,6 +1548,9 @@ void require_dialogue_text( const std::string &value,
 
 using script_dialogue_context = cata::lua_dialogue::context;
 
+sol::object native_talker_to_lua(
+    runtime_state &state, const const_talker &talker );
+
 std::shared_ptr<script_dialogue_context> make_dialogue_context(
     runtime_state &state, dialogue &d, const std::size_t source_index,
     const std::string &topic_id )
@@ -1559,7 +1562,10 @@ std::shared_ptr<script_dialogue_context> make_dialogue_context(
     return std::make_shared<script_dialogue_context>(
                state.lua.lua_state(), d, topic_id,
                state.sources[source_index].manifest.has_capability( "game.write" ),
-               "Lua dialogue context is no longer valid" );
+               "Lua dialogue context is no longer valid",
+    [&state]( const const_talker & actor ) {
+        return native_talker_to_lua( state, actor );
+    } );
 }
 
 sol::object evaluate_dialogue_response_source(
@@ -1604,7 +1610,7 @@ talk_response lua_dialogue_response_from_table(
             return cata::lua_dialogue::register_response_callback(
                        cata::lua_dialogue::response_callback_origin::game_v5,
             [&state, callback = std::move( registered )]( dialogue & d,
-            const talk_topic & fallback ) mutable {
+            const talk_topic & fallback, const bool ) mutable {
                 return invoke_lua_dialogue_response_callback(
                            state, std::move( callback ), d, fallback );
             } );
@@ -3700,6 +3706,30 @@ void initialize_state( runtime_state &state )
         "ScriptDialogueContext", sol::no_constructor,
         "valid", &script_dialogue_context::valid,
         "topic", &script_dialogue_context::topic,
+        "topic_item", &script_dialogue_context::topic_item,
+        "has_alpha", &script_dialogue_context::has_alpha,
+        "has_beta", &script_dialogue_context::has_beta,
+        "by_radio", &script_dialogue_context::by_radio,
+        "has_reason", &script_dialogue_context::has_reason,
+        "reason", &script_dialogue_context::reason,
+        "trial_chance",
+        []( const script_dialogue_context &context,
+            const std::string &kind, const int difficulty,
+        const sol::optional<std::string> &skill ) {
+            return context.trial_chance(
+                       kind, difficulty,
+                       skill.value_or( std::string() ) );
+        },
+        "roll_trial",
+        []( const script_dialogue_context &context,
+            const std::string &kind, const int difficulty,
+        const sol::optional<std::string> &skill ) {
+            return context.roll_trial(
+                       kind, difficulty,
+                       skill.value_or( std::string() ) );
+        },
+        "alpha", &script_dialogue_context::alpha,
+        "beta", &script_dialogue_context::beta,
         "get", &script_dialogue_context::get,
         "set", &script_dialogue_context::set,
         "remove", &script_dialogue_context::remove,
@@ -4209,6 +4239,14 @@ void initialize_state( runtime_state &state )
     [&state]() {
         require_api_version( state, 5, "game.npcs" );
         require_capability( state, "game.write" );
+    },
+    [&state]() {
+        if( state.world_generation ==
+            std::numeric_limits<std::size_t>::max() ) {
+            state.world_generation = 1;
+        } else {
+            ++state.world_generation;
+        }
     } );
     install_faction_api(
         game,
@@ -4222,6 +4260,10 @@ void initialize_state( runtime_state &state )
     } );
     install_camp_api(
         game,
+        current_handle_runtime,
+    [&state]() {
+        return state.world_generation;
+    },
     [&state]() {
         require_api_version( state, 5, "game.camps" );
         require_capability( state, "game.read" );
@@ -4274,6 +4316,10 @@ void initialize_state( runtime_state &state )
     } );
     install_crafting_api(
         game,
+        current_handle_runtime,
+    [&state]() {
+        return state.world_generation;
+    },
     [&state]() {
         require_api_version( state, 5, "game.recipes" );
         require_capability( state, "game.read" );
@@ -5000,11 +5046,13 @@ sol::object native_talker_to_lua(
     if( const item_location *location = talker.get_const_item() ) {
         if( const item *value = location->get_item() ) {
             item &mutable_item = const_cast<item &>( *value );
+            const tripoint_abs_ms position = location->pos_abs();
             return sol::make_object(
                        lua, game_handle::from_item(
             mutable_item, {
                 "callback_talker_item",
-                value->uid().get_value(), 0, 0, 0, {}
+                value->uid().get_value(),
+                position.x(), position.y(), position.z(), {}
             }, current_game_handle_runtime( state ), state.world_generation ) );
         }
     }
@@ -6530,6 +6578,36 @@ bool dispatch_native_hook(
     return dispatch_native_hook_result( name, arguments ).allowed;
 }
 
+namespace
+{
+
+bool dispatch_character_fatal( const std::string_view hook,
+                               Character &character, const Creature *killer )
+{
+    const bool allowed = dispatch_native_hook( hook, {
+        { "character", static_cast<const Character *>( &character ) },
+        { "killer", killer }
+    } );
+    if( !allowed ) {
+        character.prevent_death();
+    }
+    return allowed;
+}
+
+} // namespace
+
+bool dispatch_avatar_fatal( Character &character, const Creature *killer )
+{
+    return dispatch_character_fatal(
+               "on_avatar_fatal", character, killer );
+}
+
+bool dispatch_npc_fatal( Character &character, const Creature *killer )
+{
+    return dispatch_character_fatal(
+               "on_npc_fatal", character, killer );
+}
+
 bool has_native_hook( const std::string_view name )
 {
     return !is_pool_worker_thread() &&
@@ -6662,18 +6740,14 @@ native_hook_result dispatch_native_dialogue_hook(
     native_callback_arguments payload = {
         { "alpha", &alpha },
         { "beta", &beta },
-        { "topic", std::string( topic ) }
+        { "topic", std::string( topic ) },
+        { "by_radio", by_radio },
+        { "reason", reason ? std::string( *reason ) : std::string() }
     };
     if( option ) {
         payload.push_back( {
             "option", std::string( *option )
         } );
-    }
-    if( by_radio ) {
-        payload.push_back( { "by_radio", true } );
-    }
-    if( reason && !reason->empty() ) {
-        payload.push_back( { "reason", std::string( *reason ) } );
     }
     return dispatch_native_hook_result( name, payload );
 }
@@ -6748,6 +6822,12 @@ std::optional<std::string> dialogue_dynamic_line(
             "Lua dialogue topic '" + found->id + "'", exception.what() );
         return std::nullopt;
     }
+}
+
+void apply_lua_dialogue_speaker_effects(
+    dialogue &d, const talk_topic &topic )
+{
+    cata::lua_platform::apply_platform_dialogue_speaker_effects( d, topic );
 }
 
 bool gen_lua_dialogue_responses(
@@ -6854,9 +6934,10 @@ void extend_lua_dialogue_responses(
 
 talk_topic apply_lua_dialogue_response(
     dialogue &d, const std::uint64_t response_id,
-    const talk_topic &fallback )
+    const talk_topic &fallback, const bool trial_success )
 {
-    return cata::lua_dialogue::apply_response_callback( d, response_id, fallback );
+    return cata::lua_dialogue::apply_response_callback(
+               d, response_id, fallback, trial_success );
 }
 
 bool begin_native_npc_interaction(

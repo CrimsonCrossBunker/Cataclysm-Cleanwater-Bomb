@@ -148,6 +148,10 @@ native_hook_result dispatch_native_hook_result(
     const native_callback_arguments &arguments = {} );
 bool dispatch_native_hook(
     std::string_view name, const native_callback_arguments &arguments = {} );
+// Synchronous last-chance character boundaries.  A veto revives vital body
+// parts through Character::prevent_death before death processing continues.
+bool dispatch_avatar_fatal( Character &character, const Creature *killer );
+bool dispatch_npc_fatal( Character &character, const Creature *killer );
 bool has_native_hook( std::string_view name );
 bool native_hook_contract_exists( std::string_view name );
 // Shared hook-contract query used by Lua-first Platform dispatch.  This does
@@ -175,12 +179,15 @@ native_hook_result dispatch_native_dialogue_hook(
 void clear_dialogue_response_callbacks();
 std::optional<std::string> dialogue_dynamic_line(
     dialogue &d, const talk_topic &topic );
+void apply_lua_dialogue_speaker_effects(
+    dialogue &d, const talk_topic &topic );
 bool gen_lua_dialogue_responses(
     dialogue &d, const talk_topic &topic );
 void extend_lua_dialogue_responses(
     dialogue &d, const talk_topic &topic );
 talk_topic apply_lua_dialogue_response(
-    dialogue &d, std::uint64_t response_id, const talk_topic &fallback );
+    dialogue &d, std::uint64_t response_id, const talk_topic &fallback,
+    bool trial_success );
 bool begin_native_npc_interaction(
     const Character &avatar, const Character &npc );
 bool allow_native_monster_interaction(
