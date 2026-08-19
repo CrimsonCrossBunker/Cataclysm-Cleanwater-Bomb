@@ -7,6 +7,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "catalua_bindings_values.h"
 
@@ -33,7 +34,8 @@ class script_mapgen_context
         static constexpr std::size_t maximum_full_generators = 4;
 
         script_mapgen_context( mapgendata &data, bool allow_write,
-                               std::uint64_t deterministic_seed );
+                               std::uint64_t deterministic_seed,
+                               std::string platform_mod_id = {} );
 
         bool valid() const noexcept;
         void invalidate() noexcept;
@@ -85,8 +87,52 @@ class script_mapgen_context
         void place_liquid( int x, int y, const std::string &item_id,
                            int charges );
         void place_toilet( int x, int y, int charges );
+        bool add_field( int x, int y, const std::string &field_id,
+                        int intensity, std::int64_t age_turns );
+        bool remove_field( int x, int y, const std::string &field_id );
+        void place_vending_machine( int x, int y,
+                                    const std::string &item_group_id,
+                                    bool reinforced, bool lootable,
+                                    bool powered, bool networked );
+        void place_gas_pump( int x, int y, int charges,
+                             const std::string &fuel_id );
+        void place_monster_group( int x1, int y1, int x2, int y2,
+                                  const std::string &group_id, int chance,
+                                  double density, bool individual,
+                                  bool friendly, const std::string &name,
+                                  bool mission_target );
+        void place_monster( int x, int y, const std::string &monster_id,
+                            int count, bool friendly,
+                            const std::string &name, bool mission_target );
+        void place_corpse( int x, int y, const std::string &monster_id,
+                           int age_days );
+        void place_corpse_from_group( int x, int y,
+                                      const std::string &group_id,
+                                      int age_days );
+        void make_rubble( int x, int y, const std::string &furniture_id,
+                          bool items, const std::string &floor_terrain_id,
+                          bool overwrite );
+        bool place_computer( int x, int y, const std::string &name,
+                             int security, const std::string &access_denied,
+                             bool mission_target );
+        void add_computer_option( int x, int y, const std::string &name,
+                                  const std::string &action, int security );
+        void add_computer_failure( int x, int y,
+                                   const std::string &failure );
+        void add_computer_eoc( int x, int y, const std::string &eoc_id );
+        void set_computer_access_handler( int x, int y,
+                                          const std::string &handler_id );
+        void add_computer_chat_topic( int x, int y,
+                                      const std::string &topic_id );
+        void place_sealed_item( int x, int y,
+                                const std::string &furniture_id,
+                                const std::string &item_id, int quantity,
+                                int charges, const std::string &item_group_name,
+                                int item_group_chance,
+                                const std::string &faction_id );
         void place_sign( int x, int y, const std::string &text,
                          const std::string &furniture_id );
+        void set_graffiti( int x, int y, const std::string &text );
         void place_zone( int x1, int y1, int x2, int y2,
                          const std::string &zone_type,
                          const std::string &faction,
@@ -95,12 +141,25 @@ class script_mapgen_context
         std::int64_t place_npc( int x, int y,
                                 const std::string &template_id,
                                 const std::string &unique_id );
+        std::int64_t place_npc_configured(
+            int x, int y, const std::string &template_id,
+            const std::string &unique_id,
+            const std::vector<std::string> &traits,
+            bool mission_target );
         bool place_vehicle( int x, int y,
                             const std::string &prototype_or_group_id,
                             int rotation_degrees, int fuel_percent,
                             int status, const std::string &faction );
         void apply_faction_ownership( int x1, int y1, int x2, int y2,
                                       const std::string &faction );
+        void transform( int x1, int y1, int x2, int y2,
+                        const std::string &transform_id );
+        std::size_t remove_vehicles( int x1, int y1, int x2, int y2,
+                                     const std::vector<std::string> &prototype_ids );
+        std::size_t remove_npcs( const std::string &template_id,
+                                 const std::string &unique_id );
+        void remove_all( int x1, int y1, int x2, int y2 );
+        void queue_point( const std::string &name, int x, int y );
 
         void fill_groundcover();
         void nest( const std::string &id, int x, int y );
