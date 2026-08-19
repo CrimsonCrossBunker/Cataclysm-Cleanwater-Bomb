@@ -196,6 +196,22 @@ generic_factory<bionic_data> bionic_factory( "bionic" );
 std::vector<bionic_id> faulty_bionics;
 } //namespace
 
+generic_factory<bionic_data> &cata::lua_platform::detail::bionic_registry()
+{
+    return bionic_factory;
+}
+
+void cata::lua_platform::detail::refresh_bionic_registry_cache()
+{
+    static const json_character_flag faulty( "BIONIC_FAULTY" );
+    faulty_bionics.clear();
+    for( const bionic_data &value : bionic_factory.get_all() ) {
+        if( value.has_flag( faulty ) ) {
+            faulty_bionics.push_back( value.id );
+        }
+    }
+}
+
 void bionic::initialize_pseudo_items( bool create_weapon )
 {
     bionic_data bid( info() );
@@ -867,6 +883,13 @@ bool Character::activate_bionic( bionic &bio, bool eff_only, bool *close_bionics
             { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) }
         } );
     }
+    cata::lua_ui::dispatch_native_hook( "on_bionic_activated", {
+        { "character", this },
+        { "bionic", cata::lua_ui::native_callback_id{ "bionic", bio.id.str() } },
+        { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) },
+        { "activation_cost_millijoules",
+          units::to_millijoule( bio.info().power_activate ) }
+    } );
 
     item tmp_item;
     avatar &player_character = get_avatar();
@@ -1355,6 +1378,13 @@ bool Character::deactivate_bionic( bionic &bio, bool eff_only )
             { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) }
         } );
     }
+    cata::lua_ui::dispatch_native_hook( "on_bionic_deactivated", {
+        { "character", this },
+        { "bionic", cata::lua_ui::native_callback_id{ "bionic", bio.id.str() } },
+        { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) },
+        { "deactivation_cost_millijoules",
+          units::to_millijoule( bio.info().power_deactivate ) }
+    } );
 
     if( bio.info().has_flag( json_flag_BIONIC_WEAPON ) ) {
         if( bio.get_uid() == get_weapon_bionic_uid() ) {
@@ -1765,6 +1795,13 @@ void Character::process_bionic( bionic &bio )
             { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) }
         } );
     }
+    cata::lua_ui::dispatch_native_hook( "on_bionic_processed", {
+        { "character", this },
+        { "bionic", cata::lua_ui::native_callback_id{ "bionic", bio.id.str() } },
+        { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) },
+        { "over_time_energy_millijoules",
+          units::to_millijoule( bio.info().power_over_time ) }
+    } );
 
     // Bionic effects on every turn they are active go here.
     if( bio.id == bio_remote ) {
