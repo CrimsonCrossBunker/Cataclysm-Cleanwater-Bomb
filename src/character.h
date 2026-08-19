@@ -2868,6 +2868,8 @@ class Character : public Creature, public visitable
         bool male = false;
 
         std::vector<effect_on_condition_id> death_eocs;
+        std::string lua_platform_death_mod;
+        std::string lua_platform_death_handler;
         outfit worn;
         bool nv_cached = false;
         // Means player sit inside vehicle on the tile he is now
