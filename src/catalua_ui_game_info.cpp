@@ -3,6 +3,7 @@
 #include "catalua_ui_game_info.h"
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <stdexcept>
@@ -11,11 +12,16 @@
 #include <utility>
 #include <vector>
 
+#include "avatar.h"
+#include "game.h"
 #include "lightmap.h"
 #include "messages.h"
+#include "type_id.h"
+#include "worldfactory.h"
 #include "rng.h"
 #include "units.h"
 #include "weather.h"
+#include "widget.h"
 
 namespace cata::lua_ui
 {
@@ -181,6 +187,107 @@ bool random_chance(
                static_cast<double>( denominator ) );
 }
 
+void validate_mod_id_text(
+    const std::string &id, const std::string_view api_name )
+{
+    if( id.empty() || id.size() > 256 ||
+        std::any_of( id.begin(), id.end(),
+    []( const unsigned char ch ) {
+        return ch < 0x20U || ch == 0x7fU;
+    } ) ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " id must contain 1 to 256 non-control bytes" );
+    }
+}
+
+bool mod_is_active( const std::string &id )
+{
+    validate_mod_id_text( id, "game.mods.is_active" );
+    if( !world_generator ||
+        world_generator->active_world == nullptr ) {
+        return false;
+    }
+    const mod_id requested( id );
+    const std::vector<mod_id> &active =
+        world_generator->active_world->active_mod_order;
+    return std::find(
+               active.begin(), active.end(), requested ) !=
+           active.end();
+}
+
+sol::table active_mods( sol::this_state lua )
+{
+    sol::state_view state( lua );
+    const std::vector<mod_id> empty;
+    const std::vector<mod_id> &active =
+        world_generator && world_generator->active_world != nullptr ?
+        world_generator->active_world->active_mod_order : empty;
+    sol::table items = state.create_table(
+                           static_cast<int>( active.size() ), 0 );
+    for( std::size_t index = 0; index < active.size(); ++index ) {
+        items[index + 1] = active[index].str();
+    }
+    sol::table result = state.create_table();
+    result["items"] = std::move( items );
+    result["total"] = active.size();
+    result["world_active"] =
+        world_generator && world_generator->active_world != nullptr;
+    return result;
+}
+
+std::string safe_mode_name( const safe_mode_type mode )
+{
+    switch( mode ) {
+        case SAFE_MODE_OFF:
+            return "off";
+        case SAFE_MODE_ON:
+            return "on";
+        case SAFE_MODE_STOP:
+            return "triggered";
+    }
+    return "unknown";
+}
+
+sol::table safety_snapshot( sol::this_state lua )
+{
+    sol::state_view state( lua );
+    if( g == nullptr ) {
+        throw std::runtime_error(
+            "game.safety.snapshot requires an active game" );
+    }
+    static constexpr std::array<std::string_view, 9> direction_names = {
+        "north", "northeast", "east", "southeast", "south",
+        "southwest", "west", "northwest", "local"
+    };
+    const monster_visible_info &visible =
+        get_avatar().get_mon_visible();
+    sol::table directions = state.create_table( 9, 0 );
+    for( std::size_t index = 0;
+         index < direction_names.size(); ++index ) {
+        sol::table direction = state.create_table();
+        direction["id"] = std::string( direction_names[index] );
+        direction["monster_groups"] = visible.unique_mons[index].size();
+        std::int64_t monster_count = 0;
+        for( const auto &entry : visible.unique_mons[index] ) {
+            monster_count += entry.second;
+        }
+        direction["monsters"] = monster_count;
+        direction["npcs"] = visible.unique_types[index].size();
+        direction["dangerous"] = index < visible.dangerous.size() ?
+                                 visible.dangerous[index] : false;
+        directions[index + 1] = std::move( direction );
+    }
+    sol::table result = state.create_table();
+    result["mode"] = safe_mode_name( g->safe_mode );
+    result["triggered"] = g->safe_mode == SAFE_MODE_STOP;
+    result["dangerous_in_proximity"] =
+        visible.has_dangerous_creature_in_proximity;
+    result["newly_seen"] = visible.new_seen_mon.size();
+    result["directions"] = std::move( directions );
+    return result;
+}
+
 } // namespace
 
 void install_game_info_api(
@@ -243,6 +350,30 @@ void install_game_info_api(
         return random_chance( numerator, denominator );
     } );
     game["random"] = std::move( random );
+
+    sol::table mods = state.create_table();
+    mods.set_function(
+        "is_active",
+        [require_read]( const std::string &id ) {
+        require_read();
+        return mod_is_active( id );
+    } );
+    mods.set_function(
+        "active",
+        [require_read]( sol::this_state lua ) {
+        require_read();
+        return active_mods( lua );
+    } );
+    game["mods"] = std::move( mods );
+
+    sol::table safety = state.create_table();
+    safety.set_function(
+        "snapshot",
+        [require_read]( sol::this_state lua ) {
+        require_read();
+        return safety_snapshot( lua );
+    } );
+    game["safety"] = std::move( safety );
 }
 
 } // namespace cata::lua_ui
