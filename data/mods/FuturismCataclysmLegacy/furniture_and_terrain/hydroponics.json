@@ -10,7 +10,7 @@
     "light_emitted": 10,
     "required_str": 12,
     "looks_like": "f_planter",
-    "flags": [ "TRANSPARENT", "PLANTABLE", "SHALLOW_WATER", "FLAT", "MOUNTABLE", "NO_CROP_OVERGROWTH" ],
+    "flags": [ "TRANSPARENT", "PLANTABLE", "SHALLOW_WATER", "FLAT", "MOUNTABLE", "NO_CROP_OVERGROWTH", "INDOOR_GROWTH" ],
     "deconstruct": { "items": [ { "group": "fcl_hydrop_deconstruct_results" } ] },
     "bash": {
       "str_min": 6,
