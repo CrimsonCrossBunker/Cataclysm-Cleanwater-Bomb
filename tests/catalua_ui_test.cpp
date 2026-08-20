@@ -9872,6 +9872,9 @@ ccb.content.add(definition)
     CHECK( id->start_name() == "Platform Start" );
     CHECK( id->start_location() == start_location_id( "sloc_shelter_safe" ) );
     CHECK( id->start_location_count() == 1 );
+    CHECK( time_past_midnight( id->start_of_game() ) == 8_hours );
+    CHECK( time_past_midnight( id->start_of_cataclysm() ) == 0_hours );
+    CHECK( id->start_of_game() > id->start_of_cataclysm() );
 
     cata::lua_platform::shutdown();
 }
