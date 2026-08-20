@@ -25103,6 +25103,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         }
 #if !defined(TILES)
         static_cast<void>( weak );
+        static_cast<void>( allow_quit );
         return false;
 #else
         if( tilecontext == nullptr || !tilecontext->is_valid() ) {
