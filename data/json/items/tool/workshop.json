@@ -378,6 +378,15 @@
     "tool_ammo": [ "battery" ]
   },
   {
+    "id": "elec_jackhammer_mining",
+    "copy-from": "elec_jackhammer",
+    "type": "ITEM",
+    "name": { "str": "electric mining jackhammer" },
+    "description": "A construction or mining tool for drilling through hard rock or other surfaces.  This model has a cord compatible with a UPS.",
+    "proportional": { "weight": 1.1, "volume": 1.1 },
+    "extend": { "flags": [ "MULTI_DRILL" ] }
+  },
+  {
     "id": "corded_demolition_hammer",
     "//": "based on the Makita HM1512",
     "type": "ITEM",
@@ -671,6 +680,15 @@
     "flags": [ "DIG_TOOL", "POWERED" ],
     "melee_damage": { "bash": 14, "stab": 6 },
     "tool_ammo": [ "gasoline" ]
+  },
+  {
+    "id": "jackhammer_mining",
+    "copy-from": "jackhammer",
+    "type": "ITEM",
+    "name": { "str": "mining jackhammer" },
+    "description": "A construction or mining tool for drilling through hard rock or other surfaces.  This model runs on gasoline.",
+    "proportional": { "weight": 1.1, "volume": 1.1 },
+    "extend": { "flags": [ "MULTI_DRILL" ] }
   },
   {
     "id": "kiln",

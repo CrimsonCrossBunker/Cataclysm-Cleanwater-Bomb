@@ -408,7 +408,7 @@
     "id": "jackhammering_standard_1_10",
     "type": "requirement",
     "//": "jackhammering",
-    "tools": [ [ [ "jackhammer", 5 ], [ "elec_jackhammer", 66 ] ] ]
+    "tools": [ [ [ "jackhammer", 5 ], [ "jackhammer_mining", 5 ], [ "elec_jackhammer", 66 ], [ "elec_jackhammer_mining", 66 ] ] ]
   },
   {
     "id": "jackhammering_standard",
@@ -486,6 +486,8 @@
         [ "masonrysaw_off", 200 ],
         [ "electric_masonrysaw_off", 2640 ],
         [ "heavy_masonrysaw_off", 100 ],
+        [ "jackhammer_mining", 140 ],
+        [ "elec_jackhammer_mining", 1848 ],
         [ "corded_demolition_hammer", 1848 ]
       ],
       [ [ "hammer_sledge", -1 ], [ "hammer_sledge_heavy", -1 ] ]
