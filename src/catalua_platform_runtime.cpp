@@ -19205,6 +19205,7 @@ bool content_transaction::apply( std::string &error )
             native.id = id;
             native.src.emplace_back( id, mod_id( pimpl_->owner ) );
             native.was_loaded = true;
+            native.initialize_default_calendar();
             native._name_male = no_translation( source.name );
             native._name_female = no_translation( source.name );
             native._description_male = no_translation( source.description );
