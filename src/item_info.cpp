@@ -1166,7 +1166,7 @@ void item::gun_info( const item *mod, std::vector<iteminfo> &info, const iteminf
         }
     } else {
         curammo = loaded_mod->ammo_data();
-        if( curammo == nullptr ) {
+        if( mod->ammo_required() && curammo == nullptr ) {
             // Defensive: has_ammo_data() above should have covered this branch.
             return;
         }
