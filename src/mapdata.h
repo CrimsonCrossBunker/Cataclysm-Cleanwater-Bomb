@@ -418,6 +418,7 @@ enum class ter_furn_flag : int {
     TFLAG_ONE_DIMENSIONAL_Z,
     TFLAG_CD_DELIGHT_PADDY,
     TFLAG_CD_DELIGHT_TRELLIS,
+    TFLAG_INDOOR_GROWTH,
 
     NUM_TFLAG_FLAGS
 };
