@@ -683,6 +683,7 @@
       { "item": "watermelon", "prob": 2, "custom-flags": [ "IRRADIATED" ] },
       { "item": "zucchini", "prob": 2, "custom-flags": [ "IRRADIATED" ] },
       [ "jackhammer", 2 ],
+      [ "jackhammer_mining", 1 ],
       [ "jam_fruit", 4 ],
       [ "jar_3l_glass_sealed", 2 ],
       { "prob": 2, "group": "fish_pickled_jar_glass_sealed_2" },
