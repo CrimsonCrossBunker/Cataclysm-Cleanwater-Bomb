@@ -476,7 +476,7 @@ TEST_CASE( "zone_sorting_skips_source_when_all_destinations_count_full",
             }
             ++inserted;
         }
-        REQUIRE( inserted >= max_item_in_square- 1 );
+        REQUIRE( inserted >= max_item_in_square - 1 );
 
         create_tile_zone( "Food", zone_type_LOOT_FOOD, dest_abs );
     }
@@ -541,7 +541,7 @@ TEST_CASE( "zone_sorting_activity_terminates_with_count_full_vehicle_destination
             break;
         }
     }
-    REQUIRE( inserted >= max_item_in_square- 1 );
+    REQUIRE( inserted >= max_item_in_square - 1 );
 
     create_tile_zone( "Food", zone_type_LOOT_FOOD, dest_abs, /*veh=*/true );
     create_tile_zone( "Unsorted", zone_type_LOOT_UNSORTED, src_abs );

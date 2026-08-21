@@ -1122,7 +1122,7 @@ bool dest_has_capacity( const tripoint_abs_ms &dest, const zone_type_id &ztype,
             return false;
         }
     }
-    return static_cast<int>( here.i_at( dest_bub ).size() ) < max_item_in_square&&
+    return static_cast<int>( here.i_at( dest_bub ).size() ) < max_item_in_square &&
            here.free_volume( dest_bub ) >= sample.volume();
 }
 
@@ -1463,7 +1463,7 @@ void move_item( Character &you, const std::optional<vpart_reference> &vpr_src,
 
         // skip tiles with inaccessible furniture, like filled charcoal kiln
         if( !here.can_put_items_ter_furn( dest_loc ) ||
-            static_cast<int>( here.i_at( dest_loc ).size() ) >= max_item_in_square) {
+            static_cast<int>( here.i_at( dest_loc ).size() ) >= max_item_in_square ) {
             continue;
         }
 
