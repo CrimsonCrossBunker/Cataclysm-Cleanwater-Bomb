@@ -55,6 +55,13 @@
   },
   {
     "type": "vehicle_part_location",
+    "id": "on_door",
+    "name": "On Door",
+    "//": "mount on door",
+    "z_order": -1
+  },
+  {
+    "type": "vehicle_part_location",
     "id": "engine_block",
     "name": "Engine Block",
     "z_order": 4,

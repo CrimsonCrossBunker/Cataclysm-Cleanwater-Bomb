@@ -3296,9 +3296,14 @@ int vehicle::next_part_to_unlock( int p, bool outside ) const
     if( !part_has_lock( p ) ) {
         return -1;
     }
-    for( const int elem : parts_at_relative( parts[p].mount, true, true ) ) {
+    const std::vector<int> parts_here = parts_at_relative( parts[p].mount, true, true );
+    const bool accessible_lock = !outside || std::any_of( parts_here.begin(), parts_here.end(),
+    [this]( const int elem ) {
         const vehicle_part &vp = part( elem );
-        const bool accessible_lock = !outside || vp.has_fault( fault_broken_window );
+        return vp.info().has_flag( VPFLAG_WINDOW ) && vp.has_fault( fault_broken_window );
+    } );
+    for( const int elem : parts_here ) {
+        const vehicle_part &vp = part( elem );
         if( vp.info().has_flag( "LOCKABLE_DOOR" ) && vp.is_available() && vp.locked && accessible_lock ) {
             return elem;
         }
