@@ -3907,7 +3907,7 @@ class Character : public Creature, public visitable
                                 const tripoint_bub_ms &origin, int radius, bool pin_to_map );
         void consume_tools( const comp_selection<tool_comp> &tool, int batch );
         void consume_tools( map &m, const comp_selection<tool_comp> &tool, int batch,
-                            const tripoint_bub_ms &origin, int radius,
+                            const tripoint_bub_ms &origin = tripoint_bub_ms::zero, int radius = pickup_range,
                             basecamp *bcp = nullptr );
         void consume_tools( map &m, const comp_selection<tool_comp> &tool, int batch,
                             const std::vector<tripoint_bub_ms> &reachable_pts = {},   basecamp *bcp = nullptr );
