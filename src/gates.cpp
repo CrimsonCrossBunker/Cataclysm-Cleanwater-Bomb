@@ -580,7 +580,7 @@ bool doors::unlock_door( map &m, Creature &who, const tripoint_bub_ms &lockp )
             // TODO: Separate this out into a function or something not awful.
             // It's a lambda right now so we don't have to check it unless we need it.
             auto has_broken_window = [&]() {
-                std::vector<vehicle_part *> parts_at_target = veh->get_parts_at( &m, lockp, "LOCKABLE_DOOR",
+                std::vector<vehicle_part *> parts_at_target = veh->get_parts_at( &m, lockp, "WINDOW",
                         part_status_flag::available );
                 return !parts_at_target.empty() && parts_at_target.front()->has_fault( fault_broken_window );
             };

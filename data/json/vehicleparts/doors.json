@@ -15,11 +15,10 @@
       "OBSTACLE",
       "OPENABLE",
       "BOARDABLE",
-      "WINDOW",
+      "WINDOW_MOUNTABLE",
       "DOOR",
       "LOCKABLE_DOOR",
-      "HUGE_OK",
-      "FRAGILE_COMPONENTS"
+      "HUGE_OK"
     ],
     "item": "frame",
     "location": "center",
@@ -70,7 +69,7 @@
       "repair": { "skills": [ [ "fabrication", 2 ] ], "time": "5 m", "using": [ [ "adhesive", 2 ] ] }
     },
     "damage_reduction": { "all": 0, "bash": 3 },
-    "delete": { "flags": [ "LOCKABLE_DOOR", "WINDOW" ] }
+    "delete": { "flags": [ "LOCKABLE_DOOR", "WINDOW_MOUNTABLE" ] }
   },
   {
     "copy-from": "cloth_flap_door",
@@ -87,7 +86,7 @@
     "durability": 240,
     "name": { "str": "opaque door" },
     "extend": { "flags": [ "OPAQUE" ] },
-    "delete": { "flags": [ "WINDOW" ] },
+    "delete": { "flags": [ "WINDOW_MOUNTABLE" ] },
     "type": "vehicle_part",
     "variants_bases": [ { "id": "full", "label": "Full" } ]
   },
@@ -117,7 +116,7 @@
     "looks_like": "door_opaque",
     "name": { "str": "heavy-duty opaque door" },
     "extend": { "flags": [ "OPAQUE" ] },
-    "delete": { "flags": [ "WINDOW" ] },
+    "delete": { "flags": [ "WINDOW_MOUNTABLE" ] },
     "type": "vehicle_part",
     "variants_bases": [ { "id": "full", "label": "Full" } ]
   },
@@ -161,7 +160,7 @@
     "looks_like": "door_opaque",
     "name": { "str": "opaque hatch" },
     "extend": { "flags": [ "OPAQUE" ] },
-    "delete": { "flags": [ "WINDOW" ] },
+    "delete": { "flags": [ "WINDOW_MOUNTABLE" ] },
     "type": "vehicle_part"
   },
   {
@@ -197,7 +196,7 @@
     "looks_like": "hatch_opaque",
     "name": { "str": "heavy-duty opaque hatch" },
     "extend": { "flags": [ "OPAQUE" ] },
-    "delete": { "flags": [ "WINDOW" ] },
+    "delete": { "flags": [ "WINDOW_MOUNTABLE" ] },
     "type": "vehicle_part"
   },
   {
@@ -221,7 +220,7 @@
       "repair": { "skills": [ [ "mechanics", 3 ] ], "time": "5 m", "using": [ [ "repair_welding_lc_steel", 3 ] ] }
     },
     "size": "125000 ml",
-    "extend": { "flags": [ "LOCKABLE_CARGO", "MULTISQUARE", "COVERED", "FRAGILE_COMPONENTS" ] },
+    "extend": { "flags": [ "LOCKABLE_CARGO", "MULTISQUARE", "COVERED" ] },
     "type": "vehicle_part"
   },
   {
@@ -254,7 +253,7 @@
     "durability": 170,
     "description": "A door.  Solid construction means you can't see through it when closed.",
     "extend": { "flags": [ "OPAQUE" ] },
-    "delete": { "flags": [ "WINDOW" ] },
+    "delete": { "flags": [ "WINDOW_MOUNTABLE" ] },
     "damage_reduction": { "all": 12 }
   },
   {
@@ -271,7 +270,7 @@
       "repair": { "skills": [ [ "mechanics", 3 ] ], "time": "60 m", "using": [ [ "repair_welding_lc_steel", 2 ] ] }
     },
     "extend": { "flags": [ "LOW_FINAL_AIR_DRAG", "SIMPLE_PART", "NO_ROOF_NEEDED" ] },
-    "delete": { "flags": [ "CARGO", "CARGO_PASSABLE", "COVERED", "LOCKABLE_CARGO" ] }
+    "delete": { "flags": [ "CARGO", "CARGO_PASSABLE", "COVERED", "LOCKABLE_CARGO", "WINDOW_MOUNTABLE" ] }
   },
   {
     "type": "vehicle_part",
@@ -306,7 +305,7 @@
     },
     "breaks_into": "ig_vp_sheet_metal",
     "extend": { "flags": [ "OPAQUE", "SIMPLE_PART" ] },
-    "delete": { "flags": [ "CARGO", "CARGO_PASSABLE", "COVERED", "LOCKABLE_CARGO", "WINDOW" ] },
+    "delete": { "flags": [ "CARGO", "CARGO_PASSABLE", "COVERED", "LOCKABLE_CARGO", "WINDOW_MOUNTABLE" ] },
     "damage_reduction": { "all": 7 }
   },
   {
@@ -317,6 +316,7 @@
     "looks_like": "door",
     "description": "A door.  A window lets you see through it when closed.",
     "breaks_into": "ig_vp_frame",
-    "delete": { "flags": [ "LOW_FINAL_AIR_DRAG", "NO_ROOF_NEEDED", "WINDOW" ] }
+    "extend": { "flags": [ "WINDOW_MOUNTABLE" ] },
+    "delete": { "flags": [ "LOW_FINAL_AIR_DRAG", "NO_ROOF_NEEDED" ] }
   }
 ]

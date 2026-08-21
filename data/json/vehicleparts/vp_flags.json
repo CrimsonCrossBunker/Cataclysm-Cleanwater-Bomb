@@ -80,6 +80,15 @@
     "requires_flag": "WINDOW"
   },
   {
+    "id": "WINDOW_MOUNT",
+    "type": "json_flag",
+    "requires_flag": "WINDOW_MOUNTABLE"
+  },
+  {
+    "id": "WINDOW_MOUNTABLE",
+    "type": "json_flag"
+  },
+  {
     "id": "DOOR",
     "type": "json_flag",
     "info": "When open, this part lets you move from inside the vehicle to outside or vice versa.  When closed, it prevents people from entering or leaving the vehicle."

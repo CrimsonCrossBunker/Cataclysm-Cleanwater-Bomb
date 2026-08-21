@@ -7,7 +7,7 @@
       { "x": 0, "y": 0, "parts": [ "frame_wood#cross", "seat_wood", "controls", "airship_balloon" ] },
       { "x": 0, "y": -1, "parts": [ "frame_wood#cross", "wooden_aisle#vertical", "airship_balloon" ] },
       { "x": 0, "y": -2, "parts": [ "frame_wood#cross", "wooden_aisle#vertical", "airship_balloon" ] },
-      { "x": 0, "y": -3, "parts": [ "frame_wood#vertical", "door_wood", "plating_wood", "airship_balloon" ] },
+      { "x": 0, "y": -3, "parts": [ "frame_wood#vertical", "door_wood", "door_window", "plating_wood", "airship_balloon" ] },
       { "x": 0, "y": -4, "parts": [ "airship_balloon_external" ] },
       { "x": 0, "y": -5, "parts": [ "airship_balloon_external" ] },
       { "x": -1, "y": -5, "parts": [ "airship_balloon_external" ] },
@@ -75,7 +75,7 @@
         "y": -3,
         "parts": [ "frame_wood#vertical", "woodhalfboard#vertical", "plating_wood", "airship_balloon" ]
       },
-      { "x": -1, "y": -3, "parts": [ "frame_wood#vertical", "door_wood", "plating_wood", "airship_balloon" ] },
+      { "x": -1, "y": -3, "parts": [ "frame_wood#vertical", "door_wood", "door_window", "plating_wood", "airship_balloon" ] },
       {
         "x": 1,
         "y": -3,
@@ -273,8 +273,8 @@
         "y": 3,
         "parts": [ "frame_wood#vertical", "woodhalfboard#vertical", "plating_wood", "airship_balloon" ]
       },
-      { "x": -1, "y": 3, "parts": [ "frame_wood#vertical", "door_wood", "plating_wood", "airship_balloon" ] },
-      { "x": 0, "y": 3, "parts": [ "frame_wood#vertical", "door_wood", "plating_wood", "airship_balloon" ] },
+      { "x": -1, "y": 3, "parts": [ "frame_wood#vertical", "door_wood", "door_window", "plating_wood", "airship_balloon" ] },
+      { "x": 0, "y": 3, "parts": [ "frame_wood#vertical", "door_wood", "door_window", "plating_wood", "airship_balloon" ] },
       {
         "x": 1,
         "y": 3,
@@ -355,7 +355,7 @@
         "y": -1,
         "parts": [ "frame_wood#vertical", "woodhalfboard#vertical", "plating_wood", "airship_balloon" ]
       },
-      { "x": -1, "y": -1, "parts": [ "frame_wood#vertical", "door_wood", "plating_wood", "airship_balloon" ] },
+      { "x": -1, "y": -1, "parts": [ "frame_wood#vertical", "door_wood", "door_window", "plating_wood", "airship_balloon" ] },
       { "x": 1, "y": -1, "parts": [ "frame_wood#nw", "woodhalfboard#nw", "plating_wood", "airship_balloon" ] },
       { "x": 2, "y": -1, "parts": [ "airship_balloon_external" ] },
       { "x": 3, "y": -1, "parts": [ "airship_balloon_external" ] },
@@ -441,7 +441,7 @@
         "y": 3,
         "parts": [ "frame_wood#vertical", "woodhalfboard#vertical", "plating_wood", "airship_balloon" ]
       },
-      { "x": -1, "y": 3, "parts": [ "frame_wood#vertical", "door_wood", "plating_wood", "airship_balloon" ] },
+      { "x": -1, "y": 3, "parts": [ "frame_wood#vertical", "door_wood", "door_window", "plating_wood", "airship_balloon" ] },
       {
         "x": 0,
         "y": 3,
