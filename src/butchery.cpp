@@ -12,6 +12,7 @@
 #include "activity_handlers.h"
 #include "avatar.h"
 #include "butchery_requirements.h"
+#include "cached_options.h"
 #include "calendar.h"
 #include "cata_utility.h"
 #include "character.h"
@@ -237,7 +238,7 @@ static bool check_anger_empathetic_npcs_with_cannibalism( const Character &you,
 bool set_up_butchery( player_activity &act, Character &you, butchery_data bd )
 {
     const int factor = you.max_quality( bd.b_type == butcher_type::DISSECT ? qual_CUT_FINE :
-                                        qual_BUTCHER, get_option<int>( "PICKUP_RANGE" ) );
+                                        qual_BUTCHER, pickup_range );
 
     const butcher_type action = bd.b_type;
     const item &corpse_item = *bd.corpse;
@@ -281,17 +282,17 @@ bool set_up_butchery( player_activity &act, Character &you, butchery_data bd )
     const requirement_id butchery_requirement = bd.req;
 
     if( !butchery_requirement->can_make_with_inventory(
-            you.crafting_inventory( you.pos_bub(), get_option<int>( "PICKUP_RANGE" ) ),
+            you.crafting_inventory( you.pos_bub(), pickup_range ),
             is_crafting_component ) ) {
         std::string popup_output = _( "You can't butcher this; you are missing some tools.\n" );
 
         for( const std::string &str : butchery_requirement->get_folded_components_list(
-                 45, c_light_gray, you.crafting_inventory( you.pos_bub(), get_option<int>( "PICKUP_RANGE" ) ),
+                 45, c_light_gray, you.crafting_inventory( you.pos_bub(), pickup_range ),
                  is_crafting_component ) ) {
             popup_output += str + '\n';
         }
         for( const std::string &str : butchery_requirement->get_folded_tools_list(
-                 45, c_light_gray, you.crafting_inventory( you.pos_bub(), get_option<int>( "PICKUP_RANGE" ) ) ) ) {
+                 45, c_light_gray, you.crafting_inventory( you.pos_bub(), pickup_range ) ) ) {
             popup_output += str + '\n';
         }
 
@@ -401,7 +402,7 @@ int butcher_time_to_cut( Character &you, const item &corpse_item, const butcher_
 {
     const mtype &corpse = *corpse_item.get_mtype();
     const int factor = you.max_quality( action == butcher_type::DISSECT ? qual_CUT_FINE : qual_BUTCHER,
-                                        get_option<int>( "PICKUP_RANGE" ) );
+                                        pickup_range );
     // in moves
     int time_to_cut;
     switch( corpse.size ) {
@@ -617,7 +618,7 @@ static std::vector<item> create_charge_items( const itype *drop, int count,
     while( count > 0 ) {
         item obj( drop, calendar::turn, 1 );
         obj.charges = std::min( count,
-                                units::from_liter( get_option<int>( "DEFAULT_TILE_VOLUME" ) ) / obj.volume() );
+                                default_tile_volume / obj.volume() );
         count -= obj.charges;
 
         if( obj.has_temperature() ) {
@@ -649,7 +650,7 @@ bool butchery_drops_harvest( butchery_data bt, Character &you )
     const time_duration moves_total = bt.time_to_butcher;
 
     const int tool_quality = you.max_quality( action == butcher_type::DISSECT ? qual_CUT_FINE :
-                             qual_BUTCHER, get_option<int>( "PICKUP_RANGE" ) );
+                             qual_BUTCHER, pickup_range );
 
     //all BUTCHERY types - FATAL FAILURE
     if( action != butcher_type::DISSECT &&
@@ -1138,7 +1139,7 @@ void destroy_the_carcass( const butchery_data &bd, Character &you )
         case butcher_type::FIELD_DRESS: {
             bool success = roll_butchery_dissect( round( you.get_average_skill_level( skill_survival ) ),
                                                   you.get_dex(),
-                                                  you.max_quality( qual_BUTCHER, get_option<int>( "PICKUP_RANGE" ) ) ) > 0;
+                                                  you.max_quality( qual_BUTCHER, pickup_range ) ) > 0;
             add_msg( success ? m_good : m_warning,
                      SNIPPET.random_from_category( success ? "harvest_drop_default_field_dress_success" :
                                                    "harvest_drop_default_field_dress_failed" ).value_or( translation() ).translated() );
@@ -1248,13 +1249,13 @@ std::optional<butcher_type> butcher_submenu( const std::vector<map_stack::iterat
     };
     const bool enough_light = player_character.fine_detail_vision_mod() <= 4;
 
-    const int factor = player_character.max_quality( qual_BUTCHER, get_option<int>( "PICKUP_RANGE" ) );
+    const int factor = player_character.max_quality( qual_BUTCHER, pickup_range );
     const std::string msgFactor = factor > INT_MIN
                                   ? string_format( _( "Your best tool has <color_cyan>%d butchering</color>." ), factor )
                                   :  _( "You have no butchering tool." );
 
     const int factorD = player_character.max_quality( qual_CUT_FINE,
-                        get_option<int>( "PICKUP_RANGE" ) );
+                        pickup_range );
     const std::string msgFactorD = factorD > INT_MIN
                                    ? string_format( _( "Your best tool has <color_cyan>%d fine cutting</color>." ), factorD )
                                    :  _( "You have no fine cutting tool." );

@@ -3584,7 +3584,7 @@ void options_manager::add_options_world_default()
 
         add( "CROP_OVERGROWN_ENABLED", page_id,
              to_translation( "Crops can wither from overgrowth" ),
-             to_translation( "If true, mature cMAX_ITEM_IN_SQUARErops will eventually become overgrown and "
+             to_translation( "If true, mature crops will eventually become overgrown and "
                              "wither if not harvested." ),
              true
            );
@@ -5113,6 +5113,9 @@ void options_manager::update_options_cache()
     cata::options::mouse.enabled = ::get_option<bool>( "ENABLE_MOUSE" );
     cata::options::mouse.hidekb = ::get_option<std::string>( "HIDE_CURSOR" ) == "hidekb";
     use_pinyin_search = ::get_option<bool>( "USE_PINYIN_SEARCH" );
+    max_item_in_square = ::get_option<int>( "MAX_ITEM_IN_SQUARE" );
+    default_tile_volume = units::from_liter( ::get_option<int>( "DEFAULT_TILE_VOLUME" ) );
+    pickup_range = ::get_option<int>( "PICKUP_RANGE" );
 
     cata::options::damage_indicators.clear();
     for( int i = 0; i < 6; i++ ) {

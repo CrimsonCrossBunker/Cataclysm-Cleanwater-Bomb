@@ -13,6 +13,7 @@
 #include <variant>
 #include <vector>
 
+#include "cached_options.h"
 #include "character.h"
 #include "character_id.h"
 #include "color.h"
@@ -1225,7 +1226,7 @@ ret_val<int> item_location::max_charges_by_parent_recursive( const item &it ) co
     float weight_multiplier = 1.0f;
     float volume_multiplier = 1.0f;
     units::mass max_weight = 1000_kilogram;
-    units::volume max_volume = units::from_liter( get_option<int>( "DEFAULT_TILE_VOLUME" ) );
+    units::volume max_volume = default_tile_volume;
     item_location current_location = *this;
     //item_location class cannot return current pocket so use first pocket for innermost container
     //Only used for weight and volume multipliers

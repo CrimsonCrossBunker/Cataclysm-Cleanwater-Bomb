@@ -2209,8 +2209,8 @@ bool advanced_inventory::query_destination( aim_location &def )
         for( aim_location &ordered_loc : ordered_locs ) {
             advanced_inv_area &s = squares[ordered_loc];
             const int size = s.get_item_count();
-            std::string prefix = string_format( "%2d/%d", size, get_option<int>( "MAX_ITEM_IN_SQUARE" ) );
-            if( size >= get_option<int>( "MAX_ITEM_IN_SQUARE" ) ) {
+            std::string prefix = string_format( "%2d/%d", size, max_item_in_square);
+            if( size >= max_item_in_square) {
                 prefix += _( " (FULL)" );
             }
             if( s.veh != nullptr ) {

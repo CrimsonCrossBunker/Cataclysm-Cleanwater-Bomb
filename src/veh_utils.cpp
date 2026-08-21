@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "avatar.h"
+#include "cached_options.h"
 #include "calendar.h"
 #include "cata_imgui.h"
 #include "character.h"
@@ -106,13 +107,13 @@ bool repair_part( map &here, vehicle &veh, vehicle_part &pt, Character &who )
                                   ? vp.install_requirements()
                                   : vp.repair_requirements() * pt.get_base().repairable_levels();
 
-    const inventory &inv = who.crafting_inventory( who.pos_bub(), get_option<int>( "PICKUP_RANGE" ),
+    const inventory &inv = who.crafting_inventory( who.pos_bub(), pickup_range,
                            !who.is_npc() );
     inventory map_inv;
     // allow NPCs to use welding rigs they can't see ( on the other side of a vehicle )
     // as they have the handicap of not being able to use the veh interaction menu
     // or able to drag a welding cart etc.
-    map_inv.form_from_map( who.pos_bub(), get_option<int>( "PICKUP_RANGE" ), &who, false,
+    map_inv.form_from_map( who.pos_bub(), pickup_range, &who, false,
                            !who.is_npc() );
     if( !reqs.can_make_with_inventory( inv, is_crafting_component ) ) {
         who.add_msg_if_player( m_info, _( "You don't meet the requirements to repair the %s." ),

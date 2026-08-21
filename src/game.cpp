@@ -7212,8 +7212,8 @@ void game::butcher( const std::optional<tripoint_bub_ms> &p )
 
     const tripoint_bub_ms pos = p.value_or( u.pos_bub() );
 
-    const int factor = u.max_quality( qual_BUTCHER, get_option<int>( "PICKUP_RANGE" ) );
-    const int factorD = u.max_quality( qual_CUT_FINE, get_option<int>( "PICKUP_RANGE" ) );
+    const int factor = u.max_quality( qual_BUTCHER, pickup_range );
+    const int factorD = u.max_quality( qual_CUT_FINE, pickup_range );
     const std::string no_knife_msg = _( "You don't have a butchering tool." );
     const std::string no_corpse_msg = _( "There are no corpses here to butcher." );
 
@@ -7312,7 +7312,7 @@ void game::butcher( const std::optional<tripoint_bub_ms> &p )
     }
 
     // Magic indices for special butcher options
-    const int MAX_ITEM = get_option<int>( "MAX_ITEM_IN_SQUARE" );
+    const int MAX_ITEM = max_item_in_square;
     const int MULTISALVAGE = MAX_ITEM + 1, MULTIBUTCHER = MAX_ITEM + 2,
               MULTIDISASSEMBLE_ONE = MAX_ITEM + 3,
               MULTIDISASSEMBLE_ALL = MAX_ITEM + 4, NUM_BUTCHER_ACTIONS = MAX_ITEM + 5;

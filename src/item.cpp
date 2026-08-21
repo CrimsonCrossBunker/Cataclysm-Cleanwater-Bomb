@@ -17,6 +17,7 @@
 #include "avatar.h"
 #include "bionics.h"
 #include "butchery.h"
+#include "cached_options.h"
 #include "calendar.h"
 #include "cata_assert.h"
 #include "cata_utility.h"
@@ -2243,10 +2244,9 @@ units::volume item::corpse_volume( const mtype *corpse ) const
     if( has_flag( flag_SKINNED ) ) {
         corpse_volume *= 0.85;
     }
-    units::volume MAX_VOLUME = units::from_liter( get_option<int>( "DEFAULT_TILE_VOLUME" ) );
-    if( corpse_volume > MAX_VOLUME ) {
-        // Silently set volume so the corpse can still spawn but a mtype can have a volume > DEFAULT_TILE_VOLUME
-        corpse_volume = MAX_VOLUME;
+    if( corpse_volume > default_tile_volume ) {
+        // Silently set volume so the corpse can still spawn but a mtype can have a volume > default_tile_volume
+        corpse_volume = default_tile_volume;
     }
     if( corpse_volume > 0_ml ) {
         return corpse_volume;

@@ -24,6 +24,7 @@
 #include "avatar.h"
 #include "bionics.h"
 #include "bodypart.h"
+#include "cached_options.h"
 #include "cata_assert.h"
 #include "cata_bitset.h"
 #include "cata_utility.h"
@@ -216,7 +217,7 @@ void vehicle_stack::insert( map &here, const item &newitem )
 
 int vehicle_stack::count_limit() const
 {
-    return get_option<int>( "MAX_ITEM_IN_SQUARE" );
+    return max_item_in_square;
 }
 
 units::volume vehicle_stack::max_volume() const

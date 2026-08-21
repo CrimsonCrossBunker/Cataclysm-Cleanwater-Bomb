@@ -327,7 +327,7 @@ float Character::workbench_crafting_speed_multiplier( const item &craft,
 
     multiplier *= lerped_multiplier( craft_mass, allowed_mass, 1000_kilogram );
     multiplier *= lerped_multiplier( craft_volume, allowed_volume,
-                                     units::from_liter( get_option<int>( "DEFAULT_TILE_VOLUME" ) ) );
+                                     default_tile_volume );
 
     return multiplier;
 }
@@ -603,12 +603,12 @@ std::vector<const item *> Character::get_eligible_containers_for_crafting() cons
     worn.get_eligible_containers_for_crafting( conts );
 
     map &here = get_map();
-    // get all potential containers within PICKUP_RANGE tiles including vehicles
+    // get all potential containers within pickup_range tiles including vehicles
     for( const tripoint_bub_ms &loc : closest_points_first( pos_bub(),
-            get_option<int>( "PICKUP_RANGE" ) ) ) {
+            pickup_range ) ) {
         // can not reach this -> can not access its contents
         if( pos_bub() != loc &&
-            !here.clear_path( pos_bub(), loc, get_option<int>( "PICKUP_RANGE" ), 1, 100 ) ) {
+            !here.clear_path( pos_bub(), loc, pickup_range, 1, 100 ) ) {
             continue;
         }
         if( here.accessible_items( loc ) ) {
@@ -663,7 +663,7 @@ bool Character::can_start_craft( const recipe *rec, recipe_filter_flags flags,
 
 const inventory &Character::crafting_inventory( bool clear_path ) const
 {
-    return crafting_inventory( tripoint_bub_ms::zero, get_option<int>( "PICKUP_RANGE" ), clear_path );
+    return crafting_inventory( tripoint_bub_ms::zero, pickup_range, clear_path );
 }
 
 const inventory &Character::crafting_inventory( const tripoint_bub_ms &src_pos, int radius,
@@ -805,7 +805,7 @@ static item_location set_item_inventory( Character &p, item &newit )
 {
     item_location ret_val = item_location::nowhere;
     if( newit.made_of( phase_id::LIQUID ) ) {
-        liquid_handler::handle_all_or_npc_liquid( p, newit, get_option<int>( "PICKUP_RANGE" ) );
+        liquid_handler::handle_all_or_npc_liquid( p, newit, pickup_range );
     } else {
         p.inv->assign_empty_invlet( newit, p );
         // We might not have space for the item
@@ -1242,7 +1242,7 @@ static step_source_context resolve_step_source( const item &craft, const item_lo
     map &m = get_map();
     step_source_context src;
     src.origin = m.get_bub( loc.pos_abs() );
-    src.radius = get_option<int>( "PICKUP_RANGE" );
+    src.radius = pickup_range;
     if( loc.where() == item_location::type::character ) {
         src.present_char = loc.carrier();
     } else {
@@ -2519,7 +2519,7 @@ static void spawn_items( Character &guy, std::vector<item> &results,
         prepare( newit );
 
         if( newit.made_of( phase_id::LIQUID ) ) {
-            liquid_handler::handle_all_or_npc_liquid( guy, newit, get_option<int>( "PICKUP_RANGE" ) );
+            liquid_handler::handle_all_or_npc_liquid( guy, newit, pickup_range );
             ++i;
             continue;
         }
@@ -2764,7 +2764,7 @@ bool Character::can_continue_craft( item &craft, const requirement_data &continu
         }
 
         inventory map_inv;
-        map_inv.form_from_map( pos_bub(), get_option<int>( "PICKUP_RANGE" ), this );
+        map_inv.form_from_map( pos_bub(), pickup_range, this );
 
         auto filter = [&]( const item & it ) {
             return std_filter( it ) &&
@@ -2844,7 +2844,7 @@ bool Character::can_continue_craft( item &craft, const requirement_data &continu
         }
 
         inventory map_inv;
-        map_inv.form_from_map( pos_bub(), get_option<int>( "PICKUP_RANGE" ), this );
+        map_inv.form_from_map( pos_bub(), pickup_range, this );
 
         if( rec.has_steps() ) {
             const std::vector<std::vector<step_tool_alloc>> &prior = craft.get_step_tool_allocs();
@@ -3290,7 +3290,7 @@ std::vector<item_location> preview_source_locations( Character &crafter,
     map &here = get_map();
     if( selection.use_from & usage_from::map ) {
         const std::vector<tripoint_bub_ms> reachable = here.reachable_item_points(
-                    crafter.pos_bub(), get_option<int>( "PICKUP_RANGE" ), 1, 100 );
+                    crafter.pos_bub(), pickup_range, 1, 100 );
         for( const tripoint_bub_ms &point : reachable ) {
             if( !here.accessible_items( point ) ) {
                 continue;
@@ -3315,7 +3315,7 @@ std::optional<item> preview_infinite_map_charge_source( Character &crafter, cons
 {
     map &here = get_map();
     const std::vector<tripoint_bub_ms> reachable = here.reachable_item_points(
-                crafter.pos_bub(), get_option<int>( "PICKUP_RANGE" ), 1, 100 );
+                crafter.pos_bub(), pickup_range, 1, 100 );
     for( const tripoint_bub_ms &point : reachable ) {
         item source = here.liquid_from( point );
         if( source.typeId() == type && source.charges == item::INFINITE_CHARGES ) {
@@ -3421,7 +3421,7 @@ std::optional<item_components> Character::preview_crafting_components(
                             *this, map_selection, filter, preferred );
                 map &here = get_map();
                 const std::vector<tripoint_bub_ms> reachable = here.reachable_item_points(
-                            pos_bub(), get_option<int>( "PICKUP_RANGE" ), 1, 100 );
+                            pos_bub(), pickup_range, 1, 100 );
                 const bool vehicle_first = !by_charges;
                 for( const tripoint_bub_ms &point : reachable ) {
                     for( item_location &location : map_candidates ) {
@@ -3479,7 +3479,7 @@ std::list<item> Character::consume_items( const comp_selection<item_comp> &is, i
     }
     // populate a grid of spots that can be reached
     const std::vector<tripoint_bub_ms> &reachable_pts = m.reachable_item_points( pos_bub(),
-            get_option<int>( "PICKUP_RANGE" ), 1, 100 );
+            pickup_range, 1, 100 );
     return consume_items( m, is, batch, filter, reachable_pts, select_ind, disable_preference );
 }
 
@@ -3595,7 +3595,7 @@ std::list<item> Character::consume_items( const std::vector<item_comp> &componen
         const bool can_cancel, const bool disable_preference )
 {
     inventory map_inv;
-    map_inv.form_from_map( pos_bub(), get_option<int>( "PICKUP_RANGE" ), this );
+    map_inv.form_from_map( pos_bub(), pickup_range, this );
     comp_selection<item_comp> sel = select_item_component( components, batch, map_inv, can_cancel,
                                     filter );
     return consume_items( sel, batch, filter, select_ind( sel.comp.type ), disable_preference );
@@ -3790,7 +3790,7 @@ bool Character::craft_consume_tools( item &craft, int multiplier, bool start_cra
     }
 
     inventory map_inv;
-    map_inv.form_from_map( pos_bub(), get_option<int>( "PICKUP_RANGE" ), this );
+    map_inv.form_from_map( pos_bub(), pickup_range, this );
 
     for( const comp_selection<tool_comp> &tool_sel : cached_tool_selections ) {
         itype_id type = tool_sel.comp.type;
@@ -4097,7 +4097,7 @@ bool Character::craft_consume_step_tools( item &craft, const crafting_cost_conte
         }
     }
     return consume_step_tool_targets( craft, targets,
-                                      pos_bub(), get_option<int>( "PICKUP_RANGE" ), /*pin_to_map=*/false );
+                                      pos_bub(), pickup_range, /*pin_to_map=*/false );
 }
 
 bool Character::craft_consume_passive_step_tools( item &craft, time_point now,
@@ -4146,7 +4146,7 @@ bool Character::craft_consume_passive_step_tools( item &craft, time_point now,
 
 void Character::consume_tools( const comp_selection<tool_comp> &tool, int batch )
 {
-    consume_tools( get_map(), tool, batch, pos_bub(), get_option<int>( "PICKUP_RANGE" ) );
+    consume_tools( get_map(), tool, batch, pos_bub(), pickup_range );
 }
 
 /* we use this if we selected the tool earlier */
@@ -4203,7 +4203,7 @@ to consume_tools */
 void Character::consume_tools( const std::vector<tool_comp> &tools, int batch )
 {
     inventory map_inv;
-    map_inv.form_from_map( pos_bub(), get_option<int>( "PICKUP_RANGE" ), this );
+    map_inv.form_from_map( pos_bub(), pickup_range, this );
     consume_tools( select_tool_component( tools, batch, map_inv ), batch );
 }
 
@@ -4678,7 +4678,7 @@ void Character::complete_disassemble( item_location &target, const recipe &dis )
             }
 
             if( act_item.made_of( phase_id::LIQUID ) ) {
-                liquid_handler::handle_all_or_npc_liquid( *this, act_item, get_option<int>( "PICKUP_RANGE" ) );
+                liquid_handler::handle_all_or_npc_liquid( *this, act_item, pickup_range );
             } else {
                 drop_items.push_back( act_item );
             }
@@ -4747,7 +4747,7 @@ void drop_or_handle( const item &newit, Character &p )
 {
     item tmp( newit );
     if( newit.made_of( phase_id::LIQUID ) ) {
-        liquid_handler::handle_all_or_npc_liquid( p, tmp, get_option<int>( "PICKUP_RANGE" ) );
+        liquid_handler::handle_all_or_npc_liquid( p, tmp, pickup_range );
     } else {
         p.i_add_or_drop( tmp );
     }
@@ -4795,15 +4795,15 @@ std::vector<Character *> Character::get_crafting_helpers() const
                && ( !is_mp_partner || cata_mp::is_partner_helping_us() )
                && !guy.in_sleep_state()
                && guy.is_obeying( *this )
-               && rl_dist( guy.pos_bub(), pos_bub() ) < get_option<int>( "PICKUP_RANGE" )
-               && get_map().clear_path( pos_bub(), guy.pos_bub(), get_option<int>( "PICKUP_RANGE" ), 1, 100 );
+               && rl_dist( guy.pos_bub(), pos_bub() ) < pickup_range
+               && get_map().clear_path( pos_bub(), guy.pos_bub(), pickup_range, 1, 100 );
 #else
         return getID() != guy.getID()
                && guy.is_npc()
                && !guy.in_sleep_state()
                && guy.is_obeying( *this )
-               && rl_dist( guy.pos_bub(), pos_bub() ) < get_option<int>( "PICKUP_RANGE" )
-               && get_map().clear_path( pos_bub(), guy.pos_bub(), get_option<int>( "PICKUP_RANGE" ), 1, 100 );
+               && rl_dist( guy.pos_bub(), pos_bub() ) < pickup_range
+               && get_map().clear_path( pos_bub(), guy.pos_bub(), pickup_range, 1, 100 );
 #endif
     } );
 }
@@ -4815,12 +4815,12 @@ std::vector<Character *> Character::get_crafting_group() const
         const bool is_mp_partner = cata_mp::is_partner_npc( guy.getID() );
         return guy.is_ally( *this )
                && ( !is_mp_partner || cata_mp::is_partner_helping_us() )
-               && rl_dist( guy.pos_bub(), pos_bub() ) < get_option<int>( "PICKUP_RANGE" )
-               && get_map().clear_path( pos_bub(), guy.pos_bub(), get_option<int>( "PICKUP_RANGE" ), 1, 100 );
+               && rl_dist( guy.pos_bub(), pos_bub() ) < pickup_range
+               && get_map().clear_path( pos_bub(), guy.pos_bub(), pickup_range, 1, 100 );
 #else
         return guy.is_ally( *this )
-               && rl_dist( guy.pos_bub(), pos_bub() ) < get_option<int>( "PICKUP_RANGE" )
-               && get_map().clear_path( pos_bub(), guy.pos_bub(), get_option<int>( "PICKUP_RANGE" ), 1, 100 );
+               && rl_dist( guy.pos_bub(), pos_bub() ) < pickup_range
+               && get_map().clear_path( pos_bub(), guy.pos_bub(), pickup_range, 1, 100 );
 #endif
     } );
 }

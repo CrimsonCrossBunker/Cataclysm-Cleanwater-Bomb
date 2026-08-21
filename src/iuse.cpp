@@ -2268,7 +2268,7 @@ class exosuit_interact
                 candidates.emplace_back( c, i );
             }
             for( const tripoint_bub_ms &p : here.points_in_radius( c.pos_bub(),
-                    get_option<int>( "PICKUP_RANGE" ) ) ) {
+                    pickup_range ) ) {
                 for( item &i : here.i_at( p ) ) {
                     if( filter( i ) ) {
                         candidates.emplace_back( map_cursor( p ), &i );
@@ -2381,7 +2381,7 @@ std::optional<int> iuse::pack_cbm( Character *p, item *it, const tripoint_bub_ms
 {
     item_location bionic = g->inv_map_splice( []( const item & e ) {
         return e.is_bionic() && e.has_flag( flag_NO_PACKED );
-    }, _( "Choose CBM to pack" ), get_option<int>( "PICKUP_RANGE" ), _( "You don't have any CBMs." ) );
+    }, _( "Choose CBM to pack" ), pickup_range, _( "You don't have any CBMs." ) );
 
     if( !bionic ) {
         return std::nullopt;
@@ -2503,7 +2503,7 @@ std::optional<int> iuse::purify_water( Character *p, item *purifier, item_locati
         p->add_msg_if_player( m_info, _( "Purifying %d water using %d %s" ), charges_of_water,
                               to_consume, purifier->tname( to_consume ) );
         // Pull from surrounding map first because it will update to_consume
-        get_map().use_amount( p->pos_bub(), get_option<int>( "PICKUP_RANGE" ), itype_pur_tablets,
+        get_map().use_amount( p->pos_bub(), pickup_range, itype_pur_tablets,
                               to_consume );
         // Then pull from inventory
         if( to_consume > 0 ) {
@@ -7682,7 +7682,7 @@ std::optional<int> iuse::multicooker( Character *p, item *it, const tripoint_bub
 
                 return 0;
             }
-            liquid_handler::handle_all_liquid( dish, get_option<int>( "PICKUP_RANGE" ) );
+            liquid_handler::handle_all_liquid( dish, pickup_range );
         } else {
             p->i_add( dish );
         }
@@ -8537,7 +8537,7 @@ static bool heat_items( Character *p, item *it, bool liquid_items, bool solid_it
         inventory_multiselector inv_s( *p, preset, _( "ITEMS TO HEAT" ),
                                        make_raw_stats, /*allow_select_contained=*/true );
         inv_s.add_character_items( *p );
-        inv_s.add_nearby_items( get_option<int>( "PICKUP_RANGE" ) );
+        inv_s.add_nearby_items( pickup_range );
         inv_s.set_title( _( "Heat menu" ) );
         inv_s.set_hint( _( "To heat x items, type a number before selecting." ) );
         if( inv_s.empty() ) {
@@ -8788,7 +8788,7 @@ std::optional<int> iuse::wash_items( Character *p, bool soft_items, bool hard_it
     inventory_multiselector inv_s( *p, preset, _( "ITEMS TO CLEAN" ),
                                    make_raw_stats, /*allow_select_contained=*/true );
     inv_s.add_character_items( *p );
-    inv_s.add_nearby_items( get_option<int>( "PICKUP_RANGE" ) );
+    inv_s.add_nearby_items( pickup_range );
     inv_s.set_title( _( "Multiclean" ) );
     inv_s.set_hint( _( "To clean x items, type a number before selecting." ) );
     if( inv_s.empty() ) {

@@ -17,6 +17,7 @@
 
 #include "activity_actor_definitions.h"
 #include "avatar.h"
+#include "cached_options.h"
 #include "calendar.h"
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
@@ -915,7 +916,7 @@ void veh_interact::cache_tool_availability()
         mech_jack = player_character.mounted_creature->mech_str_addition() + 10;
     }
     int max_quality = std::max( { player_character.max_quality( qual_JACK ), mech_jack,
-                                  map_selector( player_character.pos_bub(), get_option<int>( "PICKUP_RANGE" ) ).max_quality( qual_JACK ),
+                                  map_selector( player_character.pos_bub(), pickup_range ).max_quality( qual_JACK ),
                                   vehicle_selector( here, player_character.pos_bub(), 2, true, *veh ).max_quality( qual_JACK )
                                 } );
     max_jack = lifting_quality_to_mass( max_quality );

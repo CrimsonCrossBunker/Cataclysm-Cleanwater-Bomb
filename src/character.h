@@ -24,6 +24,7 @@
 #include "activity_tracker.h"
 #include "body_part_set.h"
 #include "bodypart.h"
+#include "cached_options.h"
 #include "calendar.h"
 #include "cata_utility.h"
 #include "character_attire.h"
@@ -3653,15 +3654,15 @@ class Character : public Creature, public visitable
         * @returns Craftable inventory items found.
         * */
         const inventory &crafting_inventory( const tripoint_bub_ms &src_pos = tripoint_bub_ms::zero,
-                                             int radius = get_option<int>( "PICKUP_RANGE" ), bool clear_path = true ) const;
+                                             int radius = pickup_range, bool clear_path = true ) const;
         const inventory &crafting_inventory( map *here,
                                              const tripoint_bub_ms &src_pos = tripoint_bub_ms::zero,
-                                             int radius = get_option<int>( "PICKUP_RANGE" ), bool clear_path = true ) const;
+                                             int radius = pickup_range, bool clear_path = true ) const;
         void invalidate_crafting_inventory();
         // Efficiently query book proficiency bonuses from nearby items
         // without rebuilding the full crafting inventory.
         // Walks map tiles and vehicle cargo in range, plus character inventory.
-        book_proficiency_bonuses book_bonuses_nearby( int radius = get_option<int>( "PICKUP_RANGE" ) )
+        book_proficiency_bonuses book_bonuses_nearby( int radius = pickup_range )
         const;
 
         /** Returns a value from 1.0 to 11.0 that acts as a multiplier
