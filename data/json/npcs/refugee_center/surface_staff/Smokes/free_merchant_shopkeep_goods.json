@@ -21,6 +21,7 @@
       { "group": "FREE_MERCHANTS_Shop_Parts_Generic", "count": [ 40, 50 ] },
       { "group": "FREE_MERCHANTS_Shop_Parts_Tailoring", "count": [ 5, 8 ] },
       { "group": "FREE_MERCHANTS_Shop_Parts_Mechanics", "count": [ 5, 8 ] },
+      { "item": "tire_repair_kit", "prob": 60, "count": [ 1, 2 ] },
       { "group": "FREE_MERCHANTS_Shop_Weapons_Ammo", "count": [ 2, 4 ] },
       { "group": "FREE_MERCHANTS_Shop_Weapons_Guns", "prob": 75 },
       { "group": "FREE_MERCHANTS_Shop_Weapons_Melee" },
