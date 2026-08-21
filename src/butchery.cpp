@@ -282,8 +282,7 @@ bool set_up_butchery( player_activity &act, Character &you, butchery_data bd )
     const requirement_id butchery_requirement = bd.req;
 
     if( !butchery_requirement->can_make_with_inventory(
-            you.crafting_inventory( you.pos_bub(), pickup_range ),
-            is_crafting_component ) ) {
+            you.crafting_inventory( you.pos_bub(), pickup_range ), is_crafting_component ) ) {
         std::string popup_output = _( "You can't butcher this; you are missing some tools.\n" );
 
         for( const std::string &str : butchery_requirement->get_folded_components_list(
@@ -291,8 +290,8 @@ bool set_up_butchery( player_activity &act, Character &you, butchery_data bd )
                  is_crafting_component ) ) {
             popup_output += str + '\n';
         }
-        for( const std::string &str : butchery_requirement->get_folded_tools_list(
-                 45, c_light_gray, you.crafting_inventory( you.pos_bub(), pickup_range ) ) ) {
+        for( const std::string &str : butchery_requirement->get_folded_tools_list( 45, c_light_gray,
+                you.crafting_inventory( you.pos_bub(), pickup_range ) ) ) {
             popup_output += str + '\n';
         }
 
@@ -617,8 +616,7 @@ static std::vector<item> create_charge_items( const itype *drop, int count,
     std::vector<item> objs;
     while( count > 0 ) {
         item obj( drop, calendar::turn, 1 );
-        obj.charges = std::min( count,
-                                default_tile_volume / obj.volume() );
+        obj.charges = std::min( count, default_tile_volume / obj.volume() );
         count -= obj.charges;
 
         if( obj.has_temperature() ) {
@@ -1254,8 +1252,7 @@ std::optional<butcher_type> butcher_submenu( const std::vector<map_stack::iterat
                                   ? string_format( _( "Your best tool has <color_cyan>%d butchering</color>." ), factor )
                                   :  _( "You have no butchering tool." );
 
-    const int factorD = player_character.max_quality( qual_CUT_FINE,
-                        pickup_range );
+    const int factorD = player_character.max_quality( qual_CUT_FINE, pickup_range );
     const std::string msgFactorD = factorD > INT_MIN
                                    ? string_format( _( "Your best tool has <color_cyan>%d fine cutting</color>." ), factorD )
                                    :  _( "You have no fine cutting tool." );

@@ -4295,8 +4295,7 @@ static std::optional<tripoint_bub_ms> find_refuel_spot_zone( const tripoint_bub_
     const tripoint_abs_ms center_abs = here.get_abs( center );
 
     const std::unordered_set<tripoint_abs_ms> tiles_abs_unordered =
-        mgr.get_near( zone_type_SOURCE_FIREWOOD, center_abs, pickup_range, nullptr,
-                      fac );
+        mgr.get_near( zone_type_SOURCE_FIREWOOD, center_abs, pickup_range, nullptr, fac );
     const std::vector<tripoint_abs_ms> &tiles_abs =
         get_sorted_tiles_by_distance( center_abs, tiles_abs_unordered );
 
@@ -4531,8 +4530,7 @@ int get_auto_consume_moves( Character &you, const bool food )
 bool try_fuel_fire( Character &you, std::optional<tripoint_bub_ms> fire_target )
 {
     const tripoint_bub_ms pos = you.pos_bub();
-    std::vector<tripoint_bub_ms> adjacent = closest_points_first( pos, 1,
-                                            pickup_range );
+    std::vector<tripoint_bub_ms> adjacent = closest_points_first( pos, 1, pickup_range );
 
     map &here = get_map();
     std::optional<tripoint_bub_ms> best_fire =

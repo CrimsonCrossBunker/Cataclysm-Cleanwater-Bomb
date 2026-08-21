@@ -5695,9 +5695,7 @@ requirement_check_result multi_zone_activity_actor::check_requirements( Characte
             loot_zone_spots.emplace_back( elem );
             combined_spots.emplace_back( elem );
         }
-        for( const tripoint_bub_ms &elem : here.points_in_radius( src_loc,
-                pickup_range,
-                pickup_range ) ) {
+        for( const tripoint_bub_ms &elem : here.points_in_radius( src_loc, pickup_range, pickup_range ) ) {
             combined_spots.push_back( elem );
         }
         multi_activity_actor::add_basecamp_storage_to_loot_zone_list( mgr, src_loc, you, loot_zone_spots,
