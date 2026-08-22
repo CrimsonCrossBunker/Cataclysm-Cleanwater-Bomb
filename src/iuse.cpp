@@ -3103,7 +3103,8 @@ static std::optional<int> dig_tool( Character *p, item *it, const tripoint_bub_m
     }
 
     const bool using_jackhammer = it->type->can_use( "JACKHAMMER" );
-    if( using_jackhammer && here.has_flag_ter( ter_furn_flag::TFLAG_WALL, pnt ) ) {
+    if( using_jackhammer && here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_WALL, pnt ) &&
+        !it->has_flag( flag_MULTI_DRILL ) ) {
         p->add_msg_if_player( _( "You can't mine a wall with a %s!" ), it->tname() );
         return std::nullopt;
     }
