@@ -1,4 +1,5 @@
 #include "cached_options.h"
+#include "units.h"
 
 bool keycode_mode;
 bool log_from_top;
@@ -24,6 +25,10 @@ int pixel_minimap_r;
 int pixel_minimap_g;
 int pixel_minimap_b;
 int pixel_minimap_a;
+
+int max_item_in_square;
+units::volume default_tile_volume;
+int pickup_range;
 
 namespace cata::options
 {

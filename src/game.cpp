@@ -7212,8 +7212,8 @@ void game::butcher( const std::optional<tripoint_bub_ms> &p )
 
     const tripoint_bub_ms pos = p.value_or( u.pos_bub() );
 
-    const int factor = u.max_quality( qual_BUTCHER, PICKUP_RANGE );
-    const int factorD = u.max_quality( qual_CUT_FINE, PICKUP_RANGE );
+    const int factor = u.max_quality( qual_BUTCHER, pickup_range );
+    const int factorD = u.max_quality( qual_CUT_FINE, pickup_range );
     const std::string no_knife_msg = _( "You don't have a butchering tool." );
     const std::string no_corpse_msg = _( "There are no corpses here to butcher." );
 
@@ -7312,13 +7312,10 @@ void game::butcher( const std::optional<tripoint_bub_ms> &p )
     }
 
     // Magic indices for special butcher options
-    enum : int {
-        MULTISALVAGE = MAX_ITEM_IN_SQUARE + 1,
-        MULTIBUTCHER,
-        MULTIDISASSEMBLE_ONE,
-        MULTIDISASSEMBLE_ALL,
-        NUM_BUTCHER_ACTIONS
-    };
+    const int MAX_ITEM = max_item_in_square;
+    const int MULTISALVAGE = MAX_ITEM + 1, MULTIBUTCHER = MAX_ITEM + 2,
+              MULTIDISASSEMBLE_ONE = MAX_ITEM + 3,
+              MULTIDISASSEMBLE_ALL = MAX_ITEM + 4, NUM_BUTCHER_ACTIONS = MAX_ITEM + 5;
     // What are we butchering (i.e.. which vector to pick indices from)
     enum {
         BUTCHER_CORPSE,
@@ -7398,7 +7395,8 @@ void game::butcher( const std::optional<tripoint_bub_ms> &p )
         }
 
         ret = static_cast<size_t>( kmenu.ret );
-        if( ret >= MULTISALVAGE && ret < NUM_BUTCHER_ACTIONS ) {
+        if( ret >= static_cast<size_t>( MULTISALVAGE ) &&
+            ret < static_cast<size_t>( NUM_BUTCHER_ACTIONS ) ) {
             butcher_select = BUTCHER_OTHER;
             indexer_index = ret;
         } else if( ret < corpses.size() ) {
@@ -7432,31 +7430,25 @@ void game::butcher( const std::optional<tripoint_bub_ms> &p )
     }
     switch( butcher_select ) {
         case BUTCHER_OTHER:
-            switch( indexer_index ) {
-                case MULTISALVAGE:
-                    u.assign_activity( longsalvage_activity_actor( salvage_tool_index ) );
-                    break;
-                case MULTIBUTCHER: {
-                    const std::optional<butcher_type> bt = butcher_submenu( corpses );
-                    if( bt.has_value() ) {
-                        std::vector<butchery_data> bd;
-                        for( map_stack::iterator &it : corpses ) {
-                            item_location corpse_loc = item_location( map_cursor( pos ), &*it );
-                            bd.emplace_back( corpse_loc, bt.value() );
-                        }
-                        u.assign_activity( butchery_activity_actor( bd ) );
+            if( indexer_index == MULTISALVAGE ) {
+                u.assign_activity( longsalvage_activity_actor( salvage_tool_index ) );
+            } else if( indexer_index == MULTIBUTCHER ) {
+                const std::optional<butcher_type> bt = butcher_submenu( corpses );
+                if( bt.has_value() ) {
+                    std::vector<butchery_data> bd;
+                    for( map_stack::iterator &it : corpses ) {
+                        item_location corpse_loc = item_location( map_cursor( pos ), &*it );
+                        bd.emplace_back( corpse_loc, bt.value() );
                     }
-                    break;
+                    u.assign_activity( butchery_activity_actor( bd ) );
                 }
-                case MULTIDISASSEMBLE_ONE:
-                    u.disassemble_all( true );
-                    break;
-                case MULTIDISASSEMBLE_ALL:
-                    u.disassemble_all( false );
-                    break;
-                default:
-                    debugmsg( "Invalid butchery type: %d", indexer_index );
-                    return;
+            } else if( indexer_index == MULTIDISASSEMBLE_ONE ) {
+                u.disassemble_all( true );
+            } else if( indexer_index == MULTIDISASSEMBLE_ALL ) {
+                u.disassemble_all( false );
+            } else {
+                debugmsg( "Invalid butchery type: %d", indexer_index );
+                return;
             }
             break;
         case BUTCHER_CORPSE: {

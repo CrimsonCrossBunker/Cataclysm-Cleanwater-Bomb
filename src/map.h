@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "active_item_cache.h"
+#include "cached_options.h"
 #include "calendar.h"
 #include "cata_assert.h"
 #include "cata_small_literal_vector.h"
@@ -41,6 +42,7 @@
 #include "map_selector.h"
 #include "mapdata.h"
 #include "maptile_fwd.h"
+#include "options.h"
 #include "point.h"
 #include "rng.h"
 #include "type_id.h"
@@ -123,7 +125,7 @@ class map_stack : public item_stack
         void insert( const item &newitem );
         iterator erase( const_iterator it ) override;
         int count_limit() const override {
-            return MAX_ITEM_IN_SQUARE;
+            return max_item_in_square;
         }
         units::volume max_volume() const override;
 };

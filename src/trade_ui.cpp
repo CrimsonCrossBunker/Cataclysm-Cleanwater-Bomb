@@ -10,6 +10,7 @@
 #include <unordered_set>
 
 #include "avatar.h"
+#include "cached_options.h"
 #include "character.h"
 #include "clzones.h"
 #include "color.h"
@@ -81,7 +82,7 @@ void populate_trade_selectors( Character &you, npc &trader, trade_selector &you_
 
         zone_manager &zmgr = zone_manager::get_manager();
         const std::unordered_set<tripoint_bub_ms> src =
-            zmgr.get_point_set_loot( trader.pos_abs(), PICKUP_RANGE, trader.get_fac_id() );
+            zmgr.get_point_set_loot( trader.pos_abs(), pickup_range, trader.get_fac_id() );
 
         for( const tripoint_bub_ms &pt : src ) {
             trader_pane.add_map_items( pt );

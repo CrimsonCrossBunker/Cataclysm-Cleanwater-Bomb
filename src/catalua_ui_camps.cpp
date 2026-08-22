@@ -603,7 +603,7 @@ void install_camp_api(
     } );
     camps.set_function(
         "player_has_camp",
-        [require_read]( sol::this_state lua_state ) {
+    [require_read]( sol::this_state lua_state ) {
         require_read();
         return player_has_camp( lua_state );
     } );

@@ -22,6 +22,7 @@
 #include "activity_type.h"
 #include "avatar.h"
 #include "butchery.h"
+#include "cached_options.h"
 #include "calendar.h"
 #include "cata_utility.h"
 #include "character.h"
@@ -1121,7 +1122,7 @@ bool dest_has_capacity( const tripoint_abs_ms &dest, const zone_type_id &ztype,
             return false;
         }
     }
-    return static_cast<int>( here.i_at( dest_bub ).size() ) < MAX_ITEM_IN_SQUARE &&
+    return static_cast<int>( here.i_at( dest_bub ).size() ) < max_item_in_square &&
            here.free_volume( dest_bub ) >= sample.volume();
 }
 
@@ -1462,7 +1463,7 @@ void move_item( Character &you, const std::optional<vpart_reference> &vpr_src,
 
         // skip tiles with inaccessible furniture, like filled charcoal kiln
         if( !here.can_put_items_ter_furn( dest_loc ) ||
-            static_cast<int>( here.i_at( dest_loc ).size() ) >= MAX_ITEM_IN_SQUARE ) {
+            static_cast<int>( here.i_at( dest_loc ).size() ) >= max_item_in_square ) {
             continue;
         }
 
@@ -1888,7 +1889,7 @@ static activity_reason_info find_base_construction(
     if( !cc ) {
         return activity_reason_info::build( do_activity_reason::BLOCKING_TILE, false, idx );
     }
-    const inventory &inv = you.crafting_inventory( inv_from_loc, PICKUP_RANGE );
+    const inventory &inv = you.crafting_inventory( inv_from_loc, pickup_range );
     if( !player_can_build( you, inv, build, true ) ) {
         //can't build with current inventory, do not look for pre-req
         return activity_reason_info::build( do_activity_reason::NO_COMPONENTS, false, build.id );
@@ -1975,8 +1976,8 @@ bool are_requirements_nearby(
     }
     // use nearby welding rig without needing to drag it or position yourself on the right side of the vehicle.
     if( !found_welder ) {
-        for( const tripoint_bub_ms &elem : here.points_in_radius( src_loc, PICKUP_RANGE - 1,
-                PICKUP_RANGE - 1 ) ) {
+        int radius = pickup_range - 1;
+        for( const tripoint_bub_ms &elem : here.points_in_radius( src_loc, radius, radius ) ) {
             const std::optional<vpart_reference> &vp = here.veh_at( elem ).part_with_tool( here, itype_welder );
 
             if( vp ) {
@@ -2159,7 +2160,7 @@ activity_reason_info multi_vehicle_repair_activity_actor::multi_activity_can_do(
         }
         const requirement_data &reqs = vpinfo.repair_requirements();
         const inventory &inv =
-            you.crafting_inventory( src_loc, PICKUP_RANGE - 1, false );
+            you.crafting_inventory( src_loc, pickup_range - 1, false );
         const bool can_make = reqs.can_make_with_inventory( inv, is_crafting_component );
         you.set_value( "veh_index_type", vpinfo.name() );
         // temporarily store the intended index, we do this so two NPCs don't try and work on the same part at same time.
@@ -2514,7 +2515,7 @@ activity_reason_info multi_craft_activity_actor::multi_activity_can_do( Characte
     if( p ) {
         item_location to_craft = p->get_item_to_craft();
         if( to_craft && to_craft->is_craft() ) {
-            const inventory &inv = you.crafting_inventory( src_loc, PICKUP_RANGE, false );
+            const inventory &inv = you.crafting_inventory( src_loc, pickup_range, false );
             const recipe &r = to_craft->get_making();
             std::vector<std::vector<item_comp>> item_comp_vector =
                                                  to_craft->get_continue_reqs().get_components();
@@ -2557,7 +2558,7 @@ activity_reason_info multi_disassemble_activity_actor::multi_activity_can_do( Ch
 
     map &here = get_map();
     // Is there anything to be disassembled?
-    const inventory &inv = you.crafting_inventory( src_loc, PICKUP_RANGE, false );
+    const inventory &inv = you.crafting_inventory( src_loc, pickup_range, false );
     requirement_data req;
     for( item &i : here.i_at( src_loc ) ) {
         // Skip items marked by other ppl.
@@ -2998,7 +2999,7 @@ std::vector<std::tuple<tripoint_bub_ms, itype_id, int>>
     map &here = get_map();
     const tripoint_bub_ms &src_loc = here.get_bub( fetch_for_activity_position );
     for( const tripoint_bub_ms &elem : here.points_in_radius( src_loc,
-            PICKUP_RANGE - 1 ) ) {
+            pickup_range - 1 ) ) {
         already_there_spots.push_back( elem );
         combined_spots.push_back( elem );
     }
@@ -4259,7 +4260,7 @@ static std::optional<tripoint_bub_ms> find_best_fire( const std::vector<tripoint
     for( const tripoint_bub_ms &pt : from ) {
         field_entry *fire = here.get_field( pt, fd_fire );
         if( fire == nullptr || fire->get_field_intensity() > 1 ||
-            !here.clear_path( center, pt, PICKUP_RANGE, 1, 100 ) ) {
+            !here.clear_path( center, pt, pickup_range, 1, 100 ) ) {
             continue;
         }
         time_duration fire_age = fire->get_field_age();
@@ -4283,7 +4284,7 @@ static bool has_clear_path_to_pickup_items(
     map &here = get_map();
     return here.has_items( to ) &&
            here.accessible_items( to ) &&
-           here.clear_path( from, to, PICKUP_RANGE, 1, 100 );
+           here.clear_path( from, to, pickup_range, 1, 100 );
 }
 
 static std::optional<tripoint_bub_ms> find_refuel_spot_zone( const tripoint_bub_ms &center,
@@ -4294,7 +4295,7 @@ static std::optional<tripoint_bub_ms> find_refuel_spot_zone( const tripoint_bub_
     const tripoint_abs_ms center_abs = here.get_abs( center );
 
     const std::unordered_set<tripoint_abs_ms> tiles_abs_unordered =
-        mgr.get_near( zone_type_SOURCE_FIREWOOD, center_abs, PICKUP_RANGE, nullptr, fac );
+        mgr.get_near( zone_type_SOURCE_FIREWOOD, center_abs, pickup_range, nullptr, fac );
     const std::vector<tripoint_abs_ms> &tiles_abs =
         get_sorted_tiles_by_distance( center_abs, tiles_abs_unordered );
 
@@ -4529,7 +4530,7 @@ int get_auto_consume_moves( Character &you, const bool food )
 bool try_fuel_fire( Character &you, std::optional<tripoint_bub_ms> fire_target )
 {
     const tripoint_bub_ms pos = you.pos_bub();
-    std::vector<tripoint_bub_ms> adjacent = closest_points_first( pos, 1, PICKUP_RANGE );
+    std::vector<tripoint_bub_ms> adjacent = closest_points_first( pos, 1, pickup_range );
 
     map &here = get_map();
     std::optional<tripoint_bub_ms> best_fire =

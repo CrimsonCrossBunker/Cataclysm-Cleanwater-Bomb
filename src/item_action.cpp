@@ -260,7 +260,7 @@ const item_action *cata::lua_platform::detail::item_action_registry_find(
 }
 
 std::vector<std::pair<item_action_id, item_action>>
-cata::lua_platform::detail::item_action_registry_snapshot()
+        cata::lua_platform::detail::item_action_registry_snapshot()
 {
     std::vector<std::pair<item_action_id, item_action>> result;
     result.reserve( item_action_generator::generator().item_actions.size() );

@@ -5367,7 +5367,7 @@ void cata::lua_platform::detail::erase_platform_savegame_migration(
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua_platform::detail::terrain_migration_snapshot()
+        cata::lua_platform::detail::terrain_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( ter_migrations.size() );
@@ -5379,7 +5379,7 @@ cata::lua_platform::detail::terrain_migration_snapshot()
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua_platform::detail::furniture_migration_snapshot()
+        cata::lua_platform::detail::furniture_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( furn_migrations.size() );
@@ -5391,7 +5391,7 @@ cata::lua_platform::detail::furniture_migration_snapshot()
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua_platform::detail::trap_migration_snapshot()
+        cata::lua_platform::detail::trap_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( tr_migrations.size() );

@@ -7,6 +7,7 @@
 
 #include "activity_actor_definitions.h"
 #include "avatar.h"
+#include "cached_options.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "character_id.h"
@@ -997,7 +998,7 @@ TEST_CASE( "craft_unattended_charged_tool_offset_crafter_uses_map_source",
     avatar &u = get_avatar();
     map &here = get_map();
     const tripoint_bub_ms craft_pos( 75, 75, 0 );
-    // Crafter stands well outside PICKUP_RANGE of the workbench craft.
+    // Crafter stands well outside pickup_range of the workbench craft.
     u.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
 
     // The charged tool sits on the map at the craft, not in the crafter's pack.
@@ -1281,7 +1282,7 @@ TEST_CASE( "craft_unattended_noncharged_tool_offset_crafter_uses_map_source",
             on_map.set_tools_to_continue( true );
 
             THEN( "the verifier fails and clears tools_to_continue" ) {
-                CHECK_FALSE( u.verify_step_tools( on_map, 1, craft_pos, PICKUP_RANGE,
+                CHECK_FALSE( u.verify_step_tools( on_map, 1, craft_pos, pickup_range,
                                                   /*pin_to_map=*/true ) );
                 CHECK_FALSE( on_map.has_tools_to_continue() );
             }

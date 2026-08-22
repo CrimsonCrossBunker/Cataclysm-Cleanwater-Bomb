@@ -14,6 +14,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "cached_options.h"
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "catalua_platform_content.h"
@@ -1120,7 +1121,7 @@ bool requirement_data::check_enough_materials( const read_only_visitable &crafti
 
     // This will be the volume of the resulting in-progress craft item (see item::volume), so we don't want to exceed it.
     // TODO: Feedback? Some sort of indicator to the player that resulting volume is why it can't be crafted
-    if( restrict_volume && total_component_volume > MAX_ITEM_VOLUME ) {
+    if( restrict_volume && total_component_volume > default_tile_volume ) {
         retval = false;
     }
 

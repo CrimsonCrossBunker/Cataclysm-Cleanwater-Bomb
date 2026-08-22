@@ -3034,9 +3034,9 @@ struct butchery_requirement_definition_handle {
                 "butchery requirement size, butcher, and requirement cannot be empty" );
         }
         definition->entries.push_back(
-            butchery_requirement_definition_data::requirement_entry{
-                speed, size, butcher, requirement_id
-            } );
+        butchery_requirement_definition_data::requirement_entry{
+            speed, size, butcher, requirement_id
+        } );
         return *this;
     }
 
@@ -11685,10 +11685,10 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             }
             if( handle.definition->files.empty() ) {
                 transaction->sound_effect_preloads.push_back(
-                    { operation, handle.definition } );
+                { operation, handle.definition } );
             } else {
                 transaction->sound_effects.push_back(
-                    { operation, handle.definition } );
+                { operation, handle.definition } );
             }
             return;
         }
@@ -13847,8 +13847,9 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                           "' has invalid ranges or a duplicate registration" );
             }
             if( check_engine_state ) {
-                for( const std::string &target :
-                     { definition.open, definition.close, definition.lockpick_result } ) {
+                for( const std::string &target : {
+                         definition.open, definition.close, definition.lockpick_result
+                     } ) {
                     if( !target.empty() && !furn_str_id( target ).is_valid() ) {
                         throw std::runtime_error( "furniture '" + definition.id +
                                                   "' references an invalid furniture id '" +
@@ -13924,9 +13925,10 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                           "' has invalid ranges or a duplicate registration" );
             }
             if( check_engine_state ) {
-                for( const std::string &target :
-                     { definition.open, definition.close, definition.transforms_into,
-                       definition.roof, definition.lockpick_result } ) {
+                for( const std::string &target : {
+                         definition.open, definition.close, definition.transforms_into,
+                         definition.roof, definition.lockpick_result
+                     } ) {
                     if( !target.empty() && !ter_str_id( target ).is_valid() ) {
                         throw std::runtime_error( "terrain '" + definition.id +
                                                   "' references an invalid terrain id '" +
@@ -16637,9 +16639,9 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                           "' is registered more than once in one transaction" );
             }
             const bool exists = entry.definition->uncraft ?
-                               recipe_dict.uncraft.count(
-                                   recipe_id( entry.definition->result ) ) > 0 :
-                               recipe_dict.recipes.count( recipe_id( definition.id ) ) > 0;
+                                recipe_dict.uncraft.count(
+                                    recipe_id( entry.definition->result ) ) > 0 :
+                                recipe_dict.recipes.count( recipe_id( definition.id ) ) > 0;
             validate_operation( entry.operation, exists, definition.id,
                                 definition.nested_category ?
                                 "nested recipe category" : "recipe" );
@@ -18414,7 +18416,7 @@ bool content_transaction::apply( std::string &error )
             native.src.emplace_back( id, mod_id( pimpl_->owner ) );
             native.name = no_translation( source.name );
             native.description = source.description.empty() ? translation() :
-                                no_translation( source.description );
+                                 no_translation( source.description );
             if( !source.avatar_message.empty() ) {
                 native.avatar_message = no_translation( source.avatar_message );
             }
@@ -18474,7 +18476,7 @@ bool content_transaction::apply( std::string &error )
             native.src.emplace_back( id, mod_id( pimpl_->owner ) );
             native.name = no_translation( source.name );
             native.description = source.description.empty() ? translation() :
-                               no_translation( source.description );
+                                 no_translation( source.description );
             if( !source.initiate_avatar.empty() ) {
                 native.initiate.emplace_back( no_translation( source.initiate_avatar ) );
             }
@@ -21407,7 +21409,7 @@ bool content_transaction::validate_finalized( std::string &error ) const
     }
     for( const recipe_registration &entry : pimpl_->recipes ) {
         const auto &native_dict = entry.definition->uncraft ?
-                                 recipe_dict.uncraft : recipe_dict.recipes;
+                                  recipe_dict.uncraft : recipe_dict.recipes;
         const recipe_id id( entry.definition->uncraft ?
                             recipe_id( entry.definition->result ) :
                             recipe_id( entry.definition->id ) );
@@ -25936,8 +25938,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                            world_generation() ) ) );
     } );
     inventory.set_function( "is_wearing", [require_read, runtime_generation,
-                                                    world_generation]( sol::this_state state,
-    const cata::lua_ui::game_handle & handle,
+                                                         world_generation]( sol::this_state state,
+                                                   const cata::lua_ui::game_handle & handle,
     const cata::lua_ui::script_game_id & id ) {
         require_read();
         if( id.kind() != "item" ) {
@@ -26372,7 +26374,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                           with_fields.value_or( true ) );
     } );
     environment.set_function( "furniture_has_flag", [require_read](
-    const cata::lua_ui::script_tripoint_coord & position, const std::string &flag ) {
+    const cata::lua_ui::script_tripoint_coord & position, const std::string & flag ) {
         require_read();
         if( flag.empty() || flag.size() > 256 || flag.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
@@ -26415,7 +26417,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         return here.furn( here.get_bub( absolute ) ).id().str();
     } );
     environment.set_function( "field_exists", [require_read](
-    const cata::lua_ui::script_tripoint_coord & position, const std::string &field_id ) {
+    const cata::lua_ui::script_tripoint_coord & position, const std::string & field_id ) {
         require_read();
         if( field_id.empty() || field_id.size() > 256 || field_id.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
@@ -26432,7 +26434,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                    field_type_id( field_id ) );
     } );
     environment.set_function( "terrain_has_flag", [require_read](
-    const cata::lua_ui::script_tripoint_coord & position, const std::string &flag ) {
+    const cata::lua_ui::script_tripoint_coord & position, const std::string & flag ) {
         require_read();
         if( flag.empty() || flag.size() > 256 || flag.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
@@ -26464,7 +26466,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         return !here.is_outside( bub );
     } );
     environment.set_function( "safe_mode_dangerous", [require_read](
-    const std::string &direction ) {
+    const std::string & direction ) {
         require_read();
         const std::optional<cardinal_direction> dir =
             io::string_to_enum_optional<cardinal_direction>( direction );
@@ -26473,7 +26475,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                 "services.gameplay.environment.safe_mode_dangerous requires a valid cardinal direction" );
         }
         return get_avatar().get_mon_visible().dangerous[
-                   static_cast<int>( *dir )];
+            static_cast<int>( *dir )];
     } );
     gameplay["environment"] = std::move( environment );
     services["gameplay"] = std::move( gameplay );

@@ -199,10 +199,10 @@ void insert_platform_trait_group(
     const std::vector<platform_trait_group_entry> &entries );
 void erase_platform_trait_group( const std::string &id );
 void append_platform_monster_adjustment( const std::string &species,
-                                         const std::string &stat,
-                                         double stat_adjust,
-                                         const std::string &flag, bool flag_val,
-                                         const std::string &special );
+        const std::string &stat,
+        double stat_adjust,
+        const std::string &flag, bool flag_val,
+        const std::string &special );
 std::size_t platform_monster_adjustment_count();
 void truncate_platform_monster_adjustments( std::size_t count );
 void erase_platform_scenario_blacklist( const platform_blacklist_data &value );

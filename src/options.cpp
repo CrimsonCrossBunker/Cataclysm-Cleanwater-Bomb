@@ -3595,6 +3595,23 @@ void options_manager::add_options_world_default()
     add_option_group( "world_default", Group( "misc_worlddef_opts", to_translation( "Misc options" ),
                       to_translation( "Miscellaneous options." ) ),
     [&]( const std::string & page_id ) {
+
+        add( "MAX_ITEM_IN_SQUARE", page_id,
+             to_translation( "Max item in square" ),
+             to_translation( "How many items could place in one tile." ),
+             4096, 99999, 8192
+           );
+        add( "DEFAULT_TILE_VOLUME", page_id,
+             to_translation( "Default tile volume (L)" ),
+             to_translation( "How many liters of item could place in one tile." ),
+             1000, 3000, 1000
+           );
+        add( "PICKUP_RANGE", page_id,
+             to_translation( "Pickup range" ),
+             to_translation( "Items on the map that are at most this distance from the player are considered available for crafting and other purposes." ),
+             1, 20, 6
+           );
+
         // TODO: find the code keypoint and implement this option.
         // add( "WANDER_SPAWNS", page_id, to_translation( "Wandering hordes" ),
         //      to_translation( "If true, emulates zombie hordes.  Zombies can group together into hordes, which can wander around cities and will sometimes move towards noise.  Note: the current implementation does not properly respect obstacles, so hordes can appear to walk through walls under some circumstances.  Must reset world directory after changing for it to take effect." ),
@@ -5096,6 +5113,9 @@ void options_manager::update_options_cache()
     cata::options::mouse.enabled = ::get_option<bool>( "ENABLE_MOUSE" );
     cata::options::mouse.hidekb = ::get_option<std::string>( "HIDE_CURSOR" ) == "hidekb";
     use_pinyin_search = ::get_option<bool>( "USE_PINYIN_SEARCH" );
+    max_item_in_square = ::get_option<int>( "MAX_ITEM_IN_SQUARE" );
+    default_tile_volume = units::from_liter( ::get_option<int>( "DEFAULT_TILE_VOLUME" ) );
+    pickup_range = ::get_option<int>( "PICKUP_RANGE" );
 
     cata::options::damage_indicators.clear();
     for( int i = 0; i < 6; i++ ) {

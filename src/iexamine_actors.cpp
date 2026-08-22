@@ -8,6 +8,7 @@
 #include <set>
 
 #include "ammo_effect.h"
+#include "cached_options.h"
 #include "calendar.h"
 #include "character.h"
 #include "coordinates.h"
@@ -346,7 +347,7 @@ void mortar_examine_actor::call( Character &you, const tripoint_bub_ms &examp ) 
         return false;
     } );
     inventory_pick_selector inv_s( you, preset );
-    inv_s.add_nearby_items( PICKUP_RANGE );
+    inv_s.add_nearby_items( pickup_range );
     inv_s.add_character_items( you );
     inv_s.set_title( _( "Pick a projectile to be used." ) );
 
