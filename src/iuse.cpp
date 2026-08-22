@@ -3111,11 +3111,6 @@ static std::optional<int> dig_tool( Character *p, item *it, const tripoint_bub_m
 
     // FIXME: Activity is interruptable but progress is not saved!
     time_duration digging_time = 30_minutes;
-    if( activity == ACT_PICKAXE ) {
-        /** @EFFECT_STR decreases time to dig with a pickaxe */
-        digging_time += ( ( CHARACTER_STAT_MAX + 4 ) -
-                          std::min( p->get_arm_str(), CHARACTER_STAT_MAX ) ) * 5_minutes;
-    }
 
     if( here.has_flag( ter_furn_flag::TFLAG_FLAT, pnt ) ) {
         // We're breaking up some flat surface like pavement, which is much easier
