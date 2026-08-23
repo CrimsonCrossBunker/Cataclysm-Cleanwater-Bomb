@@ -259,3 +259,4 @@ VERSION.txt
 /replay_userdir/
 *.replay
 build-tracy/
+tests/objwin/tiles/pch/tests-pch.hpp.gch
