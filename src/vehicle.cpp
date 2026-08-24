@@ -2868,6 +2868,27 @@ std::vector<int> vehicle::parts_at_relative( const point_rel_ms &dp, const bool 
 
 std::optional<vpart_reference> vpart_position::obstacle_at_part() const
 {
+    for( const int idx : vehicle().parts_at_relative( mount_pos(), false ) ) {
+        const vehicle_part &vp = vehicle().part( idx );
+        if( vp.is_broken() ) {
+            continue;
+        }
+        if( !vp.info().has_flag( VPFLAG_CARGO_PASSABLE_BY_STORED ) ) {
+            continue;
+        }
+        if( !vp.info().cargo_passable_size ) {
+            continue;
+        }
+        const units::volume thr = *vp.info().cargo_passable_size;
+        if( thr >= vp.info().size ) {
+            continue;
+        }
+        const vpart_reference ref( vehicle(), idx );
+        if( ref.items().stored_volume() > thr ) {
+            return ref;
+        }
+    }
+
     std::optional<vpart_reference> part = part_with_feature( VPFLAG_OBSTACLE, true, true );
     if( !part ) {
         return std::nullopt; // No obstacle here
