@@ -133,9 +133,9 @@ class CcbInventoryGeneratorTest(unittest.TestCase):
             entry["id"]: set(entry["roots"])
             for entry in inventory["export_surfaces"]
         }
-        self.assertEqual(len(inventory["export_roots"]), 155)
+        self.assertEqual(len(inventory["export_roots"]), 174)
         self.assertEqual(len(surfaces["api_v5"]), 16)
-        self.assertEqual(len(surfaces["platform_v1"]), 152)
+        self.assertEqual(len(surfaces["platform_v1"]), 171)
         self.assertEqual(
             len(surfaces["api_v5"] & surfaces["platform_v1"]), 13
         )

@@ -1836,9 +1836,172 @@ function ScriptMapgenContext:place_toilet(x, y, charges) end
 
 ---@param x integer
 ---@param y integer
+---@param field_id string
+---@param intensity integer
+---@param age_turns integer
+---@return boolean
+function ScriptMapgenContext:add_field(x, y, field_id, intensity, age_turns) end
+
+---@param x integer
+---@param y integer
+---@param field_id string
+---@return boolean
+function ScriptMapgenContext:remove_field(x, y, field_id) end
+
+---@param x integer
+---@param y integer
+---@param item_group_id string
+---@param reinforced boolean
+---@param lootable boolean
+---@param powered boolean
+---@param networked boolean
+function ScriptMapgenContext:place_vending_machine(x, y, item_group_id, reinforced, lootable, powered, networked) end
+
+---@param x integer
+---@param y integer
+---@param charges integer
+---@param fuel_id string
+function ScriptMapgenContext:place_gas_pump(x, y, charges, fuel_id) end
+
+---@param x1 integer
+---@param y1 integer
+---@param x2 integer
+---@param y2 integer
+---@param group_id string
+---@param chance integer
+---@param density number
+---@param individual boolean
+---@param friendly boolean
+---@param name string
+---@param mission_target boolean
+function ScriptMapgenContext:place_monster_group(x1, y1, x2, y2, group_id, chance, density, individual, friendly, name, mission_target) end
+
+---@param x integer
+---@param y integer
+---@param monster_id string
+---@param count integer
+---@param friendly boolean
+---@param name string
+---@param mission_target boolean
+function ScriptMapgenContext:place_monster(x, y, monster_id, count, friendly, name, mission_target) end
+
+---@param x integer
+---@param y integer
+---@param monster_id string
+---@param age_days integer
+function ScriptMapgenContext:place_corpse(x, y, monster_id, age_days) end
+
+---@param x integer
+---@param y integer
+---@param group_id string
+---@param age_days integer
+function ScriptMapgenContext:place_corpse_from_group(x, y, group_id, age_days) end
+
+---@param x integer
+---@param y integer
+---@param furniture_id string
+---@param items boolean
+---@param floor_terrain_id string
+---@param overwrite boolean
+function ScriptMapgenContext:make_rubble(x, y, furniture_id, items, floor_terrain_id, overwrite) end
+
+---@param x integer
+---@param y integer
+---@param name string
+---@param security integer
+---@param access_denied string
+---@param mission_target boolean
+---@return boolean
+function ScriptMapgenContext:place_computer(x, y, name, security, access_denied, mission_target) end
+
+---@param x integer
+---@param y integer
+---@param name string
+---@param action string
+---@param security integer
+function ScriptMapgenContext:add_computer_option(x, y, name, action, security) end
+
+---@param x integer
+---@param y integer
+---@param failure string
+function ScriptMapgenContext:add_computer_failure(x, y, failure) end
+
+---@param x integer
+---@param y integer
+---@param eoc_id string
+function ScriptMapgenContext:add_computer_eoc(x, y, eoc_id) end
+
+---@param x integer
+---@param y integer
+---@param handler_id string
+function ScriptMapgenContext:set_computer_access_handler(x, y, handler_id) end
+
+---@param x integer
+---@param y integer
+---@param topic_id string
+function ScriptMapgenContext:add_computer_chat_topic(x, y, topic_id) end
+
+---@param x integer
+---@param y integer
+---@param furniture_id string
+---@param item_id string
+---@param quantity integer
+---@param charges integer
+---@param item_group_name string
+---@param item_group_chance integer
+---@param faction_id string
+function ScriptMapgenContext:place_sealed_item(x, y, furniture_id, item_id, quantity, charges, item_group_name, item_group_chance, faction_id) end
+
+---@param x integer
+---@param y integer
 ---@param text string Sign text.
 ---@param furniture_id string Existing sign furniture id.
 function ScriptMapgenContext:place_sign(x, y, text, furniture_id) end
+
+---@param x integer
+---@param y integer
+---@param text string
+function ScriptMapgenContext:set_graffiti(x, y, text) end
+
+---@param x integer
+---@param y integer
+---@param template_id string
+---@param unique_id string
+---@param traits string[]
+---@param mission_target boolean
+---@return integer
+function ScriptMapgenContext:place_npc_configured(x, y, template_id, unique_id, traits, mission_target) end
+
+---@param x1 integer
+---@param y1 integer
+---@param x2 integer
+---@param y2 integer
+---@param transform_id string
+function ScriptMapgenContext:transform(x1, y1, x2, y2, transform_id) end
+
+---@param x1 integer
+---@param y1 integer
+---@param x2 integer
+---@param y2 integer
+---@param prototype_ids string[]
+---@return integer
+function ScriptMapgenContext:remove_vehicles(x1, y1, x2, y2, prototype_ids) end
+
+---@param template_id string
+---@param unique_id string
+---@return integer
+function ScriptMapgenContext:remove_npcs(template_id, unique_id) end
+
+---@param x1 integer
+---@param y1 integer
+---@param x2 integer
+---@param y2 integer
+function ScriptMapgenContext:remove_all(x1, y1, x2, y2) end
+
+---@param name string
+---@param x integer
+---@param y integer
+function ScriptMapgenContext:queue_point(name, x, y) end
 
 ---@param x1 integer
 ---@param y1 integer
@@ -1893,6 +2056,42 @@ function ScriptDialogueContext:valid() end
 
 ---@return string
 function ScriptDialogueContext:topic() end
+
+---@return string
+function ScriptDialogueContext:topic_item() end
+
+---@return boolean
+function ScriptDialogueContext:has_alpha() end
+
+---@return boolean
+function ScriptDialogueContext:has_beta() end
+
+---@return boolean
+function ScriptDialogueContext:by_radio() end
+
+---@return boolean
+function ScriptDialogueContext:has_reason() end
+
+---@return string
+function ScriptDialogueContext:reason() end
+
+---@param kind string
+---@param difficulty integer
+---@param skill? string
+---@return integer
+function ScriptDialogueContext:trial_chance(kind, difficulty, skill) end
+
+---@param kind string
+---@param difficulty integer
+---@param skill? string
+---@return boolean
+function ScriptDialogueContext:roll_trial(kind, difficulty, skill) end
+
+---@return any
+function ScriptDialogueContext:alpha() end
+
+---@return any
+function ScriptDialogueContext:beta() end
 
 ---@param key string
 ---@return nil|string|number
@@ -2127,6 +2326,18 @@ function CcbRandomApi.int(minimum, maximum) end
 ---@return boolean
 function CcbRandomApi.chance(numerator, denominator) end
 
+---@param minimum number
+---@param maximum number
+---@return number
+function CcbRandomApi.real(minimum, maximum) end
+
+---@class CcbOptionsApi
+local CcbOptionsApi = {}
+
+---@param name string Existing native option id.
+---@return string
+function CcbOptionsApi.get(name) end
+
 ---@class CcbVariantSoundOptions
 ---@field angle_degrees? number
 ---@field pitch_min? number
@@ -2267,9 +2478,13 @@ function CcbRelocationApi.creature_at(creature, position, options) end
 ---@class CcbNearbyOptions
 ---@field radius? integer
 ---@field limit? integer
+---@field offset? integer
 ---@field visible_only? boolean
 ---@field include_avatar? boolean
 ---@field include_hallucinations? boolean
+---@field kind? 'any'|'character'|'avatar'|'npc'|'monster'
+---@field attitude? 'any'|'hostile' Filter by the avatar's native attitude toward each candidate.
+---@field origin? TripointCoord Absolute map-square origin for distance filtering.
 
 ---@class CcbCharactersAdjustments
 ---@field moves? integer
@@ -2539,8 +2754,9 @@ function CcbEffectsApi.list(handle, limit) end
 ---@param handle GameHandle
 ---@param id GameId
 ---@param body_part? GameId
+---@param intensity? number Minimum current effect intensity.
 ---@return CcbResult
-function CcbEffectsApi.has(handle, id, body_part) end
+function CcbEffectsApi.has(handle, id, body_part, intensity) end
 
 ---@param handle GameHandle
 ---@param id GameId
@@ -2560,6 +2776,16 @@ function CcbEffectsApi.add(handle, id, duration, options) end
 ---@param body_part? GameId
 ---@return CcbResult
 function CcbEffectsApi.remove(handle, id, body_part) end
+
+---Adjust an existing effect's intensity. Missing effects are unchanged;
+---intensities reduced to zero are removed through the native lifecycle.
+---@param handle GameHandle
+---@param id GameId
+---@param delta integer Bounded to -1000..1000.
+---@param body_part? GameId
+---@return CcbResult result `value` contains integer `before`/`after` and
+---boolean `changed`/`removed` fields.
+function CcbEffectsApi.adjust_intensity(handle, id, delta, body_part) end
 
 ---@param handle GameHandle
 ---@param id GameId
@@ -2819,6 +3045,7 @@ function CcbItemsApi.set_technique(handle, technique, enabled) end
 ---@field include_wielded? boolean
 ---@field include_worn? boolean
 ---@field include_carried? boolean
+---@field context? table<string, CcbEocInputValue> Values visible to item math conditions.
 
 ---@class CcbGiveItemOptions
 ---@field allow_wield? boolean
@@ -2831,6 +3058,32 @@ local CcbInventoryApi = {}
 ---@return CcbResult
 function CcbInventoryApi.list(character, options) end
 
+---@class CcbInventoryCondition
+---@field math? string|string[] One bounded native math expression.
+---@field all? CcbInventoryCondition[] All child conditions must match.
+---@field any? CcbInventoryCondition[] At least one child condition must match.
+---@field not? CcbInventoryCondition Negates one child condition.
+
+---@class CcbInventorySearchDescriptor
+---@field id? string|string[] Exact item type id(s).
+---@field id_blacklist? string|string[] Item type ids to exclude.
+---@field category? string|string[] Exact shallow item-category id(s).
+---@field material? string|string[] Required material id(s).
+---@field flags? string|string[] At least one required item flag.
+---@field excluded_flags? string|string[] Flags that disqualify an item.
+---@field uses_energy? boolean
+---@field is_chargeable? boolean
+---@field worn_only? boolean
+---@field wielded_only? boolean
+---@field held_only? boolean
+---@field condition? "has_ammo"|CcbInventoryCondition Item/talker condition evaluated after descriptor fields.
+
+---@param character GameHandle
+---@param descriptors CcbInventorySearchDescriptor[] OR-combined descriptors; an empty array matches all.
+---@param options? CcbInventoryOptions
+---@return CcbResult result A bounded detached inventory page matching the descriptors.
+function CcbInventoryApi.filter(character, descriptors, options) end
+
 ---@param character GameHandle
 ---@param uid integer
 ---@return CcbResult
@@ -2841,6 +3094,12 @@ function CcbInventoryApi.find(character, uid) end
 ---@param quantity integer
 ---@return CcbResult
 function CcbInventoryApi.resources(character, type, quantity) end
+
+---@param character GameHandle
+---@param entries table Dense `{ item = GameId<item>, amount = number }[]`; the
+--- cumulative amount/charge coverage follows native crafting-inventory rules.
+---@return CcbResult result `value` is true when weighted coverage reaches one.
+function CcbInventoryApi.has_items_sum(character, entries) end
 
 ---@param character GameHandle
 ---@param type GameId
@@ -3282,13 +3541,21 @@ function CcbWorldApi.set_trap(position, trap) end
 ---@param field GameId
 ---@param intensity integer
 ---@param age TimeDuration
+---@param hit_player? boolean Defaults to false for direct Lua calls; legacy
+--- `u_set_field` migration passes its native default explicitly.
 ---@return CcbResult
-function CcbWorldApi.put_field(position, field, intensity, age) end
+function CcbWorldApi.put_field(position, field, intensity, age, hit_player) end
 
 ---@param position TripointCoord
 ---@param field GameId
 ---@return CcbResult
 function CcbWorldApi.remove_field(position, field) end
+
+---@param position TripointCoord Absolute loaded map-square position.
+---@param emission string Valid native emission id.
+---@param chance? number Finite multiplier from 0 through 1000; defaults to 1.
+---@return CcbResult result `value` reports the emission, position, and multiplier.
+function CcbWorldApi.emit(position, emission, chance) end
 
 ---@param position TripointCoord
 ---@param item GameId
@@ -3310,6 +3577,7 @@ function CcbWorldApi.remove_item(position, item) end
 ---@class CcbOvermapSearchOptions: CcbPageOptions
 ---@field types? CcbOvermapSelector[]
 ---@field exclude_types? CcbOvermapSelector[]
+---@field special? string Existing overmap-special id to match in addition to terrain selectors.
 ---@field minimum_radius? integer
 ---@field radius? integer
 ---@field radius_z? integer
@@ -4153,6 +4421,43 @@ function CcbVariablesApi.set(handle, key, value) end
 ---@return CcbResult
 function CcbVariablesApi.remove(handle, key) end
 
+---Read one engine-global dialogue variable.  Global variables are shared by
+---all characters and persist through the native save system.
+---@param key string
+---@return CcbResult result `value` contains `exists` and (when present) `value`.
+function CcbVariablesApi.get_global(key) end
+
+---Write one engine-global dialogue variable from an active callback.
+---@param key string
+---@param value boolean|number|string|TripointCoord
+---@return CcbResult
+function CcbVariablesApi.set_global(key, value) end
+
+---Remove one engine-global dialogue variable from an active callback.
+---@param key string
+---@return CcbResult
+function CcbVariablesApi.remove_global(key) end
+
+---Resolve a legacy variable descriptor against a detached callback context.
+---The scope is one of `u`, `npc`, `global`, `context`, or `var`; `var`
+---follows the native indirection rules with a bounded depth.
+---@param context? table<string, boolean|number|string|TripointCoord>
+---@param actor? GameHandle Character or vehicle used by `u`/`npc` scopes.
+---@param scope 'u'|'npc'|'global'|'context'|'var'
+---@param key string
+---@return CcbResult result `value` contains `exists` and (when present) `value`.
+function CcbVariablesApi.resolve(context, actor, scope, key) end
+
+---Write a value through a legacy variable namespace, following `var`
+---indirection with the same bounded depth as `resolve`.
+---@param context? table<string, boolean|number|string|TripointCoord>
+---@param actor? GameHandle Character or vehicle used by `u`/`npc` scopes.
+---@param scope 'u'|'npc'|'global'|'context'|'var'
+---@param key string
+---@param value boolean|number|string|TripointCoord
+---@return CcbResult
+function CcbVariablesApi.set_resolved(context, actor, scope, key, value) end
+
 ---@class CcbAchievementTimeConstraint
 ---@field target TimePoint
 ---@field completion string
@@ -4508,6 +4813,10 @@ function CcbVehiclesApi.start_full_repair(vehicle, mechanic, repair_multiplier) 
 ---@return CcbResult result `value.status` reports the native part-service result.
 function CcbVehiclesApi.open_part_service(vehicle, mechanic, repair_multiplier, install_multiplier) end
 
+---@return CcbResult result `value` is the generation-safe handle of the
+---currently marked vehicle-service target, or nil when no target is marked.
+function CcbVehiclesApi.marked_service_vehicle() end
+
 ---@class CcbNpcClassDefinition
 ---@field id GameId
 ---@field name string
@@ -4568,6 +4877,13 @@ function CcbVehiclesApi.open_part_service(vehicle, mechanic, repair_multiplier, 
 ---@field sold? integer
 
 ---@class CcbNpcsApi
+---@field dialogue CcbDialogueApi
+---@field equipment CcbEquipmentApi
+---@field grooming CcbGroomingApi
+---@field medical CcbMedicalApi
+---@field missions CcbMissionsApi
+---@field orders CcbOrdersApi
+---@field training CcbTrainingApi
 local CcbNpcsApi = {}
 
 ---@param options? CcbDefinitionSearchOptions
@@ -4605,6 +4921,10 @@ function CcbNpcsApi.modify_opinion(handle, deltas) end
 ---@param amount integer Raw native debt delta, bounded to -1000000..1000000.
 ---@return CcbResult result `value` reports amount, before/after debt, and changed.
 function CcbNpcsApi.add_debt(handle, amount) end
+---@param handle GameHandle NPC handle.
+---@param amount integer Raw faction reputation delta, bounded to -1000000..1000000.
+---@return CcbResult
+function CcbNpcsApi.add_faction_rep(handle, amount) end
 
 ---@param handle GameHandle NPC handle.
 ---@param npc_class GameId GameId<npc_class>
@@ -4626,7 +4946,7 @@ function CcbNpcsApi.set_first_topic(handle, topic) end
 ---@return CcbResult
 function CcbNpcsApi.set_radio_representative(handle, enabled) end
 
----@return table<string, string[]> Dense sorted valid ids for aim, engagement, CBM, and ally-rule families.
+---@return table<string, string[]> Dense sorted valid ids for aim, engagement, cbm, and ally-rule families.
 function CcbNpcsApi.ai_rule_catalog() end
 
 ---@param handle GameHandle NPC handle.
@@ -4649,6 +4969,25 @@ function CcbNpcsApi.copy_ai_rules(target, source) end
 ---@param handle GameHandle NPC handle.
 ---@return CcbResult Native thankful/de-escalation transition result.
 function CcbNpcsApi.make_thankful(handle) end
+
+---@class CcbNpcDestination
+---@field id string Stable destination key suitable for UI choice values.
+---@field kind 'camp'|'player'
+---@field label string Player-facing destination label.
+---@field position TripointCoord Absolute overmap-terrain destination.
+
+---@class CcbNpcDestinationPage
+---@field items CcbNpcDestination[]
+---@field total integer
+---@field returned integer
+---@field truncated boolean
+
+---@param handle GameHandle NPC handle.
+---@return CcbResult result `value` is a CcbNpcDestinationPage containing
+---visible player camps, the player's current location, and the player's
+---current route destination.  Lua chooses a destination and passes its
+---position to `set_goal`.
+function CcbNpcsApi.destinations(handle) end
 
 ---@param handle GameHandle NPC handle.
 ---@param goal TripointCoord Absolute overmap-terrain destination.
@@ -4679,6 +5018,11 @@ function CcbTradeApi.open(npc, cost, deal) end
 ---@param cost integer Positive cost in cents.
 ---@return CcbResult result `value` is true when payment completes.
 function CcbTradeApi.pay(npc, cost) end
+
+---@param npc GameHandle NPC settlement account handle.
+---@param amount integer Signed native settlement amount in -1000000000..1000000000.
+---@return CcbResult result `value.accepted` mirrors native NPC payment/debt settlement.
+function CcbTradeApi.settle(npc, amount) end
 
 ---@class CcbFactionReputation
 ---@field likes integer
@@ -5164,7 +5508,14 @@ function CcbWeatherApi.activate_lightning() end
 ---@field last_error string
 
 ---@class CcbGameApi
+---@field activities CcbActivitiesApi
+---@field interaction CcbInteractionApi
+---@field item_categories CcbItemCategoriesApi
+---@field mods CcbModsApi
+---@field monsters CcbMonstersApi
+---@field safety CcbSafetyApi
 ---@field api_version 5
+---@field options CcbOptionsApi
 ---@field achievements CcbAchievementsApi
 ---@field actions CcbGameActionsApi
 ---@field action_menu CcbActionMenuApi
@@ -5344,3 +5695,973 @@ sidebar = {}
 
 ---@type string
 ccb_source_id = ""
+---@class CcbActivitiesApi
+local CcbActivitiesApi = {}
+---@param handle GameHandle
+---@param job string
+---@return any
+function CcbActivitiesApi.assign_npc_job(handle, job) end
+---@param handle GameHandle
+---@param id GameId
+---@param duration TimeDuration
+---@return any
+function CcbActivitiesApi.assign_timed(handle, id, duration) end
+---@param character_handle GameHandle
+---@return any
+function CcbActivitiesApi.cancel(character_handle) end
+---@param character_handle GameHandle
+---@return any
+function CcbActivitiesApi.clear_backlog(character_handle) end
+---@param npc_handle GameHandle
+---@return any
+function CcbActivitiesApi.dismount(npc_handle) end
+---@param npc_handle GameHandle
+---@return any
+function CcbActivitiesApi.distribute_camp_food(npc_handle) end
+---@param character_handle GameHandle
+---@param item_handle GameHandle
+---@param quantity integer
+---@param placement? TripointCoord
+---@param force_ground? boolean
+---@return any
+function CcbActivitiesApi.drop_item(character_handle, item_handle, quantity, placement, force_ground) end
+---@param npc_handle GameHandle
+---@return any
+function CcbActivitiesApi.drop_nonfavorite_items(npc_handle) end
+---@param reason string
+---@return any
+function CcbActivitiesApi.offer_interruption(reason) end
+---@param message string
+---@return any
+function CcbActivitiesApi.offer_portal_storm_interruption(message) end
+---@param character GameHandle
+---@param position TripointCoord
+---@param extra_moves_per_item? integer
+---@param max_volume_ml? number
+---@param max_mass_grams? number
+---@return any
+function CcbActivitiesApi.pickup_from(character, position, extra_moves_per_item, max_volume_ml, max_mass_grams) end
+---@param character_handle GameHandle
+---@param item_handle GameHandle
+---@param quantity integer
+---@param autopickup? boolean
+---@return any
+function CcbActivitiesApi.pickup_item(character_handle, item_handle, quantity, autopickup) end
+---@param character_handle GameHandle
+---@param book_handle GameHandle
+---@param duration TimeDuration
+---@param ereader_handle? GameHandle
+---@param continuous? boolean
+---@param learner_handle? GameHandle
+---@return any
+function CcbActivitiesApi.read(character_handle, book_handle, duration, ereader_handle, continuous, learner_handle) end
+---@param character_handle GameHandle
+---@return any
+function CcbActivitiesApi.resume(character_handle) end
+---@param handle GameHandle
+---@return any
+function CcbActivitiesApi.revert_npc_job(handle) end
+---@param handle GameHandle
+---@return any
+function CcbActivitiesApi.snapshot(handle) end
+---@param character_handle GameHandle
+---@param partner_handle GameHandle
+---@param duration TimeDuration
+---@return any
+function CcbActivitiesApi.socialize(character_handle, partner_handle, duration) end
+---@param teacher_handle GameHandle
+---@param trainee_handles table
+---@param subject_id GameId
+---@param duration TimeDuration
+---@return any
+function CcbActivitiesApi.start_training(teacher_handle, trainee_handles, subject_id, duration) end
+---@param character_handle GameHandle
+---@return any
+function CcbActivitiesApi.suspend(character_handle) end
+---@param character_handle GameHandle
+---@return any
+function CcbActivitiesApi.target_practice(character_handle) end
+---@param character_handle GameHandle
+---@param npc_handle GameHandle
+---@param duration TimeDuration
+---@return any
+function CcbActivitiesApi.wait_for_npc(character_handle, npc_handle, duration) end
+---@param worker GameHandle
+---@return any
+function CcbCampsApi.abandon_at_worker(worker) end
+---@param worker GameHandle
+---@return any
+function CcbCampsApi.assign_resident(worker) end
+---@param worker GameHandle
+---@return any
+function CcbCampsApi.distribute_food(worker) end
+---@param worker GameHandle
+---@return any
+function CcbCampsApi.open_missions(worker) end
+---@param worker GameHandle
+---@return any
+function CcbCampsApi.return_to_duties(worker) end
+---@param worker GameHandle
+---@return any
+function CcbCampsApi.sort_loot(worker) end
+---@param worker GameHandle
+---@return any
+function CcbCampsApi.start_with(worker) end
+---@param handle GameHandle
+---@param damage_type GameId
+---@param body_part GameId
+---@return any
+function CcbCharactersApi.armor(handle, damage_type, body_part) end
+---@param observer GameHandle
+---@param position TripointCoord
+---@return any
+function CcbCharactersApi.can_see_location(observer, position) end
+---@param handle GameHandle
+---@param options? CcbLuaValue
+---@return any
+function CcbCharactersApi.choose_body_part(handle, options) end
+---@param attacker GameHandle
+---@param target GameHandle
+---@param options? CcbLuaValue
+---@return any
+function CcbCharactersApi.choose_technique(attacker, target, options) end
+---@param handle GameHandle
+---@param item? GameId
+---@param window? TimeDuration
+---@return any
+function CcbCharactersApi.consumption_count(handle, item, window) end
+---@param origin TripointCoord
+---@param observer? GameHandle
+---@param options? CcbLuaValue
+---@return any
+function CcbCharactersApi.count_nearby(origin, observer, options) end
+---@param handle GameHandle
+---@param body_part GameId
+---@return any
+function CcbCharactersApi.coverage(handle, body_part) end
+---@param handle GameHandle
+---@param key string
+---@param base? number
+---@return any
+function CcbCharactersApi.enchantment_value(handle, key, base) end
+---@param handle GameHandle
+---@param group string
+---@return any
+function CcbCharactersApi.hp_group(handle, group) end
+---@param handle GameHandle
+---@param score GameId
+---@param body_part_type? string
+---@return any
+function CcbCharactersApi.limb_score(handle, score, body_part_type) end
+---@param handle GameHandle
+---@param deltas table
+---@return any
+function CcbCharactersApi.modify_attributes(handle, deltas) end
+---@param handle GameHandle
+---@param delta integer
+---@return any
+function CcbCharactersApi.modify_kill_xp(handle, delta) end
+---@param handle GameHandle
+---@param values table
+---@return any
+function CcbCharactersApi.set_attributes(handle, values) end
+---@param handle GameHandle
+---@param updates table
+---@return any
+function CcbCharactersApi.set_demographics(handle, updates) end
+---@param handle GameHandle
+---@param body_part GameId
+---@param hp integer
+---@return any
+function CcbCharactersApi.set_hp(handle, body_part, hp) end
+---@param handle GameHandle
+---@param group string
+---@param hp integer
+---@return any
+function CcbCharactersApi.set_hp_group(handle, group, hp) end
+---@param handle GameHandle
+---@param value integer
+---@return any
+function CcbCharactersApi.set_kill_xp(handle, value) end
+---@param trainer GameHandle
+---@param student GameHandle
+---@return any
+function CcbCharactersApi.training_offers(trainer, student) end
+---@param handle GameHandle
+---@param body_type string
+---@return any
+function CcbCreaturesApi.has_body_type(handle, body_type) end
+---@param observer GameHandle
+---@param target GameHandle
+---@return any
+function CcbCreaturesApi.has_line_of_sight(observer, target) end
+---@param handle GameHandle
+---@param species GameId
+---@return any
+function CcbCreaturesApi.has_species(handle, species) end
+---@param handle GameHandle
+---@param flag GameId
+---@return CcbResult
+function CcbCreaturesApi.has_flag(handle, flag) end
+---@param direction string
+---@return any
+function CcbCreaturesApi.visible_monsters(direction) end
+---@param handle GameHandle
+---@return any
+function CcbDialogueApi.finish(handle) end
+---@param handle GameHandle
+---@return any
+function CcbDialogueApi.provoke_combat(handle) end
+---@class CcbEquipmentApi
+local CcbEquipmentApi = {}
+---@param provider GameHandle
+---@param allowance? integer
+---@return any
+function CcbEquipmentApi.request_gift(provider, allowance) end
+---@param owner GameHandle
+---@return any
+function CcbEquipmentApi.return_stolen_items(owner) end
+---@class CcbGroomingApi
+local CcbGroomingApi = {}
+---@param provider GameHandle
+---@param area string
+---@return any
+function CcbGroomingApi.open_style(provider, area) end
+---@param provider GameHandle
+---@param service string
+---@return any
+function CcbGroomingApi.provide(provider, service) end
+---@class CcbInteractionApi
+local CcbInteractionApi = {}
+---@param entries table
+---@param options? CcbLuaValue
+---@return any
+function CcbInteractionApi.choose(entries, options) end
+---@param message string
+---@return any
+function CcbInteractionApi.confirm(message) end
+---@param description string
+---@param default_value integer
+---@return any
+function CcbInteractionApi.input_number(description, default_value) end
+---@param title string
+---@param options? CcbLuaValue
+---@return any
+function CcbInteractionApi.input_text(title, options) end
+---@param character GameHandle
+---@param category GameId
+---@return any
+function CcbInventoryApi.category_count(character, category) end
+---@param character GameHandle
+---@param candidates table
+---@param title? string
+---@return any
+function CcbInventoryApi.choose(character, candidates, title) end
+---@param character GameHandle
+---@param candidates table
+---@param title? string
+---@return any
+function CcbInventoryApi.choose_many(character, candidates, title) end
+---@param character GameHandle
+---@param candidates table
+---@param options? CcbLuaValue
+---@return any
+function CcbInventoryApi.choose_many_map(character, candidates, options) end
+---@param character GameHandle
+---@param candidates table
+---@param options? CcbLuaValue
+---@return any
+function CcbInventoryApi.choose_map(character, candidates, options) end
+---@param character GameHandle
+---@param type GameId
+---@param count? integer
+---@param charges? integer
+---@return any
+function CcbInventoryApi.consume(character, type, count, charges) end
+---@param character GameHandle Character giving up the items.
+---@param recipient GameHandle Character receiving the hand-in notice.
+---@param type GameId
+---@param count? integer
+---@param charges? integer
+---@return CcbResult result `value.notice` is the native-localized hand-in text.
+function CcbInventoryApi.hand_in(character, recipient, type, count, charges) end
+---@param character GameHandle
+---@param entries table
+---@return any
+function CcbInventoryApi.consume_sum(character, entries) end
+---@param character GameHandle
+---@param force? boolean
+---@return any
+function CcbInventoryApi.drop_wielded(character, force) end
+---@param character GameHandle
+---@param group GameId
+---@param options? CcbLuaValue
+---@return any
+function CcbInventoryApi.give_group(character, group, options) end
+---@param character GameHandle
+---@param flag GameId
+---@return any
+function CcbInventoryApi.has_item_flag(character, flag) end
+---@param character GameHandle
+---@param software GameId
+---@param minimum_charges? integer
+---@param device? GameId
+---@return any
+function CcbInventoryApi.has_software(character, software, minimum_charges, device) end
+---@param holder GameHandle
+---@param owner GameHandle
+---@return any
+function CcbInventoryApi.has_stolen_from(holder, owner) end
+---@param character GameHandle
+---@param flag GameId
+---@param body_part? GameId
+---@return any
+function CcbInventoryApi.has_worn_flag(character, flag, body_part) end
+---@param character GameHandle
+---@param item_id GameId
+---@return any
+function CcbInventoryApi.is_wearing(character, item_id) end
+---@param character GameHandle
+---@param flag GameId
+---@param aggregate? string
+---@return any
+function CcbInventoryApi.item_radiation(character, flag, aggregate) end
+---@param character GameHandle
+---@return any
+function CcbInventoryApi.weapon_state(character) end
+---@param character GameHandle
+---@param criterion GameId
+---@return any
+function CcbInventoryApi.wielded_matches(character, criterion) end
+---@class CcbItemCategoriesApi
+local CcbItemCategoriesApi = {}
+---@param id GameId
+---@param rate number
+---@return any
+function CcbItemCategoriesApi.set_spawn_rate(id, rate) end
+---@param updates table
+---@return any
+function CcbItemCategoriesApi.set_spawn_rates(updates) end
+---@param id GameId
+---@return any
+function CcbItemCategoriesApi.spawn_rate(id) end
+---@param item_handle GameHandle
+---@param character? GameHandle
+---@param method? string
+---@param quantity? integer
+---@return any
+function CcbItemsApi.ammo_sufficient(item_handle, character, method, quantity) end
+---@param item_handle GameHandle
+---@return any
+function CcbItemsApi.clear_old_owner(item_handle) end
+---@param item_handle GameHandle
+---@param remember_previous? boolean
+---@return any
+function CcbItemsApi.clear_owner(item_handle, remember_previous) end
+---@param id GameId
+---@return any
+function CcbItemsApi.food_fun(id) end
+---@param handle GameHandle
+---@param damage_type? GameId
+---@param with_ammo? boolean
+---@return any
+function CcbItemsApi.gun_damage(handle, damage_type, with_ammo) end
+---@param handle GameHandle
+---@param damage_type? GameId
+---@return any
+function CcbItemsApi.melee_damage(handle, damage_type) end
+---@param group GameId
+---@return any
+function CcbItemsApi.possible_from_group(group) end
+---@param handle GameHandle
+---@param quality GameId
+---@param strict? boolean
+---@return any
+function CcbItemsApi.quality(handle, quality, strict) end
+---@param item_handle GameHandle
+---@param owner GameHandle
+---@param remember_previous? boolean
+---@return any
+function CcbItemsApi.set_owner(item_handle, owner, remember_previous) end
+---@param id GameId
+---@return any
+function CcbMartialArtsApi.technique_definition(id) end
+---@param options? CcbLuaValue
+---@return any
+function CcbMartialArtsApi.technique_definitions(options) end
+---@class CcbMedicalApi
+local CcbMedicalApi = {}
+---@param provider GameHandle
+---@param operation string
+---@param patient? GameHandle
+---@return any
+function CcbMedicalApi.open_bionic_service(provider, operation, patient) end
+---@param provider GameHandle
+---@param level? string
+---@param include_allies? boolean
+---@return any
+function CcbMedicalApi.provide_aid(provider, level, include_allies) end
+---@param provider GameHandle
+---@return any
+function CcbMedicalApi.repair_bionic_limbs(provider) end
+---@param provider GameHandle
+---@return any
+function CcbMissionsApi.assign_selected(provider) end
+---@param provider GameHandle
+---@return any
+function CcbMissionsApi.claim_selected_reward(provider) end
+---@param provider GameHandle
+---@return any
+function CcbMissionsApi.clear_selected(provider) end
+---@param provider GameHandle
+---@return any
+function CcbMissionsApi.fail_selected(provider) end
+---@param provider GameHandle
+---@param mission GameId
+---@return any
+function CcbMissionsApi.offer(provider, mission) end
+---@param provider GameHandle
+---@param mission GameId
+---@return any
+function CcbMissionsApi.add_assigned(provider, mission) end
+---@param token MissionToken
+---@param deadline? TimePoint
+---@return any
+function CcbMissionsApi.set_deadline(token, deadline) end
+---@param provider GameHandle
+---@return any
+function CcbMissionsApi.state(provider) end
+---@param provider GameHandle
+---@param force? boolean
+---@return any
+function CcbMissionsApi.succeed_selected(provider, force) end
+---@class CcbModsApi
+local CcbModsApi = {}
+---@return any
+function CcbModsApi.active() end
+---@param id string
+---@return any
+function CcbModsApi.is_active(id) end
+---@class CcbMonstersApi
+local CcbMonstersApi = {}
+---@param origin TripointCoord
+---@param groups? table
+---@param options? CcbLuaValue
+---@return any
+function CcbMonstersApi.count_groups_nearby(origin, groups, options) end
+---@param origin TripointCoord
+---@param ids? table
+---@param options? CcbLuaValue
+---@return any
+function CcbMonstersApi.count_nearby(origin, ids, options) end
+---@param origin TripointCoord
+---@param species? table
+---@param options? CcbLuaValue
+---@return any
+function CcbMonstersApi.count_species_nearby(origin, species, options) end
+---@param handle GameHandle
+---@param deltas table
+---@return any
+function CcbMonstersApi.modify_disposition(handle, deltas) end
+---@param handle GameHandle
+---@param values table
+---@return any
+function CcbMonstersApi.set_disposition(handle, values) end
+---@param handle GameHandle
+---@param friendly boolean
+---@return any
+function CcbMonstersApi.set_friendly(handle, friendly) end
+---@param handle GameHandle
+---@param lifespan TimeDuration
+---@param summoner? GameHandle
+---@param temporary_drop_items? boolean
+---@return any
+function CcbMonstersApi.set_summon(handle, lifespan, summoner, temporary_drop_items) end
+---@param handle GameHandle
+---@param category GameId
+---@param type? string
+---@param permanent_only? boolean
+---@return any
+function CcbMutationsApi.category_count(handle, category, type, permanent_only) end
+---@param handle GameHandle
+---@param id GameId
+---@return any
+function CcbMutationsApi.is_purifiable(handle, id) end
+---@param observed GameHandle
+---@param observer GameHandle
+---@param id GameId
+---@return any
+function CcbMutationsApi.is_visible_to(observed, observer, id) end
+---@param handle GameHandle
+---@param category GameId
+---@return any
+function CcbMutationsApi.remove_category(handle, category) end
+---@param handle GameHandle
+---@param id GameId
+---@param purifiable boolean
+---@return any
+function CcbMutationsApi.set_purifiable(handle, id, purifiable) end
+---@param handle GameHandle
+---@param type GameId
+---@param bonus integer
+---@param options? CcbLuaValue
+---@return any
+function CcbNeedsApi.add_morale(handle, type, bonus, options) end
+---@param handle GameHandle
+---@return any
+function CcbNeedsApi.clear_morale(handle) end
+---@param handle GameHandle
+---@param day? integer
+---@param type? string
+---@return any
+function CcbNeedsApi.daily_calories(handle, day, type) end
+---@param handle GameHandle
+---@param id GameId
+---@return any
+function CcbNeedsApi.get_vitamin(handle, id) end
+---@param handle GameHandle
+---@param id GameId
+---@param delta integer
+---@return any
+function CcbNeedsApi.modify_vitamin(handle, id, delta) end
+---@param handle GameHandle
+---@param type? GameId
+---@return any
+function CcbNeedsApi.morale(handle, type) end
+---@param handle GameHandle
+---@param type GameId
+---@return any
+function CcbNeedsApi.remove_morale(handle, type) end
+---@param handle GameHandle
+---@param id GameId
+---@param amount integer
+---@return any
+function CcbNeedsApi.set_vitamin(handle, id, amount) end
+---@param handle GameHandle
+---@return any
+function CcbNpcsApi.become_hostile(handle) end
+---@param handle GameHandle
+---@return any
+function CcbNpcsApi.clear_stolen_item_claim(handle) end
+---@param handle GameHandle
+---@return any
+function CcbNpcsApi.companion_state(handle) end
+---@param global? boolean
+---@return any
+function CcbNpcsApi.count_allies(global) end
+---@param unique_id string
+---@return any
+function CcbNpcsApi.find_unique(unique_id) end
+---@param handle GameHandle
+---@return any
+function CcbNpcsApi.follow_temporarily(handle) end
+---@param origin GameHandle
+---@param npc_class GameId
+---@param radius? integer
+---@return any
+function CcbNpcsApi.has_follower_nearby(origin, npc_class, radius) end
+---@param origin GameHandle
+---@param role string
+---@param radius? integer
+---@return any
+function CcbNpcsApi.has_role_nearby(origin, role, radius) end
+---@param handle GameHandle
+---@return any
+function CcbNpcsApi.join_player(handle) end
+---@param handle GameHandle
+---@param goal TripointCoord
+---@return any
+function CcbNpcsApi.lead_to(handle, goal) end
+---@param handle GameHandle
+---@return any
+function CcbNpcsApi.leave_player(handle) end
+---@param handle GameHandle
+---@return any
+function CcbNpcsApi.make_neutral(handle) end
+---@param recipient GameHandle
+---@param item GameHandle
+---@param use_item? boolean
+---@return any
+function CcbNpcsApi.offer_item(recipient, item, use_item) end
+---@param handle GameHandle
+---@param role string
+---@return any
+function CcbNpcsApi.open_companion_missions(handle, role) end
+---@return any
+function CcbNpcsApi.open_control_menu() end
+---@param handle GameHandle
+---@param topic? string
+---@return any
+function CcbNpcsApi.open_dialogue(handle, topic) end
+---@param handle GameHandle
+---@return any
+function CcbNpcsApi.open_rules(handle) end
+---@param handle GameHandle
+---@param goal TripointCoord
+---@return any
+function CcbNpcsApi.plan_travel(handle, goal) end
+---@param handle GameHandle
+---@param request string
+---@return any
+function CcbNpcsApi.record_refusal(handle, request) end
+---@param handle GameHandle
+---@param rule string
+---@param state string
+---@return any
+function CcbNpcsApi.set_ally_override(handle, rule, state) end
+---@param handle GameHandle
+---@param role string
+---@return any
+function CcbNpcsApi.set_companion_role(handle, role) end
+---@param handle GameHandle
+---@param enabled boolean
+---@return any
+function CcbNpcsApi.set_guarding(handle, enabled) end
+---@param handle GameHandle
+---@return any
+function CcbNpcsApi.start_fleeing(handle) end
+---@param handle GameHandle
+---@return any
+function CcbNpcsApi.start_mugging(handle) end
+---@param handle GameHandle
+---@return any
+function CcbNpcsApi.stop_temporary_following(handle) end
+---@param handle GameHandle
+---@return any
+function CcbNpcsApi.take_control(handle) end
+---@param handle GameHandle
+---@return any
+function CcbNpcsApi.warn_player_departure(handle) end
+---@class CcbOrdersApi
+local CcbOrdersApi = {}
+---@param handle GameHandle
+---@return any
+function CcbOrdersApi.choose_combat_style(handle) end
+---@param handle GameHandle
+---@return any
+function CcbOrdersApi.open_character_sheet(handle) end
+---@param handle GameHandle
+---@return any
+function CcbOrdersApi.open_pickup_rules(handle) end
+---@param handle GameHandle
+---@param order string
+---@return any
+function CcbOrdersApi.run(handle, order) end
+---@param position TripointCoord
+---@param include_legacy_terrain? boolean
+---@return any
+function CcbOvermapApi.is_camp(position, include_legacy_terrain) end
+---@param position TripointCoord
+---@return any
+function CcbOvermapApi.is_camp_start(position) end
+---@param source TripointCoord
+---@param destination TripointCoord
+---@param radius? integer
+---@param road_only? boolean
+---@return any
+function CcbOvermapApi.reveal_route(source, destination, radius, road_only) end
+---@param character GameHandle
+---@param id GameId
+---@return any
+function CcbRecipesApi.forget(character, id) end
+---@param character GameHandle
+---@param category GameId
+---@param subcategory? string
+---@return any
+function CcbRecipesApi.forget_category(character, category, subcategory) end
+---@param character GameHandle
+---@param id GameId
+---@return any
+function CcbRecipesApi.knows(character, id) end
+---@param character GameHandle
+---@param id GameId
+---@param override_never_learn? boolean
+---@return any
+function CcbRecipesApi.learn(character, id, override_never_learn) end
+---@param dimension string
+---@return any
+function CcbRelocationApi.clear_dimension(dimension) end
+---@param handle GameHandle
+---@param position TripointCoord
+---@return any
+function CcbRelocationApi.item_at(handle, position) end
+---@param handle GameHandle
+---@param position TripointCoord
+---@param force? boolean
+---@return any
+function CcbRelocationApi.vehicle_at(handle, position, force) end
+---@class CcbSafetyApi
+local CcbSafetyApi = {}
+---@return any
+function CcbSafetyApi.snapshot() end
+---@param position TripointCoord
+---@param volume integer
+---@param category string
+---@param description string
+---@param ambient? boolean
+---@param id? string
+---@param variant? string
+---@return any
+function CcbSoundApi.emit(position, volume, category, description, ambient, id, variant) end
+---@param monster_group GameId
+---@return any
+function CcbSpawnsApi.group_members(monster_group) end
+---@param monster_group GameId
+---@return GameId Random valid monster member selected with the native group weights.
+function CcbSpawnsApi.choose_monster_from_group(monster_group) end
+---@param monster_type GameId
+---@param position TripointCoord
+---@param options? CcbLuaValue
+---@return any
+function CcbSpawnsApi.monster_configured(monster_type, position, options) end
+---@param monster_group GameId
+---@param position TripointCoord
+---@param options? CcbLuaValue
+---@return any
+function CcbSpawnsApi.monster_from_group(monster_group, position, options) end
+---@param npc_template GameId
+---@param position TripointCoord
+---@param options? CcbLuaValue
+---@return any
+function CcbSpawnsApi.npc(npc_template, position, options) end
+---@param handle GameHandle
+---@param property string
+---@param amount number
+---@param options? CcbLuaValue
+---@return any
+function CcbSpellsApi.adjust_casting(handle, property, amount, options) end
+---@param handle GameHandle
+---@param school? GameId
+---@return any
+function CcbSpellsApi.count(handle, school) end
+---@param handle GameHandle
+---@param id GameId
+---@param baseline? boolean
+---@return any
+function CcbSpellsApi.difficulty(handle, id, baseline) end
+---@param id GameId
+---@param level integer
+---@return any
+function CcbSpellsApi.experience_for_level(id, level) end
+---@param handle GameHandle
+---@param spell_id? GameId
+---@return any
+function CcbSpellsApi.level_adjustment(handle, spell_id) end
+---@param handle GameHandle
+---@param school? GameId
+---@param minimum_level? integer
+---@return any
+function CcbSpellsApi.level_sum(handle, school, minimum_level) end
+---@param handle GameHandle
+---@param school GameId
+---@return any
+function CcbSpellsApi.school_level(handle, school) end
+---@param handle GameHandle
+---@param school GameId
+---@return any
+function CcbSpellsApi.school_level_adjustment(handle, school) end
+---@param handle GameHandle
+---@param amount number
+---@param spell_id? GameId
+---@return any
+function CcbSpellsApi.set_level_adjustment(handle, amount, spell_id) end
+---@param handle GameHandle
+---@param school GameId
+---@param amount number
+---@return any
+function CcbSpellsApi.set_school_level_adjustment(handle, school, amount) end
+---@param center TripointCoord
+---@param message string
+---@param failure_message string
+---@param candidates table
+---@param allow_vertical? boolean
+---@param allow_autoselect? boolean
+---@return any
+function CcbTargetingApi.choose_adjacent_where_at(center, message, failure_message, candidates, allow_vertical, allow_autoselect) end
+---@param message string
+---@param center? TripointCoord
+---@param allow_vertical? boolean
+---@return any
+function CcbTargetingApi.choose_map_square(message, center, allow_vertical) end
+---@param message string
+---@param center? TripointCoord
+---@param distance? integer
+---@return any
+function CcbTargetingApi.choose_overmap_point(message, center, distance) end
+---@param message string
+---@param range integer
+---@return any
+function CcbTargetingApi.choose_visible_map_square(message, range) end
+---@param character GameHandle
+---@param delta integer
+---@return any
+function CcbTradeApi.adjust_balance(character, delta) end
+---@param character GameHandle
+---@return any
+function CcbTradeApi.balance(character) end
+---@param seller GameHandle
+---@param monster GameId
+---@param cost integer
+---@param options? CcbLuaValue
+---@return any
+function CcbTradeApi.buy_monsters(seller, monster, cost, options) end
+---@param npc GameHandle
+---@param cash integer
+---@return any
+function CcbTradeApi.cash_to_favor(npc, cash) end
+---@param seller GameHandle
+---@param item_id GameId
+---@param limit? integer
+---@return any
+function CcbTradeApi.matching_stock(seller, item_id, limit) end
+---@param buyer GameHandle
+---@param seller GameHandle
+---@param item_id GameId
+---@param quantity integer
+---@return any
+function CcbTradeApi.quote(buyer, seller, item_id, quantity) end
+---@param character GameHandle
+---@param amount integer
+---@return any
+function CcbTradeApi.set_balance(character, amount) end
+---@param npc_handle GameHandle
+---@param cost integer
+---@return any
+function CcbTradeApi.settle_credit(npc_handle, cost) end
+---@param account GameHandle
+---@param counterparty GameHandle
+---@param amount integer
+---@param options? CcbLuaValue
+---@return any
+function CcbTradeApi.settle_faction_account(account, counterparty, amount, options) end
+---@param seller GameHandle
+---@param buyer GameHandle
+---@param item_handle GameHandle
+---@param quantity integer
+---@return any
+function CcbTradeApi.transfer(seller, buyer, item_handle, quantity) end
+---@param seller GameHandle
+---@param buyer GameHandle
+---@param item_id GameId
+---@param options? CcbLuaValue
+---@return any
+function CcbTradeApi.transfer_matching(seller, buyer, item_id, options) end
+---@class CcbTrainingApi
+local CcbTrainingApi = {}
+---@param teacher GameHandle
+---@param student GameHandle
+---@return any
+function CcbTrainingApi.offerings(teacher, student) end
+---@param teacher GameHandle
+---@param students table
+---@param subject GameId
+---@return any
+function CcbTrainingApi.start(teacher, students, subject) end
+---@param provider GameHandle
+---@param mode string
+---@return any
+function CcbTrainingApi.start_selected(provider, mode) end
+---@param handle GameHandle
+---@param flag string
+---@param enabled? boolean
+---@return any
+function CcbVehiclesApi.has_part_flag(handle, flag, enabled) end
+---@param level integer
+---@param duration TimeDuration
+---@param key? string
+---@return any
+function CcbWeatherApi.override_light(level, duration, key) end
+---@param update GameId
+---@param position TripointCoord
+---@param options? CcbLuaValue
+---@return any
+function CcbWorldApi.apply_mapgen_update(update, position, options) end
+---@return any
+function CcbWorldApi.dimension() end
+---@param position TripointCoord
+---@param field GameId
+---@return any
+function CcbWorldApi.field_strength(position, field) end
+---@param origin TripointCoord
+---@param selector? table
+---@param options? CcbLuaValue
+---@return any
+function CcbWorldApi.find_location(origin, selector, options) end
+---@param first TripointCoord
+---@param second TripointCoord
+---@param range? integer
+---@param with_fields? boolean
+---@return any
+function CcbWorldApi.has_line_of_sight(first, second, range, with_fields) end
+---@class CcbMapItemSearchDescriptor
+---@field id? string|string[]
+---@field id_blacklist? string|string[]
+---@field category? string|string[]
+---@field material? string|string[]
+---@field flags? string|string[]
+---@field excluded_flags? string|string[]
+---@field uses_energy? boolean
+---@field is_chargeable? boolean
+---@field worn_only? boolean
+---@field wielded_only? boolean
+---@field held_only? boolean
+---@class CcbMapItemsNearbyOptions
+---@field min_radius? integer
+---@field max_radius? integer
+---@field offset? integer
+---@field limit? integer
+---@field filters? CcbMapItemSearchDescriptor[] OR-combined item descriptors.
+---@param origin TripointCoord
+---@param options? CcbMapItemsNearbyOptions
+---@return any
+function CcbWorldApi.items_nearby(origin, options) end
+---@param position TripointCoord
+---@return any
+function CcbWorldApi.light_level(position) end
+---@param name string
+---@param duration TimeDuration
+---@param key? string
+---@return any
+function CcbWorldApi.override_place_name(name, duration, key) end
+---@param origin TripointCoord
+---@param options? CcbLuaValue
+---@return any
+function CcbWorldApi.points_nearby(origin, options) end
+---@param key string
+---@param delay TimeDuration
+---@return any
+function CcbWorldApi.reschedule_events(key, delay) end
+---@param source TripointCoord
+---@param destination TripointCoord
+---@param delay TimeDuration
+---@param key? string
+---@return any
+function CcbWorldApi.schedule_location_copy(source, destination, delay, key) end
+---@param position TripointCoord
+---@param delay TimeDuration
+---@param key? string
+---@return any
+function CcbWorldApi.schedule_location_revert(position, delay, key) end
+---@param position TripointCoord
+---@param group GameId
+---@param flags? table
+---@return any
+function CcbWorldApi.spawn_item_group(position, group, flags) end
+---@param position TripointCoord
+---@param contents GameId
+---@param quantity integer
+---@param container GameId
+---@param flags? table
+---@return any
+function CcbWorldApi.spawn_item_in_container(position, contents, quantity, container, flags) end
+---@param position TripointCoord
+---@param layer string
+---@param flag string
+---@return any
+function CcbWorldApi.tile_has_flag(position, layer, flag) end
+---@param position TripointCoord
+---@param radius integer
+---@param transform_id GameId
+---@param options? CcbLuaValue
+---@return any
+function CcbWorldApi.transform_radius(position, radius, transform_id, options) end

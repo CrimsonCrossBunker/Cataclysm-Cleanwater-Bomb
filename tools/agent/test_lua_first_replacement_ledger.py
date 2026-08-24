@@ -18,11 +18,11 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
             {
                 "total": 775,
                 "implemented_verified": 67,
-                "implemented_unverified": 0,
-                "bounded_implemented_verified": 14,
-                "bounded_implemented_unverified": 468,
-                "primitive_available_unverified": 179,
-                "planned": 29,
+                "implemented_unverified": 22,
+                "bounded_implemented_verified": 16,
+                "bounded_implemented_unverified": 652,
+                "primitive_available_unverified": 0,
+                "planned": 0,
                 "private_adapter": 0,
                 "reviewed_not_applicable": 18,
             },
@@ -64,6 +64,46 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 "tools/migrate_lua_first.py",
                 entries[selector]["evidence"],
             )
+
+    def test_extended_static_catalogs_are_no_longer_planned(self):
+        generated = build_ledger()
+        entries = {
+            entry["selector"]: entry
+            for entry in generated["entries"]
+            if entry["inventory"] == "json-object-types"
+        }
+        expected = {
+            "SPELL": "content.magic",
+            "bionic": "content.bionics",
+            "city_building": "content.map",
+            "enchantment": "content.enchantments",
+            "faction": "content.factions",
+            "jmath_function": "content.state-and-values",
+            "mission_definition": "content.missions",
+            "mutation": "content.mutations",
+            "npc": "content.characters",
+            "npc_class": "content.characters",
+            "overmap_special": "content.map",
+            "overmap_terrain": "content.map",
+            "pp_generator": "content.map",
+            "profession": "content.professions",
+            "profession_item_substitutions": "content.items",
+            "relic_procgen_data": "content.relics",
+            "ter_furn_transform": "content.map",
+            "vehicle": "content.vehicles",
+            "vehicle_part": "content.vehicles",
+            "vehicle_placement": "content.vehicles",
+            "vehicle_spawn": "content.vehicles",
+            "widget": "content.widgets",
+        }
+        for selector, target in expected.items():
+            self.assertEqual(entries[selector]["status"], "implemented_unverified")
+            self.assertEqual(entries[selector]["target"], target)
+            self.assertEqual(entries[selector]["legacy_dependency"], "none")
+            self.assertIn("src/catalua_platform_world_content.cpp",
+                          entries[selector]["evidence"])
+            self.assertIn("tests/catalua_ui_test.cpp",
+                          entries[selector]["evidence"])
 
     def test_committed_ledger_matches_the_generator(self):
         self.assertEqual(
@@ -1255,14 +1295,14 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
             (
                 "json-object-types",
                 "event_statistic",
-                "bounded_implemented_unverified",
-                "content.gameplay",
+                "bounded_implemented_verified",
+                "content.events",
             ),
             (
                 "json-object-types",
                 "event_transformation",
-                "bounded_implemented_unverified",
-                "content.gameplay",
+                "bounded_implemented_verified",
+                "content.events",
             ),
             (
                 "json-object-types",
@@ -1280,7 +1320,7 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 "json-object-types",
                 "palette",
                 "bounded_implemented_unverified",
-                "content.gameplay",
+                "services.mapgen.register_palette",
             ),
             (
                 "json-object-types",
@@ -1340,7 +1380,7 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 "json-object-types",
                 "mod_tileset",
                 "bounded_implemented_unverified",
-                "content.gameplay",
+                "services.tileset.register",
             ),
             (
                 "json-object-types",
@@ -1466,7 +1506,7 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 "json-object-types",
                 "mapgen",
                 "bounded_implemented_unverified",
-                "content.map",
+                "services.mapgen.define",
             ),
             (
                 "json-object-types",
@@ -1514,7 +1554,7 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 "json-object-types",
                 "talk_topic",
                 "bounded_implemented_unverified",
-                "content.gameplay",
+                "ccb.dialogue.register_topic",
             ),
             (
                 "json-object-types",
@@ -1559,6 +1599,30 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 "services.activities",
             ),
             (
+                "eoc-conditions",
+                "npc_see_u_loc",
+                "bounded_implemented_unverified",
+                "services.creatures.perception",
+            ),
+            (
+                "eoc-conditions",
+                "u_see_npc_loc",
+                "bounded_implemented_unverified",
+                "services.creatures.perception",
+            ),
+            (
+                "eoc-conditions",
+                "u_monsters_in_direction",
+                "bounded_implemented_unverified",
+                "services.creatures.perception",
+            ),
+            (
+                "eoc-conditions",
+                "npc_query",
+                "bounded_implemented_unverified",
+                "services.characters",
+            ),
+            (
                 "eoc-effects",
                 "math",
                 "bounded_implemented_unverified",
@@ -1573,7 +1637,7 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
             (
                 "eoc-effects",
                 "add_debt",
-                "primitive_available_unverified",
+                "bounded_implemented_unverified",
                 "services.npcs",
             ),
             (
@@ -1635,6 +1699,12 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 "u_add_faction_trust",
                 "bounded_implemented_unverified",
                 "services.characters",
+            ),
+            (
+                "eoc-effects",
+                "u_faction_rep",
+                "bounded_implemented_unverified",
+                "services.npcs",
             ),
             (
                 "eoc-effects",
@@ -1928,7 +1998,7 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 "eoc-conditions",
                 "npc_has_items_sum",
                 "bounded_implemented_unverified",
-                "services.items",
+                "services.inventory",
             ),
             (
                 "eoc-conditions",
@@ -1982,7 +2052,7 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 "eoc-conditions",
                 "u_has_items_sum",
                 "bounded_implemented_unverified",
-                "services.items",
+                "services.inventory",
             ),
             (
                 "eoc-conditions",
@@ -2142,6 +2212,12 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
             ),
             (
                 "eoc-effects",
+                "u_buy_monster",
+                "bounded_implemented_unverified",
+                "services.characters",
+            ),
+            (
+                "eoc-effects",
                 "u_consume_item",
                 "bounded_implemented_unverified",
                 "services.items",
@@ -2187,6 +2263,12 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 "u_sell_item",
                 "bounded_implemented_unverified",
                 "services.items",
+            ),
+            (
+                "eoc-effects",
+                "u_spend_cash",
+                "bounded_implemented_unverified",
+                "services.characters",
             ),
             (
                 "eoc-effects",
@@ -2313,21 +2395,13 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
         self.assertIn("src/catalua_ui_factions.cpp", trust["evidence"])
 
     def test_missing_native_registrars_are_planned(self):
-        expected_content = {
-            "jmath_function", "event_statistic", "event_transformation",
-            "widget", "palette", "ter_furn_transform",
-            "profession_item_substitutions", "relic_procgen_data",
-            "city_building", "pp_generator",
-            "mod_tileset",
-            "enchantment", "SPELL", "bionic",
-            "faction", "mapgen", "mission_definition",
-            "mutation", "npc", "npc_class", "overmap_special",
-            "overmap_terrain", "profession", "talk_topic", "vehicle",
-            "vehicle_part", "vehicle_placement", "vehicle_spawn",
-        }
-        self.assertEqual(set(PLANNED_JSON), expected_content)
-
         generated = build_ledger()
+        expected_content = {
+            entry["selector"]
+            for entry in generated["entries"]
+            if entry["inventory"] == "json-object-types" and
+            entry["status"] == "planned"
+        }
         entries = {
             (entry["inventory"], entry["selector"]): entry
             for entry in generated["entries"]
@@ -2339,7 +2413,8 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
 
         transform = entries[("eoc-effects", "transform_item")]
         self.assertEqual(
-            transform["status"], "primitive_available_unverified")
+            transform["status"], "bounded_implemented_unverified")
+        self.assertEqual(transform["target"], "services.items")
         self.assertEqual(transform["legacy_dependency"], "none")
 
 

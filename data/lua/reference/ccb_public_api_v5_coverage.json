@@ -10,26 +10,26 @@
       "private C++ helpers without a registered Lua access path"
     ]
   },
-  "inventory_sha256": "9eab3a16f28930c30024075c17317f41b7cf76f4cec0eaa83ad6a37fef75449a",
+  "inventory_sha256": "95f4bc7dff8dc35382770a2b4340a877ba53978ab52a0d1d4895d1587c669180",
   "sections": {
     "modules": 3,
-    "namespaces": 71,
-    "classes": 286,
-    "functions": 536,
-    "methods": 162,
+    "namespaces": 84,
+    "classes": 310,
+    "functions": 784,
+    "methods": 195,
     "properties": 51,
     "operators": 47,
     "enums": 26,
     "events": 113,
-    "hooks": 54,
+    "hooks": 61,
     "callbacks": 38,
     "capabilities": 17,
     "manifest_fields": 6,
-    "class_fields": 1411,
+    "class_fields": 1509,
     "event_fields": 242
   },
-  "public_symbols": 3012,
-  "documented_symbols": 3012,
+  "public_symbols": 3435,
+  "documented_symbols": 3435,
   "undocumented_symbols": {
     "count": 0,
     "ids": []

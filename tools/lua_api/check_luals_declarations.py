@@ -20,6 +20,7 @@ TABLE_CLASSES = {
     "action_menu": "CcbActionMenuApi",
     "actions": "CcbGameActionsApi",
     "addictions": "CcbAddictionsApi",
+    "activities": "CcbActivitiesApi",
     "bionics": "CcbBionicsApi",
     "callbacks": "CcbCallbacksApi",
     "camps": "CcbCampsApi",
@@ -34,6 +35,7 @@ TABLE_CLASSES = {
     "diagnostics": "CcbDiagnosticsApi",
     "dialogue": "CcbDialogueApi",
     "effects": "CcbEffectsApi",
+    "equipment": "CcbEquipmentApi",
     "enum_api": "CcbEnumsApi",
     "eocs": "CcbEocsApi",
     "events": "CcbEventsApi",
@@ -43,18 +45,25 @@ TABLE_CLASSES = {
     "handles": "CcbHandlesApi",
     "hooks": "CcbHooksApi",
     "hordes": "CcbHordesApi",
+    "grooming": "CcbGroomingApi",
     "i18n": "CcbI18nApi",
     "inventory": "CcbInventoryApi",
+    "interaction": "CcbInteractionApi",
     "items": "CcbItemsApi",
+    "item_categories": "CcbItemCategoriesApi",
     "mapgen": "CcbMapgenApi",
     "martial_arts": "CcbMartialArtsApi",
+    "medical": "CcbMedicalApi",
     "messages": "CcbMessagesApi",
     "missions": "CcbMissionsApi",
     "modules": "CcbModulesApi",
     "mutations": "CcbMutationsApi",
+    "mods": "CcbModsApi",
+    "monsters": "CcbMonstersApi",
     "native_events": "CcbNativeEventsApi",
     "needs": "CcbNeedsApi",
     "npcs": "CcbNpcsApi",
+    "orders": "CcbOrdersApi",
     "overmap": "CcbOvermapApi",
     "page_state": "CcbStateStore",
     "proficiencies": "CcbProficienciesApi",
@@ -64,6 +73,7 @@ TABLE_CLASSES = {
     "relocation": "CcbRelocationApi",
     "requirements": "CcbRequirementsApi",
     "scheduler": "CcbSchedulerApi",
+    "safety": "CcbSafetyApi",
     "serde": "CcbSerdeApi",
     "services": "CcbServicesApi",
     "sidebar": "CcbSidebarApi",
@@ -75,6 +85,7 @@ TABLE_CLASSES = {
     "targeting": "CcbTargetingApi",
     "time": "CcbTimeApi",
     "trade": "CcbTradeApi",
+    "training": "CcbTrainingApi",
     "types": "CcbTypesApi",
     "ui": "CcbUiApi",
     "units": "CcbUnitsApi",
@@ -195,6 +206,9 @@ def platform_sources() -> list[Path]:
         REPOSITORY_ROOT / "src/catalua_platform.cpp",
         REPOSITORY_ROOT / "src/catalua_platform_runtime.cpp",
         REPOSITORY_ROOT / "src/catalua_platform_world_content.cpp",
+        # Activity services are shared with the v5 game layer but installed
+        # directly into the Platform service table during bootstrap.
+        REPOSITORY_ROOT / "src/catalua_ui_activities.cpp",
     ]
 
 
@@ -278,18 +292,28 @@ PLATFORM_TABLE_CLASSES = {
     "bionics": "CcbPlatformBionicsApi",
     "content": "CcbPlatformContent",
     "dialogue_api": "CcbPlatformDialogueApi",
+    "dialogue_services": "CcbPlatformDialogueServiceApi",
     "environment": "CcbPlatformEnvironmentQueries",
+    "gameplay_options": "CcbPlatformGameplayOptionsApi",
     "inventory": "CcbPlatformInventoryApi",
+    "lore": "CcbPlatformLoreApi",
+    "math": "CcbPlatformMathApi",
     "mapgen": "CcbPlatformMapgenApi",
     "martial_arts": "CcbPlatformMartialArtsApi",
     "morale": "CcbPlatformMoraleApi",
     "mods": "CcbPlatformModQueries",
+    "native_events": "CcbPlatformNativeEventsApi",
+    "platform_messages": "CcbPlatformMessagesApi",
+    "platform_sound": "CcbPlatformSoundApi",
     "random": "CcbPlatformRandomApi",
     "recipes": "CcbPlatformRecipesApi",
     "runtime_api": "CcbPlatformRuntime",
     "scope": "CcbPlatformStateScope",
+    "snippets": "CcbPlatformSnippetsApi",
     "strings": "CcbPlatformStringPredicates",
     "tasks": "CcbPlatformTasks",
+    "text_services": "CcbPlatformTextApi",
+    "tileset": "CcbPlatformTilesetApi",
     "presentation": "CcbPlatformPresentation",
     "services": "CcbPlatformServices",
     "wounds": "CcbPlatformWoundsApi",
@@ -311,6 +335,7 @@ PLATFORM_SERVICE_FIELDS = {
     "coords",
     "crafting",
     "creatures",
+    "dialogue",
     "effects",
     "enums",
     "factions",
@@ -318,7 +343,9 @@ PLATFORM_SERVICE_FIELDS = {
     "gameplay",
     "handles",
     "hordes",
+    "interaction",
     "inventory",
+    "lore",
     "items",
     "mapgen",
     "martial_arts",
@@ -327,6 +354,7 @@ PLATFORM_SERVICE_FIELDS = {
     "morale",
     "mutations",
     "needs",
+    "native_events",
     "npcs",
     "overmap",
     "proficiencies",
@@ -338,10 +366,13 @@ PLATFORM_SERVICE_FIELDS = {
     "serde",
     "skills",
     "sound",
+    "snippets",
     "spawns",
     "spells",
     "statistics",
     "targeting",
+    "text",
+    "tileset",
     "time",
     "trade",
     "types",
@@ -362,6 +393,11 @@ def platform_source_methods() -> dict[str, set[str]]:
         contents = path.read_text(encoding="utf-8", errors="replace")
         for table, method in SET_FUNCTION.findall(contents):
             result[table].add(method)
+        # World-content aliases intentionally reuse one constructor and are
+        # installed by table assignment rather than a second set_function
+        # call.  Treat the alias as a registered public method as well.
+        if 'content["CityBuilding"] = content["OvermapSpecial"]' in contents:
+            result["content"].add("CityBuilding")
     unknown = sorted(
         set(result) - set(PLATFORM_TABLE_CLASSES) -
         PLATFORM_INTENTIONALLY_UNDECLARED_TABLES
@@ -452,6 +488,13 @@ def migration_content_methods(path: Path = MIGRATION_TOOL) -> set[str]:
         ]
         parameters = set(positional) | set(keyword_only)
         for variable in variables:
+            # ``render_generic_platform_content`` receives its builder from
+            # the closed ``PLATFORM_CONTENT_BUILDERS`` registry.  The value is
+            # intentionally data-driven, so a call-site literal walk cannot
+            # recover it without importing the migrator; the registry itself
+            # is checked by the generated content inventory gate.
+            if function.name == "render_generic_platform_content" and variable == "builder":
+                continue
             resolved: set[str] = set()
             bounded = True
             if variable in parameters:

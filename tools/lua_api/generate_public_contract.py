@@ -424,8 +424,8 @@ def parse_luals(path: Path = DECLARATIONS) -> dict[str, object]:
             ],
         }
 
-    if len(classes) != 286:
-        raise RuntimeError(f"expected 286 LuaLS classes, found {len(classes)}")
+    if len(classes) != 310:
+        raise RuntimeError(f"expected 310 LuaLS classes, found {len(classes)}")
     result = {"classes": classes, "functions": functions, "contents": contents}
     validate_confirmed_declaration_contracts(result)
     return result
@@ -462,8 +462,9 @@ def validate_confirmed_declaration_contracts(luals: dict[str, object]) -> None:
         raise RuntimeError("CcbCallbackMethodSpec.consuming must be boolean")
 
 
-def parse_table_paths() -> tuple[dict[str, set[str]], list[dict[str, object]]]:
+def parse_table_paths() -> tuple[dict[tuple[Path, str], set[str]], list[dict[str, object]]]:
     paths: dict[str, set[str]] = defaultdict(set)
+    source_paths: dict[tuple[Path, str], set[str]] = defaultdict(set)
     namespaces: dict[str, dict[str, object]] = {}
     assignments: list[tuple[str, str, str, Path, str, int]] = []
     named_pattern = re.compile(
@@ -480,6 +481,7 @@ def parse_table_paths() -> tuple[dict[str, set[str]], list[dict[str, object]]]:
         for match in named_pattern.finditer(contents):
             variable, public_name = match.groups()
             paths[variable].add(public_name)
+            source_paths[(path, variable)].add(public_name)
             namespaces.setdefault(
                 public_name,
                 {
@@ -522,11 +524,15 @@ def parse_table_paths() -> tuple[dict[str, set[str]], list[dict[str, object]]]:
             contents,
             offset,
         ) in assignments:
-            for container_path in sorted(paths.get(container, set())):
+            container_paths = source_paths.get((path, container), set())
+            if not container_paths:
+                container_paths = paths.get(container, set())
+            for container_path in sorted(container_paths):
                 public_path = f"{container_path}.{public_name}"
                 if public_path not in paths[variable]:
                     paths[variable].add(public_path)
                     changed = True
+                source_paths[(path, variable)].add(public_path)
                 namespaces.setdefault(
                     public_path,
                     {
@@ -542,16 +548,27 @@ def parse_table_paths() -> tuple[dict[str, set[str]], list[dict[str, object]]]:
                         ),
                     },
                 )
-    return paths, [namespaces[key] for key in sorted(namespaces)]
+    # Keep a global fallback for registrations made through a function
+    # parameter such as `game` or `npcs`, whose defining assignment lives in a
+    # different source file.  Source-local paths take precedence below.
+    for variable, public_paths in paths.items():
+        source_paths[(Path(), variable)].update(public_paths)
+    return source_paths, [namespaces[key] for key in sorted(namespaces)]
 
 
 def parse_set_functions(
-    luals: dict[str, object], table_paths: dict[str, set[str]]
+    luals: dict[str, object],
+    table_paths: dict[tuple[Path, str], set[str]],
 ) -> list[dict[str, object]]:
     declarations = luals["functions"]
     assert isinstance(declarations, dict)
     functions: list[dict[str, object]] = []
-    seen_registrations: set[tuple[str, str]] = set()
+    # Local C++ variable names are not globally unique: the NPC domain owns
+    # nested `missions`, `dialogue`, and service tables that intentionally
+    # reuse names from the top-level game API.  Reject duplicate registrations
+    # within one source file, while allowing distinct public namespaces to
+    # share the same table variable and method name.
+    seen_registrations: set[tuple[Path, str, str]] = set()
     pattern = re.compile(
         r"\b([A-Za-z_][A-Za-z0-9_]*)\.set_function\s*\(\s*\"([^\"]+)\""
     )
@@ -561,7 +578,7 @@ def parse_set_functions(
             table, name = match.groups()
             if table in INTENTIONALLY_UNDECLARED_TABLES:
                 continue
-            registration = (table, name)
+            registration = (path, table, name)
             if registration in seen_registrations:
                 raise RuntimeError(
                     f"duplicate native registration {table}.{name}")
@@ -578,7 +595,10 @@ def parse_set_functions(
                 )
             opening = contents.find("(", match.start())
             call_body, _ = extract_balanced(contents, opening)
-            public_paths = sorted(table_paths.get(table, set()))
+            public_paths = sorted(
+                table_paths.get((path, table), set()) or
+                table_paths.get((Path(), table), set())
+            )
             if not public_paths:
                 raise RuntimeError(
                     f"public native table {table} has no access path")
@@ -1082,8 +1102,8 @@ def parse_hooks() -> list[dict[str, object]]:
             }
         )
     hooks.sort(key=lambda entry: str(entry["id"]))
-    if len(hooks) != 54:
-        raise RuntimeError(f"expected 54 hooks, found {len(hooks)}")
+    if len(hooks) != 61:
+        raise RuntimeError(f"expected 61 hooks, found {len(hooks)}")
     return hooks
 
 

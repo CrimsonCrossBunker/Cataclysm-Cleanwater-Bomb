@@ -106,6 +106,11 @@ function ItemDefinition:flag(id) end
 ---@return ItemDefinition self
 function ItemDefinition:on_use(handler_id, label) end
 
+---@param handler_id string
+---@param label? string
+---@return ItemDefinition self
+function ItemDefinition:on_consume(handler_id, label) end
+
 ---@class RecipeDefinitionOptions
 ---@field id string Stable recipe id.
 ---@field result string Stable result item id.
@@ -191,6 +196,10 @@ function RecipeDefinition:proficiency(proficiency_id, options) end
 ---@param skill_level integer Required primary skill level.
 ---@return RecipeDefinition self
 function RecipeDefinition:book(item_id, skill_level) end
+
+---@param handler_id string
+---@return RecipeDefinition self
+function RecipeDefinition:on_complete(handler_id) end
 
 ---@class NestedRecipeCategoryDefinitionOptions
 ---@field id string Stable nested-category recipe id.
@@ -364,6 +373,10 @@ function ScenarioDefinition:flag(name) end
 ---@param achievement_id string Native achievement id required to unlock the scenario.
 ---@return ScenarioDefinition self
 function ScenarioDefinition:requirement(achievement_id) end
+
+---@param handler_id string
+---@return ScenarioDefinition self
+function ScenarioDefinition:on_start(handler_id) end
 
 ---@class VehicleColorPaletteDefinitionOptions
 ---@field id string Stable vehicle color palette id.
@@ -1000,6 +1013,9 @@ function MonsterDefinition:melee_damage(damage_type, amount, armor_penetration) 
 ---@param cooldown? number Optional finite non-negative cooldown override.
 ---@return MonsterDefinition self
 function MonsterDefinition:attack(attack_id, cooldown) end
+---@param handler_id string
+---@return MonsterDefinition self
+function MonsterDefinition:on_attack(handler_id) end
 ---@param set_id string Existing or same-transaction WeakpointSet id.
 ---@return MonsterDefinition self
 function MonsterDefinition:weakpoint_set(set_id) end
@@ -1033,6 +1049,9 @@ function MonsterDefinition:fear_trigger(trigger) end
 ---@param trigger 'STALK'|'PLAYER_WEAK'|'PLAYER_CLOSE'|'HOSTILE_SEEN'|'HURT'|'FIRE'|'FRIEND_DIED'|'FRIEND_ATTACKED'|'SOUND'|'PLAYER_NEAR_BABY'|'MATING_SEASON'|'BRIGHT_LIGHT'
 ---@return MonsterDefinition self
 function MonsterDefinition:placate_trigger(trigger) end
+---@param handler_id string
+---@return MonsterDefinition self
+function MonsterDefinition:on_death(handler_id) end
 
 ---@class MoraleTypeDefinitionOptions
 ---@field id string Stable morale-type id.
@@ -2042,6 +2061,9 @@ function TechniqueDefinition:attack_vector(attack_vector_id) end
 ---@param level integer Non-negative minimum skill level.
 ---@return TechniqueDefinition self
 function TechniqueDefinition:requires_skill(skill_id, level) end
+---@param handler_id string
+---@return TechniqueDefinition self
+function TechniqueDefinition:on_apply(handler_id) end
 
 ---@class MartialArtDefinitionOptions
 ---@field id string Stable martial-art style id.
@@ -2083,6 +2105,9 @@ function MartialArtDefinition:weapon(item_id) end
 ---@param category_id string Native weapon-category id usable with the style.
 ---@return MartialArtDefinition self
 function MartialArtDefinition:weapon_category(category_id) end
+---@param handler_id string
+---@return MartialArtDefinition self
+function MartialArtDefinition:on(handler_id) end
 
 ---@class TrapDefinitionOptions
 ---@field id string Stable trap id.
@@ -2119,6 +2144,9 @@ function TrapDefinition:flag(flag_id) end
 ---@param charges? integer Positive charges; defaults to 1.
 ---@return TrapDefinition self
 function TrapDefinition:drop(item_id, quantity, charges) end
+---@param handler_id string
+---@return TrapDefinition self
+function TrapDefinition:on_trigger(handler_id) end
 
 ---@class ConstructionDefinitionOptions
 ---@field id string Stable construction id.
@@ -2183,6 +2211,9 @@ local FurnitureDefinition = {}
 ---@param flag_id string Native furniture flag id.
 ---@return FurnitureDefinition self
 function FurnitureDefinition:flag(flag_id) end
+---@param handler_id string
+---@return FurnitureDefinition self
+function FurnitureDefinition:on_examine(handler_id) end
 
 ---@class TerrainDefinitionOptions
 ---@field id string Stable terrain id.
@@ -2210,6 +2241,9 @@ local TerrainDefinition = {}
 ---@param flag_id string Native terrain flag id.
 ---@return TerrainDefinition self
 function TerrainDefinition:flag(flag_id) end
+---@param handler_id string
+---@return TerrainDefinition self
+function TerrainDefinition:on_examine(handler_id) end
 
 ---@class GateDefinitionOptions
 ---@field id string Stable gate id; the matching terrain acts as the winch.
@@ -4161,6 +4195,412 @@ local VehiclePartDefinition = {}
 ---@field id string
 local VehicleDefinition = {}
 
+---@class BionicDefinition
+---@field activation_spell any
+---@field armor any
+---@field auto_deactivate any
+---@field available_upgrade any
+---@field cancel_mutation any
+---@field conflict_mutation any
+---@field enchantment any
+---@field encumbers any
+---@field environment_protection any
+---@field flag any
+---@field fuel any
+---@field give_mutation_when_removed any
+---@field id any
+---@field include_bionic any
+---@field installable_weapon_flag any
+---@field learn_spell any
+---@field martial_art any
+---@field occupies any
+---@field passive_item any
+---@field proficiency any
+---@field replace_bodypart any
+---@field toggled_item any
+local BionicDefinition = {}
+---@class ComputerAccessContext
+---@field access_denied any
+---@field alerts any
+---@field character any
+---@field message any
+---@field mission_id any
+---@field name any
+---@field position any
+---@field security any
+local ComputerAccessContext = {}
+---@param key string
+---@return any
+function ComputerAccessContext.get_value(key) end
+---@param key string
+---@return any
+function ComputerAccessContext.remove_value(key) end
+---@param key string
+---@param value any
+---@return any
+function ComputerAccessContext.set_value(key, value) end
+---@class EnchantmentDefinition
+---@field active_when any
+---@field bodypart_change any
+---@field custom any
+---@field effect any
+---@field encumbrance any
+---@field every any
+---@field hit_me any
+---@field hit_you any
+---@field id any
+---@field incoming_damage any
+---@field limb_score any
+---@field max_hp any
+---@field melee_damage any
+---@field mutation any
+---@field post_armor_damage any
+---@field skill any
+---@field value any
+---@field vision any
+local EnchantmentDefinition = {}
+---@class EventStatisticDefinition
+---@field id any
+local EventStatisticDefinition = {}
+---@class EventTransformationDefinition
+---@field derive any
+---@field drop any
+---@field id any
+---@field where_any any
+---@field where_equals any
+---@field where_gt any
+---@field where_gte any
+---@field where_lt any
+---@field where_lte any
+---@field where_statistic any
+local EventTransformationDefinition = {}
+---@class MathFunctionDefinition
+---@field arguments any
+---@field id any
+---@field returns any
+local MathFunctionDefinition = {}
+---@class MissionDefinition
+---@field complete_when any
+---@field deadline any
+---@field dialogue any
+---@field dynamic_deadline any
+---@field fail_with any
+---@field finish_with any
+---@field id any
+---@field origin any
+---@field place_when any
+---@field reward any
+---@field start_with any
+local MissionDefinition = {}
+---@class MutationDefinition
+---@field armor any
+---@field attack any
+---@field comfort any
+---@field decimal_value any
+---@field id any
+---@field integer_value any
+---@field personality any
+---@field reflex any
+---@field relationship any
+---@field transform any
+---@field variant any
+---@field vitamin_absorption any
+---@field wet_protection any
+local MutationDefinition = {}
+---@class PlantLifecycleDefinition
+---@field id any
+---@field on any
+local PlantLifecycleDefinition = {}
+---@class PostProcessGeneratorDefinition
+---@field id any
+---@field stage any
+local PostProcessGeneratorDefinition = {}
+---@class ProfessionDefinition
+---@field addiction any
+---@field cbm any
+---@field flag any
+---@field forbid_trait any
+---@field hobby any
+---@field id any
+---@field items any
+---@field martial_art any
+---@field martial_art_choice any
+---@field mission any
+---@field on_start any
+---@field pet any
+---@field proficiency any
+---@field recipe any
+---@field requirement any
+---@field skill any
+---@field spell any
+---@field trait any
+local ProfessionDefinition = {}
+---@class ProfessionItemBonusDefinition
+---@field id any
+---@field when any
+local ProfessionItemBonusDefinition = {}
+---@class ProfessionItemSubstitutionDefinition
+---@field id any
+---@field when any
+local ProfessionItemSubstitutionDefinition = {}
+---@class RelicProcgenDefinition
+---@field activated_spell any
+---@field charge any
+---@field id any
+---@field item any
+---@field on_hit_me any
+---@field on_hit_you any
+---@field passive_add any
+---@field passive_multiplier any
+---@field type any
+local RelicProcgenDefinition = {}
+---@class SpellDefinition
+---@field bodypart any
+---@field caster_when any
+---@field dynamic_stat any
+---@field extra_spell any
+---@field flag any
+---@field id any
+---@field ignore_species any
+---@field learn_spell any
+---@field lua_effect any
+---@field stat any
+---@field stat_range any
+---@field target any
+---@field target_monster any
+---@field target_species any
+---@field target_when any
+local SpellDefinition = {}
+---@class TerrainTransformDefinition
+---@field field any
+---@field furniture any
+---@field id any
+---@field terrain any
+---@field trap any
+local TerrainTransformDefinition = {}
+---@class VehiclePlacementDefinition
+---@field id any
+---@field location any
+local VehiclePlacementDefinition = {}
+---@class VehicleSpawnDefinition
+---@field builtin any
+---@field id any
+---@field vehicle any
+local VehicleSpawnDefinition = {}
+---@class WidgetDefinition
+---@field bodypart any
+---@field break_at any
+---@field child any
+---@field clause any
+---@field color any
+---@field custom_value any
+---@field default_clause any
+---@field flag any
+---@field id any
+local WidgetDefinition = {}
+---@param options CcbLuaValue
+---@return any
+function CcbPlatformContent.Bionic(options) end
+---@param options CcbLuaValue
+---@return any
+function CcbPlatformContent.Enchantment(options) end
+---@param options CcbLuaValue
+---@return any
+function CcbPlatformContent.EventStatistic(options) end
+---@param options CcbLuaValue
+---@return any
+function CcbPlatformContent.EventTransformation(options) end
+---@param options CcbLuaValue
+---@return any
+function CcbPlatformContent.MathFunction(options) end
+---@param options CcbLuaValue
+---@return any
+function CcbPlatformContent.Mission(options) end
+---@param options CcbLuaValue
+---@return any
+function CcbPlatformContent.Mutation(options) end
+---@param options CcbLuaValue
+---@return any
+function CcbPlatformContent.PlantLifecycle(options) end
+---@param options CcbLuaValue
+---@return any
+function CcbPlatformContent.PostProcessGenerator(options) end
+---@param options CcbLuaValue
+---@return any
+function CcbPlatformContent.Profession(options) end
+---@param options CcbLuaValue
+---@return any
+function CcbPlatformContent.ProfessionItemBonus(options) end
+---@param options CcbLuaValue
+---@return any
+function CcbPlatformContent.ProfessionItemSubstitution(options) end
+---@param options CcbLuaValue
+---@return any
+function CcbPlatformContent.RelicProcgen(options) end
+---@param options CcbLuaValue
+---@return any
+function CcbPlatformContent.Spell(options) end
+---@param options CcbLuaValue
+---@return any
+function CcbPlatformContent.TerrainTransform(options) end
+---@param options CcbLuaValue
+---@return any
+function CcbPlatformContent.VehiclePlacement(options) end
+---@param options CcbLuaValue
+---@return any
+function CcbPlatformContent.VehicleSpawn(options) end
+---@param options CcbLuaValue
+---@return any
+function CcbPlatformContent.Widget(options) end
+---@param id string
+---@return any
+function CcbPlatformContent.edit_bionic(id) end
+---@param id string
+---@return any
+function CcbPlatformContent.edit_enchantment(id) end
+---@param id string
+---@return any
+function CcbPlatformContent.edit_event_statistic(id) end
+---@param id string
+---@return any
+function CcbPlatformContent.edit_event_transformation(id) end
+---@param id string
+---@return any
+function CcbPlatformContent.edit_math_function(id) end
+---@param id string
+---@return any
+function CcbPlatformContent.edit_mission(id) end
+---@param id string
+---@return any
+function CcbPlatformContent.edit_mutation(id) end
+---@param id string
+---@return any
+function CcbPlatformContent.edit_post_process_generator(id) end
+---@param id string
+---@return any
+function CcbPlatformContent.edit_profession(id) end
+---@param id string
+---@return any
+function CcbPlatformContent.edit_profession_item_bonus(id) end
+---@param id string
+---@return any
+function CcbPlatformContent.edit_profession_item_substitution(id) end
+---@param id string
+---@return any
+function CcbPlatformContent.edit_relic_procgen(id) end
+---@param id string
+---@return any
+function CcbPlatformContent.edit_spell(id) end
+---@param id string
+---@return any
+function CcbPlatformContent.edit_terrain_transform(id) end
+---@param id string
+---@return any
+function CcbPlatformContent.edit_vehicle_placement(id) end
+---@param id string
+---@return any
+function CcbPlatformContent.edit_vehicle_spawn(id) end
+---@param id string
+---@return any
+function CcbPlatformContent.edit_widget(id) end
+---@param dimension string
+---@return any
+function CcbPlatformEnvironmentQueries.clear_saved_dimension(dimension) end
+---@class CcbPlatformGameplayOptionsApi
+local CcbPlatformGameplayOptionsApi = {}
+---@param id string
+---@return any
+function CcbPlatformGameplayOptionsApi.get(id) end
+---@param id string
+---@return any
+function CcbPlatformGameplayOptionsApi.has(id) end
+---@param id string
+---@return any
+function CcbPlatformGameplayOptionsApi.value(id) end
+---@class CcbPlatformLoreApi
+local CcbPlatformLoreApi = {}
+---@return any
+function CcbPlatformLoreApi.known_snippets() end
+---@param id string
+---@return any
+function CcbPlatformLoreApi.knows_snippet(id) end
+---@param id string
+---@return any
+function CcbPlatformLoreApi.remember_snippet(id) end
+---@class CcbPlatformNativeEventsApi
+local CcbPlatformNativeEventsApi = {}
+---@param type_name string
+---@param requested_args? table
+---@return any
+function CcbPlatformNativeEventsApi.emit(type_name, requested_args) end
+---@class CcbPlatformMessagesApi
+local CcbPlatformMessagesApi = {}
+---@param message string
+---@param type? string One of the native message severity names.
+---@return boolean
+function CcbPlatformMessagesApi.add(message, type) end
+---@param message string
+---@param type? string
+---@return any
+function CcbPlatformMessagesApi.add_from_outdoors(message, type) end
+---@param message string
+---@param type? string
+---@return any
+function CcbPlatformMessagesApi.add_if_audible(message, type) end
+
+---@class CcbPlatformDialogueServiceApi
+local CcbPlatformDialogueServiceApi = {}
+
+---@param topic string Existing native dialogue topic id.
+---@return boolean opened
+function CcbPlatformDialogueServiceApi.open_topic(topic) end
+---@class CcbPlatformSoundApi
+local CcbPlatformSoundApi = {}
+---@param id string
+---@param variant string
+---@param volume? integer
+---@return any
+function CcbPlatformSoundApi.play_from_outdoors(id, variant, volume) end
+---@param id string
+---@param variant string
+---@param volume? integer
+---@return any
+function CcbPlatformSoundApi.play_if_audible(id, variant, volume) end
+---@class CcbPlatformSnippetsApi
+local CcbPlatformSnippetsApi = {}
+---@param text string
+---@return any
+function CcbPlatformSnippetsApi.expand(text) end
+---@param id string
+---@return any
+function CcbPlatformSnippetsApi.get(id) end
+---@param id string
+---@return any
+function CcbPlatformSnippetsApi.has(id) end
+---@param category string
+---@return any
+function CcbPlatformSnippetsApi.has_category(category) end
+---@param category string
+---@return any
+function CcbPlatformSnippetsApi.random(category) end
+---@param category string
+---@return any
+function CcbPlatformSnippetsApi.random_named(category) end
+---@class CcbPlatformTextApi
+local CcbPlatformTextApi = {}
+---@param text string
+---@param alpha_handle GameHandle
+---@param beta_handle? GameHandle
+---@param item_id? string
+---@return any
+function CcbPlatformTextApi.expand_for(text, alpha_handle, beta_handle, item_id) end
+---@class CcbPlatformTilesetApi
+local CcbPlatformTilesetApi = {}
+---@return any
+function CcbPlatformTilesetApi.limits() end
+---@param descriptor table
+---@return any
+function CcbPlatformTilesetApi.register(descriptor) end
 ---@class CcbPlatformContent
 local CcbPlatformContent = {}
 
@@ -4711,6 +5151,10 @@ function CcbPlatformContent.ForestBiomeComponent(options) end
 ---@return CityDefinition
 function CcbPlatformContent.City(options) end
 
+---@param options CcbLuaValue
+---@return any
+function CcbPlatformContent.CityBuilding(options) end
+
 ---@param options FactionMissionDefinitionOptions
 ---@return FactionMissionDefinition
 function CcbPlatformContent.FactionMission(options) end
@@ -5199,6 +5643,21 @@ local CcbPlatformRuntime = {}
 ---@param callback fun(payload: any): any
 ---@param payload_version? integer
 function CcbPlatformRuntime.handler(id, callback, payload_version) end
+
+---Register one per-Character recurring policy. The effect handler runs only
+---when the Character-local due turn is reached; the interval handler runs on
+---initial enrollment and after every due effect and must return 1..31536000
+---integral turns. Due state is stored on each Character and survives save/load.
+---@param effect_handler string Registered handler receiving PlatformCharacterRecurringPayload.
+---@param interval_handler string Registered handler receiving PlatformCharacterRecurringPayload and returning integer turns.
+function CcbPlatformRuntime.character_recurring(effect_handler, interval_handler) end
+
+---@class PlatformCharacterRecurringPayload
+---@field character GameHandle Generation-safe Character handle.
+---@field first_schedule boolean True while initializing this Character's first due turn.
+---@field due_turn? integer Absolute due turn when an effect is running.
+---@field overdue_turns integer Non-negative lateness at invocation.
+
 ---@param event_name string `world_ready`, `before_save`, `after_save`, `shutdown`, or `game:<event>`.
 ---@param handler_id string
 function CcbPlatformRuntime.on(event_name, handler_id) end
@@ -5226,6 +5685,47 @@ function PlatformDialogueContext:valid() end
 
 ---@return string Native dialogue topic currently being rendered or selected.
 function PlatformDialogueContext:topic() end
+
+---@return string
+function PlatformDialogueContext:topic_item() end
+
+---@return boolean
+function PlatformDialogueContext:has_alpha() end
+
+---@return boolean
+function PlatformDialogueContext:has_beta() end
+
+---@return boolean
+function PlatformDialogueContext:by_radio() end
+
+---@return boolean
+function PlatformDialogueContext:has_reason() end
+
+---@return string
+function PlatformDialogueContext:reason() end
+
+---@param kind string
+---@param difficulty integer
+---@param skill? string
+---@return integer
+function PlatformDialogueContext:trial_chance(kind, difficulty, skill) end
+
+---@param kind string
+---@param difficulty integer
+---@param skill? string
+---@return boolean
+function PlatformDialogueContext:roll_trial(kind, difficulty, skill) end
+
+---@param text string
+---@param item_id? string
+---@return string
+function PlatformDialogueContext:expand_text(text, item_id) end
+
+---@return any
+function PlatformDialogueContext:alpha() end
+
+---@return any
+function PlatformDialogueContext:beta() end
 
 ---@param key string
 ---@return boolean|number|string|nil value
@@ -5377,6 +5877,46 @@ function CcbPlatformPresentation.choose(prompt, entries) end
 ---@return string|nil text
 function CcbPlatformPresentation.input_text(prompt, options) end
 
+---@class CcbPlatformInteractionApi
+local CcbPlatformInteractionApi = {}
+
+---@class CcbPlatformInteractionChoice
+---@field id string
+---@field label string
+---@field description? string
+---@field enabled? boolean
+---@field hotkey? string One ASCII letter or digit.
+
+---@class CcbPlatformInteractionChoiceOptions
+---@field title? string
+---@field allow_cancel? boolean
+---@field highlight_disabled? boolean
+
+---@class CcbPlatformInteractionChoiceResult
+---@field accepted boolean
+---@field cancelled boolean
+---@field index? integer One-based selected index.
+---@field id? string Selected entry id.
+
+---@param message string
+---@return boolean confirmed
+function CcbPlatformInteractionApi.confirm(message) end
+
+---@param title string
+---@param options? PlatformTextInputOptions
+---@return string|nil text
+function CcbPlatformInteractionApi.input_text(title, options) end
+
+---@param description string
+---@param default_value integer
+---@return integer|nil value
+function CcbPlatformInteractionApi.input_number(description, default_value) end
+
+---@param entries CcbPlatformInteractionChoice[]
+---@param options? CcbPlatformInteractionChoiceOptions
+---@return CcbPlatformInteractionChoiceResult
+function CcbPlatformInteractionApi.choose(entries, options) end
+
 ---@class CcbPlatformMapgenRegistrationOptions
 ---@field terrain_ids? string[] Concrete directional overmap-terrain ids to match.
 ---@field z_min? integer Minimum generated z level.
@@ -5448,6 +5988,11 @@ function CcbCharactersApi.prevent_death(character) end
 function CcbCharactersApi.recalculate_enchantments(character) end
 
 ---@class CcbPlatformServices
+---@field lore CcbPlatformLoreApi
+---@field native_events CcbPlatformNativeEventsApi
+---@field snippets CcbPlatformSnippetsApi
+---@field text CcbPlatformTextApi
+---@field tileset CcbPlatformTilesetApi
 ---@field achievements CcbPlatformAchievementsApi
 ---@field activities CcbPlatformActivitiesApi
 ---@field addictions CcbAddictionsApi
@@ -5463,11 +6008,13 @@ function CcbCharactersApi.recalculate_enchantments(character) end
 ---@field factions CcbFactionsApi
 ---@field followers CcbFollowersApi
 ---@field handles CcbHandlesApi Handles are bound to the exact Platform Mod runtime owner as well as its runtime/world generations.
+---@field interaction CcbPlatformInteractionApi
 ---@field hordes CcbHordesApi
 ---@field inventory CcbPlatformInventoryApi
 ---@field items CcbItemsApi
 ---@field martial_arts CcbPlatformMartialArtsApi
----@field messages CcbMessagesApi
+---@field messages CcbPlatformMessagesApi
+---@field dialogue CcbPlatformDialogueServiceApi
 ---@field missions CcbMissionsApi
 ---@field morale CcbPlatformMoraleApi
 ---@field mapgen CcbPlatformMapgenApi
@@ -5483,7 +6030,7 @@ function CcbCharactersApi.recalculate_enchantments(character) end
 ---@field registry CcbRegistryApi Read-only native definition registry.
 ---@field serde CcbSerdeApi
 ---@field skills CcbSkillsApi
----@field sound CcbSoundApi
+---@field sound CcbPlatformSoundApi
 ---@field spawns CcbSpawnsApi
 ---@field spells CcbSpellsApi
 ---@field statistics CcbStatisticsApi
@@ -5501,6 +6048,123 @@ function CcbCharactersApi.recalculate_enchantments(character) end
 ---@field zones CcbZonesApi
 ---@field gameplay CcbPlatformGameplayApi
 local CcbPlatformServices = {}
+---@param handle GameHandle
+---@param job string
+---@return any
+function CcbPlatformActivitiesApi.assign_npc_job(handle, job) end
+---@param character_handle GameHandle
+---@return any
+function CcbPlatformActivitiesApi.clear_backlog(character_handle) end
+---@param npc_handle GameHandle
+---@return any
+function CcbPlatformActivitiesApi.dismount(npc_handle) end
+---@param npc_handle GameHandle
+---@return any
+function CcbPlatformActivitiesApi.distribute_camp_food(npc_handle) end
+---@param character_handle GameHandle
+---@param item_handle GameHandle
+---@param quantity integer
+---@param placement? TripointCoord
+---@param force_ground? boolean
+---@return any
+function CcbPlatformActivitiesApi.drop_item(character_handle, item_handle, quantity, placement, force_ground) end
+---@param npc_handle GameHandle
+---@return any
+function CcbPlatformActivitiesApi.drop_nonfavorite_items(npc_handle) end
+---@param reason string
+---@return any
+function CcbPlatformActivitiesApi.offer_interruption(reason) end
+---@param message string
+---@return any
+function CcbPlatformActivitiesApi.offer_portal_storm_interruption(message) end
+---@param character GameHandle
+---@param position TripointCoord
+---@param extra_moves_per_item? integer
+---@param max_volume_ml? number
+---@param max_mass_grams? number
+---@return any
+function CcbPlatformActivitiesApi.pickup_from(character, position, extra_moves_per_item, max_volume_ml, max_mass_grams) end
+---@param character_handle GameHandle
+---@param item_handle GameHandle
+---@param quantity integer
+---@param autopickup? boolean
+---@return any
+function CcbPlatformActivitiesApi.pickup_item(character_handle, item_handle, quantity, autopickup) end
+---@param character_handle GameHandle
+---@param book_handle GameHandle
+---@param duration TimeDuration
+---@param ereader_handle? GameHandle
+---@param continuous? boolean
+---@param learner_handle? GameHandle
+---@return any
+function CcbPlatformActivitiesApi.read(character_handle, book_handle, duration, ereader_handle, continuous, learner_handle) end
+---@param character_handle GameHandle
+---@return any
+function CcbPlatformActivitiesApi.resume(character_handle) end
+---@param handle GameHandle
+---@return any
+function CcbPlatformActivitiesApi.revert_npc_job(handle) end
+---@param character_handle GameHandle
+---@param partner_handle GameHandle
+---@param duration TimeDuration
+---@return any
+function CcbPlatformActivitiesApi.socialize(character_handle, partner_handle, duration) end
+---@param teacher_handle GameHandle
+---@param trainee_handles table
+---@param subject_id GameId
+---@param duration TimeDuration
+---@return any
+function CcbPlatformActivitiesApi.start_training(teacher_handle, trainee_handles, subject_id, duration) end
+---@param character_handle GameHandle
+---@return any
+function CcbPlatformActivitiesApi.suspend(character_handle) end
+---@param character_handle GameHandle
+---@return any
+function CcbPlatformActivitiesApi.target_practice(character_handle) end
+---@param character_handle GameHandle
+---@param npc_handle GameHandle
+---@param duration TimeDuration
+---@return any
+function CcbPlatformActivitiesApi.wait_for_npc(character_handle, npc_handle, duration) end
+---@param descriptor table
+---@return any
+function CcbPlatformMapgenApi.define(descriptor) end
+---@return any
+function CcbPlatformMapgenApi.limits() end
+---@param descriptor table
+---@return any
+function CcbPlatformMapgenApi.register_palette(descriptor) end
+---@param id string
+---@return any
+function CcbPlatformModQueries.load_order(id) end
+---@param interval_turns integer
+---@param handler_id string
+---@param payload? table
+---@param payload_version? integer
+---@param scope? string
+---@return any
+function CcbPlatformTasks.every(interval_turns, handler_id, payload, payload_version, scope) end
+---@param id integer
+---@return any
+function CcbPlatformTasks.get(id) end
+---@param handler_id? string
+---@param scope? string
+---@param requested_limit? integer
+---@return any
+function CcbPlatformTasks.list(handler_id, scope, requested_limit) end
+---@param handler_id string
+---@param scope? string
+---@return any
+function CcbPlatformTasks.next(handler_id, scope) end
+---@param message string
+---@return any
+function CcbPlatformPresentation.notice_any_key(message) end
+---@param message string
+---@return any
+function CcbPlatformPresentation.notice_large(message) end
+---@param message string
+---@return any
+function CcbPlatformPresentation.notice_top(message) end
 
 ---@class CcbPlatformInventoryApi: CcbInventoryApi
 local CcbPlatformInventoryApi = {}
@@ -5840,8 +6504,29 @@ function CcbPlatformEnvironmentQueries.safe_mode_dangerous(direction) end
 ---@class CcbPlatformGameplayApi
 ---@field strings CcbPlatformStringPredicates
 ---@field mods CcbPlatformModQueries
+---@field math CcbPlatformMathApi
 ---@field environment CcbPlatformEnvironmentQueries
+---@field options CcbPlatformGameplayOptionsApi
 local CcbPlatformGameplayApi = {}
+
+---@class CcbPlatformMathApi
+local CcbPlatformMathApi = {}
+
+---Evaluate a native gameplay expression against the supplied actor and
+---detached callback context.  This is a domain expression service, not an EOC
+---runner; it returns a finite number and follows native variable semantics.
+---@param expression string Native math expression, at most 8192 bytes.
+---@param actor? GameHandle Character/creature used for u_/npc_ variables.
+---@param context? table<string, boolean|number|string|TripointCoord>
+---@return CcbResult result `value` is the finite numeric result.
+function CcbPlatformMathApi.evaluate(expression, actor, context) end
+
+---Evaluate and apply a native assignment expression against an active callback.
+---@param expression string Native math assignment/expression, at most 8192 bytes.
+---@param actor? GameHandle Character/creature used for u_/npc_ variables.
+---@param context? table<string, boolean|number|string|TripointCoord>
+---@return CcbResult result `value` is the finite numeric result.
+function CcbPlatformMathApi.apply(expression, actor, context) end
 
 ---@param text string
 function CcbPlatformServices.message(text) end

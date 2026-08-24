@@ -58,15 +58,15 @@ class PublicContractGeneratorTest(unittest.TestCase):
             section_counts(self.contract),
             {
                 "modules": 3,
-                "namespaces": 71,
-                "classes": 286,
-                "functions": 536,
-                "methods": 162,
+                "namespaces": 84,
+                "classes": 310,
+                "functions": 784,
+                "methods": 195,
                 "properties": 51,
                 "operators": 47,
                 "enums": 26,
                 "events": 113,
-                "hooks": 54,
+                "hooks": 61,
                 "callbacks": 38,
                 "capabilities": 17,
                 "manifest_fields": 6,
@@ -77,9 +77,18 @@ class PublicContractGeneratorTest(unittest.TestCase):
             242,
         )
 
+    def test_same_named_nested_tables_keep_distinct_public_paths(self) -> None:
+        ids = {
+            entry["id"]
+            for entry in self.contract["functions"]
+            if entry["id"].endswith(".missions.select")
+        }
+        self.assertIn("game.missions.select", ids)
+        self.assertIn("game.npcs.missions.select", ids)
+
     def test_inventory_coverage_is_exactly_complete(self) -> None:
-        self.assertEqual(self.coverage["public_symbols"], 3012)
-        self.assertEqual(self.coverage["documented_symbols"], 3012)
+        self.assertEqual(self.coverage["public_symbols"], 3396)
+        self.assertEqual(self.coverage["documented_symbols"], 3396)
         self.assertEqual(
             self.coverage["undocumented_symbols"],
             {"count": 0, "ids": []},
