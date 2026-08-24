@@ -868,7 +868,7 @@ sol::table resolve_variable(
 }
 
 sol::table set_resolved_variable(
-    sol::this_state lua, const sol::optional<sol::table> &context,
+    sol::this_state lua, sol::optional<sol::table> context,
     const sol::optional<game_handle> &actor, const std::string &scope,
     const std::string &key, const sol::object &requested,
     const game_handle_runtime &runtime_generation,

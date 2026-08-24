@@ -31,6 +31,7 @@
 #include "field_type.h"
 #include "game.h"
 #include "item.h"
+#include "item_category.h"
 #include "item_location.h"
 #include "item_group.h"
 #include "line.h"
@@ -205,19 +206,20 @@ bool map_item_matches_filter( const item &entry, const sol::table &descriptor )
     } ) ) {
         return false;
     }
-    for( const std::string &key : { "uses_energy", "is_chargeable" } ) {
+    for( const char *key : { "uses_energy", "is_chargeable" } ) {
         const sol::object raw = descriptor.raw_get<sol::object>( key );
         if( raw.valid() && raw.get_type() != sol::type::nil ) {
             if( !raw.is<bool>() ) {
                 throw std::invalid_argument( "game.world.items_nearby filter booleans are required" );
             }
-            const bool actual = key == "uses_energy" ? entry.uses_energy() : entry.is_chargeable();
+            const bool actual = std::string_view( key ) == "uses_energy" ?
+                                entry.uses_energy() : entry.is_chargeable();
             if( actual != raw.as<bool>() ) {
                 return false;
             }
         }
     }
-    for( const std::string &key : { "worn_only", "wielded_only", "held_only" } ) {
+    for( const char *key : { "worn_only", "wielded_only", "held_only" } ) {
         const sol::object raw = descriptor.raw_get<sol::object>( key );
         if( raw.valid() && raw.get_type() != sol::type::nil ) {
             if( !raw.is<bool>() ) {
@@ -3111,14 +3113,18 @@ void install_world_api(
     } );
     world.set_function(
         "points_nearby",
-        [require_read](
-            sol::this_state lua_state,
-            const script_tripoint_coord & origin,
-    const sol::optional<sol::table> &options ) {
-        require_read();
-        return world_points_nearby(
-                   lua_state, origin, options );
-    } );
+        std::function<sol::table(
+            sol::this_state,
+            const script_tripoint_coord &,
+            const sol::optional<sol::table> &)>(
+                [require_read](
+                    sol::this_state lua_state,
+                    const script_tripoint_coord & origin,
+            const sol::optional<sol::table> &options ) {
+                require_read();
+                return world_points_nearby(
+                           lua_state, origin, options );
+            } ) );
     world.set_function(
         "vehicles",
         [current_runtime_generation,
