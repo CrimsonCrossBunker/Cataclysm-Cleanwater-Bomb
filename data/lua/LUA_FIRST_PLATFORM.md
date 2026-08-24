@@ -325,13 +325,16 @@ combat-hook failure recorded by earlier stash-based runs does not reproduce
 in the clean build, so the recorded current gate is green.
 
 The exact replacement ledger contains 775 dispositions; its generated summary
-is the authoritative count.  At the 2026-08-19 regeneration the split is 67
-implemented_verified, 14 bounded_implemented_verified, 0
-implemented_unverified, 468 bounded_implemented_unverified, 179
-primitive_available_unverified, 29 planned, 0 private_adapter, and 18
-reviewed_not_applicable.  A same-day audit retired legacy-name-only
-promotions whose migrator still emits TODOs; those selectors now appear as
-primitive/planned instead of overstating parity.  The whole-selector verified catalogs are anatomy,
+is the authoritative count.  At the 2026-08-23 regeneration the split is 67
+implemented_verified, 16 bounded_implemented_verified, 22
+implemented_unverified, 630 bounded_implemented_unverified, 22
+primitive_available_unverified, 0 planned, 0 private_adapter, and 18
+reviewed_not_applicable.  The latest EOC sprint added bounded, fail-closed
+renderers for proven actor combat actions, inventory consumption, map/field
+mutations, mapgen/reveal/location scheduling, overmap predicates, NPC policy
+updates, sound emission, talker-variable writes, and literal spawn requests.
+Selectors still marked primitive have native building blocks but no selector-level
+claim; unsupported shapes continue to emit explicit TODOs.  The whole-selector verified catalogs are anatomy,
 attack vectors, bash-damage profiles, butchery requirements, connect groups,
 construction categories and groups, damage-info ordering, disease types,
 dreams, field emissions, fault groups, gates, harvest-drop types, the global
@@ -345,12 +348,11 @@ vehicle-part categories and locations, weapon categories, ammunition types,
 and the checked migration and blacklist catalogs.  Bounded verified selectors
 whose exercised shapes have whole-registry parity are item categories, loot
 zones, clothing modifications, damage types, explosion lights, faults, JSON
-flags, mood faces, morale types, movement modes, recipe groups, scenarios,
-start locations, and tool qualities.  No selectors are currently classified
-as implemented-but-unverified; the remaining non-verified work is represented
-by bounded slices or explicit planned targets.  This remains far short of complete
-static-domain coverage: 29 selectors remain planned, and field-level parity
-work continues.  Character-state migration now has bounded exact-part wound
+  flags, mood faces, morale types, movement modes, recipe groups, scenarios,
+  start locations, and tool qualities.  The remaining non-verified work is
+  represented by bounded slices or primitive building blocks; no selector is
+  currently planned.  This remains short of complete static-domain and EOC
+  parity: field-level and semantic parity work continues.  Character-state migration now has bounded exact-part wound
 and proven-actor variable slices; dynamic and legacy-fallback shapes remain
 explicit TODOs.  The
 hit range is deliberately a replace-only singleton because it configures one
@@ -433,6 +435,15 @@ data and emits explicit rewrites for all legacy behaviour.
 Scores are native id-to-event-statistic definitions with an optional display
 format.  Lua authors reference the statistic by stable id and do not construct
 or pass a legacy score object.
+
+Event transformations and statistics are also native transactional definitions.
+`EventTransformation` composes an event source with typed derived fields,
+literal/equality-list/statistic constraints, and dropped fields; `EventStatistic`
+selects count or a typed field aggregate over an event source.  The registrar
+validates event enums, field-transform signatures, variant types, duplicate
+constraints, and cross-definition references before finalization.  Existing
+JSON statistics can be lowered to these builders without retaining a JSON
+loader or EOC runner.
 
 Mutation-overlay ordering is a native engine-wide singleton composed with
 `OverlayOrder:mutation(id, order)`.  Authors work with one stable mutation id
@@ -641,11 +652,13 @@ creator/migrator 单元套件 86 个用例全部通过。2026-08-14 干净重编
 migrated-core parity 门禁；早前基于 stash 的构建记录的 `landed_technique` 战斗
 Hook 失败在干净构建中不再复现，当前记录的门禁为全绿。
 
-账本当前（2026-08-19 重新生成）的分布为 67 项 implemented_verified、14 项
-bounded_implemented_verified、0 项 implemented_unverified、468 项
-bounded_implemented_unverified、179 项 primitive_available_unverified、29 项
-planned 与 18 项 reviewed_not_applicable。同日的真实性审计撤回了仍由迁移器输出 TODO
-的“仅按旧名称晋级”条目；这些 selector 现在显示为 primitive/planned，不再夸大 parity。
+账本当前（2026-08-23 重新生成）的分布为 67 项 implemented_verified、16 项
+ bounded_implemented_verified、22 项 implemented_unverified、630 项
+ bounded_implemented_unverified、22 项 primitive_available_unverified、0 项
+planned 与 18 项 reviewed_not_applicable。最新 EOC 冲刺加入了已证明 actor 的战斗动作、
+物品消耗、地图/字段变更、mapgen/reveal/位置调度、大地图谓词、NPC 策略、声音、talker
+变量写入和字面量 spawn 的 fail-closed 有界迁移器；primitive 只表示已有原语，不表示
+selector 级 parity，未支持形状继续输出显式 TODO。
 完整 selector 已验证的目录包括解剖、攻击
 向量、bash 伤害配置、屠宰需求、连接组、建造分类与建造组、伤害信息显示顺序、疾病类型、
 梦境、字段排放、故障组、大门、采收掉落类型、全局命中距离配置、物品动作、肢体评分、
@@ -654,9 +667,9 @@ planned 与 18 项 reviewed_not_applicable。同日的真实性审计撤回了�
 怪物物种、语音池、速度描述、子身体部位、载具调色板、载具组、载具部件分类与位置、
 武器分类、弹药类型，以及受检的迁移与黑名单目录。已验证有界形状的 selector 包括物品
 分类、战利品区域、服装改造、伤害类型、爆炸光效、故障、JSON flag、心情表情、士气类型、
-移动模式、配方组、场景、起始位置与工具质量。当前没有 implemented-but-unverified selector；
-其余非验证工作都明确标为 bounded 切片、primitive 或 planned 目标。它仍远未达到静态内容全面覆盖：29 个 selector 仍处于 planned，
-逐字段等价工作仍在继续。角色状态迁移已加入精确部位伤口与已证明 actor 的变量有界切片；
+移动模式、配方组、场景、起始位置与工具质量。其余非验证工作都明确标为 bounded 切片或
+primitive，当前没有 planned selector；这仍未达到静态内容与 EOC 的完整 parity，逐字段和
+语义等价工作仍在继续。角色状态迁移已加入精确部位伤口与已证明 actor 的变量有界切片；
 动态值与 legacy 回退形状仍写入显式 TODO。命中距离配置刻意只允许显式
 `replace`：它是一张引擎全局表，不是假装拥有普通对象 ID 的目录。服装数值使用可组合的
 厚度/覆盖率缩放维度，而不是公开旧 JSON 对象形状。大地图视野配置使用有序的 `appearance` 与
@@ -796,6 +809,7 @@ content layers: `ToolQuality`, `SkillDisplay`, `Skill`, `Vitamin`, `JsonFlag`,
 `ProfessionGroup`, `MapExtraCollection`, `VehicleGroup`, `FaultGroup`,
 `ExplosionLight`, `AmmoEffect`, `AddictionType`, `CharacterModifier`,
 `StartLocation`, `ClimbingAid`, `WeatherType`, `Score`, `ButcheryRequirement`, `ItemAction`, `Scenario`, `VehicleColorPalette`, `MonsterGroup`, `OvermapConnection`,
+`EventTransformation`, `EventStatistic`,
 `OverlayOrder`, `ZoneType`, `SpeechPool`, `EndScreen`, `ActivityType`,
 `HelpTopic`, `SnippetCategory`, `Playlist`, `NestedRecipeCategory`,
 `SoundEffect`, `SoundEffectPreload`, `Technique`, `MartialArt`, `Trap`,
@@ -2149,14 +2163,31 @@ partial with explicit TODOs rather than invalid Lua calls.  The generated code
 uses typed coordinate arithmetic, Character variables, and the native city and
 environment services; ordinary Lua remains responsible for composing richer
 policies.
+The current EOC sprint extends the same boundary to high-value effects.  Literal
+proven combat actions (`attack`, `ranged_attack`, `knockback`, `explosion`,
+`emit`, `cast_spell`, `die`, and `prevent_death`) compose
+`services.characters`; charge-aware `consume_item`/`consume_item_sum` use
+`services.inventory`; radius-zero field/terrain/furniture changes use
+`services.world`; mapgen updates, reveal, revert/copy scheduling, and bounded
+radius transforms use the typed world/overmap services.  The batch also covers
+NPC class/faction/policy mutations, mutation purifiability/category removal,
+sound emission, talker-variable writes, category spawn-rate updates, weapon
+drop, literal spawn requests, overmap location/proximity predicates, ally/role
+queries, visibility, and service checks.  Each renderer requires a proven
+alpha/beta actor and finite literal options; interactive selectors, dynamic
+variables, nearby-inventory semantics, and unsupported target forms stay
+explicit TODOs rather than becoming accidental selector parity.
 NPC 导航的第一层原生组合面也已开放：
 `ccb.services.npcs.set_goal(npc_handle, overmap_position)` 只接受绝对
 overmap-terrain 坐标，复用 NPC 原生寻路参数，成功后设置 travelling mission、清除 guard
 post 并返回路径长度；不可达目标会清除旧 goal 并返回 `accepted = false`。
 `ccb.services.npcs.set_guard_position(npc_handle, map_position)` 则写入持久 guard post，
 要求绝对 map-square 坐标并返回幂等变更结果。两个 API 都只接受 NPC 句柄，写操作受
-Platform callback 与 `game.write` 权限保护；旧的 `om_terrain`/`om_special` mission-target
-解析、`goto_location` 工作流以及 guard 变量/`unique_id` 作用域仍不自动迁移。
+Platform callback 与 `game.write` 权限保护。无参数 `goto_location` 现在由迁移器输出普通
+Lua 工作流：查询 `destinations`、构造 `ccb.presentation.choose` 选项、调用
+`plan_travel` 预览并在确认后调用 `set_goal`；字面量 `om_terrain` 与 `om_special` 目标
+可通过有界 `services.overmap.search` 解析，复杂 mission-target、动态变量/`unique_id`
+作用域仍明确保留为其他 selector 的迁移边界。
 
 Rain wetness, direct damage, and specialized activity-actor construction remain
 planned native domains because current Character/item primitives do not carry
@@ -2383,11 +2414,25 @@ global/context 变量和未证明目标作用域仍输出 TODO。
 维度名写入与视线条件仍按各自的有界规则处理；同一角色的两个字面量位置变量和
 合法 `ter_furn_transform` ID 现在还可组合 `services.world.transform_line`，但仅限当前
 已加载地图内的有限线段，不会生成无效 Lua 调用。
-淋雨湿润、直接伤害和专用 activity actor 构造仍是 planned 原生领域，因为当前
-Character/物品原语没有保留它们的完整副作用。NPC 导航现在提供第一层原生组合面：
+当前 EOC 冲刺沿用同一边界补齐高价值 effect：已证明 actor 的
+`attack`/`ranged_attack`/`knockback`/`explosion`/`emit`/`cast_spell`/`die`/
+`prevent_death` 组合 `services.characters`；带 charge 语义的物品消耗组合
+`services.inventory`；半径为零的字段、地形、家具变更组合 `services.world`；
+mapgen、揭示、位置回滚/复制调度和有限半径变换使用类型化 world/overmap service。
+同时覆盖 NPC 阵营/职业/策略、突变可净化性与分类移除、声音、talker 变量、物品分类
+spawn-rate、武器丢弃、字面量 spawn，以及大地图位置/邻近、盟友/角色、可见性和 service
+谓词。新增的坐标/交互批次还把同作用域 `u_val`/`npc_val` 位置变量算术、玩家 tile/OMT
+选择，以及无条件玩家/NPC 邻接高亮接到 `services.variables` 与 `services.targeting`；只有
+actor、坐标来源、写回目标和提示边界都能证明时才生成调用。所有 renderer 都要求已证明
+alpha/beta actor 与有限字面量；交互选择、动态变量、
+周边物品栏语义和未支持 target 仍明确输出 TODO，不把原语误报为 selector parity。
+淋雨湿润、直接伤害和专用 activity actor 构造仍是未完成的 primitive 领域，因为当前
+Character/物品原语没有保留它们的完整副作用；它们不再伪装成 planned selector。NPC 导航现在提供第一层原生组合面：
 `ccb.services.npcs.set_goal` 复用 NPC overmap 寻路并设置 travelling mission，
-`set_guard_position` 写入持久 guard post；两者都要求类型化绝对坐标和 NPC 句柄，但旧
-mission-target/guard 变量解析仍不自动迁移。通用生物传送现在提供一个有界原生原语
+`set_guard_position` 写入持久 guard post；两者都要求类型化绝对坐标和 NPC 句柄。无参数
+`goto_location` 的迁移器输出 `destinations` 查询、Lua 选择、`plan_travel` 预览和确认后
+`set_goal` 的普通控制流；字面量 `om_terrain`/`om_special` 目标也可由
+`services.overmap.search` 有界解析，复杂 mission-target/guard 变量解析仍不自动迁移。通用生物传送现在提供一个有界原生原语
 `ccb.services.relocation.creature_at(handle, position, options?)`：接受代际安全的生物
 句柄和绝对 map-square `TripointCoord`，复用原生安全碰撞、维度锚、跨地图加载和 teleglow
 规则，并按同样偏移更新 Character 携带的 cable link 物品。`safe`、`force`、`force_safe`
@@ -2415,6 +2460,11 @@ primitive-only 或 planned。账本 target 只描述领域归属，不能证明�
 以及宽泛物品栏/地图调整在对应的类型化 service 和 actor 契约出现前都只生成明确 TODO；已有
 有界字面量物品激活/故障切片会生成对应 typed service 调用。迁移测试会审计完整生成的
 Lua 骨架中的 `services.*` 调用；不支持的形状 fail-closed，不会生成看似合理但实际不存在的 API。
+The 2026-08-23 coordinate/targeting slice also lowers same-scope `u_val`/`npc_val`
+location arithmetic, avatar tile/OMT queries, and unconditional avatar/NPC adjacent highlighting
+through `services.variables` and `services.targeting`. It emits those calls only when actor
+provenance, coordinate origin, write-back scope, and prompt bounds are explicit; dynamic scopes,
+candidate predicates, false-EOC branches, and nested searches remain TODOs.
 The extractor applies the same executable-output invariant to the remaining
 EOC effect families.  A bounded named NPC activity is emitted only as
 `activities.assign_timed` with a typed `time.duration` value; it never passes a

@@ -113,6 +113,55 @@ Some commands require platform dependencies and can be expensive.  Report
 exactly what ran, what was skipped, and why.  Never claim a check passed when
 it was not executed.
 
+## Long-task execution efficiency / 长任务执行效率
+
+Treat context, command output, and repeated validation as limited resources on
+large or multi-turn work.  These rules apply across C++, Java, Lua, JSON,
+Android, tools, and documentation:
+
+- **Bounded context / 有界上下文:** Start from the nearest `AGENTS.md`, the
+  project/test maps, changed-file names, and exact symbols or tests.  On
+  continuation, do not reread whole threads, full diffs, generated inventories,
+  logs, or unchanged completed files. / 从最近的 `AGENTS.md`、项目/测试映射、
+  变更文件名和精确符号或测试开始；续接时不得重读完整聊天、完整 diff、生成清单、
+  日志或未变化的已完成文件。
+- **Indexed large-file access / 大文件索引式读取:** Locate definitions,
+  callers, registrations, and tests with `rg`, then read and patch narrow
+  windows.  Split a large file only at a real responsibility boundary, not
+  merely to make it easier for an agent to read. / 先用 `rg` 定位定义、调用、
+  注册和测试，再读取及修改小窗口；只有存在真实职责边界时才拆分大文件。
+- **One coherent batch / 单一完整批次:** Finish one subsystem or domain batch
+  at a time, including its implementation, declarations/contracts, and test
+  source.  Inspect one authoritative lifecycle or registration point and one
+  representative caller/data shape before broad edits. / 每次完成一个完整子系统或
+  领域批次，并同步实现、声明/契约和测试源码；批量修改前只检查一个权威生命周期或
+  注册点及一个代表性调用或数据形状。
+- **Checkpoint, do not reconstruct / 记录断点，不重建历史:** For unfinished
+  multi-turn work, keep a compact local checkpoint containing the current
+  batch, closed work, changed files, last checks, unresolved risk, and next
+  exact search.  Resume from it after context compression; do not reconstruct
+  the task from chat history. / 未完成的多轮任务只保存当前批次、已完成工作、修改文件、
+  最近检查、未解决风险和下一条精确搜索；上下文压缩后从断点继续，不从聊天历史重建。
+- **Cache evidence / 缓存验证证据:** Reuse a passing check while its relevant
+  inputs are unchanged.  Run cheap syntax, formatting, and focused tests in the
+  edit loop; reserve builds, full data loads, broad suites, and generated-file
+  refreshes for the applicable acceptance gate. / 相关输入未变化时复用已通过的检查；
+  编辑循环只运行廉价语法、格式和聚焦测试，把编译、完整数据加载、宽测试和生成文件
+  刷新留到相应验收门。
+- **Bounded output / 有界输出:** Limit search and command output.  Report
+  counts, exit status, elapsed time, and the relevant error excerpt instead of
+  pasting full reports, generated files, or build logs into task context. /
+  限制搜索和命令输出，只记录计数、退出状态、耗时及相关错误片段，不把完整报告、
+  生成文件或构建日志放入任务上下文。
+- **One failure loop / 单次失败闭环:** On failure, collect one focused
+  diagnostic, fix the root cause, and return to the same gate.  Do not restart
+  earlier broad scans or use a full suite as a probe. / 失败时只收集一次聚焦诊断，
+  修复根因后返回同一验收门；不得重启之前的宽扫描或用完整套件探测问题。
+- **Defer non-evidence churn / 推迟无验证价值的工作:** Keep unrelated history
+  rewriting, PR description changes, generated progress prose, and repeated
+  unchanged statistics outside the implementation loop. / 实现循环中不做无关历史
+  重写、PR 描述修改、进度文案生成或重复统计未变化的数据。
+
 ## Pull requests and documentation impact / PR 与文档影响
 
 - Every PR names a Responsible human.  AI-tool disclosure is not required.
