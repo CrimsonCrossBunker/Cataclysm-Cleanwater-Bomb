@@ -2906,6 +2906,7 @@ Unless specified as optional, the following fields are mandatory for parts with 
 #### The following optional fields are specific to CARGO parts.
 ```jsonc
 "size": "400 L",              // for parts with "CARGO" flag the capacity in liters
+"cargo_passable_size": "200 L", // (Optional) When `CARGO_PASSABLE_BY_STORED` is present, part becomes impassable if stored volume exceeds this value (must be < `size`). Cramped check uses this value instead of `size`. Without the flag, cramped check uses `max(cargo_passable_size, size)`.
 "cargo_weight_modifier": 33,  // (Optional, default = 100) Multiplies cargo weight by this percentage.
 "cargo_spoil_multiplier": 50, // (Optional, default = 100) Multiplies the spoilage rate of items
                               // stored in this part by this percentage.  0 preserves indefinitely.
