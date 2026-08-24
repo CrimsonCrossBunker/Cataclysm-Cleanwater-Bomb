@@ -1,18 +1,25 @@
+#include <input_enums.h>
 #include <array>
+#include <cstdio>
+#include <fstream>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <set>
 #include <string>
 #include <vector>
 
+#include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
 #include "creature_tracker.h"
 #include "enums.h"
 #include "game.h"
+#include "input_replay.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
@@ -85,6 +92,47 @@ static void clear_game_and_set_ramp( const int transit_x, bool use_ramp, bool up
     }
     here.invalidate_map_cache( 0 );
     here.build_map_cache( 0, true );
+}
+
+TEST_CASE( "vehicle_grab_releases_missing_vehicle_after_stairs", "[vehicle][stairs]" )
+{
+    clear_map_without_vision();
+    build_test_map( ter_id( "t_floor" ) );
+
+    map &here = get_map();
+    avatar &player_character = get_avatar();
+    const tripoint_bub_ms test_origin( 60, 60, 0 );
+    player_character.setpos( here, test_origin );
+    here.ter_set( test_origin, ter_id( "t_stairs_up" ) );
+    here.ter_set( test_origin + tripoint::above, ter_id( "t_stairs_down" ) );
+    here.invalidate_map_cache( 0 );
+    here.build_map_cache( 0, true );
+
+    // Simulate a vehicle that became unavailable while the map changed z-levels.
+    player_character.grab( object_type::VEHICLE, tripoint_rel_ms::east );
+    REQUIRE( player_character.get_grab_type() == object_type::VEHICLE );
+
+    const std::string replay_path = "vehicle_stairs_grab_replay.txt";
+    const on_out_of_scope cleanup( [&]() {
+        input_replay::finish();
+        const int rc = std::remove( replay_path.c_str() );
+        ( void )rc;
+    } );
+    {
+        std::ofstream replay( replay_path );
+        REQUIRE( replay.good() );
+        replay << "CATA_REPLAY 1\n"
+               << "SEED 0\n"
+               << "EV " << static_cast<int>( input_event_t::keyboard_char )
+               << " 0 1 " << static_cast<int>( 'l' ) << " 0 0 - -\n";
+    }
+    REQUIRE( input_replay::begin_replay( replay_path ) );
+
+    g->vertical_move( 1, false );
+
+    CHECK( input_replay::replay_remaining() == 0 );
+    CHECK( player_character.get_grab_type() == object_type::NONE );
+    CHECK( player_character.grab_point == tripoint_rel_ms::zero );
 }
 
 // Algorithm goes as follows:
