@@ -2519,6 +2519,7 @@
     "item": "frame_wood",
     "location": "center",
     "size": "40 L",
+    "cargo_passable_size": "100 L",
     "requirements": {
       "install": { "skills": [ [ "mechanics", 1 ] ], "time": "30 m", "using": [ [ "vehicle_nail_install", 1 ] ] },
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "15 m", "using": [ [ "vehicle_nail_removal", 1 ] ] },
