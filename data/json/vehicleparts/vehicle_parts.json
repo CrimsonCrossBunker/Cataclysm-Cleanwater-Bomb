@@ -2210,7 +2210,8 @@
     "categories": [ "cargo" ],
     "broken_color": "dark_gray",
     "durability": 250,
-    "size": "500 L",
+    "size": "1000 L",
+    "cargo_passable_size": "500 L",
     "//": "Based roughly on a quarter of a 2 m x 1.2 m pickup truck bed, assuming a reasonable amount of piling up (about 80 cm, ie. sticking up around 20 cm over the sides if really stacked).  Could definitely use more subtypes.",
     "//1": "240 cm weld to install, 60 cm per damage quadrant to repair",
     "item": "cargo_rack",
@@ -2228,7 +2229,7 @@
       },
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "20 m", "using": [ [ "repair_welding_standard", 12 ] ] }
     },
-    "flags": [ "BOARDABLE", "CARGO", "COVERED", "HUGE_OK", "FURNITURE_TIEDOWN" ],
+    "flags": [ "BOARDABLE", "CARGO", "COVERED", "HUGE_OK", "FURNITURE_TIEDOWN", "CARGO_PASSABLE_BY_STORED" ],
     "breaks_into": [
       { "item": "mc_steel_lump", "count": [ 12, 19 ] },
       { "item": "mc_steel_chunk", "count": [ 7, 12 ] },
