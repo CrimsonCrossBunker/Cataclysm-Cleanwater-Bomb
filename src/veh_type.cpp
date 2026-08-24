@@ -1118,7 +1118,7 @@ int vpart_info::format_description( std::string &msg, const nc_color &format_col
     }
     if( has_flag( VPFLAG_CARGO_PASSABLE_BY_STORED ) && cargo_passable_size &&
         *cargo_passable_size < size ) {
-        append_desc( string_format( _( "Becomes impassable when stored volume exceeds %s." ),
+        append_desc( string_format( _( "Becomes impassable when stored volume exceeds <info>%s</info>." ),
                                       format_volume( *cargo_passable_size ) ) );
     }
     if( has_flag( "TURRET" ) ) {
