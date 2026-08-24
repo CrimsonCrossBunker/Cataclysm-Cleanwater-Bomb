@@ -945,6 +945,16 @@ void vpart_info::check() const
     if( has_flag( "CARGO" ) && has_flag( "FLUIDTANK" ) ) {
         debugmsg( "vehicle part %s can't have both CARGO and FLUIDTANK flags at the same time", id.str() );
     }
+    if( has_flag( VPFLAG_CARGO_PASSABLE_BY_STORED ) && !cargo_passable_size ) {
+        debugmsg( "vehicle part %s has CARGO_PASSABLE_BY_STORED flag but no cargo_passable_size", id.str() );
+    }
+    if( cargo_passable_size && *cargo_passable_size > size ) {
+        debugmsg( "vehicle part %s has cargo_passable_size %s greater than size %s", id.str(),
+                  cargo_passable_size->str(), size.str() );
+    }
+    if( cargo_passable_size && *cargo_passable_size < 0_ml ) {
+        debugmsg( "vehicle part %s has negative cargo_passable_size", id.str() );
+    }
     if( !item::type_is_defined( base_item ) ) {
         debugmsg( "vehicle part %s uses undefined item %s", id.str(), base_item.str() );
     }
