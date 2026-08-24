@@ -10,7 +10,7 @@
       "private C++ helpers without a registered Lua access path"
     ]
   },
-  "inventory_sha256": "e5219f4b8f1705587ff3a419d34ba1c72b88476c82c064acbe9cb87f50c1375e",
+  "inventory_sha256": "fa2e6f63c2a06dae53a3344e9f2eabce1da5c498a525d240f3a4caf3666eadd6",
   "sections": {
     "modules": 3,
     "namespaces": 85,
