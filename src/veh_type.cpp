@@ -1109,10 +1109,10 @@ int vpart_info::format_description( std::string &msg, const nc_color &format_col
         if( spoil_multiplier != 1.0f ) {
             if( spoil_multiplier != 0.0f ) {
                 const int percent = static_cast<int>( std::lround( spoil_multiplier * 100 ) );
-                append_desc( string_format( _( "Stored items spoil at %d%% their original rate." ),
+                append_desc( string_format( _( "Stored items spoil at <neutral>%d%%</neutral> their original rate." ),
                                             percent ) );
             } else {
-                append_desc( _( "Stored items won't spoil." ) );
+                append_desc( _( "Stored items <info>won't spoil</info>." ) );
             }
         }
     }
