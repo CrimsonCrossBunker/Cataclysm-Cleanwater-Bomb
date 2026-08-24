@@ -52,9 +52,9 @@ class LuaLsDeclarationTest(unittest.TestCase):
 
     def test_committed_declarations_cover_the_native_surface(self) -> None:
         result = check(DECLARATIONS)
-        self.assertEqual(result["tables"], 80)
-        self.assertEqual(result["methods"], 741)
-        self.assertEqual(result["game_tables"], 64)
+        self.assertEqual(result["tables"], 81)
+        self.assertEqual(result["methods"], 748)
+        self.assertEqual(result["game_tables"], 65)
         self.assertEqual(result["usertypes"], 16)
         self.assertEqual(result["coordinate_factories"], 36)
 
@@ -141,6 +141,12 @@ class LuaLsDeclarationTest(unittest.TestCase):
     def test_unmapped_registered_table_is_rejected(self) -> None:
         with self.assertRaisesRegex(RuntimeError, "table mappings"):
             validate_table_mappings({"future_native_api": {"read"}})
+
+    def test_game_options_table_is_mapped_to_its_luals_class(self) -> None:
+        self.assertEqual(
+            validate_table_mappings({"options": {"get"}}),
+            {"options": {"get"}},
+        )
 
     def test_undefined_luals_type_reference_is_rejected(self) -> None:
         contents = """\

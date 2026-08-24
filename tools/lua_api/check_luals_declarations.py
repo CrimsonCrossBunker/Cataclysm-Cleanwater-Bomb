@@ -64,6 +64,7 @@ TABLE_CLASSES = {
     "needs": "CcbNeedsApi",
     "npcs": "CcbNpcsApi",
     "orders": "CcbOrdersApi",
+    "options": "CcbOptionsApi",
     "overmap": "CcbOvermapApi",
     "page_state": "CcbStateStore",
     "proficiencies": "CcbProficienciesApi",

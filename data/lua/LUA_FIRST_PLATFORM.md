@@ -325,9 +325,9 @@ combat-hook failure recorded by earlier stash-based runs does not reproduce
 in the clean build, so the recorded current gate is green.
 
 The exact replacement ledger contains 775 dispositions; its generated summary
-is the authoritative count.  At the 2026-08-23 regeneration the split is 67
+is the authoritative count.  At the 2026-08-24 regeneration the split is 67
 implemented_verified, 16 bounded_implemented_verified, 22
-implemented_unverified, 630 bounded_implemented_unverified, 22
+implemented_unverified, 652 bounded_implemented_unverified, 0
 primitive_available_unverified, 0 planned, 0 private_adapter, and 18
 reviewed_not_applicable.  The latest EOC sprint added bounded, fail-closed
 renderers for proven actor combat actions, inventory consumption, map/field
@@ -652,9 +652,9 @@ creator/migrator 单元套件 86 个用例全部通过。2026-08-14 干净重编
 migrated-core parity 门禁；早前基于 stash 的构建记录的 `landed_technique` 战斗
 Hook 失败在干净构建中不再复现，当前记录的门禁为全绿。
 
-账本当前（2026-08-23 重新生成）的分布为 67 项 implemented_verified、16 项
- bounded_implemented_verified、22 项 implemented_unverified、630 项
- bounded_implemented_unverified、22 项 primitive_available_unverified、0 项
+账本当前（2026-08-24 重新生成）的分布为 67 项 implemented_verified、16 项
+ bounded_implemented_verified、22 项 implemented_unverified、652 项
+ bounded_implemented_unverified、0 项 primitive_available_unverified、0 项
 planned 与 18 项 reviewed_not_applicable。最新 EOC 冲刺加入了已证明 actor 的战斗动作、
 物品消耗、地图/字段变更、mapgen/reveal/位置调度、大地图谓词、NPC 策略、声音、talker
 变量写入和字面量 spawn 的 fail-closed 有界迁移器；primitive 只表示已有原语，不表示
