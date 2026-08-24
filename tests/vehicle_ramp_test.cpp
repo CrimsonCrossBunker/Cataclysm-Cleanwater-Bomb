@@ -1,6 +1,8 @@
+#include <input_enums.h>
 #include <array>
 #include <cstdio>
 #include <fstream>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <set>
