@@ -111,6 +111,7 @@ enum vpart_bitflags : int {
     VPFLAG_CURTAIN,
     VPFLAG_CARGO,
     VPFLAG_CARGO_PASSABLE,
+    VPFLAG_CARGO_PASSABLE_BY_STORED,
     VPFLAG_INTERNAL,
     VPFLAG_SOLAR_PANEL,
     VPFLAG_WATER_WHEEL,
@@ -483,6 +484,9 @@ class vpart_info
 
         /** Cargo location volume */
         units::volume size = 0_ml;
+
+        /** Volume threshold for CARGO_PASSABLE_BY_STORED */
+        std::optional<units::volume> cargo_passable_size = std::nullopt;
 
         /** hint to tilesets for what tile to use if this part doesn't have one */
         std::string looks_like;

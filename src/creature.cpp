@@ -265,8 +265,18 @@ bool Creature::will_be_cramped_in_vehicle_tile( map &here, const tripoint_abs_ms
         if( !vp_there.part_with_feature( "CARGO_PASSABLE", false ) &&
             !vp_there.part_with_feature( "APPLIANCE", false ) &&
             !vp_there.part_with_feature( "OBSTACLE", false ) ) {
-            capacity += contents.max_volume();
-            free_cargo += contents.free_volume();
+            units::volume eff_max = contents.max_volume();
+            if( part->info().has_flag( VPFLAG_CARGO_PASSABLE_BY_STORED ) ) {
+                if( part->info().cargo_passable_size &&
+                    *part->info().cargo_passable_size < part->info().size ) {
+                    eff_max = *part->info().cargo_passable_size;
+                }
+            } else if( part->info().cargo_passable_size ) {
+                eff_max = std::max( *part->info().cargo_passable_size, eff_max );
+            }
+            capacity += eff_max;
+            const units::volume stored = contents.stored_volume();
+            free_cargo += eff_max > stored ? eff_max - stored : 0_ml;
         }
     }
     if( capacity > 0_ml ) {
