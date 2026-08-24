@@ -37,10 +37,15 @@ bool game::grabbed_veh_move_stairs( const tripoint_rel_ms &dp )
     const optional_vpart_position grabbed_vehicle_vp = here.veh_at( you.pos_bub(
                 here ) + you.grab_point );
     if( !grabbed_vehicle_vp ) {
+        // The vehicle may have been unloaded while changing z-levels.  Clear
+        // the grab state so the next movement does not use a stale grab point.
+        add_msg( m_info, _( "No vehicle at grabbed point." ) );
+        you.grab( object_type::NONE );
         return false;
     }
     vehicle *grabbed_vehicle = &grabbed_vehicle_vp->vehicle();
     if( !grabbed_vehicle ) {
+        you.grab( object_type::NONE );
         return false;
     }
 
