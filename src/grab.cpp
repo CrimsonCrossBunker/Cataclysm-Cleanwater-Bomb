@@ -1,5 +1,8 @@
 #include "game.h" // IWYU pragma: associated
 
+#include <calendar.h>
+#include <coordinates.h>
+#include <enums.h>
 #include <algorithm>
 #include <cstdlib>
 
