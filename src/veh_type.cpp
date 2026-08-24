@@ -951,7 +951,7 @@ void vpart_info::check() const
     if( has_flag( VPFLAG_CARGO_PASSABLE_BY_STORED ) && cargo_passable_size &&
         *cargo_passable_size > size ) {
         debugmsg( "vehicle part %s has cargo_passable_size %s greater than size %s", id.str(),
-                  cargo_passable_size->str(), size.str() );
+                  format_volume( *cargo_passable_size ), format_volume( size ) );
     }
     if( cargo_passable_size && *cargo_passable_size < 0_ml ) {
         debugmsg( "vehicle part %s has negative cargo_passable_size", id.str() );
