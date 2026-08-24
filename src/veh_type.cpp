@@ -146,6 +146,7 @@ static const std::unordered_map<std::string, vpart_bitflags> vpart_bitflag_map =
     { "CURTAIN", VPFLAG_CURTAIN },
     { "CARGO", VPFLAG_CARGO },
     { "CARGO_PASSABLE", VPFLAG_CARGO_PASSABLE },
+    { "CARGO_PASSABLE_BY_STORED", VPFLAG_CARGO_PASSABLE_BY_STORED },
     { "INTERNAL", VPFLAG_INTERNAL },
     { "SOLAR_PANEL", VPFLAG_SOLAR_PANEL },
     { "WIND_TURBINE", VPFLAG_WIND_TURBINE },
@@ -279,6 +280,7 @@ void vpart_info::load( const JsonObject &jo, const std::string_view src )
     optional( jo, was_loaded, "default_ammo", default_ammo, itype_id::NULL_ID() );
     optional( jo, was_loaded, "folded_volume", folded_volume, std::nullopt );
     optional( jo, was_loaded, "size", size, 0_ml );
+    optional( jo, was_loaded, "cargo_passable_size", cargo_passable_size, std::nullopt );
     optional( jo, was_loaded, "bonus", bonus, 0 );
     if( jo.has_array( "light_color" ) ) {
         JsonArray jarr = jo.get_array( "light_color" );
