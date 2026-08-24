@@ -186,19 +186,19 @@ std::string get_talk_var_basename( const JsonObject &jo, std::string_view member
 namespace
 {
 
-template<typename valueT, typename funcT>
-value_or_var_pair<valueT, funcT> get_value_or_var_pair( const JsonValue &jv )
+template<typename valueT, typename... funcT>
+value_or_var_pair<valueT, funcT...> get_value_or_var_pair( const JsonValue &jv )
 {
-    value_or_var_pair<valueT, funcT> ret_val;
+    value_or_var_pair<valueT, funcT...> ret_val;
     ret_val.deserialize( jv );
     return ret_val;
 }
 
-template<typename retT, typename funcT>
-value_or_var_pair<retT, funcT> get_value_or_var_pair( const JsonObject &jo,
+template<typename retT, typename... funcT>
+value_or_var_pair<retT, funcT...> get_value_or_var_pair( const JsonObject &jo,
         std::string_view member, bool required, retT default_val )
 {
-    value_or_var_pair<retT, funcT> ret_val;
+    value_or_var_pair<retT, funcT...> ret_val;
     if( required ) {
         mandatory( jo, false, member, ret_val );
     } else {

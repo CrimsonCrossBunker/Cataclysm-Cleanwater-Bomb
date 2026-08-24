@@ -18,6 +18,7 @@
 
 #include "avatar.h"
 #include "auto_pickup.h"
+#include "basecamp.h"
 #include "calendar.h"
 #include "catalua_bindings_coords.h"
 #include "catalua_bindings_values.h"
@@ -1210,6 +1211,71 @@ sol::table add_npc_debt(
                    state, std::move( value ) ) );
 }
 
+sol::table add_npc_faction_rep(
+    sol::this_state lua, const game_handle &handle, const int amount,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    if( amount < -maximum_opinion_delta ||
+        amount > maximum_opinion_delta ) {
+        throw std::invalid_argument(
+            "game.npcs.add_faction_rep amount must be within -1000000..1000000" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *entry = resolve_npc(
+                     handle, runtime_generation,
+                     world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    faction *fac = entry->get_faction();
+    if( fac == nullptr ) {
+        return make_game_error_result( state, {
+            "missing_faction", "The NPC has no faction"
+        } );
+    }
+    auto checked_add = [amount]( const int before ) -> std::optional<int> {
+        const std::int64_t after =
+            static_cast<std::int64_t>( before ) + amount;
+        if( after < std::numeric_limits<int>::min() ||
+            after > std::numeric_limits<int>::max() ) {
+            return std::nullopt;
+        }
+        return static_cast<int>( after );
+    };
+    const std::optional<int> likes_after = checked_add( fac->likes_u );
+    const std::optional<int> respects_after = checked_add( fac->respects_u );
+    const std::optional<int> trusts_after = checked_add( fac->trusts_u );
+    if( !likes_after || !respects_after || !trusts_after ) {
+        return make_game_error_result( state, {
+            "numeric_overflow", "The faction reputation update would overflow"
+        } );
+    }
+    const int likes_before = fac->likes_u;
+    const int respects_before = fac->respects_u;
+    const int trusts_before = fac->trusts_u;
+    if( !fac->lone_wolf_faction ) {
+        fac->likes_u = *likes_after;
+        fac->respects_u = *respects_after;
+        fac->trusts_u = *trusts_after;
+    }
+    sol::table value = state.create_table();
+    value["amount"] = amount;
+    value["changed"] = !fac->lone_wolf_faction && amount != 0;
+    value["before"] = state.create_table_with(
+                          "likes", likes_before,
+                          "respects", respects_before,
+                          "trusts", trusts_before );
+    value["after"] = state.create_table_with(
+                         "likes", fac->likes_u,
+                         "respects", fac->respects_u,
+                         "trusts", fac->trusts_u );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 void require_npc_domain_id(
     const script_game_id &id, const std::string_view kind,
     const std::string_view api_name )
@@ -1694,7 +1760,7 @@ sol::table leave_npc_player(
     const std::size_t world_generation )
 {
     sol::state_view state( lua );
-    if( g == nullptr || g->faction_manager_ptr == nullptr ) {
+    if( g == nullptr ) {
         return make_game_error_result(
                    state, { "unavailable", "No active game is available" } );
     }
@@ -1965,6 +2031,98 @@ sol::table plan_npc_travel(
     value["eta"] = script_time_duration::from_native( eta );
     value["eta_min"] = script_time_duration::from_native( eta * 0.8 );
     value["eta_max"] = script_time_duration::from_native( eta * 1.2 );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+struct npc_destination_entry {
+    std::string id;
+    std::string kind;
+    std::string label;
+    tripoint_abs_omt position;
+};
+
+sol::table list_npc_destinations(
+    sol::this_state lua, const game_handle &handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    const npc *entry = resolve_npc(
+                           handle, runtime_generation,
+                           world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const Character &player = get_player_character();
+    const tripoint_abs_omt npc_position = entry->pos_abs_omt();
+    std::vector<npc_destination_entry> destinations;
+    destinations.reserve( player.camps.size() + 2 );
+
+    for( const tripoint_abs_omt &camp_position : player.camps ) {
+        if( camp_position == npc_position ||
+            overmap_buffer.seen( camp_position ) == om_vision_level::unseen ) {
+            continue;
+        }
+        const std::optional<basecamp *> camp =
+            overmap_buffer.find_camp( camp_position.xy() );
+        if( !camp || *camp == nullptr || !( *camp )->is_valid() ) {
+            continue;
+        }
+        const std::string position_id = camp_position.to_string();
+        destinations.push_back( {
+                "camp:" + position_id,
+                "camp",
+                ( *camp )->camp_name(),
+                ( *camp )->camp_omt_pos()
+            } );
+    }
+
+    if( player.pos_abs_omt() != npc_position ) {
+        destinations.push_back( {
+                "player_current", "player", _( "My current location" ),
+                player.pos_abs_omt()
+            } );
+    }
+    if( !player.omt_path.empty() ) {
+        destinations.push_back( {
+                "player_destination", "player", _( "My destination" ),
+                player.omt_path.front()
+            } );
+    }
+
+    std::sort( destinations.begin(), destinations.end(),
+    []( const npc_destination_entry &lhs,
+        const npc_destination_entry &rhs ) {
+        if( lhs.kind != rhs.kind ) {
+            return lhs.kind < rhs.kind;
+        }
+        return lhs.id < rhs.id;
+    } );
+
+    const std::size_t returned = std::min(
+                                     destinations.size(), maximum_nested_ids );
+    sol::table items = state.create_table(
+                           static_cast<int>( returned ), 0 );
+    for( std::size_t index = 0; index < returned; ++index ) {
+        const npc_destination_entry &destination = destinations[index];
+        sol::table value = state.create_table();
+        value["id"] = destination.id;
+        value["kind"] = destination.kind;
+        value["label"] = destination.label;
+        value["position"] = script_tripoint_coord::from_native(
+                                 coords::origin::abs,
+                                 coords::scale::overmap_terrain,
+                                 destination.position.raw() );
+        items[index + 1] = std::move( value );
+    }
+    sol::table value = state.create_table();
+    value["items"] = std::move( items );
+    value["total"] = destinations.size();
+    value["returned"] = returned;
+    value["truncated"] = returned < destinations.size();
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -2576,6 +2734,17 @@ void install_npc_api(
                    current_world_generation() );
     } );
     npcs.set_function(
+        "add_faction_rep",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle &handle,
+            const int amount ) {
+        require_write();
+        return add_npc_faction_rep(
+                   lua_state, handle, amount,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    npcs.set_function(
         "set_class",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state, const game_handle &handle,
@@ -2779,6 +2948,16 @@ void install_npc_api(
         return clear_npc_stolen_item_claim(
                    lua_state, handle,
                    current_runtime_generation(), current_world_generation() );
+    } );
+    npcs.set_function(
+        "destinations",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle &handle ) {
+        require_read();
+        return list_npc_destinations(
+                   lua_state, handle,
+                   current_runtime_generation(),
+                   current_world_generation() );
     } );
     npcs.set_function(
         "plan_travel",

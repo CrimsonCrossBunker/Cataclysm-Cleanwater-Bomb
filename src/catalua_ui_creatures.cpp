@@ -99,6 +99,7 @@ struct creature_query_options {
     bool include_avatar = false;
     bool include_hallucinations = false;
     std::string kind = "any";
+    std::string attitude = "any";
     std::optional<tripoint_abs_ms> origin;
 };
 
@@ -145,6 +146,12 @@ creature_query_options read_query_options(
         throw std::invalid_argument(
             "game.creatures query option 'kind' must be any, character, "
             "avatar, npc, or monster" );
+    }
+    result.attitude = requested->get_or(
+                          "attitude", result.attitude );
+    if( result.attitude != "any" && result.attitude != "hostile" ) {
+        throw std::invalid_argument(
+            "game.creatures query option 'attitude' must be any or hostile" );
     }
     const sol::object requested_origin =
         requested->raw_get<sol::object>( "origin" );
@@ -344,6 +351,29 @@ sol::table creature_has_species(
                        species_id( requested.value() ) ) ) );
 }
 
+sol::table creature_has_flag(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    if( requested.kind() != "json_flag" || !requested.is_valid() ) {
+        throw std::invalid_argument(
+            "game.creatures.has_flag requires a valid GameId<json_flag>" );
+    }
+    sol::state_view state( lua );
+    const native_handle_result<Creature> resolved =
+        handle.resolve_creature(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        return make_game_error_result( state, *resolved.error );
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, resolved.value->has_flag(
+                       flag_id( requested.value() ) ) ) );
+}
+
 sol::table creature_has_body_type(
     sol::this_state lua, const game_handle &handle,
     const std::string &requested,
@@ -476,6 +506,11 @@ sol::table nearby_creatures(
                 !query_kind_matches( candidate, options.kind ) ) {
                 return false;
             }
+            if( options.attitude == "hostile" &&
+                player.attitude_to( candidate ) !=
+                Creature::Attitude::HOSTILE ) {
+                return false;
+            }
             if( rl_dist( origin, candidate.pos_abs() ) >
                 options.radius ) {
                 return false;
@@ -527,6 +562,7 @@ sol::table nearby_creatures(
     result["radius"] = options.radius;
     result["limit"] = options.limit;
     result["kind"] = options.kind;
+    result["attitude"] = options.attitude;
     result["origin"] = script_tripoint_coord::from_native(
                            coords::origin::abs,
                            coords::scale::map_square,
@@ -4197,6 +4233,17 @@ void install_creature_api(
         require_read();
         return creature_has_species(
                    lua_state, handle, species,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    creatures.set_function(
+        "has_flag",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle &handle,
+    const script_game_id &flag ) {
+        require_read();
+        return creature_has_flag(
+                   lua_state, handle, flag,
                    current_runtime_generation(),
                    current_world_generation() );
     } );

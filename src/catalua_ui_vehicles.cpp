@@ -1283,6 +1283,26 @@ void mark_vehicle_for_service( vehicle &target, const double repair_multiplier,
     static_cast<void>( install_multiplier );
 }
 
+sol::table marked_service_vehicle(
+    sol::this_state lua,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    for( const wrapped_vehicle &wrapped : get_map().get_vehicles() ) {
+        if( wrapped.v == nullptr ||
+            wrapped.v->maybe_get_value( vehicle_service_target ) == nullptr ) {
+            continue;
+        }
+        return make_game_value_result(
+                   state, sol::make_object(
+                       state, make_vehicle_handle( *wrapped.v,
+                               runtime_generation, world_generation ) ) );
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, sol::nil ) );
+}
+
 std::string npc_value_string( const npc &mechanic, const std::string &key )
 {
     const diag_value *value = mechanic.maybe_get_value( key );
@@ -1643,6 +1663,15 @@ void install_vehicle_api(
                    repair_multiplier.value_or( 1.0 ),
                    install_multiplier.value_or( 1.0 ),
                    current_runtime_generation(), current_world_generation() );
+    } );
+    vehicles_api.set_function(
+        "marked_service_vehicle",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state ) {
+        require_read();
+        return marked_service_vehicle(
+                   lua_state, current_runtime_generation(),
+                   current_world_generation() );
     } );
     game["vehicles"] = std::move( vehicles_api );
 }

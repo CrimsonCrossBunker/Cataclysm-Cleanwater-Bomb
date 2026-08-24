@@ -201,6 +201,7 @@ void runtime_before_save();
 bool runtime_save( std::string &error );
 void runtime_after_save( bool success, std::string_view error );
 void runtime_process_tasks();
+void runtime_process_character_recurring( Character &character );
 bool dispatch_platform_mapgen_generate( mapgendata &data );
 void dispatch_platform_mapgen_postprocess( mapgendata &data );
 

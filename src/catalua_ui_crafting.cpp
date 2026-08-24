@@ -1116,7 +1116,7 @@ craft_action_options read_craft_action_options(
 
 void install_crafting_api(
     sol::table &game,
-    const game_handle_runtime &runtime_generation,
+    std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write,
@@ -1210,7 +1210,7 @@ void install_crafting_api(
     } );
     recipes.set_function(
         "knows",
-        [require_read, &runtime_generation,
+        [require_read, current_runtime_generation,
          world_generation](
             sol::this_state lua,
             const game_handle & character,
@@ -1218,12 +1218,12 @@ void install_crafting_api(
         require_read();
         return recipe_known_result(
                    lua, character, id,
-                   runtime_generation,
+                   current_runtime_generation(),
                    world_generation() );
     } );
     recipes.set_function(
         "learn",
-        [require_write, &runtime_generation,
+        [require_write, current_runtime_generation,
          world_generation](
             sol::this_state lua,
             const game_handle & character,
@@ -1233,12 +1233,12 @@ void install_crafting_api(
         return learn_recipe_result(
                    lua, character, id,
                    override_never_learn.value_or( false ),
-                   runtime_generation,
+                   current_runtime_generation(),
                    world_generation() );
     } );
     recipes.set_function(
         "forget",
-        [require_write, &runtime_generation,
+        [require_write, current_runtime_generation,
          world_generation](
             sol::this_state lua,
             const game_handle & character,
@@ -1246,12 +1246,12 @@ void install_crafting_api(
         require_write();
         return forget_recipe_result(
                    lua, character, id,
-                   runtime_generation,
+                   current_runtime_generation(),
                    world_generation() );
     } );
     recipes.set_function(
         "forget_category",
-        [require_write, &runtime_generation,
+        [require_write, current_runtime_generation,
          world_generation](
             sol::this_state lua,
             const game_handle & character,
@@ -1260,7 +1260,7 @@ void install_crafting_api(
         require_write();
         return forget_recipe_category_result(
                    lua, character, category, subcategory,
-                   runtime_generation,
+                   current_runtime_generation(),
                    world_generation() );
     } );
     game["recipes"] = std::move( recipes );

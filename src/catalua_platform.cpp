@@ -493,8 +493,21 @@ bool apply_prepared_content( std::string &error )
     }
     std::vector<std::shared_ptr<runtime>> applied;
     for( runtime_state &state : prepared_states ) {
-        if( !validate_runtime( state.platform, true, error ) ||
-            !apply_runtime_content( state.platform, error ) ) {
+        if( !validate_runtime( state.platform, true, error ) ) {
+            if( error.empty() ) {
+                error = "Lua-first Platform candidate failed engine-state validation "
+                        "without a diagnostic";
+            }
+            for( auto it = applied.rbegin(); it != applied.rend(); ++it ) {
+                rollback_runtime_content( *it );
+            }
+            return false;
+        }
+        if( !apply_runtime_content( state.platform, error ) ) {
+            if( error.empty() ) {
+                error = "Lua-first Platform candidate failed content application "
+                        "without a diagnostic";
+            }
             for( auto it = applied.rbegin(); it != applied.rend(); ++it ) {
                 rollback_runtime_content( *it );
             }

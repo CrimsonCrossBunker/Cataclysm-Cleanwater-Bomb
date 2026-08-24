@@ -1367,7 +1367,7 @@ event_transformation cata::lua_platform::detail::make_event_transformation(
                 io::string_to_enum<cata_variant_type>( source.value_type );
             for( const std::string &value : source.values ) {
                 constraint.equals_any_.push_back(
-                    cata_variant::from_string( value_type, value ) );
+                    cata_variant::from_string( value_type, std::string( value ) ) );
             }
         } else {
             value_constraint::comparator comparator;
@@ -1388,7 +1388,8 @@ event_transformation cata::lua_platform::detail::make_event_transformation(
             constraint.val_comp_ = std::make_pair(
                                        comparator,
                                        cata_variant::from_string(
-                                           cata_variant_type::int_, source.values.front() ) );
+                                           cata_variant_type::int_,
+                                           std::string( source.values.front() ) ) );
         }
         if( !constraints.emplace( source.field, std::move( constraint ) ).second ) {
             throw std::runtime_error( "duplicate event value constraint for field '" +
@@ -1448,6 +1449,97 @@ event_statistic cata::lua_platform::detail::make_event_statistic(
     }
     return result;
 }
+
+namespace cata::lua_platform::detail
+{
+
+struct event_transformation_snapshot {
+    std::optional<event_transformation> value;
+};
+
+struct event_statistic_snapshot {
+    std::optional<event_statistic> value;
+};
+
+std::shared_ptr<event_transformation_snapshot> snapshot_event_transformation(
+    const std::string &id )
+{
+    auto snapshot = std::make_shared<event_transformation_snapshot>();
+    const string_id<event_transformation> native_id( id );
+    if( native_id.is_valid() ) {
+        snapshot->value = event_transformation_factory.obj( native_id );
+    }
+    return snapshot;
+}
+
+void register_event_transformation(
+    const event_transformation_native_definition &definition,
+    const std::string &owner )
+{
+    event_transformation native = make_event_transformation( definition );
+    const string_id<event_transformation> id( definition.id );
+    native.src.clear();
+    native.src.emplace_back( id, mod_id( owner ) );
+    event_transformation_factory.insert( native );
+}
+
+void restore_event_transformation(
+    const std::string &id,
+    const std::shared_ptr<event_transformation_snapshot> &snapshot )
+{
+    const string_id<event_transformation> native_id( id );
+    if( snapshot != nullptr && snapshot->value ) {
+        event_transformation_factory.restore( *snapshot->value );
+    } else {
+        event_transformation_factory.erase( native_id );
+    }
+}
+
+void finalize_event_transformations()
+{
+    event_transformation_factory.finalize();
+}
+
+std::shared_ptr<event_statistic_snapshot> snapshot_event_statistic(
+    const std::string &id )
+{
+    auto snapshot = std::make_shared<event_statistic_snapshot>();
+    const event_statistic_id native_id( id );
+    if( native_id.is_valid() ) {
+        snapshot->value = event_statistic_factory.obj( native_id );
+    }
+    return snapshot;
+}
+
+void register_event_statistic(
+    const event_statistic_native_definition &definition,
+    const std::string &owner )
+{
+    event_statistic native = make_event_statistic( definition );
+    const event_statistic_id id( definition.id );
+    native.src.clear();
+    native.src.emplace_back( id, mod_id( owner ) );
+    event_statistic_factory.insert( native );
+}
+
+void restore_event_statistic(
+    const std::string &id,
+    const std::shared_ptr<event_statistic_snapshot> &snapshot )
+{
+    const event_statistic_id native_id( id );
+    if( snapshot != nullptr && snapshot->value ) {
+        event_statistic_factory.restore( *snapshot->value );
+    } else {
+        event_statistic_factory.erase( native_id );
+    }
+}
+
+void finalize_event_statistics()
+{
+    event_statistic_factory.finalize();
+}
+
+} // namespace cata::lua_platform::detail
 
 std::string score::description( stats_tracker &stats ) const
 {

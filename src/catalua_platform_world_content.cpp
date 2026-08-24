@@ -3191,7 +3191,7 @@ bool world_content_transaction::apply( std::string &error )
             }
             for( const price_rule_data &rule : source.price_rules ) {
                 icg_entry base{ itype_id( rule.item ), item_category_id( rule.category ),
-                                item_group_id( rule.group ), no_translation( rule.message ), {} };
+                                item_group_id( rule.group ), no_translation( rule.message ), {}, {} };
                 if( !rule.condition_handler.empty() ) {
                     const std::string mod = pimpl_->owner;
                     const std::string owner_id = source.id;
@@ -3323,7 +3323,7 @@ bool world_content_transaction::apply( std::string &error )
             }
             for( const price_rule_data &rule : source.price_rules ) {
                 icg_entry base{ itype_id( rule.item ), item_category_id( rule.category ),
-                                item_group_id( rule.group ), no_translation( rule.message ), {} };
+                                item_group_id( rule.group ), no_translation( rule.message ), {}, {} };
                 if( !rule.condition_handler.empty() ) {
                     const std::string mod = pimpl_->owner;
                     const std::string owner_id = source.id;

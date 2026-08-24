@@ -275,12 +275,12 @@ sol::table pickup_from_map_square(
         units::from_milliliter(
             checked_pickup_constraint(
                 requested_max_volume_ml, "max_volume_ml" ) ) :
-        -1_ml,
+        units::from_milliliter( -1.0 ),
         requested_max_mass_grams ?
         units::from_gram(
             checked_pickup_constraint(
                 requested_max_mass_grams, "max_mass_grams" ) ) :
-        -1_gram );
+        units::from_gram( -1.0 ) );
     const tripoint_bub_ms local = here.get_bub( absolute );
     const drop_locations selected =
         game_menus::inv::pickup( { local }, {}, info );
@@ -502,8 +502,7 @@ void install_activity_api(
         value["after"] = activity_snapshot(
                              state, worker->activity );
         value["mission"] = io::enum_to_string( worker->mission );
-        value["attitude"] = io::enum_to_string(
-                                worker->get_attitude() );
+        value["attitude"] = npc_attitude_id( worker->get_attitude() );
         return make_game_value_result(
                    state, sol::make_object(
                        state, std::move( value ) ) );
@@ -606,8 +605,7 @@ void install_activity_api(
         value["after"] = activity_snapshot(
                              state, worker->activity );
         value["mission"] = io::enum_to_string( worker->mission );
-        value["attitude"] = io::enum_to_string(
-                                worker->get_attitude() );
+        value["attitude"] = npc_attitude_id( worker->get_attitude() );
         return make_game_value_result(
                    state, sol::make_object(
                        state, std::move( value ) ) );
@@ -1228,7 +1226,7 @@ void install_activity_api(
         }
         sol::table value = state.create_table();
         value["changed"] = changed;
-        value["state"] = character_activity_snapshot(
+        value["activity"] = character_activity_snapshot(
                              state, *character );
         return make_game_value_result(
                    state, sol::make_object(

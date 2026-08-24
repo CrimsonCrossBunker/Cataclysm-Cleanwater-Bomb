@@ -30,6 +30,7 @@
 #include "coordinates.h"
 #include "creature.h"
 #include "damage.h"
+#include "dialogue.h"
 #include "faction.h"
 #include "game_inventory.h"
 #include "inventory.h"
@@ -37,11 +38,16 @@
 #include "item_category.h"
 #include "item_contents.h"
 #include "item_group.h"
+#include "item_location.h"
 #include "item_pocket.h"
 #include "itype.h"
 #include "map.h"
+#include "math_parser.h"
+#include "math_parser_type.h"
 #include "math_parser_diag_value.h"
 #include "requirements.h"
+#include "string_formatter.h"
+#include "translations.h"
 #include "type_id.h"
 #include "units.h"
 
@@ -60,6 +66,7 @@ constexpr int default_pocket_limit = 64;
 constexpr int maximum_pocket_limit = 256;
 constexpr int default_contents_limit = 128;
 constexpr int maximum_contents_limit = 512;
+constexpr std::size_t maximum_contents_offset = 1000000;
 constexpr int maximum_item_charges = 1000000000;
 constexpr int maximum_item_burnt = 1000000000;
 constexpr double maximum_item_relative_rot = 1000000.0;
@@ -85,6 +92,7 @@ struct inventory_query_options {
     bool include_wielded = true;
     bool include_worn = true;
     bool include_carried = true;
+    std::optional<sol::table> context;
 };
 
 struct inventory_item_entry {
@@ -117,6 +125,23 @@ bool boolean_option(
             "' must be a boolean" );
     }
     return value.as<bool>();
+}
+
+std::size_t require_dense_lua_array(
+    const sol::table &values, const std::string &description,
+    const std::size_t minimum, const std::size_t maximum )
+{
+    const std::size_t count = values.size();
+    if( count < minimum || count > maximum ) {
+        throw std::invalid_argument( description + " has an invalid length" );
+    }
+    for( std::size_t index = 1; index <= count; ++index ) {
+        const sol::object value = values.raw_get<sol::object>( index );
+        if( !value.valid() || value.get_type() == sol::type::nil ) {
+            throw std::invalid_argument( description + " must be a dense array" );
+        }
+    }
+    return count;
 }
 
 inventory_query_options read_inventory_options(
@@ -182,6 +207,12 @@ inventory_query_options read_inventory_options(
             result.include_carried = boolean_option(
                                          value, key,
                                          "game.inventory.list" );
+        } else if( key == "context" ) {
+            if( value.get_type() != sol::type::table ) {
+                throw std::invalid_argument(
+                    "game.inventory.list option 'context' must be a table" );
+            }
+            result.context = value.as<sol::table>();
         } else {
             throw std::invalid_argument(
                 "game.inventory.list received unknown option '" +
@@ -442,6 +473,505 @@ sol::table list_inventory(
     value["depth_truncated"] = depth_truncated;
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
+}
+
+std::vector<std::string> filter_string_values(
+    const sol::table &descriptor, const std::string &key,
+    const std::string &api_name )
+{
+    const sol::object raw = descriptor.raw_get<sol::object>( key );
+    if( !raw.valid() || raw.get_type() == sol::type::nil ) {
+        return {};
+    }
+    std::vector<std::string> result;
+    const auto append = [&]( const sol::object &value ) {
+        if( !value.is<std::string>() ) {
+            throw std::invalid_argument( api_name + " filter '" + key +
+                                         "' values must be strings" );
+        }
+        const std::string entry = value.as<std::string>();
+        if( entry.empty() || entry.size() > 256 || entry.find( '\0' ) != std::string::npos ) {
+            throw std::invalid_argument( api_name + " filter '" + key +
+                                         "' values must be bounded non-empty strings" );
+        }
+        result.push_back( entry );
+    };
+    if( raw.is<std::string>() ) {
+        append( raw );
+    } else if( raw.get_type() == sol::type::table ) {
+        const sol::table values = raw.as<sol::table>();
+        const std::size_t count = require_dense_lua_array( values,
+                                    api_name + " filter '" + key + "'", 0, 128 );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            append( values.raw_get<sol::object>( index ) );
+        }
+    } else {
+        throw std::invalid_argument( api_name + " filter '" + key +
+                                     "' must be a string or dense string array" );
+    }
+    return result;
+}
+
+enum class inventory_condition_kind : std::uint8_t {
+    has_ammo,
+    math,
+    all,
+    any,
+    negate,
+};
+
+struct inventory_condition {
+    inventory_condition_kind kind = inventory_condition_kind::math;
+    math_exp expression;
+    std::vector<inventory_condition> children;
+
+    bool evaluate( const const_dialogue &conversation ) const
+    {
+        switch( kind ) {
+            case inventory_condition_kind::has_ammo: {
+                const item_location *location =
+                    conversation.const_actor( true )->get_const_item();
+                const Character *character =
+                    conversation.const_actor( false )->get_const_character();
+                return location != nullptr && character != nullptr &&
+                       ( *location )->ammo_sufficient( character );
+            }
+            case inventory_condition_kind::math:
+                try {
+                    return expression.eval( conversation ) != 0.0;
+                } catch( const math::exception & ) {
+                    return false;
+                }
+            case inventory_condition_kind::all:
+                return std::all_of( children.begin(), children.end(),
+                [&conversation]( const inventory_condition &child ) {
+                    return child.evaluate( conversation );
+                } );
+            case inventory_condition_kind::any:
+                return std::any_of( children.begin(), children.end(),
+                [&conversation]( const inventory_condition &child ) {
+                    return child.evaluate( conversation );
+                } );
+            case inventory_condition_kind::negate:
+                return children.size() == 1 && !children.front().evaluate( conversation );
+        }
+        return false;
+    }
+};
+
+constexpr std::size_t maximum_inventory_condition_depth = 8;
+constexpr std::size_t maximum_inventory_condition_children = 16;
+constexpr std::size_t maximum_inventory_condition_expression_bytes = 8192;
+constexpr std::size_t maximum_inventory_context_entries = 128;
+constexpr std::size_t maximum_inventory_context_string_bytes = 8192;
+
+std::string inventory_condition_expression(
+    const sol::object &value, const std::string &api_name )
+{
+    if( value.is<std::string>() ) {
+        const std::string expression = value.as<std::string>();
+        if( expression.empty() || expression.size() >
+            maximum_inventory_condition_expression_bytes ||
+            expression.find( '\0' ) != std::string::npos ) {
+            throw std::invalid_argument(
+                api_name + " condition math expression is outside its limit" );
+        }
+        return expression;
+    }
+    if( value.get_type() != sol::type::table ) {
+        throw std::invalid_argument(
+            api_name + " condition 'math' must be a string or string array" );
+    }
+    const sol::table parts = value.as<sol::table>();
+    const std::size_t count = require_dense_lua_array(
+                                  parts, api_name + " condition math", 1,
+                                  maximum_inventory_condition_children );
+    std::string expression;
+    for( std::size_t index = 1; index <= count; ++index ) {
+        const sol::object part = parts.raw_get<sol::object>( index );
+        if( !part.is<std::string>() ) {
+            throw std::invalid_argument(
+                api_name + " condition math parts must be strings" );
+        }
+        expression += part.as<std::string>();
+        if( expression.size() > maximum_inventory_condition_expression_bytes ) {
+            throw std::invalid_argument(
+                api_name + " condition math expression is outside its limit" );
+        }
+    }
+    return expression;
+}
+
+inventory_condition parse_inventory_condition(
+    const sol::object &value, const std::string &api_name,
+    const std::size_t depth = 0 )
+{
+    if( depth > maximum_inventory_condition_depth ) {
+        throw std::invalid_argument(
+            api_name + " condition nesting exceeds its limit" );
+    }
+    if( value.is<std::string>() ) {
+        if( value.as<std::string>() != "has_ammo" ) {
+            throw std::invalid_argument(
+                api_name + " condition string must be 'has_ammo'" );
+        }
+        return { inventory_condition_kind::has_ammo, {}, {} };
+    }
+    if( value.get_type() != sol::type::table ) {
+        throw std::invalid_argument(
+            api_name + " condition must be a string or table" );
+    }
+    const sol::table table = value.as<sol::table>();
+    std::string key;
+    sol::object payload;
+    std::size_t fields = 0;
+    for( const auto &entry : table ) {
+        if( !entry.first.is<std::string>() ) {
+            throw std::invalid_argument(
+                api_name + " condition keys must be strings" );
+        }
+        key = entry.first.as<std::string>();
+        payload = entry.second;
+        ++fields;
+    }
+    if( fields != 1 ) {
+        throw std::invalid_argument(
+            api_name + " condition must contain exactly one operator" );
+    }
+    if( key == "math" ) {
+        const std::string expression = inventory_condition_expression( payload, api_name );
+        math_exp parsed;
+        try {
+            if( !parsed.parse( expression, true ) ) {
+                throw std::invalid_argument(
+                    api_name + " condition math expression could not be parsed" );
+            }
+        } catch( const math::exception &error ) {
+            throw std::invalid_argument(
+                api_name + " condition math expression is invalid: " +
+                std::string( error.what() ) );
+        }
+        return { inventory_condition_kind::math, std::move( parsed ), {} };
+    }
+    inventory_condition_kind kind;
+    if( key == "all" ) {
+        kind = inventory_condition_kind::all;
+    } else if( key == "any" ) {
+        kind = inventory_condition_kind::any;
+    } else if( key == "not" ) {
+        inventory_condition child = parse_inventory_condition(
+                                        payload, api_name, depth + 1 );
+        return { inventory_condition_kind::negate, {}, { std::move( child ) } };
+    } else {
+        throw std::invalid_argument(
+            api_name + " condition operator must be math, all, any, or not" );
+    }
+    if( payload.get_type() != sol::type::table ) {
+        throw std::invalid_argument(
+            api_name + " condition operator requires an array" );
+    }
+    const sol::table children = payload.as<sol::table>();
+    const std::size_t count = require_dense_lua_array(
+                                  children, api_name + " condition children", 1,
+                                  maximum_inventory_condition_children );
+    std::vector<inventory_condition> parsed;
+    parsed.reserve( count );
+    for( std::size_t index = 1; index <= count; ++index ) {
+        parsed.push_back( parse_inventory_condition(
+                              children.raw_get<sol::object>( index ), api_name,
+                              depth + 1 ) );
+    }
+    return { kind, {}, std::move( parsed ) };
+}
+
+struct inventory_filter_descriptor {
+    std::vector<std::string> ids;
+    std::vector<std::string> excluded_ids;
+    std::vector<std::string> categories;
+    std::vector<std::string> materials;
+    std::vector<std::string> flags;
+    std::vector<std::string> excluded_flags;
+    std::optional<bool> uses_energy;
+    std::optional<bool> is_chargeable;
+    bool worn_only = false;
+    bool wielded_only = false;
+    bool held_only = false;
+    std::optional<inventory_condition> condition;
+};
+
+std::optional<bool> optional_inventory_filter_bool(
+    const sol::table &descriptor, const std::string &key,
+    const std::string &api_name )
+{
+    const sol::object raw = descriptor.raw_get<sol::object>( key );
+    if( !raw.valid() || raw.get_type() == sol::type::nil ) {
+        return std::nullopt;
+    }
+    if( !raw.is<bool>() ) {
+        throw std::invalid_argument(
+            api_name + " filter '" + key + "' must be boolean" );
+    }
+    return raw.as<bool>();
+}
+
+inventory_filter_descriptor parse_inventory_filter(
+    const sol::table &descriptor, const std::string &api_name )
+{
+    inventory_filter_descriptor result;
+    result.ids = filter_string_values( descriptor, "id", api_name );
+    result.excluded_ids = filter_string_values( descriptor, "id_blacklist", api_name );
+    result.categories = filter_string_values( descriptor, "category", api_name );
+    result.materials = filter_string_values( descriptor, "material", api_name );
+    result.flags = filter_string_values( descriptor, "flags", api_name );
+    result.excluded_flags = filter_string_values( descriptor, "excluded_flags", api_name );
+    result.uses_energy = optional_inventory_filter_bool( descriptor, "uses_energy", api_name );
+    result.is_chargeable = optional_inventory_filter_bool( descriptor, "is_chargeable", api_name );
+    const sol::object worn = descriptor.raw_get<sol::object>( "worn_only" );
+    const sol::object wielded = descriptor.raw_get<sol::object>( "wielded_only" );
+    const sol::object held = descriptor.raw_get<sol::object>( "held_only" );
+    if( worn.valid() && worn.get_type() != sol::type::nil ) {
+        if( !worn.is<bool>() ) {
+            throw std::invalid_argument( api_name + " filter 'worn_only' must be boolean" );
+        }
+        result.worn_only = worn.as<bool>();
+    }
+    if( wielded.valid() && wielded.get_type() != sol::type::nil ) {
+        if( !wielded.is<bool>() ) {
+            throw std::invalid_argument( api_name + " filter 'wielded_only' must be boolean" );
+        }
+        result.wielded_only = wielded.as<bool>();
+    }
+    if( held.valid() && held.get_type() != sol::type::nil ) {
+        if( !held.is<bool>() ) {
+            throw std::invalid_argument( api_name + " filter 'held_only' must be boolean" );
+        }
+        result.held_only = held.as<bool>();
+    }
+    const sol::object condition = descriptor.raw_get<sol::object>( "condition" );
+    if( condition.valid() && condition.get_type() != sol::type::nil ) {
+        result.condition = parse_inventory_condition( condition, api_name );
+    }
+    for( const auto &member : descriptor ) {
+        if( !member.first.is<std::string>() ) {
+            throw std::invalid_argument( api_name + " filter keys must be strings" );
+        }
+        const std::string key = member.first.as<std::string>();
+        if( key != "id" && key != "id_blacklist" && key != "category" &&
+            key != "material" && key != "flags" && key != "excluded_flags" &&
+            key != "uses_energy" && key != "is_chargeable" && key != "worn_only" &&
+            key != "wielded_only" && key != "held_only" && key != "condition" ) {
+            throw std::invalid_argument( api_name + " received unknown filter field '" + key + "'" );
+        }
+    }
+    return result;
+}
+
+void apply_inventory_condition_context(
+    const sol::table &context, const std::string &api_name,
+    const_dialogue &conversation )
+{
+    std::size_t count = 0;
+    for( const auto &entry : context ) {
+        if( ++count > maximum_inventory_context_entries ) {
+            throw std::invalid_argument(
+                api_name + " option 'context' exceeds 128 entries" );
+        }
+        if( !entry.first.is<std::string>() ) {
+            throw std::invalid_argument(
+                api_name + " option 'context' keys must be strings" );
+        }
+        const std::string key = entry.first.as<std::string>();
+        if( key.empty() || key.size() > 128 ||
+            std::any_of( key.begin(), key.end(), []( const unsigned char ch ) {
+            return ch == '\0' || ch < 0x20U || ch == 0x7fU;
+        } ) ) {
+            throw std::invalid_argument(
+                api_name + " option 'context' keys are outside their limit" );
+        }
+        const sol::object value = entry.second;
+        if( value.is<bool>() ) {
+            conversation.set_value( key, value.as<bool>() ? 1.0 : 0.0 );
+        } else if( value.get_type() == sol::type::number ) {
+            const double number = value.as<double>();
+            if( !std::isfinite( number ) ) {
+                throw std::invalid_argument(
+                    api_name + " option 'context' numbers must be finite" );
+            }
+            conversation.set_value( key, number );
+        } else if( value.is<std::string>() ) {
+            const std::string text = value.as<std::string>();
+            if( text.size() > maximum_inventory_context_string_bytes ) {
+                throw std::invalid_argument(
+                    api_name + " option 'context' strings exceed their limit" );
+            }
+            conversation.set_value( key, text );
+        } else if( value.is<script_tripoint_coord>() ) {
+            const script_tripoint_coord position =
+                value.as<script_tripoint_coord>();
+            if( position.native_origin() != coords::origin::abs ||
+                position.native_scale() != coords::scale::map_square ) {
+                throw std::invalid_argument(
+                    api_name + " option 'context' coordinates must be absolute map-square" );
+            }
+            conversation.set_value( key, tripoint_abs_ms( position.to_native() ) );
+        } else {
+            throw std::invalid_argument(
+                api_name + " option 'context' values must be scalar or Tripoint" );
+        }
+    }
+}
+
+bool inventory_filter_matches(
+    Character &character, item &entry,
+    const inventory_filter_descriptor &descriptor,
+    const std::optional<sol::table> &context,
+    const std::string &api_name )
+{
+    const std::string id = entry.typeId().str();
+    if( !descriptor.ids.empty() && std::find( descriptor.ids.begin(), descriptor.ids.end(), id ) ==
+        descriptor.ids.end() ) {
+        return false;
+    }
+    if( std::find( descriptor.excluded_ids.begin(), descriptor.excluded_ids.end(), id ) !=
+        descriptor.excluded_ids.end() ) {
+        return false;
+    }
+    const std::string category = entry.get_category_shallow().get_id().str();
+    if( !descriptor.categories.empty() && std::find( descriptor.categories.begin(),
+            descriptor.categories.end(), category ) == descriptor.categories.end() ) {
+        return false;
+    }
+    if( !descriptor.materials.empty() ) {
+        bool matches = false;
+        for( const std::string &material : descriptor.materials ) {
+            if( entry.made_of( material_id( material ) ) > 0 ) {
+                matches = true;
+                break;
+            }
+        }
+        if( !matches ) {
+            return false;
+        }
+    }
+    if( !descriptor.flags.empty() ) {
+        bool matches = false;
+        for( const std::string &flag : descriptor.flags ) {
+            if( entry.has_flag( flag_id( flag ) ) ) {
+                matches = true;
+                break;
+            }
+        }
+        if( !matches ) {
+            return false;
+        }
+    }
+    for( const std::string &flag : descriptor.excluded_flags ) {
+        if( entry.has_flag( flag_id( flag ) ) ) {
+            return false;
+        }
+    }
+    if( descriptor.uses_energy.has_value() &&
+        descriptor.uses_energy.value() != entry.uses_energy() ) {
+        return false;
+    }
+    if( descriptor.is_chargeable.has_value() &&
+        descriptor.is_chargeable.value() != entry.is_chargeable() ) {
+        return false;
+    }
+    if( descriptor.worn_only != character.is_worn( entry ) &&
+        descriptor.worn_only ) {
+        return false;
+    }
+    if( descriptor.wielded_only != character.is_wielding( entry ) &&
+        descriptor.wielded_only ) {
+        return false;
+    }
+    if( descriptor.held_only &&
+        !( character.is_worn( entry ) || character.is_wielding( entry ) ) ) {
+        return false;
+    }
+    if( descriptor.condition ) {
+        item_location location( character, &entry );
+        const_dialogue conversation(
+            get_const_talker_for( character ),
+            get_const_talker_for( location ) );
+        if( context ) {
+            apply_inventory_condition_context( *context, api_name, conversation );
+        }
+        if( !descriptor.condition->evaluate( conversation ) ) {
+            return false;
+        }
+    }
+    return true;
+}
+
+sol::table filter_inventory(
+    sol::this_state lua, const game_handle &character_handle,
+    const sol::table &descriptors, const sol::optional<sol::table> &requested,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    constexpr std::string_view api_name = "game.inventory.filter";
+    const inventory_query_options options = read_inventory_options( requested );
+    const std::size_t descriptor_count = require_dense_lua_array(
+            descriptors, "game.inventory.filter descriptors", 0, 128 );
+    std::vector<inventory_filter_descriptor> filters;
+    filters.reserve( descriptor_count );
+    for( std::size_t index = 1; index <= descriptor_count; ++index ) {
+        const sol::object value = descriptors.raw_get<sol::object>( index );
+        if( !value.is<sol::table>() ) {
+            throw std::invalid_argument( "game.inventory.filter descriptors must be tables" );
+        }
+        filters.push_back( parse_inventory_filter( value.as<sol::table>(),
+                           std::string( api_name ) ) );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character( character_handle, runtime_generation,
+                                              world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    bool depth_truncated = false;
+    std::vector<inventory_item_entry> entries;
+    std::size_t visited = 0;
+    const bool complete = visit_inventory( *character, options,
+    [&]( const inventory_item_entry &entry ) {
+        bool matches = filters.empty();
+        for( const inventory_filter_descriptor &filter : filters ) {
+            if( inventory_filter_matches( *character, *entry.value, filter,
+                                          options.context, std::string( api_name ) ) ) {
+                matches = true;
+                break;
+            }
+        }
+        if( !matches ) {
+            return true;
+        }
+        const std::size_t index = visited++;
+        if( index < options.offset ) {
+            return true;
+        }
+        if( entries.size() >= static_cast<std::size_t>( options.limit ) ) {
+            return false;
+        }
+        entries.push_back( entry );
+        return true;
+    }, depth_truncated );
+    sol::table items = state.create_table( static_cast<int>( entries.size() ), 0 );
+    for( std::size_t index = 0; index < entries.size(); ++index ) {
+        items[index + 1] = inventory_entry_to_lua( state, *character, entries[index],
+                              runtime_generation, world_generation );
+    }
+    sol::table result = state.create_table();
+    result["items"] = std::move( items );
+    result["total"] = visited;
+    result["returned"] = entries.size();
+    result["offset"] = options.offset;
+    result["limit"] = options.limit;
+    result["has_more"] = !complete;
+    result["depth_truncated"] = depth_truncated;
+    return make_game_value_result( state, sol::make_object( state, std::move( result ) ) );
 }
 
 sol::table find_inventory_item(
@@ -3135,6 +3665,77 @@ sol::table inventory_resources(
                    state, std::move( value ) ) );
 }
 
+sol::table inventory_has_items_sum(
+    sol::this_state lua, const game_handle &character_handle,
+    const sol::table &requested_entries,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    constexpr std::string_view api_name = "game.inventory.has_items_sum";
+    const std::size_t entry_count = requested_entries.size();
+    if( entry_count == 0 || entry_count > maximum_inventory_sum_entries ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " requires 1..128 weighted item entries" );
+    }
+    struct weighted_entry {
+        script_game_id id;
+        double desired = 0.0;
+    };
+    std::vector<weighted_entry> entries;
+    entries.reserve( entry_count );
+    for( std::size_t index = 1; index <= entry_count; ++index ) {
+        const sol::object row_object = requested_entries[index];
+        if( !row_object.is<sol::table>() ) {
+            throw std::invalid_argument(
+                std::string( api_name ) +
+                " entries must be a dense table array" );
+        }
+        const sol::table row = row_object.as<sol::table>();
+        const sol::object id_object = row["item"];
+        const sol::object amount_object = row["amount"];
+        if( !id_object.is<script_game_id>() ||
+            amount_object.get_type() != sol::type::number ) {
+            throw std::invalid_argument(
+                std::string( api_name ) +
+                " entries require item and numeric amount fields" );
+        }
+        const script_game_id id = id_object.as<script_game_id>();
+        require_id_kind( id, "item", std::string( api_name ) );
+        const double desired = amount_object.as<double>();
+        if( !std::isfinite( desired ) || desired <= 0.0 ||
+            desired > maximum_inventory_resource_quantity ) {
+            throw std::invalid_argument(
+                std::string( api_name ) +
+                " amount must be finite and within 0..1000000000" );
+        }
+        entries.push_back( { id, desired } );
+    }
+
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_character(
+                               character_handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const inventory available_inventory = character->crafting_inventory();
+    double coverage = 0.0;
+    for( const weighted_entry &entry : entries ) {
+        const itype_id native( entry.id.value() );
+        const double count_present = available_inventory.amount_of( native );
+        const double charges_present = available_inventory.charges_of( native );
+        coverage += std::max( count_present, charges_present ) / entry.desired;
+        if( coverage >= 1.0 ) {
+            return make_game_value_result(
+                       state, sol::make_object( state, true ) );
+        }
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, false ) );
+}
+
 sol::table inventory_has_software(
     sol::this_state lua, const game_handle &character_handle,
     const script_game_id &software,
@@ -3709,6 +4310,52 @@ sol::table consume_inventory_items(
     return make_game_value_result(
                state, sol::make_object(
                    state, std::move( value ) ) );
+}
+
+sol::table hand_in_inventory_items(
+    sol::this_state lua, const game_handle &character_handle,
+    const game_handle &recipient_handle,
+    const script_game_id &type, const std::int64_t requested_count,
+    const std::int64_t requested_charges,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *recipient = resolve_character(
+                               recipient_handle, runtime_generation,
+                               world_generation, error );
+    if( recipient == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    sol::table result = consume_inventory_items(
+                            lua, character_handle, type,
+                            requested_count, requested_charges,
+                            runtime_generation, world_generation );
+    if( !result.get_or( "ok", false ) ) {
+        return result;
+    }
+    const sol::object raw_value = result["value"];
+    if( !raw_value.is<sol::table>() ) {
+        throw std::runtime_error(
+            "game.inventory.hand_in received an invalid consumption result" );
+    }
+    sol::table value = raw_value.as<sol::table>();
+    const itype_id native_type( type.value() );
+    const int display_count = static_cast<int>( std::max<std::int64_t>(
+                                  1, requested_count ) );
+    if( display_count == 1 ) {
+        value["notice"] = string_format(
+                              _( "You give %1$s a %2$s." ),
+                              recipient->get_name(),
+                              item::nname( native_type ) );
+    } else {
+        value["notice"] = string_format(
+                              _( "You give %1$s %2$d %3$s." ),
+                              recipient->get_name(), display_count,
+                              item::nname( native_type, display_count ) );
+    }
+    return result;
 }
 
 sol::table consume_inventory_sum(
@@ -4704,6 +5351,16 @@ void install_item_api(
                    current_world_generation() );
     } );
     inventory.set_function(
+        "filter",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle &character,
+            const sol::table &descriptors, const sol::optional<sol::table> &options ) {
+        require_read();
+        return filter_inventory(
+                   lua_state, character, descriptors, options,
+                   current_runtime_generation(), current_world_generation() );
+    } );
+    inventory.set_function(
         "find",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state,
@@ -4778,6 +5435,18 @@ void install_item_api(
         require_read();
         return inventory_resources(
                    lua_state, character, type, quantity,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    inventory.set_function(
+        "has_items_sum",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state,
+            const game_handle &character,
+            const sol::table &entries ) {
+        require_read();
+        return inventory_has_items_sum(
+                   lua_state, character, entries,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
@@ -4944,6 +5613,22 @@ void install_item_api(
         require_write();
         return consume_inventory_items(
                    lua_state, character, type,
+                   count.value_or( 0 ), charges.value_or( 0 ),
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    inventory.set_function(
+        "hand_in",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state,
+            const game_handle &character,
+            const game_handle &recipient,
+            const script_game_id &type,
+            const sol::optional<std::int64_t> &count,
+    const sol::optional<std::int64_t> &charges ) {
+        require_write();
+        return hand_in_inventory_items(
+                   lua_state, character, recipient, type,
                    count.value_or( 0 ), charges.value_or( 0 ),
                    current_runtime_generation(),
                    current_world_generation() );

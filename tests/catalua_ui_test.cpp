@@ -2544,6 +2544,192 @@ ccb.content.add(recipe_group)
                "ccb_platform_test_recipe_group" ).empty() );
 }
 
+TEST_CASE( "lua_first_event_statistics_and_transformations_are_transactional",
+           "[lua][platform][content][events]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_event_catalog" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+
+local transformed = ccb.content.EventTransformation {
+    id = "ccb_platform_event_transform",
+    event_type = "avatar_moves",
+}
+transformed:derive("swimming", "is_swimming_terrain", "terrain")
+transformed:where_equals("underwater", "bool", true)
+transformed:drop("z")
+ccb.content.add(transformed)
+
+ccb.content.add(ccb.content.EventStatistic {
+    id = "ccb_platform_event_count",
+    event_transformation = "ccb_platform_event_transform",
+    statistic_type = "count",
+    description = "%s Platform movement",
+})
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_event_catalog" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    REQUIRE( event_transformation_id( "ccb_platform_event_transform" ).is_valid() );
+    REQUIRE( event_statistic_id( "ccb_platform_event_count" ).is_valid() );
+    CHECK( event_transformation_id( "ccb_platform_event_transform" ).obj().fields().count(
+               "swimming" ) == 1 );
+    CHECK( event_statistic_id( "ccb_platform_event_count" ).obj().type() ==
+           cata_variant_type::int_ );
+
+    cata::lua_platform::shutdown();
+    CHECK_FALSE( event_transformation_id( "ccb_platform_event_transform" ).is_valid() );
+    CHECK_FALSE( event_statistic_id( "ccb_platform_event_count" ).is_valid() );
+}
+
+TEST_CASE( "lua_first_extended_static_catalogs_apply_transactionally",
+           "[lua][platform][content][catalogs]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_extended_static_catalogs" );
+    test_mod.write( "main.lua", R"lua(
+local ccb = require("ccb")
+local function add(value)
+    ccb.content.add(value)
+end
+
+add(ccb.content.MathFunction {
+    id = "ccb_static_math",
+    arguments = 1,
+    expression = "x",
+})
+add(ccb.content.Widget {
+    id = "ccb_static_widget",
+    label = "Static widget",
+})
+add(ccb.content.Enchantment {
+    id = "ccb_static_enchantment",
+    name = "Static enchantment",
+    description = "An enchantment registered from Lua.",
+})
+add(ccb.content.Bionic {
+    id = "ccb_static_bionic",
+    name = "Static bionic",
+    description = "A bionic registered from Lua.",
+})
+add(ccb.content.Spell {
+    id = "ccb_static_spell",
+    name = "Static spell",
+    description = "A spell registered from Lua.",
+    message = "You cast the static spell!",
+    skill = "survival",
+    valid_targets = { "self" },
+})
+add(ccb.content.Mission {
+    id = "ccb_static_mission",
+    name = "Static mission",
+    description = "A mission registered from Lua.",
+})
+add(ccb.content.Mutation {
+    id = "ccb_static_mutation",
+    name = "Static mutation",
+    description = "A mutation registered from Lua.",
+})
+add(ccb.content.Profession {
+    id = "ccb_static_profession",
+    name_male = "Static profession",
+    name_female = "Static profession",
+    description_male = "A profession registered from Lua.",
+    description_female = "A profession registered from Lua.",
+})
+local substitution = ccb.content.ProfessionItemSubstitution { item = "9mm" }
+substitution:when({}, { "9mm" })
+add(substitution)
+local relic = ccb.content.RelicProcgen { id = "ccb_static_relic" }
+relic:type("active_enchantment", 1)
+relic:item("9mm", 1)
+add(relic)
+local transform = ccb.content.TerrainTransform { id = "ccb_static_transform" }
+transform:field { inputs = { "fd_smoke" }, results = { { "fd_smoke", 1 } } }
+add(transform)
+local post_process = ccb.content.PostProcessGenerator { id = "ccb_static_post_process" }
+post_process:stage("bash_damage", { attempts = 1, chance = 100 })
+add(post_process)
+local placement = ccb.content.VehiclePlacement { id = "ccb_static_placement" }
+placement:location { x = 0, y = 0, facings = 0 }
+add(placement)
+local spawn = ccb.content.VehicleSpawn { id = "ccb_static_spawn" }
+spawn:builtin("no_vehicles", 1)
+add(spawn)
+
+add(ccb.content.Faction { id = "ccb_static_faction", name = "Static faction" })
+add(ccb.content.NpcClass { id = "ccb_static_npc_class", name = "Static NPC class" })
+add(ccb.content.Npc {
+    id = "ccb_static_npc",
+    class = "ccb_static_npc_class",
+    faction = "ccb_static_faction",
+})
+add(ccb.content.OvermapTerrain {
+    id = "ccb_static_omt",
+    name = "Static overmap terrain",
+    symbol = "S",
+})
+add(ccb.content.OvermapSpecial {
+    id = "ccb_static_special",
+    terrains = { { point = { 0, 0, 0 }, terrain = "ccb_static_omt" } },
+})
+add(ccb.content.CityBuilding {
+    id = "ccb_static_city_building",
+    terrains = { { point = { 0, 0, 0 }, terrain = "ccb_static_omt" } },
+})
+add(ccb.content.VehiclePart {
+    id = "ccb_static_vehicle_part",
+    name = "Static vehicle part",
+    item = "frame",
+    location = "structure",
+})
+add(ccb.content.Vehicle {
+    id = "ccb_static_vehicle",
+    name = "Static vehicle",
+    parts = { { x = 0, y = 0, part = "ccb_static_vehicle_part" } },
+})
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_extended_static_catalogs" ) }, error ) );
+    const bool applied = cata::lua_platform::apply_prepared_content( error );
+    INFO( error );
+    REQUIRE( applied );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    CHECK( jmath_func_id( "ccb_static_math" ).is_valid() );
+    CHECK( widget_id( "ccb_static_widget" ).is_valid() );
+    CHECK( enchantment_id( "ccb_static_enchantment" ).is_valid() );
+    CHECK( bionic_id( "ccb_static_bionic" ).is_valid() );
+    CHECK( spell_id( "ccb_static_spell" ).is_valid() );
+    CHECK( mission_type_id( "ccb_static_mission" ).is_valid() );
+    CHECK( trait_id( "ccb_static_mutation" ).is_valid() );
+    CHECK( profession_id( "ccb_static_profession" ).is_valid() );
+    CHECK( cata::lua_platform::detail::profession_item_substitution_registry_contains( "9mm" ) );
+    CHECK( relic_procgen_id( "ccb_static_relic" ).is_valid() );
+    CHECK( ter_furn_transform_id( "ccb_static_transform" ).is_valid() );
+    CHECK( pp_generator_id( "ccb_static_post_process" ).is_valid() );
+    CHECK( cata::lua_platform::detail::vehicle_placement_registry_find(
+               "ccb_static_placement" ) != nullptr );
+    CHECK( vspawn_id( "ccb_static_spawn" ).is_valid() );
+    CHECK( faction_id( "ccb_static_faction" ).is_valid() );
+    CHECK( npc_class_id( "ccb_static_npc_class" ).is_valid() );
+    CHECK( npc_template_id( "ccb_static_npc" ).is_valid() );
+    CHECK( oter_type_str_id( "ccb_static_omt" ).is_valid() );
+    CHECK( overmap_special_id( "ccb_static_special" ).is_valid() );
+    CHECK( overmap_special_id( "ccb_static_city_building" ).is_valid() );
+    CHECK( vpart_id( "ccb_static_vehicle_part" ).is_valid() );
+    CHECK( vproto_id( "ccb_static_vehicle" ).is_valid() );
+}
+
 TEST_CASE( "lua_first_behavior_runs_named_lua_condition_and_score_policies",
            "[lua][platform][content][behavior]" )
 {
@@ -5341,6 +5527,207 @@ ccb.runtime.on("world_ready", "ready")
     cata::lua_platform::shutdown();
 }
 
+TEST_CASE( "lua_first_character_tasks_reacquire_actors_after_runtime_recreation",
+           "[lua][platform][runtime][state][character]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_character_task_round_trip" );
+    scoped_calendar_turn turn;
+    scoped_lua_state_file character_sidecar(
+        ( PATH_INFO::player_base_save_path() +
+          ".lua_platform.json" ).get_unrelative_path() );
+    character_sidecar.write( R"json({
+  "version": 1,
+  "scope": "character",
+  "mods": {}
+})json" );
+    const fs::path marker = test_mod.root() / "restored-character-task.txt";
+    const fs::path invalid_marker = test_mod.root() / "invalid-character-task.txt";
+    test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+
+local function reacquire_character(task)
+    local task_payload = task.payload
+    assert(task_payload.__ccb_task == true)
+    local actor_result = ccb.services.characters.by_id(
+        task_payload.actor_character_id)
+    if not actor_result.ok then
+        return nil
+    end
+    local snapshot_result = ccb.services.characters.snapshot(actor_result.value)
+    assert(snapshot_result.ok)
+    assert(snapshot_result.value.id == task_payload.actor_character_id)
+    return snapshot_result.value
+end
+
+ccb.runtime.handler("resume_character", function(task)
+    local snapshot = reacquire_character(task)
+    if snapshot == nil then
+        return false
+    end
+    local output = assert(io.open([[%s]], "wb"))
+    output:write(tostring(snapshot.id))
+    output:close()
+    return true
+end, 1)
+
+ccb.runtime.handler("missing_character", function(task)
+    if reacquire_character(task) == nil then
+        return false
+    end
+    local output = assert(io.open([[%s]], "wb"))
+    output:write("unexpected")
+    output:close()
+    return true
+end, 1)
+
+ccb.runtime.handler("ready", function()
+    if ccb.state.character.get("character_task_scheduled", false) then
+        return
+    end
+    local avatar = ccb.services.characters.avatar()
+    local snapshot_result = ccb.services.characters.snapshot(avatar)
+    assert(snapshot_result.ok)
+    ccb.state.character.set("character_task_scheduled", true)
+    ccb.tasks.after(5, "resume_character", {
+        __ccb_task = true,
+        data = {},
+        actor_character_id = snapshot_result.value.id,
+    }, 1, "character")
+    ccb.tasks.after(5, "missing_character", {
+        __ccb_task = true,
+        data = {},
+        actor_character_id = -9223372036854775807,
+    }, 1, "character")
+end, 1)
+ccb.runtime.on("world_ready", "ready")
+)lua", marker.generic_u8string(), invalid_marker.generic_u8string() ) );
+
+    const auto prepare_and_commit = [&test_mod]() {
+        std::string error;
+        REQUIRE( cata::lua_platform::prepare_mods(
+                     { test_mod.source( "ccb_platform_character_task_round_trip" ) }, error ) );
+        REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+        REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+        cata::lua_platform::commit_prepared_mods();
+    };
+
+    calendar::turn = turn.original();
+    prepare_and_commit();
+    cata::lua_platform::on_world_ready( true );
+    std::string error;
+    REQUIRE( cata::lua_platform::save_persistent_state( error ) );
+    cata::lua_platform::shutdown();
+
+    calendar::turn = turn.original() + 7_turns;
+    prepare_and_commit();
+    cata::lua_platform::on_world_ready( false );
+    REQUIRE( fs::is_regular_file( marker ) );
+    CHECK_FALSE( fs::exists( invalid_marker ) );
+    std::ifstream input( marker );
+    std::int64_t restored_id = 0;
+    input >> restored_id;
+    REQUIRE( input );
+    CHECK( restored_id > 0 );
+    cata::lua_platform::shutdown();
+}
+
+TEST_CASE( "lua_first_character_recurrence_keeps_independent_persistent_due_turns",
+           "[lua][platform][runtime][state][character][recurrence]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod test_mod( "ccb_platform_character_recurrence" );
+    scoped_calendar_turn turn;
+    avatar &player = get_avatar();
+    standard_npc test_npc( "Lua recurring NPC", player.pos_bub( get_map() ) );
+    const fs::path marker = test_mod.root() / "character-recurrence.txt";
+    test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+
+ccb.runtime.handler("character_recurrence_effect", function(payload)
+    assert(payload.first_schedule == false)
+    assert(payload.due_turn ~= nil)
+    local snapshot = ccb.services.characters.snapshot(payload.character)
+    assert(snapshot.ok)
+    local output = assert(io.open([[%s]], "ab"))
+    output:write(tostring(snapshot.value.id) .. "\n")
+    output:close()
+    return true
+end, 1)
+
+ccb.runtime.handler("character_recurrence_interval", function(payload)
+    assert(payload.character ~= nil)
+    if payload.first_schedule then
+        assert(payload.due_turn == nil)
+    end
+    return 3
+end, 1)
+
+local missing_ok, missing_error = pcall(
+    ccb.runtime.character_recurring,
+    "missing_character_recurrence_effect",
+    "character_recurrence_interval")
+assert(not missing_ok)
+assert(string.find(missing_error, "missing handler", 1, true))
+
+ccb.runtime.character_recurring(
+    "character_recurrence_effect", "character_recurrence_interval")
+local duplicate_ok, duplicate_error = pcall(
+    ccb.runtime.character_recurring,
+    "character_recurrence_effect",
+    "character_recurrence_interval")
+assert(not duplicate_ok)
+assert(string.find(duplicate_error, "duplicate", 1, true))
+)lua", marker.generic_u8string() ) );
+
+    const auto prepare_and_commit = [&test_mod]() {
+        std::string error;
+        REQUIRE( cata::lua_platform::prepare_mods(
+                     { test_mod.source( "ccb_platform_character_recurrence" ) }, error ) );
+        REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+        REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+        cata::lua_platform::commit_prepared_mods();
+    };
+
+    calendar::turn = turn.original();
+    prepare_and_commit();
+    cata::lua_platform::on_world_ready( true );
+    cata::lua_platform::runtime_process_character_recurring( player );
+    cata::lua_platform::runtime_process_character_recurring( test_npc );
+    CHECK_FALSE( fs::exists( marker ) );
+
+    calendar::turn = turn.original() + 2_turns;
+    cata::lua_platform::runtime_process_character_recurring( player );
+    cata::lua_platform::runtime_process_character_recurring( test_npc );
+    CHECK_FALSE( fs::exists( marker ) );
+
+    calendar::turn = turn.original() + 3_turns;
+    cata::lua_platform::runtime_process_character_recurring( player );
+    cata::lua_platform::runtime_process_character_recurring( test_npc );
+    REQUIRE( fs::is_regular_file( marker ) );
+
+    cata::lua_platform::shutdown();
+    calendar::turn = turn.original() + 5_turns;
+    prepare_and_commit();
+    cata::lua_platform::on_world_ready( false );
+    cata::lua_platform::runtime_process_character_recurring( player );
+    cata::lua_platform::runtime_process_character_recurring( test_npc );
+
+    std::ifstream input( marker );
+    std::vector<int> observed_ids;
+    int observed = 0;
+    while( input >> observed ) {
+        observed_ids.push_back( observed );
+    }
+    REQUIRE( input.eof() );
+    REQUIRE( observed_ids.size() == 2 );
+    CHECK( std::count( observed_ids.begin(), observed_ids.end(),
+                       player.getID().get_value() ) == 1 );
+    CHECK( std::count( observed_ids.begin(), observed_ids.end(),
+                       test_npc.getID().get_value() ) == 1 );
+    cata::lua_platform::shutdown();
+}
+
 TEST_CASE( "lua_first_bundled_mod_completes_a_playable_save_reload_loop",
            "[lua][platform][integration][playable_mvp]" )
 {
@@ -6533,6 +6920,94 @@ ccb.runtime.on("world_ready", "ready")
     REQUIRE( input );
     CHECK( contents == "ok" );
 
+}
+
+TEST_CASE( "lua_first_inventory_filter_supports_item_conditions_and_context",
+           "[lua][platform][runtime][services][inventory][filter]" )
+{
+    cata::lua_platform::shutdown();
+    clear_avatar();
+    clear_map_without_vision();
+    on_out_of_scope restore_map( []() {
+        clear_map_without_vision();
+    } );
+    avatar &player = get_avatar();
+    map &here = get_map();
+    player.setpos( here, tripoint_bub_ms( 30, 30, 0 ) );
+    player.remove_weapon();
+    item_location rock = player.i_add( item( itype_id( "rock" ) ) );
+    REQUIRE( rock );
+    const std::int64_t rock_uid = rock->uid().get_value();
+    on_out_of_scope cleanup( [&player, rock_uid]() {
+        player.remove_items_with( [rock_uid]( const item &candidate ) {
+            return candidate.uid().get_value() == rock_uid;
+        }, 100 );
+        cata::lua_platform::shutdown();
+    } );
+
+    scoped_platform_test_mod test_mod( "ccb_platform_inventory_filter_conditions" );
+    const fs::path marker = test_mod.root() / "inventory-filter-conditions.txt";
+    test_mod.write( "main.lua", string_format( R"lua(
+local ccb = require("ccb")
+local services = ccb.services
+
+local function value(result)
+    assert(result.ok, result.error and result.error.message)
+    return result.value
+end
+
+ccb.runtime.handler("ready", function()
+    local character = services.creatures.avatar()
+    local positive = value(services.inventory.filter(character, {
+        { condition = { math = { "n_volume() > 0" } } },
+    }, { limit = 32 }))
+    assert(positive.total >= 1)
+
+    local contextual = value(services.inventory.filter(character, {
+        { condition = { all = {
+            { math = { "n_volume() > 0" } },
+            { math = { "_cost <= u_val('power')" } },
+        } } },
+    }, { context = { _cost = 0 }, limit = 32 }))
+    assert(contextual.total >= 1)
+
+    local blocked = value(services.inventory.filter(character, {
+        { condition = { math = { "_cost > u_val('power')" } } },
+    }, { context = { _cost = 1 }, limit = 32 }))
+    assert(blocked.total == 0)
+
+    local ammo_query = services.inventory.filter(character, {
+        { condition = "has_ammo" },
+    }, { limit = 32 })
+    assert(ammo_query.ok)
+
+    local rejected = pcall(function()
+        services.inventory.filter(character, {
+            { condition = "not_a_native_item_condition" },
+        })
+    end)
+    assert(not rejected)
+
+    local output = assert(io.open([[%s]], "wb"))
+    output:write("ok")
+    output:close()
+end)
+ccb.runtime.on("world_ready", "ready")
+)lua", marker.generic_u8string() ) );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_inventory_filter_conditions" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+    cata::lua_platform::on_world_ready( true );
+
+    std::ifstream input( marker, std::ios::binary );
+    std::string contents;
+    input >> contents;
+    REQUIRE( input );
+    CHECK( contents == "ok" );
 }
 
 TEST_CASE( "lua_first_wound_services_preserve_native_character_and_handle_rules",
@@ -14142,6 +14617,33 @@ game.native_events.on("game_begin", { once = true }, function()
     assert(game.variables.get(
         avatar, "lua_native_bridge").value.exists == false)
 
+    local context = {
+        alias = "u_lua_resolved_bridge",
+        target = "context_round_trip",
+    }
+    local resolved = game.variables.set_resolved(
+        context, avatar, "var", "alias", "resolved_value")
+    assert(resolved.ok and resolved.value.existed == false)
+    local resolved_read = game.variables.resolve(
+        context, avatar, "u", "lua_resolved_bridge")
+    assert(resolved_read.ok and resolved_read.value.value == "resolved_value")
+    local context_write = game.variables.set_resolved(
+        context, avatar, "context", "target", 42)
+    assert(context_write.ok and context.target == 42)
+
+    local rock = game.inventory.give(
+        avatar, game.types.id("item", "rock"), 1)
+    assert(rock.ok and rock.value.items[1] ~= nil)
+    local item_handle = rock.value.items[1].handle
+    local item_written = game.variables.set(
+        item_handle, "lua_item_bridge", "item_round_trip")
+    assert(item_written.ok and item_written.value.existed == false)
+    local item_stored = game.variables.get(item_handle, "lua_item_bridge")
+    assert(item_stored.ok and item_stored.value.value == "item_round_trip")
+    local item_removed = game.variables.remove(item_handle, "lua_item_bridge")
+    assert(item_removed.ok and item_removed.value.removed)
+    assert(game.inventory.remove(avatar, item_handle).ok)
+
     local negative = game.time.duration(-1, "turn")
     assert(pcall(function()
         game.eocs.queue(eoc, negative)
@@ -15041,6 +15543,8 @@ assert(added.value.blocks_effects.returned ==
 
 local present = game.effects.has(avatar, downed)
 assert(present.ok == true and present.value == true)
+assert(game.effects.has(avatar, downed, nil, 1).value == true)
+assert(game.effects.has(avatar, downed, nil, 2).value == false)
 local fetched = game.effects.get(avatar, downed)
 assert(fetched.ok == true and fetched.value.id == downed)
 
@@ -15062,13 +15566,22 @@ assert(updated.value.before.id == downed)
 assert(updated.value.after.duration == two_turns)
 assert(updated.value.after.permanent == true)
 
+local raised = game.effects.adjust_intensity(avatar, downed, 1)
+assert(raised.ok == true)
+assert(raised.value.before == 1 and raised.value.after == 2)
+assert(raised.value.changed == true and raised.value.removed == false)
+local lowered = game.effects.adjust_intensity(avatar, downed, -1)
+assert(lowered.ok == true)
+assert(lowered.value.before == 2 and lowered.value.after == 1)
+assert(lowered.value.changed == true and lowered.value.removed == false)
+
 assert(pcall(function()
     game.effects.add(avatar, downed,
         game.time.duration(0, "turn"))
 end) == false)
 assert(pcall(function()
     game.effects.add(avatar, downed, one_turn,
-        { intensity = 1001 })
+        { intensity = 1000001 })
 end) == false)
 assert(pcall(function()
     game.effects.add(avatar, downed, one_turn,
@@ -15078,9 +15591,30 @@ assert(pcall(function()
     game.effects.has(avatar,
         game.types.id("item", "rock"))
 end) == false)
+assert(pcall(function()
+    game.effects.has(avatar, downed, nil, math.huge)
+end) == false)
+assert(pcall(function()
+    game.effects.adjust_intensity(avatar, downed, 1001)
+end) == false)
 
 local removed = game.effects.remove(avatar, downed)
 assert(removed.ok == true and removed.value == true)
+assert(game.effects.has(avatar, downed).value == false)
+local missing = game.effects.adjust_intensity(avatar, downed, -1)
+assert(missing.ok == true)
+assert(missing.value.before == 0 and missing.value.after == 0)
+assert(missing.value.changed == false and missing.value.removed == false)
+assert(game.effects.add(avatar, downed, one_turn, {
+    intensity = 1,
+    force = true
+}).ok)
+local reduced_to_zero = game.effects.adjust_intensity(avatar, downed, -1)
+assert(reduced_to_zero.ok == true)
+assert(reduced_to_zero.value.before == 1)
+assert(reduced_to_zero.value.after == 0)
+assert(reduced_to_zero.value.changed == true)
+assert(reduced_to_zero.value.removed == true)
 assert(game.effects.has(avatar, downed).value == false)
 )lua" );
 
@@ -15147,6 +15681,12 @@ local updated = game.effects.update(avatar, cold, {
 assert(updated.ok)
 assert(updated.value.before.intensity == 1)
 assert(updated.value.after.intensity == 2)
+local lowered = game.effects.adjust_intensity(avatar, cold, -1, torso)
+assert(lowered.ok)
+assert(lowered.value.before == 2 and lowered.value.after == 1)
+local restored = game.effects.adjust_intensity(avatar, cold, 1, torso)
+assert(restored.ok)
+assert(restored.value.before == 1 and restored.value.after == 2)
 )lua" );
 
     std::string error;
@@ -16912,6 +17452,21 @@ assert(debt.value.before == 13)
 assert(debt.value.after == 9)
 assert(debt.value.changed == true)
 
+local faction_rep = game.npcs.add_faction_rep(handle, 2)
+assert(faction_rep.ok == true)
+assert(faction_rep.value.amount == 2)
+assert(faction_rep.value.after.likes == faction_rep.value.before.likes + 2)
+assert(faction_rep.value.after.respects == faction_rep.value.before.respects + 2)
+assert(faction_rep.value.after.trusts == faction_rep.value.before.trusts + 2)
+
+local assigned_mission = game.npcs.missions.add_assigned(
+    handle, game.types.id("mission", "TEST_MISSION_GOAL_CONDITION1"))
+assert(assigned_mission.ok == true)
+assert(assigned_mission.value.mission.assigned == true)
+assert(assigned_mission.value.mission.status == "active")
+assert(game.missions.abandon(
+    assigned_mission.value.mission.token).ok == true)
+
 assert(pcall(function()
     game.npcs.rename(handle, "")
 end) == false)
@@ -17017,6 +17572,11 @@ local page = game.npcs.list({ query = "Lua navigation NPC", limit = 1 })
 assert(page.ok == true)
 local handle = page.value.items[1].handle
 local position = page.value.items[1].position
+
+local destinations = game.npcs.destinations(handle)
+assert(destinations.ok == true)
+assert(type(destinations.value.items) == "table")
+assert(destinations.value.returned <= destinations.value.total)
 
 local guard = game.npcs.set_guard_position(handle, position)
 assert(guard.ok == true)
@@ -20050,6 +20610,17 @@ local ok, failure = pcall(function()
     assert(removed_field.value.removed == true)
     assert(game.world.remove_field(position, web).value.removed == false)
 
+    local emitted = game.world.emit(position, "emit_smoke_plume", 0)
+    assert(emitted.ok == true)
+    assert(emitted.value.emission == "emit_smoke_plume")
+    assert(emitted.value.position == position)
+    assert(emitted.value.chance == 0)
+
+    local placed_with_hit_player = game.world.put_field(
+        position, web, 1, game.time.duration(0, "turn"), true)
+    assert(placed_with_hit_player.ok == true)
+    assert(game.world.remove_field(position, web).value.removed == true)
+
     local backpack = game.types.id("item", "backpack")
     local spawned = game.world.spawn_item(position, backpack, 1)
     assert(spawned.ok == true)
@@ -20089,6 +20660,12 @@ local ok, failure = pcall(function()
     end) == false)
     assert(pcall(function()
         game.world.spawn_item(position, backpack, 101)
+    end) == false)
+    assert(pcall(function()
+        game.world.emit(position, "not_a_real_emission")
+    end) == false)
+    assert(pcall(function()
+        game.world.emit(position, "emit_smoke_plume", math.huge)
     end) == false)
 end)
 
@@ -20142,6 +20719,7 @@ local avatar = game.creatures.snapshot(
 local origin = avatar.position:project_to("overmap_terrain")
 local limits = game.overmap.limits()
 assert(limits.maximum_radius == 60)
+assert(limits.maximum_closest_radius == 2000)
 assert(limits.maximum_radius_z == 5)
 assert(limits.maximum_limit == 256)
 assert(limits.maximum_selectors == 16)
@@ -20190,6 +20768,18 @@ assert(found.existing_only == true)
 local closest = game.overmap.closest(origin, options)
 assert(closest.ok == true)
 assert(closest.value.position == origin)
+local long_range_closest = game.overmap.closest(origin, {
+    types = { selector }, radius = 2000, limit = 1,
+})
+assert(long_range_closest.ok == true)
+assert(long_range_closest.value.position == origin)
+assert(long_range_closest.value.native_query == true)
+assert(long_range_closest.value.maximum_radius == 2000)
+local long_range_random = game.overmap.random(origin, {
+    types = { selector }, radius = 0, limit = 1,
+})
+assert(long_range_random.ok == true)
+assert(long_range_random.value.native_query == true)
 local sampled = game.overmap.random(origin, options)
 assert(sampled.ok == true)
 assert(sampled.value.position == origin)
@@ -20211,6 +20801,9 @@ assert(pcall(function()
 end) == false)
 assert(pcall(function()
     game.overmap.search(origin, { radius = 61 })
+end) == false)
+assert(pcall(function()
+    game.overmap.closest(origin, { types = { selector }, radius = 2001 })
 end) == false)
 assert(pcall(function()
     game.overmap.search(origin, { radius_z = 6 })
@@ -21483,6 +22076,10 @@ assert(hammer_after.value.amount >=
     hammer_before.value.amount + 2)
 assert(hammer_after.value.has_amount == true)
 assert(hammer_after.value.has_tools == true)
+local weighted_hammers = game.inventory.has_items_sum(
+    avatar, {{ item = hammer_id, amount = 2 }})
+assert(weighted_hammers.ok == true)
+assert(weighted_hammers.value == true)
 
 local wielded = game.inventory.wield(
     avatar, hammers.value.items[1].handle)
@@ -21559,6 +22156,16 @@ local battery_final = game.inventory.resources(
     avatar, battery_id, 1).value
 assert(battery_final.charges == battery_before.charges)
 
+local rock_id = game.types.id("item", "rock")
+local rock_before = game.inventory.resources(avatar, rock_id, 1).value.amount
+assert(game.inventory.give(avatar, rock_id, 1).value.added == 1)
+local hand_in = game.inventory.hand_in(avatar, avatar, rock_id, 1, 0)
+assert(hand_in.ok == true)
+assert(hand_in.value.count == 1)
+assert(type(hand_in.value.notice) == "string" and #hand_in.value.notice > 0)
+local rock_after = game.inventory.resources(avatar, rock_id, 1).value.amount
+assert(rock_after == rock_before)
+
 assert(pcall(function()
     game.inventory.give(avatar, hammer_id, 101)
 end) == false)
@@ -21569,6 +22176,9 @@ end) == false)
 assert(pcall(function()
     game.inventory.resources(
         avatar, game.types.id("effect", "onfire"), 1)
+end) == false)
+assert(pcall(function()
+    game.inventory.has_items_sum(avatar, {{ item = hammer_id, amount = 0 }})
 end) == false)
 )lua" );
 
@@ -23765,9 +24375,14 @@ assert(string.find(message_error, "active callback", 1, true) ~= nil)
 
 events.on("game_begin", function()
     assert(game.random.int(37, 37) == 37)
+    assert(game.random.real(1.5, 1.5) == 1.5)
     assert(game.random.chance(0, 1) == false)
     assert(game.random.chance(1, 1) == true)
     assert(pcall(function() game.random.int(2, 1) end) == false)
+    assert(pcall(function() game.random.real(2, 1) end) == false)
+    assert(pcall(function() game.random.real(0, math.huge) end) == false)
+    assert(type(game.options.get("USE_LANG")) == "string")
+    assert(pcall(function() game.options.get("NOT_A_REAL_OPTION") end) == false)
     assert(pcall(function() game.random.chance(-1, 1) end) == false)
     assert(pcall(function()
         game.messages.add("bad type", "unknown")
@@ -24023,6 +24638,30 @@ events.on("game_begin", function()
     assert(placed_snapshot.value.type_id ==
            placed.value.monster.value)
     assert(placed_snapshot.value.hallucination == false)
+
+    local hostile_page = game.creatures.nearby({
+        radius = 60,
+        limit = 256,
+        visible_only = false,
+        include_hallucinations = true,
+        kind = "monster",
+        attitude = "hostile"
+    })
+    local found_hostile_spawn = false
+    for _, entry in ipairs(hostile_page.items) do
+        if entry.snapshot.position == monster_position then
+            found_hostile_spawn = true
+        end
+    end
+    assert(found_hostile_spawn == true)
+    assert(hostile_page.attitude == "hostile")
+    assert(pcall(function()
+        game.creatures.nearby({ attitude = "unknown" })
+    end) == false)
+    local group_monster = game.spawns.choose_monster_from_group(
+        game.types.id("monster_group", "GROUP_ZOMBIE"))
+    assert(group_monster.kind == "monster")
+    assert(group_monster:is_valid())
 
     local hallucination = game.spawns.hallucination(
         hallucination_position, {
@@ -25600,7 +26239,7 @@ game.dialogue.register_topic({
     REQUIRE( response.lua_response_id.has_value() );
     talk_topic next_topic = response.success.apply( lua_dialogue );
     next_topic = apply_lua_dialogue_response(
-                     lua_dialogue, *response.lua_response_id, next_topic );
+                     lua_dialogue, *response.lua_response_id, next_topic, true );
     CHECK( next_topic.id == "TALK_LUA_DIALOGUE_AFTER_SELECT" );
     CHECK( lua_dialogue.get_value( "lua_dialogue_choice" ).str() == "picked" );
 
@@ -25650,7 +26289,7 @@ game.dialogue.register_topic({
     talk_topic readonly_next = readonly_response.success.apply( readonly_dialogue );
     readonly_next = apply_lua_dialogue_response(
                         readonly_dialogue, *readonly_response.lua_response_id,
-                        readonly_next );
+                        readonly_next, true );
     CHECK( readonly_next.id == "TALK_LUA_DIALOGUE_READONLY_DONE" );
     CHECK_FALSE( readonly_dialogue.maybe_get_value(
                      "lua_dialogue_forbidden_set" ) );
@@ -25812,7 +26451,7 @@ ccb.dialogue.register_topic {
     REQUIRE( response.lua_response_id.has_value() );
     talk_topic next_topic = response.success.apply( platform_dialogue );
     next_topic = apply_lua_dialogue_response(
-                     platform_dialogue, *response.lua_response_id, next_topic );
+                     platform_dialogue, *response.lua_response_id, next_topic, true );
     CHECK( next_topic.id == "TALK_PLATFORM_DIALOGUE_AFTER_SELECT" );
     CHECK( platform_dialogue.get_value( "platform_dialogue_choice" ).str() == "picked" );
 }

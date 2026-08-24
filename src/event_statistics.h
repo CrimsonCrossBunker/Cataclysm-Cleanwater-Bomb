@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "clone_ptr.h"
+#include "catalua_platform_content.h"
 #include "translation.h"
 #include "type_id.h"
 
@@ -32,9 +33,6 @@ namespace detail
 {
 struct event_statistic_native_definition;
 struct event_transformation_native_definition;
-event_statistic make_event_statistic( const event_statistic_native_definition &definition );
-event_transformation make_event_transformation(
-    const event_transformation_native_definition &definition );
 } // namespace detail
 }
 

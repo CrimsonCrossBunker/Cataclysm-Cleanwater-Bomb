@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -25,6 +26,7 @@
 #include "clzones.h"
 #include "coordinates.h"
 #include "creature_tracker.h"
+#include "emit.h"
 #include "field.h"
 #include "field_type.h"
 #include "game.h"
@@ -38,6 +40,7 @@
 #include "mapgen_functions.h"
 #include "mission.h"
 #include "monster.h"
+#include "mtype.h"
 #include "npc.h"
 #include "overmapbuffer.h"
 #include "point.h"
@@ -111,7 +114,134 @@ struct map_item_options {
     int max_radius = 0;
     std::size_t offset = 0;
     int limit = default_map_item_limit;
+    std::optional<sol::table> filters;
 };
+
+std::size_t require_dense_lua_array(
+    const sol::table &values, const std::string &description,
+    const std::size_t minimum, const std::size_t maximum )
+{
+    const std::size_t count = values.size();
+    if( count < minimum || count > maximum ) {
+        throw std::invalid_argument( description + " has an invalid length" );
+    }
+    for( std::size_t index = 1; index <= count; ++index ) {
+        const sol::object value = values.raw_get<sol::object>( index );
+        if( !value.valid() || value.get_type() == sol::type::nil ) {
+            throw std::invalid_argument( description + " must be a dense array" );
+        }
+    }
+    return count;
+}
+
+std::vector<std::string> map_filter_values(
+    const sol::table &descriptor, const std::string &key )
+{
+    const sol::object raw = descriptor.raw_get<sol::object>( key );
+    if( !raw.valid() || raw.get_type() == sol::type::nil ) {
+        return {};
+    }
+    std::vector<std::string> result;
+    const auto append = [&result, &key]( const sol::object &entry ) {
+        if( !entry.is<std::string>() ) {
+            throw std::invalid_argument( "game.world.items_nearby filter '" + key +
+                                         "' values must be strings" );
+        }
+        const std::string value = entry.as<std::string>();
+        if( value.empty() || value.size() > 256 || value.find( '\0' ) != std::string::npos ) {
+            throw std::invalid_argument( "game.world.items_nearby filter values are out of bounds" );
+        }
+        result.push_back( value );
+    };
+    if( raw.is<std::string>() ) {
+        append( raw );
+    } else if( raw.get_type() == sol::type::table ) {
+        const sol::table values = raw.as<sol::table>();
+        const std::size_t count = require_dense_lua_array(
+            values, "game.world.items_nearby filter", 0, 128 );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            append( values.raw_get<sol::object>( index ) );
+        }
+    } else {
+        throw std::invalid_argument( "game.world.items_nearby filter values must be strings or arrays" );
+    }
+    return result;
+}
+
+bool map_item_matches_filter( const item &entry, const sol::table &descriptor )
+{
+    const std::vector<std::string> ids = map_filter_values( descriptor, "id" );
+    const std::vector<std::string> excluded_ids = map_filter_values( descriptor, "id_blacklist" );
+    const std::vector<std::string> categories = map_filter_values( descriptor, "category" );
+    const std::vector<std::string> materials = map_filter_values( descriptor, "material" );
+    const std::vector<std::string> flags = map_filter_values( descriptor, "flags" );
+    const std::vector<std::string> excluded_flags = map_filter_values( descriptor, "excluded_flags" );
+    const std::string id = entry.typeId().str();
+    if( !ids.empty() && std::find( ids.begin(), ids.end(), id ) == ids.end() ) {
+        return false;
+    }
+    if( std::find( excluded_ids.begin(), excluded_ids.end(), id ) != excluded_ids.end() ) {
+        return false;
+    }
+    const std::string category = entry.get_category_shallow().get_id().str();
+    if( !categories.empty() && std::find( categories.begin(), categories.end(), category ) == categories.end() ) {
+        return false;
+    }
+    if( !materials.empty() && std::none_of( materials.begin(), materials.end(),
+    [&entry]( const std::string &value ) {
+        return entry.made_of( material_id( value ) ) > 0;
+    } ) ) {
+        return false;
+    }
+    if( !flags.empty() && std::none_of( flags.begin(), flags.end(),
+    [&entry]( const std::string &value ) {
+        return entry.has_flag( flag_id( value ) );
+    } ) ) {
+        return false;
+    }
+    if( std::any_of( excluded_flags.begin(), excluded_flags.end(),
+    [&entry]( const std::string &value ) {
+        return entry.has_flag( flag_id( value ) );
+    } ) ) {
+        return false;
+    }
+    for( const std::string &key : { "uses_energy", "is_chargeable" } ) {
+        const sol::object raw = descriptor.raw_get<sol::object>( key );
+        if( raw.valid() && raw.get_type() != sol::type::nil ) {
+            if( !raw.is<bool>() ) {
+                throw std::invalid_argument( "game.world.items_nearby filter booleans are required" );
+            }
+            const bool actual = key == "uses_energy" ? entry.uses_energy() : entry.is_chargeable();
+            if( actual != raw.as<bool>() ) {
+                return false;
+            }
+        }
+    }
+    for( const std::string &key : { "worn_only", "wielded_only", "held_only" } ) {
+        const sol::object raw = descriptor.raw_get<sol::object>( key );
+        if( raw.valid() && raw.get_type() != sol::type::nil ) {
+            if( !raw.is<bool>() ) {
+                throw std::invalid_argument( "game.world.items_nearby filter booleans are required" );
+            }
+            if( raw.as<bool>() ) {
+                return false;
+            }
+        }
+    }
+    for( const auto &member : descriptor ) {
+        if( !member.first.is<std::string>() ) {
+            throw std::invalid_argument( "game.world.items_nearby filter keys must be strings" );
+        }
+        const std::string key = member.first.as<std::string>();
+        if( key != "id" && key != "id_blacklist" && key != "category" &&
+            key != "material" && key != "flags" && key != "excluded_flags" &&
+            key != "uses_energy" && key != "is_chargeable" && key != "worn_only" &&
+            key != "wielded_only" && key != "held_only" ) {
+            throw std::invalid_argument( "game.world.items_nearby unknown filter field '" + key + "'" );
+        }
+    }
+    return true;
+}
 
 enum class location_selector_kind {
     none,
@@ -409,9 +539,13 @@ region_options read_region_options(
         }
         const std::string key =
             key_object.as<std::string>();
-        const int number =
-            require_integer_option(
-                entry.second, std::string( api_name ), key );
+        const int number = key == "filters" ? 0 :
+                           require_integer_option(
+                               entry.second, std::string( api_name ), key );
+        if( key != "filters" && number < 0 ) {
+            throw std::invalid_argument(
+                std::string( api_name ) + " numeric options cannot be negative" );
+        }
         if( key == "radius" ) {
             result.radius =
                 std::min( number, maximum_region_radius );
@@ -454,9 +588,13 @@ map_item_options read_map_item_options(
         }
         const std::string key =
             key_object.as<std::string>();
-        const int number =
-            require_integer_option(
-                entry.second, std::string( api_name ), key );
+        const int number = key == "filters" ? 0 :
+                           require_integer_option(
+                               entry.second, std::string( api_name ), key );
+        if( key != "filters" && number < 0 ) {
+            throw std::invalid_argument(
+                std::string( api_name ) + " numeric options cannot be negative" );
+        }
         if( key == "min_radius" ) {
             result.min_radius =
                 std::min( number, maximum_location_search_radius );
@@ -472,6 +610,12 @@ map_item_options read_map_item_options(
         } else if( key == "limit" ) {
             result.limit =
                 std::min( number, maximum_map_item_limit );
+        } else if( key == "filters" ) {
+            if( entry.second.get_type() != sol::type::table ) {
+                throw std::invalid_argument(
+                    std::string( api_name ) + " filters must be a dense descriptor array" );
+            }
+            result.filters = entry.second.as<sol::table>();
         } else {
             throw std::invalid_argument(
                 std::string( api_name ) +
@@ -507,6 +651,10 @@ map_item_options read_point_page_options(
         const int number =
             require_integer_option(
                 entry.second, std::string( api_name ), key );
+        if( key != "filters" && number < 0 ) {
+            throw std::invalid_argument(
+                std::string( api_name ) + " numeric options cannot be negative" );
+        }
         if( key == "min_radius" ) {
             result.min_radius =
                 std::min( number, maximum_location_search_radius );
@@ -557,6 +705,10 @@ vehicle_options read_vehicle_options(
         const int number =
             require_integer_option(
                 entry.second, std::string( api_name ), key );
+        if( number < 0 ) {
+            throw std::invalid_argument(
+                std::string( api_name ) + " numeric options cannot be negative" );
+        }
         if( key == "offset" ) {
             result.offset = static_cast<std::size_t>(
                                 std::min(
@@ -1413,6 +1565,20 @@ sol::table world_items_nearby(
             here, origin, std::string( api_name ) );
     const map_item_options options =
         read_map_item_options( requested_options );
+    std::vector<sol::table> filters;
+    if( options.filters ) {
+        const std::size_t count = require_dense_lua_array(
+            *options.filters, "game.world.items_nearby filters", 0, 128 );
+        filters.reserve( count );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            const sol::object descriptor = options.filters->raw_get<sol::object>( index );
+            if( !descriptor.is<sol::table>() ) {
+                throw std::invalid_argument(
+                    "game.world.items_nearby filters must contain descriptor tables" );
+            }
+            filters.push_back( descriptor.as<sol::table>() );
+        }
+    }
 
     struct match {
         item *value = nullptr;
@@ -1434,6 +1600,12 @@ sol::table world_items_nearby(
         const tripoint_abs_ms absolute =
             here.get_abs( position );
         for( item &entry : here.i_at( position ) ) {
+            if( !filters.empty() && std::none_of( filters.begin(), filters.end(),
+            [&entry]( const sol::table &descriptor ) {
+                return map_item_matches_filter( entry, descriptor );
+            } ) ) {
+                continue;
+            }
             matches.push_back( {
                 &entry, absolute, distance
             } );
@@ -1777,7 +1949,8 @@ sol::table put_field(
     const script_tripoint_coord &position,
     const script_game_id &requested,
     const int intensity,
-    const script_time_duration &age )
+    const script_time_duration &age,
+    const sol::optional<bool> &requested_hit_player )
 {
     constexpr std::string_view api_name =
         "game.world.put_field";
@@ -1814,7 +1987,8 @@ sol::table put_field(
         existed ? before->get_field_age() : 0_turns;
     const bool accepted = here.add_field(
                               local, native, intensity,
-                              native_age, false );
+                              native_age,
+                              requested_hit_player.value_or( false ) );
     const field_entry *after =
         here.get_field( local, native );
     sol::state_view state( lua );
@@ -1871,6 +2045,45 @@ sol::table remove_field(
                 before->get_field_age() );
         here.remove_field( local, native );
     }
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table emit_field_at(
+    sol::this_state lua,
+    const script_tripoint_coord &position,
+    const std::string &requested_emission,
+    const sol::optional<double> &requested_chance )
+{
+    constexpr std::string_view api_name =
+        "game.world.emit";
+    const emit_id emission( requested_emission );
+    if( requested_emission.empty() ||
+        requested_emission.size() > 256 ||
+        !emission.is_valid() ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " requires a valid bounded emission id" );
+    }
+    const double chance = requested_chance.value_or( 1.0 );
+    if( !std::isfinite( chance ) ||
+        chance < 0.0 || chance > 1000.0 ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " chance must be finite and within 0..1000" );
+    }
+    map &here = get_map();
+    const tripoint_bub_ms local =
+        require_loaded_position(
+            here, position, std::string( api_name ) );
+    here.emit_field(
+        local, emission, static_cast<float>( chance ) );
+    sol::state_view state( lua );
+    sol::table value = state.create_table();
+    value["emission"] = requested_emission;
+    value["position"] = position;
+    value["chance"] = chance;
     return make_game_value_result(
                state,
                sol::make_object( state, std::move( value ) ) );
@@ -3040,11 +3253,12 @@ void install_world_api(
             const script_tripoint_coord & position,
             const script_game_id & id,
             const int intensity,
-    const script_time_duration & age ) {
+    const script_time_duration & age,
+    const sol::optional<bool> & hit_player ) {
         require_write();
         return put_field(
                    lua_state, position, id,
-                   intensity, age );
+                   intensity, age, hit_player );
     } );
     world.set_function(
         "remove_field",
@@ -3055,6 +3269,17 @@ void install_world_api(
         require_write();
         return remove_field(
                    lua_state, position, id );
+    } );
+    world.set_function(
+        "emit",
+        [require_write](
+            sol::this_state lua_state,
+            const script_tripoint_coord &position,
+            const std::string &emission,
+    const sol::optional<double> &chance ) {
+        require_write();
+        return emit_field_at(
+                   lua_state, position, emission, chance );
     } );
     world.set_function(
         "spawn_item",

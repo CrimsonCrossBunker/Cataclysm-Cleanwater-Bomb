@@ -3013,10 +3013,11 @@ bool overmap::can_place_special( const overmap_special &special, const tripoint_
     const point_abs_omt base = coords::project_to<coords::omt>( this->pos() );
     const tripoint_abs_omt absolute_position =
         tripoint_abs_omt{ base, p.z() } + point_rel_omt{ p.x(), p.y() };
+    const city &nearest_city = get_nearest_city( p );
     const std::optional<bool> lua_condition =
         cata::lua_platform::invoke_overmap_special_condition_handler(
             special.id.str(), absolute_position, static_cast<int>( dir ),
-            cit.name, cit.size, cit.population );
+            nearest_city.name, nearest_city.size, nearest_city.population );
     if( lua_condition && !*lua_condition ) {
         return false;
     }

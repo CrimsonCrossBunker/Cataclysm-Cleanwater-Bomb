@@ -131,7 +131,7 @@ sol::table provider_service_state(
     result["owed"] = provider.op_of_u.owed;
     result["attitude"] = static_cast<int>(
                               provider.get_attitude() );
-    result["busy_turns"] = to_turn<std::int64_t>(
+    result["busy_turns"] = to_turns<std::int64_t>(
                                 provider.get_effect_dur(
                                     effect_currently_busy ) );
     result["current_activity"] =
@@ -1113,6 +1113,55 @@ sol::table npc_training_offerings(
                    state, std::move( value ) ) );
 }
 
+sol::table add_assigned_npc_mission(
+    sol::this_state lua, const game_handle &provider_handle,
+    const script_game_id &requested_mission,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    if( requested_mission.kind() != "mission" ||
+        !requested_mission.is_valid() ) {
+        throw std::invalid_argument(
+            "game.npcs.missions.add_assigned requires a valid GameId<mission>" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *provider = resolve_npc(
+                        provider_handle, runtime_generation,
+                        world_generation, error );
+    if( provider == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    sol::table before = npc_mission_provider_state(
+                            state, *provider,
+                            runtime_generation,
+                            world_generation );
+    mission *created = mission::reserve_new(
+                           mission_type_id( requested_mission.value() ),
+                           provider->getID() );
+    if( created == nullptr ) {
+        return make_game_error_result( state, {
+            "rejected",
+            "The engine rejected the NPC mission assignment"
+        } );
+    }
+    created->assign( get_avatar() );
+    provider->chatbin.missions_assigned.push_back( created );
+    sol::table value = state.create_table();
+    value["mission"] = npc_mission_state(
+                           state, *created,
+                           runtime_generation,
+                           world_generation );
+    value["before"] = std::move( before );
+    value["after"] = npc_mission_provider_state(
+                         state, *provider,
+                         runtime_generation,
+                         world_generation );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 template<typename Id>
 bool contains_training_id(
     const std::vector<Id> &ids, const Id &requested )
@@ -1507,6 +1556,17 @@ void install_npc_domain_services(
     const script_game_id &mission ) {
         require_write();
         return offer_npc_mission(
+                   state, provider, mission,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    missions.set_function(
+        "add_assigned",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state state, const game_handle &provider,
+    const script_game_id &mission ) {
+        require_write();
+        return add_assigned_npc_mission(
                    state, provider, mission,
                    current_runtime_generation(),
                    current_world_generation() );

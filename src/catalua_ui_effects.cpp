@@ -3,6 +3,7 @@
 #include "catalua_ui_effects.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -29,7 +30,8 @@ namespace
 constexpr int default_effect_limit = 64;
 constexpr int maximum_effect_limit = 256;
 constexpr std::size_t maximum_effect_relation_ids = 64;
-constexpr int maximum_effect_intensity = 1000;
+constexpr int maximum_effect_assignment_intensity = 1000000;
+constexpr int maximum_effect_intensity_delta = 1000;
 
 void require_id_kind( const script_game_id &id, const std::string &kind,
                       const std::string &api_name )
@@ -240,6 +242,7 @@ sol::table has_effect(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
     const std::optional<script_game_id> &requested_body_part,
+    const std::optional<double> &requested_intensity,
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
@@ -257,10 +260,18 @@ sol::table has_effect(
         effect_body_part(
             *creature, requested_body_part,
             "game.effects.has" );
+    if( requested_intensity &&
+        ( !std::isfinite( *requested_intensity ) ||
+          *requested_intensity < -1000000.0 ||
+          *requested_intensity > 1000000.0 ) ) {
+        throw std::invalid_argument(
+            "game.effects.has intensity must be finite and within -1000000..1000000" );
+    }
     const efftype_id id( requested_id.value() );
-    const bool present = body_part ?
-                         creature->has_effect( id, *body_part ) :
-                         creature->has_effect( id );
+    const effect *entry = find_effect( *creature, id, body_part );
+    const bool present = entry != nullptr &&
+                         ( !requested_intensity ||
+                           entry->get_intensity() >= *requested_intensity );
     return make_game_value_result(
                state, sol::make_object( state, present ) );
 }
@@ -343,7 +354,7 @@ effect_add_options read_add_options(
             }
             const lua_Integer intensity = value.as<lua_Integer>();
             if( intensity < 0 ||
-                intensity > maximum_effect_intensity ) {
+                intensity > maximum_effect_assignment_intensity ) {
                 throw std::invalid_argument(
                     "game.effects.add intensity is outside its limit" );
             }
@@ -456,6 +467,69 @@ sol::table remove_effect(
                state, sol::make_object( state, removed ) );
 }
 
+sol::table adjust_effect_intensity(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_id, const std::int64_t requested_delta,
+    const std::optional<script_game_id> &requested_body_part,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    require_id_kind(
+        requested_id, "effect", "game.effects.adjust_intensity" );
+    if( requested_delta < -maximum_effect_intensity_delta ||
+        requested_delta > maximum_effect_intensity_delta ) {
+        throw std::invalid_argument(
+            "game.effects.adjust_intensity delta must be within -1000..1000" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Creature *creature = resolve_creature(
+                             handle, runtime_generation,
+                             world_generation, error );
+    if( creature == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const std::optional<bodypart_id> body_part =
+        effect_body_part(
+            *creature, requested_body_part,
+            "game.effects.adjust_intensity" );
+    const efftype_id id( requested_id.value() );
+    effect *entry = find_effect( *creature, id, body_part );
+
+    sol::table value = state.create_table();
+    value["before"] = 0;
+    value["after"] = 0;
+    value["changed"] = false;
+    value["removed"] = false;
+    if( entry == nullptr ) {
+        return make_game_value_result(
+                   state, sol::make_object( state, std::move( value ) ) );
+    }
+
+    const int before = entry->get_intensity();
+    const std::int64_t requested_after =
+        static_cast<std::int64_t>( before ) + requested_delta;
+    value["before"] = before;
+    if( requested_after <= 0 ) {
+        const bodypart_id selected_body_part = entry->get_bp();
+        const bool removed = creature->remove_effect(
+                                 id, selected_body_part );
+        value["changed"] = removed;
+        value["removed"] = removed;
+    } else {
+        entry->set_intensity( static_cast<int>( requested_after ) );
+        const int after = entry->get_intensity();
+        value["after"] = after;
+        value["changed"] = after != before;
+        if( after != before ) {
+            creature->notify_effect_int_change(
+                entry->get_id(), after, entry->get_bp() );
+        }
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 struct effect_update_options {
     std::optional<script_game_id> body_part;
     std::optional<script_time_duration> duration;
@@ -498,7 +572,7 @@ effect_update_options read_update_options(
             }
             const lua_Integer intensity = value.as<lua_Integer>();
             if( intensity < 1 ||
-                intensity > maximum_effect_intensity ) {
+                intensity > maximum_effect_assignment_intensity ) {
                 throw std::invalid_argument(
                     "game.effects.update intensity is outside its limit" );
             }
@@ -605,10 +679,11 @@ void install_effect_api(
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle & handle,
             const script_game_id & id,
-    const std::optional<script_game_id> &body_part ) {
+    const std::optional<script_game_id> &body_part,
+    const std::optional<double> &intensity ) {
         require_read();
         return has_effect(
-                   lua_state, handle, id, body_part,
+                   lua_state, handle, id, body_part, intensity,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
@@ -646,6 +721,18 @@ void install_effect_api(
         require_write();
         return remove_effect(
                    lua_state, handle, id, body_part,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    effects.set_function(
+        "adjust_intensity",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+            const script_game_id & id, const std::int64_t delta,
+    const std::optional<script_game_id> &body_part ) {
+        require_write();
+        return adjust_effect_intensity(
+                   lua_state, handle, id, delta, body_part,
                    current_runtime_generation(),
                    current_world_generation() );
     } );

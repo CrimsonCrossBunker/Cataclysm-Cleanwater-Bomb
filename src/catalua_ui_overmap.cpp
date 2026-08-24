@@ -37,6 +37,7 @@ namespace
 
 constexpr int default_search_radius = 20;
 constexpr int maximum_search_radius = 60;
+constexpr int maximum_closest_radius = 2000;
 constexpr int maximum_search_radius_z = 5;
 constexpr int default_search_limit = 64;
 constexpr int maximum_search_limit = 256;
@@ -56,6 +57,7 @@ struct terrain_selector {
 struct overmap_search_options {
     std::vector<terrain_selector> types;
     std::vector<terrain_selector> exclude_types;
+    std::optional<std::string> special;
     int minimum_radius = 0;
     int radius = default_search_radius;
     int radius_z = 0;
@@ -311,7 +313,8 @@ bool require_boolean(
 
 overmap_search_options read_search_options(
     const sol::optional<sol::table> &requested,
-    const std::string &api_name )
+    const std::string &api_name,
+    const int maximum_radius )
 {
     overmap_search_options result;
     if( !requested ) {
@@ -331,6 +334,14 @@ overmap_search_options read_search_options(
         } else if( key == "exclude_types" ) {
             result.exclude_types = read_selectors(
                                        entry.second, api_name, key );
+        } else if( key == "special" ) {
+            if( !entry.second.is<std::string>() ) {
+                throw std::invalid_argument(
+                    api_name + " option 'special' must be a string" );
+            }
+            const std::string value = entry.second.as<std::string>();
+            result.special = require_selector_text(
+                                 value, api_name );
         } else if( key == "minimum_radius" ) {
             result.minimum_radius =
                 require_integer(
@@ -366,9 +377,10 @@ overmap_search_options read_search_options(
                 " received unknown option '" + key + "'" );
         }
     }
-    if( result.radius > maximum_search_radius ) {
+    if( result.radius > maximum_radius ) {
         throw std::invalid_argument(
-            api_name + " radius cannot exceed 60" );
+            api_name + " radius cannot exceed " +
+            std::to_string( maximum_radius ) );
     }
     if( result.minimum_radius > result.radius ) {
         throw std::invalid_argument(
@@ -405,6 +417,7 @@ bool matches_any(
 
 bool matches_filters(
     const oter_id &terrain,
+    const tripoint_abs_omt &position,
     const om_vision_level vision,
     const bool explored,
     const overmap_search_options &options )
@@ -416,6 +429,11 @@ bool matches_filters(
     if( !options.exclude_types.empty() &&
         matches_any(
             terrain, options.exclude_types ) ) {
+        return false;
+    }
+    if( options.special &&
+        !overmap_buffer.check_overmap_special_type_existing(
+            overmap_special_id( *options.special ), position ) ) {
         return false;
     }
     const bool seen =
@@ -504,7 +522,7 @@ overmap_search_scan scan_existing_overmap(
                     located.om->is_explored(
                         located.local );
                 if( matches_filters(
-                        terrain, vision,
+                        terrain, position, vision,
                         explored, options ) ) {
                     result.matches.push_back( position );
                 }
@@ -677,6 +695,8 @@ sol::table overmap_limits( sol::this_state lua )
     sol::table result = state.create_table();
     result["maximum_radius"] =
         maximum_search_radius;
+    result["maximum_closest_radius"] =
+        maximum_closest_radius;
     result["maximum_radius_z"] =
         maximum_search_radius_z;
     result["maximum_limit"] =
@@ -709,7 +729,8 @@ sol::table overmap_search(
             origin, std::string( api_name ) );
     const overmap_search_options options =
         read_search_options(
-            requested, std::string( api_name ) );
+            requested, std::string( api_name ),
+            maximum_search_radius );
     overmap_search_scan scan =
         scan_existing_overmap(
             native_origin, options );
@@ -767,21 +788,69 @@ sol::table overmap_closest(
             origin, std::string( api_name ) );
     const overmap_search_options options =
         read_search_options(
-            requested, std::string( api_name ) );
-    const overmap_search_scan scan =
-        scan_existing_overmap(
-            native_origin, options );
+            requested, std::string( api_name ),
+            maximum_closest_radius );
+    const bool native_compatible =
+        options.exclude_types.empty() &&
+        !options.explored && options.offset == 0 &&
+        !options.types.empty();
+    if( !native_compatible &&
+        options.radius > maximum_search_radius ) {
+        throw std::invalid_argument(
+            "game.overmap.closest long-range queries require terrain types "
+            "without exclude_types, explored, or offset filters" );
+    }
+    std::optional<tripoint_abs_omt> native_match;
+    overmap_search_scan scan;
+    if( native_compatible ) {
+        omt_find_params params;
+        params.types.reserve( options.types.size() );
+        for( const terrain_selector &selector : options.types ) {
+            params.types.emplace_back(
+                selector.terrain, selector.match );
+        }
+        params.search_range = options.radius + 1;
+        params.min_distance = options.minimum_radius;
+        params.must_see = options.seen.value_or( false );
+        params.cant_see = options.seen && !*options.seen;
+        params.existing_only = true;
+        params.min_z = std::max(
+                           -OVERMAP_DEPTH,
+                           native_origin.z() - options.radius_z );
+        params.max_z = std::min(
+                           OVERMAP_HEIGHT,
+                           native_origin.z() + options.radius_z );
+        if( options.special ) {
+            params.om_special =
+                overmap_special_id( *options.special );
+        }
+        const tripoint_abs_omt found =
+            overmap_buffer.find_closest(
+                native_origin, params );
+        if( !found.is_invalid() ) {
+            native_match = found;
+        }
+    } else {
+        scan = scan_existing_overmap(
+                   native_origin, options );
+    }
     sol::state_view state( lua );
-    if( scan.matches.empty() ) {
+    if( !native_match && scan.matches.empty() ) {
         return make_game_error_result(
         state, game_handle_error{
             "not_found",
             "No existing overmap tile matched the bounded search"
         } );
     }
+    const tripoint_abs_omt matched =
+        native_match ? *native_match : scan.matches.front();
     sol::table value =
         snapshot_overmap_tile(
-            state, scan.matches.front() );
+            state, matched );
+    value["minimum_radius"] = options.minimum_radius;
+    value["radius"] = options.radius;
+    value["maximum_radius"] = maximum_closest_radius;
+    value["native_query"] = native_compatible;
     return make_game_value_result(
                state,
                sol::make_object(
@@ -850,12 +919,53 @@ sol::table overmap_random(
             origin, std::string( api_name ) );
     const overmap_search_options options =
         read_search_options(
-            requested, std::string( api_name ) );
-    const overmap_search_scan scan =
-        scan_existing_overmap(
-            native_origin, options );
+            requested, std::string( api_name ),
+            maximum_closest_radius );
+    const bool native_compatible =
+        options.exclude_types.empty() &&
+        !options.explored && options.offset == 0 &&
+        !options.types.empty();
+    if( !native_compatible &&
+        options.radius > maximum_search_radius ) {
+        throw std::invalid_argument(
+            "game.overmap.random long-range queries require terrain types "
+            "without exclude_types, explored, or offset filters" );
+    }
+    std::vector<tripoint_abs_omt> native_matches;
+    overmap_search_scan scan;
+    if( native_compatible ) {
+        omt_find_params params;
+        params.types.reserve( options.types.size() );
+        for( const terrain_selector &selector : options.types ) {
+            params.types.emplace_back(
+                selector.terrain, selector.match );
+        }
+        params.search_range = options.radius + 1;
+        params.min_distance = options.minimum_radius;
+        params.must_see = options.seen.value_or( false );
+        params.cant_see = options.seen && !*options.seen;
+        params.existing_only = true;
+        params.min_z = std::max(
+                           -OVERMAP_DEPTH,
+                           native_origin.z() - options.radius_z );
+        params.max_z = std::min(
+                           OVERMAP_HEIGHT,
+                           native_origin.z() + options.radius_z );
+        if( options.special ) {
+            params.om_special =
+                overmap_special_id( *options.special );
+        }
+        native_matches = overmap_buffer.find_all(
+                             native_origin, params );
+    } else {
+        scan = scan_existing_overmap(
+                   native_origin, options );
+    }
     sol::state_view state( lua );
-    if( scan.matches.empty() ) {
+    const std::size_t match_count = native_compatible ?
+                                    native_matches.size() :
+                                    scan.matches.size();
+    if( match_count == 0 ) {
         return make_game_error_result(
         state, game_handle_error{
             "not_found",
@@ -863,14 +973,21 @@ sol::table overmap_random(
         } );
     }
     const std::size_t selected =
-        random_index( scan.matches.size() );
-    if( selected >= scan.matches.size() ) {
+        random_index( match_count );
+    if( selected >= match_count ) {
         throw std::runtime_error(
             "game.overmap.random selector returned an invalid index" );
     }
+    const tripoint_abs_omt matched = native_compatible ?
+                                      native_matches[selected] :
+                                      scan.matches[selected];
     sol::table value =
         snapshot_overmap_tile(
-            state, scan.matches[selected] );
+            state, matched );
+    value["minimum_radius"] = options.minimum_radius;
+    value["radius"] = options.radius;
+    value["maximum_radius"] = maximum_closest_radius;
+    value["native_query"] = native_compatible;
     return make_game_value_result(
                state,
                sol::make_object(

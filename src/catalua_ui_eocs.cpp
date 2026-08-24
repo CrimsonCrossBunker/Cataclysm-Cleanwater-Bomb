@@ -21,9 +21,12 @@
 #include "catalua_game_handle.h"
 #include "creature.h"
 #include "dialogue.h"
+#include "dialogue_helpers.h"
 #include "effect_on_condition.h"
 #include "enum_conversions.h"
 #include "event.h"
+#include "global_vars.h"
+#include "item.h"
 #include "math_parser_diag_value.h"
 #include "vehicle.h"
 
@@ -528,8 +531,40 @@ sol::table queue_eoc(
 
 struct resolved_variable_talker {
     std::unique_ptr<talker> value;
+    item *item_value = nullptr;
     std::optional<game_handle_error> error;
 };
+
+const diag_value *resolved_variable_get(
+    const resolved_variable_talker &resolved,
+    const std::string &key )
+{
+    return resolved.item_value != nullptr ?
+           resolved.item_value->maybe_get_value( key ) :
+           resolved.value->maybe_get_value( key );
+}
+
+void resolved_variable_set(
+    resolved_variable_talker &resolved,
+    const std::string &key, const diag_value &value )
+{
+    if( resolved.item_value != nullptr ) {
+        resolved.item_value->set_var( key, value );
+    } else {
+        resolved.value->set_value( key, value );
+    }
+}
+
+void resolved_variable_remove(
+    resolved_variable_talker &resolved,
+    const std::string &key )
+{
+    if( resolved.item_value != nullptr ) {
+        resolved.item_value->erase_var( key );
+    } else {
+        resolved.value->remove_value( key );
+    }
+}
 
 resolved_variable_talker resolve_variable_talker(
     const game_handle &handle,
@@ -559,9 +594,20 @@ resolved_variable_talker resolve_variable_talker(
         result.value = get_talker_for( *target.value );
         return result;
     }
+    if( handle.kind() == game_handle_kind::item ) {
+        const native_handle_result<item> target =
+            handle.resolve_item(
+                runtime_generation, world_generation );
+        if( !target ) {
+            result.error = target.error;
+            return result;
+        }
+        result.item_value = target.value;
+        return result;
+    }
     result.error = game_handle_error{
         "wrong_kind",
-        "game.variables requires a creature or vehicle GameHandle"
+        "game.variables requires a creature, item, or vehicle GameHandle"
     };
     return result;
 }
@@ -581,7 +627,7 @@ sol::table get_variable(
         return make_game_error_result( state, *resolved.error );
     }
     sol::table value = state.create_table();
-    const diag_value *stored = resolved.value->maybe_get_value( key );
+    const diag_value *stored = resolved_variable_get( resolved, key );
     value["exists"] = stored != nullptr;
     if( stored != nullptr ) {
         std::size_t nodes = 0;
@@ -611,7 +657,7 @@ sol::table set_variable(
         return make_game_error_result( state, *resolved.error );
     }
     sol::table value = state.create_table();
-    const diag_value *before = resolved.value->maybe_get_value( key );
+    const diag_value *before = resolved_variable_get( resolved, key );
     value["existed"] = before != nullptr;
     if( before != nullptr ) {
         std::size_t nodes = 0;
@@ -620,7 +666,7 @@ sol::table set_variable(
     } else {
         value["before"] = sol::nil;
     }
-    resolved.value->set_value( key, replacement );
+    resolved_variable_set( resolved, key, replacement );
     std::size_t nodes = 0;
     value["after"] = context_value_to_lua(
                          state, replacement, 0, nodes );
@@ -643,18 +689,270 @@ sol::table remove_variable(
         return make_game_error_result( state, *resolved.error );
     }
     sol::table value = state.create_table();
-    const diag_value *before = resolved.value->maybe_get_value( key );
+    const diag_value *before = resolved_variable_get( resolved, key );
     value["removed"] = before != nullptr;
     if( before != nullptr ) {
         std::size_t nodes = 0;
         value["before"] = context_value_to_lua(
                               state, *before, 0, nodes );
-        resolved.value->remove_value( key );
+        resolved_variable_remove( resolved, key );
     } else {
         value["before"] = sol::nil;
     }
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table get_global_variable(
+    sol::this_state lua, const std::string &key )
+{
+    validate_context_key( key );
+    sol::state_view state( lua );
+    sol::table value = state.create_table();
+    const diag_value *stored = get_globals().maybe_get_global_value( key );
+    value["exists"] = stored != nullptr;
+    if( stored != nullptr ) {
+        std::size_t nodes = 0;
+        value["value"] = context_value_to_lua( state, *stored, 0, nodes );
+    } else {
+        value["value"] = sol::nil;
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table set_global_variable(
+    sol::this_state lua, const std::string &key, const sol::object &requested )
+{
+    validate_context_key( key );
+    const diag_value replacement = context_value_from_lua( requested, key );
+    sol::state_view state( lua );
+    sol::table value = state.create_table();
+    const diag_value *before = get_globals().maybe_get_global_value( key );
+    value["existed"] = before != nullptr;
+    if( before != nullptr ) {
+        std::size_t nodes = 0;
+        value["before"] = context_value_to_lua( state, *before, 0, nodes );
+    } else {
+        value["before"] = sol::nil;
+    }
+    get_globals().set_global_value( key, replacement );
+    std::size_t nodes = 0;
+    value["after"] = context_value_to_lua( state, replacement, 0, nodes );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table remove_global_variable(
+    sol::this_state lua, const std::string &key )
+{
+    validate_context_key( key );
+    sol::state_view state( lua );
+    sol::table value = state.create_table();
+    const diag_value *before = get_globals().maybe_get_global_value( key );
+    value["removed"] = before != nullptr;
+    if( before != nullptr ) {
+        std::size_t nodes = 0;
+        value["before"] = context_value_to_lua( state, *before, 0, nodes );
+        get_globals().remove_global_value( key );
+    } else {
+        value["before"] = sol::nil;
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table resolve_variable(
+    sol::this_state lua, const sol::optional<sol::table> &context,
+    const sol::optional<game_handle> &actor, const std::string &scope,
+    const std::string &key, const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    validate_context_key( key );
+    if( scope != "u" && scope != "npc" && scope != "global" &&
+        scope != "context" && scope != "var" ) {
+        throw std::invalid_argument( "game.variables.resolve received an unknown scope" );
+    }
+    sol::state_view state( lua );
+    std::string current_scope = scope;
+    std::string current_key = key;
+    for( int depth = 0; depth < 8; ++depth ) {
+        if( current_scope == "context" || current_scope == "var" ) {
+            if( !context ) {
+                sol::table result = state.create_table();
+                result["exists"] = false;
+                result["value"] = sol::nil;
+                return make_game_value_result(
+                           state, sol::make_object( state, std::move( result ) ) );
+            }
+            const sol::object stored = context->raw_get<sol::object>( current_key );
+            if( !stored.valid() || stored.get_type() == sol::type::nil ) {
+                sol::table result = state.create_table();
+                result["exists"] = false;
+                result["value"] = sol::nil;
+                return make_game_value_result(
+                           state, sol::make_object( state, std::move( result ) ) );
+            }
+            if( current_scope == "context" ) {
+                sol::table result = state.create_table();
+                result["exists"] = true;
+                result["value"] = stored;
+                return make_game_value_result(
+                           state, sol::make_object( state, std::move( result ) ) );
+            }
+            if( !stored.is<std::string>() ) {
+                throw std::invalid_argument(
+                    "game.variables.resolve var scope must name another variable" );
+            }
+            const var_info nested = process_variable( stored.as<std::string>() );
+            switch( nested.type ) {
+                case var_type::u:
+                    current_scope = "u";
+                    break;
+                case var_type::npc:
+                    current_scope = "npc";
+                    break;
+                case var_type::context:
+                    current_scope = "context";
+                    break;
+                case var_type::global:
+                    current_scope = "global";
+                    break;
+                case var_type::var:
+                case var_type::last:
+                    current_scope = "var";
+                    break;
+            }
+            current_key = nested.name;
+            validate_context_key( current_key );
+            continue;
+        }
+        if( current_scope == "global" ) {
+            const diag_value *stored = get_globals().maybe_get_global_value( current_key );
+            sol::table result = state.create_table();
+            result["exists"] = stored != nullptr;
+            if( stored != nullptr ) {
+                std::size_t nodes = 0;
+                result["value"] = context_value_to_lua( state, *stored, 0, nodes );
+            } else {
+                result["value"] = sol::nil;
+            }
+            return make_game_value_result(
+                       state, sol::make_object( state, std::move( result ) ) );
+        }
+        if( !actor ) {
+            sol::table result = state.create_table();
+            result["exists"] = false;
+            result["value"] = sol::nil;
+            return make_game_value_result(
+                       state, sol::make_object( state, std::move( result ) ) );
+        }
+        const resolved_variable_talker resolved = resolve_variable_talker(
+                *actor, runtime_generation, world_generation );
+        if( resolved.error ) {
+            return make_game_error_result( state, *resolved.error );
+        }
+        const diag_value *stored = resolved_variable_get( resolved, current_key );
+        sol::table result = state.create_table();
+        result["exists"] = stored != nullptr;
+        if( stored != nullptr ) {
+            std::size_t nodes = 0;
+            result["value"] = context_value_to_lua( state, *stored, 0, nodes );
+        } else {
+            result["value"] = sol::nil;
+        }
+        return make_game_value_result(
+                   state, sol::make_object( state, std::move( result ) ) );
+    }
+    throw std::runtime_error( "game.variables.resolve exceeded variable indirection depth" );
+}
+
+sol::table set_resolved_variable(
+    sol::this_state lua, const sol::optional<sol::table> &context,
+    const sol::optional<game_handle> &actor, const std::string &scope,
+    const std::string &key, const sol::object &requested,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    validate_context_key( key );
+    if( scope != "u" && scope != "npc" && scope != "global" &&
+        scope != "context" && scope != "var" ) {
+        throw std::invalid_argument( "game.variables.set_resolved received an unknown scope" );
+    }
+    if( scope == "global" ) {
+        return set_global_variable( lua, key, requested );
+    }
+    if( scope == "u" || scope == "npc" ) {
+        if( !actor ) {
+            sol::state_view state( lua );
+            return make_game_error_result( state, {
+                "missing_actor",
+                "game.variables.set_resolved requires an actor for u/npc scope"
+            } );
+        }
+        return set_variable(
+                   lua, *actor, key, requested,
+                   runtime_generation, world_generation );
+    }
+    if( !context ) {
+        sol::state_view state( lua );
+        return make_game_error_result( state, {
+            "missing_context",
+            "game.variables.set_resolved requires context scope data"
+        } );
+    }
+    if( scope == "context" ) {
+        const diag_value replacement = context_value_from_lua( requested, key );
+        sol::state_view state( lua );
+        sol::table value = state.create_table();
+        const sol::object before = context->raw_get<sol::object>( key );
+        value["existed"] = before.valid() && before.get_type() != sol::type::nil;
+        if( before.valid() && before.get_type() != sol::type::nil ) {
+            value["before"] = before;
+        } else {
+            value["before"] = sol::nil;
+        }
+        context->raw_set( key, requested );
+        std::size_t nodes = 0;
+        value["after"] = context_value_to_lua( state, replacement, 0, nodes );
+        return make_game_value_result(
+                   state, sol::make_object( state, std::move( value ) ) );
+    }
+    const sol::object stored = context->raw_get<sol::object>( key );
+    if( !stored.valid() || stored.get_type() == sol::type::nil ) {
+        sol::state_view state( lua );
+        return make_game_error_result( state, {
+            "missing_indirection",
+            "game.variables.set_resolved var scope has no target variable"
+        } );
+    }
+    if( !stored.is<std::string>() ) {
+        throw std::invalid_argument(
+            "game.variables.set_resolved var scope must name another variable" );
+    }
+    const var_info nested = process_variable( stored.as<std::string>() );
+    std::string nested_scope;
+    switch( nested.type ) {
+        case var_type::u:
+            nested_scope = "u";
+            break;
+        case var_type::npc:
+            nested_scope = "npc";
+            break;
+        case var_type::context:
+            nested_scope = "context";
+            break;
+        case var_type::global:
+            nested_scope = "global";
+            break;
+        case var_type::var:
+        case var_type::last:
+            nested_scope = "var";
+            break;
+    }
+    return set_resolved_variable(
+               lua, context, actor, nested_scope, nested.name, requested,
+               runtime_generation, world_generation );
 }
 
 } // namespace
@@ -793,6 +1091,52 @@ void install_variable_api(
                    lua_state, handle, key,
                    current_runtime_generation(),
                    current_world_generation() );
+    } );
+    variables.set_function(
+        "get_global",
+        [require_read]( sol::this_state lua_state, const std::string &key ) {
+        require_read();
+        return get_global_variable( lua_state, key );
+    } );
+    variables.set_function(
+        "set_global",
+        [require_write, has_active_callback]( sol::this_state lua_state,
+    const std::string &key, const sol::object &value ) {
+        require_write();
+        require_active_callback( has_active_callback, "game.variables.set_global" );
+        return set_global_variable( lua_state, key, value );
+    } );
+    variables.set_function(
+        "remove_global",
+        [require_write, has_active_callback]( sol::this_state lua_state,
+    const std::string &key ) {
+        require_write();
+        require_active_callback( has_active_callback, "game.variables.remove_global" );
+        return remove_global_variable( lua_state, key );
+    } );
+    variables.set_function(
+        "resolve",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const sol::optional<sol::table> &context,
+    const sol::optional<game_handle> &actor, const std::string &scope,
+    const std::string &key ) {
+        require_read();
+        return resolve_variable( lua_state, context, actor, scope, key,
+                                 current_runtime_generation(),
+                                 current_world_generation() );
+    } );
+    variables.set_function(
+        "set_resolved",
+        [current_runtime_generation, current_world_generation,
+         require_write, has_active_callback](
+            sol::this_state lua_state, const sol::optional<sol::table> &context,
+            const sol::optional<game_handle> &actor, const std::string &scope,
+            const std::string &key, const sol::object &value ) {
+        require_write();
+        require_active_callback( has_active_callback, "game.variables.set_resolved" );
+        return set_resolved_variable(
+                   lua_state, context, actor, scope, key, value,
+                   current_runtime_generation(), current_world_generation() );
     } );
     game["variables"] = std::move( variables );
 }

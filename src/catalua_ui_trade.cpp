@@ -453,9 +453,11 @@ sol::table matching_stock(
     if( seller == nullptr ) {
         return make_game_error_result( state, *error );
     }
+    const std::optional<std::int64_t> limit = requested_limit ?
+            std::optional<std::int64_t>( *requested_limit ) : std::nullopt;
     const matching_inventory stock = find_matching_inventory(
                                          *seller, itype_id( item_id.value() ),
-                                         requested_limit );
+                                         limit );
     sol::table value = state.create_table();
     value["id"] = item_id;
     value["quantity"] = stock.quantity;
@@ -794,6 +796,38 @@ sol::table pay_npc(
                        *entry, cost ) ) );
 }
 
+sol::table settle_npc_payment(
+    sol::this_state lua, const game_handle &handle,
+    const std::int64_t amount,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    if( amount < -maximum_trade_balance ||
+        amount > maximum_trade_balance ) {
+        throw std::invalid_argument(
+            "game.trade.settle amount must be within -1000000000..1000000000" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *entry = resolve_npc(
+                     handle, runtime_generation,
+                     world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const int debt_before = entry->op_of_u.owed;
+    const bool accepted = npc_trading::pay_npc(
+                              *entry, static_cast<int>( amount ) );
+    sol::table value = state.create_table();
+    value["accepted"] = accepted;
+    value["amount"] = amount;
+    value["debt_before"] = debt_before;
+    value["debt_after"] = entry->op_of_u.owed;
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 sol::table settle_npc_credit(
     sol::this_state lua, const game_handle &handle,
     const int cost,
@@ -1105,6 +1139,19 @@ void install_trade_api(
         require_write();
         return pay_npc(
                    state, npc_handle, cost,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    trade.set_function(
+        "settle",
+        [current_runtime_generation,
+         current_world_generation, require_write](
+             sol::this_state state,
+             const game_handle &npc_handle,
+             const std::int64_t amount ) {
+        require_write();
+        return settle_npc_payment(
+                   state, npc_handle, amount,
                    current_runtime_generation(),
                    current_world_generation() );
     } );

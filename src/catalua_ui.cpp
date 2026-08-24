@@ -1614,7 +1614,8 @@ talk_response lua_dialogue_response_from_table(
                 return invoke_lua_dialogue_response_callback(
                            state, std::move( callback ), d, fallback );
             } );
-        }
+        },
+        {}
     } );
 }
 

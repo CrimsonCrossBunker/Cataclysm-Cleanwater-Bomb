@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <stdexcept>
@@ -16,6 +17,7 @@
 #include "game.h"
 #include "lightmap.h"
 #include "messages.h"
+#include "options.h"
 #include "type_id.h"
 #include "worldfactory.h"
 #include "rng.h"
@@ -35,6 +37,7 @@ constexpr std::size_t maximum_message_bytes = 8192;
 constexpr std::int64_t minimum_random_integer = -1000000000;
 constexpr std::int64_t maximum_random_integer = 1000000000;
 constexpr std::int64_t maximum_random_denominator = 1000000000;
+constexpr double maximum_random_real = 1000000000.0;
 
 void require_active_callback(
     const std::function<bool()> &has_active_callback,
@@ -185,6 +188,30 @@ bool random_chance(
     return x_in_y(
                static_cast<double>( numerator ),
                static_cast<double>( denominator ) );
+}
+
+std::string option_string( const std::string &name )
+{
+    if( name.empty() || name.size() > 128 ||
+        name.find( '\0' ) != std::string::npos ||
+        !has_option( name ) ) {
+        throw std::invalid_argument(
+            "game.options.get requires an existing option name within 128 bytes" );
+    }
+    return get_option<std::string>( name );
+}
+
+double random_real( const double minimum, const double maximum )
+{
+    if( !std::isfinite( minimum ) || !std::isfinite( maximum ) ||
+        minimum < -maximum_random_real ||
+        maximum > maximum_random_real ||
+        minimum > maximum ) {
+        throw std::invalid_argument(
+            "game.random.real requires a finite ordered range within "
+            "-1000000000..1000000000" );
+    }
+    return rng_float( minimum, maximum );
 }
 
 void validate_mod_id_text(
@@ -349,7 +376,26 @@ void install_game_info_api(
             has_active_callback, "game.random.chance" );
         return random_chance( numerator, denominator );
     } );
+    random.set_function(
+        "real",
+        [require_read, has_active_callback](
+            const double minimum,
+    const double maximum ) {
+        require_read();
+        require_active_callback(
+            has_active_callback, "game.random.real" );
+        return random_real( minimum, maximum );
+    } );
     game["random"] = std::move( random );
+
+    sol::table options = state.create_table();
+    options.set_function(
+        "get",
+        [require_read]( const std::string &name ) {
+        require_read();
+        return option_string( name );
+    } );
+    game["options"] = std::move( options );
 
     sol::table mods = state.create_table();
     mods.set_function(

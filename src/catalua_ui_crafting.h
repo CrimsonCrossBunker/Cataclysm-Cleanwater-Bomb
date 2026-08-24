@@ -14,7 +14,7 @@ namespace cata::lua_ui
 // is added through the regular safe-point action queue in the same module.
 void install_crafting_api(
     sol::table &game,
-    const game_handle_runtime &runtime_generation,
+    std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write,

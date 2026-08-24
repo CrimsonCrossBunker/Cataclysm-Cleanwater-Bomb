@@ -27,6 +27,7 @@
 #include "calendar.h"
 #include "cata_utility.h"
 #include "catacharset.h"
+#include "catalua_platform_runtime.h"
 #include "catalua_ui.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
@@ -2443,6 +2444,9 @@ void Character::process_turn()
         }
     }
     effect_on_conditions::process_effect_on_conditions( *this );
+#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+    cata::lua_platform::runtime_process_character_recurring( *this );
+#endif
 }
 
 // This must be called when any of the following change:

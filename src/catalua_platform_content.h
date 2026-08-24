@@ -5,6 +5,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -245,10 +246,6 @@ void erase_platform_scenario_blacklist( const platform_blacklist_data &value );
 void insert_platform_savegame_blacklist( const platform_blacklist_data &value );
 void erase_platform_savegame_blacklist( const platform_blacklist_data &value );
 void erase_platform_trait_blacklist( const std::vector<std::string> &entries );
-void insert_platform_monster_blacklist( const std::vector<std::string> &entries,
-                                        bool whitelist );
-void erase_platform_monster_blacklist( const std::vector<std::string> &entries,
-                                       bool whitelist );
 generic_factory<map_extra> &map_extra_registry();
 generic_factory<weather_generator> &weather_generator_registry();
 generic_factory<shopkeeper_blacklist> &shopkeeper_blacklist_registry();
@@ -361,6 +358,33 @@ struct event_statistic_native_definition {
     std::string description;
     std::string description_plural;
 };
+
+// Event statistic and transformation use a pimpl implementation whose
+// concrete type is private to event_statistics.cpp.  Keep transaction undo
+// state opaque here so callers do not instantiate copies of the incomplete
+// implementation type.
+struct event_transformation_snapshot;
+struct event_statistic_snapshot;
+
+std::shared_ptr<event_transformation_snapshot> snapshot_event_transformation(
+    const std::string &id );
+void register_event_transformation(
+    const event_transformation_native_definition &definition,
+    const std::string &owner );
+void restore_event_transformation(
+    const std::string &id,
+    const std::shared_ptr<event_transformation_snapshot> &snapshot );
+void finalize_event_transformations();
+
+std::shared_ptr<event_statistic_snapshot> snapshot_event_statistic(
+    const std::string &id );
+void register_event_statistic(
+    const event_statistic_native_definition &definition,
+    const std::string &owner );
+void restore_event_statistic(
+    const std::string &id,
+    const std::shared_ptr<event_statistic_snapshot> &snapshot );
+void finalize_event_statistics();
 
 generic_factory<event_transformation> &event_transformation_registry();
 generic_factory<event_statistic> &event_statistic_registry();

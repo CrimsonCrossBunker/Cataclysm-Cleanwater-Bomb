@@ -23,6 +23,7 @@
 #include "character.h"
 #include "character_id.h"
 #include "coordinates.h"
+#include "current_map.h"
 #include "creature.h"
 #include "creature_tracker.h"
 #include "game.h"
@@ -1634,6 +1635,12 @@ void install_game_world_service_api(
         require_read();
         return monsters_from_group(
                    lua, monster_group );
+    } );
+    spawns.set_function(
+        "choose_monster_from_group",
+        [require_read]( const script_game_id &monster_group ) {
+        require_read();
+        return random_monster_from_group( monster_group );
     } );
     spawns.set_function(
         "monster",
