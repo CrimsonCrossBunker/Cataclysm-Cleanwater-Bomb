@@ -11,16 +11,8 @@
     "damage_reduction": { "all": 2 },
     "flags": [ "WINDOW", "WINDOW_MOUNT", "FRAGILE_COMPONENTS" ],
     "requirements": {
-      "install": {
-        "skills": [ [ "mechanics", 1 ] ],
-        "time": "15 m",
-        "using": [ [ "adhesive", 2 ] ]
-      },
-      "removal": {
-        "skills": [ [ "mechanics", 1 ] ],
-        "time": "10 m",
-        "using": [ [ "vehicle_nail_removal", 1 ] ]
-      }
+      "install": { "skills": [ [ "mechanics", 1 ] ], "time": "15 m", "using": [ [ "adhesive", 2 ] ] },
+      "removal": { "skills": [ [ "mechanics", 1 ] ], "time": "10 m", "using": [ [ "vehicle_nail_removal", 1 ] ] }
     },
     "breaks_into": [ { "count": [ 15, 30 ], "item": "glass_shard" } ],
     "variants": [ { "symbols": "+", "symbols_broken": "+" } ]
@@ -37,16 +29,8 @@
     "damage_reduction": { "all": 20 },
     "flags": [ "WINDOW", "WINDOW_MOUNT", "FRAGILE_COMPONENTS" ],
     "requirements": {
-      "install": {
-        "skills": [ [ "mechanics", 1 ] ],
-        "time": "15 m",
-        "using": [ [ "adhesive", 2 ] ]
-      },
-      "removal": {
-        "skills": [ [ "mechanics", 1 ] ],
-        "time": "10 m",
-        "using": [ [ "vehicle_nail_removal", 1 ] ]
-      }
+      "install": { "skills": [ [ "mechanics", 1 ] ], "time": "15 m", "using": [ [ "adhesive", 2 ] ] },
+      "removal": { "skills": [ [ "mechanics", 1 ] ], "time": "10 m", "using": [ [ "vehicle_nail_removal", 1 ] ] }
     },
     "breaks_into": [ { "count": [ 15, 30 ], "item": "glass_shard" } ],
     "variants": [ { "symbols": "+", "symbols_broken": "+" } ]
