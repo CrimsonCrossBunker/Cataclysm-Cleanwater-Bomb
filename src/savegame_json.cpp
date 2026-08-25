@@ -828,6 +828,10 @@ void Character::load( const JsonObject &data )
     data.read( "healthy_mod", daily_health );
     data.read( "health_tally", health_tally );
 
+    // sensitivity
+    data.read( "sensitive", sensitive );
+    data.read( "sensitive_mod", sensitive_mod );
+
     data.read( "proficiencies", _proficiencies );
 
     _proficiencies->migrate_proficiencies();
@@ -1455,6 +1459,10 @@ void Character::store( JsonOut &json ) const
     json.member( "healthy", lifestyle );
     json.member( "healthy_mod", daily_health );
     json.member( "health_tally", health_tally );
+
+    // sensitivity
+    json.member( "sensitive", sensitive );
+    json.member( "sensitive_mod", sensitive_mod );
 
     //sleep
     json.member( "daily_sleep", daily_sleep );
