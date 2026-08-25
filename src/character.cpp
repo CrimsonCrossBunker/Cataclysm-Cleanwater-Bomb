@@ -2660,7 +2660,8 @@ bool Character::practice( const skill_id &id, int amount, int cap, bool suppress
             // apply many turns of gains at once.
             double focus_drain = std::max( focus_pool / 100.0, static_cast<double>( amount ) );
 
-            // Low sensitivity speeds focus burnout by up to +50%, high sensitivity slows it down to -50%.
+            // Low sensitivity speeds focus burnout by up to +50%,
+            // high sensitivity slows it down to -50%.
             const int s = get_sensitive();
             if( s < 50 ) {
                 focus_drain *= 1.0 + std::min( 0.5, ( 50 - s ) * 0.01 );
@@ -7974,7 +7975,8 @@ bool Character::avoid_trap( const tripoint_bub_ms &pos, const trap &tr ) const
     // Sensitivity slightly shifts trap avoidance, ±10% across 0..400.
     const double sens_mult = clamp( 1.0 + 0.1 * std::log( std::clamp( get_sensitive(), 1,
                                            400 ) / 100.0 ) / std::log( 4.0 ), 0.9, 1.1 );
-    int myroll = dice( 3, round( ( get_dex() + get_skill_level( skill_dodge ) * 1.5 ) * sens_mult ) );
+    int myroll = dice( 3, round( ( get_dex() + get_skill_level( skill_dodge ) * 1.5 ) *
+                                  sens_mult ) );
     int traproll;
     if( tr.can_see( pos, *this ) ) {
         traproll = dice( 3, tr.get_avoidance() );
