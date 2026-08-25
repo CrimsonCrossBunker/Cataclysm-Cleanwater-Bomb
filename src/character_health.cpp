@@ -1508,20 +1508,24 @@ void Character::update_sensitive_per_effects()
 {
     const int s = get_sensitive();
 
-    if( s < 50 ) {
-        add_effect( effect_dulled_senses, 2_minutes, bodypart_str_id::NULL_ID(), true, 2 );
-    } else if( s < 75 ) {
-        add_effect( effect_dulled_senses, 2_minutes, bodypart_str_id::NULL_ID(), true, 1 );
-    } else {
+    const int want_dulled = s < 50 ? 2 : ( s < 75 ? 1 : 0 );
+    if( want_dulled == 0 ) {
         remove_effect( effect_dulled_senses );
+    } else if( !has_effect( effect_dulled_senses ) ||
+               get_effect_int( effect_dulled_senses ) != want_dulled ) {
+        remove_effect( effect_dulled_senses );
+        add_effect( effect_dulled_senses, 10_minutes, bodypart_str_id::NULL_ID(), true,
+                    want_dulled );
     }
 
-    if( s > 400 ) {
-        add_effect( effect_heightened_senses, 2_minutes, bodypart_str_id::NULL_ID(), true, 2 );
-    } else if( s > 200 ) {
-        add_effect( effect_heightened_senses, 2_minutes, bodypart_str_id::NULL_ID(), true, 1 );
-    } else {
+    const int want_heightened = s > 400 ? 2 : ( s > 200 ? 1 : 0 );
+    if( want_heightened == 0 ) {
         remove_effect( effect_heightened_senses );
+    } else if( !has_effect( effect_heightened_senses ) ||
+               get_effect_int( effect_heightened_senses ) != want_heightened ) {
+        remove_effect( effect_heightened_senses );
+        add_effect( effect_heightened_senses, 10_minutes, bodypart_str_id::NULL_ID(), true,
+                    want_heightened );
     }
 }
 
