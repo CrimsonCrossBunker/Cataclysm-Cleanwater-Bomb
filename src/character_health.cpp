@@ -298,6 +298,9 @@ void Character::react_to_felt_pain( int intensity )
         !has_effect( effect_narcosis ) ) {
         int pain_thresh = rng( 3, 5 );
 
+        // Sensitivity shifts the pain wake-up threshold by up to ±100%.
+        pain_thresh = std::max( 1, pain_thresh + ( 100 - get_sensitive() ) / 25 );
+
         if( has_bionic( bio_sleep_shutdown ) ) {
             pain_thresh += 999;
         } else if( has_trait( trait_HEAVYSLEEPER ) ) {
