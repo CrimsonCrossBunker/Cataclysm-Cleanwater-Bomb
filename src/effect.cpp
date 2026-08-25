@@ -447,7 +447,7 @@ void effect_type::load_mod_data( const JsonObject &j )
         {"h_mod_tick",        mod_action::TICK},
     } );
 
-    // Then sensitivity equilibrium mod
+    // Then sensitivity current value
     extract_effect( to_extract, "SENSITIVE", {
         {"sensitive_amount",      mod_action::AMOUNT},
         {"sensitive_min",         mod_action::MIN},
@@ -457,6 +457,18 @@ void effect_type::load_mod_data( const JsonObject &j )
         {"sensitive_chance",      mod_action::CHANCE_TOP},
         {"sensitive_chance_bot",  mod_action::CHANCE_BOT},
         {"sensitive_tick",        mod_action::TICK},
+    } );
+
+    // Then sensitivity equilibrium mod
+    extract_effect( to_extract, "SEN_MOD", {
+        {"sen_mod_amount",      mod_action::AMOUNT},
+        {"sen_mod_min",         mod_action::MIN},
+        {"sen_mod_max",         mod_action::MAX},
+        {"sen_mod_min_val",     mod_action::MIN_VAL},
+        {"sen_mod_max_val",     mod_action::MAX_VAL},
+        {"sen_mod_chance",      mod_action::CHANCE_TOP},
+        {"sen_mod_chance_bot",  mod_action::CHANCE_BOT},
+        {"sen_mod_tick",        mod_action::TICK},
     } );
 
     // Then radiation

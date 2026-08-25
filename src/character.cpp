@@ -6939,14 +6939,25 @@ void Character::process_one_effect( effect &it, bool is_new )
         }
     }
 
-    // Handle sensitivity equilibrium mod
+    // Handle sensitivity current value
     val = get_effect( "SENSITIVE", reduced );
     if( val != 0 ) {
         mod = 1;
         if( is_new || it.activated( calendar::turn, "SENSITIVE", val, reduced, mod ) ) {
+            mod_sensitive( bound_mod_to_vals( get_sensitive(), val,
+                                              it.get_max_val( "SENSITIVE", reduced ),
+                                              it.get_min_val( "SENSITIVE", reduced ) ) );
+        }
+    }
+
+    // Handle sensitivity equilibrium mod
+    val = get_effect( "SEN_MOD", reduced );
+    if( val != 0 ) {
+        mod = 1;
+        if( is_new || it.activated( calendar::turn, "SEN_MOD", val, reduced, mod ) ) {
             mod_sensitive_mod( bound_mod_to_vals( get_sensitive_mod(), val,
-                                                  it.get_max_val( "SENSITIVE", reduced ),
-                                                  it.get_min_val( "SENSITIVE", reduced ) ) );
+                                                  it.get_max_val( "SEN_MOD", reduced ),
+                                                  it.get_min_val( "SEN_MOD", reduced ) ) );
         }
     }
 
