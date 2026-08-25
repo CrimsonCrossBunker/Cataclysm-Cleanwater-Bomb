@@ -791,6 +791,10 @@ void Character::mod_stat( const std::string &stat, float modifier )
         mod_int_bonus( modifier );
     } else if( stat == "healthy" ) {
         mod_livestyle( modifier );
+    } else if( stat == "sensitive" ) {
+        mod_sensitive( static_cast<int>( modifier ) );
+    } else if( stat == "sensitive_mod" ) {
+        mod_sensitive_mod( static_cast<int>( modifier ) );
     } else if( stat == "hunger" ) {
         mod_hunger( modifier );
     } else {
