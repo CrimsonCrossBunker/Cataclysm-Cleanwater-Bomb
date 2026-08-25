@@ -227,7 +227,7 @@ units::volume vehicle_stack::max_volume() const
         return 0_ml;
     }
     // Set max volume for vehicle cargo to prevent integer overflow
-    return std::min( vpi.size, 10000_liter );
+    return std::min( vpi.size, units::volume::max() );
 }
 
 units::volume vehicle_stack::stored_volume() const
