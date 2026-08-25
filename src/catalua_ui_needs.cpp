@@ -76,10 +76,6 @@ sol::table snapshot_needs(
         character.get_daily_health();
     result["health_tally"] =
         character.get_health_tally();
-    result["sensitive"] =
-        character.get_sensitive();
-    result["sensitive_mod"] =
-        character.get_sensitive_mod();
     return result;
 }
 
@@ -604,8 +600,6 @@ sol::table reset_sleep(
 struct health_adjustments {
     std::optional<int> lifestyle;
     std::optional<int> daily_health;
-    std::optional<int> sensitive;
-    std::optional<int> sensitive_mod;
 };
 
 health_adjustments read_health_adjustments(
@@ -618,8 +612,7 @@ health_adjustments read_health_adjustments(
                 "game.needs.set_health option keys must be strings" );
         }
         const std::string key = entry.first.as<std::string>();
-        if( key != "lifestyle" && key != "daily_health" &&
-            key != "sensitive" && key != "sensitive_mod" ) {
+        if( key != "lifestyle" && key != "daily_health" ) {
             throw std::invalid_argument(
                 "game.needs.set_health received unknown option '" +
                 key + "'" );
@@ -630,28 +623,18 @@ health_adjustments read_health_adjustments(
                 "' must be an integer" );
         }
         const int value = entry.second.as<int>();
-        const int minimum =
-            key == "sensitive" || key == "sensitive_mod" ? 0 : -200;
-        const int maximum =
-            key == "sensitive_mod" ? 500 :
-            key == "sensitive" ? maximum_need_magnitude : 200;
-        if( value < minimum || value > maximum ) {
+        if( value < -200 || value > 200 ) {
             throw std::invalid_argument(
                 "game.needs.set_health option '" + key +
-                "' exceeds its supported magnitude" );
+                "' must be within -200..200" );
         }
         if( key == "lifestyle" ) {
             result.lifestyle = value;
-        } else if( key == "daily_health" ) {
-            result.daily_health = value;
-        } else if( key == "sensitive" ) {
-            result.sensitive = value;
         } else {
-            result.sensitive_mod = value;
+            result.daily_health = value;
         }
     }
-    if( !result.lifestyle && !result.daily_health &&
-        !result.sensitive && !result.sensitive_mod ) {
+    if( !result.lifestyle && !result.daily_health ) {
         throw std::invalid_argument(
             "game.needs.set_health requires "
             "at least one adjustment" );
@@ -685,14 +668,6 @@ sol::table set_health(
         character->set_daily_health(
             *adjustments.daily_health );
     }
-    if( adjustments.sensitive ) {
-        character->set_sensitive(
-            *adjustments.sensitive );
-    }
-    if( adjustments.sensitive_mod ) {
-        character->set_sensitive_mod(
-            *adjustments.sensitive_mod );
-    }
     sol::table value = state.create_table();
     value["before"] = std::move( before );
     value["after"] =
@@ -706,8 +681,6 @@ struct health_deltas {
     std::optional<int> daily_health;
     std::optional<int> daily_health_cap;
     std::optional<int> health_tally;
-    std::optional<int> sensitive;
-    std::optional<int> sensitive_mod;
 };
 
 health_deltas read_health_deltas(
@@ -723,8 +696,7 @@ health_deltas read_health_deltas(
         const std::string key = entry.first.as<std::string>();
         if( key != "lifestyle" && key != "daily_health" &&
             key != "daily_health_cap" &&
-            key != "health_tally" &&
-            key != "sensitive" && key != "sensitive_mod" ) {
+            key != "health_tally" ) {
             throw std::invalid_argument(
                 "game.needs.modify_health received unknown option '" +
                 key + "'" );
@@ -736,7 +708,7 @@ health_deltas read_health_deltas(
         }
         const int value = entry.second.as<int>();
         const int maximum =
-            key == "health_tally" || key == "sensitive" ?
+            key == "health_tally" ?
             maximum_need_magnitude : 200;
         if( value < -maximum || value > maximum ) {
             throw std::invalid_argument(
@@ -749,17 +721,12 @@ health_deltas read_health_deltas(
             result.daily_health = value;
         } else if( key == "daily_health_cap" ) {
             result.daily_health_cap = value;
-        } else if( key == "health_tally" ) {
-            result.health_tally = value;
-        } else if( key == "sensitive" ) {
-            result.sensitive = value;
         } else {
-            result.sensitive_mod = value;
+            result.health_tally = value;
         }
     }
     if( !result.lifestyle && !result.daily_health &&
-        !result.daily_health_cap && !result.health_tally &&
-        !result.sensitive && !result.sensitive_mod ) {
+        !result.daily_health_cap && !result.health_tally ) {
         throw std::invalid_argument(
             "game.needs.modify_health requires "
             "at least one adjustment" );
@@ -803,14 +770,6 @@ sol::table modify_health(
     if( deltas.health_tally ) {
         character->mod_health_tally(
             *deltas.health_tally );
-    }
-    if( deltas.sensitive ) {
-        character->mod_sensitive(
-            *deltas.sensitive );
-    }
-    if( deltas.sensitive_mod ) {
-        character->mod_sensitive_mod(
-            *deltas.sensitive_mod );
     }
     sol::table value = state.create_table();
     value["before"] = std::move( before );
