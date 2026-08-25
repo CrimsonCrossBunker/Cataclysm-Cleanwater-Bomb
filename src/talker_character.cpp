@@ -1071,6 +1071,26 @@ void talker_character::set_stim( int amount )
     me_chr->set_stim( amount );
 }
 
+int talker_character_const::get_sensitive() const
+{
+    return me_chr_const->get_sensitive();
+}
+
+int talker_character_const::get_sensitive_mod() const
+{
+    return me_chr_const->get_sensitive_mod();
+}
+
+void talker_character::set_sensitive( int amount )
+{
+    me_chr->set_sensitive( amount );
+}
+
+void talker_character::set_sensitive_mod( int amount )
+{
+    me_chr->set_sensitive_mod( amount );
+}
+
 int talker_character_const::get_pkill() const
 {
     return me_chr_const->get_painkiller();
