@@ -1464,6 +1464,30 @@ bool Character::needs_food() const
     return !( is_npc() && get_option<bool>( "NO_NPC_FOOD" ) );
 }
 
+void Character::update_sensitive()
+{
+    const int gap = get_sensitive_mod_total() - sensitive;
+    if( gap == 0 ) {
+        return;
+    }
+
+    double rate = 0.05; // fraction of the remaining gap closed per tick
+    rate = enchantment_cache->modify_value( enchant_vals::mod::SENSITIVE_RATE, rate );
+    if( gap > 0 ) {
+        rate *= 1.0 + std::max( -1.0, enchantment_cache->get_value_add(
+                                    enchant_vals::mod::SENSITIVE_RATE_UP ) );
+    } else {
+        rate *= 1.0 + std::max( -1.0, enchantment_cache->get_value_add(
+                                    enchant_vals::mod::SENSITIVE_RATE_DOWN ) );
+    }
+
+    int change = roll_remainder( gap * static_cast<float>( rate ) );
+    if( change == 0 ) {
+        change = gap > 0 ? 1 : -1;
+    }
+    mod_sensitive( change );
+}
+
 void Character::update_needs( int rate_multiplier )
 {
     // Stasis NPCs don't accumulate any needs.
