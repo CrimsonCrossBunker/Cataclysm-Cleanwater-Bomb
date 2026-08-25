@@ -667,6 +667,20 @@ class Character : public Creature, public visitable
         void set_lifestyle( int nhealthy );
         void set_daily_health( int nhealthy_mod );
 
+        /** Getters for sensitivity values exclusive to characters */
+        int get_sensitive() const;
+        int get_sensitive_mod() const;
+        /** Equilibrium sensitivity after stim, painkillers, sleep deprivation and enchantments */
+        int get_sensitive_mod_total() const;
+
+        /** Modifiers for sensitivity values exclusive to characters */
+        void mod_sensitive( int nsensitive );
+        void mod_sensitive_mod( int nsensitive_mod );
+
+        /** Setters for sensitivity values exclusive to characters */
+        void set_sensitive( int nsensitive );
+        void set_sensitive_mod( int nsensitive_mod );
+
         /** Getter for need values exclusive to characters */
         int get_stored_kcal() const;
         int get_healthy_kcal() const;
@@ -4141,6 +4155,10 @@ class Character : public Creature, public visitable
         int lifestyle = 0;
         int daily_health = 0;
         int health_tally = 0;
+
+        /** Sensitivity to external stimuli, and its equilibrium target. */
+        int sensitive = 100;
+        int sensitive_mod = 100;
 
         // Our bmr at no activity level
         int base_bmr() const;

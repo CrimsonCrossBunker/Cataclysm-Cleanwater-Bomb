@@ -2188,6 +2188,44 @@ void Character::mod_stim( int mod )
     stim += mod;
 }
 
+void Character::set_sensitive( int nsensitive )
+{
+    nsensitive = std::max( nsensitive, 0 );
+    if( sensitive != nsensitive ) {
+        sensitive = nsensitive;
+        on_stat_change( "sensitive", sensitive );
+    }
+}
+
+void Character::mod_sensitive( int mod )
+{
+    set_sensitive( sensitive + mod );
+}
+
+int Character::get_sensitive() const
+{
+    return sensitive;
+}
+
+void Character::set_sensitive_mod( int nsensitive_mod )
+{
+    nsensitive_mod = clamp( nsensitive_mod, 0, 500 );
+    if( sensitive_mod != nsensitive_mod ) {
+        sensitive_mod = nsensitive_mod;
+        on_stat_change( "sensitive_mod", sensitive_mod );
+    }
+}
+
+void Character::mod_sensitive_mod( int mod )
+{
+    set_sensitive_mod( sensitive_mod + mod );
+}
+
+int Character::get_sensitive_mod() const
+{
+    return sensitive_mod;
+}
+
 int Character::get_rad() const
 {
     return radiation;
