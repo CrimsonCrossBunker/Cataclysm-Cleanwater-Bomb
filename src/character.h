@@ -971,6 +971,8 @@ class Character : public Creature, public visitable
         void update_needs( int rate_multiplier );
         /** Move sensitivity one tick towards its equilibrium */
         void update_sensitive();
+        /** Refresh threshold-based perception effects driven by sensitivity */
+        void update_sensitive_per_effects();
         needs_rates calc_needs_rates() const;
         void calc_sleep_recovery_rate( needs_rates &rates ) const;
         /** Kills the player if too hungry, stimmed up etc., forces tired player to sleep and prints warnings. */

@@ -119,6 +119,8 @@ static const damage_type_id damage_cut( "cut" );
 static const damage_type_id damage_electric( "electric" );
 static const damage_type_id damage_stab( "stab" );
 
+static const efftype_id effect_dulled_senses( "dulled_senses" );
+static const efftype_id effect_heightened_senses( "heightened_senses" );
 static const efftype_id effect_adrenaline( "adrenaline" );
 static const efftype_id effect_alarm_clock( "alarm_clock" );
 static const efftype_id effect_bandaged( "bandaged" );
@@ -1500,6 +1502,27 @@ void Character::update_sensitive()
         change = gap > 0 ? 1 : -1;
     }
     mod_sensitive( change );
+}
+
+void Character::update_sensitive_per_effects()
+{
+    const int s = get_sensitive();
+
+    if( s < 50 ) {
+        add_effect( effect_dulled_senses, 2_minutes, bodypart_str_id::NULL_ID(), true, 2 );
+    } else if( s < 75 ) {
+        add_effect( effect_dulled_senses, 2_minutes, bodypart_str_id::NULL_ID(), true, 1 );
+    } else {
+        remove_effect( effect_dulled_senses );
+    }
+
+    if( s > 400 ) {
+        add_effect( effect_heightened_senses, 2_minutes, bodypart_str_id::NULL_ID(), true, 2 );
+    } else if( s > 200 ) {
+        add_effect( effect_heightened_senses, 2_minutes, bodypart_str_id::NULL_ID(), true, 1 );
+    } else {
+        remove_effect( effect_heightened_senses );
+    }
 }
 
 void Character::update_needs( int rate_multiplier )
