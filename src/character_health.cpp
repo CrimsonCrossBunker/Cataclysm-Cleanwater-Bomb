@@ -3545,11 +3545,41 @@ int Character::mod_pain( int npain, const bodypart_id bp )
 
         npain *= bp->pain_mod;
 
+        // Sensitivity scales the pain actually gained.
+        npain = roll_remainder( npain * sensitive_pain_multiplier() );
+
         // no matter how powerful the enchantment if we are gaining pain we don't lose any
         npain = std::max( 0, npain );
     }
     Creature::mod_pain( npain );
     return npain;
+}
+
+double Character::sensitive_pain_multiplier() const
+{
+    const int s = get_sensitive();
+
+    // Numbness: linear between -75% at 0, -25% at 50, -5% at 80, neutral at 95.
+    if( s < 50 ) {
+        return 0.25 + s / 50.0 * 0.50;
+    }
+    if( s < 80 ) {
+        return 0.75 + ( s - 50 ) / 30.0 * 0.20;
+    }
+    if( s < 95 ) {
+        return 0.95 + ( s - 80 ) / 15.0 * 0.05;
+    }
+    // Neutral band, then ramp to +50% at 200 and +150% at 500, capped above.
+    if( s <= 120 ) {
+        return 1.0;
+    }
+    if( s <= 200 ) {
+        return 1.0 + ( s - 120 ) / 80.0 * 0.50;
+    }
+    if( s <= 500 ) {
+        return 1.50 + ( s - 200 ) / 300.0 * 1.00;
+    }
+    return 2.50;
 }
 
 void Character::set_pain( int npain )

@@ -672,6 +672,8 @@ class Character : public Creature, public visitable
         int get_sensitive_mod() const;
         /** Equilibrium sensitivity after stim, painkillers, sleep deprivation and enchantments */
         int get_sensitive_mod_total() const;
+        /** Multiplier applied to pain gained, driven by current sensitivity */
+        double sensitive_pain_multiplier() const;
 
         /** Modifiers for sensitivity values exclusive to characters */
         void mod_sensitive( int nsensitive );
