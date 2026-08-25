@@ -6070,5 +6070,12 @@
         ]
       }
     ]
+  },
+  {
+    "type": "effect_type",
+    "id": "berserk",
+    "//COMMENT": "Hardcoded effect to track a pc as berserk. Applied and checked in C++ only.",
+    "name": [ "RAGE" ],
+    "desc": [ "Uncontrollably raging.  You cannot flee from hostiles." ]
   }
 ]
