@@ -4173,6 +4173,20 @@ void initialize_state( runtime_state &state )
         require_api_version( state, 5, "game.needs" );
         require_capability( state, "game.write" );
     } );
+    install_sensitive_api(
+        game,
+        current_handle_runtime,
+    [&state]() {
+        return state.world_generation;
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.sensitive" );
+        require_capability( state, "game.read" );
+    },
+    [&state]() {
+        require_api_version( state, 5, "game.sensitive" );
+        require_capability( state, "game.write" );
+    } );
     install_martial_art_api(
         game,
         current_handle_runtime,

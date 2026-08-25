@@ -781,6 +781,153 @@ sol::table modify_health(
 
 } // namespace
 
+struct sensitive_adjustments {
+    std::optional<int> sensitive;
+    std::optional<int> sensitive_mod;
+};
+
+sensitive_adjustments read_sensitive_adjustments(
+    const sol::table &requested, const std::string &api_name )
+{
+    sensitive_adjustments result;
+    for( const auto &entry : requested ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                api_name + " option keys must be strings" );
+        }
+        const std::string key = entry.first.as<std::string>();
+        if( key != "sensitive" && key != "sensitive_mod" ) {
+            throw std::invalid_argument(
+                api_name + " received unknown option '" +
+                key + "'" );
+        }
+        if( !entry.second.is<int>() ) {
+            throw std::invalid_argument(
+                api_name + " option '" + key +
+                "' must be an integer" );
+        }
+        const int value = entry.second.as<int>();
+        const int maximum = key == "sensitive" ? maximum_need_magnitude : 500;
+        if( value < 0 || value > maximum ) {
+            throw std::invalid_argument(
+                api_name + " option '" + key +
+                "' must be within 0.." + std::to_string( maximum ) );
+        }
+        if( key == "sensitive" ) {
+            result.sensitive = value;
+        } else {
+            result.sensitive_mod = value;
+        }
+    }
+    if( !result.sensitive && !result.sensitive_mod ) {
+        throw std::invalid_argument(
+            api_name + " requires at least one adjustment" );
+    }
+    return result;
+}
+
+sol::table snapshot_sensitive(
+    sol::state_view lua, const Character &character )
+{
+    sol::table result = lua.create_table();
+    result["sensitive"] = character.get_sensitive();
+    result["sensitive_mod"] =
+        character.get_sensitive_mod();
+    result["sensitive_mod_total"] =
+        character.get_sensitive_mod_total();
+    return result;
+}
+
+} // namespace
+
+void install_sensitive_api(
+    sol::table &game,
+    std::function<game_handle_runtime()> current_runtime_generation,
+    std::function<std::size_t()> current_world_generation,
+    std::function<void()> require_read,
+    std::function<void()> require_write )
+{
+    sol::state_view lua( game.lua_state() );
+    sol::table sensitive = lua.create_table();
+    sensitive.set_function(
+        "get",
+        [current_runtime_generation, current_world_generation, require_read](
+    sol::this_state lua_state, const game_handle & handle ) {
+        require_read();
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        Character *character = resolve_character(
+                                   handle, current_runtime_generation(),
+                                   current_world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        return make_game_value_result(
+                   state, sol::make_object(
+                       state, snapshot_sensitive(
+                           state, *character ) ) );
+    } );
+    sensitive.set_function(
+        "set",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::table & adjustments ) {
+        require_write();
+        const sensitive_adjustments parsed = read_sensitive_adjustments(
+                                                adjustments, "game.sensitive.set" );
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        Character *character = resolve_character(
+                                   handle, current_runtime_generation(),
+                                   current_world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        sol::table before = snapshot_sensitive( state, *character );
+        if( parsed.sensitive ) {
+            character->set_sensitive( *parsed.sensitive );
+        }
+        if( parsed.sensitive_mod ) {
+            character->set_sensitive_mod( *parsed.sensitive_mod );
+        }
+        sol::table value = state.create_table();
+        value["before"] = std::move( before );
+        value["after"] = snapshot_sensitive( state, *character );
+        return make_game_value_result(
+                   state, sol::make_object( state, std::move( value ) ) );
+    } );
+    sensitive.set_function(
+        "modify",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::table & deltas ) {
+        require_write();
+        const sensitive_adjustments parsed = read_sensitive_adjustments(
+                                                deltas, "game.sensitive.modify" );
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        Character *character = resolve_character(
+                                   handle, current_runtime_generation(),
+                                   current_world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        sol::table before = snapshot_sensitive( state, *character );
+        if( parsed.sensitive ) {
+            character->mod_sensitive( *parsed.sensitive );
+        }
+        if( parsed.sensitive_mod ) {
+            character->mod_sensitive_mod( *parsed.sensitive_mod );
+        }
+        sol::table value = state.create_table();
+        value["before"] = std::move( before );
+        value["after"] = snapshot_sensitive( state, *character );
+        return make_game_value_result(
+                   state, sol::make_object( state, std::move( value ) ) );
+    } );
+    game["sensitive"] = std::move( sensitive );
+}
+
 void install_need_api(
     sol::table &game,
     std::function<game_handle_runtime()> current_runtime_generation,

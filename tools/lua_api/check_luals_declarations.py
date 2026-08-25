@@ -63,6 +63,7 @@ TABLE_CLASSES = {
     "requirements": "CcbRequirementsApi",
     "scheduler": "CcbSchedulerApi",
     "serde": "CcbSerdeApi",
+    "sensitive": "CcbSensitiveApi",
     "services": "CcbServicesApi",
     "sidebar": "CcbSidebarApi",
     "skills": "CcbSkillsApi",

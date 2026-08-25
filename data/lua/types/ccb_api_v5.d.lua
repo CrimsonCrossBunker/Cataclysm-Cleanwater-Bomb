@@ -3572,6 +3572,32 @@ function CcbAddictionsApi.run_effect(handle, id) end
 ---@field daily_health_cap? integer Required together with `daily_health`.
 ---@field health_tally? integer
 
+---@class CcbSensitiveSnapshot
+---@field sensitive integer Current sensitivity to external stimuli.
+---@field sensitive_mod integer Equilibrium target, within 0..500.
+---@field sensitive_mod_total integer Equilibrium after stim, painkillers, sleep deprivation and enchantments.
+
+---@class CcbSensitiveAdjustments
+---@field sensitive? integer Must be within 0..1000000.
+---@field sensitive_mod? integer Must be within 0..500.
+
+---@class CcbSensitiveApi
+local CcbSensitiveApi = {}
+
+---@param handle GameHandle
+---@return CcbResult
+function CcbSensitiveApi.get(handle) end
+
+---@param handle GameHandle
+---@param adjustments CcbSensitiveAdjustments
+---@return CcbResult
+function CcbSensitiveApi.set(handle, adjustments) end
+
+---@param handle GameHandle
+---@param deltas CcbSensitiveAdjustments
+---@return CcbResult
+function CcbSensitiveApi.modify(handle, deltas) end
+
 ---@class CcbNeedsApi
 local CcbNeedsApi = {}
 
@@ -4836,6 +4862,7 @@ function CcbWeatherApi.refresh() end
 ---@field proficiencies CcbProficienciesApi
 ---@field skills CcbSkillsApi
 ---@field statistics CcbStatisticsApi
+---@field sensitive CcbSensitiveApi
 ---@field variables CcbVariablesApi
 ---@field vehicles CcbVehiclesApi
 ---@field vitamins CcbVitaminsApi
