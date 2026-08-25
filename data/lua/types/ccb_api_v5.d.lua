@@ -3549,6 +3549,8 @@ function CcbAddictionsApi.run_effect(handle, id) end
 ---@field lifestyle integer
 ---@field daily_health integer
 ---@field health_tally integer
+---@field sensitive integer
+---@field sensitive_mod integer
 
 ---@class CcbNeedAdjustments
 ---@field hunger? integer
@@ -3567,6 +3569,8 @@ function CcbAddictionsApi.run_effect(handle, id) end
 ---@class CcbHealthAdjustments
 ---@field lifestyle? integer
 ---@field daily_health? integer
+---@field sensitive? integer Must be within 0..1000000.
+---@field sensitive_mod? integer Must be within 0..500.
 
 ---@class CcbHealthDeltas: CcbHealthAdjustments
 ---@field daily_health_cap? integer Required together with `daily_health`.
