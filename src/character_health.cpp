@@ -2226,6 +2226,39 @@ int Character::get_sensitive_mod() const
     return sensitive_mod;
 }
 
+int Character::get_sensitive_mod_total() const
+{
+    const double base = 100.0;
+
+    // Stimulants raise equilibrium sensitivity, depressants lower it.
+    double stim_effect = 25.0 * std::copysign( std::log( 1.0 + std::abs( stim ) / 25.0 ),
+                           stim );
+
+    // Painkillers dull sensitivity, saturating at -15 around 200 pkill.
+    double pkill_effect = -std::min( 15.0, 18.0 * std::log( 1.0 + get_painkiller() / 150.0 ) );
+
+    // When both dull sensitivity, only half of the weaker effect stacks.
+    if( stim_effect < 0 && pkill_effect < 0 ) {
+        const double stronger = std::max( stim_effect, pkill_effect );
+        const double weaker = std::min( stim_effect, pkill_effect );
+        stim_effect = stronger;
+        pkill_effect = weaker / 2;
+    }
+
+    // Sleep deprivation dulls sensitivity, saturating at -10.
+    const double sleep_effect = -10.0 * std::min( 1.0, std::log( 1.0 + get_sleep_deprivation() /
+            1000.0 ) / std::log( 21.0 ) );
+
+    double total = sensitive_mod + stim_effect + pkill_effect + sleep_effect;
+
+    // Enchantment multipliers scale the deviation from baseline; additions apply after.
+    total += ( total - base ) * enchantment_cache->get_value_multiply(
+                 enchant_vals::mod::SENSITIVE_MOD );
+    total += enchantment_cache->get_value_add( enchant_vals::mod::SENSITIVE_MOD );
+
+    return clamp( static_cast<int>( std::round( total ) ), 0, 500 );
+}
+
 int Character::get_rad() const
 {
     return radiation;
