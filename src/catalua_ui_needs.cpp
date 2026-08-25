@@ -787,7 +787,8 @@ struct sensitive_adjustments {
 };
 
 sensitive_adjustments read_sensitive_adjustments(
-    const sol::table &requested, const std::string &api_name )
+    const sol::table &requested, const std::string &api_name, bool allow_negative )
+{
 {
     sensitive_adjustments result;
     for( const auto &entry : requested ) {
@@ -808,10 +809,11 @@ sensitive_adjustments read_sensitive_adjustments(
         }
         const int value = entry.second.as<int>();
         const int maximum = key == "sensitive" ? maximum_need_magnitude : 500;
-        if( value < 0 || value > maximum ) {
+        if( value < ( allow_negative ? -maximum : 0 ) || value > maximum ) {
             throw std::invalid_argument(
-                api_name + " option '" + key +
-                "' must be within 0.." + std::to_string( maximum ) );
+                api_name + " option '" + key + "' must be within " +
+                ( allow_negative ? std::to_string( -maximum ) : "0" ) +
+                ".." + std::to_string( maximum ) );
         }
         if( key == "sensitive" ) {
             result.sensitive = value;
@@ -874,7 +876,7 @@ void install_sensitive_api(
     const sol::table & adjustments ) {
         require_write();
         const sensitive_adjustments parsed = read_sensitive_adjustments(
-                                                adjustments, "game.sensitive.set" );
+                                                adjustments, "game.sensitive.set", false );
         sol::state_view state( lua_state );
         std::optional<game_handle_error> error;
         Character *character = resolve_character(
@@ -903,7 +905,7 @@ void install_sensitive_api(
     const sol::table & deltas ) {
         require_write();
         const sensitive_adjustments parsed = read_sensitive_adjustments(
-                                                deltas, "game.sensitive.modify" );
+                                                deltas, "game.sensitive.modify", true );
         sol::state_view state( lua_state );
         std::optional<game_handle_error> error;
         Character *character = resolve_character(
