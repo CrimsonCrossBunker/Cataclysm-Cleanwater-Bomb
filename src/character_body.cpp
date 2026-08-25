@@ -266,7 +266,9 @@ void Character::update_body( const time_point &from, const time_point &to )
 
         check_needs_extremes();
         update_needs( five_mins );
-        update_sensitive();
+        for( int i = 0; i < five_mins; ++i ) {
+            update_sensitive();
+        }
         regen( five_mins );
         // Note: mend ticks once per 5 minutes, but wants rate in TURNS, not 5 minute intervals
         // TODO: change @ref mend to take time_duration
