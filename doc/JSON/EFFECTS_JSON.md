@@ -560,6 +560,24 @@ Valid arguments:
 "h_mod_chance_bot"
 "h_mod_tick"        // Defaults to every tick
 
+"sensitive_amount"  // Negatives dull and positives sharpen the current sensitivity, a body stat that reacts to external stimuli.
+"sensitive_min"     // Minimal amount of sensitivity change, certain effect will give/take.
+"sensitive_max"     // if 0 or missing value will be exactly "sensitive_min"
+"sensitive_min_val" // Defaults to 0, which means uncapped
+"sensitive_max_val" // Defaults to 0, which means uncapped
+"sensitive_chance"  // Chance to change sensitivity
+"sensitive_chance_bot"
+"sensitive_tick"    // Defaults to every tick
+
+"sen_mod_amount"    // Affects the equilibrium that current sensitivity drifts towards, positives raise it and negatives lower it
+"sen_mod_min"       // Minimal amount of sensitivity_modifier, certain effect will give/take
+"sen_mod_max"       // if 0 or missing value will be exactly "sen_mod_min"
+"sen_mod_min_val"   // Defaults to 0, which means uncapped
+"sen_mod_max_val"   // Defaults to 0, which means uncapped
+"sen_mod_chance"    // Chance to change sensitivity_modifier
+"sen_mod_chance_bot"
+"sen_mod_tick"      // Defaults to every tick
+
 "rad_amount"        // Amount of radiation it can give/take. Just be aware that anything above [50] is fatal.
 "rad_min"           // Minimal amount of radiation, certain effect will give/take
 "rad_max"           // if 0 or missing value will be exactly "rad_min"
