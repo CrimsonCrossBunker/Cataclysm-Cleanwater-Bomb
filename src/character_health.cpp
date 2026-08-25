@@ -625,7 +625,18 @@ void Character::update_mental_focus()
         const double multiplier =
             ( 1.0 + enchantment_cache->get_value_add( enchant_vals::mod::FOCUS_REGEN ) ) *
             ( 1.0 + enchantment_cache->get_value_multiply( enchant_vals::mod::FOCUS_REGEN ) );
-        focus_change = static_cast<int>( focus_change * multiplier );
+
+        // Low sensitivity dulls focus recovery down to -25%, high sensitivity up to +25%.
+        double sens_mod = 1.0;
+        const int s = get_sensitive();
+        if( s < 75 ) {
+            sens_mod -= std::min( 0.25, 0.25 * std::log( 1.0 + ( 75.0 - s ) / 75.0 ) /
+                                  std::log( 2.0 ) );
+        } else if( s > 125 ) {
+            sens_mod += std::min( 0.25, 0.25 * std::log( s / 125.0 ) / std::log( 4.0 ) );
+        }
+
+        focus_change = static_cast<int>( focus_change * multiplier * sens_mod );
     }
     focus_pool += 10 * focus_change;
 }
