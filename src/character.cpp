@@ -7958,7 +7958,10 @@ bool Character::avoid_trap( const tripoint_bub_ms &pos, const trap &tr ) const
     /** @EFFECT_DEX increases chance to avoid traps */
 
     /** @EFFECT_DODGE increases chance to avoid traps */
-    int myroll = dice( 3, round( get_dex() + get_skill_level( skill_dodge ) * 1.5 ) );
+    // Sensitivity slightly shifts trap avoidance, ±10% across 0..400.
+    const double sens_mult = clamp( 1.0 + 0.1 * std::log( std::clamp( get_sensitive(), 1,
+                                           400 ) / 100.0 ) / std::log( 4.0 ), 0.9, 1.1 );
+    int myroll = dice( 3, round( ( get_dex() + get_skill_level( skill_dodge ) * 1.5 ) * sens_mult ) );
     int traproll;
     if( tr.can_see( pos, *this ) ) {
         traproll = dice( 3, tr.get_avoidance() );
