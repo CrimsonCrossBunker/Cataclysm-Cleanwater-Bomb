@@ -3141,9 +3141,7 @@ void Character::reset_stats()
     if( calendar::once_every( 1_minutes ) ) {
         update_mental_focus();
     }
-    if( calendar::once_every( 1_turns ) ) {
-        update_sensitive_per_effects();
-    }
+    update_sensitive_per_effects();
 
     mod_dodge_bonus( enchantment_cache->modify_value( enchant_vals::mod::DODGE_CHANCE, 0 ) );
 
