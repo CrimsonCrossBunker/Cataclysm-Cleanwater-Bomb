@@ -22,6 +22,17 @@ static const skill_id skill_dodge( "dodge" );
 
 static const trap_id tr_glass( "tr_glass" );
 
+// The equilibrium reads live stim, painkiller, and sleep deprivation values,
+// and focus recovery is capped by sleepiness; clear whatever other tests have
+// left behind on the shared avatar.
+static void reset_sensitivity_sources( Character &dude )
+{
+    dude.set_stim( 0 );
+    dude.set_painkiller( 0 );
+    dude.set_sleep_deprivation( 0 );
+    dude.set_sleepiness( 0 );
+}
+
 TEST_CASE( "sensitive_values_are_clamped_to_their_ranges", "[sensitive][character]" )
 {
     avatar &dummy = get_avatar();
@@ -45,6 +56,7 @@ TEST_CASE( "sensitive_mod_total_reflects_its_sources", "[sensitive][character]" 
 {
     avatar &dummy = get_avatar();
     clear_character( dummy );
+    reset_sensitivity_sources( dummy );
     // Neutral baseline with no active sources.
     CHECK( dummy.get_sensitive_mod_total() == 100 );
 
@@ -77,6 +89,7 @@ TEST_CASE( "sensitive_drifts_towards_its_equilibrium", "[sensitive][character]" 
 {
     avatar &dummy = get_avatar();
     clear_character( dummy );
+    reset_sensitivity_sources( dummy );
     // Rising towards the equilibrium, never overshooting it.
     dummy.set_sensitive( 50 );
     for( int i = 0; i < 200 && dummy.get_sensitive() != 100; ++i ) {
@@ -246,6 +259,7 @@ TEST_CASE( "focus_recovery_scales_with_sensitivity", "[sensitive][character][foc
 {
     avatar &dummy = get_avatar();
     clear_character( dummy );
+    reset_sensitivity_sources( dummy );
     // With neutral morale the focus equilibrium is 100. Starting from focus 1
     // leaves a change of 99 points per tick, which survives the pool/1000
     // rounding when read back through get_focus().
