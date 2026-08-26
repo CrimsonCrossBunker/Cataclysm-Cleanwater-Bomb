@@ -745,9 +745,11 @@ compatibility guarantee.
 
 Static definitions are real native staging objects.  The target content API
 provides explicit `add`, `replace`, and transactional `edit` operations.
-Duplicate ids are errors unless replacement or editing is requested.  Normal
-Lua functions, loops, modules, constructors, and cloning replace JSON
-`copy-from` and inheritance syntax.
+`extend_item_group` appends entries to an existing native item group of the
+same kind without copying or replacing entries contributed by earlier Mods.
+Duplicate ids are errors unless replacement, editing, or this bounded item-group
+extension is requested.  Normal Lua functions, loops, modules, constructors,
+and cloning replace JSON `copy-from` and inheritance syntax.
 
 Platform 导出的 C++ 类型公开全部可绑定的 public 字段、方法与运算符；private 和
 protected 仍遵守 C++ 规则。每个 Mod runtime 都有独立且不向 Lua 暴露的 owner 身份，
@@ -757,8 +759,9 @@ owner 控制块身份与代次，但不会延长 owner 生命周期，所以同�
 稳定相等，而不同的同代 runtime token 永不相等。失效状态不再占用某个代次数值，因此
 包括 `size_t` 最大值在内的全部代次都不会与哨兵碰撞。owner 消失、跨 Mod runtime、
 世界切换、内容提交或 runtime 替换后访问会抛 Lua 错误。静态定义使用真实的原生
-staging 对象，通过显式 `add`、`replace`、事务性 `edit` 提交；普通 Lua 组合取代 JSON
-`copy-from`。
+staging 对象，通过显式 `add`、`replace`、事务性 `edit` 提交；`extend_item_group`
+只向同类的既有原生物品组追加条目，不复制或覆盖更早 Mod 提供的条目；普通 Lua 组合取代
+JSON `copy-from`。
 
 ### Implemented native vertical slice / 已编码的原生纵向切片
 
@@ -770,6 +773,10 @@ Registering the clone with `ccb.content.edit` replaces that earlier staged
 value while preserving its original add-or-replace intent.  This makes edits
 ordinary Lua module composition and gives cold load, full reload, and
 fingerprint-gated hot reload the same semantics.
+`extend_item_group` accepts a newly built `ItemGroup` as an entry-only patch;
+the target must already exist and have the same collection/distribution kind.
+Its append is fingerprinted and rolls back by restoring the target's prior
+entry boundary.
 Cross-Mod layers are validated and applied in dependency order, and the whole
 candidate rolls back in reverse order.  Recipe component and tool alternative
 groups are bounded dense one-based arrays, so holes or metadata keys cannot be

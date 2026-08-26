@@ -395,6 +395,10 @@ class Item_group : public Item_spawn_data
          * a Single_item_creator or Item_group to @ref items.
          */
         void add_entry( std::unique_ptr<Item_spawn_data> ptr );
+        /** Number of direct entries, used to transactionally extend and restore this group. */
+        std::size_t entry_count() const;
+        /** Remove entries after the retained prefix and rebuild distribution bookkeeping. */
+        void truncate_entries( std::size_t retained_entries );
         std::size_t create( ItemList &list, const time_point &birthday, RecursionList &rec,
                             spawn_flags ) const override;
         item create_single( const time_point &birthday, RecursionList &rec ) const override;

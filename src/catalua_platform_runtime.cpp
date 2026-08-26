@@ -233,7 +233,8 @@ using persistent_value = cata::lua_ui::script_persistent_value;
 enum class definition_operation : int {
     add,
     replace,
-    edit
+    edit,
+    extend
 };
 
 enum class handle_lifecycle : int {
@@ -6377,6 +6378,8 @@ std::string operation_name( definition_operation operation )
             return "replace";
         case definition_operation::edit:
             return "edit";
+        case definition_operation::extend:
+            return "extend";
     }
     return "unknown";
 }
@@ -7277,6 +7280,7 @@ struct content_transaction::impl {
     std::vector<std::pair<weakpoints_id, std::optional<weakpoints>>> weakpoint_set_undo;
     std::vector<std::pair<field_type_str_id, std::optional<field_type>>> field_type_undo;
     std::vector<std::pair<item_group_id, std::unique_ptr<Item_spawn_data>>> item_group_undo;
+    std::vector<std::pair<item_group_id, std::size_t>> item_group_extension_undo;
     std::vector<std::pair<sub_bodypart_str_id, std::optional<sub_body_part_type>>>
     sub_body_part_undo;
     std::vector<std::pair<wound_type_id, std::optional<wound_type>>> wound_type_undo;
@@ -11896,6 +11900,14 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
     content.set_function( "edit", [register_definition]( const sol::object & value ) {
         register_definition( value, definition_operation::edit );
     } );
+    content.set_function( "extend_item_group", [transaction, register_catalog](
+    item_group_definition_handle handle ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        register_catalog( std::move( handle ), transaction->item_groups,
+                          definition_operation::extend, "item group" );
+    } );
     auto edit_catalog = [transaction]( const std::string & id, auto & registrations,
     const char *kind ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
@@ -12510,6 +12522,10 @@ bool content_transaction::validate( const runtime &owner_runtime,
             }
             if( operation == definition_operation::replace && !exists ) {
                 throw std::runtime_error( std::string( "replace requires existing " ) +
+                                          kind + " '" + id + "'" );
+            }
+            if( operation == definition_operation::extend && !exists ) {
+                throw std::runtime_error( std::string( "extend requires existing " ) +
                                           kind + " '" + id + "'" );
             }
         };
@@ -15052,6 +15068,28 @@ bool content_transaction::validate( const runtime &owner_runtime,
             validate_operation( entry.operation,
                                 item_group::group_is_defined( item_group_id( definition.id ) ),
                                 definition.id, "item group" );
+            if( entry.operation == definition_operation::extend ) {
+                if( definition.with_ammo != 0 || definition.with_magazine != 0 ) {
+                    throw std::runtime_error( "item group extension '" + definition.id +
+                                              "' may only append entries" );
+                }
+                if( check_engine_state ) {
+                    const item_group_id id( definition.id );
+                    const auto existing = item_controller->m_template_groups.find( id );
+                    const Item_group *const native = existing ==
+                                                     item_controller->m_template_groups.end() ?
+                                                     nullptr :
+                                                     dynamic_cast<const Item_group *>(
+                                                         existing->second.get() );
+                    const Item_group::Type expected = definition.kind == "collection" ?
+                                                      Item_group::G_COLLECTION :
+                                                      Item_group::G_DISTRIBUTION;
+                    if( native == nullptr || native->type != expected ) {
+                        throw std::runtime_error( "item group extension '" + definition.id +
+                                                  "' must match the existing group kind" );
+                    }
+                }
+            }
         }
         for( const item_group_registration &entry : pimpl_->item_groups ) {
             const item_group_definition_data &definition = *entry.definition;
@@ -19386,22 +19424,8 @@ bool content_transaction::apply( std::string &error )
             detail::speed_description_registry().insert( native );
         }
 
-        for( const item_group_registration &entry : pimpl_->item_groups ) {
-            const item_group_id id( entry.definition->id );
-            auto previous = item_controller->m_template_groups.find( id );
-            std::unique_ptr<Item_spawn_data> snapshot;
-            if( previous != item_controller->m_template_groups.end() ) {
-                snapshot = std::move( previous->second );
-            }
-            pimpl_->item_group_undo.emplace_back( id, std::move( snapshot ) );
-            const item_group_definition_data &source = *entry.definition;
-            const Item_group::Type kind = source.kind == "collection" ?
-                                          Item_group::G_COLLECTION :
-                                          Item_group::G_DISTRIBUTION;
-            auto native = std::make_unique<Item_group>(
-                              kind, 100, static_cast<int>( source.with_ammo ),
-                              static_cast<int>( source.with_magazine ),
-                              "Lua-first item group " + source.id );
+        const auto append_item_group_entries = [this]( Item_group & native,
+        const item_group_definition_data & source ) {
             for( const item_group_entry_definition_data &source_entry : source.entries ) {
                 const Single_item_creator::Type entry_type = source_entry.group ?
                         Single_item_creator::S_ITEM_GROUP : Single_item_creator::S_ITEM;
@@ -19444,8 +19468,41 @@ bool content_transaction::apply( std::string &error )
                         static_cast<int>( source_entry.charges_max )
                     };
                 }
-                native->add_entry( std::move( native_entry ) );
+                native.add_entry( std::move( native_entry ) );
             }
+        };
+
+        for( const item_group_registration &entry : pimpl_->item_groups ) {
+            const item_group_id id( entry.definition->id );
+            const item_group_definition_data &source = *entry.definition;
+            if( entry.operation == definition_operation::extend ) {
+                const auto existing = item_controller->m_template_groups.find( id );
+                Item_group *const native = existing == item_controller->m_template_groups.end() ?
+                                           nullptr :
+                                           dynamic_cast<Item_group *>( existing->second.get() );
+                if( native == nullptr ) {
+                    throw std::runtime_error( "cannot extend missing item group '" +
+                                              source.id + "'" );
+                }
+                pimpl_->item_group_extension_undo.emplace_back( id, native->entry_count() );
+                append_item_group_entries( *native, source );
+                continue;
+            }
+
+            auto previous = item_controller->m_template_groups.find( id );
+            std::unique_ptr<Item_spawn_data> snapshot;
+            if( previous != item_controller->m_template_groups.end() ) {
+                snapshot = std::move( previous->second );
+            }
+            pimpl_->item_group_undo.emplace_back( id, std::move( snapshot ) );
+            const Item_group::Type kind = source.kind == "collection" ?
+                                          Item_group::G_COLLECTION :
+                                          Item_group::G_DISTRIBUTION;
+            auto native = std::make_unique<Item_group>(
+                              kind, 100, static_cast<int>( source.with_ammo ),
+                              static_cast<int>( source.with_magazine ),
+                              "Lua-first item group " + source.id );
+            append_item_group_entries( *native, source );
             item_controller->m_template_groups[id] = std::move( native );
         }
 
@@ -21671,6 +21728,18 @@ void content_transaction::rollback()
     }
     pimpl_->harvest_drop_type_undo.clear();
 
+    for( auto it = pimpl_->item_group_extension_undo.rbegin();
+         it != pimpl_->item_group_extension_undo.rend(); ++it ) {
+        const auto existing = item_controller->m_template_groups.find( it->first );
+        if( existing != item_controller->m_template_groups.end() ) {
+            Item_group *const native = dynamic_cast<Item_group *>( existing->second.get() );
+            if( native != nullptr ) {
+                native->truncate_entries( it->second );
+            }
+        }
+    }
+    pimpl_->item_group_extension_undo.clear();
+
     for( auto it = pimpl_->item_group_undo.rbegin();
          it != pimpl_->item_group_undo.rend(); ++it ) {
         if( it->second ) {
@@ -22696,6 +22765,7 @@ void content_transaction::commit()
     pimpl_->overmap_connection_undo.clear();
     pimpl_->speed_description_undo.clear();
     pimpl_->item_group_undo.clear();
+    pimpl_->item_group_extension_undo.clear();
     pimpl_->harvest_drop_type_undo.clear();
     pimpl_->harvest_undo.clear();
     pimpl_->behavior_undo.clear();

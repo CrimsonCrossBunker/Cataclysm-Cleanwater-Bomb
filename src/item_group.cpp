@@ -891,6 +891,22 @@ void Item_group::add_entry( std::unique_ptr<Item_spawn_data> ptr )
     cached_cum_prob.clear();
 }
 
+std::size_t Item_group::entry_count() const
+{
+    return items.size();
+}
+
+void Item_group::truncate_entries( const std::size_t retained_entries )
+{
+    cata_assert( retained_entries <= items.size() );
+    items.resize( retained_entries );
+    sum_prob = 0;
+    for( const std::unique_ptr<Item_spawn_data> &entry : items ) {
+        sum_prob += entry->get_probability( true );
+    }
+    cached_cum_prob.clear();
+}
+
 std::size_t Item_group::create( Item_spawn_data::ItemList &list,
                                 const time_point &birthday, RecursionList &rec, spawn_flags flags ) const
 {

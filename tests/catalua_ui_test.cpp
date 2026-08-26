@@ -5031,6 +5031,45 @@ ccb.content.replace(ccb.content.Item {
                      itype_id( "ccb_platform_layered_item" ) ) );
 }
 
+TEST_CASE( "lua_first_item_group_extensions_preserve_prior_mod_entries_and_rollback",
+           "[lua][platform][content][item_group]" )
+{
+    cata::lua_platform::shutdown();
+    scoped_platform_test_mod provider( "ccb_platform_item_group_provider" );
+    scoped_platform_test_mod consumer( "ccb_platform_item_group_consumer" );
+    provider.write( "main.lua", R"lua(
+local ccb = require("ccb")
+local group = ccb.content.ItemGroup {
+    id = "ccb_platform_extended_item_group",
+    kind = "collection",
+}
+group:item("rock", 100)
+ccb.content.add(group)
+)lua" );
+    consumer.write( "main.lua", R"lua(
+local ccb = require("ccb")
+local extension = ccb.content.ItemGroup {
+    id = "ccb_platform_extended_item_group",
+    kind = "collection",
+}
+extension:item("stick", 100)
+ccb.content.extend_item_group(extension)
+)lua" );
+
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods( {
+        provider.source( "ccb_platform_item_group_provider" ),
+        consumer.source( "ccb_platform_item_group_consumer" )
+    }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    const item_group_id group_id( "ccb_platform_extended_item_group" );
+    CHECK( item_group::group_contains_item( group_id, itype_id( "rock" ) ) );
+    CHECK( item_group::group_contains_item( group_id, itype_id( "stick" ) ) );
+
+    cata::lua_platform::discard_prepared_mods();
+    CHECK_FALSE( item_group::group_is_defined( group_id ) );
+}
+
 TEST_CASE( "lua_first_content_edits_earlier_staged_definitions",
            "[lua][platform][content]" )
 {

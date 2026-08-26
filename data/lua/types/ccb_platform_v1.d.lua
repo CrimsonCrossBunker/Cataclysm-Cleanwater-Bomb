@@ -3596,6 +3596,8 @@ function CcbPlatformContent.add(definition) end
 function CcbPlatformContent.replace(definition) end
 ---@param definition PlatformContentDefinition Clone of a definition staged earlier by this Mod.
 function CcbPlatformContent.edit(definition) end
+---@param definition ItemGroupDefinition Entries to append to an existing native item group of the same kind.
+function CcbPlatformContent.extend_item_group(definition) end
 
 ---@param id string Item id staged earlier by this Mod in the current candidate.
 ---@return ItemDefinition
