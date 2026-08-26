@@ -266,14 +266,17 @@ void Character::update_body( const time_point &from, const time_point &to )
 
         check_needs_extremes();
         update_needs( five_mins );
-        for( int i = 0; i < five_mins; ++i ) {
-            update_sensitive();
-        }
         regen( five_mins );
         // Note: mend ticks once per 5 minutes, but wants rate in TURNS, not 5 minute intervals
         // TODO: change @ref mend to take time_duration
         mend( five_mins * to_turns<int>( 5_minutes ) );
         activity_history.reset_activity_level();
+    }
+    const int one_min = ticks_between( from, to, 1_minutes );
+    if( one_min > 0 ) {
+        for( int i = 0; i < one_min; ++i ) {
+            update_sensitive();
+        }
     }
     bool was_sleeping = get_value( "was_sleeping" ).str() == "true";
     if( in_sleep_state() && was_sleeping ) {
