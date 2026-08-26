@@ -18,10 +18,8 @@ static const efftype_id effect_dulled_senses( "dulled_senses" );
 static const efftype_id effect_heightened_senses( "heightened_senses" );
 static const efftype_id effect_sleep( "sleep" );
 
-static const skill_id skill_fabrication( "fabrication" );
 static const skill_id skill_dodge( "dodge" );
-
-static const trap_id tr_glass( "tr_glass" );
+static const skill_id skill_fabrication( "fabrication" );
 
 // The equilibrium reads live stim, painkiller, and sleep deprivation values,
 // and focus recovery is capped by sleepiness; clear whatever other tests have
@@ -229,7 +227,7 @@ TEST_CASE( "trap_avoidance_shifts_with_sensitivity", "[sensitive][character][tra
     dummy.set_dex_base( 8 );
     dummy.set_skill_level( skill_dodge, 8 );
 
-    const trap &glass = *tr_glass;
+    const trap &glass = *trap_id( "tr_glass" );
     const tripoint_bub_ms pos( HALF_MAPSIZE_X, HALF_MAPSIZE_Y, 0 );
 
     constexpr int iters = 20000;
