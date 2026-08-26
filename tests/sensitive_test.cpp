@@ -22,22 +22,10 @@ static const skill_id skill_dodge( "dodge" );
 
 static const trap_id tr_glass( "tr_glass" );
 
-// Sensitivity is not reset by clear_character, so every case starts from the
-// neutral defaults to stay independent from the order of test execution.
-static void reset_sensitivity( Character &dude )
-{
-    dude.set_sensitive( 100 );
-    dude.set_sensitive_mod( 100 );
-    dude.remove_effect( effect_dulled_senses );
-    dude.remove_effect( effect_heightened_senses );
-}
-
 TEST_CASE( "sensitive_values_are_clamped_to_their_ranges", "[sensitive][character]" )
 {
     avatar &dummy = get_avatar();
     clear_character( dummy );
-    reset_sensitivity( dummy );
-
     dummy.mod_sensitive( -500 );
     CHECK( dummy.get_sensitive() == 0 );
 
@@ -57,8 +45,6 @@ TEST_CASE( "sensitive_mod_total_reflects_its_sources", "[sensitive][character]" 
 {
     avatar &dummy = get_avatar();
     clear_character( dummy );
-    reset_sensitivity( dummy );
-
     // Neutral baseline with no active sources.
     CHECK( dummy.get_sensitive_mod_total() == 100 );
 
@@ -91,8 +77,6 @@ TEST_CASE( "sensitive_drifts_towards_its_equilibrium", "[sensitive][character]" 
 {
     avatar &dummy = get_avatar();
     clear_character( dummy );
-    reset_sensitivity( dummy );
-
     // Rising towards the equilibrium, never overshooting it.
     dummy.set_sensitive( 50 );
     for( int i = 0; i < 200 && dummy.get_sensitive() != 100; ++i ) {
@@ -124,8 +108,6 @@ TEST_CASE( "threshold_perception_effects_track_sensitivity", "[sensitive][charac
 {
     avatar &dummy = get_avatar();
     clear_character( dummy );
-    reset_sensitivity( dummy );
-
     dummy.update_sensitive_per_effects();
     CHECK_FALSE( dummy.has_effect( effect_dulled_senses ) );
     CHECK_FALSE( dummy.has_effect( effect_heightened_senses ) );
@@ -165,8 +147,6 @@ TEST_CASE( "gained_pain_scales_with_sensitivity", "[sensitive][character][pain]"
 {
     avatar &dummy = get_avatar();
     clear_character( dummy );
-    reset_sensitivity( dummy );
-
     // Exact anchors of the multiplier curve.
     dummy.set_sensitive( 0 );
     CHECK( dummy.sensitive_pain_multiplier() == Approx( 0.25 ) );
@@ -201,8 +181,6 @@ TEST_CASE( "sensitivity_shifts_pain_wake_threshold", "[sensitive][character][sle
 {
     avatar &dummy = get_avatar();
     clear_character( dummy );
-    reset_sensitivity( dummy );
-
     auto lay_asleep = [&dummy]() {
         dummy.remove_effect( effect_sleep );
         dummy.add_effect( effect_sleep, 1_hours );
@@ -234,7 +212,6 @@ TEST_CASE( "trap_avoidance_shifts_with_sensitivity", "[sensitive][character][tra
 {
     avatar &dummy = get_avatar();
     clear_character( dummy );
-    reset_sensitivity( dummy );
     dummy.set_dex_base( 8 );
     dummy.set_skill_level( skill_dodge, 8 );
 
@@ -269,8 +246,6 @@ TEST_CASE( "focus_recovery_scales_with_sensitivity", "[sensitive][character][foc
 {
     avatar &dummy = get_avatar();
     clear_character( dummy );
-    reset_sensitivity( dummy );
-
     // With neutral morale the focus equilibrium is 100. Starting from focus 1
     // leaves a change of 99 points per tick, which survives the pool/1000
     // rounding when read back through get_focus().
@@ -297,7 +272,6 @@ TEST_CASE( "focus_drain_while_practicing_scales_with_sensitivity",
 {
     avatar &dummy = get_avatar();
     clear_character( dummy );
-    reset_sensitivity( dummy );
     dummy.set_skill_level( skill_fabrication, 0 );
 
     // Large pools keep the drain on its linear branch (>= 1000), so the
