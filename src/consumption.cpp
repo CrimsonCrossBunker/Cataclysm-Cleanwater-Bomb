@@ -1347,6 +1347,13 @@ void Character::modify_health( const islot_comestible &comest )
     mod_daily_health( effective_health, effective_health >= 0 ? health_cap : -health_cap );
 }
 
+void Character::modify_sensitive( const islot_comestible &comest )
+{
+    if( comest.sensitive != 0 ) {
+        mod_sensitive( comest.sensitive );
+    }
+}
+
 void Character::modify_stimulation( const islot_comestible &comest )
 {
     if( comest.stim == 0 ) {
@@ -1709,6 +1716,7 @@ bool Character::consume_effects( item &food )
         modify_health( comest );
     }
     modify_stimulation( comest );
+    modify_sensitive( comest );
     modify_sleepiness( comest );
     modify_addiction( comest );
     modify_morale( food, nutr );
@@ -1991,6 +1999,7 @@ static bool consume_med( item &target, Character &you )
         // Assume that parenteral meds don't spoil, so don't apply rot
         you.modify_health( comest );
         you.modify_stimulation( comest );
+        you.modify_sensitive( comest );
         you.modify_sleepiness( comest );
         you.modify_addiction( comest );
         you.modify_morale( target );
