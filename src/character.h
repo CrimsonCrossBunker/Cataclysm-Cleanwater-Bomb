@@ -1333,7 +1333,7 @@ class Character : public Creature, public visitable
         /** Runs through all bionics and armor on a part and reduces damage through their armor_absorb */
         const weakpoint *absorb_hit( const weakpoint_attack &attack, const bodypart_id &bp,
                                      damage_instance &dam, const weakpoint &wp = weakpoint() ) override;
-        // Overload for pressure / non-durability cases: when damage_armor is false, mitigation still applies but durability is not damaged
+        // Overload for non-durability cases: when damage_armor is false, mitigation still applies but durability is not damaged
         const weakpoint *absorb_hit( const weakpoint_attack &attack, const bodypart_id &bp,
                                      damage_instance &dam, const weakpoint &wp,
                                      bool damage_armor );
