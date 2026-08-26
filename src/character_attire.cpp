@@ -1868,7 +1868,7 @@ item &outfit::front()
 void outfit::absorb_damage( Character &guy, damage_unit &elem, bodypart_id bp,
                             std::list<item> &worn_remains, bool &armor_destroyed,
                             const std::optional<sub_bodypart_id> &forced_sbp,
-                            bool allow_torso_neck_fallback )
+                            bool allow_torso_neck_fallback, bool damage_armor )
 {
     const map &here = get_map();
 
@@ -1924,14 +1924,14 @@ void outfit::absorb_damage( Character &guy, damage_unit &elem, bodypart_id bp,
                                               sub_body_part_torso_upper.id() : sbp;
             // if the armor location has ablative armor apply that first
             if( armor.is_ablative() ) {
-                guy.ablative_armor_absorb( elem, armor, armor_sbp, roll );
+                guy.ablative_armor_absorb( elem, armor, armor_sbp, roll, damage_armor );
             }
 
             // if not already destroyed to an armor absorb
-            destroy = guy.armor_absorb( elem, armor, bp, armor_sbp, roll );
+            destroy = guy.armor_absorb( elem, armor, bp, armor_sbp, roll, damage_armor );
             // for the torso we also need to consider if it hits anything hanging off the character or their neck
             if( secondary_sbp != sub_bodypart_id() && !destroy ) {
-                destroy = guy.armor_absorb( elem, armor, bp, secondary_sbp, roll );
+                destroy = guy.armor_absorb( elem, armor, bp, secondary_sbp, roll, damage_armor );
             }
         }
 
