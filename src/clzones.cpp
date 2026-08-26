@@ -20,7 +20,7 @@
 #include "debug.h"
 #include "field_type.h"
 #include "flexbuffer_json.h"
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 #include "generic_factory.h"
 #include "iexamine.h"
 #include "input_popup.h"
@@ -140,7 +140,7 @@ namespace
 generic_factory<zone_type> zone_type_factory( "zone_type" );
 } // namespace
 
-generic_factory<zone_type> &cata::lua_platform::detail::zone_type_registry()
+generic_factory<zone_type> &cata::lua::detail::zone_type_registry()
 {
     return zone_type_factory;
 }

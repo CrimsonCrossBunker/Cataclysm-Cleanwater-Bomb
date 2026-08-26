@@ -20,7 +20,7 @@
 #include "calendar.h"
 #include "cata_assert.h"
 #include "cata_utility.h"
-#include "catalua_ui.h"
+#include "catalua_hook.h"
 #include "character.h"
 #include "character_id.h"
 #include "character_martial_arts.h"
@@ -1489,11 +1489,6 @@ void item::on_pickup( Character &p )
 
     p.flag_encumbrance();
     p.on_item_acquire( *this );
-    cata::lua_ui::dispatch_native_callback(
-    "istate", typeId().str(), "on_pickup", {
-        { "character", static_cast<const Character *>( &p ) },
-        { "item", static_cast<const item *>( this ) }
-    } );
 }
 
 void item::update_inherited_flags()
@@ -5222,21 +5217,6 @@ bool item::on_drop( const tripoint_bub_ms &pos )
 bool item::on_drop( const tripoint_bub_ms &pos, map &m )
 {
     avatar &player_character = get_avatar();
-    if( cata::lua_ui::dispatch_native_consuming_callback(
-    "istate", typeId().str(), "on_drop", {
-    {
-        "character",
-        static_cast<const Character *>( &player_character )
-        },
-        { "item", static_cast<const item *>( this ) },
-        {
-            "position", cata::lua_ui::native_callback_point {
-                "bub_ms", tripoint_rel_ms( pos.x(), pos.y(), pos.z() )
-            }
-        }
-    } ) ) {
-        return true;
-    }
 
     // dropping liquids, even currently frozen ones, on the ground makes them
     // dirty

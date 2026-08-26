@@ -5,7 +5,7 @@
 #include <string>
 #include <utility>
 
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 #include "debug.h"
 #include "enum_conversions.h"
 #include "flexbuffer_json.h"
@@ -21,12 +21,12 @@ generic_factory<clothing_mod> all_clothing_mods( "clothing mods" );
 
 static std::map<clothing_mod_type, std::vector<clothing_mod>> clothing_mods_by_type;
 
-generic_factory<clothing_mod> &cata::lua_platform::detail::clothing_mod_registry()
+generic_factory<clothing_mod> &cata::lua::detail::clothing_mod_registry()
 {
     return all_clothing_mods;
 }
 
-void cata::lua_platform::detail::refresh_clothing_mod_registry_cache()
+void cata::lua::detail::refresh_clothing_mod_registry_cache()
 {
     clothing_mods_by_type.clear();
 }

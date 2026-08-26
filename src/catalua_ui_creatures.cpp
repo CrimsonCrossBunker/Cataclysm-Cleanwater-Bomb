@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_creatures.h"
 
@@ -55,7 +55,7 @@
 #include "weather.h"
 #include "widget.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -110,7 +110,7 @@ int bounded_nonnegative_option(
     const int value = options.get_or( name, fallback );
     if( value < 0 ) {
         throw std::invalid_argument(
-            "game.creatures query option '" + name + "' cannot be negative" );
+            "services.creatures query option '" + name + "' cannot be negative" );
     }
     return std::min( value, maximum );
 }
@@ -144,14 +144,14 @@ creature_query_options read_query_options(
         result.kind != "avatar" && result.kind != "npc" &&
         result.kind != "monster" ) {
         throw std::invalid_argument(
-            "game.creatures query option 'kind' must be any, character, "
+            "services.creatures query option 'kind' must be any, character, "
             "avatar, npc, or monster" );
     }
     result.attitude = requested->get_or(
                           "attitude", result.attitude );
     if( result.attitude != "any" && result.attitude != "hostile" ) {
         throw std::invalid_argument(
-            "game.creatures query option 'attitude' must be any or hostile" );
+            "services.creatures query option 'attitude' must be any or hostile" );
     }
     const sol::object requested_origin =
         requested->raw_get<sol::object>( "origin" );
@@ -159,14 +159,14 @@ creature_query_options read_query_options(
         requested_origin.get_type() != sol::type::nil ) {
         if( !requested_origin.is<script_tripoint_coord>() ) {
             throw std::invalid_argument(
-                "game.creatures query option 'origin' must be a Tripoint" );
+                "services.creatures query option 'origin' must be a Tripoint" );
         }
         const script_tripoint_coord origin =
             requested_origin.as<script_tripoint_coord>();
         if( origin.native_origin() != coords::origin::abs ||
             origin.native_scale() != coords::scale::map_square ) {
             throw std::invalid_argument(
-                "game.creatures query option 'origin' must be an absolute "
+                "services.creatures query option 'origin' must be an absolute "
                 "map-square coordinate" );
         }
         result.origin = tripoint_abs_ms( origin.to_native() );
@@ -336,7 +336,7 @@ sol::table creature_has_species(
 {
     if( requested.kind() != "species" || !requested.is_valid() ) {
         throw std::invalid_argument(
-            "game.creatures.has_species requires a valid GameId<species>" );
+            "services.creatures.has_species requires a valid GameId<species>" );
     }
     sol::state_view state( lua );
     const native_handle_result<Creature> resolved =
@@ -359,7 +359,7 @@ sol::table creature_has_flag(
 {
     if( requested.kind() != "json_flag" || !requested.is_valid() ) {
         throw std::invalid_argument(
-            "game.creatures.has_flag requires a valid GameId<json_flag>" );
+            "services.creatures.has_flag requires a valid GameId<json_flag>" );
     }
     sol::state_view state( lua );
     const native_handle_result<Creature> resolved =
@@ -386,7 +386,7 @@ sol::table creature_has_body_type(
         return ch < 0x20U || ch == 0x7fU;
     } ) ) {
         throw std::invalid_argument(
-            "game.creatures.has_body_type requires 1 to 128 non-control bytes" );
+            "services.creatures.has_body_type requires 1 to 128 non-control bytes" );
     }
     sol::state_view state( lua );
     const native_handle_result<Creature> resolved =
@@ -464,7 +464,7 @@ sol::table visible_monsters_by_direction(
         parse_cardinal_direction( requested_direction );
     if( !parsed ) {
         throw std::invalid_argument(
-            "game.creatures.visible_monsters direction must be one of "
+            "services.creatures.visible_monsters direction must be one of "
             "N, NE, E, SE, S, SW, W, NW, or L" );
     }
     const std::size_t index = static_cast<std::size_t>( *parsed );
@@ -584,7 +584,7 @@ sol::table creature_at(
     if( position.native_origin() != coords::origin::abs ||
         position.native_scale() != coords::scale::map_square ) {
         throw std::invalid_argument(
-            "game.creatures.at requires an absolute map-square coordinate" );
+            "services.creatures.at requires an absolute map-square coordinate" );
     }
     sol::state_view state( lua );
     if( g == nullptr ) {
@@ -668,24 +668,24 @@ nearby_character_count_options read_nearby_character_count_options(
     for( const auto &entry : *requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.characters.count_nearby option keys must be strings" );
+                "services.characters.count_nearby option keys must be strings" );
         }
         const std::string key = entry.first.as<std::string>();
         if( key == "radius" ) {
             if( !entry.second.is<lua_Integer>() ) {
                 throw std::invalid_argument(
-                    "game.characters.count_nearby radius must be an integer" );
+                    "services.characters.count_nearby radius must be an integer" );
             }
             const lua_Integer radius = entry.second.as<lua_Integer>();
             if( radius < 0 || radius > maximum_creature_count_radius ) {
                 throw std::invalid_argument(
-                    "game.characters.count_nearby radius must be within 0..1000" );
+                    "services.characters.count_nearby radius must be within 0..1000" );
             }
             result.radius = static_cast<int>( radius );
         } else if( key == "attitude" ) {
             if( !entry.second.is<std::string>() ) {
                 throw std::invalid_argument(
-                    "game.characters.count_nearby attitude must be a string" );
+                    "services.characters.count_nearby attitude must be a string" );
             }
             const std::string attitude = entry.second.as<std::string>();
             if( attitude == "any" ) {
@@ -698,18 +698,18 @@ nearby_character_count_options read_nearby_character_count_options(
                 result.attitude = nearby_character_attitude::hostile;
             } else {
                 throw std::invalid_argument(
-                    "game.characters.count_nearby attitude must be any, allies, "
+                    "services.characters.count_nearby attitude must be any, allies, "
                     "not_allies, or hostile" );
             }
         } else if( key == "allow_hallucinations" ) {
             if( !entry.second.is<bool>() ) {
                 throw std::invalid_argument(
-                    "game.characters.count_nearby allow_hallucinations must be a boolean" );
+                    "services.characters.count_nearby allow_hallucinations must be a boolean" );
             }
             result.allow_hallucinations = entry.second.as<bool>();
         } else {
             throw std::invalid_argument(
-                "game.characters.count_nearby received unknown option '" +
+                "services.characters.count_nearby received unknown option '" +
                 key + "'" );
         }
     }
@@ -757,7 +757,7 @@ sol::table count_nearby_characters(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.characters.count_nearby";
+        "services.characters.count_nearby";
     const nearby_character_count_options options =
         read_nearby_character_count_options( requested_options );
     const tripoint_abs_ms native_origin = nearby_count_origin(
@@ -779,7 +779,7 @@ sol::table count_nearby_characters(
         }
     } else if( options.attitude != nearby_character_attitude::any ) {
         throw std::invalid_argument(
-            "game.characters.count_nearby requires an observer for attitude filtering" );
+            "services.characters.count_nearby requires an observer for attitude filtering" );
     }
 
     const std::vector<Character *> matches = g->get_characters_if(
@@ -960,10 +960,10 @@ sol::table count_nearby_monsters(
     const nearby_monster_filter_kind kind )
 {
     const std::string api_name = kind == nearby_monster_filter_kind::type ?
-                                 "game.monsters.count_nearby" :
+                                 "services.monsters.count_nearby" :
                                  kind == nearby_monster_filter_kind::species ?
-                                 "game.monsters.count_species_nearby" :
-                                 "game.monsters.count_groups_nearby";
+                                 "services.monsters.count_species_nearby" :
+                                 "services.monsters.count_groups_nearby";
     const nearby_monster_count_options options =
         read_nearby_monster_count_options(
             requested_options, api_name );
@@ -1120,7 +1120,7 @@ sol::table character_armor(
 {
     require_id_kind(
         requested_damage_type, "damage_type",
-        "game.characters.armor" );
+        "services.characters.armor" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     const Character *character = character_from_handle(
@@ -1131,7 +1131,7 @@ sol::table character_armor(
     }
     const bodypart_id part = character_body_part(
                                  *character, requested_body_part,
-                                 "game.characters.armor" );
+                                 "services.characters.armor" );
     const damage_type_id damage_type(
         requested_damage_type.value() );
     const double value = character->worn.damage_resist(
@@ -1156,7 +1156,7 @@ sol::table character_coverage(
     }
     const bodypart_id part = character_body_part(
                                  *character, requested_body_part,
-                                 "game.characters.coverage" );
+                                 "services.characters.coverage" );
     return make_game_value_result(
                state, sol::make_object(
                    state, character->worn.get_coverage( part ) ) );
@@ -1171,13 +1171,13 @@ sol::table character_limb_score(
 {
     require_id_kind(
         requested_score, "limb_score",
-        "game.characters.limb_score" );
+        "services.characters.limb_score" );
     bp_type body_part_type = bp_type::num_types;
     if( requested_body_part_type ) {
         if( requested_body_part_type->empty() ||
             requested_body_part_type->size() > 64 ) {
             throw std::invalid_argument(
-                "game.characters.limb_score body part type is invalid" );
+                "services.characters.limb_score body part type is invalid" );
         }
         body_part_type = io::string_to_enum<bp_type>(
                              *requested_body_part_type );
@@ -1216,7 +1216,7 @@ sol::table character_consumption_count(
     if( requested_item ) {
         require_id_kind(
             *requested_item, "item",
-            "game.characters.consumption_count" );
+            "services.characters.consumption_count" );
         item_type = canonical_consumption_id(
                         itype_id( requested_item->value() ) );
     }
@@ -1224,7 +1224,7 @@ sol::table character_consumption_count(
                                  requested_window->to_native() : 48_hours;
     if( window < 0_turns || window > 10000_days ) {
         throw std::invalid_argument(
-            "game.characters.consumption_count window must be within 0 turns and 10000 days" );
+            "services.characters.consumption_count window must be within 0 turns and 10000 days" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1258,12 +1258,12 @@ sol::table character_enchantment_value(
         key.size() > maximum_enchantment_value_key_bytes ||
         key.find( '\0' ) != std::string::npos ) {
         throw std::invalid_argument(
-            "game.characters.enchantment_value key is invalid" );
+            "services.characters.enchantment_value key is invalid" );
     }
     if( !std::isfinite( base ) ||
         std::abs( base ) > maximum_enchantment_value_base ) {
         throw std::invalid_argument(
-            "game.characters.enchantment_value base must be finite and within its limit" );
+            "services.characters.enchantment_value base must be finite and within its limit" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1288,7 +1288,7 @@ sol::table set_character_hp(
     if( requested_hp < -maximum_character_healing ||
         requested_hp > maximum_character_healing ) {
         throw std::invalid_argument(
-            "game.characters.set_hp value must be within -10000..10000" );
+            "services.characters.set_hp value must be within -10000..10000" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1300,7 +1300,7 @@ sol::table set_character_hp(
     }
     const bodypart_id part = character_body_part(
                                  *character, requested_body_part,
-                                 "game.characters.set_hp" );
+                                 "services.characters.set_hp" );
     const int before = character->get_part_hp_cur( part );
     character->set_part_hp_cur( part, requested_hp );
     const int after = character->get_part_hp_cur( part );
@@ -1338,7 +1338,7 @@ sol::table character_hp_group(
 {
     const get_body_part_flags flags = hp_group_flags(
                                           group,
-                                          "game.characters.hp_group" );
+                                          "services.characters.hp_group" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     const Character *character = character_from_handle(
@@ -1362,7 +1362,7 @@ sol::table set_character_hp_group(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    const std::string api_name = "game.characters.set_hp_group";
+    const std::string api_name = "services.characters.set_hp_group";
     const get_body_part_flags flags = hp_group_flags(
                                           group, api_name );
     if( requested_hp < -maximum_character_healing ||
@@ -1416,14 +1416,14 @@ int bounded_adjustment( const sol::object &value,
 {
     if( !value.is<lua_Integer>() ) {
         throw std::invalid_argument(
-            "game.characters.adjust field '" + field +
+            "services.characters.adjust field '" + field +
             "' must be an integer" );
     }
     const lua_Integer requested = value.as<lua_Integer>();
     if( requested < -maximum_character_adjustment ||
         requested > maximum_character_adjustment ) {
         throw std::invalid_argument(
-            "game.characters.adjust field '" + field +
+            "services.characters.adjust field '" + field +
             "' exceeds the per-call limit" );
     }
     return static_cast<int>( requested );
@@ -1437,7 +1437,7 @@ character_adjustments read_character_adjustments(
         const sol::object key_object = entry.first;
         if( key_object.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.characters.adjust keys must be strings" );
+                "services.characters.adjust keys must be strings" );
         }
         const std::string key = key_object.as<std::string>();
         const int value = bounded_adjustment( entry.second, key );
@@ -1463,7 +1463,7 @@ character_adjustments read_character_adjustments(
             result.stored_kcal = value;
         } else {
             throw std::invalid_argument(
-                "game.characters.adjust received unknown field '" +
+                "services.characters.adjust received unknown field '" +
                 key + "'" );
         }
     }
@@ -1551,7 +1551,7 @@ sol::table heal_character(
 {
     if( amount <= 0 || amount > maximum_character_healing ) {
         throw std::invalid_argument(
-            "game.characters.heal amount must be between 1 and 10000" );
+            "services.characters.heal amount must be between 1 and 10000" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1563,7 +1563,7 @@ sol::table heal_character(
     }
     const bodypart_id part = character_body_part(
                                  *character, body_part,
-                                 "game.characters.heal" );
+                                 "services.characters.heal" );
     const int before = character->get_part_hp_cur( part );
     character->heal( part, amount );
     const int after = character->get_part_hp_cur( part );
@@ -1594,13 +1594,13 @@ std::vector<std::string> body_part_picker_string_array(
 {
     if( !value.is<sol::table>() ) {
         throw std::invalid_argument(
-            "game.characters body part picker option '" + name +
+            "services.characters body part picker option '" + name +
             "' must be an array of strings" );
     }
     const sol::table table = value.as<sol::table>();
     if( table.size() > maximum_body_part_snapshot_limit ) {
         throw std::invalid_argument(
-            "game.characters body part picker option '" + name +
+            "services.characters body part picker option '" + name +
             "' exceeds the native body part limit" );
     }
     std::vector<std::string> result;
@@ -1609,14 +1609,14 @@ std::vector<std::string> body_part_picker_string_array(
         const sol::object entry = table.raw_get<sol::object>( index );
         if( !entry.valid() || entry.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.characters body part picker option '" + name +
+                "services.characters body part picker option '" + name +
                 "' must be a dense array of strings" );
         }
         const std::string text = entry.as<std::string>();
         if( text.empty() || text.size() > 128 ||
             text.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
-                "game.characters body part picker option '" + name +
+                "services.characters body part picker option '" + name +
                 "' contains an invalid value" );
         }
         result.push_back( text );
@@ -1634,7 +1634,7 @@ character_body_part_picker_options read_body_part_picker_options(
     for( const auto &entry : *requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.characters.pick_body_part option names must be strings" );
+                "services.characters.pick_body_part option names must be strings" );
         }
         const std::string key = entry.first.as<std::string>();
         if( key != "wounded" && key != "types" &&
@@ -1642,13 +1642,13 @@ character_body_part_picker_options read_body_part_picker_options(
             key != "exclude_flags" && key != "title" &&
             key != "allow_cancel" ) {
             throw std::invalid_argument(
-                "game.characters.pick_body_part received unknown option '" +
+                "services.characters.pick_body_part received unknown option '" +
                 key + "'" );
         }
         if( key == "wounded" ) {
             if( !entry.second.is<bool>() ) {
                 throw std::invalid_argument(
-                    "game.characters.pick_body_part option 'wounded' must be boolean" );
+                    "services.characters.pick_body_part option 'wounded' must be boolean" );
             }
             result.wounded = entry.second.as<bool>();
         } else if( key == "types" || key == "exclude_types" ) {
@@ -1674,17 +1674,17 @@ character_body_part_picker_options read_body_part_picker_options(
         } else if( key == "title" ) {
             if( !entry.second.is<std::string>() ) {
                 throw std::invalid_argument(
-                    "game.characters.pick_body_part option 'title' must be a string" );
+                    "services.characters.pick_body_part option 'title' must be a string" );
             }
             result.title = entry.second.as<std::string>();
             if( result.title.empty() || result.title.size() > 512 ||
                 result.title.find( '\0' ) != std::string::npos ) {
                 throw std::invalid_argument(
-                    "game.characters.pick_body_part option 'title' must contain 1..512 bytes" );
+                    "services.characters.pick_body_part option 'title' must contain 1..512 bytes" );
             }
         } else if( !entry.second.is<bool>() ) {
             throw std::invalid_argument(
-                "game.characters.pick_body_part option 'allow_cancel' must be boolean" );
+                "services.characters.pick_body_part option 'allow_cancel' must be boolean" );
         } else {
             result.allow_cancel = entry.second.as<bool>();
         }
@@ -1712,7 +1712,7 @@ sol::table pick_character_body_part(
     if( interactive && !character->is_avatar() ) {
         return make_game_error_result( state, {
             "wrong_target",
-            "game.characters.choose_body_part requires the avatar"
+            "services.characters.choose_body_part requires the avatar"
         } );
     }
 
@@ -1759,7 +1759,7 @@ sol::table pick_character_body_part(
     if( candidates.empty() ) {
         return make_game_error_result( state, {
             "no_match",
-            "game.characters.pick_body_part found no matching body part"
+            "services.characters.pick_body_part found no matching body part"
         } );
     }
     std::optional<bodypart_id> picked;
@@ -1822,14 +1822,14 @@ double bounded_damage_number( const sol::object &value,
     }
     if( value.get_type() != sol::type::number ) {
         throw std::invalid_argument(
-            "game.characters.damage option '" + field +
+            "services.characters.damage option '" + field +
             "' must be a finite number" );
     }
     const double requested = value.as<double>();
     if( !std::isfinite( requested ) || requested < minimum ||
         requested > maximum ) {
         throw std::invalid_argument(
-            "game.characters.damage option '" + field +
+            "services.characters.damage option '" + field +
             "' is outside its bounded range" );
     }
     return requested;
@@ -1845,7 +1845,7 @@ int bounded_damage_hit_option( const sol::object &value,
                                  maximum_character_hit_option );
     if( std::trunc( requested ) != requested ) {
         throw std::invalid_argument(
-            "game.characters.damage option '" + field +
+            "services.characters.damage option '" + field +
             "' must be an integer" );
     }
     return static_cast<int>( requested );
@@ -1861,7 +1861,7 @@ character_damage_options read_character_damage_options(
     for( const auto &entry : *requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.characters.damage option keys must be strings" );
+                "services.characters.damage option keys must be strings" );
         }
         const std::string key = entry.first.as<std::string>();
         if( key != "body_part" && key != "armor_penetration" &&
@@ -1870,14 +1870,14 @@ character_damage_options read_character_damage_options(
             key != "max_hit" && key != "hit_roll" &&
             key != "can_attack_high" ) {
             throw std::invalid_argument(
-                "game.characters.damage received unknown option '" + key + "'" );
+                "services.characters.damage received unknown option '" + key + "'" );
         }
     }
     const sol::object body_part = ( *requested )["body_part"];
     if( body_part.valid() && body_part.get_type() != sol::type::lua_nil ) {
         if( !body_part.is<script_game_id>() ) {
             throw std::invalid_argument(
-                "game.characters.damage option 'body_part' must be GameId<body_part>" );
+                "services.characters.damage option 'body_part' must be GameId<body_part>" );
         }
         result.body_part = body_part.as<script_game_id>();
     }
@@ -1909,13 +1909,13 @@ character_damage_options read_character_damage_options(
         can_attack_high.get_type() != sol::type::lua_nil ) {
         if( !can_attack_high.is<bool>() ) {
             throw std::invalid_argument(
-                "game.characters.damage option 'can_attack_high' must be boolean" );
+                "services.characters.damage option 'can_attack_high' must be boolean" );
         }
         result.can_attack_high = can_attack_high.as<bool>();
     }
     if( result.max_hit != -1 && result.max_hit < result.min_hit ) {
         throw std::invalid_argument(
-            "game.characters.damage options require max_hit >= min_hit" );
+            "services.characters.damage options require max_hit >= min_hit" );
     }
     return result;
 }
@@ -1929,16 +1929,16 @@ sol::table damage_character(
 {
     if( requested_damage_type.kind() != "damage_type" ) {
         throw std::invalid_argument(
-            "game.characters.damage requires GameId<damage_type>" );
+            "services.characters.damage requires GameId<damage_type>" );
     }
     if( !requested_damage_type.is_valid() ) {
         throw std::invalid_argument(
-            "game.characters.damage requires a valid GameId<damage_type>" );
+            "services.characters.damage requires a valid GameId<damage_type>" );
     }
     if( !std::isfinite( amount ) || amount < -maximum_character_damage ||
         amount > maximum_character_damage ) {
         throw std::invalid_argument(
-            "game.characters.damage amount must be finite and within -1000000..1000000" );
+            "services.characters.damage amount must be finite and within -1000000..1000000" );
     }
     const character_damage_options options = read_character_damage_options(
             requested_options );
@@ -1955,7 +1955,7 @@ sol::table damage_character(
     if( options.body_part ) {
         selected_body_part = character_body_part(
                                  *character, *options.body_part,
-                                 "game.characters.damage" );
+                                 "services.characters.damage" );
     } else {
         selected_body_part = character->select_body_part(
                                  options.min_hit, options.max_hit,
@@ -2113,7 +2113,7 @@ sol::table set_character_movement_mode(
 {
     require_id_kind(
         requested_mode, "move_mode",
-        "game.characters.set_movement_mode" );
+        "services.characters.set_movement_mode" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = mutable_character_from_handle(
@@ -2267,12 +2267,12 @@ std::vector<matec_id> read_technique_blacklist( const sol::object &value )
     }
     if( !value.is<sol::table>() ) {
         throw std::invalid_argument(
-            "game.characters.choose_technique option 'blacklist' must be an array" );
+            "services.characters.choose_technique option 'blacklist' must be an array" );
     }
     const sol::table entries = value.as<sol::table>();
     if( entries.size() > 256 ) {
         throw std::invalid_argument(
-            "game.characters.choose_technique option 'blacklist' exceeds 256 entries" );
+            "services.characters.choose_technique option 'blacklist' exceeds 256 entries" );
     }
     std::vector<matec_id> result;
     result.reserve( entries.size() );
@@ -2285,19 +2285,19 @@ std::vector<matec_id> read_technique_blacklist( const sol::object &value )
             const script_game_id typed_id = entry.as<script_game_id>();
             if( typed_id.kind() != "martial_art_technique" ) {
                 throw std::invalid_argument(
-                    "game.characters.choose_technique blacklist GameIds must have "
+                    "services.characters.choose_technique blacklist GameIds must have "
                     "kind 'martial_art_technique'" );
             }
             id = typed_id.value();
         } else {
             throw std::invalid_argument(
-                "game.characters.choose_technique option 'blacklist' must be a "
+                "services.characters.choose_technique option 'blacklist' must be a "
                 "dense array of technique ids" );
         }
         if( id.empty() || id.size() > maximum_combat_string_bytes ||
             id.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
-                "game.characters.choose_technique blacklist contains an invalid id" );
+                "services.characters.choose_technique blacklist contains an invalid id" );
         }
         result.emplace_back( id );
     }
@@ -2311,7 +2311,7 @@ character_technique_options read_character_technique_options(
     if( !requested ) {
         return result;
     }
-    constexpr std::string_view api_name = "game.characters.choose_technique";
+    constexpr std::string_view api_name = "services.characters.choose_technique";
     reject_unknown_combat_options(
         *requested, api_name,
     { "critical", "dodge_counter", "block_counter", "blacklist" } );
@@ -3067,18 +3067,18 @@ character_demographic_updates read_character_demographic_updates(
     for( const auto &entry : requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.characters.set_demographics field names must be strings" );
+                "services.characters.set_demographics field names must be strings" );
         }
         const std::string key =
             entry.first.as<std::string>();
         if( key != "age" && key != "height_cm" ) {
             throw std::invalid_argument(
-                "game.characters.set_demographics received unknown field '" +
+                "services.characters.set_demographics received unknown field '" +
                 key + "'" );
         }
         if( !entry.second.is<lua_Integer>() ) {
             throw std::invalid_argument(
-                "game.characters.set_demographics field '" + key +
+                "services.characters.set_demographics field '" + key +
                 "' must be an integer" );
         }
         const lua_Integer value =
@@ -3086,20 +3086,20 @@ character_demographic_updates read_character_demographic_updates(
         if( key == "age" ) {
             if( value < 0 || value > 10000 ) {
                 throw std::invalid_argument(
-                    "game.characters.set_demographics age must be within 0..10000" );
+                    "services.characters.set_demographics age must be within 0..10000" );
             }
             result.age = static_cast<int>( value );
         } else {
             if( value <= 0 || value > 10000 ) {
                 throw std::invalid_argument(
-                    "game.characters.set_demographics height_cm must be within 1..10000" );
+                    "services.characters.set_demographics height_cm must be within 1..10000" );
             }
             result.height_cm = static_cast<int>( value );
         }
     }
     if( !result.age && !result.height_cm ) {
         throw std::invalid_argument(
-            "game.characters.set_demographics requires age or height_cm" );
+            "services.characters.set_demographics requires age or height_cm" );
     }
     return result;
 }
@@ -3264,8 +3264,8 @@ sol::table change_character_attributes(
     const std::size_t world_generation )
 {
     const std::string api_name = relative ?
-                                 "game.characters.modify_attributes" :
-                                 "game.characters.set_attributes";
+                                 "services.characters.modify_attributes" :
+                                 "services.characters.set_attributes";
     const character_attribute_updates updates =
         read_character_attribute_updates( requested, api_name );
     sol::state_view state( lua );
@@ -3377,8 +3377,8 @@ sol::table change_character_kill_xp(
     const std::size_t world_generation )
 {
     const std::string api_name = relative ?
-                                 "game.characters.modify_kill_xp" :
-                                 "game.characters.set_kill_xp";
+                                 "services.characters.modify_kill_xp" :
+                                 "services.characters.set_kill_xp";
     if( requested < std::numeric_limits<int>::min() ||
         requested > std::numeric_limits<int>::max() ) {
         throw std::invalid_argument(
@@ -3467,7 +3467,7 @@ int body_part_limit( const sol::optional<int> &requested )
     const int value = requested.value_or( default_body_part_snapshot_limit );
     if( value < 0 ) {
         throw std::invalid_argument(
-            "game.characters.snapshot body_part_limit cannot be negative" );
+            "services.characters.snapshot body_part_limit cannot be negative" );
     }
     return std::min( value, maximum_body_part_snapshot_limit );
 }
@@ -3899,8 +3899,8 @@ sol::table change_monster_disposition(
     const std::size_t world_generation )
 {
     const std::string api_name = relative ?
-                                 "game.monsters.modify_disposition" :
-                                 "game.monsters.set_disposition";
+                                 "services.monsters.modify_disposition" :
+                                 "services.monsters.set_disposition";
     const monster_disposition_updates updates =
         read_monster_disposition_updates( requested, api_name );
     sol::state_view state( lua );
@@ -3996,7 +3996,7 @@ sol::table configure_monster_summon(
     if( native_lifespan <= 0_turns ||
         native_lifespan > 10000_days ) {
         throw std::invalid_argument(
-            "game.monsters.set_summon lifespan must be within 1 turn..10000 days" );
+            "services.monsters.set_summon lifespan must be within 1 turn..10000 days" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -4017,7 +4017,7 @@ sol::table configure_monster_summon(
         }
         if( resolved_summoner.value == entry ) {
             throw std::invalid_argument(
-                "game.monsters.set_summon summoner cannot be the summoned monster" );
+                "services.monsters.set_summon summoner cannot be the summoned monster" );
         }
         summoner = resolved_summoner.value;
     }
@@ -4043,7 +4043,7 @@ sol::table character_can_see_location(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.characters.can_see_location";
+        "services.characters.can_see_location";
     if( requested_position.native_origin() != coords::origin::abs ||
         requested_position.native_scale() != coords::scale::map_square ) {
         throw std::invalid_argument(
@@ -4881,6 +4881,6 @@ void install_creature_api(
     game["characters"] = std::move( characters );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

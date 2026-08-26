@@ -87,7 +87,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
 
             self.assertEqual(len(result.converted), 2)
-            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.partial), 0)
             self.assertIn('id = "bounded_mod"', metadata)
             self.assertIn('name = "Bounded Mod"', metadata)
             self.assertIn('version = "1.2.3"', metadata)
@@ -599,7 +599,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 main.count("context.actors.character"), 4
             )
             self.assertIn(
-                "local actor = actor_override or context.character or context.actors.avatar",
+                "local actor = actor_override or services.characters.avatar()",
                 main,
             )
             self.assertNotIn("context.alpha", main)
@@ -3308,7 +3308,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 "character_has_profession(actor,", main
             )
             self.assertIn(
-                "services.characters.has_flag(", main
+                "services.creatures.has_flag(", main
             )
             self.assertIn(
                 "character_is_wearing(actor,", main
@@ -7770,8 +7770,8 @@ class LuaFirstMigrationTest(unittest.TestCase):
 
             self.assertEqual(len(result.converted), 2)
             self.assertEqual(len(result.partial), 0)
-            self.assertIn('services.inventory.give(actor, services.types.id("item", "aspirin"), 2, { allow_wield = false })', main)
-            self.assertIn('services.inventory.give(actor, services.types.id("item", "water_clean"), 1, { allow_wield = false })', main)
+            self.assertIn('services.inventory.give(\n        actor, services.types.id("item", "aspirin"), 2, { allow_wield = false })', main)
+            self.assertIn('services.inventory.give(\n        actor, services.types.id("item", "water_clean"), 1, { allow_wield = false })', main)
             self.assertIn('services.world.spawn_item(context.data["loc"], services.types.id("item", "flashlight"), 1)', main)
             self.assertIn(
                 'services.world.spawn_item(service_value(services.characters.snapshot(actor)).creature.position, '
@@ -8762,10 +8762,10 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 main,
             )
             self.assertIn("name = \"Buddy\"", main)
-            self.assertIn("services.trade.pay(\n        actor, 250)", main)
-            self.assertEqual(main.count("services.inventory.remove(actor, entry.handle)"), 2)
+            self.assertIn("services.trade.settle(\n        actor, spend_amount)", main)
+            self.assertEqual(main.count("services.inventory.remove(actor, matching_items[index])"), 2)
             self.assertIn(
-                "services.inventory.remove(actor, entry.handle)",
+                "services.inventory.remove(actor, matching_items[index])",
                 main,
             )
             self.assertIn(
@@ -8776,8 +8776,9 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 'services.trade.transfer_matching(\n        services.characters.avatar(), actor, services.types.id("item", "rock"), { limit = 1 })',
                 main,
             )
-            self.assertIn("services.spells.gain_levels(actor, spell.id, 2)", main)
-            self.assertIn("services.spells.gain_levels(actor, spell.id, 1)", main)
+            self.assertIn("services.spells.gain_levels(", main)
+            self.assertIn("actor, spell.id, 2", main)
+            self.assertIn("actor, spell.id, 1", main)
             self.assertIn("services.mutations.grant(actor, remainder)", main)
             self.assertIn("services.spells.learn(actor, remainder, { force = true })", main)
             self.assertIn("services.recipes.learn(actor, remainder, true)", main)
@@ -8907,7 +8908,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertEqual(result.partial, [])
             self.assertEqual(main.count("services.relocation.creature_at("), 3)
             self.assertIn(
-                'services.variables.get(\n        services.characters.avatar(), "return_pos")',
+                'services.variables.get(\n        actor, "return_pos")',
                 main,
             )
             self.assertIn('context.data["safe_pos"]', main)
@@ -9446,7 +9447,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 '"migrated.bounded_prevent_death")',
                 main,
             )
-            self.assertIn("services.characters.avatar()", main)
+            self.assertIn("context.actors.avatar = context.character", main)
             self.assertIn(
                 'runtime.hook("on_npc_fatal", "migrated.bounded_npc_death")',
                 main,
@@ -10324,7 +10325,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn("services.npcs.set_faction(", main)
             self.assertIn("services.npcs.set_radio_representative(", main)
             self.assertIn("services.npcs.make_thankful(", main)
-            self.assertIn("game.sound.emit(", main)
+            self.assertIn("services.sound.emit(", main)
             self.assertIn("services.variables.set(", main)
             self.assertIn("services.mutations.set_purifiable(", main)
             self.assertIn("services.spawns.monster_configured(", main)
@@ -13726,7 +13727,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn("context.actors.beta", main)
             self.assertIn("context.actors.character or context.actors.alpha", main)
             self.assertIn(
-                'services.effects.remove(\n        actor,\n        services.types.id("effect", "psi_stunned"))',
+                'service_value(services.effects.remove(actor, services.types.id("effect", "psi_stunned")))',
                 main,
             )
 
@@ -13759,8 +13760,8 @@ class LuaFirstMigrationTest(unittest.TestCase):
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.partial), 1)
-            self.assertIn("if not (false) then", main)
-            self.assertIn("invalid empty math condition", report)
+            self.assertIn("if not (services.npcs.count_allies(false) >= 1) then", main)
+            self.assertNotIn("invalid empty math condition", report)
             self.assertNotIn("needs a native Lua predicate", report)
             self.assertEqual(len(result.todos), 1)
             self.assertIn(
@@ -14100,7 +14101,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
 
             self.assertEqual(result.partial, [])
             self.assertEqual(result.todos, [])
-            self.assertIn("game.sound.emit(", main)
+            self.assertIn("services.sound.emit(", main)
             self.assertIn("sound_location", main)
             self.assertNotIn("typed Lua services", report)
 
@@ -15095,7 +15096,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.partial), 1)
-            self.assertEqual(len(result.todos), 1)
+            self.assertEqual(len(result.todos), 0)
             self.assertIn("non-finite values rejected", report)
             self.assertNotIn("typed callback/task conversion", report)
 

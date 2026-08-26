@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_game_handle.h"
 
@@ -12,7 +12,7 @@
 #include "item.h"
 #include "vehicle.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -361,6 +361,6 @@ void install_game_handle_api(
     game["handles"] = std::move( handles );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

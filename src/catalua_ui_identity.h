@@ -7,7 +7,7 @@
 #include <exception>
 #include <limits>
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 // Gives native objects a process-local identity that cannot be reused after
@@ -61,6 +61,6 @@ class native_object_identity
         std::uint64_t value_;
 };
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
 #endif // CATA_SRC_CATALUA_UI_IDENTITY_H

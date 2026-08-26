@@ -6,7 +6,7 @@
 #include <unordered_set>
 #include <utility>
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 bool is_safe_service_identifier( const std::string_view value )
@@ -99,4 +99,4 @@ std::string script_service_registry::method_key(
            std::to_string( method_name.size() ) + ":" + std::string( method_name );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua

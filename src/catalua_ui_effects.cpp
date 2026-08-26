@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_effects.h"
 
@@ -21,7 +21,7 @@
 #include "effect.h"
 #include "type_id.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -208,7 +208,7 @@ sol::table list_effects(
     const std::size_t world_generation )
 {
     const int limit = effect_limit(
-                          requested_limit, "game.effects.list" );
+                          requested_limit, "services.effects.list" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Creature *creature = resolve_creature(
@@ -247,7 +247,7 @@ sol::table has_effect(
     const std::size_t world_generation )
 {
     require_id_kind(
-        requested_id, "effect", "game.effects.has" );
+        requested_id, "effect", "services.effects.has" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Creature *creature = resolve_creature(
@@ -259,13 +259,13 @@ sol::table has_effect(
     const std::optional<bodypart_id> body_part =
         effect_body_part(
             *creature, requested_body_part,
-            "game.effects.has" );
+            "services.effects.has" );
     if( requested_intensity &&
         ( !std::isfinite( *requested_intensity ) ||
           *requested_intensity < -1000000.0 ||
           *requested_intensity > 1000000.0 ) ) {
         throw std::invalid_argument(
-            "game.effects.has intensity must be finite and within -1000000..1000000" );
+            "services.effects.has intensity must be finite and within -1000000..1000000" );
     }
     const efftype_id id( requested_id.value() );
     const effect *entry = find_effect( *creature, id, body_part );
@@ -284,7 +284,7 @@ sol::table get_effect(
     const std::size_t world_generation )
 {
     require_id_kind(
-        requested_id, "effect", "game.effects.get" );
+        requested_id, "effect", "services.effects.get" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Creature *creature = resolve_creature(
@@ -296,7 +296,7 @@ sol::table get_effect(
     const std::optional<bodypart_id> body_part =
         effect_body_part(
             *creature, requested_body_part,
-            "game.effects.get" );
+            "services.effects.get" );
     const effect *entry = find_effect(
                               *creature,
                               efftype_id( requested_id.value() ),
@@ -331,43 +331,43 @@ effect_add_options read_add_options(
         const sol::object key_object = entry.first;
         if( key_object.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.effects.add option keys must be strings" );
+                "services.effects.add option keys must be strings" );
         }
         const std::string key = key_object.as<std::string>();
         const sol::object value = entry.second;
         if( key == "body_part" ) {
             if( !value.is<script_game_id>() ) {
                 throw std::invalid_argument(
-                    "game.effects.add body_part must be a GameId" );
+                    "services.effects.add body_part must be a GameId" );
             }
             result.body_part = value.as<script_game_id>();
         } else if( key == "permanent" ) {
             if( !value.is<bool>() ) {
                 throw std::invalid_argument(
-                    "game.effects.add permanent must be a boolean" );
+                    "services.effects.add permanent must be a boolean" );
             }
             result.permanent = value.as<bool>();
         } else if( key == "intensity" ) {
             if( !value.is<lua_Integer>() ) {
                 throw std::invalid_argument(
-                    "game.effects.add intensity must be an integer" );
+                    "services.effects.add intensity must be an integer" );
             }
             const lua_Integer intensity = value.as<lua_Integer>();
             if( intensity < 0 ||
                 intensity > maximum_effect_assignment_intensity ) {
                 throw std::invalid_argument(
-                    "game.effects.add intensity is outside its limit" );
+                    "services.effects.add intensity is outside its limit" );
             }
             result.intensity = static_cast<int>( intensity );
         } else if( key == "force" ) {
             if( !value.is<bool>() ) {
                 throw std::invalid_argument(
-                    "game.effects.add force must be a boolean" );
+                    "services.effects.add force must be a boolean" );
             }
             result.force = value.as<bool>();
         } else {
             throw std::invalid_argument(
-                "game.effects.add received unknown option '" +
+                "services.effects.add received unknown option '" +
                 key + "'" );
         }
     }
@@ -397,8 +397,8 @@ sol::table add_effect(
     const std::size_t world_generation )
 {
     require_id_kind(
-        requested_id, "effect", "game.effects.add" );
-    validate_effect_duration( duration, "game.effects.add" );
+        requested_id, "effect", "services.effects.add" );
+    validate_effect_duration( duration, "services.effects.add" );
     const effect_add_options options =
         read_add_options( requested_options );
     sol::state_view state( lua );
@@ -412,7 +412,7 @@ sol::table add_effect(
     const std::optional<bodypart_id> body_part =
         effect_body_part(
             *creature, options.body_part,
-            "game.effects.add" );
+            "services.effects.add" );
     const efftype_id id( requested_id.value() );
     if( body_part ) {
         creature->add_effect(
@@ -446,7 +446,7 @@ sol::table remove_effect(
     const std::size_t world_generation )
 {
     require_id_kind(
-        requested_id, "effect", "game.effects.remove" );
+        requested_id, "effect", "services.effects.remove" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Creature *creature = resolve_creature(
@@ -458,7 +458,7 @@ sol::table remove_effect(
     const std::optional<bodypart_id> body_part =
         effect_body_part(
             *creature, requested_body_part,
-            "game.effects.remove" );
+            "services.effects.remove" );
     const efftype_id id( requested_id.value() );
     const bool removed = body_part ?
                          creature->remove_effect( id, *body_part ) :
@@ -475,11 +475,11 @@ sol::table adjust_effect_intensity(
     const std::size_t world_generation )
 {
     require_id_kind(
-        requested_id, "effect", "game.effects.adjust_intensity" );
+        requested_id, "effect", "services.effects.adjust_intensity" );
     if( requested_delta < -maximum_effect_intensity_delta ||
         requested_delta > maximum_effect_intensity_delta ) {
         throw std::invalid_argument(
-            "game.effects.adjust_intensity delta must be within -1000..1000" );
+            "services.effects.adjust_intensity delta must be within -1000..1000" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -492,7 +492,7 @@ sol::table adjust_effect_intensity(
     const std::optional<bodypart_id> body_part =
         effect_body_part(
             *creature, requested_body_part,
-            "game.effects.adjust_intensity" );
+            "services.effects.adjust_intensity" );
     const efftype_id id( requested_id.value() );
     effect *entry = find_effect( *creature, id, body_part );
 
@@ -545,47 +545,47 @@ effect_update_options read_update_options(
         const sol::object key_object = entry.first;
         if( key_object.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.effects.update option keys must be strings" );
+                "services.effects.update option keys must be strings" );
         }
         const std::string key = key_object.as<std::string>();
         const sol::object value = entry.second;
         if( key == "body_part" ) {
             if( !value.is<script_game_id>() ) {
                 throw std::invalid_argument(
-                    "game.effects.update body_part must be a GameId" );
+                    "services.effects.update body_part must be a GameId" );
             }
             result.body_part = value.as<script_game_id>();
         } else if( key == "duration" ) {
             if( !value.is<script_time_duration>() ) {
                 throw std::invalid_argument(
-                    "game.effects.update duration must be a TimeDuration" );
+                    "services.effects.update duration must be a TimeDuration" );
             }
             const script_time_duration duration =
                 value.as<script_time_duration>();
             validate_effect_duration(
-                duration, "game.effects.update" );
+                duration, "services.effects.update" );
             result.duration = duration;
         } else if( key == "intensity" ) {
             if( !value.is<lua_Integer>() ) {
                 throw std::invalid_argument(
-                    "game.effects.update intensity must be an integer" );
+                    "services.effects.update intensity must be an integer" );
             }
             const lua_Integer intensity = value.as<lua_Integer>();
             if( intensity < 1 ||
                 intensity > maximum_effect_assignment_intensity ) {
                 throw std::invalid_argument(
-                    "game.effects.update intensity is outside its limit" );
+                    "services.effects.update intensity is outside its limit" );
             }
             result.intensity = static_cast<int>( intensity );
         } else if( key == "permanent" ) {
             if( !value.is<bool>() ) {
                 throw std::invalid_argument(
-                    "game.effects.update permanent must be a boolean" );
+                    "services.effects.update permanent must be a boolean" );
             }
             result.permanent = value.as<bool>();
         } else {
             throw std::invalid_argument(
-                "game.effects.update received unknown option '" +
+                "services.effects.update received unknown option '" +
                 key + "'" );
         }
     }
@@ -600,7 +600,7 @@ sol::table update_effect(
     const std::size_t world_generation )
 {
     require_id_kind(
-        requested_id, "effect", "game.effects.update" );
+        requested_id, "effect", "services.effects.update" );
     const effect_update_options options =
         read_update_options( requested_options );
     sol::state_view state( lua );
@@ -614,7 +614,7 @@ sol::table update_effect(
     const std::optional<bodypart_id> body_part =
         effect_body_part(
             *creature, options.body_part,
-            "game.effects.update" );
+            "services.effects.update" );
     effect *entry = find_effect(
                         *creature,
                         efftype_id( requested_id.value() ),
@@ -751,6 +751,6 @@ void install_effect_api(
     game["effects"] = std::move( effects );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

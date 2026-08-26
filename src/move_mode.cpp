@@ -6,7 +6,7 @@
 #include <unordered_map>
 
 #include "debug.h"
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "translations.h"
@@ -23,7 +23,7 @@ namespace
 generic_factory<move_mode> move_mode_factory( "move_mode" );
 } // namespace
 
-generic_factory<move_mode> &cata::lua_platform::detail::movement_mode_registry()
+generic_factory<move_mode> &cata::lua::detail::movement_mode_registry()
 {
     return move_mode_factory;
 }
@@ -103,10 +103,10 @@ void move_mode::finalize()
 
 void move_mode::finalize_all()
 {
-    cata::lua_platform::detail::refresh_movement_mode_registry();
+    cata::lua::detail::refresh_movement_mode_registry();
 }
 
-void cata::lua_platform::detail::refresh_movement_mode_registry()
+void cata::lua::detail::refresh_movement_mode_registry()
 {
     move_mode_factory.finalize();
     move_modes_sorted.clear();

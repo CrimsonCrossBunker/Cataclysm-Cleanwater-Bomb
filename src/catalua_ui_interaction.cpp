@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_interaction.h"
 
@@ -32,7 +32,7 @@
 #include "uilist.h"
 #include "units.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -155,37 +155,37 @@ variant_sound_options read_variant_sound_options(
         const sol::object key_object = entry.first;
         if( key_object.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.sound.play option keys must be strings" );
+                "services.sound.play option keys must be strings" );
         }
         const std::string key = key_object.as<std::string>();
         if( key == "angle_degrees" ) {
             result.angle_degrees = finite_number(
-                                       entry.second, "game.sound.play", key );
+                                       entry.second, "services.sound.play", key );
             if( result.angle_degrees < -360.0 ||
                 result.angle_degrees > 360.0 ) {
                 throw std::invalid_argument(
-                    "game.sound.play angle_degrees must be within -360..360" );
+                    "services.sound.play angle_degrees must be within -360..360" );
             }
             result.has_angle = true;
         } else if( key == "pitch_min" ) {
             result.pitch_min = finite_number(
-                                   entry.second, "game.sound.play", key );
+                                   entry.second, "services.sound.play", key );
             result.has_pitch = true;
         } else if( key == "pitch_max" ) {
             result.pitch_max = finite_number(
-                                   entry.second, "game.sound.play", key );
+                                   entry.second, "services.sound.play", key );
             result.has_pitch = true;
         } else {
             throw std::invalid_argument(
-                "game.sound.play received unknown option '" + key + "'" );
+                "services.sound.play received unknown option '" + key + "'" );
         }
     }
     if( result.has_pitch && !result.has_angle ) {
         throw std::invalid_argument(
-            "game.sound.play pitch options require angle_degrees" );
+            "services.sound.play pitch options require angle_degrees" );
     }
     validate_pitch_range(
-        result.pitch_min, result.pitch_max, "game.sound.play" );
+        result.pitch_min, result.pitch_max, "services.sound.play" );
     return result;
 }
 
@@ -193,9 +193,9 @@ void play_variant_sound(
     const std::string &id, const std::string &variant,
     const int volume, const sol::optional<sol::table> &requested )
 {
-    require_sound_id( id, "id", "game.sound.play" );
-    require_sound_id( variant, "variant", "game.sound.play" );
-    require_sound_volume( volume, "game.sound.play" );
+    require_sound_id( id, "id", "services.sound.play" );
+    require_sound_id( variant, "variant", "services.sound.play" );
+    require_sound_volume( volume, "services.sound.play" );
     const variant_sound_options options =
         read_variant_sound_options( requested );
     if( options.has_angle ) {
@@ -254,7 +254,7 @@ sfx::channel ambient_channel_from_name( const std::string &name )
     } );
     if( found == ambient_channel_names.end() ) {
         throw std::invalid_argument(
-            "game.sound.play_ambient received unknown channel '" +
+            "services.sound.play_ambient received unknown channel '" +
             name + "'" );
     }
     return found->second;
@@ -278,13 +278,13 @@ ambient_sound_options read_ambient_sound_options(
         const sol::object key_object = entry.first;
         if( key_object.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.sound.play_ambient option keys must be strings" );
+                "services.sound.play_ambient option keys must be strings" );
         }
         const std::string key = key_object.as<std::string>();
         if( key == "channel" ) {
             if( entry.second.get_type() != sol::type::string ) {
                 throw std::invalid_argument(
-                    "game.sound.play_ambient option 'channel' "
+                    "services.sound.play_ambient option 'channel' "
                     "must be a string" );
             }
             result.channel = ambient_channel_from_name(
@@ -292,34 +292,34 @@ ambient_sound_options read_ambient_sound_options(
         } else if( key == "fade_in_ms" ) {
             result.fade_in_ms = integer_option(
                                     entry.second,
-                                    "game.sound.play_ambient", key );
+                                    "services.sound.play_ambient", key );
         } else if( key == "pitch" ) {
             result.pitch = finite_number(
                                entry.second,
-                               "game.sound.play_ambient", key );
+                               "services.sound.play_ambient", key );
         } else if( key == "loops" ) {
             result.loops = integer_option(
                                entry.second,
-                               "game.sound.play_ambient", key );
+                               "services.sound.play_ambient", key );
         } else {
             throw std::invalid_argument(
-                "game.sound.play_ambient received unknown option '" +
+                "services.sound.play_ambient received unknown option '" +
                 key + "'" );
         }
     }
     if( result.fade_in_ms < 0 ||
         result.fade_in_ms > maximum_sound_fade_ms ) {
         throw std::invalid_argument(
-            "game.sound.play_ambient fade_in_ms must be within 0..60000" );
+            "services.sound.play_ambient fade_in_ms must be within 0..60000" );
     }
     if( result.pitch != -1.0 &&
         ( result.pitch < 0.25 || result.pitch > 4.0 ) ) {
         throw std::invalid_argument(
-            "game.sound.play_ambient pitch must be -1 or within 0.25..4" );
+            "services.sound.play_ambient pitch must be -1 or within 0.25..4" );
     }
     if( result.loops < -1 || result.loops > maximum_sound_loops ) {
         throw std::invalid_argument(
-            "game.sound.play_ambient loops must be within -1..100" );
+            "services.sound.play_ambient loops must be within -1..100" );
     }
     return result;
 }
@@ -328,10 +328,10 @@ void play_ambient_sound(
     const std::string &id, const std::string &variant,
     const int volume, const sol::optional<sol::table> &requested )
 {
-    require_sound_id( id, "id", "game.sound.play_ambient" );
+    require_sound_id( id, "id", "services.sound.play_ambient" );
     require_sound_id(
-        variant, "variant", "game.sound.play_ambient" );
-    require_sound_volume( volume, "game.sound.play_ambient" );
+        variant, "variant", "services.sound.play_ambient" );
+    require_sound_volume( volume, "services.sound.play_ambient" );
     const ambient_sound_options options =
         read_ambient_sound_options( requested );
     sfx::play_ambient_variant_sound(
@@ -423,7 +423,7 @@ sounds::sound_t gameplay_sound_type(
         return sounds::sound_t::order;
     }
     throw std::invalid_argument(
-        "game.sound.emit received unknown category '" + name + "'" );
+        "services.sound.emit received unknown category '" + name + "'" );
 }
 
 void emit_gameplay_sound(
@@ -433,15 +433,15 @@ void emit_gameplay_sound(
     const sol::optional<std::string> &id,
     const sol::optional<std::string> &variant )
 {
-    constexpr std::string_view api_name = "game.sound.emit";
+    constexpr std::string_view api_name = "services.sound.emit";
     if( volume < 0 || volume > maximum_gameplay_sound_volume ) {
         throw std::invalid_argument(
-            "game.sound.emit volume must be within 0..1000" );
+            "services.sound.emit volume must be within 0..1000" );
     }
     if( description.size() > maximum_sound_description_bytes ||
         description.find( '\0' ) != std::string::npos ) {
         throw std::invalid_argument(
-            "game.sound.emit description exceeds its bounded string limit" );
+            "services.sound.emit description exceeds its bounded string limit" );
     }
     if( id && !id->empty() ) {
         require_sound_id( *id, "id", api_name );
@@ -493,9 +493,9 @@ sol::object choose_adjacent_position(
     const bool allow_vertical )
 {
     require_target_prompt(
-        message, "message", "game.targeting.choose_adjacent" );
+        message, "message", "services.targeting.choose_adjacent" );
     map &here = require_active_map(
-                    "game.targeting.choose_adjacent" );
+                    "services.targeting.choose_adjacent" );
     return absolute_selection(
                sol::state_view( lua ), here,
                choose_adjacent( message, allow_vertical ) );
@@ -506,8 +506,8 @@ sol::object choose_direction_offset(
     const bool allow_vertical )
 {
     require_target_prompt(
-        message, "message", "game.targeting.choose_direction" );
-    require_active_map( "game.targeting.choose_direction" );
+        message, "message", "services.targeting.choose_direction" );
+    require_active_map( "services.targeting.choose_direction" );
     return relative_selection(
                sol::state_view( lua ),
                choose_direction( message, allow_vertical ) );
@@ -516,7 +516,7 @@ sol::object choose_direction_offset(
 sol::object look_around_position( sol::this_state lua )
 {
     map &here = require_active_map(
-                    "game.targeting.look_around" );
+                    "services.targeting.look_around" );
     return absolute_selection(
                sol::state_view( lua ), here, g->look_around() );
 }
@@ -527,16 +527,16 @@ sol::object choose_map_square(
     const bool allow_vertical )
 {
     require_target_prompt(
-        message, "message", "game.targeting.choose_map_square" );
+        message, "message", "services.targeting.choose_map_square" );
     map &here = require_active_map(
-                    "game.targeting.choose_map_square" );
+                    "services.targeting.choose_map_square" );
     avatar &player = get_avatar();
     tripoint_bub_ms center =
         player.pos_bub( here ) + player.view_offset;
     if( requested_center ) {
         center = require_loaded_position(
                      here, *requested_center,
-                     "game.targeting.choose_map_square" );
+                     "services.targeting.choose_map_square" );
     }
     if( !message.empty() ) {
         static_popup popup;
@@ -557,12 +557,12 @@ sol::object choose_visible_map_square(
 {
     require_target_prompt(
         message, "message",
-        "game.targeting.choose_visible_map_square" );
+        "services.targeting.choose_visible_map_square" );
     map &here = require_active_map(
-                    "game.targeting.choose_visible_map_square" );
+                    "services.targeting.choose_visible_map_square" );
     if( range < 0 || range > maximum_targeting_range ) {
         throw std::invalid_argument(
-            "game.targeting.choose_visible_map_square range must be within 0..1000" );
+            "services.targeting.choose_visible_map_square range must be within 0..1000" );
     }
     if( !message.empty() ) {
         static_popup popup;
@@ -613,7 +613,7 @@ sol::object choose_overmap_point(
     const sol::optional<int> &requested_distance )
 {
     constexpr std::string_view api_name =
-        "game.targeting.choose_overmap_point";
+        "services.targeting.choose_overmap_point";
     require_target_prompt(
         message, "message", api_name );
     require_active_map( api_name );
@@ -628,7 +628,7 @@ sol::object choose_overmap_point(
         ( requested_distance &&
           distance > maximum_targeting_range ) ) {
         throw std::invalid_argument(
-            "game.targeting.choose_overmap_point distance must be within 0..1000" );
+            "services.targeting.choose_overmap_point distance must be within 0..1000" );
     }
     if( requested_distance ) {
         ui::omap::range_mark( center, distance );
@@ -657,16 +657,16 @@ sol::object choose_area(
     const bool allow_vertical )
 {
     require_target_prompt(
-        message, "message", "game.targeting.choose_area" );
+        message, "message", "services.targeting.choose_area" );
     map &here = require_active_map(
-                    "game.targeting.choose_area" );
+                    "services.targeting.choose_area" );
     avatar &player = get_avatar();
     tripoint_bub_ms center =
         player.pos_bub( here ) + player.view_offset;
     if( requested_start ) {
         center = require_loaded_position(
                      here, *requested_start,
-                     "game.targeting.choose_area" );
+                     "services.targeting.choose_area" );
     }
 
     static_popup popup;
@@ -719,18 +719,18 @@ sol::object choose_adjacent_for_action(
 {
     require_target_prompt(
         message, "message",
-        "game.targeting.choose_adjacent_for_action" );
+        "services.targeting.choose_adjacent_for_action" );
     require_target_prompt(
         failure_message, "failure_message",
-        "game.targeting.choose_adjacent_for_action" );
+        "services.targeting.choose_adjacent_for_action" );
     const action_id action = look_up_action( action_name );
     if( action == ACTION_NULL ) {
         throw std::invalid_argument(
-            "game.targeting.choose_adjacent_for_action received "
+            "services.targeting.choose_adjacent_for_action received "
             "an unknown action id" );
     }
     map &here = require_active_map(
-                    "game.targeting.choose_adjacent_for_action" );
+                    "services.targeting.choose_adjacent_for_action" );
     return absolute_selection(
                sol::state_view( lua ), here,
                choose_adjacent_highlight(
@@ -786,18 +786,18 @@ sol::object choose_adjacent_where(
 {
     require_target_prompt(
         message, "message",
-        "game.targeting.choose_adjacent_where" );
+        "services.targeting.choose_adjacent_where" );
     require_target_prompt(
         failure_message, "failure_message",
-        "game.targeting.choose_adjacent_where" );
+        "services.targeting.choose_adjacent_where" );
     map &here = require_active_map(
-                    "game.targeting.choose_adjacent_where" );
+                    "services.targeting.choose_adjacent_where" );
     const tripoint_bub_ms center =
         get_avatar().pos_bub( here );
     const std::vector<tripoint_bub_ms> candidates =
         read_adjacent_candidates(
             here, requested_candidates, center,
-            "game.targeting.choose_adjacent_where" );
+            "services.targeting.choose_adjacent_where" );
     return absolute_selection(
                sol::state_view( lua ), here,
                choose_adjacent_highlight(
@@ -819,7 +819,7 @@ sol::object choose_adjacent_where_at(
     const bool allow_autoselect )
 {
     constexpr std::string_view api_name =
-        "game.targeting.choose_adjacent_where_at";
+        "services.targeting.choose_adjacent_where_at";
     require_target_prompt(
         message, "message", api_name );
     require_target_prompt(
@@ -857,14 +857,14 @@ std::string bounded_interaction_text(
 {
     if( value.get_type() != sol::type::string ) {
         throw std::invalid_argument(
-            "game.interaction.input_text option '" + field +
+            "services.interaction.input_text option '" + field +
             "' must be a string" );
     }
     const std::string result = value.as<std::string>();
     if( result.size() > maximum ||
         result.find( '\0' ) != std::string::npos ) {
         throw std::invalid_argument(
-            "game.interaction.input_text option '" + field +
+            "services.interaction.input_text option '" + field +
             "' exceeds its native text bound" );
     }
     return result;
@@ -880,7 +880,7 @@ text_input_options read_text_input_options(
     for( const auto &entry : *requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.interaction.input_text option names must be strings" );
+                "services.interaction.input_text option names must be strings" );
         }
         const std::string key = entry.first.as<std::string>();
         if( key == "description" ) {
@@ -898,14 +898,14 @@ text_input_options read_text_input_options(
         } else if( key == "width" ) {
             result.width = integer_option(
                                entry.second,
-                               "game.interaction.input_text", key );
+                               "services.interaction.input_text", key );
             if( result.width < 10 || result.width > 240 ) {
                 throw std::invalid_argument(
-                    "game.interaction.input_text width must be within 10..240" );
+                    "services.interaction.input_text width must be within 10..240" );
             }
         } else {
             throw std::invalid_argument(
-                "game.interaction.input_text received unknown option '" +
+                "services.interaction.input_text received unknown option '" +
                 key + "'" );
         }
     }
@@ -915,7 +915,7 @@ text_input_options read_text_input_options(
 bool confirm_interaction( const std::string &message )
 {
     require_target_prompt(
-        message, "message", "game.interaction.confirm" );
+        message, "message", "services.interaction.confirm" );
     return query_yn( message );
 }
 
@@ -924,7 +924,7 @@ sol::table input_interaction_text(
     const sol::optional<sol::table> &requested_options )
 {
     require_target_prompt(
-        title, "title", "game.interaction.input_text" );
+        title, "title", "services.interaction.input_text" );
     const text_input_options options =
         read_text_input_options( requested_options );
     string_input_popup_imgui popup(
@@ -950,7 +950,7 @@ sol::table input_interaction_number(
 {
     require_target_prompt(
         description, "description",
-        "game.interaction.input_number" );
+        "services.interaction.input_number" );
     number_input_popup<int> popup( 55, default_value );
     popup.set_label( _( "Input a value:" ) );
     popup.set_description( description );
@@ -985,14 +985,14 @@ std::string required_choice_text(
     const sol::object value = entry[field];
     if( value.get_type() != sol::type::string ) {
         throw std::invalid_argument(
-            "game.interaction.choose entries require string '" +
+            "services.interaction.choose entries require string '" +
             field + "' fields" );
     }
     const std::string result = value.as<std::string>();
     if( result.empty() || result.size() > maximum ||
         result.find( '\0' ) != std::string::npos ) {
         throw std::invalid_argument(
-            "game.interaction.choose entry '" + field +
+            "services.interaction.choose entry '" + field +
             "' is outside its native text bound" );
     }
     return result;
@@ -1004,7 +1004,7 @@ std::vector<interaction_choice> read_interaction_choices(
     if( requested.size() == 0 ||
         requested.size() > maximum_interaction_choices ) {
         throw std::invalid_argument(
-            "game.interaction.choose requires 1..256 entries" );
+            "services.interaction.choose requires 1..256 entries" );
     }
     std::vector<interaction_choice> result;
     result.reserve( requested.size() );
@@ -1013,7 +1013,7 @@ std::vector<interaction_choice> read_interaction_choices(
         const sol::object raw_entry = requested.raw_get<sol::object>( index );
         if( !raw_entry.is<sol::table>() ) {
             throw std::invalid_argument(
-                "game.interaction.choose entries must be a dense table array" );
+                "services.interaction.choose entries must be a dense table array" );
         }
         const sol::table entry = raw_entry.as<sol::table>();
         interaction_choice choice;
@@ -1025,7 +1025,7 @@ std::vector<interaction_choice> read_interaction_choices(
         return existing.id == choice.id;
     } ) ) {
             throw std::invalid_argument(
-                "game.interaction.choose entry ids must be unique" );
+                "services.interaction.choose entry ids must be unique" );
         }
         choice.label = required_choice_text(
                            entry, "label", maximum_target_prompt_bytes );
@@ -1040,7 +1040,7 @@ std::vector<interaction_choice> read_interaction_choices(
         if( enabled.valid() && enabled.get_type() != sol::type::nil ) {
             if( !enabled.is<bool>() ) {
                 throw std::invalid_argument(
-                    "game.interaction.choose entry enabled must be boolean" );
+                    "services.interaction.choose entry enabled must be boolean" );
             }
             choice.enabled = enabled.as<bool>();
         }
@@ -1052,7 +1052,7 @@ std::vector<interaction_choice> read_interaction_choices(
                 std::isalnum(
                     static_cast<unsigned char>( text.front() ) ) == 0 ) {
                 throw std::invalid_argument(
-                    "game.interaction.choose entry hotkey must be one ASCII letter or digit" );
+                    "services.interaction.choose entry hotkey must be one ASCII letter or digit" );
             }
             choice.hotkey = static_cast<unsigned char>( text.front() );
         }
@@ -1071,7 +1071,7 @@ interaction_choice_options read_interaction_choice_options(
     for( const auto &entry : *requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.interaction.choose option names must be strings" );
+                "services.interaction.choose option names must be strings" );
         }
         const std::string key = entry.first.as<std::string>();
         if( key == "title" ) {
@@ -1080,13 +1080,13 @@ interaction_choice_options read_interaction_choice_options(
                                maximum_target_prompt_bytes );
             if( result.title.empty() ) {
                 throw std::invalid_argument(
-                    "game.interaction.choose title cannot be empty" );
+                    "services.interaction.choose title cannot be empty" );
             }
         } else if( key == "allow_cancel" ||
                    key == "highlight_disabled" ) {
             if( !entry.second.is<bool>() ) {
                 throw std::invalid_argument(
-                    "game.interaction.choose boolean option '" +
+                    "services.interaction.choose boolean option '" +
                     key + "' must be boolean" );
             }
             if( key == "allow_cancel" ) {
@@ -1096,7 +1096,7 @@ interaction_choice_options read_interaction_choice_options(
             }
         } else {
             throw std::invalid_argument(
-                "game.interaction.choose received unknown option '" +
+                "services.interaction.choose received unknown option '" +
                 key + "'" );
         }
     }
@@ -1163,7 +1163,7 @@ void install_game_interaction_api(
             const std::string &message ) {
         require_actions();
         require_active_callback(
-            has_active_callback, "game.interaction.confirm" );
+            has_active_callback, "services.interaction.confirm" );
         return confirm_interaction( message );
     } );
     interaction.set_function(
@@ -1173,7 +1173,7 @@ void install_game_interaction_api(
             const sol::optional<sol::table> &options ) {
         require_actions();
         require_active_callback(
-            has_active_callback, "game.interaction.input_text" );
+            has_active_callback, "services.interaction.input_text" );
         return input_interaction_text(
                    lua, title, options );
     } );
@@ -1186,7 +1186,7 @@ void install_game_interaction_api(
         require_actions();
         require_active_callback(
             has_active_callback,
-            "game.interaction.input_number" );
+            "services.interaction.input_number" );
         return input_interaction_number(
                    lua, description, default_value );
     } );
@@ -1197,7 +1197,7 @@ void install_game_interaction_api(
             const sol::optional<sol::table> &options ) {
         require_actions();
         require_active_callback(
-            has_active_callback, "game.interaction.choose" );
+            has_active_callback, "services.interaction.choose" );
         return choose_interaction_entry(
                    lua, entries, options );
     } );
@@ -1211,7 +1211,7 @@ void install_game_interaction_api(
     const int volume, const sol::optional<sol::table> &options ) {
         require_actions();
         require_active_callback(
-            has_active_callback, "game.sound.play" );
+            has_active_callback, "services.sound.play" );
         play_variant_sound( id, variant, volume, options );
     } );
     sound.set_function(
@@ -1221,7 +1221,7 @@ void install_game_interaction_api(
     const int volume, const sol::optional<sol::table> &options ) {
         require_actions();
         require_active_callback(
-            has_active_callback, "game.sound.play_ambient" );
+            has_active_callback, "services.sound.play_ambient" );
         play_ambient_sound( id, variant, volume, options );
     } );
     sound.set_function(
@@ -1235,7 +1235,7 @@ void install_game_interaction_api(
     const sol::optional<std::string> &variant ) {
         require_actions();
         require_active_callback(
-            has_active_callback, "game.sound.emit" );
+            has_active_callback, "services.sound.emit" );
         emit_gameplay_sound(
             position, volume, category, description,
             ambient, id, variant );
@@ -1270,7 +1270,7 @@ void install_game_interaction_api(
         [authorize](
             sol::this_state lua, const std::string & message,
     const sol::optional<bool> &allow_vertical ) {
-        authorize( "game.targeting.choose_adjacent" );
+        authorize( "services.targeting.choose_adjacent" );
         return choose_adjacent_position(
                    lua, message, allow_vertical.value_or( false ) );
     } );
@@ -1279,14 +1279,14 @@ void install_game_interaction_api(
         [authorize](
             sol::this_state lua, const std::string & message,
     const sol::optional<bool> &allow_vertical ) {
-        authorize( "game.targeting.choose_direction" );
+        authorize( "services.targeting.choose_direction" );
         return choose_direction_offset(
                    lua, message, allow_vertical.value_or( false ) );
     } );
     targeting.set_function(
         "look_around",
     [authorize]( sol::this_state lua ) {
-        authorize( "game.targeting.look_around" );
+        authorize( "services.targeting.look_around" );
         return look_around_position( lua );
     } );
     targeting.set_function(
@@ -1295,7 +1295,7 @@ void install_game_interaction_api(
             sol::this_state lua, const std::string &message,
             const sol::optional<script_tripoint_coord> &center,
     const sol::optional<bool> &allow_vertical ) {
-        authorize( "game.targeting.choose_map_square" );
+        authorize( "services.targeting.choose_map_square" );
         return choose_map_square(
                    lua, message, center,
                    allow_vertical.value_or( false ) );
@@ -1306,7 +1306,7 @@ void install_game_interaction_api(
             sol::this_state lua, const std::string &message,
     const int range ) {
         authorize(
-            "game.targeting.choose_visible_map_square" );
+            "services.targeting.choose_visible_map_square" );
         return choose_visible_map_square(
                    lua, message, range );
     } );
@@ -1316,7 +1316,7 @@ void install_game_interaction_api(
             sol::this_state lua, const std::string &message,
             const sol::optional<script_tripoint_coord> &center,
     const sol::optional<int> &distance ) {
-        authorize( "game.targeting.choose_overmap_point" );
+        authorize( "services.targeting.choose_overmap_point" );
         return choose_overmap_point(
                    lua, message, center, distance );
     } );
@@ -1326,7 +1326,7 @@ void install_game_interaction_api(
             sol::this_state lua, const std::string & message,
             const sol::optional<script_tripoint_coord> &start,
     const sol::optional<bool> &allow_vertical ) {
-        authorize( "game.targeting.choose_area" );
+        authorize( "services.targeting.choose_area" );
         return choose_area(
                    lua, message, start,
                    allow_vertical.value_or( false ) );
@@ -1340,7 +1340,7 @@ void install_game_interaction_api(
             const sol::optional<bool> &allow_vertical,
     const sol::optional<bool> &allow_autoselect ) {
         authorize(
-            "game.targeting.choose_adjacent_for_action" );
+            "services.targeting.choose_adjacent_for_action" );
         return choose_adjacent_for_action(
                    lua, message, failure_message, action,
                    allow_vertical.value_or( false ),
@@ -1354,7 +1354,7 @@ void install_game_interaction_api(
             const sol::table & candidates,
             const sol::optional<bool> &allow_vertical,
     const sol::optional<bool> &allow_autoselect ) {
-        authorize( "game.targeting.choose_adjacent_where" );
+        authorize( "services.targeting.choose_adjacent_where" );
         return choose_adjacent_where(
                    lua, message, failure_message, candidates,
                    allow_vertical.value_or( false ),
@@ -1371,7 +1371,7 @@ void install_game_interaction_api(
             const sol::optional<bool> &allow_vertical,
     const sol::optional<bool> &allow_autoselect ) {
         authorize(
-            "game.targeting.choose_adjacent_where_at" );
+            "services.targeting.choose_adjacent_where_at" );
         return choose_adjacent_where_at(
                    lua, center, message, failure_message,
                    candidates,
@@ -1381,6 +1381,6 @@ void install_game_interaction_api(
     game["targeting"] = std::move( targeting );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_world_services.h"
 
@@ -45,7 +45,7 @@
 #include "visitable.h"
 #include "vehicle.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -176,12 +176,12 @@ sol::table spawn_monster(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    constexpr std::string_view api_name = "game.spawns.monster";
+    constexpr std::string_view api_name = "services.spawns.monster";
     require_game_id( requested_type, "monster", api_name );
     const int radius = requested_radius.value_or( 0 );
     if( radius < 0 || radius > maximum_monster_spawn_radius ) {
         throw std::invalid_argument(
-            "game.spawns.monster radius must be within 0..60" );
+            "services.spawns.monster radius must be within 0..60" );
     }
     map &here = require_active_map( api_name );
     const tripoint_bub_ms position = require_loaded_position(
@@ -238,19 +238,19 @@ monster_spawn_options read_monster_spawn_options(
     for( const auto &entry : *requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.spawns.monster_configured option keys must be strings" );
+                "services.spawns.monster_configured option keys must be strings" );
         }
         const std::string key = entry.first.as<std::string>();
         const sol::object value = entry.second;
         if( key == "min_radius" || key == "max_radius" ) {
             if( !value.is<lua_Integer>() ) {
                 throw std::invalid_argument(
-                    "game.spawns.monster_configured radii must be integers" );
+                    "services.spawns.monster_configured radii must be integers" );
             }
             const int radius = value.as<int>();
             if( radius < 0 || radius > maximum_monster_spawn_radius ) {
                 throw std::invalid_argument(
-                    "game.spawns.monster_configured radii must be within 0..60" );
+                    "services.spawns.monster_configured radii must be within 0..60" );
             }
             if( key == "min_radius" ) {
                 result.min_radius = radius;
@@ -264,7 +264,7 @@ monster_spawn_options read_monster_spawn_options(
                    key == "temporary_drop_items" || key == "upgrade" ) {
             if( !value.is<bool>() ) {
                 throw std::invalid_argument(
-                    "game.spawns.monster_configured boolean options must be booleans" );
+                    "services.spawns.monster_configured boolean options must be booleans" );
             }
             const bool enabled = value.as<bool>();
             if( key == "outdoor_only" ) {
@@ -289,46 +289,46 @@ monster_spawn_options read_monster_spawn_options(
         } else if( key == "lifespan" ) {
             if( !value.is<script_time_duration>() ) {
                 throw std::invalid_argument(
-                    "game.spawns.monster_configured lifespan must be a TimeDuration" );
+                    "services.spawns.monster_configured lifespan must be a TimeDuration" );
             }
             const time_duration lifespan =
                 value.as<script_time_duration>().to_native();
             if( lifespan <= 0_turns ||
                 lifespan > maximum_hallucination_lifespan ) {
                 throw std::invalid_argument(
-                    "game.spawns.monster_configured lifespan must be within 1 turn..10000 days" );
+                    "services.spawns.monster_configured lifespan must be within 1 turn..10000 days" );
             }
             result.lifespan = lifespan;
         } else if( key == "summoner" ) {
             if( !value.is<game_handle>() ) {
                 throw std::invalid_argument(
-                    "game.spawns.monster_configured summoner must be a GameHandle" );
+                    "services.spawns.monster_configured summoner must be a GameHandle" );
             }
             result.summoner = value.as<game_handle>();
         } else if( key == "name" ) {
             if( !value.is<std::string>() ) {
                 throw std::invalid_argument(
-                    "game.spawns.monster_configured name must be a string" );
+                    "services.spawns.monster_configured name must be a string" );
             }
             result.unique_name = value.as<std::string>();
             if( result.unique_name.size() >
                 maximum_monster_unique_name_bytes ) {
                 throw std::invalid_argument(
-                    "game.spawns.monster_configured name exceeds 256 bytes" );
+                    "services.spawns.monster_configured name exceeds 256 bytes" );
             }
         } else {
             throw std::invalid_argument(
-                "game.spawns.monster_configured received unknown option '" +
+                "services.spawns.monster_configured received unknown option '" +
                 key + "'" );
         }
     }
     if( result.min_radius > result.max_radius ) {
         throw std::invalid_argument(
-            "game.spawns.monster_configured min_radius cannot exceed max_radius" );
+            "services.spawns.monster_configured min_radius cannot exceed max_radius" );
     }
     if( result.indoor_only && result.outdoor_only ) {
         throw std::invalid_argument(
-            "game.spawns.monster_configured cannot require both indoor and outdoor tiles" );
+            "services.spawns.monster_configured cannot require both indoor and outdoor tiles" );
     }
     return result;
 }
@@ -341,7 +341,7 @@ sol::table spawn_configured_monster(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.spawns.monster_configured";
+        "services.spawns.monster_configured";
     require_game_id( requested_type, "monster", api_name );
     const monster_spawn_options options =
         read_monster_spawn_options( requested_options );
@@ -436,7 +436,7 @@ script_game_id random_monster_from_group(
     const script_game_id &requested_group )
 {
     constexpr std::string_view api_name =
-        "game.spawns.monster_from_group";
+        "services.spawns.monster_from_group";
     require_game_id(
         requested_group, "monster_group", api_name );
     const mtype_id type =
@@ -444,7 +444,7 @@ script_game_id random_monster_from_group(
             mongroup_id( requested_group.value() ) );
     if( type.is_null() || !type.is_valid() ) {
         throw std::runtime_error(
-            "game.spawns.monster_from_group could not select a valid monster" );
+            "services.spawns.monster_from_group could not select a valid monster" );
     }
     return script_game_id( "monster", type.str() );
 }
@@ -453,7 +453,7 @@ sol::table monsters_from_group(
     sol::this_state lua, const script_game_id &requested_group )
 {
     constexpr std::string_view api_name =
-        "game.spawns.group_members";
+        "services.spawns.group_members";
     require_game_id(
         requested_group, "monster_group", api_name );
     std::vector<std::string> ids;
@@ -503,7 +503,7 @@ npc_spawn_options read_npc_spawn_options(
     for( const auto &entry : *requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.spawns.npc option keys must be strings" );
+                "services.spawns.npc option keys must be strings" );
         }
         const std::string key =
             entry.first.as<std::string>();
@@ -511,12 +511,12 @@ npc_spawn_options read_npc_spawn_options(
         if( key == "min_radius" || key == "max_radius" ) {
             if( !value.is<lua_Integer>() ) {
                 throw std::invalid_argument(
-                    "game.spawns.npc radius options must be integers" );
+                    "services.spawns.npc radius options must be integers" );
             }
             const lua_Integer radius = value.as<lua_Integer>();
             if( radius < 0 || radius > maximum_npc_spawn_radius ) {
                 throw std::invalid_argument(
-                    "game.spawns.npc radii must be within 0..60" );
+                    "services.spawns.npc radii must be within 0..60" );
             }
             if( key == "min_radius" ) {
                 result.min_radius = static_cast<int>( radius );
@@ -529,7 +529,7 @@ npc_spawn_options read_npc_spawn_options(
                    key == "hallucination" ) {
             if( !value.is<bool>() ) {
                 throw std::invalid_argument(
-                    "game.spawns.npc boolean options must be booleans" );
+                    "services.spawns.npc boolean options must be booleans" );
             }
             const bool enabled = value.as<bool>();
             if( key == "outdoor_only" ) {
@@ -544,63 +544,63 @@ npc_spawn_options read_npc_spawn_options(
         } else if( key == "unique_id" ) {
             if( !value.is<std::string>() ) {
                 throw std::invalid_argument(
-                    "game.spawns.npc unique_id must be a string" );
+                    "services.spawns.npc unique_id must be a string" );
             }
             result.unique_id = value.as<std::string>();
             if( result.unique_id.size() > maximum_npc_unique_id_bytes ||
                 result.unique_id.find( '\0' ) != std::string::npos ) {
                 throw std::invalid_argument(
-                    "game.spawns.npc unique_id exceeds its bounded string contract" );
+                    "services.spawns.npc unique_id exceeds its bounded string contract" );
             }
         } else if( key == "lifespan" ) {
             if( !value.is<script_time_duration>() ) {
                 throw std::invalid_argument(
-                    "game.spawns.npc lifespan must be a TimeDuration" );
+                    "services.spawns.npc lifespan must be a TimeDuration" );
             }
             const time_duration lifespan =
                 value.as<script_time_duration>().to_native();
             if( lifespan <= 0_turns ||
                 lifespan > maximum_hallucination_lifespan ) {
                 throw std::invalid_argument(
-                    "game.spawns.npc lifespan must be within 1 turn..10000 days" );
+                    "services.spawns.npc lifespan must be within 1 turn..10000 days" );
             }
             result.lifespan = lifespan;
         } else if( key == "traits" ) {
             if( !value.is<sol::table>() ) {
                 throw std::invalid_argument(
-                    "game.spawns.npc traits must be a dense GameId array" );
+                    "services.spawns.npc traits must be a dense GameId array" );
             }
             const sol::table traits = value.as<sol::table>();
             if( traits.size() > maximum_npc_spawn_traits ) {
                 throw std::invalid_argument(
-                    "game.spawns.npc accepts at most 128 traits" );
+                    "services.spawns.npc accepts at most 128 traits" );
             }
             for( std::size_t index = 1;
                  index <= traits.size(); ++index ) {
                 const sol::object trait_object = traits[index];
                 if( !trait_object.is<script_game_id>() ) {
                     throw std::invalid_argument(
-                        "game.spawns.npc traits must be a dense GameId array" );
+                        "services.spawns.npc traits must be a dense GameId array" );
                 }
                 const script_game_id trait =
                     trait_object.as<script_game_id>();
                 require_game_id(
-                    trait, "mutation", "game.spawns.npc" );
+                    trait, "mutation", "services.spawns.npc" );
                 result.traits.emplace_back( trait.value() );
             }
         } else {
             throw std::invalid_argument(
-                "game.spawns.npc received unknown option '" +
+                "services.spawns.npc received unknown option '" +
                 key + "'" );
         }
     }
     if( result.min_radius > result.max_radius ) {
         throw std::invalid_argument(
-            "game.spawns.npc min_radius cannot exceed max_radius" );
+            "services.spawns.npc min_radius cannot exceed max_radius" );
     }
     if( result.indoor_only && result.outdoor_only ) {
         throw std::invalid_argument(
-            "game.spawns.npc cannot be both indoor_only and outdoor_only" );
+            "services.spawns.npc cannot be both indoor_only and outdoor_only" );
     }
     if( result.hallucination ) {
         const trait_id hallucination( "HALLUCINATION" );
@@ -622,7 +622,7 @@ sol::table spawn_npc(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    constexpr std::string_view api_name = "game.spawns.npc";
+    constexpr std::string_view api_name = "services.spawns.npc";
     require_game_id(
         requested_template, "npc_template", api_name );
     const npc_spawn_options options =
@@ -693,24 +693,24 @@ hallucination_options read_hallucination_options(
         const sol::object key_object = entry.first;
         if( key_object.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.spawns.hallucination option keys must be strings" );
+                "services.spawns.hallucination option keys must be strings" );
         }
         const std::string key = key_object.as<std::string>();
         if( key == "monster" ) {
             if( !entry.second.is<script_game_id>() ) {
                 throw std::invalid_argument(
-                    "game.spawns.hallucination option 'monster' "
+                    "services.spawns.hallucination option 'monster' "
                     "must be a GameId" );
             }
             const script_game_id id =
                 entry.second.as<script_game_id>();
             require_game_id(
-                id, "monster", "game.spawns.hallucination" );
+                id, "monster", "services.spawns.hallucination" );
             result.monster_type = mtype_id( id.value() );
         } else if( key == "lifespan" ) {
             if( !entry.second.is<script_time_duration>() ) {
                 throw std::invalid_argument(
-                    "game.spawns.hallucination option 'lifespan' "
+                    "services.spawns.hallucination option 'lifespan' "
                     "must be a TimeDuration" );
             }
             const time_duration lifespan =
@@ -718,19 +718,19 @@ hallucination_options read_hallucination_options(
             if( lifespan <= 0_turns ||
                 lifespan > maximum_hallucination_lifespan ) {
                 throw std::invalid_argument(
-                    "game.spawns.hallucination lifespan must be "
+                    "services.spawns.hallucination lifespan must be "
                     "within 1 turn..10000 days" );
             }
             result.lifespan = lifespan;
         } else {
             throw std::invalid_argument(
-                "game.spawns.hallucination received unknown option '" +
+                "services.spawns.hallucination received unknown option '" +
                 key + "'" );
         }
     }
     if( result.lifespan && !result.monster_type ) {
         throw std::invalid_argument(
-            "game.spawns.hallucination lifespan requires a monster id" );
+            "services.spawns.hallucination lifespan requires a monster id" );
     }
     return result;
 }
@@ -743,7 +743,7 @@ sol::table spawn_hallucination(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.spawns.hallucination";
+        "services.spawns.hallucination";
     map &here = require_active_map( api_name );
     const tripoint_bub_ms position = require_loaded_position(
                                          here, requested_position, api_name );
@@ -936,32 +936,32 @@ dimension_travel_options read_dimension_travel_options(
     for( const auto &field : *requested ) {
         if( field.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.relocation.travel_to_dimension option names must be strings" );
+                "services.relocation.travel_to_dimension option names must be strings" );
         }
         const std::string key = field.first.as<std::string>();
         if( key == "npc_travel_radius" || key == "item_travel_radius" ) {
             if( !field.second.is<int>() ) {
                 throw std::invalid_argument(
-                    "game.relocation.travel_to_dimension radius options must be integers" );
+                    "services.relocation.travel_to_dimension radius options must be integers" );
             }
             const int radius = field.second.as<int>();
             if( key == "npc_travel_radius" ) {
                 if( radius < 0 || radius > maximum_monster_spawn_radius ) {
                     throw std::invalid_argument(
-                        "game.relocation.travel_to_dimension npc_travel_radius must be within 0..60" );
+                        "services.relocation.travel_to_dimension npc_travel_radius must be within 0..60" );
                 }
                 result.npc_travel_radius = radius;
             } else {
                 if( radius < -1 || radius > maximum_monster_spawn_radius ) {
                     throw std::invalid_argument(
-                        "game.relocation.travel_to_dimension item_travel_radius must be within -1..60" );
+                        "services.relocation.travel_to_dimension item_travel_radius must be within -1..60" );
                 }
                 result.item_travel_radius = radius;
             }
         } else if( key == "npc_travel_filter" ) {
             if( !field.second.is<std::string>() ) {
                 throw std::invalid_argument(
-                    "game.relocation.travel_to_dimension npc_travel_filter must be a string" );
+                    "services.relocation.travel_to_dimension npc_travel_filter must be a string" );
             }
             result.npc_travel_filter = field.second.as<std::string>();
             if( result.npc_travel_filter != "all" &&
@@ -969,17 +969,17 @@ dimension_travel_options read_dimension_travel_options(
                 result.npc_travel_filter != "enemy" &&
                 result.npc_travel_filter != "none" ) {
                 throw std::invalid_argument(
-                    "game.relocation.travel_to_dimension npc_travel_filter must be all, follower, enemy, or none" );
+                    "services.relocation.travel_to_dimension npc_travel_filter must be all, follower, enemy, or none" );
             }
         } else if( key == "take_vehicle" ) {
             if( !field.second.is<bool>() ) {
                 throw std::invalid_argument(
-                    "game.relocation.travel_to_dimension take_vehicle must be boolean" );
+                    "services.relocation.travel_to_dimension take_vehicle must be boolean" );
             }
             result.take_vehicle = field.second.as<bool>();
         } else {
             throw std::invalid_argument(
-                "game.relocation.travel_to_dimension received unknown option '" +
+                "services.relocation.travel_to_dimension received unknown option '" +
                 key + "'" );
         }
     }
@@ -991,7 +991,7 @@ bool relocation_boolean_option(
 {
     if( !value.is<bool>() ) {
         throw std::invalid_argument(
-            "game.relocation option '" + std::string( key ) +
+            "services.relocation option '" + std::string( key ) +
             "' must be a boolean" );
     }
     return value.as<bool>();
@@ -1007,7 +1007,7 @@ creature_relocation_options read_creature_relocation_options(
     for( const auto &field : *requested ) {
         if( field.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.relocation option names must be strings" );
+                "services.relocation option names must be strings" );
         }
         const std::string key = field.first.as<std::string>();
         if( key == "safe" ) {
@@ -1020,7 +1020,7 @@ creature_relocation_options read_creature_relocation_options(
             result.force_safe = relocation_boolean_option( field.second, key );
         } else {
             throw std::invalid_argument(
-                "game.relocation.creature_at received unknown option '" +
+                "services.relocation.creature_at received unknown option '" +
                 key + "'" );
         }
     }
@@ -1151,7 +1151,7 @@ sol::table relocate_creature(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.relocation.creature_at";
+        "services.relocation.creature_at";
     map &here = require_active_map( api_name );
     const tripoint_abs_ms destination = require_absolute_ms(
                                             requested_position, api_name );
@@ -1199,7 +1199,7 @@ sol::table relocate_vehicle(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.relocation.vehicle_at";
+        "services.relocation.vehicle_at";
     require_active_map( api_name );
     const tripoint_abs_ms destination = require_absolute_ms(
                                             requested_position,
@@ -1270,7 +1270,7 @@ sol::table relocate_item(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.relocation.item_at";
+        "services.relocation.item_at";
     map &here = require_active_map( api_name );
     const tripoint_abs_ms destination = require_absolute_ms(
                                             requested_position,
@@ -1371,7 +1371,7 @@ sol::table travel_to_dimension(
     const sol::optional<sol::table> &requested_options )
 {
     constexpr std::string_view api_name =
-        "game.relocation.travel_to_dimension";
+        "services.relocation.travel_to_dimension";
     map &here = require_active_map( api_name );
     const dimension_travel_options options =
         read_dimension_travel_options( requested_options );
@@ -1380,7 +1380,7 @@ sol::table travel_to_dimension(
     if( !destination.is_valid() ) {
         return make_game_error_result( state, {
             "invalid_dimension",
-            "game.relocation.travel_to_dimension requires a valid dimension id"
+            "services.relocation.travel_to_dimension requires a valid dimension id"
         } );
     }
     const dimension_id before = g->get_dimension_prefix();
@@ -1434,7 +1434,7 @@ sol::table travel_to_dimension(
         if( !vehicle_position ) {
             return make_game_error_result( state, {
                 "no_vehicle",
-                "game.relocation.travel_to_dimension take_vehicle requires a vehicle"
+                "services.relocation.travel_to_dimension take_vehicle requires a vehicle"
             } );
         }
         vehicle_to_take = &vehicle_position->vehicle();
@@ -1460,7 +1460,7 @@ sol::table clear_saved_dimension(
     sol::this_state lua, const std::string &requested_dimension )
 {
     constexpr std::string_view api_name =
-        "game.relocation.clear_dimension";
+        "services.relocation.clear_dimension";
     if( requested_dimension.empty() || requested_dimension.size() > 256 ||
         requested_dimension == "." || requested_dimension == ".." ||
         requested_dimension.find( '/' ) != std::string::npos ||
@@ -1475,13 +1475,13 @@ sol::table clear_saved_dimension(
     if( !dimension.is_valid() ) {
         return make_game_error_result( state, {
             "invalid_dimension",
-            "game.relocation.clear_dimension requires a valid dimension id"
+            "services.relocation.clear_dimension requires a valid dimension id"
         } );
     }
     if( g == nullptr ) {
         return make_game_error_result( state, {
             "world_unavailable",
-            "game.relocation.clear_dimension requires an active world"
+            "services.relocation.clear_dimension requires an active world"
         } );
     }
     if( dimension == g->get_dimension_prefix() ) {
@@ -1524,7 +1524,7 @@ sol::table relocate_local(
     const script_tripoint_coord &requested_position )
 {
     constexpr std::string_view api_name =
-        "game.relocation.local_at";
+        "services.relocation.local_at";
     map &here = require_active_map( api_name );
     const tripoint_bub_ms destination = require_loaded_position(
                                             here, requested_position, api_name );
@@ -1581,13 +1581,13 @@ sol::table relocate_overmap(
     const script_tripoint_coord &requested_position )
 {
     constexpr std::string_view api_name =
-        "game.relocation.overmap_at";
+        "services.relocation.overmap_at";
     require_active_map( api_name );
     if( requested_position.native_origin() != coords::origin::abs ||
         requested_position.native_scale() !=
         coords::scale::overmap_terrain ) {
         throw std::invalid_argument(
-            "game.relocation.overmap_at requires an absolute "
+            "services.relocation.overmap_at requires an absolute "
             "overmap-terrain Tripoint" );
     }
     const tripoint_abs_omt destination(
@@ -1595,7 +1595,7 @@ sol::table relocate_overmap(
     if( destination.z() < -OVERMAP_DEPTH ||
         destination.z() > OVERMAP_HEIGHT ) {
         throw std::invalid_argument(
-            "game.relocation.overmap_at z level is outside "
+            "services.relocation.overmap_at z level is outside "
             "the world bounds" );
     }
 
@@ -1654,7 +1654,7 @@ void install_game_world_service_api(
     const sol::optional<int> &radius ) {
         require_write();
         require_active_callback(
-            has_active_callback, "game.spawns.monster" );
+            has_active_callback, "services.spawns.monster" );
         return spawn_monster(
                    lua, monster_type, position, radius,
                    current_runtime_generation(),
@@ -1673,7 +1673,7 @@ void install_game_world_service_api(
         require_write();
         require_active_callback(
             has_active_callback,
-            "game.spawns.monster_configured" );
+            "services.spawns.monster_configured" );
         return spawn_configured_monster(
                    lua, monster_type, position, options,
                    current_runtime_generation(),
@@ -1692,7 +1692,7 @@ void install_game_world_service_api(
         require_write();
         require_active_callback(
             has_active_callback,
-            "game.spawns.monster_from_group" );
+            "services.spawns.monster_from_group" );
         return spawn_configured_monster(
                    lua,
                    random_monster_from_group( monster_group ),
@@ -1712,7 +1712,7 @@ void install_game_world_service_api(
             const sol::optional<sol::table> &options ) {
         require_write();
         require_active_callback(
-            has_active_callback, "game.spawns.npc" );
+            has_active_callback, "services.spawns.npc" );
         return spawn_npc(
                    lua, npc_template, position, options,
                    current_runtime_generation(),
@@ -1730,7 +1730,7 @@ void install_game_world_service_api(
         require_write();
         require_active_callback(
             has_active_callback,
-            "game.spawns.hallucination" );
+            "services.spawns.hallucination" );
         return spawn_hallucination(
                    lua, position, options,
                    current_runtime_generation(),
@@ -1759,7 +1759,7 @@ void install_game_world_service_api(
     const game_handle & handle ) {
         require_write();
         require_active_callback(
-            has_active_callback, "game.followers.add" );
+            has_active_callback, "services.followers.add" );
         return follower_mutation(
                    lua, handle, true,
                    current_runtime_generation(),
@@ -1775,7 +1775,7 @@ void install_game_world_service_api(
     const game_handle & handle ) {
         require_write();
         require_active_callback(
-            has_active_callback, "game.followers.remove" );
+            has_active_callback, "services.followers.remove" );
         return follower_mutation(
                    lua, handle, false,
                    current_runtime_generation(),
@@ -1798,7 +1798,7 @@ void install_game_world_service_api(
             sol::this_state lua,
     const script_tripoint_coord & position ) {
         authorize_relocation(
-            "game.relocation.local_at" );
+            "services.relocation.local_at" );
         return relocate_local( lua, position );
     } );
     relocation.set_function(
@@ -1807,7 +1807,7 @@ void install_game_world_service_api(
             sol::this_state lua,
     const script_tripoint_coord & position ) {
         authorize_relocation(
-            "game.relocation.overmap_at" );
+            "services.relocation.overmap_at" );
         return relocate_overmap( lua, position );
     } );
     relocation.set_function(
@@ -1818,7 +1818,7 @@ void install_game_world_service_api(
             const script_tripoint_coord &position,
             const sol::optional<sol::table> &options ) {
         require_write();
-        authorize_relocation( "game.relocation.creature_at" );
+        authorize_relocation( "services.relocation.creature_at" );
         return relocate_creature(
                    lua, handle, position, options,
                    current_runtime_generation(),
@@ -1833,7 +1833,7 @@ void install_game_world_service_api(
             const sol::optional<bool> &force ) {
         require_write();
         authorize_relocation(
-            "game.relocation.vehicle_at" );
+            "services.relocation.vehicle_at" );
         return relocate_vehicle(
                    lua, handle, position, force,
                    current_runtime_generation(),
@@ -1847,7 +1847,7 @@ void install_game_world_service_api(
             const script_tripoint_coord &position ) {
         require_write();
         authorize_relocation(
-            "game.relocation.item_at" );
+            "services.relocation.item_at" );
         return relocate_item(
                    lua, handle, position,
                    current_runtime_generation(),
@@ -1860,7 +1860,7 @@ void install_game_world_service_api(
             const sol::optional<sol::table> &options ) {
         require_write();
         authorize_relocation(
-            "game.relocation.travel_to_dimension" );
+            "services.relocation.travel_to_dimension" );
         return travel_to_dimension( lua, dimension, options );
     } );
     relocation.set_function(
@@ -1869,12 +1869,12 @@ void install_game_world_service_api(
             sol::this_state lua, const std::string &dimension ) {
         require_write();
         authorize_relocation(
-            "game.relocation.clear_dimension" );
+            "services.relocation.clear_dimension" );
         return clear_saved_dimension( lua, dimension );
     } );
     game["relocation"] = std::move( relocation );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

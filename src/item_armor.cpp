@@ -17,7 +17,7 @@
 
 #include "body_part_set.h"
 #include "bodypart.h"
-#include "catalua_ui.h"
+#include "catalua_hook.h"
 #include "character.h"
 #include "character_id.h"
 #include "clothing_mod.h"
@@ -462,21 +462,11 @@ void item::on_wear( Character &p )
     }
     p.on_item_acquire( *this );
     p.on_item_wear( *this );
-    cata::lua_ui::dispatch_native_callback(
-    "iwearable", typeId().str(), "on_wear", {
-        { "character", static_cast<const Character *>( &p ) },
-        { "item", static_cast<const item *>( this ) }
-    } );
 }
 
 void item::on_takeoff( Character &p )
 {
     p.on_item_takeoff( *this );
-    cata::lua_ui::dispatch_native_callback(
-    "iwearable", typeId().str(), "on_takeoff", {
-        { "character", static_cast<const Character *>( &p ) },
-        { "item", static_cast<const item *>( this ) }
-    } );
 
     if( is_sided() ) {
         set_side( side::BOTH );

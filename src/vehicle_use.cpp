@@ -15,7 +15,7 @@
 #include "activity_handlers.h"
 #include "avatar.h"
 #include "character.h"
-#include "catalua_platform_runtime.h"
+#include "catalua_runtime.h"
 #include "clzones.h"
 #include "color.h"
 #include "creature.h"
@@ -2550,7 +2550,7 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
                 dialogue newDialog( get_talker_for( get_player_character() ), nullptr );
                 part.info().activatable_eoc.value()->activate( newDialog );
             }
-            cata::lua_platform::invoke_vehicle_part_activation_handler(
+            cata::lua::invoke_vehicle_part_activation_handler(
                 part.info().id.str(), *this, part, get_player_character() );
         } );
     }

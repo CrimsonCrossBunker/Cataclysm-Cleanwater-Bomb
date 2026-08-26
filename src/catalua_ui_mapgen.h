@@ -13,7 +13,7 @@
 
 class mapgendata;
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 /**
@@ -21,7 +21,8 @@ namespace cata::lua_ui
  *
  * The wrapper deliberately does not expose mapgendata, map, or any native
  * pointer to Lua.  Every coordinate is restricted to the current 24x24 OMT,
- * mutations are capability-gated, and retained wrappers stop working as soon
+ * mutations require the active Platform write boundary, and retained wrappers
+ * stop working as soon
  * as their callback returns.
  */
 class script_mapgen_context
@@ -175,10 +176,10 @@ class script_mapgen_context
         std::uint64_t next_random();
 };
 
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 void install_script_mapgen_context_api( sol::state &lua );
 #endif
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
 #endif // CATA_SRC_CATALUA_UI_MAPGEN_H

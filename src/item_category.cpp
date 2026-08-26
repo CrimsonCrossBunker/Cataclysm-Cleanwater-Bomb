@@ -4,7 +4,7 @@
 #include <utility>
 #include <vector>
 
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 #include "generic_factory.h"
 #include "item.h"
 
@@ -13,13 +13,13 @@ namespace
 generic_factory<item_category> item_category_factory( "item_category" );
 } // namespace
 
-generic_factory<item_category> &cata::lua_platform::detail::item_category_registry()
+generic_factory<item_category> &cata::lua::detail::item_category_registry()
 {
     return item_category_factory;
 }
 
-std::vector<cata::lua_platform::detail::item_category_snapshot_entry>
-cata::lua_platform::detail::item_category_snapshot()
+std::vector<cata::lua::detail::item_category_snapshot_entry>
+cata::lua::detail::item_category_snapshot()
 {
     std::vector<item_category_snapshot_entry> result;
     for( const item_category &value : item_category_factory.get_all() ) {

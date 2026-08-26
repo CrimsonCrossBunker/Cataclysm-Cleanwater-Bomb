@@ -1,9 +1,9 @@
 schema_version: 1
 kind: documentation_registry
-source_commit: e58ab376090a52349fdfd73c7e8d59641b70e2c4
+source_commit: 5f9037bf119ed97a1e1bc7c19d8e14c95308309c
 scope: Tracked documentation and machine contracts from the Git index; untracked build caches are never
   traversed.
-entry_count: 244
+entry_count: 242
 entries:
 - id: repo.deepcode-plans-sim-render-decoupling-plan-md
   path: .deepcode/plans/sim-render-decoupling-plan.md
@@ -505,15 +505,16 @@ entries:
   include_in_ai_index: true
 - id: repo.data-lua-lua-first-eoc-workflow-md
   path: data/lua/LUA_FIRST_EOC_WORKFLOW.md
-  category: historical_document
-  status: historical
-  authority: historical
-  source_of_truth: false
+  category: authoritative_document
+  status: active
+  authority: architecture_contract
+  source_of_truth: true
   stable_document_id: null
-  ccb_docs_ids: []
+  ccb_docs_ids:
+  - architecture.lua-first-eoc-workflow
   generated: false
   generated_by: null
-  include_in_ai_index: false
+  include_in_ai_index: true
 - id: repo.data-lua-lua-first-platform-md
   path: data/lua/LUA_FIRST_PLATFORM.md
   category: authoritative_document
@@ -551,17 +552,6 @@ entries:
   generated: false
   generated_by: null
   include_in_ai_index: true
-- id: repo.data-lua-manifest-schema-json
-  path: data/lua/manifest.schema.json
-  category: api_contract
-  status: active
-  authority: api_contract
-  source_of_truth: true
-  stable_document_id: null
-  ccb_docs_ids: []
-  generated: false
-  generated_by: null
-  include_in_ai_index: true
 - id: repo.data-lua-reference-cbn-api-inventory-json
   path: data/lua/reference/cbn_api_inventory.json
   category: generated_document
@@ -571,7 +561,7 @@ entries:
   stable_document_id: null
   ccb_docs_ids: []
   generated: true
-  generated_by: python3 tools/lua_api/generate_cbn_inventory.py
+  generated_by: Lua contract generator; see ai/generated-files.yml
   include_in_ai_index: false
 - id: repo.data-lua-reference-cbn-coverage-json
   path: data/lua/reference/cbn_coverage.json
@@ -582,7 +572,7 @@ entries:
   stable_document_id: null
   ccb_docs_ids: []
   generated: true
-  generated_by: python3 tools/lua_api/generate_cbn_coverage.py
+  generated_by: Lua contract generator; see ai/generated-files.yml
   include_in_ai_index: false
 - id: repo.data-lua-reference-ccb-native-inventory-json
   path: data/lua/reference/ccb_native_inventory.json
@@ -604,19 +594,19 @@ entries:
   stable_document_id: null
   ccb_docs_ids: []
   generated: true
-  generated_by: python3 tools/lua_api/generate_public_contract.py
+  generated_by: Lua contract generator; see ai/generated-files.yml
   include_in_ai_index: false
 - id: repo.data-lua-reference-ccb-public-api-v5-schema-json
   path: data/lua/reference/ccb_public_api_v5.schema.json
-  category: api_contract
-  status: active
-  authority: api_contract
+  category: generated_document
+  status: generated
+  authority: generated_contract
   source_of_truth: true
   stable_document_id: null
   ccb_docs_ids: []
-  generated: false
-  generated_by: null
-  include_in_ai_index: true
+  generated: true
+  generated_by: Lua contract generator; see ai/generated-files.yml
+  include_in_ai_index: false
 - id: repo.data-lua-reference-ccb-public-api-v5-coverage-json
   path: data/lua/reference/ccb_public_api_v5_coverage.json
   category: generated_document
@@ -626,36 +616,25 @@ entries:
   stable_document_id: null
   ccb_docs_ids: []
   generated: true
-  generated_by: python3 tools/lua_api/generate_public_contract.py
+  generated_by: Lua contract generator; see ai/generated-files.yml
   include_in_ai_index: false
 - id: repo.data-lua-reference-ccb-public-api-v5-coverage-schema-json
   path: data/lua/reference/ccb_public_api_v5_coverage.schema.json
-  category: api_contract
-  status: active
-  authority: api_contract
+  category: generated_document
+  status: generated
+  authority: generated_contract
   source_of_truth: true
   stable_document_id: null
   ccb_docs_ids: []
-  generated: false
-  generated_by: null
-  include_in_ai_index: true
+  generated: true
+  generated_by: Lua contract generator; see ai/generated-files.yml
+  include_in_ai_index: false
 - id: repo.data-lua-templates-complete-readme-md
   path: data/lua/templates/complete/README.md
   category: maintained_document
   status: active
   authority: explanatory
   source_of_truth: false
-  stable_document_id: null
-  ccb_docs_ids: []
-  generated: false
-  generated_by: null
-  include_in_ai_index: true
-- id: repo.data-lua-types-ccb-api-v5-d-lua
-  path: data/lua/types/ccb_api_v5.d.lua
-  category: api_contract
-  status: active
-  authority: api_contract
-  source_of_truth: true
   stable_document_id: null
   ccb_docs_ids: []
   generated: false

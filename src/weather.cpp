@@ -15,7 +15,7 @@
 #include "calendar.h"
 #include "character.h"
 #include "character_attire.h"
-#include "catalua_ui.h"
+#include "catalua_hook.h"
 #include "city.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -1081,13 +1081,13 @@ void weather_manager::update_weather()
         }
         if( old_weather != WEATHER_NULL ) {
             if( weather_changed ) {
-                cata::lua_ui::dispatch_native_hook(
+                cata::lua::dispatch_native_hook(
                 "on_weather_changed", {
                     { "before", old_weather.str() },
                     { "after", weather_id.str() }
                 } );
             }
-            cata::lua_ui::dispatch_native_hook(
+            cata::lua::dispatch_native_hook(
             "on_weather_updated", {
                 { "weather", weather_id.str() },
                 {

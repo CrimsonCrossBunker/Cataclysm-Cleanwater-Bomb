@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_martial_arts.h"
 
@@ -20,7 +20,7 @@
 #include "creature.h"
 #include "martialarts.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -65,18 +65,18 @@ definition_options read_definition_options(
     if( result.offset < 0 ||
         result.offset > maximum_definition_offset ) {
         throw std::invalid_argument(
-            "game.martial_arts.definitions offset "
+            "services.martial_arts.definitions offset "
             "must be within 0..1000000" );
     }
     if( result.limit < 0 ) {
         throw std::invalid_argument(
-            "game.martial_arts.definitions limit cannot be negative" );
+            "services.martial_arts.definitions limit cannot be negative" );
     }
     result.limit = std::min(
                        result.limit, maximum_definition_limit );
     if( result.query.size() > maximum_query_bytes ) {
         throw std::invalid_argument(
-            "game.martial_arts.definitions query exceeds 128 bytes" );
+            "services.martial_arts.definitions query exceeds 128 bytes" );
     }
     return result;
 }
@@ -318,7 +318,7 @@ sol::table get_definition(
     sol::this_state lua, const script_game_id &id )
 {
     require_style_id(
-        id, "game.martial_arts.definition" );
+        id, "services.martial_arts.definition" );
     return snapshot_definition(
                sol::state_view( lua ),
                matype_id( id.value() ).obj() );
@@ -358,7 +358,7 @@ sol::table get_technique_definition(
 {
     if( id.kind() != "martial_art_technique" || !id.is_valid() ) {
         throw std::invalid_argument(
-            "game.martial_arts.technique_definition requires a valid "
+            "services.martial_arts.technique_definition requires a valid "
             "GameId<martial_art_technique>" );
     }
     return snapshot_technique_definition(
@@ -434,12 +434,12 @@ state_list_options read_state_list_options(
     }
     if( result.offset < 0 || result.offset > maximum_state_offset ) {
         throw std::invalid_argument(
-            "game.martial_arts.list offset "
+            "services.martial_arts.list offset "
             "must be within 0..1000000" );
     }
     if( result.limit < 0 ) {
         throw std::invalid_argument(
-            "game.martial_arts.list limit cannot be negative" );
+            "services.martial_arts.list limit cannot be negative" );
     }
     result.limit = std::min(
                        result.limit, maximum_state_limit );
@@ -499,7 +499,7 @@ sol::table get_state(
     const std::size_t world_generation )
 {
     require_style_id(
-        requested_id, "game.martial_arts.get" );
+        requested_id, "services.martial_arts.get" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -544,7 +544,7 @@ sol::table learn_state(
     const std::size_t world_generation )
 {
     require_style_id(
-        requested_id, "game.martial_arts.learn" );
+        requested_id, "services.martial_arts.learn" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -580,12 +580,12 @@ sol::table remove_state(
     const std::size_t world_generation )
 {
     require_style_id(
-        requested_id, "game.martial_arts.remove" );
+        requested_id, "services.martial_arts.remove" );
     const matype_id id( requested_id.value() );
     if( id == matype_id( "style_none" ) ||
         id == matype_id( "style_kicks" ) ) {
         throw std::invalid_argument(
-            "game.martial_arts.remove cannot remove "
+            "services.martial_arts.remove cannot remove "
             "a built-in fallback style" );
     }
     sol::state_view state( lua );
@@ -635,7 +635,7 @@ sol::table select_state(
     const std::size_t world_generation )
 {
     require_style_id(
-        requested_id, "game.martial_arts.select" );
+        requested_id, "services.martial_arts.select" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -648,7 +648,7 @@ sol::table select_state(
     const matype_id id( requested_id.value() );
     if( !character->has_martialart( id ) ) {
         throw std::invalid_argument(
-            "game.martial_arts.select requires "
+            "services.martial_arts.select requires "
             "a known martial art" );
     }
     const matype_id before_id =
@@ -741,7 +741,7 @@ sol::table trigger_state(
         arts.ma_onkill_effects( *character );
     } else {
         throw std::invalid_argument(
-            "game.martial_arts.trigger received "
+            "services.martial_arts.trigger received "
             "an unknown trigger" );
     }
 
@@ -883,6 +883,6 @@ void install_martial_art_api(
     game["martial_arts"] = std::move( martial_arts );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

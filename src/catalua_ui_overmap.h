@@ -7,7 +7,7 @@
 
 #include "catalua_sol.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 // Install bounded, existing-overmap-only observation, search and mutation
@@ -18,6 +18,6 @@ void install_overmap_api(
     std::function<void()> require_write,
     std::function<std::size_t( std::size_t )> random_index );
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
 #endif // CATA_SRC_CATALUA_UI_OVERMAP_H

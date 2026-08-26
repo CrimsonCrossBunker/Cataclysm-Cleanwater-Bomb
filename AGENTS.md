@@ -44,8 +44,10 @@ rules and does not replace this file.
 The machine-readable map is `ai/project-map.yml`; validation routing is in
 `ai/test-matrix.yml`.  The long-term pure-Lua authoring direction is defined
 by `data/lua/LUA_FIRST_PLATFORM.md`, with implementation status in
-`ai/lua-first-roadmap.yml`; it is independent of the currently shipped Lua
-API v5 contract.
+`ai/lua-first-roadmap.yml`.  Platform v1 is the repository's only supported
+Lua runtime and public authoring contract; the former API v5 runtime,
+capability sandbox, manifest, and `game.*` compatibility surface are removed
+rather than maintained as a second system.
 
 Lua-first EOC capability work follows
 `data/lua/LUA_FIRST_EOC_WORKFLOW.md`.  Its active objective is to finish a
@@ -102,7 +104,7 @@ make -j2 json-check
 
 # Lua public-contract checks
 python3 tools/lua_api/check_luals_declarations.py
-python3 tools/lua_api/check_coverage.py
+python3 tools/lua_api/check_ccb_inventory.py
 python3 tools/lua_api/check_cmake_contract.py
 
 # CMake configuration (out-of-tree)

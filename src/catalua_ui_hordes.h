@@ -7,7 +7,7 @@
 
 #include "catalua_sol.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 class game_handle_runtime;
@@ -22,6 +22,6 @@ void install_horde_api(
     std::function<void()> require_read,
     std::function<void()> require_write );
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
 #endif // CATA_SRC_CATALUA_UI_HORDES_H

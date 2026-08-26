@@ -36,10 +36,10 @@ struct furn_t;
 struct itype;
 struct ter_t;
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 class content_transaction;
-} // namespace cata::lua_platform
+} // namespace cata::lua
 
 // size of connect groups bitset; increase if needed
 const int NUM_TERCONN = 256;
@@ -544,7 +544,7 @@ void init_mapdata();
 
 //handles data common between terrain and furniture
 struct map_data_common_t {
-        friend class cata::lua_platform::content_transaction;
+        friend class cata::lua::content_transaction;
         std::set<emit_id> emissions;
         translation lockpick_message; // Lockpick action: message when successfully lockpicked
         cata::value_ptr<map_shoot_info> shoot;
@@ -724,7 +724,7 @@ struct map_data_common_t {
 * Short for terrain type. This struct defines all of the metadata for a given terrain id (an enum below).
 */
 struct ter_t : map_data_common_t {
-    friend class cata::lua_platform::content_transaction;
+    friend class cata::lua::content_transaction;
 
     std::vector<std::pair<ter_str_id, mod_id>> src;
 
@@ -794,7 +794,7 @@ void reset_furn_ter();
  */
 
 struct furn_t : map_data_common_t {
-    friend class cata::lua_platform::content_transaction;
+    friend class cata::lua::content_transaction;
 
     std::vector<std::pair<furn_str_id, mod_id>> src;
 

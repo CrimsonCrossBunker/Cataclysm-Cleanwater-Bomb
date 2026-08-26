@@ -8,8 +8,8 @@
 
 #include "bodypart.h"
 #include "character.h"
-#include "catalua_platform_content.h"
-#include "catalua_platform_runtime.h"
+#include "catalua_content.h"
+#include "catalua_runtime.h"
 #include "debug.h"
 #include "effect.h"
 #include "enum_conversions.h"
@@ -41,7 +41,7 @@ generic_factory<character_modifier> character_modifier_factory( "character modif
 
 } // namespace
 
-generic_factory<character_modifier> &cata::lua_platform::detail::character_modifier_registry()
+generic_factory<character_modifier> &cata::lua::detail::character_modifier_registry()
 {
     return character_modifier_factory;
 }
@@ -379,7 +379,7 @@ static float call_builtin( const std::string &builtin, const Character &c, const
 float character_modifier::modifier( const Character &c, const skill_id &skill ) const
 {
     if( const std::optional<double> lua_result =
-            cata::lua_platform::invoke_character_modifier_handler(
+            cata::lua::invoke_character_modifier_handler(
                 id.str(), c, skill.str() ) ) {
         return static_cast<float>( *lua_result );
     }

@@ -24,7 +24,7 @@
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "catacharset.h"
-#include "catalua_ui.h"
+#include "catalua_hook.h"
 #include "character.h"
 #include "character_id.h"
 #include "color.h"
@@ -1229,23 +1229,6 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
         return 0;
     }
 
-    const cata::lua_ui::native_callback_arguments fire_payload = {
-        { "character", static_cast<const Character *>( this ) },
-        { "item", static_cast<const item *>( &gun ) },
-        {
-            "target", cata::lua_ui::native_callback_point {
-                "bub_ms", tripoint_rel_ms( target.x(), target.y(), target.z() )
-            }
-        },
-        { "shots", std::int64_t { shots } }
-    };
-    if( !cata::lua_ui::dispatch_native_callback(
-            "iranged", gun.typeId().str(), "can_fire", fire_payload ) ||
-        !cata::lua_ui::dispatch_native_callback(
-            "iranged", gun.typeId().str(), "on_fire", fire_payload ) ) {
-        return 0;
-    }
-
     // Cleanwater: 撤销 PR #86232 (Remove dumb gun cheese)
     // 方法：删除 times_shot_target 计数器和射击次数限制，恢复无条件技能训练
 
@@ -1458,12 +1441,12 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
     practice( gun_skill, ( practice_units + 1 ) * 5 );
 
     if( curshot > 0 ) {
-        cata::lua_ui::dispatch_native_hook(
+        cata::lua::dispatch_native_hook(
         "on_shoot", {
             { "character", static_cast<const Character *>( this ) },
             { "weapon", static_cast<const item *>( &gun ) },
             {
-                "target", cata::lua_ui::native_callback_point {
+                "target", cata::lua::native_callback_point {
                     "bub_ms", tripoint_rel_ms( target.x(), target.y(), target.z() )
                 }
             },
@@ -2005,17 +1988,17 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
     last_target_pos = std::nullopt;
     recoil = MAX_RECOIL;
 
-    cata::lua_ui::dispatch_native_hook(
+    cata::lua::dispatch_native_hook(
     "on_throw", {
         { "character", static_cast<const Character *>( this ) },
         { "item", static_cast<const item *>( &to_throw ) },
         {
-            "target", cata::lua_ui::native_callback_point {
+            "target", cata::lua::native_callback_point {
                 "bub_ms", tripoint_rel_ms( target.x(), target.y(), target.z() )
             }
         },
         {
-            "origin", cata::lua_ui::native_callback_point {
+            "origin", cata::lua::native_callback_point {
                 "bub_ms", tripoint_rel_ms( throw_from.x(), throw_from.y(), throw_from.z() )
             }
         }

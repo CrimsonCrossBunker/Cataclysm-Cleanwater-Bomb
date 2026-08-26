@@ -6,7 +6,6 @@
 #include <iterator>
 #include <memory>
 #include <optional>
-#include <set>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -18,7 +17,6 @@
 #include "cata_imgui.h"  // IWYU pragma: keep
 #include "cata_utility.h"
 #include "catacharset.h"
-#include "catalua_ui.h"
 #include "color.h"
 #include "coordinates.h"
 #include "cursesdef.h"
@@ -353,61 +351,6 @@ static void draw_messages( const draw_args &args )
     wnoutrefresh( w );
 }
 
-static nc_color lua_sidebar_line_color( const std::string &name )
-{
-    if( name.empty() ) {
-        return c_light_gray;
-    }
-    const color_id id = get_all_colors().name_to_id(
-                            name, report_color_error::no );
-    return get_all_colors().get( id );
-}
-
-static void draw_lua_sidebar_widget(
-    const std::string &key, const draw_args &args )
-{
-    const catacurses::window &window = args._win;
-    werase( window );
-    const int width = getmaxx( window );
-    const int height = getmaxy( window );
-    const std::vector<cata::lua_ui::sidebar_widget_line> lines =
-        cata::lua_ui::render_sidebar_widget(
-            key, width, height );
-    const std::size_t count = std::min(
-                                  lines.size(),
-                                  static_cast<std::size_t>(
-                                      std::max( 0, height ) ) );
-    for( std::size_t index = 0; index < count; ++index ) {
-        const cata::lua_ui::sidebar_widget_line &line =
-            lines[index];
-        const nc_color base_color =
-            lua_sidebar_line_color( line.color );
-        nc_color current_color = base_color;
-        print_colored_text(
-            window, point( 0, static_cast<int>( index ) ),
-            current_color, base_color, line.text,
-            report_color_error::no );
-    }
-    wnoutrefresh( window );
-}
-
-static window_panel make_lua_sidebar_panel(
-    const cata::lua_ui::sidebar_widget_info &info,
-    const int width )
-{
-    const std::string key = info.key;
-    const auto draw = [key]( const draw_args & args ) {
-        draw_lua_sidebar_widget( key, args );
-    };
-    const auto render = [key]() {
-        return cata::lua_ui::sidebar_widget_visible( key );
-    };
-    return window_panel(
-               draw, key, no_translation( info.name ),
-               info.height, width, info.default_toggle,
-               render, info.redraw_every_frame );
-}
-
 #if defined(TILES)
 static void draw_mminimap( const draw_args &args )
 {
@@ -551,7 +494,6 @@ void panel_manager::init()
 {
     layouts = initialize_default_panel_layouts();
     load();
-    sync_lua_panels();
 #if defined(__ANDROID__)
     if( android_ui_mode::is_new_ui_build() ) {
         // The New UI HUD is rendered by a native View overlay.  Keep panel
@@ -566,124 +508,6 @@ void panel_manager::init()
         widget::finalize_inherited_fields_recursive( get_current_sidebar()->getId(),
                 get_current_sidebar()->_separator, get_current_sidebar()->_padding );
     }
-}
-
-void panel_manager::sync_lua_panels()
-{
-    const std::vector<cata::lua_ui::sidebar_widget_info>
-    widgets = cata::lua_ui::registered_sidebar_widgets();
-    std::set<std::string> desired_ids;
-    for( const cata::lua_ui::sidebar_widget_info &widget :
-         widgets ) {
-        desired_ids.insert( widget.key );
-    }
-
-    std::map<std::string, panel_layout> next_layouts =
-        layouts;
-    for( auto &[layout_id, layout] : next_layouts ) {
-        std::vector<window_panel> &panels = layout.panels();
-        panels.erase(
-            std::remove_if(
-                panels.begin(), panels.end(),
-        [&desired_ids]( const window_panel & panel ) {
-            const std::string &id = panel.get_id();
-            return id.compare( 0, 4, "lua:" ) == 0 &&
-                   desired_ids.count( id ) == 0;
-        } ),
-        panels.end() );
-
-        const int width = panels.empty() ?
-                          0 : panels.front().get_width();
-        std::map<int, std::size_t> order_offsets;
-        for( const cata::lua_ui::sidebar_widget_info &widget :
-             widgets ) {
-            const auto existing = std::find_if(
-                                      panels.begin(), panels.end(),
-            [&widget]( const window_panel & panel ) {
-                return panel.get_id() == widget.key;
-            } );
-            if( existing != panels.end() ) {
-                const bool toggle = existing->toggle;
-                window_panel replacement =
-                    make_lua_sidebar_panel( widget, width );
-                replacement.toggle = toggle;
-                *existing = std::move( replacement );
-                continue;
-            }
-
-            window_panel panel =
-                make_lua_sidebar_panel( widget, width );
-            std::optional<std::size_t> insert_at;
-            const auto saved_layout =
-                saved_layout_entries.find( layout_id );
-            if( saved_layout !=
-                saved_layout_entries.end() ) {
-                const std::vector<std::pair<std::string, bool>>
-                        &saved = saved_layout->second;
-                const auto saved_widget = std::find_if(
-                                              saved.begin(), saved.end(),
-                [&widget]( const auto & entry ) {
-                    return entry.first == widget.key;
-                } );
-                if( saved_widget != saved.end() ) {
-                    panel.toggle = saved_widget->second;
-                    for( auto after = std::next( saved_widget );
-                         after != saved.end(); ++after ) {
-                        const auto found = std::find_if(
-                                               panels.begin(), panels.end(),
-                        [&after]( const window_panel & candidate ) {
-                            return candidate.get_id() ==
-                                   after->first;
-                        } );
-                        if( found != panels.end() ) {
-                            insert_at = static_cast<std::size_t>(
-                                            std::distance(
-                                                panels.begin(), found ) );
-                            break;
-                        }
-                    }
-                    if( !insert_at ) {
-                        for( auto before = std::make_reverse_iterator(
-                                               saved_widget );
-                             before != saved.rend(); ++before ) {
-                            const auto found = std::find_if(
-                                                   panels.begin(),
-                                                   panels.end(),
-                            [&before]( const window_panel & candidate ) {
-                                return candidate.get_id() ==
-                                       before->first;
-                            } );
-                            if( found != panels.end() ) {
-                                insert_at =
-                                    static_cast<std::size_t>(
-                                        std::distance(
-                                            panels.begin(), found ) ) + 1;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            if( !insert_at && widget.order ) {
-                const std::size_t offset =
-                    order_offsets[*widget.order]++;
-                const std::size_t requested =
-                    static_cast<std::size_t>(
-                        *widget.order - 1 ) + offset;
-                insert_at = std::min(
-                                requested, panels.size() );
-            }
-            if( insert_at ) {
-                panels.insert(
-                    panels.begin() +
-                    static_cast<std::ptrdiff_t>( *insert_at ),
-                    std::move( panel ) );
-            } else {
-                panels.emplace_back( std::move( panel ) );
-            }
-        }
-    }
-    layouts.swap( next_layouts );
 }
 
 void panel_manager::update_offsets( int x )

@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_bionics.h"
 
@@ -24,7 +24,7 @@
 #include "type_id.h"
 #include "units.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -418,17 +418,17 @@ definition_options read_definition_options(
         const sol::object key_object = entry.first;
         if( key_object.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.bionics.definitions option keys must be strings" );
+                "services.bionics.definitions option keys must be strings" );
         }
         const sol::object value = entry.second;
         if( !value.is<lua_Integer>() ) {
             throw std::invalid_argument(
-                "game.bionics.definitions options must be integers" );
+                "services.bionics.definitions options must be integers" );
         }
         const lua_Integer number = value.as<lua_Integer>();
         if( number < 0 ) {
             throw std::invalid_argument(
-                "game.bionics.definitions options cannot be negative" );
+                "services.bionics.definitions options cannot be negative" );
         }
         const std::string key = key_object.as<std::string>();
         if( key == "offset" ) {
@@ -442,7 +442,7 @@ definition_options read_definition_options(
                                    number, maximum_definition_limit ) );
         } else {
             throw std::invalid_argument(
-                "game.bionics.definitions received unknown option '" +
+                "services.bionics.definitions received unknown option '" +
                 key + "'" );
         }
     }
@@ -495,7 +495,7 @@ sol::table get_definition(
     sol::this_state lua, const script_game_id &requested_id )
 {
     require_id_kind(
-        requested_id, "bionic", "game.bionics.definition" );
+        requested_id, "bionic", "services.bionics.definition" );
     sol::state_view state( lua );
     return snapshot_definition(
                state, bionic_id( requested_id.value() ).obj() );
@@ -540,7 +540,7 @@ int instance_limit( const sol::optional<int> &requested )
                           default_instance_limit );
     if( value < 0 ) {
         throw std::invalid_argument(
-            "game.bionics.list limit cannot be negative" );
+            "services.bionics.list limit cannot be negative" );
     }
     return std::min( value, maximum_instance_limit );
 }
@@ -632,7 +632,7 @@ sol::table has_instance(
     const std::size_t world_generation )
 {
     require_id_kind(
-        requested_id, "bionic", "game.bionics.has" );
+        requested_id, "bionic", "services.bionics.has" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -654,7 +654,7 @@ sol::table install_instance(
     const std::size_t world_generation )
 {
     require_id_kind(
-        requested_id, "bionic", "game.bionics.install" );
+        requested_id, "bionic", "services.bionics.install" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -743,7 +743,7 @@ sol::table set_power(
 {
     const units::energy power = native_energy(
                                     requested_power,
-                                    "game.bionics.set_power" );
+                                    "services.bionics.set_power" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -845,38 +845,38 @@ configuration read_configuration( const sol::table &requested )
         const sol::object key_object = entry.first;
         if( key_object.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.bionics.configure option keys must be strings" );
+                "services.bionics.configure option keys must be strings" );
         }
         const std::string key = key_object.as<std::string>();
         const sol::object value = entry.second;
         if( key == "auto_shutdown" ) {
             if( !value.is<bool>() ) {
                 throw std::invalid_argument(
-                    "game.bionics.configure auto_shutdown must be a boolean" );
+                    "services.bionics.configure auto_shutdown must be a boolean" );
             }
             result.auto_shutdown = value.as<bool>();
         } else if( key == "show_sprite" ) {
             if( !value.is<bool>() ) {
                 throw std::invalid_argument(
-                    "game.bionics.configure show_sprite must be a boolean" );
+                    "services.bionics.configure show_sprite must be a boolean" );
             }
             result.show_sprite = value.as<bool>();
         } else if( key == "safe_fuel_threshold" ) {
             if( !value.is<double>() ) {
                 throw std::invalid_argument(
-                    "game.bionics.configure safe_fuel_threshold must be a number" );
+                    "services.bionics.configure safe_fuel_threshold must be a number" );
             }
             const double threshold = value.as<double>();
             if( !std::isfinite( threshold ) ||
                 threshold < -1.0 || threshold > 1.0 ) {
                 throw std::invalid_argument(
-                    "game.bionics.configure safe_fuel_threshold is outside [-1, 1]" );
+                    "services.bionics.configure safe_fuel_threshold is outside [-1, 1]" );
             }
             result.safe_fuel_threshold =
                 static_cast<float>( threshold );
         } else {
             throw std::invalid_argument(
-                "game.bionics.configure received unknown option '" +
+                "services.bionics.configure received unknown option '" +
                 key + "'" );
         }
     }
@@ -1185,6 +1185,6 @@ void install_bionic_api(
     game["bionics"] = std::move( bionics );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

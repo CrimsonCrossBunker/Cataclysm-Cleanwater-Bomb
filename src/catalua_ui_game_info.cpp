@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_game_info.h"
 
@@ -25,7 +25,7 @@
 #include "weather.h"
 #include "widget.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -57,7 +57,7 @@ std::size_t message_limit(
         requested.value_or( default_message_limit );
     if( value < 0 || value > maximum_message_limit ) {
         throw std::invalid_argument(
-            "game.messages.recent limit must be within 0..256" );
+            "services.messages.recent limit must be within 0..256" );
     }
     return static_cast<std::size_t>( value );
 }
@@ -125,7 +125,7 @@ game_message_type message_type_from_name( const std::string_view name )
         return m_grazing;
     }
     throw std::invalid_argument(
-        "game.messages.add received unknown message type '" +
+        "services.messages.add received unknown message type '" +
         std::string( name ) + "'" );
 }
 
@@ -135,7 +135,7 @@ void add_script_message(
 {
     if( message.size() > maximum_message_bytes ) {
         throw std::invalid_argument(
-            "game.messages.add message exceeds 8192 bytes" );
+            "services.messages.add message exceeds 8192 bytes" );
     }
     const game_message_type type = message_type_from_name(
                                        requested_type.value_or( "neutral" ) );
@@ -167,7 +167,7 @@ int random_integer(
         maximum > maximum_random_integer ||
         minimum > maximum ) {
         throw std::invalid_argument(
-            "game.random.int requires an ordered range within "
+            "services.random.int requires an ordered range within "
             "-1000000000..1000000000" );
     }
     return rng( static_cast<int>( minimum ), static_cast<int>( maximum ) );
@@ -182,7 +182,7 @@ bool random_chance(
         numerator < 0 ||
         numerator > denominator ) {
         throw std::invalid_argument(
-            "game.random.chance requires 0 <= numerator <= denominator "
+            "services.random.chance requires 0 <= numerator <= denominator "
             "<= 1000000000" );
     }
     return x_in_y(
@@ -196,7 +196,7 @@ std::string option_string( const std::string &name )
         name.find( '\0' ) != std::string::npos ||
         !has_option( name ) ) {
         throw std::invalid_argument(
-            "game.options.get requires an existing option name within 128 bytes" );
+            "services.options.get requires an existing option name within 128 bytes" );
     }
     return get_option<std::string>( name );
 }
@@ -208,7 +208,7 @@ double random_real( const double minimum, const double maximum )
         maximum > maximum_random_real ||
         minimum > maximum ) {
         throw std::invalid_argument(
-            "game.random.real requires a finite ordered range within "
+            "services.random.real requires a finite ordered range within "
             "-1000000000..1000000000" );
     }
     return rng_float( minimum, maximum );
@@ -230,7 +230,7 @@ void validate_mod_id_text(
 
 bool mod_is_active( const std::string &id )
 {
-    validate_mod_id_text( id, "game.mods.is_active" );
+    validate_mod_id_text( id, "services.mods.is_active" );
     if( !world_generator ||
         world_generator->active_world == nullptr ) {
         return false;
@@ -281,7 +281,7 @@ sol::table safety_snapshot( sol::this_state lua )
     sol::state_view state( lua );
     if( g == nullptr ) {
         throw std::runtime_error(
-            "game.safety.snapshot requires an active game" );
+            "services.safety.snapshot requires an active game" );
     }
     static constexpr std::array<std::string_view, 9> direction_names = {
         "north", "northeast", "east", "southeast", "south",
@@ -341,7 +341,7 @@ void install_game_info_api(
     const sol::optional<std::string> &type ) {
         require_actions();
         require_active_callback(
-            has_active_callback, "game.messages.add" );
+            has_active_callback, "services.messages.add" );
         add_script_message( message, type );
     } );
     game["messages"] = std::move( messages );
@@ -363,7 +363,7 @@ void install_game_info_api(
     const std::int64_t maximum ) {
         require_read();
         require_active_callback(
-            has_active_callback, "game.random.int" );
+            has_active_callback, "services.random.int" );
         return random_integer( minimum, maximum );
     } );
     random.set_function(
@@ -373,7 +373,7 @@ void install_game_info_api(
     const std::int64_t denominator ) {
         require_read();
         require_active_callback(
-            has_active_callback, "game.random.chance" );
+            has_active_callback, "services.random.chance" );
         return random_chance( numerator, denominator );
     } );
     random.set_function(
@@ -383,7 +383,7 @@ void install_game_info_api(
     const double maximum ) {
         require_read();
         require_active_callback(
-            has_active_callback, "game.random.real" );
+            has_active_callback, "services.random.real" );
         return random_real( minimum, maximum );
     } );
     game["random"] = std::move( random );
@@ -422,6 +422,6 @@ void install_game_info_api(
     game["safety"] = std::move( safety );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

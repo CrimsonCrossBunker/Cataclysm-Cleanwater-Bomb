@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_bindings_coords.h"
 
@@ -16,7 +16,7 @@
 #include "line.h"
 #include "point.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -73,7 +73,7 @@ coords::origin parse_origin( const std::string_view name )
         return coords::origin::reality_bubble;
     }
     throw std::invalid_argument(
-        "game.coords received an unknown coordinate origin: " + std::string( name ) );
+        "services.coords received an unknown coordinate origin: " + std::string( name ) );
 }
 
 coords::scale parse_scale( const std::string_view name )
@@ -94,7 +94,7 @@ coords::scale parse_scale( const std::string_view name )
         return coords::scale::overmap;
     }
     throw std::invalid_argument(
-        "game.coords received an unknown coordinate scale: " + std::string( name ) );
+        "services.coords received an unknown coordinate scale: " + std::string( name ) );
 }
 
 std::string_view origin_name( const coords::origin origin )
@@ -113,7 +113,7 @@ std::string_view origin_name( const coords::origin origin )
         case coords::origin::reality_bubble:
             return "bub";
     }
-    throw std::logic_error( "game.coords value has an unknown origin" );
+    throw std::logic_error( "services.coords value has an unknown origin" );
 }
 
 std::string_view scale_name( const coords::scale scale )
@@ -132,7 +132,7 @@ std::string_view scale_name( const coords::scale scale )
         case coords::scale::vehicle:
             break;
     }
-    throw std::logic_error( "game.coords value has an unknown scale" );
+    throw std::logic_error( "services.coords value has an unknown scale" );
 }
 
 bool is_supported_kind( const coords::origin origin, const coords::scale scale )
@@ -148,7 +148,7 @@ void require_supported_kind( const coords::origin origin, const coords::scale sc
 {
     if( !is_supported_kind( origin, scale ) ) {
         throw std::invalid_argument(
-            "game.coords does not support coordinate kind " +
+            "services.coords does not support coordinate kind " +
             std::string( origin_name( origin ) ) + "_" +
             std::string( scale_name( scale ) ) );
     }
@@ -158,7 +158,7 @@ int checked_axis( const std::int64_t value )
 {
     if( value < std::numeric_limits<int>::min() ||
         value > std::numeric_limits<int>::max() ) {
-        throw std::overflow_error( "game.coords axis exceeds the engine coordinate range" );
+        throw std::overflow_error( "services.coords axis exceeds the engine coordinate range" );
     }
     return static_cast<int>( value );
 }
@@ -179,7 +179,7 @@ int checked_axis_product( const int value, const std::int64_t factor )
         static_cast<long double>( value ) * static_cast<long double>( factor );
     if( product < static_cast<long double>( std::numeric_limits<int>::min() ) ||
         product > static_cast<long double>( std::numeric_limits<int>::max() ) ) {
-        throw std::overflow_error( "game.coords arithmetic exceeds the engine coordinate range" );
+        throw std::overflow_error( "services.coords arithmetic exceeds the engine coordinate range" );
     }
     return static_cast<int>( product );
 }
@@ -196,7 +196,7 @@ void require_matching_kind(
 {
     if( lhs_origin != rhs_origin || lhs_scale != rhs_scale ) {
         throw std::invalid_argument(
-            "game.coords cannot " + std::string( operation ) +
+            "services.coords cannot " + std::string( operation ) +
             " coordinates with different origins or scales" );
     }
 }
@@ -211,7 +211,7 @@ coords::origin addition_result_origin(
         return rhs;
     }
     throw std::invalid_argument(
-        "game.coords addition requires at least one relative coordinate" );
+        "services.coords addition requires at least one relative coordinate" );
 }
 
 coords::origin subtraction_result_origin(
@@ -224,14 +224,14 @@ coords::origin subtraction_result_origin(
         return coords::origin::relative;
     }
     throw std::invalid_argument(
-        "game.coords subtraction requires a relative offset or matching coordinate kinds" );
+        "services.coords subtraction requires a relative offset or matching coordinate kinds" );
 }
 
 void require_same_scale( const coords::scale lhs, const coords::scale rhs )
 {
     if( lhs != rhs ) {
         throw std::invalid_argument(
-            "game.coords arithmetic requires coordinates at the same scale" );
+            "services.coords arithmetic requires coordinates at the same scale" );
     }
 }
 
@@ -239,7 +239,7 @@ void require_relative( const coords::origin origin, const std::string_view opera
 {
     if( origin != coords::origin::relative ) {
         throw std::invalid_argument(
-            "game.coords " + std::string( operation ) +
+            "services.coords " + std::string( operation ) +
             " is only valid for relative coordinates" );
     }
 }
@@ -258,7 +258,7 @@ std::int64_t exact_projection_factor(
     const std::int64_t smaller = std::min( source_size, result_size );
     if( larger % smaller != 0 ) {
         throw std::invalid_argument(
-            "game.coords projection requires exactly divisible coordinate scales" );
+            "services.coords projection requires exactly divisible coordinate scales" );
     }
     return larger / smaller;
 }
@@ -302,7 +302,7 @@ coords::origin remainder_origin( const coords::scale coarse_scale )
             break;
     }
     throw std::invalid_argument(
-        "game.coords cannot produce a remainder for the requested scale" );
+        "services.coords cannot produce a remainder for the requested scale" );
 }
 
 std::int64_t projection_down_factor(
@@ -312,7 +312,7 @@ std::int64_t projection_down_factor(
     const std::int64_t coarse_size = scale_size( coarse );
     if( coarse_size <= source_size || coarse_size % source_size != 0 ) {
         throw std::invalid_argument(
-            "game.coords project_remain requires an exactly divisible coarser scale" );
+            "services.coords project_remain requires an exactly divisible coarser scale" );
     }
     remainder_origin( coarse );
     return coarse_size / source_size;
@@ -323,7 +323,7 @@ void require_valid_remainder_axis(
 {
     if( value < 0 || static_cast<std::int64_t>( value ) >= factor ) {
         throw std::invalid_argument(
-            "game.coords project_combine requires a bounded non-negative remainder" );
+            "services.coords project_combine requires a bounded non-negative remainder" );
     }
 }
 
@@ -331,7 +331,7 @@ std::size_t checked_output_limit( const std::int64_t max_points )
 {
     if( max_points <= 0 || max_points > maximum_coordinate_range_points ) {
         throw std::invalid_argument(
-            "game.coords max_points must be between 1 and " +
+            "services.coords max_points must be between 1 and " +
             std::to_string( maximum_coordinate_range_points ) );
     }
     return static_cast<std::size_t>( max_points );
@@ -342,7 +342,7 @@ void require_output_count(
 {
     if( count > limit ) {
         throw std::length_error(
-            "game.coords result exceeds the requested max_points limit" );
+            "services.coords result exceeds the requested max_points limit" );
     }
 }
 
@@ -362,7 +362,7 @@ std::size_t checked_rectangle_count(
     require_output_count( height, limit );
     if( width > limit / height ) {
         throw std::length_error(
-            "game.coords result exceeds the requested max_points limit" );
+            "services.coords result exceeds the requested max_points limit" );
     }
     return static_cast<std::size_t>( width * height );
 }
@@ -377,7 +377,7 @@ std::size_t checked_box_count(
         checked_rectangle_count( from_x, to_x, from_y, to_y, limit );
     if( area > limit / depth ) {
         throw std::length_error(
-            "game.coords result exceeds the requested max_points limit" );
+            "services.coords result exceeds the requested max_points limit" );
     }
     return static_cast<std::size_t>( area * depth );
 }
@@ -526,7 +526,7 @@ script_point_coord script_point_coord::project_combine(
         projection_down_factor( remainder.scale_, scale_ );
     if( remainder.origin_ != remainder_origin( scale_ ) ) {
         throw std::invalid_argument(
-            "game.coords project_combine received the wrong remainder origin" );
+            "services.coords project_combine received the wrong remainder origin" );
     }
     require_supported_kind( origin_, remainder.scale_ );
     require_valid_remainder_axis( remainder.x_, factor );
@@ -780,7 +780,7 @@ script_tripoint_coord script_tripoint_coord::project_combine(
         projection_down_factor( remainder.native_scale(), scale_ );
     if( remainder.native_origin() != remainder_origin( scale_ ) ) {
         throw std::invalid_argument(
-            "game.coords project_combine received the wrong remainder origin" );
+            "services.coords project_combine received the wrong remainder origin" );
     }
     require_supported_kind( origin_, remainder.native_scale() );
     require_valid_remainder_axis( remainder.x(), factor );
@@ -1165,6 +1165,6 @@ void install_coordinate_value_api(
     game["coords"] = std::move( coord_api );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

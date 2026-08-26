@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_skills.h"
 
@@ -18,7 +18,7 @@
 #include "creature.h"
 #include "skill.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -58,17 +58,17 @@ definition_options read_definition_options(
     }
     if( result.offset < 0 || result.offset > maximum_definition_offset ) {
         throw std::invalid_argument(
-            "game.skills.definitions offset must be within 0..1000000" );
+            "services.skills.definitions offset must be within 0..1000000" );
     }
     if( result.limit < 0 ) {
         throw std::invalid_argument(
-            "game.skills.definitions limit cannot be negative" );
+            "services.skills.definitions limit cannot be negative" );
     }
     result.limit = std::min(
                        result.limit, maximum_definition_limit );
     if( result.query.size() > maximum_query_bytes ) {
         throw std::invalid_argument(
-            "game.skills.definitions query exceeds 128 bytes" );
+            "services.skills.definitions query exceeds 128 bytes" );
     }
     return result;
 }
@@ -163,7 +163,7 @@ sol::table list_definitions(
 sol::table get_definition(
     sol::this_state lua, const script_game_id &id )
 {
-    require_skill_id( id, "game.skills.definition" );
+    require_skill_id( id, "services.skills.definition" );
     return snapshot_definition(
                sol::state_view( lua ), skill_id( id.value() ).obj() );
 }
@@ -249,11 +249,11 @@ state_list_options read_state_list_options(
     }
     if( result.offset < 0 || result.offset > maximum_state_offset ) {
         throw std::invalid_argument(
-            "game.skills.list offset must be within 0..1000000" );
+            "services.skills.list offset must be within 0..1000000" );
     }
     if( result.limit < 0 ) {
         throw std::invalid_argument(
-            "game.skills.list limit cannot be negative" );
+            "services.skills.list limit cannot be negative" );
     }
     result.limit = std::min(
                        result.limit, maximum_state_limit );
@@ -328,7 +328,7 @@ sol::table get_state(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    require_skill_id( requested_id, "game.skills.get" );
+    require_skill_id( requested_id, "services.skills.get" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -356,32 +356,32 @@ level_adjustments read_level_adjustments( const sol::table &requested )
     for( const auto &entry : requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.skills.set option keys must be strings" );
+                "services.skills.set option keys must be strings" );
         }
         const std::string key = entry.first.as<std::string>();
         if( key != "practical" && key != "knowledge" &&
             key != "exercise_percent" ) {
             throw std::invalid_argument(
-                "game.skills.set received unknown option '" +
+                "services.skills.set received unknown option '" +
                 key + "'" );
         }
         if( !entry.second.is<int>() ) {
             throw std::invalid_argument(
-                "game.skills.set option '" + key +
+                "services.skills.set option '" + key +
                 "' must be an integer" );
         }
         const int value = entry.second.as<int>();
         if( key == "exercise_percent" ) {
             if( value < 0 || value > 99 ) {
                 throw std::invalid_argument(
-                    "game.skills.set exercise_percent "
+                    "services.skills.set exercise_percent "
                     "must be within 0..99" );
             }
             result.exercise_percent = value;
         } else {
             if( value < 0 || value > MAX_SKILL ) {
                 throw std::invalid_argument(
-                    "game.skills.set " + key +
+                    "services.skills.set " + key +
                     " must be within 0..10" );
             }
             if( key == "practical" ) {
@@ -394,7 +394,7 @@ level_adjustments read_level_adjustments( const sol::table &requested )
     if( !result.practical && !result.knowledge &&
         !result.exercise_percent ) {
         throw std::invalid_argument(
-            "game.skills.set requires at least one adjustment" );
+            "services.skills.set requires at least one adjustment" );
     }
     return result;
 }
@@ -406,7 +406,7 @@ sol::table set_state(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    require_skill_id( requested_id, "game.skills.set" );
+    require_skill_id( requested_id, "services.skills.set" );
     const level_adjustments adjustments =
         read_level_adjustments( requested_adjustments );
     sol::state_view state( lua );
@@ -429,7 +429,7 @@ sol::table set_state(
             std::max( current.knowledgeLevel(), practical ) );
     if( knowledge < practical ) {
         throw std::invalid_argument(
-            "game.skills.set knowledge cannot be below practical" );
+            "services.skills.set knowledge cannot be below practical" );
     }
 
     sol::table before =
@@ -458,7 +458,7 @@ sol::table set_training_state(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    require_skill_id( requested_id, "game.skills.set_training" );
+    require_skill_id( requested_id, "services.skills.set_training" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -501,31 +501,31 @@ practice_options read_practice_options(
     for( const auto &entry : *requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.skills.practice option keys must be strings" );
+                "services.skills.practice option keys must be strings" );
         }
         const std::string key = entry.first.as<std::string>();
         if( key == "cap" ) {
             if( !entry.second.is<int>() ) {
                 throw std::invalid_argument(
-                    "game.skills.practice cap must be an integer" );
+                    "services.skills.practice cap must be an integer" );
             }
             result.cap = entry.second.as<int>();
         } else if( key == "allow_multilevel" ) {
             if( !entry.second.is<bool>() ) {
                 throw std::invalid_argument(
-                    "game.skills.practice allow_multilevel "
+                    "services.skills.practice allow_multilevel "
                     "must be a boolean" );
             }
             result.allow_multilevel = entry.second.as<bool>();
         } else {
             throw std::invalid_argument(
-                "game.skills.practice received unknown option '" +
+                "services.skills.practice received unknown option '" +
                 key + "'" );
         }
     }
     if( result.cap < 0 || result.cap > MAX_SKILL ) {
         throw std::invalid_argument(
-            "game.skills.practice cap must be within 0..10" );
+            "services.skills.practice cap must be within 0..10" );
     }
     return result;
 }
@@ -537,10 +537,10 @@ sol::table practice_state(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    require_skill_id( requested_id, "game.skills.practice" );
+    require_skill_id( requested_id, "services.skills.practice" );
     if( amount < 1 || amount > 1000 ) {
         throw std::invalid_argument(
-            "game.skills.practice amount must be within 1..1000" );
+            "services.skills.practice amount must be within 1..1000" );
     }
     const practice_options options =
         read_practice_options( requested_options );
@@ -657,6 +657,6 @@ void install_skill_api(
     game["skills"] = std::move( skills );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

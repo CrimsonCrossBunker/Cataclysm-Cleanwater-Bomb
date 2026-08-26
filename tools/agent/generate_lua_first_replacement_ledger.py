@@ -37,7 +37,6 @@ CONTROL_FLOW = {
     "nothing",
     "run_eoc_selector",
     "run_eocs",
-    "run_lua",
     "set_condition",
     "switch",
     "test_eoc",
@@ -45,7 +44,7 @@ CONTROL_FLOW = {
 }
 
 # Selectors whose Migrated_Core catalog passes the semantic parity gate in
-# tests/catalua_ui_test.cpp field-for-field against the legacy JSON-loaded
+# tests/catalua_platform_test.cpp field-for-field against the legacy JSON-loaded
 # objects.  Promotions ride the base IMPLEMENTED_JSON / BOUNDED_IMPLEMENTED_JSON
 # target and evidence and only flip the disposition suffix.
 IMPLEMENTED_VERIFIED = frozenset({
@@ -140,11 +139,11 @@ IMPLEMENTED_JSON = {
     "monster_adjustment": {
         "target": "content.monsters",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/monstergenerator.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -152,12 +151,12 @@ IMPLEMENTED_JSON = {
     "trait_group": {
         "target": "content.trait-groups",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/mutation_data.cpp",
             "src/trait_group.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -165,11 +164,11 @@ IMPLEMENTED_JSON = {
     "profession_blacklist": {
         "target": "content.blacklists",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_runtime.cpp",
+            "src/catalua_content.h",
             "src/profession.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -177,13 +176,13 @@ IMPLEMENTED_JSON = {
     "ITEM_BLACKLIST": {
         "target": "content.blacklists",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_runtime.cpp",
+            "src/catalua_content.h",
             "src/item_factory.cpp",
             "src/scenario.cpp",
             "src/savegame_json.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -191,13 +190,13 @@ IMPLEMENTED_JSON = {
     "SCENARIO_BLACKLIST": {
         "target": "content.blacklists",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_runtime.cpp",
+            "src/catalua_content.h",
             "src/item_factory.cpp",
             "src/scenario.cpp",
             "src/savegame_json.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -205,13 +204,13 @@ IMPLEMENTED_JSON = {
     "charge_removal_blacklist": {
         "target": "content.blacklists",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_runtime.cpp",
+            "src/catalua_content.h",
             "src/item_factory.cpp",
             "src/scenario.cpp",
             "src/savegame_json.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -219,13 +218,13 @@ IMPLEMENTED_JSON = {
     "temperature_removal_blacklist": {
         "target": "content.blacklists",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_runtime.cpp",
+            "src/catalua_content.h",
             "src/item_factory.cpp",
             "src/scenario.cpp",
             "src/savegame_json.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -233,10 +232,10 @@ IMPLEMENTED_JSON = {
     "bionic_migration": {
         "target": "content.migrations",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_runtime.cpp",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -244,10 +243,10 @@ IMPLEMENTED_JSON = {
     "effect_migration": {
         "target": "content.migrations",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_runtime.cpp",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -255,10 +254,10 @@ IMPLEMENTED_JSON = {
     "field_type_migration": {
         "target": "content.migrations",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_runtime.cpp",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -266,10 +265,10 @@ IMPLEMENTED_JSON = {
     "oter_id_migration": {
         "target": "content.migrations",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_runtime.cpp",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -277,10 +276,10 @@ IMPLEMENTED_JSON = {
     "overmap_special_migration": {
         "target": "content.migrations",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_runtime.cpp",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -288,10 +287,10 @@ IMPLEMENTED_JSON = {
     "proficiency_migration": {
         "target": "content.migrations",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_runtime.cpp",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -299,10 +298,10 @@ IMPLEMENTED_JSON = {
     "ter_furn_migration": {
         "target": "content.migrations",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_runtime.cpp",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -310,10 +309,10 @@ IMPLEMENTED_JSON = {
     "trap_migration": {
         "target": "content.migrations",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_runtime.cpp",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -321,10 +320,10 @@ IMPLEMENTED_JSON = {
     "var_migration": {
         "target": "content.migrations",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_runtime.cpp",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -332,10 +331,10 @@ IMPLEMENTED_JSON = {
     "vehicle_part_migration": {
         "target": "content.migrations",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_runtime.cpp",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -343,10 +342,10 @@ IMPLEMENTED_JSON = {
     "speech": {
         "target": "content.speech-pools",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/speech.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -354,10 +353,10 @@ IMPLEMENTED_JSON = {
     "connect_group": {
         "target": "content.connect-groups",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/mapdata.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -365,10 +364,10 @@ IMPLEMENTED_JSON = {
     "construction_category": {
         "target": "content.construction-categories",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/construction_category.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -376,10 +375,10 @@ IMPLEMENTED_JSON = {
     "construction_group": {
         "target": "content.construction-groups",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/construction_group.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -387,10 +386,10 @@ IMPLEMENTED_JSON = {
     "fault_group": {
         "target": "content.fault-groups",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/fault.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -398,10 +397,10 @@ IMPLEMENTED_JSON = {
     "monster_flag": {
         "target": "content.monster-flags",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/monstergenerator.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -409,10 +408,10 @@ IMPLEMENTED_JSON = {
     "vehicle_group": {
         "target": "content.vehicle-groups",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/vehicle_group.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -420,11 +419,11 @@ IMPLEMENTED_JSON = {
     "activity_type": {
         "target": "content.activity-types",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/activity_type.cpp",
             "src/player_activity.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -432,10 +431,10 @@ IMPLEMENTED_JSON = {
     "anatomy": {
         "target": "content.anatomies",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/anatomy.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -443,10 +442,10 @@ IMPLEMENTED_JSON = {
     "butchery_requirement": {
         "target": "content.butchery-requirements",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/butchery_requirements.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -454,10 +453,10 @@ IMPLEMENTED_JSON = {
     "item_action": {
         "target": "content.item-actions",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/item_action.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -465,10 +464,10 @@ IMPLEMENTED_JSON = {
     "vehicle_color_palette": {
         "target": "content.vehicle-color-palettes",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/vehicle_palette.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -476,10 +475,10 @@ IMPLEMENTED_JSON = {
     "overmap_connection": {
         "target": "content.overmap-connections",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/overmap_connection.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -487,10 +486,10 @@ IMPLEMENTED_JSON = {
     "attack_vector": {
         "target": "content.attack-vectors",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/martialarts.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -498,10 +497,10 @@ IMPLEMENTED_JSON = {
     "bash_damage_profile": {
         "target": "content.bash-damage-profiles",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/map_accessories.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -509,10 +508,10 @@ IMPLEMENTED_JSON = {
     "damage_info_order": {
         "target": "content.damage-info-presentation",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/damage.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -520,10 +519,10 @@ IMPLEMENTED_JSON = {
     "help": {
         "target": "content.help-topics",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/help.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -531,10 +530,10 @@ IMPLEMENTED_JSON = {
     "mutation_category": {
         "target": "content.mutation-categories",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/mutation_data.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -542,10 +541,10 @@ IMPLEMENTED_JSON = {
     "oter_vision": {
         "target": "content.overmap-vision",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/overmap_terrain.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -553,10 +552,10 @@ IMPLEMENTED_JSON = {
     "overmap_land_use_code": {
         "target": "content.overmap-land-use-codes",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/overmap_terrain.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -564,10 +563,10 @@ IMPLEMENTED_JSON = {
     "rotatable_symbol": {
         "target": "content.rotatable-symbols",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/rotatable_symbols.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -575,10 +574,10 @@ IMPLEMENTED_JSON = {
     "vehicle_part_category": {
         "target": "content.vehicle-part-categories",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/veh_type.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -586,10 +585,10 @@ IMPLEMENTED_JSON = {
     "vehicle_part_location": {
         "target": "content.vehicle-part-locations",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/vehicle_part_location.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -597,10 +596,10 @@ IMPLEMENTED_JSON = {
     "SPECIES": {
         "target": "content.species",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/monstergenerator.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -608,11 +607,11 @@ IMPLEMENTED_JSON = {
     "emit": {
         "target": "content.emissions",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/emit.cpp",
             "src/map_field.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -620,12 +619,12 @@ IMPLEMENTED_JSON = {
     "magic_type": {
         "target": "content.magic-types",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/magic_type.cpp",
             "src/magic.cpp",
             "src/activity_actor.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -633,11 +632,11 @@ IMPLEMENTED_JSON = {
     "playlist": {
         "target": "content.playlists",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/sdlsound.cpp",
             "src/sounds.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -645,10 +644,10 @@ IMPLEMENTED_JSON = {
     "named_color": {
         "target": "content.named-colors",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/hsv_color.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -656,10 +655,10 @@ IMPLEMENTED_JSON = {
     "speed_description": {
         "target": "content.speed-descriptions",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/speed_description.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -667,10 +666,10 @@ IMPLEMENTED_JSON = {
     "overlay_order": {
         "target": "content.overlay-order",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/overlay_ordering.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -678,10 +677,10 @@ IMPLEMENTED_JSON = {
     "profession_group": {
         "target": "content.profession-groups",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/profession_group.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -689,10 +688,10 @@ IMPLEMENTED_JSON = {
     "ammunition_type": {
         "target": "content.ammunition-types",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/ammo.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -700,10 +699,10 @@ IMPLEMENTED_JSON = {
     "disease_type": {
         "target": "content.disease-types",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/disease.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -711,10 +710,10 @@ IMPLEMENTED_JSON = {
     "harvest_drop_type": {
         "target": "content.harvest-drop-types",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/harvest.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -722,10 +721,10 @@ IMPLEMENTED_JSON = {
     "hit_range": {
         "target": "content.hit-range",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/creature.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -733,10 +732,10 @@ IMPLEMENTED_JSON = {
     "limb_score": {
         "target": "content.limb-scores",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/bodypart.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -744,10 +743,10 @@ IMPLEMENTED_JSON = {
     "skill": {
         "target": "content.skills",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/skill.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -755,10 +754,10 @@ IMPLEMENTED_JSON = {
     "sub_body_part": {
         "target": "content.sub-body-parts",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/subbodypart.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -766,10 +765,10 @@ IMPLEMENTED_JSON = {
     "weapon_category": {
         "target": "content.weapon-categories",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/martialarts.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -777,10 +776,10 @@ IMPLEMENTED_JSON = {
     "recipe_category": {
         "target": "content.recipe-categories",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/crafting_gui.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -788,10 +787,10 @@ IMPLEMENTED_JSON = {
     "proficiency_category": {
         "target": "content.proficiency-categories",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/proficiency.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -799,10 +798,10 @@ IMPLEMENTED_JSON = {
     "skill_display_type": {
         "target": "content.skill-display-categories",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/skill.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -810,10 +809,10 @@ IMPLEMENTED_JSON = {
     "scent_type": {
         "target": "content.scent-types",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/scent_map.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -821,12 +820,12 @@ IMPLEMENTED_JSON = {
     "sound_effect": {
         "target": "content.sound-effects",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/sdlsound.cpp",
             "src/sounds.cpp",
             "src/sounds.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -834,12 +833,12 @@ IMPLEMENTED_JSON = {
     "sound_effect_preload": {
         "target": "content.sound-effects",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/sdlsound.cpp",
             "src/sounds.cpp",
             "src/sounds.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -847,11 +846,11 @@ IMPLEMENTED_JSON = {
     "gate": {
         "target": "content.map",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/gates.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -859,12 +858,12 @@ IMPLEMENTED_JSON = {
     "dream": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/mutation_data.cpp",
             "src/mutation.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -872,12 +871,12 @@ IMPLEMENTED_JSON = {
     "TRAIT_BLACKLIST": {
         "target": "content.blacklists",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/mutation_data.cpp",
             "src/mongroup.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -885,11 +884,11 @@ IMPLEMENTED_JSON = {
     "MONSTER_BLACKLIST": {
         "target": "content.blacklists",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/mongroup.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -897,11 +896,11 @@ IMPLEMENTED_JSON = {
     "MONSTER_WHITELIST": {
         "target": "content.blacklists",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/mongroup.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -913,11 +912,11 @@ IMPLEMENTED_JSON = {
 # implemented_unverified until the focused parity corpus is expanded, but
 # they are no longer planned work.
 _STATIC_CATALOG_EVIDENCE = [
-    "src/catalua_platform_runtime.cpp",
-    "src/catalua_platform_world_content.cpp",
-    "src/catalua_platform_content.h",
+    "src/catalua_runtime.cpp",
+    "src/catalua_content_world.cpp",
+    "src/catalua_content.h",
     "data/lua/types/ccb_platform_v1.d.lua",
-    "tests/catalua_ui_test.cpp",
+    "tests/catalua_platform_test.cpp",
     "tools/migrate_lua_first.py",
     "data/lua/LUA_FIRST_PLATFORM.md",
 ]
@@ -953,12 +952,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "event_statistic": {
         "target": "content.events",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/event_statistics.cpp",
             "src/event_statistics.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -967,12 +966,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "event_transformation": {
         "target": "content.events",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/event_statistics.cpp",
             "src/event_statistics.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -981,12 +980,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "shopkeeper_blacklist": {
         "target": "content.shopkeeper-rules",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/shop_cons_rate.cpp",
             "src/shop_cons_rate.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -994,12 +993,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "shopkeeper_whitelist": {
         "target": "content.shopkeeper-rules",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/shop_cons_rate.cpp",
             "src/shop_cons_rate.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1007,12 +1006,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "shopkeeper_consumption_rates": {
         "target": "content.shopkeeper-rules",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/shop_cons_rate.cpp",
             "src/shop_cons_rate.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1020,12 +1019,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "region_settings_forest": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/regional_settings.cpp",
             "src/regional_settings.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1033,12 +1032,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "region_settings_forest_mapgen": {
         "target": "content.map",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/regional_settings.cpp",
             "src/regional_settings.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1046,12 +1045,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "region_settings_lake": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/regional_settings.cpp",
             "src/regional_settings.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1059,12 +1058,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "region_settings_map_extras": {
         "target": "content.map",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/regional_settings.cpp",
             "src/regional_settings.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1072,12 +1071,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "region_settings_ocean": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/regional_settings.cpp",
             "src/regional_settings.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1085,12 +1084,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "region_settings_ravine": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/regional_settings.cpp",
             "src/regional_settings.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1098,12 +1097,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "region_settings_river": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/regional_settings.cpp",
             "src/regional_settings.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1111,12 +1110,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "region_settings_terrain_furniture": {
         "target": "content.map",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/regional_settings.cpp",
             "src/regional_settings.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1124,12 +1123,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "region_settings_forest_trail": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/regional_settings.cpp",
             "src/regional_settings.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1137,12 +1136,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "region_settings_highway": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/regional_settings.cpp",
             "src/regional_settings.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1150,12 +1149,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "region_settings": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/regional_settings.cpp",
             "src/regional_settings.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1164,12 +1163,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "option_slider": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_runtime.cpp",
+            "src/catalua_content.h",
             "src/options.cpp",
             "src/options.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1178,12 +1177,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "dimension": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_runtime.cpp",
+            "src/catalua_content.h",
             "src/overmap_worldgen.cpp",
             "src/overmap_worldgen.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1192,12 +1191,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "dimension_region_layout": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_runtime.cpp",
+            "src/catalua_content.h",
             "src/overmap_worldgen.cpp",
             "src/overmap_worldgen.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1206,12 +1205,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "omt_placeholder": {
         "target": "content.map",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_runtime.cpp",
+            "src/catalua_content.h",
             "src/overmap_map_data_cache.cpp",
             "src/overmap_map_data_cache.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1220,12 +1219,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "region_terrain_furniture": {
         "target": "content.map",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/regional_settings.cpp",
             "src/regional_settings.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1233,12 +1232,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "forest_biome_component": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/regional_settings.cpp",
             "src/regional_settings.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1246,12 +1245,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "city": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/city.cpp",
             "src/city.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1259,12 +1258,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "faction_mission": {
         "target": "content.missions",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/faction_mission.cpp",
             "src/faction_camp.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1272,12 +1271,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "region_settings_city": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/regional_settings.cpp",
             "src/regional_settings.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1285,12 +1284,12 @@ BOUNDED_IMPLEMENTED_JSON = {
     "forest_biome_mapgen": {
         "target": "content.map",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/regional_settings.cpp",
             "src/regional_settings.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1298,10 +1297,10 @@ BOUNDED_IMPLEMENTED_JSON = {
     "MOD_INFO": {
         "target": "platform.mod-metadata",
         "evidence": [
-            "src/catalua_platform.cpp",
+            "src/catalua_loader.cpp",
             "src/mod_manager.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1309,9 +1308,9 @@ BOUNDED_IMPLEMENTED_JSON = {
     "ITEM": {
         "target": "content.items",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1319,9 +1318,9 @@ BOUNDED_IMPLEMENTED_JSON = {
     "effect_on_condition": {
         "target": "platform.runtime-events-and-functions",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1330,9 +1329,9 @@ BOUNDED_IMPLEMENTED_JSON = {
     "MIGRATION": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1341,9 +1340,9 @@ BOUNDED_IMPLEMENTED_JSON = {
     "TRAIT_MIGRATION": {
         "target": "content.mutations",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1352,9 +1351,9 @@ BOUNDED_IMPLEMENTED_JSON = {
     "spell_migration": {
         "target": "content.magic",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1363,9 +1362,9 @@ BOUNDED_IMPLEMENTED_JSON = {
     "camp_migration": {
         "target": "content.camps",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1374,9 +1373,9 @@ BOUNDED_IMPLEMENTED_JSON = {
     "mod_migration": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1390,9 +1389,9 @@ PLANNED_JSON = {
     "jmath_function": {
         "target": "content.state-and-values",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1401,9 +1400,9 @@ PLANNED_JSON = {
     "widget": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1412,9 +1411,9 @@ PLANNED_JSON = {
     "ter_furn_transform": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1423,9 +1422,9 @@ PLANNED_JSON = {
     "profession_item_substitutions": {
         "target": "content.items",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1434,9 +1433,9 @@ PLANNED_JSON = {
     "relic_procgen_data": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1445,9 +1444,9 @@ PLANNED_JSON = {
     "city_building": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1456,9 +1455,9 @@ PLANNED_JSON = {
     "pp_generator": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1467,9 +1466,9 @@ PLANNED_JSON = {
     "enchantment": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1478,9 +1477,9 @@ PLANNED_JSON = {
     "SPELL": {
         "target": "content.magic",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1489,9 +1488,9 @@ PLANNED_JSON = {
     "bionic": {
         "target": "content.bionics",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1500,9 +1499,9 @@ PLANNED_JSON = {
     "faction": {
         "target": "content.factions",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1511,9 +1510,9 @@ PLANNED_JSON = {
     "mission_definition": {
         "target": "content.missions",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1522,9 +1521,9 @@ PLANNED_JSON = {
     "mutation": {
         "target": "content.mutations",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1533,9 +1532,9 @@ PLANNED_JSON = {
     "npc": {
         "target": "content.characters",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1544,9 +1543,9 @@ PLANNED_JSON = {
     "npc_class": {
         "target": "content.characters",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1555,9 +1554,9 @@ PLANNED_JSON = {
     "overmap_special": {
         "target": "content.map",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1566,9 +1565,9 @@ PLANNED_JSON = {
     "overmap_terrain": {
         "target": "content.map",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1577,9 +1576,9 @@ PLANNED_JSON = {
     "profession": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1588,9 +1587,9 @@ PLANNED_JSON = {
     "vehicle": {
         "target": "content.vehicles",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1599,9 +1598,9 @@ PLANNED_JSON = {
     "vehicle_part": {
         "target": "content.vehicles",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1610,9 +1609,9 @@ PLANNED_JSON = {
     "vehicle_placement": {
         "target": "content.vehicles",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1621,9 +1620,9 @@ PLANNED_JSON = {
     "vehicle_spawn": {
         "target": "content.vehicles",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -1635,9 +1634,9 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "recipe": {
         "target": "content.recipes",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1645,10 +1644,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "practice": {
         "target": "content.recipes",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/recipe_dictionary.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1656,10 +1655,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "uncraft": {
         "target": "content.recipes",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/recipe_dictionary.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1667,10 +1666,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "tool_quality": {
         "target": "content.tool-qualities",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/requirements.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1678,11 +1677,11 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "technique": {
         "target": "content.martial-arts",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/martialarts.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1690,11 +1689,11 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "martial_art": {
         "target": "content.martial-arts",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/martialarts.cpp",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1702,12 +1701,12 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "trap": {
         "target": "content.map",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/trap.cpp",
             "src/trap.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1715,12 +1714,12 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "construction": {
         "target": "content.map",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/construction.cpp",
             "src/construction.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1728,12 +1727,12 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "furniture": {
         "target": "content.map",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/mapdata.cpp",
             "src/mapdata.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1741,12 +1740,12 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "terrain": {
         "target": "content.map",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/mapdata.cpp",
             "src/mapdata.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1754,12 +1753,12 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "fault": {
         "target": "content.faults",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/fault.cpp",
             "src/fault.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1767,12 +1766,12 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "fault_fix": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/fault.cpp",
             "src/fault.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1780,12 +1779,12 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "achievement": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/achievement.cpp",
             "src/achievement.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1793,12 +1792,12 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "conduct": {
         "target": "content.gameplay",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/achievement.cpp",
             "src/achievement.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1806,12 +1805,12 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "map_extra": {
         "target": "content.map",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/map_extras.cpp",
             "src/map_extras.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1819,12 +1818,12 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "weather_generator": {
         "target": "content.time-weather",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/weather_gen.cpp",
             "src/weather_gen.h",
-            "src/catalua_platform_content.h",
+            "src/catalua_content.h",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1832,10 +1831,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "vitamin": {
         "target": "content.vitamins",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/vitamin.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1843,10 +1842,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "json_flag": {
         "target": "content.flags",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/flag.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1854,10 +1853,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "damage_type": {
         "target": "content.damage-types",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/damage.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1865,10 +1864,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "material": {
         "target": "content.materials",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/material.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1876,10 +1875,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "ITEM_CATEGORY": {
         "target": "content.item-categories",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/item_category.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1887,10 +1886,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "proficiency": {
         "target": "content.proficiencies",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/proficiency.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1898,10 +1897,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "requirement": {
         "target": "content.requirements",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/requirements.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1909,10 +1908,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "recipe_group": {
         "target": "content.recipe-groups",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/recipe_groups.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1920,10 +1919,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "harvest": {
         "target": "content.harvest-lists",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/harvest.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1931,11 +1930,11 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "behavior": {
         "target": "content.behavior-trees",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/behavior.cpp",
             "src/behavior_oracle.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1943,10 +1942,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "monster_attack": {
         "target": "content.monster-attacks",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/monstergenerator.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1954,10 +1953,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "effect_type": {
         "target": "content.effect-types",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/effect.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1965,10 +1964,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "weakpoint_set": {
         "target": "content.weakpoint-sets",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/weakpoint.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1976,11 +1975,11 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "field_type": {
         "target": "content.field-types",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/field_type.cpp",
             "src/map_field.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -1988,11 +1987,11 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "item_group": {
         "target": "content.item-groups",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/item_factory.cpp",
             "src/item_group.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2000,10 +1999,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "body_part": {
         "target": "content.body-parts",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/bodypart.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2011,10 +2010,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "body_graph": {
         "target": "content.body-graphs",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/bodygraph.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2022,11 +2021,11 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "MONSTER": {
         "target": "content.monsters",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/monstergenerator.cpp",
             "src/mtype.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2034,10 +2033,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "morale_type": {
         "target": "content.morale-types",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/morale_types.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2045,10 +2044,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "MONSTER_FACTION": {
         "target": "content.monster-factions",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/monfaction.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2056,10 +2055,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "mutation_type": {
         "target": "content.mutation-types",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/mutation_type.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2067,10 +2066,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "mood_face": {
         "target": "content.mood-faces",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/mood_face.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2078,10 +2077,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "ascii_art": {
         "target": "content.ascii-art",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/ascii_art.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2089,10 +2088,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "clothing_mod": {
         "target": "content.clothing-modifications",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/clothing_mod.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2100,10 +2099,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "overmap_location": {
         "target": "content.overmap-locations",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/overmap_location.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2111,10 +2110,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "map_extra_collection": {
         "target": "content.map-extra-collections",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/regional_settings.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2122,10 +2121,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "explosion_light": {
         "target": "content.explosion-lights",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/explosion_light.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2133,11 +2132,11 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "ammo_effect": {
         "target": "content.ammunition-effects",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/ammo_effect.cpp",
             "src/projectile.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2145,10 +2144,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "addiction_type": {
         "target": "content.addiction-types",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/addiction.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2156,10 +2155,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "character_mod": {
         "target": "content.character-modifiers",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/character_modifier.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2167,10 +2166,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "start_location": {
         "target": "content.start-locations",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/start_location.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2178,10 +2177,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "climbing_aid": {
         "target": "content.climbing-aids",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/climbing.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2189,11 +2188,11 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "weather_type": {
         "target": "content.weather-types",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/weather_type.cpp",
             "src/weather_gen.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2201,10 +2200,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "score": {
         "target": "content.scores",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/event_statistics.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2212,10 +2211,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "LOOT_ZONE": {
         "target": "content.zone-types",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/clzones.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2223,10 +2222,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "end_screen": {
         "target": "content.end-screens",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/end_screen.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2234,11 +2233,11 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "snippet": {
         "target": "content.snippet-categories",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/text_snippets.cpp",
             "src/item_info.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2246,11 +2245,11 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "nested_category": {
         "target": "content.nested-recipe-categories",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/recipe.cpp",
             "src/recipe_dictionary.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2258,10 +2257,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "movement_mode": {
         "target": "content.movement-modes",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/move_mode.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2269,10 +2268,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "scenario": {
         "target": "content.scenarios",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/scenario.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2280,10 +2279,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "monstergroup": {
         "target": "content.monster-groups",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/mongroup.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
         ],
@@ -2291,10 +2290,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "wound": {
         "target": "content.wounds",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/wound.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -2303,10 +2302,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "wound_fix": {
         "target": "content.wound-fixes",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/wound.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -2322,10 +2321,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "mapgen": {
         "target": "services.mapgen.define",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/catalua_ui_mapgen.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -2334,10 +2333,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "mod_tileset": {
         "target": "services.tileset.register",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/mod_tileset.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -2346,10 +2345,10 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "palette": {
         "target": "services.mapgen.register_palette",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "src/catalua_ui_mapgen.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -2358,9 +2357,9 @@ BOUNDED_IMPLEMENTED_JSON.update({
     "talk_topic": {
         "target": "ccb.dialogue.register_topic",
         "evidence": [
-            "src/catalua_platform_runtime.cpp",
+            "src/catalua_runtime.cpp",
             "data/lua/types/ccb_platform_v1.d.lua",
-            "tests/catalua_ui_test.cpp",
+            "tests/catalua_platform_test.cpp",
             "tools/migrate_lua_first.py",
             "tools/test_migrate_lua_first.py",
             "data/lua/LUA_FIRST_PLATFORM.md",
@@ -2389,10 +2388,10 @@ NATIVE_PRIMITIVE_DOMAINS = {
 }
 
 NATIVE_PRIMITIVE_EVIDENCE = [
-    "src/catalua_platform_runtime.cpp",
+    "src/catalua_runtime.cpp",
     "src/catalua_game_handle.cpp",
     "data/lua/types/ccb_platform_v1.d.lua",
-    "tests/catalua_ui_test.cpp",
+    "tests/catalua_platform_test.cpp",
     "data/lua/LUA_FIRST_PLATFORM.md",
 ]
 
@@ -3077,9 +3076,9 @@ BOUNDED_IMPLEMENTED_EOC = {
 }
 
 BOUNDED_IMPLEMENTED_EOC_EVIDENCE = [
-    "src/catalua_platform_runtime.cpp",
+    "src/catalua_runtime.cpp",
     "data/lua/types/ccb_platform_v1.d.lua",
-    "tests/catalua_ui_test.cpp",
+    "tests/catalua_platform_test.cpp",
     "tools/migrate_lua_first.py",
     "tools/test_migrate_lua_first.py",
     "data/lua/LUA_FIRST_PLATFORM.md",
@@ -3152,7 +3151,7 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
     ("eoc-effects", "goto_location"): [
         "src/npctalk_funcs.cpp",
         "src/catalua_ui_npcs.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py",
         "tools/test_migrate_lua_first.py",
         "data/lua/LUA_FIRST_PLATFORM.md",
@@ -3161,7 +3160,7 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/timed_event.cpp", "src/catalua_ui_time.cpp",
     ],
     ("eoc-effects", "dimension_name"): [
-        "src/npctalk.cpp", "src/catalua_platform_runtime.cpp",
+        "src/npctalk.cpp", "src/catalua_runtime.cpp",
     ],
     ("eoc-effects", "mirror_coordinates"): [
         "src/npctalk.cpp", "src/catalua_bindings_values.cpp",
@@ -3175,13 +3174,13 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
     ],
     ("eoc-effects", "npc_teleport"): [
         "src/npctalk.cpp", "src/catalua_ui_world_services.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
         "data/lua/LUA_FIRST_PLATFORM.md",
     ],
     ("eoc-effects", "u_teleport"): [
         "src/npctalk.cpp", "src/catalua_ui_world_services.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
         "data/lua/LUA_FIRST_PLATFORM.md",
     ],
@@ -3189,32 +3188,32 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
     ("eoc-conditions", "u_is_alive"): [
         "src/condition.cpp",
         "src/catalua_ui_creatures.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "npc_is_alive"): [
         "src/condition.cpp",
         "src/catalua_ui_creatures.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "u_is_underwater"): [
         "src/condition.cpp",
         "src/catalua_ui_creatures.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "npc_is_underwater"): [
         "src/condition.cpp",
         "src/catalua_ui_creatures.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "u_has_part_temp"): [
         "src/condition.cpp",
         "src/catalua_ui_creatures.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "npc_has_part_temp"): [
         "src/condition.cpp",
         "src/catalua_ui_creatures.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "u_has_faction_trust"): [
         "src/condition.cpp",
@@ -3238,14 +3237,14 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
     ],
     ("eoc-conditions", "expects_vars"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py",
         "tools/test_migrate_lua_first.py",
     ],
     ("eoc-conditions", "math"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py",
         "tools/test_migrate_lua_first.py",
@@ -3254,71 +3253,71 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/npctalk.cpp",
         "src/bodypart.cpp",
         "src/wound.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py",
         "tools/test_migrate_lua_first.py",
-        "tests/catalua_ui_test.cpp",
+        "tests/catalua_platform_test.cpp",
     ],
     ("eoc-effects", "npc_remove_wound"): [
         "src/npctalk.cpp",
         "src/bodypart.cpp",
         "src/wound.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py",
         "tools/test_migrate_lua_first.py",
-        "tests/catalua_ui_test.cpp",
+        "tests/catalua_platform_test.cpp",
     ],
     ("eoc-effects", "u_add_wound"): [
         "src/npctalk.cpp",
         "src/bodypart.cpp",
         "src/wound.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py",
         "tools/test_migrate_lua_first.py",
-        "tests/catalua_ui_test.cpp",
+        "tests/catalua_platform_test.cpp",
     ],
     ("eoc-effects", "u_remove_wound"): [
         "src/npctalk.cpp",
         "src/bodypart.cpp",
         "src/wound.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py",
         "tools/test_migrate_lua_first.py",
-        "tests/catalua_ui_test.cpp",
+        "tests/catalua_platform_test.cpp",
     ],
     ("eoc-effects", "npc_add_var"): [
         "src/catalua_ui_eocs.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
         "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py",
         "tools/test_migrate_lua_first.py",
     ],
     ("eoc-effects", "u_add_var"): [
         "src/catalua_ui_eocs.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
         "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py",
         "tools/test_migrate_lua_first.py",
     ],
     ("eoc-effects", "math"): [
         "src/catalua_ui_eocs.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py",
         "tools/test_migrate_lua_first.py",
     ],
     ("eoc-effects", "copy_var"): [
         "src/catalua_ui_eocs.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py",
         "tools/test_migrate_lua_first.py",
     ],
     ("eoc-effects", "set_string_var"): [
         "src/catalua_ui_eocs.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py",
         "tools/test_migrate_lua_first.py",
     ],
@@ -3327,22 +3326,22 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/creature.cpp",
         "src/character_health.cpp",
         "src/catalua_ui_creatures.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
         "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py",
         "tools/test_migrate_lua_first.py",
-        "tests/catalua_ui_test.cpp",
+        "tests/catalua_platform_test.cpp",
     ],
     ("eoc-effects", "u_deal_damage"): [
         "src/npctalk.cpp",
         "src/creature.cpp",
         "src/character_health.cpp",
         "src/catalua_ui_creatures.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
         "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py",
         "tools/test_migrate_lua_first.py",
-        "tests/catalua_ui_test.cpp",
+        "tests/catalua_platform_test.cpp",
     ],
     ("eoc-effects", "assign_mission"): [
         "src/npctalk.cpp",
@@ -3351,20 +3350,20 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/npctalk.cpp",
         "src/talker_character.cpp",
         "src/catalua_ui_creatures.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
         "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py",
         "tools/test_migrate_lua_first.py",
-        "tests/catalua_ui_test.cpp",
+        "tests/catalua_platform_test.cpp",
     ],
     ("eoc-effects", "u_add_faction_trust"): [
         "src/npctalk.cpp",
         "src/catalua_ui_creatures.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
         "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py",
         "tools/test_migrate_lua_first.py",
-        "tests/catalua_ui_test.cpp",
+        "tests/catalua_platform_test.cpp",
     ],
     ("eoc-effects", "u_set_fac_relation"): [
         "src/catalua_ui_factions.cpp",
@@ -3378,22 +3377,22 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
     ("eoc-effects", "set_browsed"): [
         "src/npctalk.cpp",
         "src/catalua_ui_items.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "transform_item"): [
         "src/npctalk.cpp",
         "src/catalua_ui_items.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "npc_prevent_death"): [
         "src/npc.cpp",
         "src/catalua_ui.cpp",
-        "src/catalua_ui_callbacks.cpp",
+        "src/catalua_hook.cpp",
     ],
     ("eoc-effects", "u_prevent_death"): [
         "src/game.cpp",
         "src/catalua_ui.cpp",
-        "src/catalua_ui_callbacks.cpp",
+        "src/catalua_hook.cpp",
     ],
     ("eoc-conditions", "u_has_cash"): [
         "src/condition.cpp",
@@ -3412,13 +3411,13 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/condition.cpp",
         "src/catalua_ui_creatures.cpp",
         "src/profession.h",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "u_has_flag"): [
         "src/condition.cpp",
         "src/catalua_ui_creatures.cpp",
         "src/character.h",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "u_is_outside"): [
         "src/condition.cpp",
@@ -3426,23 +3425,23 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
     ],
     ("eoc-conditions", "map_furniture_with_flag"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
     ],
     ("eoc-conditions", "map_terrain_id"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
     ],
     ("eoc-conditions", "map_furniture_id"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
     ],
     ("eoc-conditions", "map_field_id"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
     ],
     ("eoc-conditions", "map_terrain_with_flag"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
     ],
     ("eoc-conditions", "map_in_city"): [
         "src/condition.cpp",
@@ -3450,47 +3449,47 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
     ],
     ("eoc-conditions", "map_is_outside"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
     ],
     ("eoc-conditions", "u_is_on_terrain"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
     ],
     ("eoc-conditions", "npc_is_on_terrain"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
     ],
     ("eoc-conditions", "u_is_on_furniture"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
     ],
     ("eoc-conditions", "npc_is_on_furniture"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
     ],
     ("eoc-conditions", "u_is_in_field"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
     ],
     ("eoc-conditions", "npc_is_in_field"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
     ],
     ("eoc-conditions", "u_is_on_terrain_with_flag"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
     ],
     ("eoc-conditions", "npc_is_on_terrain_with_flag"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
     ],
     ("eoc-conditions", "u_is_on_furniture_with_flag"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
     ],
     ("eoc-conditions", "npc_is_on_furniture_with_flag"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
     ],
     ("eoc-conditions", "u_is_falling"): [
         "src/condition.cpp",
@@ -3736,7 +3735,7 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
     ],
     ("eoc-conditions", "is_outside"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
     ],
     ("eoc-conditions", "has_assigned_mission"): [
         "src/condition.cpp",
@@ -3800,7 +3799,7 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
     ],
     ("eoc-conditions", "u_safe_mode_trigger"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
         "src/avatar.h",
     ],
     ("eoc-conditions", "u_has_part_flag"): [
@@ -3839,11 +3838,11 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
     ],
     ("eoc-conditions", "is_outside"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
     ],
     ("eoc-conditions", "npc_is_outside"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
     ],
     ("eoc-conditions", "u_male"): [
         "src/condition.cpp",
@@ -3873,25 +3872,25 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/condition.cpp",
         "src/catalua_ui_npcs.cpp",
         "src/npc.h",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "npc_engagement_rule"): [
         "src/condition.cpp",
         "src/catalua_ui_npcs.cpp",
         "src/npc.h",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "npc_cbm_reserve_rule"): [
         "src/condition.cpp",
         "src/catalua_ui_npcs.cpp",
         "src/npc.h",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "npc_cbm_recharge_rule"): [
         "src/condition.cpp",
         "src/catalua_ui_npcs.cpp",
         "src/npc.h",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "npc_is_travelling"): [
         "src/condition.cpp",
@@ -3902,27 +3901,27 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/condition.cpp",
         "src/catalua_ui_creatures.cpp",
         "src/catalua_ui_overmap.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "has_pickup_list"): [
         "src/condition.cpp",
         "src/catalua_ui_npcs.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "player_see_npc"): [
         "src/condition.cpp",
         "src/catalua_ui_creatures.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "npc_add_wet"): [
         "src/npctalk.cpp",
         "src/weather.cpp",
         "src/catalua_ui_creatures.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "npc_cancel_activity"): [
         "src/npctalk.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "is_day"): [
@@ -3934,13 +3933,13 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/condition.cpp",
         "src/calendar.cpp",
         "src/catalua_ui_game.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "is_weather"): [
         "src/condition.cpp",
         "src/catalua_ui_weather.cpp",
         "src/catalua_bindings_values.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
 
     ("eoc-conditions", "u_can_drop_weapon"): [
@@ -3948,29 +3947,29 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/melee.cpp",
         "src/catalua_ui_items.cpp",
         "src/catalua_ui_martial_arts.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "u_has_bionics"): [
         "src/condition.cpp",
         "src/catalua_ui_bionics.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "player_see_u"): [
         "src/condition.cpp",
         "src/catalua_ui_creatures.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "u_at_safe_space"): [
         "src/condition.cpp",
         "src/catalua_ui_creatures.cpp",
         "src/catalua_ui_overmap.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "u_has_pickup_list"): [
         "src/condition.cpp",
         "src/catalua_ui_npcs.cpp",
         "src/npctalk.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "u_is_travelling"): [
         "src/condition.cpp",
@@ -3984,80 +3983,80 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
     ("eoc-conditions", "u_has_item"): [
         "src/condition.cpp",
         "src/catalua_ui_items.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "u_is_wearing"): [
         "src/condition.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
         "src/character.h",
     ],
     ("eoc-conditions", "u_has_move_mode"): [
         "src/condition.cpp",
         "src/catalua_ui_creatures.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "u_has_weapon"): [
         "src/condition.cpp",
         "src/melee.cpp",
         "src/catalua_ui_items.cpp",
         "src/catalua_ui_martial_arts.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "u_has_wielded_with_flag"): [
         "src/condition.cpp",
         "src/talker_character.cpp",
         "src/catalua_ui_items.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "u_has_any_trait"): [
         "src/condition.cpp",
         "src/catalua_ui_mutations.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "u_has_martial_art"): [
         "src/condition.cpp",
         "src/catalua_ui_martial_arts.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "u_using_martial_art"): [
         "src/condition.cpp",
         "src/catalua_ui_martial_arts.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "u_has_proficiency"): [
         "src/condition.cpp",
         "src/catalua_ui_proficiencies.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "u_has_trait"): [
         "src/condition.cpp",
         "src/catalua_ui_mutations.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "u_know_recipe"): [
         "src/condition.cpp",
         "src/character_crafting.cpp",
         "src/catalua_ui_crafting.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "u_add_bionic"): [
         "src/bionics.cpp",
         "src/catalua_ui_bionics.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "npc_set_flag"): [
         "src/effect_on_condition.cpp",
         "src/event_bus.cpp",
         "src/npctalk.cpp",
         "src/catalua_ui_items.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "npc_unset_flag"): [
         "src/effect_on_condition.cpp",
         "src/event_bus.cpp",
         "src/npctalk.cpp",
         "src/catalua_ui_items.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "u_cancel_activity"): [
         "src/npctalk.cpp",
@@ -4068,44 +4067,44 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/npctalk.cpp",
         "src/creature.cpp",
         "src/catalua_ui_effects.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "u_lose_bionic"): [
         "src/bionics.cpp",
         "src/catalua_ui_bionics.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "u_lose_effect"): [
         "src/npctalk.cpp",
         "src/creature.cpp",
         "src/catalua_ui_effects.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "u_learn_recipe"): [
         "src/character_crafting.cpp",
         "src/catalua_ui_crafting.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "u_forget_recipe"): [
         "src/character_crafting.cpp",
         "src/catalua_ui_crafting.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "u_learn_martial_art"): [
         "src/character_martial_arts.cpp",
         "src/catalua_ui_martial_arts.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "u_add_wet"): [
         "src/npctalk.cpp",
         "src/weather.cpp",
         "src/catalua_ui_creatures.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "u_forget_martial_art"): [
         "src/character_martial_arts.cpp",
         "src/catalua_ui_martial_arts.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "u_add_morale"): [
         "src/npctalk.cpp",
@@ -4125,13 +4124,13 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/npctalk.cpp",
         "src/condition.cpp",
         "src/catalua_ui_eocs.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "npc_lose_var"): [
         "src/npctalk.cpp",
         "src/condition.cpp",
         "src/catalua_ui_eocs.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "u_message"): [
         "src/npctalk.cpp",
@@ -4143,61 +4142,61 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/npctalk.cpp",
         "src/talker_character.cpp",
         "src/catalua_ui_mutations.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "u_deactivate_trait"): [
         "src/npctalk.cpp",
         "src/talker_character.cpp",
         "src/catalua_ui_mutations.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "npc_activate_trait"): [
         "src/npctalk.cpp",
         "src/talker_character.cpp",
         "src/catalua_ui_mutations.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "npc_deactivate_trait"): [
         "src/npctalk.cpp",
         "src/talker_character.cpp",
         "src/catalua_ui_mutations.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "npc_mutate"): [
         "src/npctalk.cpp",
         "src/mutation.cpp",
         "src/catalua_ui_mutations.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "npc_mutate_category"): [
         "src/npctalk.cpp",
         "src/mutation.cpp",
         "src/catalua_ui_mutations.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "npc_mutate_towards"): [
         "src/npctalk.cpp",
         "src/mutation.cpp",
         "src/catalua_ui_mutations.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "u_mutate"): [
         "src/npctalk.cpp",
         "src/mutation.cpp",
         "src/catalua_ui_mutations.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "u_mutate_category"): [
         "src/npctalk.cpp",
         "src/mutation.cpp",
         "src/catalua_ui_mutations.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "u_mutate_towards"): [
         "src/npctalk.cpp",
         "src/mutation.cpp",
         "src/catalua_ui_mutations.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
 }
 
@@ -4233,45 +4232,45 @@ EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
         "src/npctalk.cpp",
         "src/talker_npc.cpp",
         "src/catalua_ui_npcs.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "npc_add_wet"): [
         "src/npctalk.cpp",
         "src/weather.cpp",
         "src/catalua_ui_creatures.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "npc_assign_activity"): [
         "src/npctalk.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "u_assign_activity"): [
         "src/npctalk.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "u_set_goal"): [
         "src/npctalk.cpp", "src/catalua_ui_npcs.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
         "data/lua/LUA_FIRST_PLATFORM.md",
     ],
     ("eoc-effects", "npc_set_goal"): [
         "src/npctalk.cpp", "src/catalua_ui_npcs.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
         "data/lua/LUA_FIRST_PLATFORM.md",
     ],
     ("eoc-effects", "u_set_guard_pos"): [
         "src/npctalk.cpp", "src/catalua_ui_npcs.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
         "data/lua/LUA_FIRST_PLATFORM.md",
     ],
     ("eoc-effects", "npc_set_guard_pos"): [
         "src/npctalk.cpp", "src/catalua_ui_npcs.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
         "data/lua/LUA_FIRST_PLATFORM.md",
     ],
@@ -4279,52 +4278,52 @@ EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
         "src/condition.cpp",
         "src/catalua_ui_creatures.cpp",
         "src/catalua_ui_overmap.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "npc_at_safe_space"): [
         "src/condition.cpp",
         "src/catalua_ui_creatures.cpp",
         "src/catalua_ui_overmap.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "follower_present"): [
         "src/catalua_ui_game_info.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "has_alpha"): [
         "src/condition.cpp",
         "src/catalua_ui.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "has_beta"): [
         "src/condition.cpp",
         "src/catalua_ui.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "has_pickup_list"): [
         "src/condition.cpp",
         "src/catalua_ui_npcs.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "has_reason"): [
         "src/condition.cpp",
         "src/catalua_ui.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "is_by_radio"): [
         "src/condition.cpp",
         "src/catalua_ui.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "is_rotten"): [
         "src/condition.cpp",
         "src/catalua_ui_items.cpp",
         "src/item.h",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "npc_is_travelling"): [
         "src/condition.cpp",
@@ -4334,53 +4333,53 @@ EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
     ("eoc-conditions", "player_see_npc"): [
         "src/condition.cpp",
         "src/catalua_ui_creatures.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "npc_can_drop_weapon"): [
         "src/melee.cpp", "src/catalua_ui_items.cpp",
-        "src/catalua_ui_martial_arts.cpp", "data/lua/types/ccb_api_v5.d.lua",
+        "src/catalua_ui_martial_arts.cpp", "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "npc_has_activity"): [
         "src/condition.cpp", "src/player_activity.cpp",
     ],
     ("eoc-conditions", "npc_has_item"): [
         "src/condition.cpp", "src/catalua_ui_items.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "npc_has_move_mode"): [
         "src/condition.cpp", "src/catalua_ui_creatures.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "npc_has_weapon"): [
         "src/melee.cpp", "src/catalua_ui_items.cpp",
-        "src/catalua_ui_martial_arts.cpp", "data/lua/types/ccb_api_v5.d.lua",
+        "src/catalua_ui_martial_arts.cpp", "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "npc_has_wielded_with_flag"): [
         "src/talker_character.cpp", "src/catalua_ui_items.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "assign_mission"): [
         "src/npctalk.cpp", "src/catalua_ui_missions.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "follow"): [
         "src/catalua_ui_game_info.cpp",
         "src/catalua_ui_npcs.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "give_aid"): [
         "src/catalua_ui_creatures.cpp",
         "src/catalua_ui_effects.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "give_equipment"): [
         "src/catalua_ui_items.cpp",
         "src/catalua_ui_interaction.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "map_spawn_item"): [
         "src/npctalk.cpp", "src/catalua_ui_world.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "npc_cancel_activity"): [
         "src/npctalk.cpp", "src/character.cpp", "src/player_activity.cpp",
@@ -4389,58 +4388,58 @@ EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
         "src/npctalk.cpp",
         "src/talker_character.cpp",
         "src/catalua_ui_factions.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "u_set_fac_relation"): [
         "src/npctalk.cpp",
         "src/talker_character.cpp",
         "src/catalua_ui_creatures.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "lightning"): [
         "src/npctalk.cpp",
         "src/catalua_ui_weather.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "next_weather"): [
         "src/npctalk.cpp",
         "src/catalua_ui_weather.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "sample_range"): [
         "src/npctalk.cpp",
-        "src/catalua_platform_runtime.cpp",
+        "src/catalua_runtime.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "npc_set_fault"): [
         "src/npctalk.cpp",
         "src/catalua_ui_items.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "npc_set_random_fault_of_type"): [
         "src/npctalk.cpp",
         "src/catalua_ui_items.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "u_add_faction_trust"): [
         "src/npctalk.cpp",
         "src/talker_character.cpp",
         "src/catalua_ui_factions.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "u_set_flag"): [
         "src/npctalk.cpp", "src/catalua_ui_items.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "u_set_fac_relation"): [
         "src/npctalk.cpp",
         "src/talker_character.cpp",
         "src/catalua_ui_factions.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "u_unset_flag"): [
         "src/npctalk.cpp", "src/catalua_ui_items.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
 }
 
@@ -4495,18 +4494,18 @@ EXPLICIT_PLANNED_EOC_EXTRA_EVIDENCE = {
     ],
     ("eoc-effects", "u_pick_bodypart"): [
         "src/npctalk.cpp", "src/catalua_ui_creatures.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
     ],
     ("eoc-effects", "npc_pick_bodypart"): [
         "src/npctalk.cpp", "src/catalua_ui_creatures.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
     ],
     ("eoc-effects", "u_travel_to_dimension"): [
         "src/npctalk.cpp", "src/game.cpp",
         "src/catalua_ui_world_services.cpp",
-        "data/lua/types/ccb_api_v5.d.lua",
+        "data/lua/types/ccb_platform_v1.d.lua",
         "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
     ],
     ("eoc-effects", "u_activate"): [
@@ -4748,7 +4747,7 @@ def build_ledger() -> dict:
             "Primitive-available entries have native composition building "
             "blocks but are not claims of selector-level parity. "
             "Verified entries additionally pass the migrated-core semantic "
-            "parity gate in tests/catalua_ui_test.cpp field-for-field "
+            "parity gate in tests/catalua_platform_test.cpp field-for-field "
             "against the legacy JSON-loaded objects."
         ),
         "sources": sources,

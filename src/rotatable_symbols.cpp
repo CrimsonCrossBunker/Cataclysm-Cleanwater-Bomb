@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "catacharset.h"
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "string_formatter.h"
@@ -33,8 +33,8 @@ std::vector<rotatable_symbol> symbols;
 
 } // anonymous namespace
 
-std::vector<cata::lua_platform::detail::rotatable_symbol_native_entry>
-cata::lua_platform::detail::rotatable_symbol_registry_snapshot()
+std::vector<cata::lua::detail::rotatable_symbol_native_entry>
+cata::lua::detail::rotatable_symbol_registry_snapshot()
 {
     std::vector<rotatable_symbol_native_entry> result;
     result.reserve( symbols.size() );
@@ -44,7 +44,7 @@ cata::lua_platform::detail::rotatable_symbol_registry_snapshot()
     return result;
 }
 
-std::vector<std::uint32_t> cata::lua_platform::detail::rotatable_symbol_registry_group(
+std::vector<std::uint32_t> cata::lua::detail::rotatable_symbol_registry_group(
     const std::uint32_t symbol )
 {
     const auto found = std::lower_bound( symbols.begin(), symbols.end(), symbol );
@@ -58,7 +58,7 @@ std::vector<std::uint32_t> cata::lua_platform::detail::rotatable_symbol_registry
     return result;
 }
 
-void cata::lua_platform::detail::rotatable_symbol_registry_set(
+void cata::lua::detail::rotatable_symbol_registry_set(
     const std::vector<std::uint32_t> &tuple )
 {
     rotatable_symbol temporary;
@@ -80,7 +80,7 @@ void cata::lua_platform::detail::rotatable_symbol_registry_set(
     }
 }
 
-void cata::lua_platform::detail::rotatable_symbol_registry_restore(
+void cata::lua::detail::rotatable_symbol_registry_restore(
     const std::vector<rotatable_symbol_native_entry> &snapshot )
 {
     symbols.clear();

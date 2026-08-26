@@ -547,9 +547,6 @@ void DynamicDataLoader::load_data_from_path( const cata_path &path, const std::s
 
     // iterate over each file
     for( const cata_path &file : files ) {
-        if( file == path / "lua" / "manifest.json" ) {
-            continue;
-        }
         scoped_debug_error_source error_source( get_mod_error_source( src ) );
         try {
             // parse it
@@ -586,9 +583,6 @@ void DynamicDataLoader::load_mod_data_from_path( const cata_path &path, const st
 
     // iterate over each file
     for( const cata_path &file : files ) {
-        if( file == path / "lua" / "manifest.json" ) {
-            continue;
-        }
         scoped_debug_error_source error_source( get_mod_error_source( src ) );
         try {
             // parse it

@@ -68,7 +68,7 @@ TEST_CASE( "bundled_lua_ui_profile_loads_from_the_data_directory",
 #endif
 }
 
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 TEST_CASE( "all_bundled_lua_ui_profiles_are_valid", "[ui][profile][integration]" )
 {
     namespace fs = std::filesystem;

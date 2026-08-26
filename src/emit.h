@@ -12,10 +12,10 @@
 class JsonObject;
 struct const_dialogue;
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 class content_transaction;
-} // namespace cata::lua_platform
+} // namespace cata::lua
 
 class emit
 {
@@ -94,7 +94,7 @@ class emit
         dbl_or_var chance_;
         std::optional<native_profile> native_profile_;
 
-        friend class cata::lua_platform::content_transaction;
+        friend class cata::lua::content_transaction;
 };
 
 #endif // CATA_SRC_EMIT_H

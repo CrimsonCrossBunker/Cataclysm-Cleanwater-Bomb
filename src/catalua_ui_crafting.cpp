@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_crafting.h"
 
@@ -17,7 +17,6 @@
 #include "avatar.h"
 #include "catalua_bindings_values.h"
 #include "catalua_game_handle.h"
-#include "catalua_ui_actions_internal.h"
 #include "character.h"
 #include "crafting_gui.h"
 #include "creature.h"
@@ -29,7 +28,7 @@
 #include "requirements.h"
 #include "type_id.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -104,7 +103,7 @@ sol::table recipe_known_result(
     const std::size_t world_generation )
 {
     require_id(
-        requested_id, "recipe", "game.recipes.knows" );
+        requested_id, "recipe", "services.recipes.knows" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -129,7 +128,7 @@ sol::table learn_recipe_result(
     const std::size_t world_generation )
 {
     require_id(
-        requested_id, "recipe", "game.recipes.learn" );
+        requested_id, "recipe", "services.recipes.learn" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -166,7 +165,7 @@ sol::table forget_recipe_result(
     const std::size_t world_generation )
 {
     require_id(
-        requested_id, "recipe", "game.recipes.forget" );
+        requested_id, "recipe", "services.recipes.forget" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -199,13 +198,13 @@ sol::table forget_recipe_category_result(
 {
     require_id(
         requested_category, "crafting_category",
-        "game.recipes.forget_category" );
+        "services.recipes.forget_category" );
     const std::string subcategory =
         requested_subcategory.value_or( std::string() );
     if( subcategory.size() > 256 ||
         subcategory.find( '\0' ) != std::string::npos ) {
         throw std::invalid_argument(
-            "game.recipes.forget_category subcategory cannot exceed "
+            "services.recipes.forget_category subcategory cannot exceed "
             "256 non-NUL bytes" );
     }
     sol::state_view state( lua );
@@ -675,10 +674,10 @@ sol::table get_recipe(
     sol::this_state lua, const script_game_id &id,
     const int batch )
 {
-    require_id( id, "recipe", "game.recipes.get" );
+    require_id( id, "recipe", "services.recipes.get" );
     if( batch < 1 || batch > maximum_recipe_batch ) {
         throw std::invalid_argument(
-            "game.recipes.get batch must be within 1..1000" );
+            "services.recipes.get batch must be within 1..1000" );
     }
     const recipe &value = recipe_id( id.value() ).obj();
     avatar &player = get_avatar();
@@ -952,12 +951,12 @@ sol::object get_requirement(
     if( id_text.empty() || id_text.size() > 256 ||
         id_text.find( '\0' ) != std::string::npos ) {
         throw std::invalid_argument(
-            "game.requirements.get id must contain "
+            "services.requirements.get id must contain "
             "1 to 256 non-NUL bytes" );
     }
     if( batch < 1 || batch > maximum_recipe_batch ) {
         throw std::invalid_argument(
-            "game.requirements.get batch must be within 1..1000" );
+            "services.requirements.get batch must be within 1..1000" );
     }
     sol::state_view state( lua );
     const requirement_id id( id_text );
@@ -982,10 +981,10 @@ sol::table requirements_for_recipe(
     const int batch )
 {
     require_id(
-        id, "recipe", "game.requirements.for_recipe" );
+        id, "recipe", "services.requirements.for_recipe" );
     if( batch < 1 || batch > maximum_recipe_batch ) {
         throw std::invalid_argument(
-            "game.requirements.for_recipe batch must be "
+            "services.requirements.for_recipe batch must be "
             "within 1..1000" );
     }
     sol::state_view state( lua );
@@ -1069,49 +1068,6 @@ sol::table requirement_limits( sol::this_state lua )
     return result;
 }
 
-struct craft_action_options {
-    int batch = 1;
-    bool long_craft = false;
-};
-
-craft_action_options read_craft_action_options(
-    const sol::optional<sol::table> &requested )
-{
-    craft_action_options result;
-    if( !requested ) {
-        return result;
-    }
-    for( const auto &entry : *requested ) {
-        const sol::object key_object = entry.first;
-        if( key_object.get_type() != sol::type::string ) {
-            throw std::invalid_argument(
-                "game.crafting.queue_start option keys "
-                "must be strings" );
-        }
-        const std::string key = key_object.as<std::string>();
-        if( key == "batch" ) {
-            result.batch = require_integer(
-                               entry.second,
-                               "game.crafting.queue_start", key );
-            if( result.batch < 1 ||
-                result.batch > maximum_recipe_batch ) {
-                throw std::invalid_argument(
-                    "game.crafting.queue_start option 'batch' "
-                    "must be within 1..1000" );
-            }
-        } else if( key == "long" ) {
-            result.long_craft = require_boolean(
-                                    entry.second,
-                                    "game.crafting.queue_start", key );
-        } else {
-            throw std::invalid_argument(
-                "game.crafting.queue_start received unknown "
-                "option '" + key + "'" );
-        }
-    }
-    return result;
-}
-
 } // namespace
 
 void install_crafting_api(
@@ -1119,9 +1075,7 @@ void install_crafting_api(
     std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> world_generation,
     std::function<void()> require_read,
-    std::function<void()> require_write,
-    std::function<bool()> can_mutate,
-    std::function<std::string()> source_id )
+    std::function<void()> require_write )
 {
     sol::state_view state( game.lua_state() );
     sol::table recipes = state.create_table();
@@ -1139,7 +1093,7 @@ void install_crafting_api(
         require_read();
         return recipe_page(
                    lua, read_recipe_options(
-                       options, "game.recipes.list" ) );
+                       options, "services.recipes.list" ) );
     } );
     recipes.set_function(
         "all",
@@ -1149,7 +1103,7 @@ void install_crafting_api(
         require_read();
         return recipe_page(
                    lua, read_recipe_options(
-                       options, "game.recipes.all" ) );
+                       options, "services.recipes.all" ) );
     } );
     recipes.set_function(
         "by_skill",
@@ -1158,9 +1112,9 @@ void install_crafting_api(
     const sol::optional<sol::table> &options ) {
         require_read();
         require_id(
-            skill, "skill", "game.recipes.by_skill" );
+            skill, "skill", "services.recipes.by_skill" );
         recipe_options parsed = read_recipe_options(
-                                    options, "game.recipes.by_skill" );
+                                    options, "services.recipes.by_skill" );
         parsed.skill = skill;
         return recipe_page( lua, parsed );
     } );
@@ -1174,11 +1128,11 @@ void install_crafting_api(
             flag.size() > maximum_filter_bytes ||
             flag.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
-                "game.recipes.by_flag flag must contain "
+                "services.recipes.by_flag flag must contain "
                 "1 to 128 non-NUL bytes" );
         }
         recipe_options parsed = read_recipe_options(
-                                    options, "game.recipes.by_flag" );
+                                    options, "services.recipes.by_flag" );
         parsed.flag = flag;
         return recipe_page( lua, parsed );
     } );
@@ -1198,12 +1152,12 @@ void install_crafting_api(
     const std::string & flag ) {
         require_read();
         require_id(
-            id, "recipe", "game.recipes.has_flag" );
+            id, "recipe", "services.recipes.has_flag" );
         if( flag.empty() ||
             flag.size() > maximum_filter_bytes ||
             flag.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
-                "game.recipes.has_flag flag must contain "
+                "services.recipes.has_flag flag must contain "
                 "1 to 128 non-NUL bytes" );
         }
         return recipe_id( id.value() )->has_flag( flag );
@@ -1280,7 +1234,7 @@ void install_crafting_api(
         require_read();
         return requirement_page(
                    lua, read_requirement_options(
-                       options, "game.requirements.list" ) );
+                       options, "services.requirements.list" ) );
     } );
     requirements.set_function(
         "get",
@@ -1302,29 +1256,8 @@ void install_crafting_api(
     } );
     game["requirements"] = std::move( requirements );
 
-    sol::table crafting = state.create_table();
-    crafting.set_function(
-        "queue_start",
-        [require_write, can_mutate, source_id](
-            const script_game_id & id,
-    const sol::optional<sol::table> &options ) {
-        require_write();
-        if( !can_mutate() ) {
-            throw std::runtime_error(
-                "game.crafting.queue_start is only available "
-                "from an active callback" );
-        }
-        require_id(
-            id, "recipe", "game.crafting.queue_start" );
-        const craft_action_options parsed =
-            read_craft_action_options( options );
-        return enqueue_craft_action(
-                   id.value(), parsed.batch,
-                   parsed.long_craft, source_id() );
-    } );
-    game["crafting"] = std::move( crafting );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

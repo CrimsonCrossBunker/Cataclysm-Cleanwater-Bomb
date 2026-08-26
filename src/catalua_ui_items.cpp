@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_items.h"
 
@@ -51,7 +51,7 @@
 #include "type_id.h"
 #include "units.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -155,28 +155,28 @@ inventory_query_options read_inventory_options(
         const sol::object key_object = entry.first;
         if( key_object.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.inventory.list option keys must be strings" );
+                "services.inventory.list option keys must be strings" );
         }
         const std::string key = key_object.as<std::string>();
         const sol::object value = entry.second;
         if( key == "offset" ) {
             const std::int64_t offset = integer_option(
                                             value, key,
-                                            "game.inventory.list" );
+                                            "services.inventory.list" );
             if( offset < 0 ||
                 static_cast<std::uint64_t>( offset ) >
                 std::numeric_limits<std::size_t>::max() ) {
                 throw std::invalid_argument(
-                    "game.inventory.list offset is outside its limit" );
+                    "services.inventory.list offset is outside its limit" );
             }
             result.offset = static_cast<std::size_t>( offset );
         } else if( key == "limit" ) {
             const std::int64_t limit = integer_option(
                                            value, key,
-                                           "game.inventory.list" );
+                                           "services.inventory.list" );
             if( limit < 0 ) {
                 throw std::invalid_argument(
-                    "game.inventory.list limit cannot be negative" );
+                    "services.inventory.list limit cannot be negative" );
             }
             result.limit = static_cast<int>(
                                std::min<std::int64_t>(
@@ -184,38 +184,38 @@ inventory_query_options read_inventory_options(
         } else if( key == "max_depth" ) {
             const std::int64_t depth = integer_option(
                                            value, key,
-                                           "game.inventory.list" );
+                                           "services.inventory.list" );
             if( depth < 0 ||
                 depth > std::numeric_limits<int>::max() ) {
                 throw std::invalid_argument(
-                    "game.inventory.list max_depth is outside its native range" );
+                    "services.inventory.list max_depth is outside its native range" );
             }
             result.max_depth = static_cast<int>( depth );
         } else if( key == "recursive" ) {
             result.recursive = boolean_option(
                                    value, key,
-                                   "game.inventory.list" );
+                                   "services.inventory.list" );
         } else if( key == "include_wielded" ) {
             result.include_wielded = boolean_option(
                                          value, key,
-                                         "game.inventory.list" );
+                                         "services.inventory.list" );
         } else if( key == "include_worn" ) {
             result.include_worn = boolean_option(
                                       value, key,
-                                      "game.inventory.list" );
+                                      "services.inventory.list" );
         } else if( key == "include_carried" ) {
             result.include_carried = boolean_option(
                                          value, key,
-                                         "game.inventory.list" );
+                                         "services.inventory.list" );
         } else if( key == "context" ) {
             if( value.get_type() != sol::type::table ) {
                 throw std::invalid_argument(
-                    "game.inventory.list option 'context' must be a table" );
+                    "services.inventory.list option 'context' must be a table" );
             }
             result.context = value.as<sol::table>();
         } else {
             throw std::invalid_argument(
-                "game.inventory.list received unknown option '" +
+                "services.inventory.list received unknown option '" +
                 key + "'" );
         }
     }
@@ -911,16 +911,16 @@ sol::table filter_inventory(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    constexpr std::string_view api_name = "game.inventory.filter";
+    constexpr std::string_view api_name = "services.inventory.filter";
     const inventory_query_options options = read_inventory_options( requested );
     const std::size_t descriptor_count = require_dense_lua_array(
-            descriptors, "game.inventory.filter descriptors", 0, 128 );
+            descriptors, "services.inventory.filter descriptors", 0, 128 );
     std::vector<inventory_filter_descriptor> filters;
     filters.reserve( descriptor_count );
     for( std::size_t index = 1; index <= descriptor_count; ++index ) {
         const sol::object value = descriptors.raw_get<sol::object>( index );
         if( !value.is<sol::table>() ) {
-            throw std::invalid_argument( "game.inventory.filter descriptors must be tables" );
+            throw std::invalid_argument( "services.inventory.filter descriptors must be tables" );
         }
         filters.push_back( parse_inventory_filter( value.as<sol::table>(),
                            std::string( api_name ) ) );
@@ -982,7 +982,7 @@ sol::table find_inventory_item(
 {
     if( uid <= 0 ) {
         throw std::invalid_argument(
-            "game.inventory.find uid must be positive" );
+            "services.inventory.find uid must be positive" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1026,7 +1026,7 @@ int item_relation_limit(
         requested.value_or( default_item_relation_limit );
     if( result < 0 ) {
         throw std::invalid_argument(
-            "game.items.snapshot relation_limit cannot be negative" );
+            "services.items.snapshot relation_limit cannot be negative" );
     }
     return std::min( result, maximum_item_relation_limit );
 }
@@ -1407,35 +1407,35 @@ pocket_query_options read_pocket_options(
         const sol::object key_object = entry.first;
         if( key_object.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.items.pockets option keys must be strings" );
+                "services.items.pockets option keys must be strings" );
         }
         const std::string key = key_object.as<std::string>();
         const sol::object value = entry.second;
         if( key == "offset" ) {
             const std::int64_t offset = integer_option(
                                             value, key,
-                                            "game.items.pockets" );
+                                            "services.items.pockets" );
             if( offset < 0 ||
                 static_cast<std::uint64_t>( offset ) >
                 maximum_contents_offset ) {
                 throw std::invalid_argument(
-                    "game.items.pockets offset is outside its limit" );
+                    "services.items.pockets offset is outside its limit" );
             }
             result.offset = static_cast<std::size_t>( offset );
         } else if( key == "limit" ) {
             const std::int64_t limit = integer_option(
                                            value, key,
-                                           "game.items.pockets" );
+                                           "services.items.pockets" );
             if( limit < 0 ) {
                 throw std::invalid_argument(
-                    "game.items.pockets limit cannot be negative" );
+                    "services.items.pockets limit cannot be negative" );
             }
             result.limit = static_cast<int>(
                                std::min<std::int64_t>(
                                    limit, maximum_pocket_limit ) );
         } else {
             throw std::invalid_argument(
-                "game.items.pockets received unknown option '" +
+                "services.items.pockets received unknown option '" +
                 key + "'" );
         }
     }
@@ -1574,28 +1574,28 @@ contents_query_options read_contents_options(
         const sol::object key_object = entry.first;
         if( key_object.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.items.contents option keys must be strings" );
+                "services.items.contents option keys must be strings" );
         }
         const std::string key = key_object.as<std::string>();
         const sol::object value = entry.second;
         if( key == "offset" ) {
             const std::int64_t offset = integer_option(
                                             value, key,
-                                            "game.items.contents" );
+                                            "services.items.contents" );
             if( offset < 0 ||
                 static_cast<std::uint64_t>( offset ) >
                 std::numeric_limits<std::size_t>::max() ) {
                 throw std::invalid_argument(
-                    "game.items.contents offset is outside its limit" );
+                    "services.items.contents offset is outside its limit" );
             }
             result.offset = static_cast<std::size_t>( offset );
         } else if( key == "limit" ) {
             const std::int64_t limit = integer_option(
                                            value, key,
-                                           "game.items.contents" );
+                                           "services.items.contents" );
             if( limit < 0 ) {
                 throw std::invalid_argument(
-                    "game.items.contents limit cannot be negative" );
+                    "services.items.contents limit cannot be negative" );
             }
             result.limit = static_cast<int>(
                                std::min<std::int64_t>(
@@ -1603,20 +1603,20 @@ contents_query_options read_contents_options(
         } else if( key == "max_depth" ) {
             const std::int64_t depth = integer_option(
                                            value, key,
-                                           "game.items.contents" );
+                                           "services.items.contents" );
             if( depth < 0 ||
                 depth > std::numeric_limits<int>::max() ) {
                 throw std::invalid_argument(
-                    "game.items.contents max_depth is outside its native range" );
+                    "services.items.contents max_depth is outside its native range" );
             }
             result.max_depth = static_cast<int>( depth );
         } else if( key == "recursive" ) {
             result.recursive = boolean_option(
                                    value, key,
-                                   "game.items.contents" );
+                                   "services.items.contents" );
         } else {
             throw std::invalid_argument(
-                "game.items.contents received unknown option '" +
+                "services.items.contents received unknown option '" +
                 key + "'" );
         }
     }
@@ -1826,7 +1826,7 @@ void require_id_kind(
 int item_type_food_fun( const script_game_id &requested_id )
 {
     require_id_kind(
-        requested_id, "item", "game.items.food_fun" );
+        requested_id, "item", "services.items.food_fun" );
     const itype_id id( requested_id.value() );
     return id->comestible ? id->comestible->get_fun() : 0;
 }
@@ -1835,7 +1835,7 @@ sol::table possible_items_from_group(
     sol::this_state lua, const script_game_id &requested_group )
 {
     constexpr std::string_view api_name =
-        "game.items.possible_from_group";
+        "services.items.possible_from_group";
     require_id_kind(
         requested_group, "item_group", std::string( api_name ) );
     std::vector<std::string> ids;
@@ -1882,109 +1882,109 @@ item_updates read_item_updates(
         const sol::object key_object = field.first;
         if( key_object.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.items.update field names must be strings" );
+                "services.items.update field names must be strings" );
         }
         const std::string key = key_object.as<std::string>();
         const sol::object value = field.second;
         if( key == "charges" ) {
             const std::int64_t charges = integer_option(
                                              value, key,
-                                             "game.items.update" );
+                                             "services.items.update" );
             if( charges < 0 ||
                 charges > maximum_item_charges ) {
                 throw std::invalid_argument(
-                    "game.items.update charges is outside its limit" );
+                    "services.items.update charges is outside its limit" );
             }
             if( !entry.type->can_have_charges() ) {
                 throw std::invalid_argument(
-                    "game.items.update cannot set charges on this item type" );
+                    "services.items.update cannot set charges on this item type" );
             }
             result.charges = static_cast<int>( charges );
         } else if( key == "damage" ) {
             const std::int64_t damage = integer_option(
                                             value, key,
-                                            "game.items.update" );
+                                            "services.items.update" );
             if( damage < 0 ||
                 damage > entry.max_damage() ) {
                 throw std::invalid_argument(
-                    "game.items.update damage is outside this item's range" );
+                    "services.items.update damage is outside this item's range" );
             }
             result.damage = static_cast<int>( damage );
         } else if( key == "degradation" ) {
             const std::int64_t degradation = integer_option(
-                    value, key, "game.items.update" );
+                    value, key, "services.items.update" );
             if( degradation < 0 ||
                 degradation > entry.max_damage() ) {
                 throw std::invalid_argument(
-                    "game.items.update degradation is outside this item's range" );
+                    "services.items.update degradation is outside this item's range" );
             }
             result.degradation = static_cast<int>( degradation );
         } else if( key == "burnt" ) {
             const std::int64_t burnt = integer_option(
                                            value, key,
-                                           "game.items.update" );
+                                           "services.items.update" );
             if( burnt < 0 || burnt > maximum_item_burnt ) {
                 throw std::invalid_argument(
-                    "game.items.update burnt is outside its limit" );
+                    "services.items.update burnt is outside its limit" );
             }
             if( entry.base_volume() <= 0_ml ) {
                 throw std::invalid_argument(
-                    "game.items.update cannot set burnt on a zero-volume item" );
+                    "services.items.update cannot set burnt on a zero-volume item" );
             }
             result.burnt = static_cast<int>( burnt );
         } else if( key == "favorite" ) {
             result.favorite = boolean_option(
                                   value, key,
-                                  "game.items.update" );
+                                  "services.items.update" );
         } else if( key == "active" ) {
             result.active = boolean_option(
                                 value, key,
-                                "game.items.update" );
+                                "services.items.update" );
         } else if( key == "browsed" ) {
             result.browsed = boolean_option(
                                  value, key,
-                                 "game.items.update" );
+                                 "services.items.update" );
         } else if( key == "relative_rot" ) {
             if( !value.is<double>() && !value.is<lua_Integer>() ) {
                 throw std::invalid_argument(
-                    "game.items.update relative_rot must be numeric" );
+                    "services.items.update relative_rot must be numeric" );
             }
             const double relative_rot = value.as<double>();
             if( !std::isfinite( relative_rot ) ||
                 relative_rot < -maximum_item_relative_rot ||
                 relative_rot > maximum_item_relative_rot ) {
                 throw std::invalid_argument(
-                    "game.items.update relative_rot must be finite and within its limit" );
+                    "services.items.update relative_rot must be finite and within its limit" );
             }
             if( !entry.goes_bad() ) {
                 throw std::invalid_argument(
-                    "game.items.update cannot set relative_rot on an item that does not rot" );
+                    "services.items.update cannot set relative_rot on an item that does not rot" );
             }
             result.relative_rot = relative_rot;
         } else if( key == "rot" ) {
             if( !value.is<script_time_duration>() ) {
                 throw std::invalid_argument(
-                    "game.items.update rot must be a TimeDuration" );
+                    "services.items.update rot must be a TimeDuration" );
             }
             if( !entry.goes_bad() ) {
                 throw std::invalid_argument(
-                    "game.items.update cannot set rot on an item that does not rot" );
+                    "services.items.update cannot set rot on an item that does not rot" );
             }
             result.rot = value.as<script_time_duration>().to_native();
         } else {
             throw std::invalid_argument(
-                "game.items.update received unknown field '" +
+                "services.items.update received unknown field '" +
                 key + "'" );
         }
         found = true;
     }
     if( !found ) {
         throw std::invalid_argument(
-            "game.items.update requires at least one field" );
+            "services.items.update requires at least one field" );
     }
     if( result.rot && result.relative_rot ) {
         throw std::invalid_argument(
-            "game.items.update cannot set rot and relative_rot together" );
+            "services.items.update cannot set rot and relative_rot together" );
     }
     return result;
 }
@@ -2086,7 +2086,7 @@ sol::table item_melee_damage(
 {
     const std::optional<damage_type_id> selected_damage_type =
         optional_damage_type(
-            requested_damage_type, "game.items.melee_damage" );
+            requested_damage_type, "services.items.melee_damage" );
     sol::state_view state( lua );
     const native_handle_result<item> resolved =
         handle.resolve_item(
@@ -2116,7 +2116,7 @@ sol::table item_gun_damage(
 {
     const std::optional<damage_type_id> selected_damage_type =
         optional_damage_type(
-            requested_damage_type, "game.items.gun_damage" );
+            requested_damage_type, "services.items.gun_damage" );
     sol::state_view state( lua );
     const native_handle_result<item> resolved =
         handle.resolve_item(
@@ -2143,7 +2143,7 @@ sol::table item_quality(
     const std::size_t world_generation )
 {
     require_id_kind(
-        requested_quality, "quality", "game.items.quality" );
+        requested_quality, "quality", "services.items.quality" );
     sol::state_view state( lua );
     const native_handle_result<item> resolved =
         handle.resolve_item(
@@ -2176,27 +2176,27 @@ item_transform_options read_item_transform_options(
         const sol::object key_object = field.first;
         if( key_object.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.items.transform option names must be strings" );
+                "services.items.transform option names must be strings" );
         }
         const std::string key = key_object.as<std::string>();
         const sol::object value = field.second;
         if( key == "carrier" ) {
             if( !value.is<game_handle>() ) {
                 throw std::invalid_argument(
-                    "game.items.transform option 'carrier' must be a GameHandle" );
+                    "services.items.transform option 'carrier' must be a GameHandle" );
             }
             result.carrier = value.as<game_handle>();
         } else if( key == "active" ) {
             result.active = boolean_option(
                                 value, key,
-                                "game.items.transform" );
+                                "services.items.transform" );
         } else if( key == "browsed" ) {
             result.browsed = boolean_option(
                                  value, key,
-                                 "game.items.transform" );
+                                 "services.items.transform" );
         } else {
             throw std::invalid_argument(
-                "game.items.transform received unknown option '" +
+                "services.items.transform received unknown option '" +
                 key + "'" );
         }
     }
@@ -2211,7 +2211,7 @@ sol::table transform_item(
     const std::size_t world_generation )
 {
     require_id_kind(
-        target, "item", "game.items.transform" );
+        target, "item", "services.items.transform" );
     const item_transform_options options =
         read_item_transform_options( requested );
     sol::state_view state( lua );
@@ -2313,7 +2313,7 @@ sol::table get_item_var(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    validate_item_var_key( key, "game.items.get_var" );
+    validate_item_var_key( key, "services.items.get_var" );
     sol::state_view state( lua );
     const native_handle_result<item> resolved =
         handle.resolve_item(
@@ -2347,11 +2347,11 @@ void set_item_var_value(
         if( value.size() >
             maximum_item_var_string_bytes ) {
             throw std::invalid_argument(
-                "game.items.set_var string exceeds 4096 bytes" );
+                "services.items.set_var string exceeds 4096 bytes" );
         }
         if( value.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
-                "game.items.set_var string cannot contain NUL bytes" );
+                "services.items.set_var string cannot contain NUL bytes" );
         }
         entry.set_var( key, value );
         return;
@@ -2363,7 +2363,7 @@ void set_item_var_value(
             value.native_scale() !=
             coords::scale::map_square ) {
             throw std::invalid_argument(
-                "game.items.set_var coordinate must use absolute map squares" );
+                "services.items.set_var coordinate must use absolute map squares" );
         }
         entry.set_var(
             key, tripoint_abs_ms( value.to_native() ) );
@@ -2375,13 +2375,13 @@ void set_item_var_value(
             std::fabs( value ) >
             maximum_item_var_number ) {
             throw std::invalid_argument(
-                "game.items.set_var number is outside its limit" );
+                "services.items.set_var number is outside its limit" );
         }
         entry.set_var( key, value );
         return;
     }
     throw std::invalid_argument(
-        "game.items.set_var value must be a string, number, or absolute map-square coordinate" );
+        "services.items.set_var value must be a string, number, or absolute map-square coordinate" );
 }
 
 sol::table set_item_var(
@@ -2390,7 +2390,7 @@ sol::table set_item_var(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    validate_item_var_key( key, "game.items.set_var" );
+    validate_item_var_key( key, "services.items.set_var" );
     sol::state_view state( lua );
     const native_handle_result<item> resolved =
         handle.resolve_item(
@@ -2423,7 +2423,7 @@ sol::table erase_item_var(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    validate_item_var_key( key, "game.items.erase_var" );
+    validate_item_var_key( key, "services.items.erase_var" );
     sol::state_view state( lua );
     const native_handle_result<item> resolved =
         handle.resolve_item(
@@ -2448,7 +2448,7 @@ sol::table item_has_flag(
     const std::size_t world_generation )
 {
     require_id_kind(
-        flag, "json_flag", "game.items.has_flag" );
+        flag, "json_flag", "services.items.has_flag" );
     sol::state_view state( lua );
     const native_handle_result<item> resolved =
         handle.resolve_item(
@@ -2473,11 +2473,11 @@ sol::table item_ammo_sufficient(
 {
     if( quantity <= 0 || quantity > maximum_inventory_resource_quantity ) {
         throw std::invalid_argument(
-            "game.items.ammo_sufficient quantity must be within 1..1000000000" );
+            "services.items.ammo_sufficient quantity must be within 1..1000000000" );
     }
     if( method && method->size() > maximum_item_method_bytes ) {
         throw std::invalid_argument(
-            "game.items.ammo_sufficient method exceeds 256 bytes" );
+            "services.items.ammo_sufficient method exceeds 256 bytes" );
     }
     sol::state_view state( lua );
     const native_handle_result<item> resolved_item =
@@ -2514,7 +2514,7 @@ sol::table set_item_flag(
     const std::size_t world_generation )
 {
     require_id_kind(
-        flag, "json_flag", "game.items.set_flag" );
+        flag, "json_flag", "services.items.set_flag" );
     sol::state_view state( lua );
     const native_handle_result<item> resolved =
         handle.resolve_item(
@@ -2560,26 +2560,26 @@ item_fault_options read_item_fault_options(
     for( const auto &field : *requested ) {
         if( field.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.items fault option names must be strings" );
+                "services.items fault option names must be strings" );
         }
         const std::string key = field.first.as<std::string>();
         if( key == "force" ) {
             result.force = boolean_option(
                                field.second, key,
-                               "game.items.set_fault" );
+                               "services.items.set_fault" );
         } else if( key == "message" ) {
             result.message = boolean_option(
                                  field.second, key,
-                                 "game.items.set_fault" );
+                                 "services.items.set_fault" );
         } else if( key == "holder" ) {
             if( !field.second.is<game_handle>() ) {
                 throw std::invalid_argument(
-                    "game.items fault option 'holder' must be a GameHandle" );
+                    "services.items fault option 'holder' must be a GameHandle" );
             }
             result.holder = field.second.as<game_handle>();
         } else {
             throw std::invalid_argument(
-                "game.items.set_fault received unknown option '" + key + "'" );
+                "services.items.set_fault received unknown option '" + key + "'" );
         }
     }
     return result;
@@ -2635,23 +2635,23 @@ item_activation_options read_item_activation_options(
     for( const auto &field : *requested ) {
         if( field.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.items.activate option names must be strings" );
+                "services.items.activate option names must be strings" );
         }
         const std::string key = field.first.as<std::string>();
         if( key != "target" ) {
             throw std::invalid_argument(
-                "game.items.activate received unknown option '" + key + "'" );
+                "services.items.activate received unknown option '" + key + "'" );
         }
         if( !field.second.is<script_tripoint_coord>() ) {
             throw std::invalid_argument(
-                "game.items.activate option 'target' must be a Tripoint" );
+                "services.items.activate option 'target' must be a Tripoint" );
         }
         const script_tripoint_coord target =
             field.second.as<script_tripoint_coord>();
         if( target.native_origin() != coords::origin::abs ||
             target.native_scale() != coords::scale::map_square ) {
             throw std::invalid_argument(
-                "game.items.activate option 'target' must be an absolute "
+                "services.items.activate option 'target' must be an absolute "
                 "map-square Tripoint" );
         }
         result.target = tripoint_abs_ms( target.to_native() );
@@ -2669,12 +2669,12 @@ sol::table activate_item(
     if( method.empty() || method.size() > maximum_item_method_bytes ||
         method.find( '\0' ) != std::string::npos ) {
         throw std::invalid_argument(
-            "game.items.activate method must contain 1..256 bytes" );
+            "services.items.activate method must contain 1..256 bytes" );
     }
     for( const unsigned char character : method ) {
         if( character < 0x20U || character == 0x7fU ) {
             throw std::invalid_argument(
-                "game.items.activate method cannot contain control characters" );
+                "services.items.activate method cannot contain control characters" );
         }
     }
     const item_activation_options options =
@@ -2751,10 +2751,10 @@ sol::table set_item_fault(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    require_id_kind( fault, "fault", "game.items.set_fault" );
+    require_id_kind( fault, "fault", "services.items.set_fault" );
     if( !fault.is_valid() ) {
         throw std::invalid_argument(
-            "game.items.set_fault requires a valid GameId<fault>" );
+            "services.items.set_fault requires a valid GameId<fault>" );
     }
     const item_fault_options options =
         read_item_fault_options( requested );
@@ -2802,7 +2802,7 @@ sol::table set_random_item_fault(
         fault_type.size() > maximum_item_method_bytes ||
         fault_type.find( '\0' ) != std::string::npos ) {
         throw std::invalid_argument(
-            "game.items.set_random_fault requires a bounded fault type" );
+            "services.items.set_random_fault requires a bounded fault type" );
     }
     const item_fault_options options =
         read_item_fault_options( requested );
@@ -2846,7 +2846,7 @@ sol::table item_has_technique(
 {
     require_id_kind(
         technique, "martial_art_technique",
-        "game.items.has_technique" );
+        "services.items.has_technique" );
     sol::state_view state( lua );
     const native_handle_result<item> resolved =
         handle.resolve_item(
@@ -2869,7 +2869,7 @@ sol::table set_item_technique(
 {
     require_id_kind(
         technique, "martial_art_technique",
-        "game.items.set_technique" );
+        "services.items.set_technique" );
     sol::state_view state( lua );
     const native_handle_result<item> resolved =
         handle.resolve_item(
@@ -3037,28 +3037,28 @@ inventory_give_options read_inventory_give_options(
         const sol::object key_object = entry.first;
         if( key_object.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.inventory.give option keys must be strings" );
+                "services.inventory.give option keys must be strings" );
         }
         const std::string key =
             key_object.as<std::string>();
         if( key == "allow_wield" ) {
             result.allow_wield = boolean_option(
                                      entry.second, key,
-                                     "game.inventory.give" );
+                                     "services.inventory.give" );
         } else if( key == "container" ) {
             if( !entry.second.is<script_game_id>() ) {
                 throw std::invalid_argument(
-                    "game.inventory.give container must be a GameId<item>" );
+                    "services.inventory.give container must be a GameId<item>" );
             }
             const script_game_id id =
                 entry.second.as<script_game_id>();
             require_id_kind(
-                id, "item", "game.inventory.give" );
+                id, "item", "services.inventory.give" );
             result.container = itype_id( id.value() );
         } else if( key == "flags" ) {
             if( !entry.second.is<sol::table>() ) {
                 throw std::invalid_argument(
-                    "game.inventory.give flags must be a dense GameId array" );
+                    "services.inventory.give flags must be a dense GameId array" );
             }
             const sol::table flags =
                 entry.second.as<sol::table>();
@@ -3067,7 +3067,7 @@ inventory_give_options read_inventory_give_options(
                 if( !flag_entry.first.is<lua_Integer>() ||
                     !flag_entry.second.is<script_game_id>() ) {
                     throw std::invalid_argument(
-                        "game.inventory.give flags must be a dense GameId array" );
+                        "services.inventory.give flags must be a dense GameId array" );
                 }
                 const lua_Integer raw_index =
                     flag_entry.first.as<lua_Integer>();
@@ -3075,12 +3075,12 @@ inventory_give_options read_inventory_give_options(
                     static_cast<std::uint64_t>( raw_index ) >
                     maximum_inventory_spawn_flags ) {
                     throw std::invalid_argument(
-                        "game.inventory.give flag index must be within 1..128" );
+                        "services.inventory.give flag index must be within 1..128" );
                 }
                 const script_game_id id =
                     flag_entry.second.as<script_game_id>();
                 require_id_kind(
-                    id, "json_flag", "game.inventory.give" );
+                    id, "json_flag", "services.inventory.give" );
                 indexed.emplace(
                     static_cast<std::size_t>( raw_index ),
                     flag_id( id.value() ) );
@@ -3088,7 +3088,7 @@ inventory_give_options read_inventory_give_options(
             if( !indexed.empty() &&
                 indexed.rbegin()->first != indexed.size() ) {
                 throw std::invalid_argument(
-                    "game.inventory.give flags must not contain holes" );
+                    "services.inventory.give flags must not contain holes" );
             }
             for( const auto &[index, flag] : indexed ) {
                 static_cast<void>( index );
@@ -3096,7 +3096,7 @@ inventory_give_options read_inventory_give_options(
             }
         } else {
             throw std::invalid_argument(
-                "game.inventory.give received unknown option '" +
+                "services.inventory.give received unknown option '" +
                 key + "'" );
         }
     }
@@ -3389,7 +3389,7 @@ sol::table choose_inventory_item(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.inventory.choose";
+        "services.inventory.choose";
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -3447,7 +3447,7 @@ sol::table choose_inventory_items(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.inventory.choose_many";
+        "services.inventory.choose_many";
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -3512,8 +3512,8 @@ sol::table choose_map_inventory_items(
     const std::size_t world_generation )
 {
     const std::string api_name = multiple ?
-                                 "game.inventory.choose_many_map" :
-                                 "game.inventory.choose_map";
+                                 "services.inventory.choose_many_map" :
+                                 "services.inventory.choose_map";
     const map_inventory_selection_options options =
         read_map_inventory_selection_options(
             requested_options,
@@ -3625,11 +3625,11 @@ sol::table inventory_resources(
     const std::size_t world_generation )
 {
     require_id_kind(
-        type, "item", "game.inventory.resources" );
+        type, "item", "services.inventory.resources" );
     if( quantity < 0 ||
         quantity > maximum_inventory_resource_quantity ) {
         throw std::invalid_argument(
-            "game.inventory.resources quantity is outside its limit" );
+            "services.inventory.resources quantity is outside its limit" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -3671,7 +3671,7 @@ sol::table inventory_has_items_sum(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    constexpr std::string_view api_name = "game.inventory.has_items_sum";
+    constexpr std::string_view api_name = "services.inventory.has_items_sum";
     const std::size_t entry_count = requested_entries.size();
     if( entry_count == 0 || entry_count > maximum_inventory_sum_entries ) {
         throw std::invalid_argument(
@@ -3745,7 +3745,7 @@ sol::table inventory_has_software(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.inventory.has_software";
+        "services.inventory.has_software";
     require_id_kind( software, "item", std::string( api_name ) );
     if( requested_device ) {
         require_id_kind(
@@ -3785,7 +3785,7 @@ sol::table inventory_has_worn_flag(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.inventory.has_worn_flag";
+        "services.inventory.has_worn_flag";
     require_id_kind(
         requested_flag, "json_flag", std::string( api_name ) );
     if( requested_body_part ) {
@@ -3818,7 +3818,7 @@ sol::table inventory_is_wearing(
     const std::size_t world_generation )
 {
     require_id_kind(
-        requested_item, "item", "game.inventory.is_wearing" );
+        requested_item, "item", "services.inventory.is_wearing" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -3841,7 +3841,7 @@ sol::table inventory_has_item_flag(
 {
     require_id_kind(
         requested_flag, "json_flag",
-        "game.inventory.has_item_flag" );
+        "services.inventory.has_item_flag" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -3864,7 +3864,7 @@ sol::table inventory_category_count(
 {
     require_id_kind(
         requested_category, "item_category",
-        "game.inventory.category_count" );
+        "services.inventory.category_count" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -3917,14 +3917,14 @@ sol::table inventory_item_radiation(
 {
     require_id_kind(
         requested_flag, "json_flag",
-        "game.inventory.item_radiation" );
+        "services.inventory.item_radiation" );
     const std::string aggregate_name =
         requested_aggregate.value_or( "min" );
     const std::optional<aggregate_type> aggregate_kind =
         item_radiation_aggregate( aggregate_name );
     if( !aggregate_kind ) {
         throw std::invalid_argument(
-            "game.inventory.item_radiation aggregate must be first, last, min, max, sum, or average" );
+            "services.inventory.item_radiation aggregate must be first, last, min, max, sum, or average" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -3961,7 +3961,7 @@ sol::table inventory_wielded_matches(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.inventory.wielded_matches";
+        "services.inventory.wielded_matches";
     const std::string &kind = criterion.kind();
     if( kind != "json_flag" && kind != "weapon_category" &&
         kind != "skill" && kind != "ammunition" ) {
@@ -4089,11 +4089,11 @@ sol::table give_inventory_items(
     const std::size_t world_generation )
 {
     require_id_kind(
-        type, "item", "game.inventory.give" );
+        type, "item", "services.inventory.give" );
     if( quantity <= 0 ||
         quantity > maximum_inventory_resource_quantity ) {
         throw std::invalid_argument(
-            "game.inventory.give quantity is outside its limit" );
+            "services.inventory.give quantity is outside its limit" );
     }
     const inventory_give_options options =
         read_inventory_give_options( requested );
@@ -4113,7 +4113,7 @@ sol::table give_inventory_items(
     if( !counted_by_charges && !options.container &&
         quantity > maximum_inventory_give_instances ) {
         throw std::invalid_argument(
-            "game.inventory.give cannot create more than 100 item instances at once" );
+            "services.inventory.give cannot create more than 100 item instances at once" );
     }
 
     const int attempts = options.container || counted_by_charges ? 1 :
@@ -4180,12 +4180,12 @@ sol::table give_inventory_item_group(
     const std::size_t world_generation )
 {
     require_id_kind(
-        group, "item_group", "game.inventory.give_group" );
+        group, "item_group", "services.inventory.give_group" );
     const inventory_give_options options =
         read_inventory_give_options( requested );
     if( options.container ) {
         throw std::invalid_argument(
-            "game.inventory.give_group does not support a container option because groups preserve their native containers" );
+            "services.inventory.give_group does not support a container option because groups preserve their native containers" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -4242,14 +4242,14 @@ sol::table consume_inventory_items(
     const std::size_t world_generation )
 {
     require_id_kind(
-        type, "item", "game.inventory.consume" );
+        type, "item", "services.inventory.consume" );
     if( requested_count < 0 ||
         requested_count > maximum_inventory_resource_quantity ||
         requested_charges < 0 ||
         requested_charges > maximum_inventory_resource_quantity ||
         ( requested_count == 0 && requested_charges == 0 ) ) {
         throw std::invalid_argument(
-            "game.inventory.consume count and charges must be bounded nonnegative values with a positive total" );
+            "services.inventory.consume count and charges must be bounded nonnegative values with a positive total" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -4269,7 +4269,7 @@ sol::table consume_inventory_items(
     if( count > std::numeric_limits<int>::max() ||
         charges > std::numeric_limits<int>::max() ) {
         throw std::invalid_argument(
-            "game.inventory.consume request exceeds native integer bounds" );
+            "services.inventory.consume request exceeds native integer bounds" );
     }
     if( charges > 0 &&
         !character->has_charges(
@@ -4338,7 +4338,7 @@ sol::table hand_in_inventory_items(
     const sol::object raw_value = result["value"];
     if( !raw_value.is<sol::table>() ) {
         throw std::runtime_error(
-            "game.inventory.hand_in received an invalid consumption result" );
+            "services.inventory.hand_in received an invalid consumption result" );
     }
     sol::table value = raw_value.as<sol::table>();
     const itype_id native_type( type.value() );
@@ -4368,7 +4368,7 @@ sol::table consume_inventory_sum(
     if( entry_count == 0 ||
         entry_count > maximum_inventory_sum_entries ) {
         throw std::invalid_argument(
-            "game.inventory.consume_sum requires 1..128 weighted item entries" );
+            "services.inventory.consume_sum requires 1..128 weighted item entries" );
     }
     struct weighted_entry {
         script_game_id id;
@@ -4382,7 +4382,7 @@ sol::table consume_inventory_sum(
         const sol::object row_object = requested_entries[index];
         if( !row_object.is<sol::table>() ) {
             throw std::invalid_argument(
-                "game.inventory.consume_sum entries must be a dense table array" );
+                "services.inventory.consume_sum entries must be a dense table array" );
         }
         const sol::table row = row_object.as<sol::table>();
         const sol::object id_object = row["item"];
@@ -4390,17 +4390,17 @@ sol::table consume_inventory_sum(
         if( !id_object.is<script_game_id>() ||
             amount_object.get_type() != sol::type::number ) {
             throw std::invalid_argument(
-                "game.inventory.consume_sum entries require item and numeric amount fields" );
+                "services.inventory.consume_sum entries require item and numeric amount fields" );
         }
         const script_game_id id =
             id_object.as<script_game_id>();
         require_id_kind(
-            id, "item", "game.inventory.consume_sum" );
+            id, "item", "services.inventory.consume_sum" );
         const double desired = amount_object.as<double>();
         if( !std::isfinite( desired ) || desired <= 0.0 ||
             desired > maximum_inventory_resource_quantity ) {
             throw std::invalid_argument(
-                "game.inventory.consume_sum amount must be finite and within 0..1000000000" );
+                "services.inventory.consume_sum amount must be finite and within 0..1000000000" );
         }
         entries.push_back( { id, desired, 0, 0 } );
     }
@@ -4488,15 +4488,15 @@ sol::table remove_inventory_item(
     if( quantity <= 0 ||
         quantity > maximum_inventory_resource_quantity ) {
         throw std::invalid_argument(
-            "game.inventory.remove quantity is outside its limit" );
+            "services.inventory.remove quantity is outside its limit" );
     }
     if( !counted_by_charges && quantity != 1 ) {
         throw std::invalid_argument(
-            "game.inventory.remove quantity must be 1 for an item that is not counted by charges" );
+            "services.inventory.remove quantity must be 1 for an item that is not counted by charges" );
     }
     if( quantity > available ) {
         throw std::invalid_argument(
-            "game.inventory.remove quantity exceeds the available item amount" );
+            "services.inventory.remove quantity exceeds the available item amount" );
     }
 
     const std::int64_t uid =
@@ -4898,7 +4898,7 @@ sol::table get_item_category_spawn_rate(
     sol::this_state lua, const script_game_id &id )
 {
     constexpr std::string_view api_name =
-        "game.item_categories.spawn_rate";
+        "services.item_categories.spawn_rate";
     const item_category_id native_id =
         require_item_category_id( id, api_name );
     sol::state_view state( lua );
@@ -4912,7 +4912,7 @@ sol::table set_item_category_spawn_rate(
     const double requested_rate )
 {
     constexpr std::string_view api_name =
-        "game.item_categories.set_spawn_rate";
+        "services.item_categories.set_spawn_rate";
     const item_category_id native_id =
         require_item_category_id( id, api_name );
     const float rate = require_item_category_spawn_rate(
@@ -4940,7 +4940,7 @@ std::vector<item_category_spawn_rate_update>
 read_item_category_spawn_rate_updates( const sol::table &requested )
 {
     constexpr std::string_view api_name =
-        "game.item_categories.set_spawn_rates";
+        "services.item_categories.set_spawn_rates";
     std::map<std::size_t, sol::table> indexed;
     for( const auto &entry : requested ) {
         if( !entry.first.is<lua_Integer>() ||
@@ -5696,6 +5696,6 @@ void install_item_api(
     game["inventory"] = std::move( inventory );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

@@ -34,10 +34,10 @@ std::string fac_combat_ability_text( int val );
 
 class JsonObject;
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 class world_content_transaction;
-} // namespace cata::lua_platform
+} // namespace cata::lua
 class JsonOut;
 class JsonValue;
 class item;
@@ -116,7 +116,7 @@ struct faction_epilogue_data {
 
 class faction_template
 {
-    friend class cata::lua_platform::world_content_transaction;
+    friend class cata::lua::world_content_transaction;
     protected:
         faction_template();
         void load_relations( const JsonObject &jsobj );

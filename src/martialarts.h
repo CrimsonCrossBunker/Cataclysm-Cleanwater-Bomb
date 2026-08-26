@@ -27,10 +27,10 @@ struct itype;
 template <typename T> class generic_factory;
 enum class bp_type;
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 class content_transaction;
-} // namespace cata::lua_platform
+} // namespace cata::lua
 
 const matec_id tec_none( "tec_none" );
 
@@ -62,7 +62,7 @@ class weapon_category
     private:
         friend class generic_factory<weapon_category>;
         friend struct mod_tracker;
-        friend class cata::lua_platform::content_transaction;
+        friend class cata::lua::content_transaction;
 
         weapon_category_id id;
         std::vector<std::pair<weapon_category_id, mod_id>> src;

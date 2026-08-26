@@ -9,8 +9,8 @@
 #include <utility>
 
 #include "calendar.h"
-#include "catalua_platform_content.h"
-#include "catalua_platform_runtime.h"
+#include "catalua_content.h"
+#include "catalua_runtime.h"
 #include "character.h"
 #include "creature.h"
 #include "debug.h"
@@ -40,7 +40,7 @@ generic_factory<add_type> add_type_factory( "addiction" );
 
 } // namespace
 
-generic_factory<add_type> &cata::lua_platform::detail::addiction_type_registry()
+generic_factory<add_type> &cata::lua::detail::addiction_type_registry()
 {
     return add_type_factory;
 }
@@ -355,7 +355,7 @@ static const std::map<std::string, std::function<bool( Character &, addiction & 
 bool addiction::run_effect( Character &u )
 {
     if( const std::optional<bool> lua_result =
-            cata::lua_platform::invoke_addiction_type_handler(
+            cata::lua::invoke_addiction_type_handler(
                 type.str(), u, intensity, to_turns<std::int64_t>( sated ) ) ) {
         return *lua_result;
     }

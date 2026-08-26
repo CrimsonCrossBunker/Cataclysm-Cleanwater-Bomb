@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_factions.h"
 
@@ -22,7 +22,7 @@
 #include "faction.h"
 #include "game.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -71,17 +71,17 @@ faction_options read_faction_options(
     if( result.offset < 0 ||
         result.offset > maximum_faction_offset ) {
         throw std::invalid_argument(
-            "game.factions.list offset must be within 0..1000000" );
+            "services.factions.list offset must be within 0..1000000" );
     }
     if( result.limit < 0 ) {
         throw std::invalid_argument(
-            "game.factions.list limit cannot be negative" );
+            "services.factions.list limit cannot be negative" );
     }
     result.limit = std::min(
                        result.limit, maximum_faction_limit );
     if( result.query.size() > maximum_query_bytes ) {
         throw std::invalid_argument(
-            "game.factions.list query exceeds 128 bytes" );
+            "services.factions.list query exceeds 128 bytes" );
     }
     return result;
 }
@@ -90,7 +90,7 @@ void require_faction_id( const script_game_id &id )
 {
     if( id.kind() != "faction" ) {
         throw std::invalid_argument(
-            "game.factions.get requires GameId<faction>" );
+            "services.factions.get requires GameId<faction>" );
     }
 }
 
@@ -337,7 +337,7 @@ sol::table faction_members(
 {
     const detail_options options =
         read_detail_options(
-            requested, "game.factions.members" );
+            requested, "services.factions.members" );
     sol::state_view state( lua );
     if( g == nullptr ) {
         return make_game_error_result(
@@ -436,7 +436,7 @@ sol::table faction_relationships(
 {
     const detail_options options =
         read_detail_options(
-            requested, "game.factions.relationships" );
+            requested, "services.factions.relationships" );
     sol::state_view state( lua );
     if( g == nullptr ) {
         return make_game_error_result(
@@ -526,7 +526,7 @@ sol::table faction_food(
 {
     const detail_options options =
         read_detail_options(
-            requested, "game.factions.food" );
+            requested, "services.factions.food" );
     sol::state_view state( lua );
     if( g == nullptr ) {
         return make_game_error_result(
@@ -592,19 +592,19 @@ void validate_faction_name(
 {
     if( name.empty() ) {
         throw std::invalid_argument(
-            "game.factions.rename name cannot be empty" );
+            "services.factions.rename name cannot be empty" );
     }
     if( name.size() >
         maximum_faction_name_bytes ) {
         throw std::invalid_argument(
-            "game.factions.rename name exceeds 40 bytes" );
+            "services.factions.rename name exceeds 40 bytes" );
     }
     if( std::any_of(
     name.begin(), name.end(), []( const unsigned char ch ) {
     return ch < 0x20U || ch == 0x7fU;
 } ) ) {
         throw std::invalid_argument(
-            "game.factions.rename name cannot contain control characters" );
+            "services.factions.rename name cannot contain control characters" );
     }
 }
 
@@ -684,7 +684,7 @@ reputation_deltas read_reputation_deltas(
         if( pair.first.get_type() !=
             sol::type::string ) {
             throw std::invalid_argument(
-                "game.factions.modify_reputation option keys must be strings" );
+                "services.factions.modify_reputation option keys must be strings" );
         }
         const std::string key =
             pair.first.as<std::string>();
@@ -692,12 +692,12 @@ reputation_deltas read_reputation_deltas(
             key != "respects" &&
             key != "trusts" ) {
             throw std::invalid_argument(
-                "game.factions.modify_reputation received unknown option '" +
+                "services.factions.modify_reputation received unknown option '" +
                 key + "'" );
         }
         if( !pair.second.is<int>() ) {
             throw std::invalid_argument(
-                "game.factions.modify_reputation option '" +
+                "services.factions.modify_reputation option '" +
                 key + "' must be an integer" );
         }
         const int delta =
@@ -705,7 +705,7 @@ reputation_deltas read_reputation_deltas(
         if( delta < -maximum_reputation_delta ||
             delta > maximum_reputation_delta ) {
             throw std::invalid_argument(
-                "game.factions.modify_reputation option '" +
+                "services.factions.modify_reputation option '" +
                 key +
                 "' must be within -1000000..1000000" );
         }
@@ -721,7 +721,7 @@ reputation_deltas read_reputation_deltas(
         !result.respects &&
         !result.trusts ) {
         throw std::invalid_argument(
-            "game.factions.modify_reputation requires at least one delta" );
+            "services.factions.modify_reputation requires at least one delta" );
     }
     return result;
 }
@@ -806,7 +806,7 @@ resource_deltas read_resource_deltas(
         if( pair.first.get_type() !=
             sol::type::string ) {
             throw std::invalid_argument(
-                "game.factions.modify_resources option keys must be strings" );
+                "services.factions.modify_resources option keys must be strings" );
         }
         const std::string key =
             pair.first.as<std::string>();
@@ -814,12 +814,12 @@ resource_deltas read_resource_deltas(
             key != "power" &&
             key != "wealth" ) {
             throw std::invalid_argument(
-                "game.factions.modify_resources received unknown option '" +
+                "services.factions.modify_resources received unknown option '" +
                 key + "'" );
         }
         if( !pair.second.is<int>() ) {
             throw std::invalid_argument(
-                "game.factions.modify_resources option '" +
+                "services.factions.modify_resources option '" +
                 key + "' must be an integer" );
         }
         const int delta =
@@ -827,7 +827,7 @@ resource_deltas read_resource_deltas(
         if( delta < -maximum_resource_delta ||
             delta > maximum_resource_delta ) {
             throw std::invalid_argument(
-                "game.factions.modify_resources option '" +
+                "services.factions.modify_resources option '" +
                 key +
                 "' must be within -1000000000..1000000000" );
         }
@@ -843,7 +843,7 @@ resource_deltas read_resource_deltas(
         !result.power &&
         !result.wealth ) {
         throw std::invalid_argument(
-            "game.factions.modify_resources requires at least one delta" );
+            "services.factions.modify_resources requires at least one delta" );
     }
     return result;
 }
@@ -909,12 +909,12 @@ sol::table modify_faction_food(
         requested_kcal >
         maximum_food_delta_kcal ) {
         throw std::invalid_argument(
-            "game.factions.modify_food kcal must be within "
+            "services.factions.modify_food kcal must be within "
             "-1000000000..1000000000" );
     }
     if( requested_kcal == 0 ) {
         throw std::invalid_argument(
-            "game.factions.modify_food kcal cannot be zero" );
+            "services.factions.modify_food kcal cannot be zero" );
     }
     sol::state_view state( lua );
     if( g == nullptr ) {
@@ -981,14 +981,14 @@ policy_update read_policy_update(
         if( pair.first.get_type() !=
             sol::type::string ) {
             throw std::invalid_argument(
-                "game.factions.set_policy option keys must be strings" );
+                "services.factions.set_policy option keys must be strings" );
         }
         const std::string key =
             pair.first.as<std::string>();
         if( key == "consumes_food" ) {
             if( !pair.second.is<bool>() ) {
                 throw std::invalid_argument(
-                    "game.factions.set_policy option "
+                    "services.factions.set_policy option "
                     "'consumes_food' must be a boolean" );
             }
             result.consumes_food =
@@ -996,7 +996,7 @@ policy_update read_policy_update(
         } else if( key == "stealing" ) {
             if( !pair.second.is<std::string>() ) {
                 throw std::invalid_argument(
-                    "game.factions.set_policy option "
+                    "services.factions.set_policy option "
                     "'stealing' must be a string" );
             }
             const std::string value =
@@ -1005,20 +1005,20 @@ policy_update read_policy_update(
                 value != "always" &&
                 value != "never" ) {
                 throw std::invalid_argument(
-                    "game.factions.set_policy option "
+                    "services.factions.set_policy option "
                     "'stealing' must be ask, always, or never" );
             }
             result.stealing = value;
         } else {
             throw std::invalid_argument(
-                "game.factions.set_policy received unknown option '" +
+                "services.factions.set_policy received unknown option '" +
                 key + "'" );
         }
     }
     if( !result.consumes_food &&
         !result.stealing ) {
         throw std::invalid_argument(
-            "game.factions.set_policy requires at least one option" );
+            "services.factions.set_policy requires at least one option" );
     }
     return result;
 }
@@ -1110,7 +1110,7 @@ relationship_updates read_relationship_updates(
         if( pair.first.get_type() !=
             sol::type::string ) {
             throw std::invalid_argument(
-                "game.factions.set_relationship option keys must be strings" );
+                "services.factions.set_relationship option keys must be strings" );
         }
         const std::string key =
             pair.first.as<std::string>();
@@ -1119,12 +1119,12 @@ relationship_updates read_relationship_updates(
             parse_relationship_flag( key );
         if( !flag ) {
             throw std::invalid_argument(
-                "game.factions.set_relationship received unknown option '" +
+                "services.factions.set_relationship received unknown option '" +
                 key + "'" );
         }
         if( !pair.second.is<bool>() ) {
             throw std::invalid_argument(
-                "game.factions.set_relationship option '" +
+                "services.factions.set_relationship option '" +
                 key + "' must be a boolean" );
         }
         result.emplace_back(
@@ -1132,7 +1132,7 @@ relationship_updates read_relationship_updates(
     }
     if( result.empty() ) {
         throw std::invalid_argument(
-            "game.factions.set_relationship requires at least one option" );
+            "services.factions.set_relationship requires at least one option" );
     }
     return result;
 }
@@ -1359,6 +1359,6 @@ void install_faction_api(
     game["factions"] = std::move( factions );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

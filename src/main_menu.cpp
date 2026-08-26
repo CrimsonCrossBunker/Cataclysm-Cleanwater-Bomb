@@ -37,7 +37,6 @@
 #include "cata_path.h"
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
-#include "catalua_ui.h"
 #include "catacharset.h"
 #include "character_id.h"
 #include "clzones.h"
@@ -1070,9 +1069,6 @@ void main_menu::init_strings()
     vOtherSubItems.emplace_back( pgettext( "Main Menu", "<M|m>OTD" ) );
     vOtherSubItems.emplace_back( pgettext( "Main Menu", "H<e|E|?>lp" ) );
     vOtherSubItems.emplace_back( pgettext( "Main Menu", "<C|c>redits" ) );
-    if( cata::lua_ui::is_enabled() ) {
-        vOtherSubItems.emplace_back( pgettext( "Main Menu", "E<x|X>tensions" ) );
-    }
     vOtherHotkeys.clear();
     for( const std::string &item : vOtherSubItems ) {
         vOtherHotkeys.push_back( get_hotkeys( item ) );
@@ -1632,8 +1628,6 @@ bool main_menu::opening_screen()
                         get_help().display_help();
                     } else if( sel2 == 2 ) {
                         show_text( mmenu_credits, _( "Credits" ) );
-                    } else if( sel2 == 3 && cata::lua_ui::is_enabled() ) {
-                        cata::lua_ui::show_slot( "main.extensions" );
                     }
                     break;
                 case main_menu_opts::SETTINGS:

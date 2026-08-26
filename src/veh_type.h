@@ -30,7 +30,7 @@ class Character;
 class JsonObject;
 class vpart_category;
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 class content_transaction;
 class world_content_transaction;
@@ -38,7 +38,7 @@ namespace detail
 {
 int vehicle_part_category_priority( const vpart_category & );
 } // namespace detail
-} // namespace cata::lua_platform
+} // namespace cata::lua
 
 class JsonOut;
 class JsonValue;
@@ -273,8 +273,8 @@ class vpart_category
         }
 
     private:
-        friend class cata::lua_platform::content_transaction;
-        friend int cata::lua_platform::detail::vehicle_part_category_priority(
+        friend class cata::lua::content_transaction;
+        friend int cata::lua::detail::vehicle_part_category_priority(
             const vpart_category & );
         std::string id_;
         translation name_;
@@ -284,7 +284,7 @@ class vpart_category
 
 class vpart_variant
 {
-    friend class cata::lua_platform::world_content_transaction;
+    friend class cata::lua::world_content_transaction;
     public:
         std::string id;
         std::array<char32_t, 8> symbols;
@@ -315,7 +315,7 @@ class vpart_variant
 
 class vpart_info
 {
-    friend class cata::lua_platform::world_content_transaction;
+    friend class cata::lua::world_content_transaction;
     public:
         vpart_id id;
 
@@ -577,7 +577,7 @@ struct vehicle_item_spawn {
  * is a nullptr. Creating a new vehicle copies the blueprint vehicle.
  */
 struct vehicle_prototype {
-    friend class cata::lua_platform::world_content_transaction;
+    friend class cata::lua::world_content_transaction;
     public:
         struct part_def {
             point_rel_ms pos;

@@ -14,7 +14,6 @@
 
 #include "bodypart.h"
 #include "calendar.h"
-#include "catalua_lua_call.h"
 #include "damage.h"
 #include "enums.h"
 #include "memory_fast.h"
@@ -37,10 +36,10 @@ struct const_dialogue;
 struct dream;
 template <typename E> struct enum_traits;
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 class content_transaction;
-} // namespace cata::lua_platform
+} // namespace cata::lua
 
 extern std::vector<dream> dreams;
 extern std::map<mutation_category_id, std::vector<trait_id> > mutations_category;
@@ -50,7 +49,7 @@ struct dream {
         std::vector<translation> raw_messages; // The messages that the dream will give
 
     public:
-        friend class cata::lua_platform::content_transaction;
+        friend class cata::lua::content_transaction;
         std::vector<std::string> messages() const;
 
         mutation_category_id category; // The category that will trigger the dream
@@ -295,15 +294,12 @@ struct mutation_branch {
         std::map<mtype_id, int> moncams;
         /** effect_on_conditions triggered when this mutation activates */
         std::vector<effect_on_condition_id> activated_eocs;
-        std::vector<cata::lua_ui::lua_call> activated_luas;
         // if the above activated eocs should be run without turning on the mutation
         bool activated_is_setup = false;
         /** effect_on_conditions triggered while this mutation is active */
         std::vector<effect_on_condition_id> processed_eocs;
-        std::vector<cata::lua_ui::lua_call> processed_luas;
         /** effect_on_conditions triggered when this mutation deactivates */
         std::vector<effect_on_condition_id> deactivated_eocs;
-        std::vector<cata::lua_ui::lua_call> deactivated_luas;
         /** mutation enchantments */
         std::vector<enchantment_id> enchantments;
 
@@ -567,7 +563,7 @@ struct mutation_category_trait {
 
         static void load( const JsonObject &jsobj );
 
-        friend class cata::lua_platform::content_transaction;
+        friend class cata::lua::content_transaction;
 };
 
 void load_mutation_type( const JsonObject &jsobj );

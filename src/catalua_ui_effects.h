@@ -7,12 +7,13 @@
 
 #include "catalua_sol.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 class game_handle_runtime;
 
-// Install bounded, detached effect inspection and capability-gated mutation.
+// Install bounded, detached effect inspection and Platform-callback-gated
+// mutation.
 // Effect instances never cross the Lua boundary as native references.
 void install_effect_api(
     sol::table &game,
@@ -21,6 +22,6 @@ void install_effect_api(
     std::function<void()> require_read,
     std::function<void()> require_write );
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
 #endif // CATA_SRC_CATALUA_UI_EFFECTS_H

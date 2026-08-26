@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_bindings_serde.h"
 
@@ -19,7 +19,7 @@
 #include "json.h"
 #include "json_loader.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -50,7 +50,7 @@ void count_node( std::size_t &nodes )
     ++nodes;
     if( nodes > maximum_value_nodes ) {
         throw std::invalid_argument(
-            "game.serde value exceeds the 16384-node limit" );
+            "services.serde value exceeds the 16384-node limit" );
     }
 }
 
@@ -58,12 +58,12 @@ void count_string( std::size_t &total, const std::string &value )
 {
     if( value.size() > maximum_string_bytes ) {
         throw std::invalid_argument(
-            "game.serde string exceeds the 64 KiB limit" );
+            "services.serde string exceeds the 64 KiB limit" );
     }
     total += value.size();
     if( total > maximum_total_string_bytes ) {
         throw std::invalid_argument(
-            "game.serde strings exceed the 512 KiB aggregate limit" );
+            "services.serde strings exceed the 512 KiB aggregate limit" );
     }
 }
 
@@ -71,7 +71,7 @@ void check_depth( const std::size_t depth )
 {
     if( depth > maximum_value_depth ) {
         throw std::invalid_argument(
-            "game.serde value exceeds the 16-level depth limit" );
+            "services.serde value exceeds the 16-level depth limit" );
     }
 }
 
@@ -100,14 +100,14 @@ std::vector<sorted_table_entry> sorted_table_entries( const sol::table &table )
                         std::to_string( key.as<lua_Integer>() );
         } else {
             throw std::invalid_argument(
-                "game.serde table keys must be strings or integers" );
+                "services.serde table keys must be strings or integers" );
         }
         result.push_back( {
             key, entry.second, std::move( order_key )
         } );
         if( result.size() > maximum_table_entries ) {
             throw std::invalid_argument(
-                "game.serde table exceeds the 4096-entry limit" );
+                "services.serde table exceeds the 4096-entry limit" );
         }
     }
     std::sort( result.begin(), result.end(),
@@ -144,7 +144,7 @@ void write_value(
                 const double number = value.as<double>();
                 if( !std::isfinite( number ) ) {
                     throw std::invalid_argument(
-                        "game.serde floating-point values must be finite" );
+                        "services.serde floating-point values must be finite" );
                 }
                 write_type( json, "float" );
                 json.member( "value", number );
@@ -163,7 +163,7 @@ void write_value(
                     context.table_stack.begin(), context.table_stack.end(),
                     table ) != context.table_stack.end() ) {
                 throw std::invalid_argument(
-                    "game.serde cannot encode a recursive table" );
+                    "services.serde cannot encode a recursive table" );
             }
             const std::vector<sorted_table_entry> entries =
                 sorted_table_entries( table );
@@ -242,12 +242,12 @@ void write_value(
                 json.member( "z", point.z() );
             } else {
                 throw std::invalid_argument(
-                    "game.serde received unsupported userdata" );
+                    "services.serde received unsupported userdata" );
             }
             break;
         default:
             throw std::invalid_argument(
-                "game.serde received an unsupported Lua value type" );
+                "services.serde received an unsupported Lua value type" );
     }
     json.end_object();
 }
@@ -268,7 +268,7 @@ std::string encode_value( const sol::object &value )
     std::string result = buffer.str();
     if( result.size() > maximum_serialized_bytes ) {
         throw std::invalid_argument(
-            "game.serde output exceeds the 1 MiB limit" );
+            "services.serde output exceeds the 1 MiB limit" );
     }
     return result;
 }
@@ -295,7 +295,7 @@ void validate_json_nesting( const std::string &input )
             ++depth;
             if( depth > maximum_json_nesting ) {
                 throw std::invalid_argument(
-                    "game.serde input exceeds the JSON nesting limit" );
+                    "services.serde input exceeds the JSON nesting limit" );
             }
         } else if( ( ch == '}' || ch == ']' ) && depth > 0 ) {
             --depth;
@@ -320,7 +320,7 @@ sol::object decode_value(
     count_node( context.nodes );
     if( !encoded.test_object() ) {
         throw std::invalid_argument(
-            "game.serde encoded values must be objects" );
+            "services.serde encoded values must be objects" );
     }
     const JsonObject object = encoded.get_object();
     const std::string type = object.get_string( "type" );
@@ -338,7 +338,7 @@ sol::object decode_value(
         const double number = object.get_float( "value" );
         if( !std::isfinite( number ) ) {
             throw std::invalid_argument(
-                "game.serde decoded a non-finite number" );
+                "services.serde decoded a non-finite number" );
         }
         result = sol::make_object( lua, number );
     } else if( type == "string" ) {
@@ -349,7 +349,7 @@ sol::object decode_value(
         const JsonArray entries = object.get_array( "entries" );
         if( entries.size() > maximum_table_entries ) {
             throw std::invalid_argument(
-                "game.serde table exceeds the 4096-entry limit" );
+                "services.serde table exceeds the 4096-entry limit" );
         }
         sol::table table = lua.create_table();
         std::set<std::string> seen_keys;
@@ -367,11 +367,11 @@ sol::object decode_value(
                               std::to_string( key.as<lua_Integer>() );
             } else {
                 throw std::invalid_argument(
-                    "game.serde decoded an invalid table key" );
+                    "services.serde decoded an invalid table key" );
             }
             if( !seen_keys.insert( fingerprint ).second ) {
                 throw std::invalid_argument(
-                    "game.serde decoded duplicate table keys" );
+                    "services.serde decoded duplicate table keys" );
             }
             const sol::object value = decode_value(
                                           lua, entry.get_member( "value" ),
@@ -429,7 +429,7 @@ sol::object decode_value(
                          object.get_int64( "z" ) ) );
     } else {
         throw std::invalid_argument(
-            "game.serde received an unknown encoded type: " + type );
+            "services.serde received an unknown encoded type: " + type );
     }
     object.allow_omitted_members();
     return result;
@@ -440,22 +440,22 @@ sol::object decode_document(
 {
     if( input.size() > maximum_serialized_bytes ) {
         throw std::invalid_argument(
-            "game.serde input exceeds the 1 MiB limit" );
+            "services.serde input exceeds the 1 MiB limit" );
     }
     validate_json_nesting( input );
     const JsonValue parsed = json_loader::from_string( input );
     if( !parsed.test_object() ) {
         throw std::invalid_argument(
-            "game.serde document root must be an object" );
+            "services.serde document root must be an object" );
     }
     const JsonObject root = parsed.get_object();
     if( root.get_string( "format" ) != "ccb_lua_value" ) {
         throw std::invalid_argument(
-            "game.serde document has an unknown format" );
+            "services.serde document has an unknown format" );
     }
     if( root.get_int( "version" ) != serde_format_version ) {
         throw std::invalid_argument(
-            "game.serde document has an unsupported version" );
+            "services.serde document has an unsupported version" );
     }
     decode_context context;
     sol::object result = decode_value(
@@ -513,6 +513,6 @@ void install_serde_api(
     game["serde"] = std::move( serde );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

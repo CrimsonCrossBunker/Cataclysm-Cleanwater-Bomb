@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_world.h"
 
@@ -55,7 +55,7 @@
 #include "visitable.h"
 #include "vpart_position.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -145,12 +145,12 @@ std::vector<std::string> map_filter_values(
     std::vector<std::string> result;
     const auto append = [&result, &key]( const sol::object &entry ) {
         if( !entry.is<std::string>() ) {
-            throw std::invalid_argument( "game.world.items_nearby filter '" + key +
+            throw std::invalid_argument( "services.world.items_nearby filter '" + key +
                                          "' values must be strings" );
         }
         const std::string value = entry.as<std::string>();
         if( value.empty() || value.size() > 256 || value.find( '\0' ) != std::string::npos ) {
-            throw std::invalid_argument( "game.world.items_nearby filter values are out of bounds" );
+            throw std::invalid_argument( "services.world.items_nearby filter values are out of bounds" );
         }
         result.push_back( value );
     };
@@ -159,12 +159,12 @@ std::vector<std::string> map_filter_values(
     } else if( raw.get_type() == sol::type::table ) {
         const sol::table values = raw.as<sol::table>();
         const std::size_t count = require_dense_lua_array(
-            values, "game.world.items_nearby filter", 0, 128 );
+            values, "services.world.items_nearby filter", 0, 128 );
         for( std::size_t index = 1; index <= count; ++index ) {
             append( values.raw_get<sol::object>( index ) );
         }
     } else {
-        throw std::invalid_argument( "game.world.items_nearby filter values must be strings or arrays" );
+        throw std::invalid_argument( "services.world.items_nearby filter values must be strings or arrays" );
     }
     return result;
 }
@@ -210,7 +210,7 @@ bool map_item_matches_filter( const item &entry, const sol::table &descriptor )
         const sol::object raw = descriptor.raw_get<sol::object>( key );
         if( raw.valid() && raw.get_type() != sol::type::nil ) {
             if( !raw.is<bool>() ) {
-                throw std::invalid_argument( "game.world.items_nearby filter booleans are required" );
+                throw std::invalid_argument( "services.world.items_nearby filter booleans are required" );
             }
             const bool actual = std::string_view( key ) == "uses_energy" ?
                                 entry.uses_energy() : entry.is_chargeable();
@@ -223,7 +223,7 @@ bool map_item_matches_filter( const item &entry, const sol::table &descriptor )
         const sol::object raw = descriptor.raw_get<sol::object>( key );
         if( raw.valid() && raw.get_type() != sol::type::nil ) {
             if( !raw.is<bool>() ) {
-                throw std::invalid_argument( "game.world.items_nearby filter booleans are required" );
+                throw std::invalid_argument( "services.world.items_nearby filter booleans are required" );
             }
             if( raw.as<bool>() ) {
                 return false;
@@ -232,14 +232,14 @@ bool map_item_matches_filter( const item &entry, const sol::table &descriptor )
     }
     for( const auto &member : descriptor ) {
         if( !member.first.is<std::string>() ) {
-            throw std::invalid_argument( "game.world.items_nearby filter keys must be strings" );
+            throw std::invalid_argument( "services.world.items_nearby filter keys must be strings" );
         }
         const std::string key = member.first.as<std::string>();
         if( key != "id" && key != "id_blacklist" && key != "category" &&
             key != "material" && key != "flags" && key != "excluded_flags" &&
             key != "uses_energy" && key != "is_chargeable" && key != "worn_only" &&
             key != "wielded_only" && key != "held_only" ) {
-            throw std::invalid_argument( "game.world.items_nearby unknown filter field '" + key + "'" );
+            throw std::invalid_argument( "services.world.items_nearby unknown filter field '" + key + "'" );
         }
     }
     return true;
@@ -282,7 +282,7 @@ script_tripoint_coord world_to_absolute(
     if( position.native_origin() !=
         coords::origin::reality_bubble ) {
         throw std::invalid_argument(
-            "game.world.to_absolute requires a reality-bubble Tripoint" );
+            "services.world.to_absolute requires a reality-bubble Tripoint" );
     }
 
     map &here = get_map();
@@ -306,7 +306,7 @@ script_tripoint_coord world_to_absolute(
                    absolute.raw() );
     }
     throw std::invalid_argument(
-        "game.world.to_absolute supports map-square and submap Tripoints" );
+        "services.world.to_absolute supports map-square and submap Tripoints" );
 }
 
 script_tripoint_coord world_to_bubble(
@@ -314,7 +314,7 @@ script_tripoint_coord world_to_bubble(
 {
     if( position.native_origin() != coords::origin::abs ) {
         throw std::invalid_argument(
-            "game.world.to_bubble requires an absolute Tripoint" );
+            "services.world.to_bubble requires an absolute Tripoint" );
     }
 
     map &here = get_map();
@@ -338,7 +338,7 @@ script_tripoint_coord world_to_bubble(
                    coords::scale::submap, local.raw() );
     }
     throw std::invalid_argument(
-        "game.world.to_bubble supports map-square and submap Tripoints" );
+        "services.world.to_bubble supports map-square and submap Tripoints" );
 }
 
 tripoint_abs_ms require_absolute_ms(
@@ -373,7 +373,7 @@ bool world_has_line_of_sight(
     const sol::optional<bool> &requested_with_fields )
 {
     constexpr std::string_view api_name =
-        "game.world.has_line_of_sight";
+        "services.world.has_line_of_sight";
     const int range = requested_range.value_or(
                           MAX_VIEW_DISTANCE );
     if( range < 0 || range > MAX_VIEW_DISTANCE ) {
@@ -396,7 +396,7 @@ bool world_tile_has_flag(
     const std::string &layer, const std::string &flag )
 {
     constexpr std::string_view api_name =
-        "game.world.tile_has_flag";
+        "services.world.tile_has_flag";
     if( layer != "terrain" && layer != "furniture" ) {
         throw std::invalid_argument(
             std::string( api_name ) +
@@ -424,7 +424,7 @@ int world_light_level(
     const script_tripoint_coord &position )
 {
     constexpr std::string_view api_name =
-        "game.world.light_level";
+        "services.world.light_level";
     map &here = get_map();
     const tripoint_bub_ms local = require_loaded_position(
                                       here, position,
@@ -437,7 +437,7 @@ int world_field_strength(
     const script_game_id &requested_field )
 {
     constexpr std::string_view api_name =
-        "game.world.field_strength";
+        "services.world.field_strength";
     if( requested_field.kind() != "field" ||
         !requested_field.is_valid() ) {
         throw std::invalid_argument(
@@ -531,7 +531,7 @@ region_options read_region_options(
     if( !requested ) {
         return result;
     }
-    constexpr std::string_view api_name = "game.world.region";
+    constexpr std::string_view api_name = "services.world.region";
     for( const auto &entry : *requested ) {
         const sol::object key_object = entry.first;
         if( key_object.get_type() != sol::type::string ) {
@@ -580,7 +580,7 @@ map_item_options read_map_item_options(
         return result;
     }
     constexpr std::string_view api_name =
-        "game.world.items_nearby";
+        "services.world.items_nearby";
     for( const auto &entry : *requested ) {
         const sol::object key_object = entry.first;
         if( key_object.get_type() != sol::type::string ) {
@@ -640,7 +640,7 @@ map_item_options read_point_page_options(
         return result;
     }
     constexpr std::string_view api_name =
-        "game.world.points_nearby";
+        "services.world.points_nearby";
     for( const auto &entry : *requested ) {
         const sol::object key_object = entry.first;
         if( key_object.get_type() != sol::type::string ) {
@@ -694,7 +694,7 @@ vehicle_options read_vehicle_options(
         return result;
     }
     constexpr std::string_view api_name =
-        "game.world.vehicles";
+        "services.world.vehicles";
     for( const auto &entry : *requested ) {
         const sol::object key_object = entry.first;
         if( key_object.get_type() != sol::type::string ) {
@@ -734,7 +734,7 @@ int read_location_integer(
     const int minimum, const int maximum )
 {
     constexpr std::string_view api_name =
-        "game.world.find_location";
+        "services.world.find_location";
     if( !value.is<lua_Integer>() ) {
         throw std::invalid_argument(
             std::string( api_name ) + " option '" + key +
@@ -755,7 +755,7 @@ bool read_location_bool(
 {
     if( !value.is<bool>() ) {
         throw std::invalid_argument(
-            "game.world.find_location option '" + key +
+            "services.world.find_location option '" + key +
             "' must be a boolean" );
     }
     return value.as<bool>();
@@ -771,19 +771,19 @@ location_selector read_location_selector(
     for( const auto &entry : *requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.world.find_location selector keys must be strings" );
+                "services.world.find_location selector keys must be strings" );
         }
         const std::string key = entry.first.as<std::string>();
         if( key != "kind" && key != "id" ) {
             throw std::invalid_argument(
-                "game.world.find_location received unknown selector '" +
+                "services.world.find_location received unknown selector '" +
                 key + "'" );
         }
     }
     const sol::object kind_value = ( *requested )["kind"];
     if( !kind_value.is<std::string>() ) {
         throw std::invalid_argument(
-            "game.world.find_location selector 'kind' must be a string" );
+            "services.world.find_location selector 'kind' must be a string" );
     }
     const std::string kind = kind_value.as<std::string>();
     std::string id_kind;
@@ -813,18 +813,18 @@ location_selector read_location_selector(
         id_kind = "zone";
     } else {
         throw std::invalid_argument(
-            "game.world.find_location selector 'kind' must be terrain, furniture, field, trap, monster, species, npc, or zone" );
+            "services.world.find_location selector 'kind' must be terrain, furniture, field, trap, monster, species, npc, or zone" );
     }
     const sol::object id_value = ( *requested )["id"];
     if( id_value.valid() && id_value.get_type() != sol::type::nil ) {
         if( !id_value.is<script_game_id>() ) {
             throw std::invalid_argument(
-                "game.world.find_location selector 'id' must be a GameId" );
+                "services.world.find_location selector 'id' must be a GameId" );
         }
         const script_game_id id = id_value.as<script_game_id>();
         require_id_kind(
             id, id_kind,
-            "game.world.find_location selector 'id'" );
+            "services.world.find_location selector 'id'" );
         result.id = id;
     }
     return result;
@@ -840,7 +840,7 @@ location_search_options read_location_search_options(
     for( const auto &entry : *requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.world.find_location option keys must be strings" );
+                "services.world.find_location option keys must be strings" );
         }
         const std::string key = entry.first.as<std::string>();
         const sol::object value = entry.second;
@@ -886,17 +886,17 @@ location_search_options read_location_search_options(
             result.passable_only = read_location_bool( value, key );
         } else {
             throw std::invalid_argument(
-                "game.world.find_location received unknown option '" +
+                "services.world.find_location received unknown option '" +
                 key + "'" );
         }
     }
     if( result.min_radius > result.max_radius ) {
         throw std::invalid_argument(
-            "game.world.find_location min_radius cannot exceed max_radius" );
+            "services.world.find_location min_radius cannot exceed max_radius" );
     }
     if( result.target_min_radius > result.target_max_radius ) {
         throw std::invalid_argument(
-            "game.world.find_location target_min_radius cannot exceed target_max_radius" );
+            "services.world.find_location target_min_radius cannot exceed target_max_radius" );
     }
     return result;
 }
@@ -1156,7 +1156,7 @@ sol::table find_world_location(
     const sol::optional<sol::table> &requested_options )
 {
     constexpr std::string_view api_name =
-        "game.world.find_location";
+        "services.world.find_location";
     const tripoint_abs_ms origin = require_absolute_ms(
                                        requested_origin,
                                        std::string( api_name ) );
@@ -1420,10 +1420,10 @@ sol::table world_tile(
     map &here = get_map();
     const tripoint_bub_ms local =
         require_loaded_position(
-            here, position, "game.world.tile" );
+            here, position, "services.world.tile" );
     const tile_options options =
         read_tile_options(
-            requested_options, "game.world.tile" );
+            requested_options, "services.world.tile" );
     return snapshot_tile(
                sol::state_view( lua ), here, local, options,
                runtime_generation, world_generation );
@@ -1439,7 +1439,7 @@ sol::table world_region(
     map &here = get_map();
     const tripoint_bub_ms local_center =
         require_loaded_position(
-            here, center, "game.world.region" );
+            here, center, "services.world.region" );
     const region_options options =
         read_region_options( requested_options );
     std::vector<tripoint_bub_ms> positions;
@@ -1501,7 +1501,7 @@ sol::table world_points_nearby(
     const sol::optional<sol::table> &requested_options )
 {
     constexpr std::string_view api_name =
-        "game.world.points_nearby";
+        "services.world.points_nearby";
     if( origin.native_origin() != coords::origin::abs ||
         origin.native_scale() != coords::scale::map_square ) {
         throw std::invalid_argument(
@@ -1560,7 +1560,7 @@ sol::table world_items_nearby(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.world.items_nearby";
+        "services.world.items_nearby";
     map &here = get_map();
     const tripoint_bub_ms center =
         require_loaded_position(
@@ -1570,13 +1570,13 @@ sol::table world_items_nearby(
     std::vector<sol::table> filters;
     if( options.filters ) {
         const std::size_t count = require_dense_lua_array(
-            *options.filters, "game.world.items_nearby filters", 0, 128 );
+            *options.filters, "services.world.items_nearby filters", 0, 128 );
         filters.reserve( count );
         for( std::size_t index = 1; index <= count; ++index ) {
             const sol::object descriptor = options.filters->raw_get<sol::object>( index );
             if( !descriptor.is<sol::table>() ) {
                 throw std::invalid_argument(
-                    "game.world.items_nearby filters must contain descriptor tables" );
+                    "services.world.items_nearby filters must contain descriptor tables" );
             }
             filters.push_back( descriptor.as<sol::table>() );
         }
@@ -1768,7 +1768,7 @@ sol::table set_terrain(
     const script_game_id &requested )
 {
     constexpr std::string_view api_name =
-        "game.world.set_terrain";
+        "services.world.set_terrain";
     require_id_kind(
         requested, "terrain", std::string( api_name ) );
     map &here = get_map();
@@ -1802,7 +1802,7 @@ sol::table transform_line(
     const script_game_id &requested_transform )
 {
     constexpr std::string_view api_name =
-        "game.world.transform_line";
+        "services.world.transform_line";
     require_id_kind(
         requested_transform, "terrain_furniture_transform",
         std::string( api_name ) );
@@ -1863,7 +1863,7 @@ sol::table set_furniture(
     const sol::object &requested )
 {
     constexpr std::string_view api_name =
-        "game.world.set_furniture";
+        "services.world.set_furniture";
     furn_id target =
         furn_str_id::NULL_ID().id();
     if( requested != sol::nil ) {
@@ -1908,7 +1908,7 @@ sol::table set_trap(
     const sol::object &requested )
 {
     constexpr std::string_view api_name =
-        "game.world.set_trap";
+        "services.world.set_trap";
     trap_id target = tr_null;
     if( requested != sol::nil ) {
         if( !requested.is<script_game_id>() ) {
@@ -1955,7 +1955,7 @@ sol::table put_field(
     const sol::optional<bool> &requested_hit_player )
 {
     constexpr std::string_view api_name =
-        "game.world.put_field";
+        "services.world.put_field";
     require_id_kind(
         requested, "field", std::string( api_name ) );
     const field_type_id native =
@@ -2024,7 +2024,7 @@ sol::table remove_field(
     const script_game_id &requested )
 {
     constexpr std::string_view api_name =
-        "game.world.remove_field";
+        "services.world.remove_field";
     require_id_kind(
         requested, "field", std::string( api_name ) );
     const field_type_id native =
@@ -2059,7 +2059,7 @@ sol::table emit_field_at(
     const sol::optional<double> &requested_chance )
 {
     constexpr std::string_view api_name =
-        "game.world.emit";
+        "services.world.emit";
     const emit_id emission( requested_emission );
     if( requested_emission.empty() ||
         requested_emission.size() > 256 ||
@@ -2100,7 +2100,7 @@ sol::table spawn_item(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.world.spawn_item";
+        "services.world.spawn_item";
     require_id_kind(
         requested, "item", std::string( api_name ) );
     if( quantity <= 0 ||
@@ -2238,7 +2238,7 @@ sol::table place_world_spawn_items(
 {
     const tripoint_abs_ms absolute = require_absolute_ms(
                                          position,
-                                         "game.world item spawning" );
+                                         "services.world item spawning" );
     map &here = get_map();
     const bool loaded = here.inbounds( absolute );
     sol::state_view state( lua );
@@ -2307,7 +2307,7 @@ sol::table spawn_world_item_group(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.world.spawn_item_group";
+        "services.world.spawn_item_group";
     require_id_kind(
         group, "item_group", std::string( api_name ) );
     const tripoint_abs_ms absolute = require_absolute_ms(
@@ -2345,7 +2345,7 @@ sol::table spawn_world_item_in_container(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.world.spawn_item_in_container";
+        "services.world.spawn_item_in_container";
     require_id_kind(
         contents_id, "item", std::string( api_name ) );
     require_id_kind(
@@ -2387,7 +2387,7 @@ sol::table remove_item(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.world.remove_item";
+        "services.world.remove_item";
     sol::state_view state( lua );
     const native_handle_result<item> resolved =
         handle.resolve_item(
@@ -2490,7 +2490,7 @@ mapgen_update_options read_mapgen_update_options(
     const sol::optional<sol::table> &requested )
 {
     constexpr std::string_view api_name =
-        "game.world.apply_mapgen_update";
+        "services.world.apply_mapgen_update";
     mapgen_update_options result;
     if( !requested ) {
         return result;
@@ -2580,7 +2580,7 @@ sol::table apply_world_mapgen_update(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.world.apply_mapgen_update";
+        "services.world.apply_mapgen_update";
     require_id_kind(
         requested_update, "update_mapgen",
         std::string( api_name ) );
@@ -2617,7 +2617,7 @@ sol::table apply_world_mapgen_update(
             options.mission->world_generation() != world_generation ) {
             return make_game_error_result( state, {
                 "stale_mission",
-                "game.world.apply_mapgen_update received a stale MissionToken"
+                "services.world.apply_mapgen_update received a stale MissionToken"
             } );
         }
         selected_mission = mission::find(
@@ -2625,7 +2625,7 @@ sol::table apply_world_mapgen_update(
         if( selected_mission == nullptr ) {
             return make_game_error_result( state, {
                 "missing_mission",
-                "game.world.apply_mapgen_update mission no longer exists"
+                "services.world.apply_mapgen_update mission no longer exists"
             } );
         }
     }
@@ -2658,7 +2658,7 @@ transform_radius_options read_transform_radius_options(
     const sol::optional<sol::table> &requested )
 {
     constexpr std::string_view api_name =
-        "game.world.transform_radius";
+        "services.world.transform_radius";
     transform_radius_options result;
     if( !requested ) {
         return result;
@@ -2703,7 +2703,7 @@ sol::table transform_world_radius(
     const sol::optional<sol::table> &requested_options )
 {
     constexpr std::string_view api_name =
-        "game.world.transform_radius";
+        "services.world.transform_radius";
     require_id_kind(
         requested_transform, "terrain_furniture_transform",
         std::string( api_name ) );
@@ -2844,7 +2844,7 @@ sol::table schedule_world_location_revert(
     const sol::optional<std::string> &requested_key )
 {
     constexpr std::string_view api_name =
-        "game.world.schedule_location_revert";
+        "services.world.schedule_location_revert";
     const tripoint_abs_omt omt = require_absolute_omt(
                                      position, api_name );
     const time_duration delay = require_world_change_delay(
@@ -2878,7 +2878,7 @@ sol::table schedule_world_location_copy(
     const sol::optional<std::string> &requested_key )
 {
     constexpr std::string_view api_name =
-        "game.world.schedule_location_copy";
+        "services.world.schedule_location_copy";
     const tripoint_abs_omt source = require_absolute_omt(
                                         source_position, api_name );
     const tripoint_abs_omt destination = require_absolute_omt(
@@ -2927,7 +2927,7 @@ sol::table override_world_place_name(
     const sol::optional<std::string> &requested_key )
 {
     constexpr std::string_view api_name =
-        "game.world.override_place_name";
+        "services.world.override_place_name";
     if( name.empty() || name.size() > maximum_place_name_bytes ) {
         throw std::invalid_argument(
             std::string( api_name ) +
@@ -2959,7 +2959,7 @@ sol::table reschedule_world_events(
     const script_time_duration &requested_delay )
 {
     constexpr std::string_view api_name =
-        "game.world.reschedule_events";
+        "services.world.reschedule_events";
     if( key.empty() ) {
         throw std::invalid_argument(
             std::string( api_name ) +
@@ -3352,6 +3352,6 @@ void install_world_api(
     game["world"] = std::move( world );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

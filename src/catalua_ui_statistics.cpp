@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_statistics.h"
 
@@ -23,7 +23,7 @@
 #include "point.h"
 #include "stats_tracker.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -441,7 +441,7 @@ sol::table list_statistic_definitions(
     const page_options options =
         read_page_options(
             requested,
-            "game.statistics.definitions" );
+            "services.statistics.definitions" );
     const std::vector <
     const event_statistic * > matches =
         matching_statistics(
@@ -490,7 +490,7 @@ sol::table get_statistic_definition(
                sol::state_view( lua ),
                resolve_statistic(
                    id,
-                   "game.statistics.definition" ) );
+                   "services.statistics.definition" ) );
 }
 
 sol::table list_statistic_values(
@@ -500,7 +500,7 @@ sol::table list_statistic_values(
     const page_options options =
         read_page_options(
             requested,
-            "game.statistics.values" );
+            "services.statistics.values" );
     const std::vector <
     const event_statistic * > matches =
         matching_statistics(
@@ -558,7 +558,7 @@ sol::table get_statistic_value(
     const event_statistic &entry =
         resolve_statistic(
             id,
-            "game.statistics.value" );
+            "services.statistics.value" );
     sol::state_view state( lua );
     sol::table value =
         snapshot_statistic_definition(
@@ -705,7 +705,7 @@ sol::table list_transformations(
     const page_options options =
         read_page_options(
             requested,
-            "game.statistics.transformations" );
+            "services.statistics.transformations" );
     const std::vector <
     const event_transformation * > matches =
         matching_transformations(
@@ -865,11 +865,11 @@ sol::table get_transformation(
     const event_transformation &entry =
         resolve_transformation(
             id,
-            "game.statistics.transformation" );
+            "services.statistics.transformation" );
     const page_options options =
         read_page_options(
             requested,
-            "game.statistics.transformation" );
+            "services.statistics.transformation" );
     event_multiset events =
         get_stats().get_events(
             entry.id );
@@ -958,7 +958,7 @@ sol::table list_event_types(
     const page_options options =
         read_page_options(
             requested,
-            "game.statistics.event_types" );
+            "services.statistics.event_types" );
     const std::string query =
         lowercase_ascii(
             options.query );
@@ -1024,14 +1024,14 @@ sol::table get_event_history(
     const event_type type =
         resolve_event_type(
             name,
-            "game.statistics.event" );
+            "services.statistics.event" );
     const page_options options =
         read_page_options(
             requested,
-            "game.statistics.event" );
+            "services.statistics.event" );
     if( !options.query.empty() ) {
         throw std::invalid_argument(
-            "game.statistics.event does not accept option 'query'" );
+            "services.statistics.event does not accept option 'query'" );
     }
     sol::state_view state( lua );
     sol::table value =
@@ -1126,7 +1126,7 @@ sol::table list_scores(
     const page_options options =
         read_page_options(
             requested,
-            "game.statistics.scores" );
+            "services.statistics.scores" );
     const std::vector <
     const score * > matches =
         matching_scores(
@@ -1181,7 +1181,7 @@ sol::table get_score(
     if( id.kind() != "score" ||
         !id.is_valid() ) {
         throw std::invalid_argument(
-            "game.statistics.score requires a valid GameId<score>" );
+            "services.statistics.score requires a valid GameId<score>" );
     }
     const score &entry =
         string_id<score>(
@@ -1294,6 +1294,6 @@ void install_statistics_api(
         std::move( statistics );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

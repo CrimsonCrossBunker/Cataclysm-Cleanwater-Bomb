@@ -22,16 +22,16 @@ class JsonObject;
 class JsonOut;
 class Character;
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 class content_transaction;
-} // namespace cata::lua_platform
+} // namespace cata::lua
 
 class recipe_dictionary
 {
         friend class Item_factory; // allow removal of blacklisted recipes
         friend recipe_id;
-        friend class cata::lua_platform::content_transaction;
+        friend class cata::lua::content_transaction;
 
     public:
         /** Returns all recipes that can be automatically learned */

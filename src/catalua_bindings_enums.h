@@ -10,7 +10,7 @@
 
 #include "catalua_sol.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 class script_enum_value
@@ -42,12 +42,12 @@ std::vector<std::string> supported_script_enum_kinds();
 std::vector<std::string> script_enum_names( std::string_view kind );
 bool script_enum_kind_is_available( std::string_view kind );
 
-// Installs immutable v5 enum values under game.enums.  Legacy CBN enums that
-// became JSON-defined IDs in CCB are represented by dynamic typed names;
-// removed engine concepts remain discoverable with an explicit status.
+// Installs immutable Platform enum values under services.enums. JSON-defined
+// IDs are represented by dynamic typed names; removed concepts remain
+// discoverable only through explicit status values.
 void install_enum_value_api(
     sol::state &lua, sol::table &game, std::function<void()> require_values );
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
 #endif // CATA_SRC_CATALUA_BINDINGS_ENUMS_H

@@ -7,13 +7,13 @@
 
 #include "debug.h"
 #include "debug_menu.h"
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 #include "generic_factory.h"
 
 // for legacy reasons "monfaction::id" is called "name" in json
 static generic_factory<monfaction> faction_factory( "MONSTER_FACTION", "name" );
 
-generic_factory<monfaction> &cata::lua_platform::detail::monster_faction_registry()
+generic_factory<monfaction> &cata::lua::detail::monster_faction_registry()
 {
     return faction_factory;
 }

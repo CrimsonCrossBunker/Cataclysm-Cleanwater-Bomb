@@ -1,6 +1,6 @@
 #pragma once
-#ifndef CATA_SRC_CATALUA_PLATFORM_RUNTIME_H
-#define CATA_SRC_CATALUA_PLATFORM_RUNTIME_H
+#ifndef CATA_SRC_CATALUA_RUNTIME_H
+#define CATA_SRC_CATALUA_RUNTIME_H
 
 #include <cstddef>
 #include <cstdint>
@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "coords_fwd.h"
+#include "catalua_hook.h"
 
 class Character;
 class computer;
@@ -31,12 +32,11 @@ struct vehicle_part;
 struct w_point;
 struct weakpoint_attack;
 
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
     #include "catalua_sol.h"
-    #include "catalua_ui.h"
 #endif
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 
 class runtime;
@@ -70,6 +70,11 @@ class content_transaction
 
         std::string fingerprint() const;
         bool was_applied() const;
+
+        /** Find an item use or consumption handler owned by this transaction. */
+        bool find_item_handler( std::string_view item_id,
+                                std::string_view phase,
+                                std::string &handler_id ) const;
 
         /** Find the named callback owned by this transaction's damage type. */
         bool find_damage_handler( std::string_view damage_id,
@@ -141,7 +146,7 @@ class content_transaction
                                        std::string_view phase,
                                        std::string &handler_id ) const;
 
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
         void install_lua_api( sol::state &lua, sol::table &ccb,
                               const std::shared_ptr<runtime> &owner_runtime );
 #endif
@@ -151,7 +156,7 @@ class content_transaction
         std::unique_ptr<impl> pimpl_;
 };
 
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 std::shared_ptr<runtime> make_runtime( const std::string &mod_id,
                                        std::size_t generation,
@@ -206,16 +211,24 @@ bool dispatch_platform_mapgen_generate( mapgendata &data );
 void dispatch_platform_mapgen_postprocess( mapgendata &data );
 
 bool has_runtime_hook( std::string_view name );
-cata::lua_ui::native_hook_result dispatch_runtime_hook(
+cata::lua::native_hook_result dispatch_runtime_hook(
     std::string_view name,
-    const cata::lua_ui::native_callback_arguments &arguments = {},
-    const cata::lua_ui::native_hook_result &initial = {} );
+    const cata::lua::native_callback_arguments &arguments = {},
+    const cata::lua::native_hook_result &initial = {} );
 
 #endif
 
-} // namespace cata::lua_platform
+/** Return whether a Platform item definition owns a Lua use handler. */
+bool has_platform_item_use_handler( std::string_view item_id );
 
-namespace cata::lua_platform
+/** Invoke the Platform item use handler selected by the active content. */
+std::optional<int> invoke_platform_item_use_handler(
+    Character *character, item &used_item, map *here,
+    const tripoint_bub_ms &position );
+
+} // namespace cata::lua
+
+namespace cata::lua
 {
 
 /** One complete, bounded field-emission decision. */
@@ -414,6 +427,6 @@ std::optional<emission_profile> invoke_emission_profile_handler(
     std::string_view emission_id, const tripoint_bub_ms &position,
     const emission_profile &fallback );
 
-} // namespace cata::lua_platform
+} // namespace cata::lua
 
-#endif // CATA_SRC_CATALUA_PLATFORM_RUNTIME_H
+#endif // CATA_SRC_CATALUA_RUNTIME_H

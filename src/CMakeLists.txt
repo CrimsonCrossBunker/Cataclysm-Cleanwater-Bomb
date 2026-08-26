@@ -1,14 +1,14 @@
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third-party)
-if (CATA_ENABLE_LUA_UI)
+if (CATA_ENABLE_LUA_PLATFORM)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lua)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/sol)
 endif()
 
-# Configure a target's Lua UI compile definition and optional runtime dependency.
-function(configure_lua_ui TARGET)
+# Configure a target's Lua Platform compile definition and optional runtime dependency.
+function(configure_lua_platform TARGET)
     target_compile_definitions(${TARGET} PUBLIC
-        CATA_ENABLE_LUA_UI=$<BOOL:${CATA_ENABLE_LUA_UI}>)
-    if (CATA_ENABLE_LUA_UI)
+        CATA_ENABLE_LUA_PLATFORM=$<BOOL:${CATA_ENABLE_LUA_PLATFORM}>)
+    if (CATA_ENABLE_LUA_PLATFORM)
         target_link_libraries(${TARGET} PUBLIC libsol)
     endif()
 endfunction()
@@ -46,28 +46,19 @@ file(GLOB CATACLYSM_DDA_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cata_allocator_c.c)
 
-set(CATALUA_UI_ENABLED_SOURCES
+set(CATALUA_PLATFORM_ENABLED_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/catalua_dialogue_common.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_actions.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_events.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_game.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_i18n.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_imgui.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_manifest.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_modules.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_navigation.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_renderer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_registry.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_scheduler.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_services.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_state.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_values.cpp)
-if (CATA_ENABLE_LUA_UI)
+if (CATA_ENABLE_LUA_PLATFORM)
     list(REMOVE_ITEM CATACLYSM_DDA_SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_disabled.cpp)
 else()
-    list(REMOVE_ITEM CATACLYSM_DDA_SOURCES ${CATALUA_UI_ENABLED_SOURCES})
+    list(REMOVE_ITEM CATACLYSM_DDA_SOURCES ${CATALUA_PLATFORM_ENABLED_SOURCES})
 endif()
 
 if (MSVC)
@@ -137,7 +128,7 @@ if (TILES)
     target_include_directories(cataclysm-tiles-common INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
     target_link_libraries(cataclysm-tiles-common PUBLIC third-party)
-    configure_lua_ui(cataclysm-tiles-common)
+    configure_lua_platform(cataclysm-tiles-common)
 
     if (TARGET cata_tracy)
         target_link_libraries(cataclysm-tiles-common PUBLIC cata_tracy)
@@ -360,7 +351,7 @@ if (CURSES)
     target_include_directories(cataclysm-common PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     target_include_directories(cataclysm-common INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
     target_link_libraries(cataclysm-common PUBLIC third-party)
-    configure_lua_ui(cataclysm-common)
+    configure_lua_platform(cataclysm-common)
 
     if (TARGET cata_tracy)
         target_link_libraries(cataclysm-common PUBLIC cata_tracy)
@@ -452,7 +443,7 @@ if (HEADLESS)
     target_include_directories(cataclysm-common PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     target_include_directories(cataclysm-common INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
     target_link_libraries(cataclysm-common PUBLIC third-party)
-    configure_lua_ui(cataclysm-common)
+    configure_lua_platform(cataclysm-common)
     target_compile_definitions(cataclysm-common PUBLIC HEADLESS)
 
     if (TARGET cata_tracy)

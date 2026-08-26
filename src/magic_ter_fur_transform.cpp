@@ -9,7 +9,7 @@
 
 #include "avatar.h"
 #include "calendar.h"
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 #include "coordinates.h"
 #include "creature.h"
 #include "enums.h"
@@ -81,7 +81,7 @@ void sync_plant_seed_after_furniture_transform( map &m, const tripoint_bub_ms &l
 } // namespace
 
 generic_factory<ter_furn_transform> &
-cata::lua_platform::detail::ter_furn_transform_registry()
+cata::lua::detail::ter_furn_transform_registry()
 {
     return ter_furn_transform_factory;
 }

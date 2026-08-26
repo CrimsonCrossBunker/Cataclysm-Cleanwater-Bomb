@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_mutations.h"
 
@@ -24,7 +24,7 @@
 #include "type_id.h"
 #include "units.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -443,17 +443,17 @@ definition_options read_definition_options(
         const sol::object key_object = entry.first;
         if( key_object.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.mutations.definitions option keys must be strings" );
+                "services.mutations.definitions option keys must be strings" );
         }
         const sol::object value = entry.second;
         if( !value.is<lua_Integer>() ) {
             throw std::invalid_argument(
-                "game.mutations.definitions options must be integers" );
+                "services.mutations.definitions options must be integers" );
         }
         const lua_Integer number = value.as<lua_Integer>();
         if( number < 0 ) {
             throw std::invalid_argument(
-                "game.mutations.definitions options cannot be negative" );
+                "services.mutations.definitions options cannot be negative" );
         }
         const std::string key = key_object.as<std::string>();
         if( key == "offset" ) {
@@ -468,7 +468,7 @@ definition_options read_definition_options(
                                    maximum_definition_limit ) );
         } else {
             throw std::invalid_argument(
-                "game.mutations.definitions received unknown option '" +
+                "services.mutations.definitions received unknown option '" +
                 key + "'" );
         }
     }
@@ -524,7 +524,7 @@ sol::table get_definition(
     sol::this_state lua, const script_game_id &requested_id )
 {
     require_mutation_id(
-        requested_id, "game.mutations.definition" );
+        requested_id, "services.mutations.definition" );
     sol::state_view state( lua );
     return snapshot_definition(
                state, trait_id( requested_id.value() ).obj() );
@@ -548,19 +548,19 @@ state_options read_state_options(
         const sol::object key_object = entry.first;
         if( key_object.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.mutations.list option keys must be strings" );
+                "services.mutations.list option keys must be strings" );
         }
         const std::string key = key_object.as<std::string>();
         const sol::object value = entry.second;
         if( key == "offset" || key == "limit" ) {
             if( !value.is<lua_Integer>() ) {
                 throw std::invalid_argument(
-                    "game.mutations.list pagination options must be integers" );
+                    "services.mutations.list pagination options must be integers" );
             }
             const lua_Integer number = value.as<lua_Integer>();
             if( number < 0 ) {
                 throw std::invalid_argument(
-                    "game.mutations.list pagination options cannot be negative" );
+                    "services.mutations.list pagination options cannot be negative" );
             }
             if( key == "offset" ) {
                 result.offset = static_cast<std::size_t>(
@@ -577,7 +577,7 @@ state_options read_state_options(
                    key == "include_enchantment" ) {
             if( value.get_type() != sol::type::boolean ) {
                 throw std::invalid_argument(
-                    "game.mutations.list filter options must be booleans" );
+                    "services.mutations.list filter options must be booleans" );
             }
             if( key == "include_hidden" ) {
                 result.include_hidden = value.as<bool>();
@@ -586,7 +586,7 @@ state_options read_state_options(
             }
         } else {
             throw std::invalid_argument(
-                "game.mutations.list received unknown option '" +
+                "services.mutations.list received unknown option '" +
                 key + "'" );
         }
     }
@@ -706,7 +706,7 @@ sol::table has_state(
     const std::size_t world_generation )
 {
     require_mutation_id(
-        requested_id, "game.mutations.has" );
+        requested_id, "services.mutations.has" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -750,11 +750,11 @@ sol::table category_count(
     if( requested_category.kind() != "mutation_category" ||
         !requested_category.is_valid() ) {
         throw std::invalid_argument(
-            "game.mutations.category_count requires a valid GameId<mutation_category>" );
+            "services.mutations.category_count requires a valid GameId<mutation_category>" );
     }
     const mut_count_type count_type = mutation_count_type(
                                           requested_type,
-                                          "game.mutations.category_count" );
+                                          "services.mutations.category_count" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -784,7 +784,7 @@ sol::table is_visible_to(
     const std::size_t world_generation )
 {
     require_mutation_id(
-        requested_id, "game.mutations.is_visible_to" );
+        requested_id, "services.mutations.is_visible_to" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *observed = resolve_character(
@@ -817,7 +817,7 @@ sol::table is_purifiable(
     const std::size_t world_generation )
 {
     require_mutation_id(
-        requested_id, "game.mutations.is_purifiable" );
+        requested_id, "services.mutations.is_purifiable" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -839,7 +839,7 @@ sol::table set_purifiable(
     const std::size_t world_generation )
 {
     require_mutation_id(
-        requested_id, "game.mutations.set_purifiable" );
+        requested_id, "services.mutations.set_purifiable" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -877,7 +877,7 @@ sol::table remove_category(
     if( requested_category.kind() != "mutation_category" ||
         !requested_category.is_valid() ) {
         throw std::invalid_argument(
-            "game.mutations.remove_category requires a valid "
+            "services.mutations.remove_category requires a valid "
             "GameId<mutation_category>" );
     }
     sol::state_view state( lua );
@@ -923,7 +923,7 @@ sol::table get_state(
     const std::size_t world_generation )
 {
     require_mutation_id(
-        requested_id, "game.mutations.get" );
+        requested_id, "services.mutations.get" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -970,7 +970,7 @@ sol::table mutate_state(
         std::trunc( raw_chance ) != raw_chance ||
         raw_chance < 0 || raw_chance > maximum_random_mutation_chance ) {
         throw std::invalid_argument(
-            "game.mutations.mutate true_random_chance must be within 0..1000000" );
+            "services.mutations.mutate true_random_chance must be within 0..1000000" );
     }
     const int chance = static_cast<int>( raw_chance );
     const bool use_vitamins = requested_use_vitamins.value_or( true );
@@ -1001,7 +1001,7 @@ sol::table mutate_category_state(
     }
     const mutation_category_id category = resolve_mutation_category(
                                               requested_category,
-                                              "game.mutations.mutate_category" );
+                                              "services.mutations.mutate_category" );
     const bool use_vitamins = requested_use_vitamins.value_or( true );
     const bool true_random = requested_true_random.value_or( false );
     const std::vector<trait_and_var> before = mutation_state( *character );
@@ -1022,7 +1022,7 @@ sol::table mutate_towards_state(
     const std::size_t world_generation )
 {
     require_mutation_id(
-        requested_mutation, "game.mutations.mutate_towards" );
+        requested_mutation, "services.mutations.mutate_towards" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -1033,7 +1033,7 @@ sol::table mutate_towards_state(
     }
     const mutation_category_id category = resolve_mutation_category(
                                               requested_category,
-                                              "game.mutations.mutate_towards" );
+                                              "services.mutations.mutate_towards" );
     const bool use_vitamins = requested_use_vitamins.value_or( true );
     const std::vector<trait_and_var> before = mutation_state( *character );
     const bool accepted = character->mutate_towards(
@@ -1081,7 +1081,7 @@ sol::table grant_state(
     const std::size_t world_generation )
 {
     require_mutation_id(
-        requested_id, "game.mutations.grant" );
+        requested_id, "services.mutations.grant" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -1102,7 +1102,7 @@ sol::table grant_state(
     }
     const mutation_variant *variant = requested_variant(
                                           id.obj(), requested_variant_id,
-                                          "game.mutations.grant" );
+                                          "services.mutations.grant" );
     character->set_mutation( id, variant );
     if( !character->has_permanent_trait( id ) ) {
         return make_game_error_result(
@@ -1129,7 +1129,7 @@ sol::table remove_state(
     const std::size_t world_generation )
 {
     require_mutation_id(
-        requested_id, "game.mutations.remove" );
+        requested_id, "services.mutations.remove" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -1174,7 +1174,7 @@ sol::table set_active_state(
     const std::size_t world_generation )
 {
     require_mutation_id(
-        requested_id, "game.mutations.set_active" );
+        requested_id, "services.mutations.set_active" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -1239,7 +1239,7 @@ sol::table set_variant_state(
     const std::size_t world_generation )
 {
     require_mutation_id(
-        requested_id, "game.mutations.set_variant" );
+        requested_id, "services.mutations.set_variant" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -1260,7 +1260,7 @@ sol::table set_variant_state(
                                           id.obj(),
                                           sol::optional<std::string>(
                                                   requested_variant_id ),
-                                          "game.mutations.set_variant" );
+                                          "services.mutations.set_variant" );
     const std::string before_id =
         mutation_variant_id( *character, id, false );
     sol::table before = snapshot_state(
@@ -1479,6 +1479,6 @@ void install_mutation_api(
     game["mutations"] = std::move( mutations );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

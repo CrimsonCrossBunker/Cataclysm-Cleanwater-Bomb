@@ -7,14 +7,14 @@
 
 #include "catalua_sol.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 class game_handle_runtime;
 
 // Install generation-bound spawning, follower, and avatar relocation
-// services.  Mutations require game.write and an active callback.  Relocation
-// additionally requires game.actions.dangerous.
+// services. Mutations require an active Platform write callback. Relocation
+// additionally requires the explicit dangerous-relocation guard.
 void install_game_world_service_api(
     sol::table &game,
     std::function<game_handle_runtime()> current_runtime_generation,
@@ -24,6 +24,6 @@ void install_game_world_service_api(
     std::function<void()> require_dangerous_relocation,
     std::function<bool()> has_active_callback );
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
 #endif // CATA_SRC_CATALUA_UI_WORLD_SERVICES_H

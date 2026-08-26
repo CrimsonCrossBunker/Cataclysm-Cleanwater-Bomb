@@ -11,7 +11,7 @@
 
 #include "calendar.h"
 #include "cata_utility.h"
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 #include "coordinates.h"
 #include "debug.h"
 #include "drawing_primitives.h"
@@ -51,7 +51,7 @@ generic_factory<pp_generator> pp_generator_factory( "pp_generator" );
 } // namespace
 
 generic_factory<pp_generator> &
-cata::lua_platform::detail::post_process_generator_registry()
+cata::lua::detail::post_process_generator_registry()
 {
     return pp_generator_factory;
 }

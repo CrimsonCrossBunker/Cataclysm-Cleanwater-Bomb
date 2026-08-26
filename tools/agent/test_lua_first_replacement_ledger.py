@@ -16,7 +16,7 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
         self.assertEqual(
             result,
             {
-                "total": 775,
+                "total": 774,
                 "implemented_verified": 67,
                 "implemented_unverified": 22,
                 "bounded_implemented_verified": 16,
@@ -24,7 +24,7 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 "primitive_available_unverified": 0,
                 "planned": 0,
                 "private_adapter": 0,
-                "reviewed_not_applicable": 18,
+                "reviewed_not_applicable": 17,
             },
         )
 
@@ -39,7 +39,7 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
             {
                 "json-object-types": 190,
                 "eoc-conditions": 275,
-                "eoc-effects": 310,
+                "eoc-effects": 309,
             },
         )
 
@@ -100,9 +100,9 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
             self.assertEqual(entries[selector]["status"], "implemented_unverified")
             self.assertEqual(entries[selector]["target"], target)
             self.assertEqual(entries[selector]["legacy_dependency"], "none")
-            self.assertIn("src/catalua_platform_world_content.cpp",
+            self.assertIn("src/catalua_content_world.cpp",
                           entries[selector]["evidence"])
-            self.assertIn("tests/catalua_ui_test.cpp",
+            self.assertIn("tests/catalua_platform_test.cpp",
                           entries[selector]["evidence"])
 
     def test_committed_ledger_matches_the_generator(self):
@@ -243,7 +243,7 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
             self.assertEqual(entry["status"], "implemented_verified")
             self.assertEqual(entry["target"], target)
             self.assertEqual(entry["legacy_dependency"], "none")
-            self.assertIn("tests/catalua_ui_test.cpp", entry["evidence"])
+            self.assertIn("tests/catalua_platform_test.cpp", entry["evidence"])
 
         for selector, target in {
             "clothing_mod": "content.clothing-modifications",
@@ -265,7 +265,7 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
             self.assertEqual(entry["status"], "bounded_implemented_verified")
             self.assertEqual(entry["target"], target)
             self.assertEqual(entry["legacy_dependency"], "none")
-            self.assertIn("tests/catalua_ui_test.cpp", entry["evidence"])
+            self.assertIn("tests/catalua_platform_test.cpp", entry["evidence"])
 
     def test_lua_native_eoc_shapes_remain_bounded_until_full_parity(self):
         generated = build_ledger()
@@ -420,7 +420,7 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
             )
             self.assertIn("src/npctalk.cpp", wound_effect["evidence"])
             self.assertIn(
-                "src/catalua_platform_runtime.cpp", wound_effect["evidence"]
+                "src/catalua_runtime.cpp", wound_effect["evidence"]
             )
 
         for selector in {"npc_set_fac_relation", "u_add_faction_trust"}:
@@ -2334,7 +2334,6 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
             "nothing",
             "run_eoc_selector",
             "run_eocs",
-            "run_lua",
             "set_condition",
             "test_eoc",
         }:

@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_bindings_enums.h"
 
@@ -25,7 +25,7 @@
 #include "npc.h"
 #include "vitamin.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -406,7 +406,7 @@ std::string_view enum_status_name( const enum_family_status status )
         case enum_family_status::not_applicable:
             return "not_applicable";
     }
-    throw std::logic_error( "unknown game.enums family status" );
+    throw std::logic_error( "unknown services.enums family status" );
 }
 
 const enum_family_definition &require_enum_family( const std::string_view kind )
@@ -414,7 +414,7 @@ const enum_family_definition &require_enum_family( const std::string_view kind )
     const enum_family_definition *family = find_enum_family( kind );
     if( family == nullptr ) {
         throw std::invalid_argument(
-            "game.enums received an unknown enum family: " + std::string( kind ) );
+            "services.enums received an unknown enum family: " + std::string( kind ) );
     }
     return *family;
 }
@@ -425,14 +425,14 @@ std::size_t require_enum_entry(
     const enum_family_definition &family = require_enum_family( kind );
     if( family.status == enum_family_status::not_applicable ) {
         throw std::invalid_argument(
-            "game.enums family " + std::string( kind ) +
+            "services.enums family " + std::string( kind ) +
             " is not applicable in this CCB engine" );
     }
     std::vector<std::string> values = family.values();
     const auto found = std::find( values.begin(), values.end(), name );
     if( found == values.end() ) {
         throw std::invalid_argument(
-            "game.enums received an unknown " + std::string( kind ) +
+            "services.enums received an unknown " + std::string( kind ) +
             " value: " + std::string( name ) );
     }
     return static_cast<std::size_t>( std::distance( values.begin(), found ) );
@@ -572,17 +572,17 @@ void install_enum_value_api(
         const enum_family_definition &family = require_enum_family( kind );
         if( family.status == enum_family_status::not_applicable ) {
             throw std::invalid_argument(
-                "game.enums.values cannot enumerate a not-applicable family" );
+                "services.enums.values cannot enumerate a not-applicable family" );
         }
         const std::int64_t offset = raw_offset.value_or( 0 );
         const std::int64_t limit = raw_limit.value_or( 128 );
         if( offset < 0 || offset > 1000000 ) {
             throw std::invalid_argument(
-                "game.enums.values offset must be within 0..1000000" );
+                "services.enums.values offset must be within 0..1000000" );
         }
         if( limit < 0 || limit > 512 ) {
             throw std::invalid_argument(
-                "game.enums.values limit must be within 0..512" );
+                "services.enums.values limit must be within 0..512" );
         }
         return enum_values_table(
                    sol::state_view( lua_state ), kind, family.values(),
@@ -603,6 +603,6 @@ void install_enum_value_api(
     game["enums"] = std::move( enum_api );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

@@ -31,10 +31,10 @@ namespace cata
 template <typename T> class value_ptr;
 }  // namespace cata
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 class content_transaction;
-} // namespace cata::lua_platform
+} // namespace cata::lua
 
 /**
  * Blacklists are an old way to remove items from the game.
@@ -101,7 +101,7 @@ class Item_factory
 {
         friend class generic_factory<itype>;
         friend struct itype;
-        friend class cata::lua_platform::content_transaction;
+        friend class cata::lua::content_transaction;
     public:
         generic_factory<itype> item_factory = generic_factory<itype>( "ITEM" );
 

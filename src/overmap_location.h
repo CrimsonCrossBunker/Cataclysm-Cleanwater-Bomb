@@ -13,7 +13,7 @@
 class JsonObject;
 struct oter_t;
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 class content_transaction;
 }
@@ -40,7 +40,7 @@ struct overmap_location {
         bool was_loaded = false;
 
     private:
-        friend class cata::lua_platform::content_transaction;
+        friend class cata::lua::content_transaction;
         TerrColType terrains;
         std::vector<std::string> flags;
 };

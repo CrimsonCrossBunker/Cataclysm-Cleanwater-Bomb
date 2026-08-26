@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "ammo_effect.h"
-#include "catalua_platform_runtime.h"
+#include "catalua_runtime.h"
 #include "bodypart.h"
 #include "calendar.h"
 #include "character.h"
@@ -221,7 +221,7 @@ void apply_ammo_effects( Creature *source, const tripoint_bub_ms &p,
             }
 
             Creature *const impact_target = get_creature_tracker().creature_at( p );
-            cata::lua_platform::invoke_ammo_effect_handler(
+            cata::lua::invoke_ammo_effect_handler(
                 ae.id.str(), source, impact_target, p, dealt_damage );
 
             //run EoCs

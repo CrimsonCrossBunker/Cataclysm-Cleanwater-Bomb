@@ -2,7 +2,7 @@
 
 #include "cached_options.h"
 #include "cata_scope_helpers.h"
-#include "catalua_platform.h"
+#include "catalua_loader.h"
 #include "mod_manager.h"
 #include "path_info.h"
 #include "worldfactory.h"
@@ -52,11 +52,11 @@ TEST_CASE( "unexpected_builtin_mod_detection", "[mod_manager]" )
     CHECK_FALSE( is_unexpected_builtin_mod( third_party_mod ) );
 }
 
-#if !defined(CATA_ENABLE_LUA_UI) || !CATA_ENABLE_LUA_UI
+#if !defined(CATA_ENABLE_LUA_PLATFORM) || !CATA_ENABLE_LUA_PLATFORM
 TEST_CASE( "lua_first_platform_disabled_build_rejects_runtime_sources",
            "[mod_manager][lua][platform]" )
 {
-    CHECK_FALSE( cata::lua_platform::is_enabled() );
+    CHECK_FALSE( cata::lua::is_enabled() );
 
     REQUIRE( world_generator != nullptr );
     mod_manager &manager = world_generator->get_mod_manager();
@@ -64,25 +64,25 @@ TEST_CASE( "lua_first_platform_disabled_build_rejects_runtime_sources",
     const mod_id bundled_example( "Lua_First_Example" );
     REQUIRE( bundled_example.is_valid() );
     CHECK( bundled_example->lua_platform_version ==
-           cata::lua_platform::platform_version );
+           cata::lua::platform_version );
     CHECK( bundled_example->lua_platform_error.find( "not enabled" ) !=
            std::string::npos );
     CHECK( bundled_example->lua_platform_entry.get_unrelative_path() ==
            PATH_INFO::moddir().get_unrelative_path() /
            "Lua_First_Example" / "main.lua" );
 
-    const std::vector<cata::lua_platform::mod_source> sources = {
+    const std::vector<cata::lua::mod_source> sources = {
         { "disabled_test", "disabled_test", "disabled_test/main.lua" }
     };
     std::string error;
-    CHECK_FALSE( cata::lua_platform::prepare_mods( sources, error ) );
+    CHECK_FALSE( cata::lua::prepare_mods( sources, error ) );
     CHECK( error.find( "not enabled" ) != std::string::npos );
-    CHECK( cata::lua_platform::loaded_mod_ids().empty() );
+    CHECK( cata::lua::loaded_mod_ids().empty() );
 
-    REQUIRE( cata::lua_platform::prepare_mods( {}, error ) );
-    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
-    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
-    cata::lua_platform::commit_prepared_mods();
+    REQUIRE( cata::lua::prepare_mods( {}, error ) );
+    REQUIRE( cata::lua::apply_prepared_content( error ) );
+    REQUIRE( cata::lua::validate_finalized_prepared_content( error ) );
+    cata::lua::commit_prepared_mods();
     CHECK( error.empty() );
 }
 #endif

@@ -1,4 +1,4 @@
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 
 #include "game.h" // IWYU pragma: associated
 
@@ -1989,21 +1989,21 @@ void global_variables::load_migrations( const JsonObject &jo, std::string_view )
     get_globals().migrations.emplace( from, to );
 }
 
-void cata::lua_platform::detail::insert_platform_var_migration(
+void cata::lua::detail::insert_platform_var_migration(
     const platform_migration_data &value )
 {
     get_globals().migrations.emplace(
         value.from_id, value.to_id.empty() ? "NULL_VALUE" : value.to_id );
 }
 
-void cata::lua_platform::detail::erase_platform_var_migration(
+void cata::lua::detail::erase_platform_var_migration(
     const platform_migration_data &value )
 {
     get_globals().migrations.erase( value.from_id );
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua_platform::detail::var_migration_snapshot()
+cata::lua::detail::var_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     const std::map<std::string, std::string> &migrations =

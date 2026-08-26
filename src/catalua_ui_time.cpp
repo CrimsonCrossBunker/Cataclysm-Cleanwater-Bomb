@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_time.h"
 
@@ -18,7 +18,7 @@
 #include "game.h"
 #include "timed_event.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -108,7 +108,7 @@ sol::table snapshot_point(
     const time_point &point )
 {
     require_snapshot_point(
-        point, "game.time.snapshot" );
+        point, "services.time.snapshot" );
     const season_type season =
         season_of_year( point );
     const std::int64_t point_turn =
@@ -283,7 +283,7 @@ sol::table set_now(
     const sol::optional<script_time_point> &expected )
 {
     constexpr std::string_view api_name =
-        "game.time.set_now";
+        "services.time.set_now";
     require_active_game( api_name );
     const time_point target =
         requested.to_native();
@@ -330,7 +330,7 @@ sol::table advance(
     const sol::optional<script_time_point> &expected )
 {
     constexpr std::string_view api_name =
-        "game.time.advance";
+        "services.time.advance";
     require_active_game( api_name );
     const std::int64_t current =
         turn_number( calendar::turn );
@@ -343,7 +343,7 @@ sol::table advance(
         ( delta < 0 &&
           current < -delta ) ) {
         throw std::invalid_argument(
-            "game.time.advance would exceed "
+            "services.time.advance would exceed "
             "turn_zero..turn_max" );
     }
     return set_now(
@@ -452,6 +452,6 @@ void install_time_api(
     } );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

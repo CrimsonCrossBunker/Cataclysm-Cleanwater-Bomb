@@ -5,7 +5,7 @@
 
 #include "calendar.h"
 #include "cata_assert.h"
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 #include "color.h"
 #include "cuboid_rectangle.h"
 #include "cursesdef.h"
@@ -274,7 +274,7 @@ namespace
 generic_factory<scent_type> scent_factory( "scent_type" );
 } // namespace
 
-generic_factory<scent_type> &cata::lua_platform::detail::scent_type_registry()
+generic_factory<scent_type> &cata::lua::detail::scent_type_registry()
 {
     return scent_factory;
 }

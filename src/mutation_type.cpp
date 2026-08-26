@@ -1,6 +1,6 @@
 #include "mutation.h" // IWYU pragma: associated
 
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 #include "flexbuffer_json.h"
 
 namespace
@@ -25,17 +25,17 @@ bool mutation_type_exists( const std::string &id )
     return mutation_types.find( id ) != mutation_types.end();
 }
 
-bool cata::lua_platform::detail::mutation_type_registry_contains( const std::string &id )
+bool cata::lua::detail::mutation_type_registry_contains( const std::string &id )
 {
     return mutation_type_exists( id );
 }
 
-void cata::lua_platform::detail::mutation_type_registry_set( const std::string &id )
+void cata::lua::detail::mutation_type_registry_set( const std::string &id )
 {
     mutation_types[id] = mutation_type{ id };
 }
 
-void cata::lua_platform::detail::mutation_type_registry_erase( const std::string &id )
+void cata::lua::detail::mutation_type_registry_erase( const std::string &id )
 {
     mutation_types.erase( id );
 }

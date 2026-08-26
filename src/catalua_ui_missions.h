@@ -9,7 +9,7 @@
 #include "catalua_game_handle.h"
 #include "catalua_sol.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 class mission_token
@@ -49,6 +49,6 @@ void install_mission_api(
     std::function<void()> require_read,
     std::function<void()> require_write );
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
 #endif // CATA_SRC_CATALUA_UI_MISSIONS_H

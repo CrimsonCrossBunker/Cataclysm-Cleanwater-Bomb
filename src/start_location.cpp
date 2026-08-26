@@ -9,7 +9,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_variant.h"
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 #include "character.h"
 #include "city.h"
 #include "clzones.h"
@@ -61,13 +61,13 @@ namespace
 generic_factory<start_location> all_start_locations( "start locations" );
 } // namespace
 
-generic_factory<start_location> &cata::lua_platform::detail::start_location_registry()
+generic_factory<start_location> &cata::lua::detail::start_location_registry()
 {
     return all_start_locations;
 }
 
-std::vector<cata::lua_platform::detail::start_location_snapshot_entry>
-cata::lua_platform::detail::start_location_snapshot()
+std::vector<cata::lua::detail::start_location_snapshot_entry>
+cata::lua::detail::start_location_snapshot()
 {
     std::vector<start_location_snapshot_entry> result;
     for( const start_location &value : all_start_locations.get_all() ) {

@@ -48,36 +48,12 @@ entries:
     patterns:
       - src/catalua*
       - src/event.h
-      - data/lua/manifest.schema.json
-      - data/lua/types/ccb_api_v5.d.lua
+      - data/lua/types/ccb_platform_v1.d.lua
       - data/lua/reference/*
       - tools/lua_api/*
     documentation_ids:
-      - api.lua.v5.overview
-      - api.lua.v5.lifecycle
-      - api.lua.v5.events
-      - api.lua.v5.capabilities
-      - api.lua.v5.permissions
-      - api.lua.v5.ui
-      - api.lua.v5.debugging
-      - api.lua.v5.performance
-      - api.lua.v5.migration
-      - api.lua.v5.changelog
-      - api.lua.v5.example-mod
-      - api.lua.v5.reference.modules
-      - api.lua.v5.reference.namespaces
-      - api.lua.v5.reference.classes
-      - api.lua.v5.reference.functions
-      - api.lua.v5.reference.methods
-      - api.lua.v5.reference.properties
-      - api.lua.v5.reference.operators
-      - api.lua.v5.reference.enums
-      - api.lua.v5.reference.events
-      - api.lua.v5.reference.hooks
-      - api.lua.v5.reference.callbacks
-      - api.lua.v5.reference.capabilities
-      - api.lua.v5.reference.permissions
-      - api.lua.v5.reference.manifest-fields
+      - architecture.lua-first-platform
+      - architecture.lua-first-roadmap
     generated_reference_impact: true
     required_check_ids: [documentation-impact, lua-contract]
     documentation_readiness:
@@ -95,6 +71,7 @@ entries:
     enforcement: advisory
     patterns:
       - data/lua/LUA_FIRST_PLATFORM.md
+      - data/lua/LUA_FIRST_EOC_WORKFLOW.md
       - ai/lua-first-roadmap.yml
       - ai/lua-first-roadmap.schema.json
       - ai/lua-first-replacement-ledger.yml
@@ -104,8 +81,14 @@ entries:
       - data/mods/Lua_First_Example/**
       - tools/create_lua_mod.py
       - tools/migrate_lua_first.py
-      - src/catalua_platform*.cpp
-      - src/catalua_platform*.h
+      - src/catalua_loader.cpp
+      - src/catalua_loader.h
+      - src/catalua_runtime.cpp
+      - src/catalua_runtime.h
+      - src/catalua_content*.cpp
+      - src/catalua_content*.h
+      - src/catalua_hook.cpp
+      - src/catalua_hook.h
       - src/mod_manager.cpp
       - src/mod_manager.h
       - src/mod_manager_ui.cpp
@@ -116,6 +99,7 @@ entries:
       - architecture.lua-first-platform
       - architecture.lua-first-roadmap
       - architecture.lua-first-glossary
+      - architecture.lua-first-eoc-workflow
     generated_reference_impact: false
     required_check_ids: [agent-context]
     risk_group: lua-platform

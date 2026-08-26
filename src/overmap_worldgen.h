@@ -15,7 +15,7 @@ class dimension_world;
 class dimension_region_layout;
 template <typename T> struct enum_traits;
 
-namespace cata::lua_platform::detail
+namespace cata::lua::detail
 {
 struct dimension_native_definition;
 struct dimension_region_layout_native_definition;
@@ -23,7 +23,7 @@ dimension_world make_dimension_native(
     const dimension_native_definition &definition );
 dimension_region_layout make_dimension_region_layout_native(
     const dimension_region_layout_native_definition &definition );
-} // namespace cata::lua_platform::detail
+} // namespace cata::lua::detail
 
 using Region_map = std::unordered_map<tripoint_abs_om, region_settings_id>;
 
@@ -54,8 +54,8 @@ struct region_voronoi_point {
 class dimension_world
 {
 
-        friend dimension_world cata::lua_platform::detail::make_dimension_native(
-            const cata::lua_platform::detail::dimension_native_definition &definition );
+        friend dimension_world cata::lua::detail::make_dimension_native(
+            const cata::lua::detail::dimension_native_definition &definition );
 
         dimension_region_layout_id region_layout;
     public:
@@ -127,8 +127,8 @@ class dimension_region_layout_static : public dimension_region_layout_generator
 
 class dimension_region_layout_generator_uniform : public dimension_region_layout_dynamic
 {
-        friend dimension_region_layout cata::lua_platform::detail::make_dimension_region_layout_native(
-            const cata::lua_platform::detail::dimension_region_layout_native_definition &definition );
+        friend dimension_region_layout cata::lua::detail::make_dimension_region_layout_native(
+            const cata::lua::detail::dimension_region_layout_native_definition &definition );
 
         region_settings_id uniform_region;
     public:
@@ -143,8 +143,8 @@ class dimension_region_layout_generator_uniform : public dimension_region_layout
 class dimension_region_layout
 {
 
-        friend dimension_region_layout cata::lua_platform::detail::make_dimension_region_layout_native(
-            const cata::lua_platform::detail::dimension_region_layout_native_definition &definition );
+        friend dimension_region_layout cata::lua::detail::make_dimension_region_layout_native(
+            const cata::lua::detail::dimension_region_layout_native_definition &definition );
 
         // what type of region layout generator to use (see `regions_generation_mode`)
         regions_generation_mode generation_mode;

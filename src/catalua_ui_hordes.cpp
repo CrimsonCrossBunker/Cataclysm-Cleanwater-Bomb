@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_hordes.h"
 
@@ -33,7 +33,7 @@
 #include "point.h"
 #include "type_id.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -912,7 +912,7 @@ sol::table list_group_definitions(
     const sol::optional<sol::table> &requested )
 {
     constexpr std::string_view api_name =
-        "game.hordes.definitions";
+        "services.hordes.definitions";
     const page_options options =
         read_page_options(
             requested, std::string( api_name ) );
@@ -971,7 +971,7 @@ sol::table get_group_definition(
     const sol::optional<sol::table> &requested )
 {
     constexpr std::string_view api_name =
-        "game.hordes.definition";
+        "services.hordes.definition";
     if( requested_id.kind() != "monster_group" ||
         !requested_id.is_valid() ) {
         throw std::invalid_argument(
@@ -997,7 +997,7 @@ sol::table group_monsters(
     const sol::optional<sol::table> &requested )
 {
     constexpr std::string_view api_name =
-        "game.hordes.monsters";
+        "services.hordes.monsters";
     if( requested_group.kind() != "monster_group" ||
         !requested_group.is_valid() ) {
         throw std::invalid_argument(
@@ -1055,7 +1055,7 @@ bool group_contains(
     const script_game_id &requested_monster )
 {
     constexpr std::string_view api_name =
-        "game.hordes.contains";
+        "services.hordes.contains";
     if( requested_group.kind() != "monster_group" ||
         !requested_group.is_valid() ) {
         throw std::invalid_argument(
@@ -1316,7 +1316,7 @@ sol::table list_entities(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.hordes.entities";
+        "services.hordes.entities";
     const tripoint_abs_omt native_center =
         require_absolute_omt(
             center, std::string( api_name ) );
@@ -1374,7 +1374,7 @@ sol::table list_legacy_groups(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.hordes.legacy_groups";
+        "services.hordes.legacy_groups";
     const tripoint_abs_omt native_center =
         require_absolute_omt(
             center, std::string( api_name ) );
@@ -1484,7 +1484,7 @@ sol::table spawn_entity(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.hordes.spawn_entity";
+        "services.hordes.spawn_entity";
     if( requested_monster.kind() != "monster" ||
         !requested_monster.is_valid() ) {
         throw std::invalid_argument(
@@ -1576,7 +1576,7 @@ sol::table alert_entity(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.hordes.alert_entity";
+        "services.hordes.alert_entity";
     if( intensity < 0 ||
         intensity > maximum_tracking_intensity ) {
         throw std::invalid_argument(
@@ -1809,7 +1809,7 @@ sol::table spawn_legacy_group(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.hordes.spawn_legacy_group";
+        "services.hordes.spawn_legacy_group";
     std::optional<std::string> group_id;
     std::optional<tripoint_abs_sm> position;
     legacy_settings settings;
@@ -1896,7 +1896,7 @@ sol::table update_legacy_group(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.hordes.update_legacy_group";
+        "services.hordes.update_legacy_group";
     const legacy_settings settings =
         read_legacy_settings(
             requested, std::string( api_name ) );
@@ -1972,7 +1972,7 @@ sol::table horde_summary(
     const script_tripoint_coord &position )
 {
     constexpr std::string_view api_name =
-        "game.hordes.summary";
+        "services.hordes.summary";
     const tripoint_abs_omt native_position =
         require_absolute_omt(
             position, std::string( api_name ) );
@@ -2046,7 +2046,7 @@ sol::table signal_hordes(
     const int power )
 {
     constexpr std::string_view api_name =
-        "game.hordes.signal";
+        "services.hordes.signal";
     if( power < 0 ||
         power > maximum_signal_power ) {
         throw std::invalid_argument(
@@ -2409,6 +2409,6 @@ void install_horde_api(
     game["hordes"] = std::move( hordes );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

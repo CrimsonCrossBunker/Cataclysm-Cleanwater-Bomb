@@ -20,7 +20,7 @@ if (USE_SDL3)
     list(APPEND CATACLYSM_DATA_DIRS shaders)
 endif ()
 
-if (CATA_ENABLE_LUA_UI)
+if (CATA_ENABLE_LUA_PLATFORM)
     list(APPEND CATACLYSM_DATA_DIRS lua)
 endif ()
 

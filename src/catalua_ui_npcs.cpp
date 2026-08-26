@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_npcs.h"
 #include "catalua_ui_npc_services.h"
@@ -45,7 +45,7 @@
 #include "overmapbuffer.h"
 #include "talker_npc.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -103,17 +103,17 @@ definition_options read_definition_options(
     if( result.offset < 0 ||
         result.offset > maximum_definition_offset ) {
         throw std::invalid_argument(
-            "game.npcs.classes offset must be within 0..1000000" );
+            "services.npcs.classes offset must be within 0..1000000" );
     }
     if( result.limit < 0 ) {
         throw std::invalid_argument(
-            "game.npcs.classes limit cannot be negative" );
+            "services.npcs.classes limit cannot be negative" );
     }
     result.limit = std::min(
                        result.limit, maximum_definition_limit );
     if( result.query.size() > maximum_query_bytes ) {
         throw std::invalid_argument(
-            "game.npcs.classes query exceeds 128 bytes" );
+            "services.npcs.classes query exceeds 128 bytes" );
     }
     return result;
 }
@@ -292,7 +292,7 @@ sol::table get_class(
     sol::this_state lua, const script_game_id &id )
 {
     require_npc_class_id(
-        id, "game.npcs.class" );
+        id, "services.npcs.class" );
     return snapshot_class(
                sol::state_view( lua ),
                npc_class_id( id.value() ).obj() );
@@ -640,17 +640,17 @@ state_options read_state_options(
     if( result.offset < 0 ||
         result.offset > maximum_state_offset ) {
         throw std::invalid_argument(
-            "game.npcs.list offset must be within 0..1000000" );
+            "services.npcs.list offset must be within 0..1000000" );
     }
     if( result.limit < 0 ) {
         throw std::invalid_argument(
-            "game.npcs.list limit cannot be negative" );
+            "services.npcs.list limit cannot be negative" );
     }
     result.limit = std::min(
                        result.limit, maximum_state_limit );
     if( result.query.size() > maximum_query_bytes ) {
         throw std::invalid_argument(
-            "game.npcs.list query exceeds 128 bytes" );
+            "services.npcs.list query exceeds 128 bytes" );
     }
     return result;
 }
@@ -758,7 +758,7 @@ sol::table find_unique_npc(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.npcs.find_unique";
+        "services.npcs.find_unique";
     if( unique_id.empty() ||
         unique_id.size() > maximum_npc_name_bytes ||
         unique_id.find( '\0' ) != std::string::npos ) {
@@ -818,7 +818,7 @@ sol::table has_npc_role_nearby(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.npcs.has_role_nearby";
+        "services.npcs.has_role_nearby";
     if( role.size() > maximum_npc_role_bytes ||
         role.find( '\0' ) != std::string::npos ) {
         throw std::invalid_argument(
@@ -862,7 +862,7 @@ sol::table has_npc_follower_nearby(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.npcs.has_follower_nearby";
+        "services.npcs.has_follower_nearby";
     require_npc_class_id( requested_class, api_name );
     const int radius = requested_radius.value_or( 4 );
     if( radius < 0 || radius > maximum_npc_role_radius ) {
@@ -906,18 +906,18 @@ void validate_npc_name( const std::string &name )
 {
     if( name.empty() ) {
         throw std::invalid_argument(
-            "game.npcs.rename name cannot be empty" );
+            "services.npcs.rename name cannot be empty" );
     }
     if( name.size() > maximum_npc_name_bytes ) {
         throw std::invalid_argument(
-            "game.npcs.rename name exceeds 256 bytes" );
+            "services.npcs.rename name exceeds 256 bytes" );
     }
     if( std::any_of(
     name.begin(), name.end(), []( const unsigned char ch ) {
     return ch < 0x20U || ch == 0x7fU;
 } ) ) {
         throw std::invalid_argument(
-            "game.npcs.rename name cannot contain control characters" );
+            "services.npcs.rename name cannot contain control characters" );
     }
 }
 
@@ -999,7 +999,7 @@ sol::table set_npc_attitude(
         parse_attitude( requested_attitude );
     if( !attitude ) {
         throw std::invalid_argument(
-            "game.npcs.set_attitude received an unknown attitude" );
+            "services.npcs.set_attitude received an unknown attitude" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1040,7 +1040,7 @@ opinion_deltas read_opinion_deltas(
     for( const auto &entry : requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.npcs.modify_opinion option keys must be strings" );
+                "services.npcs.modify_opinion option keys must be strings" );
         }
         const std::string key =
             entry.first.as<std::string>();
@@ -1048,19 +1048,19 @@ opinion_deltas read_opinion_deltas(
             key != "value" && key != "anger" &&
             key != "owed" && key != "sold" ) {
             throw std::invalid_argument(
-                "game.npcs.modify_opinion received unknown option '" +
+                "services.npcs.modify_opinion received unknown option '" +
                 key + "'" );
         }
         if( !entry.second.is<int>() ) {
             throw std::invalid_argument(
-                "game.npcs.modify_opinion option '" + key +
+                "services.npcs.modify_opinion option '" + key +
                 "' must be an integer" );
         }
         const int delta = entry.second.as<int>();
         if( delta < -maximum_opinion_delta ||
             delta > maximum_opinion_delta ) {
             throw std::invalid_argument(
-                "game.npcs.modify_opinion option '" + key +
+                "services.npcs.modify_opinion option '" + key +
                 "' must be within -1000000..1000000" );
         }
         if( key == "trust" ) {
@@ -1081,7 +1081,7 @@ opinion_deltas read_opinion_deltas(
         !result.value && !result.anger &&
         !result.owed && !result.sold ) {
         throw std::invalid_argument(
-            "game.npcs.modify_opinion requires at least one delta" );
+            "services.npcs.modify_opinion requires at least one delta" );
     }
     return result;
 }
@@ -1176,11 +1176,11 @@ sol::table add_npc_debt(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    constexpr std::string_view api_name = "game.npcs.add_debt";
+    constexpr std::string_view api_name = "services.npcs.add_debt";
     if( amount < -maximum_opinion_delta ||
         amount > maximum_opinion_delta ) {
         throw std::invalid_argument(
-            "game.npcs.add_debt amount must be within -1000000..1000000" );
+            "services.npcs.add_debt amount must be within -1000000..1000000" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1219,7 +1219,7 @@ sol::table add_npc_faction_rep(
     if( amount < -maximum_opinion_delta ||
         amount > maximum_opinion_delta ) {
         throw std::invalid_argument(
-            "game.npcs.add_faction_rep amount must be within -1000000..1000000" );
+            "services.npcs.add_faction_rep amount must be within -1000000..1000000" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1293,7 +1293,7 @@ sol::table set_npc_class(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    constexpr std::string_view api_name = "game.npcs.set_class";
+    constexpr std::string_view api_name = "services.npcs.set_class";
     require_npc_domain_id( requested_class, "npc_class", api_name );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1318,7 +1318,7 @@ sol::table set_npc_faction(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    constexpr std::string_view api_name = "game.npcs.set_faction";
+    constexpr std::string_view api_name = "services.npcs.set_faction";
     require_npc_domain_id( requested_faction, "faction", api_name );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1345,7 +1345,7 @@ void validate_npc_topic( const std::string &topic )
         return ch < 0x20U || ch == 0x7fU;
     } ) ) {
         throw std::invalid_argument(
-            "game.npcs.set_first_topic requires 1 to 256 non-control bytes" );
+            "services.npcs.set_first_topic requires 1 to 256 non-control bytes" );
     }
 }
 
@@ -1356,11 +1356,11 @@ void validate_dialogue_topic( const std::string &topic )
         return ch < 0x20U || ch == 0x7fU;
     } ) ) {
         throw std::invalid_argument(
-            "game.npcs.open_dialogue topic requires 1 to 256 non-control bytes" );
+            "services.npcs.open_dialogue topic requires 1 to 256 non-control bytes" );
     }
     if( get_talk_topic( topic ) == nullptr ) {
         throw std::invalid_argument(
-            "game.npcs.open_dialogue received an unknown dialogue topic" );
+            "services.npcs.open_dialogue received an unknown dialogue topic" );
     }
 }
 
@@ -1433,7 +1433,7 @@ sol::table set_npc_ai_policy(
         const auto found = aim_rule_strs.find( rule );
         if( found == aim_rule_strs.end() ) {
             throw std::invalid_argument(
-                "game.npcs.set_ai_policy received an unknown aim rule" );
+                "services.npcs.set_ai_policy received an unknown aim rule" );
         }
         entry->rules.aim = found->second;
         entry->invalidate_range_cache();
@@ -1441,7 +1441,7 @@ sol::table set_npc_ai_policy(
         const auto found = combat_engagement_strs.find( rule );
         if( found == combat_engagement_strs.end() ) {
             throw std::invalid_argument(
-                "game.npcs.set_ai_policy received an unknown engagement rule" );
+                "services.npcs.set_ai_policy received an unknown engagement rule" );
         }
         entry->rules.engagement = found->second;
         entry->invalidate_range_cache();
@@ -1450,19 +1450,19 @@ sol::table set_npc_ai_policy(
         const auto found = cbm_recharge_strs.find( rule );
         if( found == cbm_recharge_strs.end() ) {
             throw std::invalid_argument(
-                "game.npcs.set_ai_policy received an unknown CBM recharge rule" );
+                "services.npcs.set_ai_policy received an unknown CBM recharge rule" );
         }
         entry->rules.cbm_recharge = found->second;
     } else if( family == "cbm_reserve" ) {
         const auto found = cbm_reserve_strs.find( rule );
         if( found == cbm_reserve_strs.end() ) {
             throw std::invalid_argument(
-                "game.npcs.set_ai_policy received an unknown CBM reserve rule" );
+                "services.npcs.set_ai_policy received an unknown CBM reserve rule" );
         }
         entry->rules.cbm_reserve = found->second;
     } else {
         throw std::invalid_argument(
-            "game.npcs.set_ai_policy family must be aim, engagement, "
+            "services.npcs.set_ai_policy family must be aim, engagement, "
             "cbm_recharge, or cbm_reserve" );
     }
     sol::table value = state.create_table();
@@ -1481,7 +1481,7 @@ sol::table set_npc_ally_rule(
     const auto found = ally_rule_strs.find( rule );
     if( found == ally_rule_strs.end() ) {
         throw std::invalid_argument(
-            "game.npcs.set_ally_rule received an unknown ally rule" );
+            "services.npcs.set_ally_rule received an unknown ally rule" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1518,12 +1518,12 @@ sol::table set_npc_ally_override(
     const auto found = ally_rule_strs.find( rule );
     if( found == ally_rule_strs.end() ) {
         throw std::invalid_argument(
-            "game.npcs.set_ally_override received an unknown ally rule" );
+            "services.npcs.set_ally_override received an unknown ally rule" );
     }
     if( state_name != "inherit" && state_name != "allow" &&
         state_name != "deny" ) {
         throw std::invalid_argument(
-            "game.npcs.set_ally_override state must be inherit, allow, or deny" );
+            "services.npcs.set_ally_override state must be inherit, allow, or deny" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1644,7 +1644,7 @@ npc_refusal npc_refusal_for( const std::string_view request )
         return { effect_asked_personal_info, 3_hours };
     }
     throw std::invalid_argument(
-        "game.npcs.record_refusal request must be follow, lead, equipment, training, or personal_info" );
+        "services.npcs.record_refusal request must be follow, lead, equipment, training, or personal_info" );
 }
 
 sol::table record_npc_refusal(
@@ -1979,7 +1979,7 @@ sol::table plan_npc_travel(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    constexpr std::string_view api_name = "game.npcs.plan_travel";
+    constexpr std::string_view api_name = "services.npcs.plan_travel";
     const tripoint_abs_omt destination = require_npc_goal_position(
             requested_goal, api_name );
     sol::state_view state( lua );
@@ -2133,7 +2133,7 @@ sol::table set_npc_goal(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    constexpr std::string_view api_name = "game.npcs.set_goal";
+    constexpr std::string_view api_name = "services.npcs.set_goal";
     const tripoint_abs_omt destination = require_npc_goal_position(
             requested_goal, api_name );
     sol::state_view state( lua );
@@ -2188,7 +2188,7 @@ sol::table set_npc_leading_goal(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.npcs.lead_to";
+        "services.npcs.lead_to";
     const tripoint_abs_omt destination =
         require_npc_goal_position( requested_goal, api_name );
     sol::state_view state( lua );
@@ -2217,7 +2217,7 @@ sol::table set_npc_guard_position(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    constexpr std::string_view api_name = "game.npcs.set_guard_position";
+    constexpr std::string_view api_name = "services.npcs.set_guard_position";
     const tripoint_abs_ms destination = require_npc_guard_position(
                                             requested_position, api_name );
     sol::state_view state( lua );
@@ -2293,7 +2293,7 @@ sol::table set_npc_companion_role(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.npcs.set_companion_role";
+        "services.npcs.set_companion_role";
     require_companion_role( role, api_name, true );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -2323,7 +2323,7 @@ sol::table open_npc_companion_missions(
     const std::size_t world_generation )
 {
     constexpr std::string_view api_name =
-        "game.npcs.open_companion_missions";
+        "services.npcs.open_companion_missions";
     require_companion_role( role, api_name, false );
     if( !is_native_companion_menu_role( role ) ) {
         throw std::invalid_argument(
@@ -2393,7 +2393,7 @@ sol::table offer_item_to_npc(
     if( !giver.has_item( *offered ) ) {
         return make_game_error_result( state, {
             "not_owned",
-            "game.npcs.offer_item requires an item carried by the avatar"
+            "services.npcs.offer_item requires an item carried by the avatar"
         } );
     }
     const std::int64_t uid = offered->uid().get_value();
@@ -2509,7 +2509,7 @@ sol::table open_npc_rules(
     if( !entry->is_player_ally() ) {
         return make_game_error_result( state, {
             "not_an_ally",
-            "game.npcs.open_rules requires an allied NPC"
+            "services.npcs.open_rules requires an allied NPC"
         } );
     }
     sol::table before = snapshot_ai_rules( state, *entry );
@@ -2565,13 +2565,13 @@ sol::table take_control_of_npc(
     if( !entry->is_player_ally() ) {
         return make_game_error_result( state, {
             "not_an_ally",
-            "game.npcs.take_control requires an allied NPC"
+            "services.npcs.take_control requires an allied NPC"
         } );
     }
     if( g == nullptr ) {
         return make_game_error_result( state, {
             "world_unavailable",
-            "game.npcs.take_control requires an active game world"
+            "services.npcs.take_control requires an active game world"
         } );
     }
     const std::int64_t controlled_id =
@@ -3118,6 +3118,6 @@ void install_npc_api(
 
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

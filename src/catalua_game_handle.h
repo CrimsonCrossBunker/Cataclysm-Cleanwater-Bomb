@@ -18,7 +18,7 @@ class Creature;
 class item;
 class vehicle;
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 enum class game_handle_kind : int {
@@ -156,6 +156,6 @@ void install_game_handle_api(
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read );
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
 #endif // CATA_SRC_CATALUA_GAME_HANDLE_H

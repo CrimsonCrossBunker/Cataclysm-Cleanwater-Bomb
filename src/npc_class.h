@@ -20,10 +20,10 @@ class Trait_group;
 class item;
 class npc;
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 class world_content_transaction;
-} // namespace cata::lua_platform
+} // namespace cata::lua
 struct const_dialogue;
 struct shopkeeper_blacklist;
 struct shopkeeper_whitelist;
@@ -82,7 +82,7 @@ struct shopkeeper_item_group {
 
 class npc_class
 {
-    friend class cata::lua_platform::world_content_transaction;
+    friend class cata::lua::world_content_transaction;
     private:
         translation name;
         translation job_description;

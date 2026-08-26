@@ -41,7 +41,7 @@ class talker;
 class const_talker;
 struct construction;
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 class content_transaction;
 }
@@ -54,7 +54,7 @@ extern const std::vector<zone_type_id> ignorable_zone_types;
 class zone_type
 {
     private:
-        friend class cata::lua_platform::content_transaction;
+        friend class cata::lua::content_transaction;
         translation name_;
         translation desc_;
         field_type_str_id field_;

@@ -36,8 +36,6 @@ KEEP_IN_REPO = {
 FROZEN_DOCUMENT_COUNT = 175
 TERMINAL_MIGRATION_STATUSES = {"verified", "stubbed", "archived"}
 TARGET_ID_OVERRIDES = {
-    "data/lua/README.md": "api.lua.v5.overview",
-    "data/lua/examples/api_v5_mod/README.md": "api.lua.v5.example-mod",
     "doc/PLAYER_ACTIVITY.md": "cpp.activities",
     "doc/RELEASE_DIFF.md": "maintenance.releases",
     "doc/RELEASE_PROCESS.md": "maintenance.releases",

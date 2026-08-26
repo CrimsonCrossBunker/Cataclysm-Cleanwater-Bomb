@@ -13,10 +13,10 @@
 class Creature;
 class JsonObject;
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 class content_transaction;
-} // namespace cata::lua_platform
+} // namespace cata::lua
 
 /**
  * A structure that contains body parts.
@@ -24,7 +24,7 @@ class content_transaction;
  */
 class anatomy
 {
-        friend class cata::lua_platform::content_transaction;
+        friend class cata::lua::content_transaction;
     private:
         std::vector<bodypart_str_id> unloaded_bps;
         std::vector<bodypart_id> cached_bps;

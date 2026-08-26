@@ -1,6 +1,6 @@
 #include "achievement.h"
 
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 
 #include <cstdlib>
 #include <string>
@@ -64,7 +64,7 @@ generic_factory<achievement> achievement_factory( "achievement" );
 
 } // namespace
 
-generic_factory<achievement> &cata::lua_platform::detail::achievement_registry()
+generic_factory<achievement> &cata::lua::detail::achievement_registry()
 {
     return achievement_factory;
 }
@@ -83,7 +83,7 @@ bool string_id<achievement>::is_valid() const
     return achievement_factory.is_valid( *this );
 }
 
-void cata::lua_platform::detail::insert_platform_achievement(
+void cata::lua::detail::insert_platform_achievement(
     const platform_achievement_data &source )
 {
     achievement native;
@@ -98,18 +98,18 @@ void cata::lua_platform::detail::insert_platform_achievement(
     achievement_factory.insert( native );
 }
 
-void cata::lua_platform::detail::erase_platform_achievement(
+void cata::lua::detail::erase_platform_achievement(
     const std::string &id )
 {
     achievement_factory.erase( achievement_id( id ) );
 }
 
-void cata::lua_platform::detail::finalize_platform_achievements()
+void cata::lua::detail::finalize_platform_achievements()
 {
     achievement_factory.finalize();
 }
 
-bool cata::lua_platform::detail::platform_achievement_is_valid(
+bool cata::lua::detail::platform_achievement_is_valid(
     const std::string &id )
 {
     return achievement_id( id ).is_valid();

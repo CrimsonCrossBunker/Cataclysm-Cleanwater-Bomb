@@ -23,7 +23,7 @@ enum class ot_match_type : int;
 struct city;
 template<typename T> class generic_factory;
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 class content_transaction;
 namespace detail
@@ -70,8 +70,8 @@ class start_location
         start_location_id id;
         std::vector<std::pair<start_location_id, mod_id>> src;
         bool was_loaded = false;
-        friend std::vector<cata::lua_platform::detail::start_location_snapshot_entry>
-        cata::lua_platform::detail::start_location_snapshot();
+        friend std::vector<cata::lua::detail::start_location_snapshot_entry>
+        cata::lua::detail::start_location_snapshot();
         void load( const JsonObject &jo, std::string_view src );
         void finalize();
         void check() const;
@@ -140,7 +140,7 @@ class start_location
         /** @returns whether the start location at specified tripoint can belong to the specified city. */
         bool can_belong_to_city( const tripoint_om_omt &p, const city &cit ) const;
     private:
-        friend class cata::lua_platform::content_transaction;
+        friend class cata::lua::content_transaction;
         translation _name;
         std::vector<omt_types_parameters> _locations;
         std::set<std::string> _flags;

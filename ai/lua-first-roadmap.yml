@@ -3,7 +3,7 @@ kind: lua_first_roadmap
 direction_status: accepted
 platform_version: 1
 authority_path: data/lua/LUA_FIRST_PLATFORM.md
-current_contract: Lua API v5
+current_contract: Lua-first Platform v1
 target: Pure-Lua authoring for CCB core content and Mods without public JSON or EOC dependencies.
 legacy_inventories:
   - id: json-object-types
@@ -17,7 +17,7 @@ legacy_inventories:
   - id: eoc-effects
     path: data/reference/json/ccb_eoc_effects.json
     selector: key
-    entry_count: 310
+    entry_count: 309
 status_definitions:
   milestone: [planned, in_progress, complete, blocked]
   capability: [absent, legacy_only, partial, available]
@@ -44,10 +44,10 @@ milestones:
       - No lua subdirectory, manifest.json, or modinfo.json is required.
       - Optional mod.lua resolves dependencies before content loading.
     evidence:
-      - src/catalua_platform.h
-      - src/catalua_platform.cpp
+      - src/catalua_loader.h
+      - src/catalua_loader.cpp
       - src/mod_manager.cpp
-      - tests/catalua_ui_test.cpp
+      - tests/catalua_platform_test.cpp
       - data/lua/types/ccb_platform_v1.d.lua
   - id: native-content-transaction
     title: Pre-finalize native content objects and transactional commit
@@ -60,10 +60,10 @@ milestones:
     evidence:
       - src/catalua_game_handle.h
       - src/catalua_game_handle.cpp
-      - src/catalua_platform_runtime.h
-      - src/catalua_platform_runtime.cpp
+      - src/catalua_runtime.h
+      - src/catalua_runtime.cpp
       - src/game_io.cpp
-      - tests/catalua_ui_test.cpp
+      - tests/catalua_platform_test.cpp
       - data/lua/types/ccb_platform_v1.d.lua
   - id: item-recipe-use-slice
     title: Zero-JSON/EOC item, recipe, and Lua use behaviour
@@ -74,11 +74,11 @@ milestones:
       - The item and recipe preserve stable ids through save/load.
       - A named Lua handler produces an observable in-game result.
     evidence:
-      - src/catalua_platform_runtime.cpp
+      - src/catalua_runtime.cpp
       - data/lua/templates/complete/main.lua
       - data/lua/templates/complete/runtime/behaviour.lua
       - tools/create_lua_mod.py
-      - tests/catalua_ui_test.cpp
+      - tests/catalua_platform_test.cpp
   - id: behaviour-services
     title: Events, hooks, callbacks, persistent tasks, state, and shared domain services
     status: in_progress
@@ -88,12 +88,12 @@ milestones:
       - Named tasks resume from serializable data after save/load.
       - Workflows can be authored as Lua libraries over the primitive APIs.
     evidence:
-      - src/catalua_platform_runtime.cpp
+      - src/catalua_runtime.cpp
       - src/do_turn.cpp
       - src/game.cpp
       - src/game_io.cpp
       - data/lua/types/ccb_platform_v1.d.lua
-      - tests/catalua_ui_test.cpp
+      - tests/catalua_platform_test.cpp
   - id: playable-mvp-v0-1
     title: Playable and mergeable pure-Lua vertical slice v0.1
     status: complete
@@ -108,7 +108,7 @@ milestones:
       - data/mods/Lua_First_Example/main.lua
       - data/mods/Lua_First_Example/content/cleanwater_charm.lua
       - data/mods/Lua_First_Example/runtime/behaviour.lua
-      - tests/catalua_ui_test.cpp
+      - tests/catalua_platform_test.cpp
       - tests/mod_manager_test.cpp
       - ai/test-matrix.yml
   - id: static-domain-coverage
@@ -142,7 +142,7 @@ milestones:
       - data/mods/Migrated_Core/main.lua
       - data/mods/Migrated_Core/MIGRATION_REPORT.md
       - data/mods/Migrated_Core/mod.lua
-      - tests/catalua_ui_test.cpp
+      - tests/catalua_platform_test.cpp
 capabilities:
   - id: mod-discovery
     phase: discovery
@@ -152,7 +152,7 @@ capabilities:
     evidence:
       - src/mod_manager.cpp
       - src/mod_manager.h
-      - tests/catalua_ui_test.cpp
+      - tests/catalua_platform_test.cpp
     next_actions:
       - The 2026-08-12 playable-MVP gate passed installed bundled-Mod discovery, dependency-aware selection, real data loading, game save, runtime shutdown, full data reload, and continued gameplay; keep it as a regression gate.
       - The 2026-08-12 no-Lua build gate keeps the pure-Platform example visible with an actionable disabled diagnostic; keep it as a regression gate.
@@ -163,9 +163,9 @@ capabilities:
     legacy_dependency: none
     target_surface: Complete Lua 5.4 standard libraries and native package loading
     evidence:
-      - src/catalua_platform.cpp
+      - src/catalua_loader.cpp
       - src/mod_manager_ui.cpp
-      - tests/catalua_ui_test.cpp
+      - tests/catalua_platform_test.cpp
       - src/lua/lua.h
     next_actions:
       - The 2026-08-11 local C++ Platform suite passed the full-library, per-Mod isolation, and candidate rollback coverage; keep these as regression gates.
@@ -176,8 +176,8 @@ capabilities:
     legacy_dependency: none
     target_surface: ccb.content with transactional foundational, proficiency, category, ammunition, scent, speed-description, harvest-drop, harvest-list, behavior-tree, monster-attack, effect-type, weakpoint-set, field-type, item-group, sub-body-part, body-part, wound, wound-fix, anatomy, body-graph, monster, morale, disease, monster-flag, species, emission, monster-faction, mutation-type, mutation-category, connect-group, construction, vehicle, mood-face, damage-info presentation, named-color, rotatable-symbol, ASCII-art, limb-score, global hit-range, bash-damage, clothing-modification, overmap-land-use, overmap-vision, overmap-location, profession-group, map-extra-collection, vehicle-group, fault-group, explosion-light, ammunition-effect, addiction-type, character-modifier, start-location, climbing-aid, weather-type, score, global mutation-overlay order, zone-type, speech-pool, end-screen, activity-type, help-topic, snippet-category, playlist, nested-recipe-category, attack-vector, magic-type, movement-mode, item, and recipe definitions
     evidence:
-      - src/catalua_platform.cpp
-      - src/catalua_platform_runtime.cpp
+      - src/catalua_loader.cpp
+      - src/catalua_runtime.cpp
       - src/harvest.cpp
       - src/behavior.cpp
       - src/behavior_oracle.cpp
@@ -194,7 +194,7 @@ capabilities:
       - src/map_field.cpp
       - src/game_io.cpp
       - data/lua/types/ccb_platform_v1.d.lua
-      - tests/catalua_ui_test.cpp
+      - tests/catalua_platform_test.cpp
     next_actions:
       - "The 2026-08-13 batches added 23 transactional native builders (SoundEffect/SoundEffectPreload, Recipe practice/uncraft flags, Technique, MartialArt, Trap, Construction, Furniture, Terrain, Gate, Fault/FaultFix, Dream, Achievement/Conduct, Blacklist, MapExtra, WeatherGenerator) plus platform_blacklist_data and NPC-actor event provenance."
       - The 2026-08-11 local C++ Platform suite passed the written native transaction, rollback, stale-handle, finalization, creature-catalog, and monster-attack policy coverage; focused Wound/WoundFix coverage passed 5 cases and 321 assertions.
@@ -207,7 +207,7 @@ capabilities:
     status: partial
     legacy_dependency: none
     target_surface: All bindable public members of explicitly exported native types
-    evidence: [src/catalua_bindings_values.cpp, src/catalua_game_handle.h, src/catalua_game_handle.cpp, tests/catalua_ui_test.cpp, data/lua/types/ccb_api_v5.d.lua]
+    evidence: [src/catalua_bindings_values.cpp, src/catalua_game_handle.h, src/catalua_game_handle.cpp, tests/catalua_platform_test.cpp, data/lua/types/ccb_platform_v1.d.lua]
     next_actions:
       - Add an export-root inventory and report every unbindable public member.
       - GameHandle plus MissionToken, HordeEntityToken, LegacyHordeToken, and ZoneToken now reject foreign or expired runtime owners in addition to stale runtime/world generations; token equality retains stable weak owner identity after shutdown, and the inactive state remains distinct from every numeric generation. Extend the same explicit-owner model to remaining borrowed native references.
@@ -216,7 +216,7 @@ capabilities:
     status: partial
     legacy_dependency: none
     target_surface: Typed events, synchronous hooks, and definition callbacks
-    evidence: [src/catalua_platform_runtime.cpp, src/catalua_ui.cpp, data/lua/types/ccb_platform_v1.d.lua, data/lua/reference/ccb_public_api_v5.json]
+    evidence: [src/catalua_runtime.cpp, src/catalua_ui.cpp, data/lua/types/ccb_platform_v1.d.lua, data/lua/reference/ccb_native_inventory.json]
     next_actions:
       - The 2026-08-11 local C++ Platform suite passed lifecycle, audited semantic event actors and item allowlist, ItemUseContext, missing-handler, decision aggregation, typed-handle, recursion, v5-composition, and runtime-only hot-reload coverage; keep these as regression gates.
       - The 2026-08-12 bundled-Mod playable gate passed discovery, load, real game save, runtime shutdown, full data reload, and continued item-handler gameplay.
@@ -226,7 +226,7 @@ capabilities:
     status: partial
     legacy_dependency: none
     target_surface: Callback-only native notice, confirmation, stable-id choice, and text input primitives
-    evidence: [src/catalua_platform_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/catalua_ui_test.cpp, data/lua/LUA_FIRST_PLATFORM.md]
+    evidence: [src/catalua_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/catalua_platform_test.cpp, data/lua/LUA_FIRST_PLATFORM.md]
     next_actions:
       - The non-interactive callback boundary coverage passed in the 2026-08-11 local C++ Platform suite; keep it as a regression gate.
       - Complete the still-open interactive desktop and Android presentation checks.
@@ -236,7 +236,7 @@ capabilities:
     status: partial
     legacy_dependency: none
     target_surface: Named tasks and serializable character/world state
-    evidence: [src/catalua_platform_runtime.cpp, src/catalua_ui_state.cpp, src/do_turn.cpp, src/game_io.cpp, data/lua/templates/complete/runtime/behaviour.lua]
+    evidence: [src/catalua_runtime.cpp, src/catalua_ui_state.cpp, src/do_turn.cpp, src/game_io.cpp, data/lua/templates/complete/runtime/behaviour.lua]
     next_actions:
       - The 2026-08-11 local C++ Platform suite passed save/load, overdue, missing-handler, payload-version and migration-chain, orphan-preservation, size-limit, and corruption coverage; keep these as regression gates.
       - The 2026-08-12 bundled-Mod playable gate passed typed character/world-state and named-task survival through real game saves, runtime shutdown, full data reload, continued gameplay, and one-time overdue execution.
@@ -246,7 +246,7 @@ capabilities:
     status: partial
     legacy_dependency: none
     target_surface: Game-domain services shared by Platform and legacy adapters
-    evidence: [src/catalua_platform_runtime.cpp, src/catalua_game_handle.cpp, src/catalua_ui_creatures.cpp, src/catalua_ui_items.cpp, src/catalua_ui_world.cpp, src/catalua_ui_vehicles.cpp, src/catalua_ui_missions.cpp, src/catalua_ui_magic.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/catalua_ui_test.cpp, data/lua/LUA_FIRST_PLATFORM.md, ai/lua-first-replacement-ledger.yml]
+    evidence: [src/catalua_runtime.cpp, src/catalua_game_handle.cpp, src/catalua_ui_creatures.cpp, src/catalua_ui_items.cpp, src/catalua_ui_world.cpp, src/catalua_ui_vehicles.cpp, src/catalua_ui_missions.cpp, src/catalua_ui_magic.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/catalua_platform_test.cpp, data/lua/LUA_FIRST_PLATFORM.md, ai/lua-first-replacement-ledger.yml]
     next_actions:
       - "The 2026-08-13 batches added characters.add_wet, npcs.ai_rules, creatures.can_see, overmap.is_safe, characters.is_safe, trait/monster blacklist helpers, and by_radio/reason dialogue projection fields."
       - Review the remaining primitive-available selectors against exact native semantics.

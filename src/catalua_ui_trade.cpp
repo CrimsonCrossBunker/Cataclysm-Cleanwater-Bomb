@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_trade.h"
 
@@ -33,7 +33,7 @@
 #include "translations.h"
 #include "type_id.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -94,12 +94,12 @@ monster_purchase_options read_monster_purchase_options(
     for( const auto &entry : *requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.trade.buy_monsters option keys must be strings" );
+                "services.trade.buy_monsters option keys must be strings" );
         }
         const std::string key = entry.first.as<std::string>();
         if( key != "count" && key != "pacified" && key != "name" ) {
             throw std::invalid_argument(
-                "game.trade.buy_monsters received unknown option '" + key + "'" );
+                "services.trade.buy_monsters received unknown option '" + key + "'" );
         }
     }
 
@@ -107,13 +107,13 @@ monster_purchase_options read_monster_purchase_options(
     if( present( count ) ) {
         if( !count.is<lua_Integer>() ) {
             throw std::invalid_argument(
-                "game.trade.buy_monsters options.count must be an integer" );
+                "services.trade.buy_monsters options.count must be an integer" );
         }
         result.count = static_cast<std::int64_t>( count.as<lua_Integer>() );
         if( result.count <= 0 ||
             result.count > maximum_monster_purchase_count ) {
             throw std::invalid_argument(
-                "game.trade.buy_monsters options.count must be within 1..1000" );
+                "services.trade.buy_monsters options.count must be within 1..1000" );
         }
     }
 
@@ -121,7 +121,7 @@ monster_purchase_options read_monster_purchase_options(
     if( present( pacified ) ) {
         if( !pacified.is<bool>() ) {
             throw std::invalid_argument(
-                "game.trade.buy_monsters options.pacified must be boolean" );
+                "services.trade.buy_monsters options.pacified must be boolean" );
         }
         result.pacified = pacified.as<bool>();
     }
@@ -130,13 +130,13 @@ monster_purchase_options read_monster_purchase_options(
     if( present( name ) ) {
         if( !name.is<std::string>() ) {
             throw std::invalid_argument(
-                "game.trade.buy_monsters options.name must be a string" );
+                "services.trade.buy_monsters options.name must be a string" );
         }
         result.name = name.as<std::string>();
         if( result.name.size() > maximum_monster_purchase_name_bytes ||
             result.name.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
-                "game.trade.buy_monsters options.name must be at most 256 bytes" );
+                "services.trade.buy_monsters options.name must be at most 256 bytes" );
         }
     }
     return result;
@@ -154,14 +154,14 @@ matching_transfer_options read_matching_transfer_options(
     if( present( limit ) ) {
         if( !limit.is<lua_Integer>() ) {
             throw std::invalid_argument(
-                "game.trade.transfer_matching options.limit must be an integer" );
+                "services.trade.transfer_matching options.limit must be an integer" );
         }
         result.limit = static_cast<std::int64_t>(
                            limit.as<lua_Integer>() );
         if( *result.limit <= 0 ||
             *result.limit > maximum_trade_quantity ) {
             throw std::invalid_argument(
-                "game.trade.transfer_matching options.limit is outside native bounds" );
+                "services.trade.transfer_matching options.limit is outside native bounds" );
         }
     }
 
@@ -169,7 +169,7 @@ matching_transfer_options read_matching_transfer_options(
     if( present( confirm ) ) {
         if( !confirm.is<bool>() ) {
             throw std::invalid_argument(
-                "game.trade.transfer_matching options.confirm must be boolean" );
+                "services.trade.transfer_matching options.confirm must be boolean" );
         }
         result.confirm = confirm.as<bool>();
     }
@@ -178,7 +178,7 @@ matching_transfer_options read_matching_transfer_options(
     if( present( settle_with ) ) {
         if( !settle_with.is<game_handle>() ) {
             throw std::invalid_argument(
-                "game.trade.transfer_matching options.settle_with must be a GameHandle" );
+                "services.trade.transfer_matching options.settle_with must be a GameHandle" );
         }
         result.settle_with = settle_with.as<game_handle>();
     }
@@ -187,7 +187,7 @@ matching_transfer_options read_matching_transfer_options(
     if( present( include_debt ) ) {
         if( !include_debt.is<bool>() ) {
             throw std::invalid_argument(
-                "game.trade.transfer_matching options.include_debt must be boolean" );
+                "services.trade.transfer_matching options.include_debt must be boolean" );
         }
         result.include_debt = include_debt.as<bool>();
     }
@@ -437,13 +437,13 @@ sol::table matching_stock(
 {
     if( item_id.kind() != "item" || !item_id.is_valid() ) {
         throw std::invalid_argument(
-            "game.trade.matching_stock requires a valid GameId<item>" );
+            "services.trade.matching_stock requires a valid GameId<item>" );
     }
     if( requested_limit &&
         ( *requested_limit <= 0 ||
           *requested_limit > maximum_trade_quantity ) ) {
         throw std::invalid_argument(
-            "game.trade.matching_stock limit is outside native bounds" );
+            "services.trade.matching_stock limit is outside native bounds" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -478,7 +478,7 @@ sol::table cash_to_favor(
 {
     if( cash < 0 || cash > maximum_favor_cash ) {
         throw std::invalid_argument(
-            "game.trade.cash_to_favor cash must be within 0..1000000000" );
+            "services.trade.cash_to_favor cash must be within 0..1000000000" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -506,11 +506,11 @@ sol::table buy_monsters(
 {
     if( monster_id.kind() != "monster" || !monster_id.is_valid() ) {
         throw std::invalid_argument(
-            "game.trade.buy_monsters requires a valid GameId<monster>" );
+            "services.trade.buy_monsters requires a valid GameId<monster>" );
     }
     if( cost < -maximum_trade_balance || cost > maximum_trade_balance ) {
         throw std::invalid_argument(
-            "game.trade.buy_monsters cost must be within -1000000000..1000000000" );
+            "services.trade.buy_monsters cost must be within -1000000000..1000000000" );
     }
     const monster_purchase_options options =
         read_monster_purchase_options( requested_options );
@@ -558,11 +558,11 @@ sol::table settle_faction_account(
     if( amount < -maximum_trade_balance ||
         amount > maximum_trade_balance ) {
         throw std::invalid_argument(
-            "game.trade.settle_faction_account amount must be within -1000000000..1000000000" );
+            "services.trade.settle_faction_account amount must be within -1000000000..1000000000" );
     }
     const bool include_debt = read_include_debt(
                                   requested_options,
-                                  "game.trade.settle_faction_account" );
+                                  "services.trade.settle_faction_account" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     npc *account = resolve_npc(
@@ -580,7 +580,7 @@ sol::table settle_faction_account(
     }
     if( account == counterparty ) {
         throw std::invalid_argument(
-            "game.trade.settle_faction_account parties must differ" );
+            "services.trade.settle_faction_account parties must differ" );
     }
     std::optional<faction_settlement_plan> plan =
         prepare_faction_settlement(
@@ -607,7 +607,7 @@ sol::table transfer_matching_items(
 {
     if( item_id.kind() != "item" || !item_id.is_valid() ) {
         throw std::invalid_argument(
-            "game.trade.transfer_matching requires a valid GameId<item>" );
+            "services.trade.transfer_matching requires a valid GameId<item>" );
     }
     const matching_transfer_options options =
         read_matching_transfer_options( requested_options );
@@ -627,7 +627,7 @@ sol::table transfer_matching_items(
     }
     if( seller == buyer ) {
         throw std::invalid_argument(
-            "game.trade.transfer_matching seller and buyer must differ" );
+            "services.trade.transfer_matching seller and buyer must differ" );
     }
 
     const itype_id native_id( item_id.value() );
@@ -649,7 +649,7 @@ sol::table transfer_matching_items(
         if( settlement_account != seller &&
             settlement_account != buyer ) {
             throw std::invalid_argument(
-                "game.trade.transfer_matching settle_with must reference the seller or buyer" );
+                "services.trade.transfer_matching settle_with must reference the seller or buyer" );
         }
         settlement_counterparty = settlement_account == seller ?
                                   buyer : seller;
@@ -751,12 +751,12 @@ sol::table open_trade(
 {
     if( cost < 0 ) {
         throw std::invalid_argument(
-            "game.trade.open cost cannot be negative" );
+            "services.trade.open cost cannot be negative" );
     }
     if( deal.empty() || deal.size() > maximum_trade_deal_bytes ||
         deal.find( '\0' ) != std::string::npos ) {
         throw std::invalid_argument(
-            "game.trade.open deal must contain 1 to 256 bytes" );
+            "services.trade.open deal must contain 1 to 256 bytes" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -780,7 +780,7 @@ sol::table pay_npc(
 {
     if( cost <= 0 ) {
         throw std::invalid_argument(
-            "game.trade.pay cost must be positive" );
+            "services.trade.pay cost must be positive" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -805,7 +805,7 @@ sol::table settle_npc_payment(
     if( amount < -maximum_trade_balance ||
         amount > maximum_trade_balance ) {
         throw std::invalid_argument(
-            "game.trade.settle amount must be within -1000000000..1000000000" );
+            "services.trade.settle amount must be within -1000000000..1000000000" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -836,7 +836,7 @@ sol::table settle_npc_credit(
 {
     if( cost <= 0 ) {
         throw std::invalid_argument(
-            "game.trade.settle_credit cost must be positive" );
+            "services.trade.settle_credit cost must be positive" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -887,7 +887,7 @@ sol::table set_character_balance(
     if( requested < -maximum_trade_balance ||
         requested > maximum_trade_balance ) {
         throw std::invalid_argument(
-            "game.trade.set_balance amount must be within -1000000000..1000000000" );
+            "services.trade.set_balance amount must be within -1000000000..1000000000" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -916,7 +916,7 @@ sol::table adjust_character_balance(
     if( delta < -maximum_trade_balance ||
         delta > maximum_trade_balance ) {
         throw std::invalid_argument(
-            "game.trade.adjust_balance delta must be within -1000000000..1000000000" );
+            "services.trade.adjust_balance delta must be within -1000000000..1000000000" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -956,12 +956,12 @@ sol::table quote_trade_item(
 {
     if( item_id.kind() != "item" || !item_id.is_valid() ) {
         throw std::invalid_argument(
-            "game.trade.quote requires a valid GameId<item>" );
+            "services.trade.quote requires a valid GameId<item>" );
     }
     if( quantity <= 0 || quantity > maximum_trade_quantity ||
         quantity > std::numeric_limits<int>::max() ) {
         throw std::invalid_argument(
-            "game.trade.quote quantity is outside native bounds" );
+            "services.trade.quote quantity is outside native bounds" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1013,7 +1013,7 @@ sol::table transfer_trade_item(
     if( quantity <= 0 || quantity > maximum_trade_quantity ||
         quantity > std::numeric_limits<int>::max() ) {
         throw std::invalid_argument(
-            "game.trade.transfer quantity is outside native bounds" );
+            "services.trade.transfer quantity is outside native bounds" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1031,7 +1031,7 @@ sol::table transfer_trade_item(
     }
     if( seller == buyer ) {
         throw std::invalid_argument(
-            "game.trade.transfer seller and buyer must differ" );
+            "services.trade.transfer seller and buyer must differ" );
     }
     const native_handle_result<item> resolved =
         item_handle.resolve_item(
@@ -1313,6 +1313,6 @@ void install_trade_api(
     game["trade"] = std::move( trade );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

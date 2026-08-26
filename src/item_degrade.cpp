@@ -25,7 +25,7 @@
 #include "bodypart.h"
 #include "cached_options.h"
 #include "calendar.h"
-#include "catalua_ui.h"
+#include "catalua_hook.h"
 #include "character.h"
 #include "color.h"
 #include "coordinates.h"
@@ -883,42 +883,12 @@ bool item::mod_damage( int qty, const Character *holder )
         // so the whole stack shares a single damage value.
         charges -= std::min( type->stack_size * qty / itype::damage_scale, charges );
         const bool destroy = charges == 0;
-        if( destroy ) {
-            cata::lua_ui::dispatch_native_callback(
-            "iequippable", typeId().str(), "on_break", {
-                { "character", static_cast<const Character *>( holder ) },
-                { "item", static_cast<const item *>( this ) }
-            } );
-        }
         return destroy; // return destroy = true if no charges
     } else {
         const int dmg_before = damage_;
         const bool destroy = ( damage_ + qty ) > max_damage();
         force_set_damage( damage_ + qty );
         if( damage_ != dmg_before ) {
-            const cata::lua_ui::native_callback_arguments payload = {
-                { "character", static_cast<const Character *>( holder ) },
-                { "item", static_cast<const item *>( this ) },
-                { "old_damage", std::int64_t { dmg_before } },
-                { "new_damage", std::int64_t { damage_ } },
-                { "delta", std::int64_t { damage_ - dmg_before } }
-            };
-            cata::lua_ui::dispatch_native_callback(
-                "iequippable", typeId().str(),
-                "on_durability_change", payload );
-            if( damage_ < dmg_before ) {
-                cata::lua_ui::dispatch_native_callback(
-                    "iequippable", typeId().str(), "on_repair", payload );
-            }
-        }
-        if( destroy ) {
-            cata::lua_ui::dispatch_native_callback(
-            "iequippable", typeId().str(), "on_break", {
-                { "character", static_cast<const Character *>( holder ) },
-                { "item", static_cast<const item *>( this ) },
-                { "old_damage", std::int64_t { dmg_before } },
-                { "new_damage", std::int64_t { damage_ } }
-            } );
         }
 
         if( qty > 0 && !destroy && ( get_category_shallow().get_id() != item_category_veh_parts ||

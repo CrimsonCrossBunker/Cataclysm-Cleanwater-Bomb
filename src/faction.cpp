@@ -9,7 +9,7 @@
 #include <utility>
 
 #include "calendar.h"
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 #include "character.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
@@ -27,7 +27,7 @@ namespace npc_factions
 static std::vector<faction_template> all_templates;
 } // namespace npc_factions
 
-std::vector<faction_template> &cata::lua_platform::detail::faction_template_registry()
+std::vector<faction_template> &cata::lua::detail::faction_template_registry()
 {
     return npc_factions::all_templates;
 }

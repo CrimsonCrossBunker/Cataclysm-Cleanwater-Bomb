@@ -42,7 +42,7 @@
 #endif
 #include "cata_utility.h"
 #include "catacharset.h"
-#include "catalua_ui.h"
+#include "catalua_hook.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_id.h"
@@ -308,9 +308,6 @@ std::string enum_to_string<debug_menu::debug_menu_index>( debug_menu::debug_menu
 		case debug_menu::debug_menu_index::WRITE_CITY_LIST: return "WRITE_CITY_LIST";
         case debug_menu::debug_menu_index::TALK_TOPIC: return "TALK_TOPIC";
         case debug_menu::debug_menu_index::IMGUI_DEMO: return "IMGUI_DEMO";
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
-        case debug_menu::debug_menu_index::LUA_UI: return "LUA_UI";
-#endif
         case debug_menu::debug_menu_index::VEHICLE_EFFECTS: return "VEHICLE_EFFECTS";
         case debug_menu::debug_menu_index::WISHPROFICIENCY: return "WISHPROFICIENCY";
         case debug_menu::debug_menu_index::RELOAD_GPU_SHADERS: return "RELOAD_GPU_SHADERS";
@@ -1016,9 +1013,6 @@ static int info_uilist()
         { uilist_entry( debug_menu_index::GENERATE_EFFECT_LIST, true, 'L', _( "Generate effect list" ) ) },
         { uilist_entry( debug_menu_index::WRITE_CITY_LIST, true, 'C', _( "Write city list to cities.output" ) ) },
         { uilist_entry( debug_menu_index::IMGUI_DEMO, true, 'u', _( "Open ImGui demo screen" ) ) },
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
-        { uilist_entry( debug_menu_index::LUA_UI, true, 'L', _( "Open Lua UI pages" ) ) },
-#endif
 #if defined(TILES) && defined(USE_SDL3)
         { uilist_entry( debug_menu_index::RELOAD_GPU_SHADERS, true, 'P', _( "Reload GPU shaders" ) ) },
 #endif
@@ -3706,7 +3700,7 @@ static void import_folower()
         temp->spawn_at_precise( get_avatar().pos_abs() + point( -4, -4 ) );
         overmap_buffer.insert_npc( temp );
         g->load_npcs();
-        cata::lua_ui::dispatch_native_npc_spawn(
+        cata::lua::dispatch_native_npc_spawn(
             *temp, "debug_import" );
     } catch( const std::exception &err ) {
         debugmsg( _( "Failed to read NPC: %s" ), err.what() );
@@ -3867,7 +3861,7 @@ static void spawn_npc()
                             faction_id( new_fac_id ), faction_no_faction );
     temp->set_fac( new_solo_fac ? new_solo_fac->id : faction_no_faction );
     g->load_npcs();
-    cata::lua_ui::dispatch_native_npc_spawn( *temp, "debug" );
+    cata::lua::dispatch_native_npc_spawn( *temp, "debug" );
 }
 
 static void spawn_npc_follower()
@@ -3885,7 +3879,7 @@ static void spawn_npc_follower()
     temp->add_new_mission( mission::reserve_random( ORIGIN_ANY_NPC, temp->pos_abs_omt(),
                            temp->getID() ) );
     g->load_npcs();
-    cata::lua_ui::dispatch_native_npc_spawn(
+    cata::lua::dispatch_native_npc_spawn(
         *temp, "debug_follower" );
 }
 
@@ -3926,7 +3920,7 @@ static void spawn_named_npc()
         temp->form_opinion( player_character );
 
         g->load_npcs();
-        cata::lua_ui::dispatch_native_npc_spawn(
+        cata::lua::dispatch_native_npc_spawn(
             *temp, "debug_template" );
     }
 
@@ -4994,14 +4988,6 @@ const std::vector<debug_action_entry> &all_actions()
                 run_imgui_demo();
             }
         },
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
-        {
-            debug_menu_index::LUA_UI, translate_marker( "Lua UI pages" ), "lua script ui", "Game", []()
-            {
-                cata::lua_ui::show_slot( "debug.tools" );
-            }
-        },
-#endif
         {
             debug_menu_index::RELOAD_GPU_SHADERS, translate_marker( "Reload GPU shaders" ), "reload gpu shaders sdl3", "Game", []()
             {

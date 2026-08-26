@@ -16,14 +16,14 @@
 #include "point.h"
 #include "type_id.h"
 
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
     #include "catalua_ui_identity.h"
 #endif
 
 class JsonObject;
 class JsonOut;
 
-namespace cata::lua_platform::detail
+namespace cata::lua::detail
 {
 void insert_platform_monster_blacklist( const std::vector<std::string> &,
                                         bool );
@@ -31,7 +31,7 @@ void erase_platform_monster_blacklist( const std::vector<std::string> &,
                                        bool );
 std::vector<std::string> monster_blacklist_snapshot();
 std::vector<std::string> monster_whitelist_snapshot();
-} // namespace cata::lua_platform::detail
+} // namespace cata::lua::detail
 // from overmap.h
 class overmap;
 struct MonsterGroupEntry;
@@ -185,7 +185,7 @@ struct mongroup {
         type( ptype ), abs_pos( ppos ), population( ppop ), target( ptarget ),
         interest( pint ), dying( pdie ), horde( phorde ) { }
     mongroup() = default;
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
     std::uint64_t lua_identity() const noexcept {
         return lua_identity_.value();
     }
@@ -248,8 +248,8 @@ struct mongroup {
     void deserialize_legacy( const JsonObject &jo );
     void serialize( JsonOut &json ) const;
 
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
-    cata::lua_ui::native_object_identity lua_identity_;
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    cata::lua::native_object_identity lua_identity_;
 #endif
 };
 
@@ -261,14 +261,14 @@ struct enum_traits<mongroup::horde_behaviour> {
 class MonsterGroupManager
 {
     public:
-        friend void cata::lua_platform::detail::insert_platform_monster_blacklist(
+        friend void cata::lua::detail::insert_platform_monster_blacklist(
             const std::vector<std::string> &, bool );
-        friend void cata::lua_platform::detail::erase_platform_monster_blacklist(
+        friend void cata::lua::detail::erase_platform_monster_blacklist(
             const std::vector<std::string> &, bool );
         friend std::vector<std::string>
-        cata::lua_platform::detail::monster_blacklist_snapshot();
+        cata::lua::detail::monster_blacklist_snapshot();
         friend std::vector<std::string>
-        cata::lua_platform::detail::monster_whitelist_snapshot();
+        cata::lua::detail::monster_whitelist_snapshot();
         static void LoadMonsterGroup( const JsonObject &jo );
         static void LoadMonsterBlacklist( const JsonObject &jo );
         static void LoadMonsterWhitelist( const JsonObject &jo );

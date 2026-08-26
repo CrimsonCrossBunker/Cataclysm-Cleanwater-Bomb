@@ -11,7 +11,7 @@
 
 #include "builtin_mods.h"
 #include "cached_options.h"
-#include "catalua_platform.h"
+#include "catalua_loader.h"
 #include "cata_utility.h"
 #include "debug.h"
 #include "dependency_tree.h"
@@ -339,7 +339,7 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
     namespace fs = std::filesystem;
 
     const std::string default_id = root.get_relative_path().filename().u8string();
-    cata::lua_platform::mod_definition definition;
+    cata::lua::mod_definition definition;
     const bool has_metadata = file_exist( root / "mod.lua" );
     std::string platform_error;
 
@@ -391,12 +391,12 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
         diagnostic.path = root;
         diagnostic.mod_root_path = root;
         diagnostic.lua_platform_entry = root / "main.lua";
-        diagnostic.lua_platform_version = cata::lua_platform::platform_version;
+        diagnostic.lua_platform_version = cata::lua::platform_version;
         diagnostic.lua_platform_error = reason;
         mod_map.emplace( diagnostic_id, std::move( diagnostic ) );
     };
 
-    if( !cata::lua_platform::is_enabled() ) {
+    if( !cata::lua::is_enabled() ) {
         // Keep pure Platform candidates visible but unavailable.  A hybrid's
         // legacy content remains loadable because record_rejection() retires
         // only its optional Platform entry.
@@ -405,7 +405,7 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
     }
 
     if( has_metadata ) {
-        if( !cata::lua_platform::read_mod_definition( root.get_unrelative_path(), definition,
+        if( !cata::lua::read_mod_definition( root.get_unrelative_path(), definition,
                 platform_error ) ) {
             record_rejection( platform_error );
             return;
@@ -567,7 +567,7 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
         }
         hybrid.lua_platform_entry = std::move( entry );
         hybrid.mod_root_path = root;
-        hybrid.lua_platform_version = cata::lua_platform::platform_version;
+        hybrid.lua_platform_version = cata::lua::platform_version;
         hybrid.lua_platform_error = std::move( platform_error );
         return;
     }
@@ -593,7 +593,7 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
     mod.path = root;
     mod.mod_root_path = root;
     mod.lua_platform_entry = std::move( entry );
-    mod.lua_platform_version = cata::lua_platform::platform_version;
+    mod.lua_platform_version = cata::lua::platform_version;
     mod.lua_platform_error = std::move( platform_error );
     mod_map.emplace( ident, std::move( mod ) );
 }

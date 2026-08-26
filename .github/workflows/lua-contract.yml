@@ -75,13 +75,10 @@ jobs:
           sudo apt-get install --no-install-recommends lua5.4
           python3 -m pip install --disable-pip-version-check -r tools/lua_api/requirements.txt
 
-      - name: Validate Lua v5 declarations and generated contract
+      - name: Validate Lua-first Platform declarations and inventory
         if: steps.detect.outputs.required == 'true'
         run: |
           python3 tools/lua_api/check_luals_declarations.py
           python3 tools/lua_api/check_ccb_inventory.py
-          python3 tools/lua_api/generate_public_contract.py --check
-          python3 tools/lua_api/check_public_contract.py
-          python3 tools/lua_api/check_examples.py --require-luac
           python3 tools/lua_api/check_cmake_contract.py
           python3 -m unittest discover -s tools/lua_api -p 'test_*.py'

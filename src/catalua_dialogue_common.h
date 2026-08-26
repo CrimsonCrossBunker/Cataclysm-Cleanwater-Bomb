@@ -63,7 +63,6 @@ void require_text( const std::string &value, std::string_view api_name,
                    std::string_view field );
 
 enum class response_callback_origin : int {
-    game_v5,
     platform
 };
 

@@ -2,7 +2,7 @@
 // functions are serialization functions.  This allows IWYU to check the
 // includes in such headers.
 
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 
 #include "enums.h" // IWYU pragma: associated
 #include "npc_favor.h" // IWYU pragma: associated
@@ -3316,7 +3316,7 @@ void load_temperature_removal_blacklist( const JsonObject &jo, std::string_view/
     temperature_removal_blacklist.insert( new_blacklist.begin(), new_blacklist.end() );
 }
 
-void cata::lua_platform::detail::insert_platform_savegame_blacklist(
+void cata::lua::detail::insert_platform_savegame_blacklist(
     const platform_blacklist_data &value )
 {
     if( value.kind == "charge_removal" ) {
@@ -3330,7 +3330,7 @@ void cata::lua_platform::detail::insert_platform_savegame_blacklist(
     }
 }
 
-void cata::lua_platform::detail::erase_platform_savegame_blacklist(
+void cata::lua::detail::erase_platform_savegame_blacklist(
     const platform_blacklist_data &value )
 {
     if( value.kind == "charge_removal" ) {
@@ -5339,7 +5339,7 @@ void trap_migrations::check()
 
 static std::unordered_map<field_type_str_id, field_type_str_id> field_migrations;
 
-void cata::lua_platform::detail::insert_platform_savegame_migration(
+void cata::lua::detail::insert_platform_savegame_migration(
     const platform_migration_data &value )
 {
     if( value.kind == "trap" ) {
@@ -5356,7 +5356,7 @@ void cata::lua_platform::detail::insert_platform_savegame_migration(
     }
 }
 
-void cata::lua_platform::detail::erase_platform_savegame_migration(
+void cata::lua::detail::erase_platform_savegame_migration(
     const platform_migration_data &value )
 {
     if( value.kind == "trap" ) {
@@ -5371,7 +5371,7 @@ void cata::lua_platform::detail::erase_platform_savegame_migration(
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua_platform::detail::terrain_migration_snapshot()
+cata::lua::detail::terrain_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( ter_migrations.size() );
@@ -5383,7 +5383,7 @@ cata::lua_platform::detail::terrain_migration_snapshot()
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua_platform::detail::furniture_migration_snapshot()
+cata::lua::detail::furniture_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( furn_migrations.size() );
@@ -5395,7 +5395,7 @@ cata::lua_platform::detail::furniture_migration_snapshot()
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua_platform::detail::trap_migration_snapshot()
+cata::lua::detail::trap_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( tr_migrations.size() );
@@ -5407,7 +5407,7 @@ cata::lua_platform::detail::trap_migration_snapshot()
 }
 
 std::vector<std::string>
-cata::lua_platform::detail::charge_removal_blacklist_snapshot()
+cata::lua::detail::charge_removal_blacklist_snapshot()
 {
     std::vector<std::string> result;
     result.reserve( charge_removal_blacklist.size() );
@@ -5419,7 +5419,7 @@ cata::lua_platform::detail::charge_removal_blacklist_snapshot()
 }
 
 std::vector<std::string>
-cata::lua_platform::detail::temperature_removal_blacklist_snapshot()
+cata::lua::detail::temperature_removal_blacklist_snapshot()
 {
     std::vector<std::string> result;
     result.reserve( temperature_removal_blacklist.size() );

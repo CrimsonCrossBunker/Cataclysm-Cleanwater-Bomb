@@ -33,8 +33,7 @@
 #include "cata_path.h"
 #include "cata_utility.h"
 #include "catacharset.h"
-#include "catalua_lua_call.h"
-#include "catalua_ui.h"
+#include "catalua_hook.h"
 #include "character.h"
 #include "character_id.h"
 #include "city.h"
@@ -1702,8 +1701,8 @@ void avatar::talk_to( std::unique_ptr<talker> talk_with, bool radio_contact,
     } else {
         d.add_topic( debug_topic );
     }
-    const cata::lua_ui::native_hook_result start_hook =
-        cata::lua_ui::dispatch_native_dialogue_hook(
+    const cata::lua::native_hook_result start_hook =
+        cata::lua::dispatch_native_dialogue_hook(
             "on_dialogue_start", *d.actor( false ),
             *d.actor( true ), d.topic_stack.back().id,
             std::nullopt, d.by_radio,
@@ -1726,8 +1725,8 @@ void avatar::talk_to( std::unique_ptr<talker> talk_with, bool radio_contact,
         d.actor( true )->update_missions( d.missions_assigned );
         last_topic = d.topic_stack.back().id;
         talk_topic next = d.opt( d_win, d.topic_stack.back() );
-        const cata::lua_ui::native_hook_result option_hook =
-            cata::lua_ui::dispatch_native_dialogue_hook(
+        const cata::lua::native_hook_result option_hook =
+            cata::lua::dispatch_native_dialogue_hook(
                 "on_dialogue_option", *d.actor( false ),
                 *d.actor( true ), last_topic, next.id,
                 d.by_radio,
@@ -1750,7 +1749,7 @@ void avatar::talk_to( std::unique_ptr<talker> talk_with, bool radio_contact,
             d.add_topic( next );
         }
     } while( !d.done );
-    cata::lua_ui::dispatch_native_dialogue_hook(
+    cata::lua::dispatch_native_dialogue_hook(
         "on_dialogue_end", *d.actor( false ),
         *d.actor( true ), last_topic, std::nullopt,
         d.by_radio,
@@ -1794,7 +1793,7 @@ std::string dialogue::dynamic_line( const talk_topic &the_topic )
     // For compatibility
     const std::string &topic = the_topic.id;
     if( std::optional<std::string> lua_line =
-            cata::lua_ui::dialogue_dynamic_line( *this, the_topic ) ) {
+            cata::lua::dialogue_dynamic_line( *this, the_topic ) ) {
         return *lua_line;
     }
 
@@ -1952,7 +1951,7 @@ std::string dialogue::dynamic_line( const talk_topic &the_topic )
 
 void dialogue::apply_speaker_effects( const talk_topic &the_topic )
 {
-    cata::lua_ui::apply_lua_dialogue_speaker_effects( *this, the_topic );
+    cata::lua::apply_lua_dialogue_speaker_effects( *this, the_topic );
     const std::string &topic = the_topic.id;
     const auto iter = json_talk_topics.find( topic );
     if( iter == json_talk_topics.end() ) {
@@ -2070,9 +2069,9 @@ void dialogue::gen_responses( const talk_topic &the_topic )
     responses.clear();
     response_condition_exists.clear();
     response_condition_eval.clear();
-    cata::lua_ui::clear_dialogue_response_callbacks();
+    cata::lua::clear_dialogue_response_callbacks();
 
-    if( cata::lua_ui::gen_lua_dialogue_responses( *this, the_topic ) ) {
+    if( cata::lua::gen_lua_dialogue_responses( *this, the_topic ) ) {
         return;
     }
 
@@ -2080,11 +2079,11 @@ void dialogue::gen_responses( const talk_topic &the_topic )
     if( iter != json_talk_topics.end() ) {
         json_talk_topic &jtt = iter->second;
         if( jtt.gen_responses( *this ) ) {
-            cata::lua_ui::extend_lua_dialogue_responses( *this, the_topic );
+            cata::lua::extend_lua_dialogue_responses( *this, the_topic );
             return;
         }
     }
-    cata::lua_ui::extend_lua_dialogue_responses( *this, the_topic );
+    cata::lua::extend_lua_dialogue_responses( *this, the_topic );
 
     Character &player_character = get_player_character();
     if( the_topic.id == "TALK_MISSION_LIST" ) {
@@ -3241,7 +3240,7 @@ talk_topic dialogue::opt( dialogue_window &d_win, const talk_topic &topic )
     talk_effect_t const &effects = success ? chosen.success : chosen.failure;
     talk_topic ret_topic =  effects.apply( *this );
     if( chosen.lua_response_id ) {
-        ret_topic = cata::lua_ui::apply_lua_dialogue_response(
+        ret_topic = cata::lua::apply_lua_dialogue_response(
                         *this, *chosen.lua_response_id, ret_topic, success );
     }
     talk_effect_t::update_missions( *this );
@@ -8649,23 +8648,6 @@ talk_effect_fun_t::func f_trigger_event( const JsonObject &jo, std::string_view 
     };
 }
 
-talk_effect_fun_t::func f_run_lua( const JsonObject &jo, std::string_view member,
-                                   std::string_view )
-{
-    cata::lua_ui::lua_call call;
-    call.load( jo, member );
-    return [call]( dialogue & d ) {
-        cata::lua_ui::native_callback_arguments context;
-        if( const_talker *alpha = d.const_actor( false ) ) {
-            context.push_back( { "alpha", alpha } );
-        }
-        if( const_talker *beta = d.const_actor( true ) ) {
-            context.push_back( { "beta", beta } );
-        }
-        cata::lua_ui::invoke_lua_call( call, "eoc", std::move( context ) );
-    };
-}
-
 } // namespace
 } // namespace talk_effect_fun
 
@@ -8900,7 +8882,6 @@ parsers = {
     { "transform_item", jarg::member, &talk_effect_fun::f_transform_item },
     { "signal_hordes", jarg::member, &talk_effect_fun::f_signal_hordes },
     { "set_browsed", jarg::member, &talk_effect_fun::f_set_browsed },
-    { "run_lua", jarg::object, &talk_effect_fun::f_run_lua },
     // since parser checks all effects in order, having "message" field in any another effect (like in f_roll_remainder)
     // would cause parser to think it's a "message" effect
     { "message", "message", jarg::member, &talk_effect_fun::f_message },

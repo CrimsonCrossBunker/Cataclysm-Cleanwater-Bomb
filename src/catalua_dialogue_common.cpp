@@ -113,7 +113,7 @@ context::state &context::require_write_state() const
     state &result = require_state();
     if( !result.allow_write ) {
         throw std::runtime_error(
-            "Lua dialogue mutation requires capability 'game.write'" );
+            "Lua dialogue mutation requires an active Platform write callback" );
     }
     return result;
 }

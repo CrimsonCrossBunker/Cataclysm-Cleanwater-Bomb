@@ -28,10 +28,10 @@ class JsonObject;
 class JsonOut;
 class effect_type;
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 class content_transaction;
-} // namespace cata::lua_platform
+} // namespace cata::lua
 
 /** Handles the large variety of weed messages. */
 void weed_msg( Character &p );
@@ -111,7 +111,7 @@ class effect_type
         friend void load_effect_type( const JsonObject &jo, std::string_view src );
         friend class effect;
         friend struct mod_tracker;
-        friend class cata::lua_platform::content_transaction;
+        friend class cata::lua::content_transaction;
     public:
         enum class memorial_gender : int {
             male,

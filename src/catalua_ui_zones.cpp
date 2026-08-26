@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_zones.h"
 
@@ -19,7 +19,7 @@
 #include "clzones.h"
 #include "coordinates.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -297,11 +297,11 @@ definition_options read_definition_options(
         result.offset >
         maximum_definition_offset ) {
         throw std::invalid_argument(
-            "game.zones.types offset must be within 0..1000000" );
+            "services.zones.types offset must be within 0..1000000" );
     }
     if( result.limit < 0 ) {
         throw std::invalid_argument(
-            "game.zones.types limit cannot be negative" );
+            "services.zones.types limit cannot be negative" );
     }
     result.limit = std::min(
                        result.limit,
@@ -309,7 +309,7 @@ definition_options read_definition_options(
     if( result.query.size() >
         maximum_query_bytes ) {
         throw std::invalid_argument(
-            "game.zones.types query exceeds 128 bytes" );
+            "services.zones.types query exceeds 128 bytes" );
     }
     return result;
 }
@@ -443,12 +443,12 @@ sol::table get_zone_type(
     const script_game_id &id )
 {
     require_id_kind(
-        id, "zone", "game.zones.type" );
+        id, "zone", "services.zones.type" );
     const zone_type_id native_id(
         id.value() );
     if( !native_id.is_valid() ) {
         throw std::invalid_argument(
-            "game.zones.type requires a valid GameId<zone>" );
+            "services.zones.type requires a valid GameId<zone>" );
     }
     return snapshot_zone_type(
                sol::state_view( lua ),
@@ -630,7 +630,7 @@ zone_create_options read_zone_create_options(
     const sol::table &requested )
 {
     const std::string api_name =
-        "game.zones.create";
+        "services.zones.create";
     zone_create_options result;
     for( const auto &entry : requested ) {
         const sol::object key_object =
@@ -830,11 +830,11 @@ sol::table create_zone(
             normalize_zone_bounds(
                 require_relative_ms(
                     *options.start,
-                    "game.zones.create" ),
+                    "services.zones.create" ),
                 require_relative_ms(
                     *options.end,
-                    "game.zones.create" ),
-                "game.zones.create" );
+                    "services.zones.create" ),
+                "services.zones.create" );
         identity.personal_start =
             relative_bounds->first;
         identity.personal_end =
@@ -844,11 +844,11 @@ sol::table create_zone(
             normalize_zone_bounds(
                 require_absolute_ms(
                     *options.start,
-                    "game.zones.create" ),
+                    "services.zones.create" ),
                 require_absolute_ms(
                     *options.end,
-                    "game.zones.create" ),
-                "game.zones.create" );
+                    "services.zones.create" ),
+                "services.zones.create" );
         identity.start =
             absolute_bounds->first;
         identity.end =
@@ -951,7 +951,7 @@ sol::table rename_zone(
 {
     validate_zone_name(
         requested_name,
-        "game.zones.rename" );
+        "services.zones.rename" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     zone_data *entry = resolve_zone(
@@ -1127,11 +1127,11 @@ sol::table set_zone_position(
             normalize_zone_bounds(
                 require_relative_ms(
                     requested_start,
-                    "game.zones.set_position" ),
+                    "services.zones.set_position" ),
                 require_relative_ms(
                     requested_end,
-                    "game.zones.set_position" ),
-                "game.zones.set_position" );
+                    "services.zones.set_position" ),
+                "services.zones.set_position" );
         future.personal_start =
             bounds.first;
         future.personal_end =
@@ -1179,11 +1179,11 @@ sol::table set_zone_position(
             normalize_zone_bounds(
                 require_absolute_ms(
                     requested_start,
-                    "game.zones.set_position" ),
+                    "services.zones.set_position" ),
                 require_absolute_ms(
                     requested_end,
-                    "game.zones.set_position" ),
-                "game.zones.set_position" );
+                    "services.zones.set_position" ),
+                "services.zones.set_position" );
         future.start =
             bounds.first;
         future.end =
@@ -1381,7 +1381,7 @@ sol::table list_zones(
     return list_zone_matches(
                lua,
                read_zone_list_options(
-                   requested, "game.zones.list" ),
+                   requested, "services.zones.list" ),
                std::nullopt,
                runtime_generation,
                world_generation );
@@ -1397,9 +1397,9 @@ sol::table zones_at(
     return list_zone_matches(
                lua,
                read_zone_list_options(
-                   requested, "game.zones.at" ),
+                   requested, "services.zones.at" ),
                require_absolute_ms(
-                   position, "game.zones.at" ),
+                   position, "services.zones.at" ),
                runtime_generation,
                world_generation );
 }
@@ -1437,7 +1437,7 @@ sol::table zone_contains(
 {
     const tripoint_abs_ms native_position =
         require_absolute_ms(
-            position, "game.zones.contains" );
+            position, "services.zones.contains" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     zone_data *entry = resolve_zone(
@@ -1673,6 +1673,6 @@ void install_zone_api(
     game["zones"] = std::move( zones );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

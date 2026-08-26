@@ -22,14 +22,14 @@ class VehicleGroup;
 class VehicleSpawn;
 class map;
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 namespace detail
 {
 std::vector<std::pair<std::string, int>> vehicle_group_weighted_entries(
     const vgroup_id &id );
 } // namespace detail
-} // namespace cata::lua_platform
+} // namespace cata::lua
 
 using vspawn_id = string_id<VehicleSpawn>;
 
@@ -59,7 +59,7 @@ class VehicleGroup
 
     private:
         friend std::vector<std::pair<std::string, int>>
-        cata::lua_platform::detail::vehicle_group_weighted_entries(
+        cata::lua::detail::vehicle_group_weighted_entries(
             const vgroup_id &id );
         weighted_int_list<vproto_id> vehicles;
 };

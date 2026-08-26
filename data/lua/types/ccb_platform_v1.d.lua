@@ -5936,7 +5936,7 @@ function CcbPlatformMapgenApi.on_generate(handler_id, options) end
 function CcbPlatformMapgenApi.on_postprocess(handler_id, options) end
 
 -- Shared character combat methods are installed under `ccb.services.characters`
--- by the same generation-safe native layer used by `game.characters`.
+--- by the same generation-safe native layer used by `ccb.services.characters`.
 ---@class CcbCharactersApi
 local CcbCharactersApi = {}
 
@@ -6292,7 +6292,7 @@ local CcbPlatformBionicsApi = {}
 ---@return CcbResult result `value` is a CcbPlatformBionicSummary.
 function CcbPlatformBionicsApi.summary(character) end
 
----Grant a bionic through native gameplay rules without the v5 inspection-list limit.
+---Grant a bionic through native gameplay rules without an inspection-list limit.
 ---@param character GameHandle Character handle.
 ---@param id GameId GameId<bionic>
 ---@return CcbResult result `value.changed` reports whether the character gained instances.

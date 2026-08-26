@@ -1,11 +1,13 @@
 # CCB Lua 0.1 平台规范 / CCB Lua 0.1 Platform Specification
 
-Status: CCB Lua 0.1 native platform architecture; implementation is tracked in
-`ai/lua-first-roadmap.yml`.  High-throughput EOC-capability implementation and
-its deferred acceptance gate follow `data/lua/LUA_FIRST_EOC_WORKFLOW.md`.
+Status: sole CCB Lua runtime and native Platform architecture; implementation
+is tracked in `ai/lua-first-roadmap.yml`.  High-throughput EOC-capability
+implementation and its deferred acceptance gate follow
+`data/lua/LUA_FIRST_EOC_WORKFLOW.md`.
 
-状态：CCB Lua 0.1 纯原生创作平台架构；实现进度以 `ai/lua-first-roadmap.yml` 为准；
-EOC 能力的高吞吐开发与集中验收流程遵循 `data/lua/LUA_FIRST_EOC_WORKFLOW.md`。
+状态：CCB 唯一 Lua 运行时与纯原生创作平台架构；实现进度以
+`ai/lua-first-roadmap.yml` 为准；EOC 能力的高吞吐开发与集中验收流程遵循
+`data/lua/LUA_FIRST_EOC_WORKFLOW.md`。
 
 ## Purpose / 目标
 
@@ -31,8 +33,21 @@ The runtime provides modularity, transactional staging, rollback safety,
 and decoupled snapshots.  Lua code receives generation-safe handles instead
 of bare C++ pointers.
 
+Platform v1 is the only Lua runtime, loader, state model, and public API in
+CCB.  The former API v5/CBN-compatibility runtime is not a compatibility layer:
+its `game.*` namespace, capability sandbox, authored manifest, EOC remote
+control, independent lifecycle, declarations, and generated contract are
+deleted.  A useful native operation is moved into `ccb.services` or
+`ccb.content`; an operation whose only purpose is old-API compatibility is
+removed.
+
 运行时提供模块化、事务预载（Staged）、冲突原子回滚（Rollback）与分离数据快照。
 Lua 不直接接触 C++ 裸指针，全面采用代际安全句柄访问实体。
+
+Platform v1 是 CCB 唯一的 Lua 运行时、加载器、状态模型与公共 API。原 API v5/CBN
+兼容运行时不再作为兼容层保留：`game.*`、capability 沙箱、作者 manifest、EOC 遥控器、
+独立生命周期、声明与生成契约全部删除。有通用价值的原生操作迁入 `ccb.services` 或
+`ccb.content`；仅服务旧 API 兼容的操作直接移除。
 
 ## Zero-configuration discovery / 零配置发现
 
@@ -140,9 +155,9 @@ during data loading.
 
 Platform v1 opens the complete bundled Lua 5.4 standard libraries, including
 `io`, `os`, `debug`, coroutines, dynamic loading, and normal package support.
-It does not use the v5 capability sandbox.  An enabled or discovered Platform
-Mod runs with the game process privileges and can read files, start processes,
-or load native code where the host platform permits it.
+An enabled or discovered Platform Mod runs with the game process privileges
+and can read files, start processes, or load native code where the host
+platform permits it.
 
 This choice maximizes extension power but removes an untrusted distribution
 boundary.  The official API still defines portable behaviour; host-specific
@@ -156,7 +171,7 @@ This consent protects entry execution; it cannot undo the documented fact that
 `mod.lua` may already execute during discovery.
 
 Platform v1 开放捆绑 Lua 5.4 的完整标准库，包括 `io`、`os`、`debug`、协程、动态
-加载和普通 package 支持，不沿用 v5 capability 沙箱。脚本与游戏进程权限相同；这种
+加载和普通 package 支持。脚本与游戏进程权限相同；这种
 选择换取最大扩展能力，但不再提供“不可信 Mod”安全边界。文件、进程和原生模块副作用
 无法事务回滚，也不保证跨平台可用。
 
@@ -259,7 +274,7 @@ engine paths:
 
 1. root `mod.lua`/`main.lua` discovery and dependency-aware Mod selection;
 2. native item and recipe loading plus an observable named Lua use handler;
-3. `game::save()` persistence for typed character state, typed world state,
+3. Platform save-lifecycle persistence for typed character state, typed world state,
    and a named delayed task;
 4. runtime shutdown followed by full core/Mod data reload, continued item
    gameplay, restored state, and exactly-once execution of the overdue task;
@@ -276,7 +291,7 @@ into full static-domain or EOC parity.
 可玩 MVP v0.1 是刻意收窄的纵向切片，并不表示 Platform v1 已经替代所有 JSON 类型或
 EOC selector。它的合并门槛是：一个内置、零 JSON/EOC 的 Mod 必须通过真实引擎路径完成
 根目录元数据与入口发现、依赖选择、原生物品/配方加载、命名 Lua 使用行为、
-`game::save()`、角色/世界状态与延迟任务持久化；销毁 runtime 并完整重载核心和 Mod 数据
+Platform 保存生命周期、角色/世界状态与延迟任务持久化；销毁 runtime 并完整重载核心和 Mod 数据
 以后，物品行为和状态必须继续生效，逾期任务只能执行一次。未编译 Lua 的版本也必须在
 Mod 列表中给出明确的不可用诊断，不能让玩家直到加载世界时才失败。
 
@@ -632,7 +647,7 @@ Lua-enabled C++ 测试程序，Wound/WoundFix 与伤口 service 的聚焦门禁�
 随后更广的 `[lua]` 过滤集也以 190 个匹配用例、2706 个断言通过，其中包含 owner identity、
 Monster pre-finalize 与身体缓存回归覆盖。LuaLS、公开契约、覆盖率、Agent
 元数据与替换账本检查同样通过。2026-08-12 新增的内置 Mod 可玩闭环以 32 个断言通过，
-真实覆盖发现、依赖选择、原生物品/配方使用、三次 `game::save()`、runtime 销毁、完整数据
+真实覆盖发现、依赖选择、原生物品/配方使用、三次 Platform 保存生命周期、runtime 销毁、完整数据
 重载、类型化状态恢复与逾期任务单次执行；修正测试夹具的安全角色位置后，更广的 `[lua]`
 门禁以 191 个用例、2738 个断言通过。全新无 Lua 构建也成功链接，其 Mod 管理器降级测试以
 13 个断言通过。启用 Lua 的 Android arm64-v8a Stable Release 也已成功编译、链接并打包；
@@ -1022,14 +1037,14 @@ vehicles, NPCs, factions, camps, zones, spells, missions, recipes, crafting,
 map/world/overmap/hordes, weather, statistics, variables, sound, targeting,
 spawning, followers, relocation, and the read-only native definition snapshot
 registry at `ccb.services.registry`.  These are shared C++ implementations,
-not calls into a v5 Lua state.  Platform deliberately does not install the v5
-EOC table, authored JSON registry, or capability surface.  Reads require
+installed directly into the sole Platform runtime.  There is no second Lua
+state, EOC table, authored JSON registry, or capability surface.  Reads require
 `world_ready`; mutations additionally require an active Platform callback.
 
 当前 Platform state 已在 `ccb.services` 下安装上述原生领域服务，其中
 `ccb.services.registry` 是只读的原生定义快照 registry。它们共享的是 C++ 实现，
-不会调用另一个 v5 Lua state；Platform 明确不安装 v5 的 EOC table、作者 JSON registry
-或 capability 表。读取要求世界已就绪，修改还要求当前处于 Platform 回调。
+直接安装进唯一的 Platform runtime；不存在第二个 Lua state、EOC table、作者 JSON
+registry 或 capability 表。读取要求世界已就绪，修改还要求当前处于 Platform 回调。
 
 Coordinates embedded in definition-policy and event callback payloads are
 detached plain Lua tables, not borrowed native coordinate objects and not
@@ -1085,10 +1100,8 @@ dialogue was opened with a non-empty reason string, so ordinary Lua `if
 payload.by_radio` / `if payload.reason` expressions replace the legacy
 `is_by_radio` and `has_reason` conditions.  Participant presence is the
 payload's own `avatar` / `interlocutor` fields instead of `has_alpha` /
-`has_beta`.  Platform never publishes `alpha`/`beta` aliases.  The existing
-Lua API v5 dispatcher keeps its own compatibility payload unchanged and runs
-before Platform, so its candidate result is visible through
-`payload.results` without becoming Platform's authoring vocabulary.
+`has_beta`.  Platform never publishes `alpha`/`beta` aliases and is the only
+Lua dispatcher at these native dialogue boundaries.
 
 Lua-owned dialogue topics may use `ccb.runtime.dialogue_topic(topic_id,
 handler_id)` to render inside the native NPC dialogue window.  The named
@@ -1125,9 +1138,7 @@ talk-topic objects or an EOC execution entry point.
 因此普通 Lua 的 `if payload.by_radio` / `if payload.reason` 表达式直接取代 legacy 的
 `is_by_radio` 与 `has_reason` 条件；参与者存在性由 payload 自身的 `avatar` /
 `interlocutor` 字段表达，取代 `has_alpha` / `has_beta`。Platform 不发布
-`alpha`/`beta` 别名。现有 Lua API v5 dispatcher 为兼容仍保留自己的旧 payload，并先于
-Platform 运行；它产生的候选结果只通过 `payload.results` 进入 Platform，不会成为新的
-作者词汇。
+`alpha`/`beta` 别名，并且是这些原生对话边界上唯一的 Lua dispatcher。
 
 Lua 自有对话主题可通过 `ccb.runtime.dialogue_topic(topic_id, handler_id)` 在原生 NPC
 对话窗口中渲染。命名 handler 得到受代次约束的 `avatar`、`interlocutor` handle 与当前
@@ -1922,7 +1933,7 @@ slice.
 Avatar and NPC gameplay changes use
 `ccb.services.bionics.grant(GameHandle, GameId)` and `remove_type`; these
 Platform operations call native character rules directly and are not capped
-by the v5 inspection-list limit or forced through UID enumeration.  The
+by the Platform registry page limit or forced through UID enumeration.  The
 Platform-only `summary(GameHandle)` query returns installed count, current and
 maximum typed energy, and the independent capacity fact, so Lua can express
 "any installed bionic or power capacity" without an EOC-shaped predicate.
@@ -2015,7 +2026,7 @@ the operation permits an omitted category.  Random/category calls return a
 detached result with `changed`, before/after counts, and targeted calls also
 report the native `accepted` result.  The service validates finite integral
 random chances in `0..1000000`, valid mutation/category ids, generation-safe
-handles, and `game.write` capability before invoking the existing mutation
+handles, and the Platform write boundary before invoking the existing mutation
 engine.  The bounded migrator converts proven literal or `context_val`/`u_val`
 IDs and finite literal chances for the game-start avatar and proven
 `npc_becomes_hostile` NPC slices; float/math/global-variable shapes and
@@ -2183,7 +2194,7 @@ overmap-terrain 坐标，复用 NPC 原生寻路参数，成功后设置 travell
 post 并返回路径长度；不可达目标会清除旧 goal 并返回 `accepted = false`。
 `ccb.services.npcs.set_guard_position(npc_handle, map_position)` 则写入持久 guard post，
 要求绝对 map-square 坐标并返回幂等变更结果。两个 API 都只接受 NPC 句柄，写操作受
-Platform callback 与 `game.write` 权限保护。无参数 `goto_location` 现在由迁移器输出普通
+Platform callback 与 Platform 写入边界保护。无参数 `goto_location` 现在由迁移器输出普通
 Lua 工作流：查询 `destinations`、构造 `ccb.presentation.choose` 选项、调用
 `plan_travel` 预览并在确认后调用 `set_goal`；字面量 `om_terrain` 与 `om_special` 目标
 可通过有界 `services.overmap.search` 解析，复杂 mission-target、动态变量/`unique_id`
@@ -2261,7 +2272,7 @@ changed 标记。动态值、时长范围和缺失时长继续明确生成迁移
 `-31536000..31536000` 回合。空 key 有意表示无 key 的原生事件；任意事件对象和动态 key
 仍不在当前迁移切片中。
 玩家与 NPC 的玩法变更使用 `ccb.services.bionics.grant(GameHandle, GameId)` 和
-`remove_type`；这些 Platform 操作直接调用角色原生规则，不受 v5 检查清单数量上限约束，
+`remove_type`；这些 Platform 操作直接调用角色原生规则，不受 registry 分页数量上限约束，
 也不强制作者先枚举 UID。Platform 专属的 `summary(GameHandle)` 会同时返回安装数量、当前与
 最大类型化能量以及独立的容量事实，使 Lua 能表达“存在任一仿生装置或电力容量”，而无需
 增加 EOC 形状谓词。

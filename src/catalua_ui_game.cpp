@@ -31,7 +31,7 @@
 #include "weather.h"
 #include "weather_type.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -207,7 +207,7 @@ sol::table snapshot_item( sol::state_view &state, const avatar &player, const it
 sol::table inventory_snapshot( sol::this_state lua, sol::optional<int> requested_limit )
 {
     const int limit = bounded_limit( requested_limit, default_inventory_snapshot_limit,
-                                     maximum_inventory_snapshot_limit, "game.inventory_snapshot" );
+                                     maximum_inventory_snapshot_limit, "services.inventory_snapshot" );
     const avatar &player = get_avatar();
     const std::vector<const item *> inventory = player.inv_dump();
     const std::size_t returned = std::min( inventory.size(), static_cast<std::size_t>( limit ) );
@@ -230,7 +230,7 @@ sol::table inventory_snapshot( sol::this_state lua, sol::optional<int> requested
 sol::table effects_snapshot( sol::this_state lua, sol::optional<int> requested_limit )
 {
     const int limit = bounded_limit( requested_limit, default_effect_snapshot_limit,
-                                     maximum_snapshot_limit, "game.effects_snapshot" );
+                                     maximum_snapshot_limit, "services.effects_snapshot" );
     const std::vector<std::reference_wrapper<const effect>> effects = get_avatar().get_effects();
     const std::size_t returned = std::min( effects.size(), static_cast<std::size_t>( limit ) );
     sol::state_view state( lua );
@@ -260,7 +260,7 @@ sol::table effects_snapshot( sol::this_state lua, sol::optional<int> requested_l
 sol::table skills_snapshot( sol::this_state lua, sol::optional<int> requested_limit )
 {
     const int limit = bounded_limit( requested_limit, default_skill_snapshot_limit,
-                                     maximum_snapshot_limit, "game.skills_snapshot" );
+                                     maximum_snapshot_limit, "services.skills_snapshot" );
     const avatar &player = get_avatar();
     std::vector<const Skill *> skills;
     skills.reserve( Skill::skills.size() );
@@ -301,7 +301,7 @@ sol::table skills_snapshot( sol::this_state lua, sol::optional<int> requested_li
 sol::table equipment_snapshot( sol::this_state lua, sol::optional<int> requested_limit )
 {
     const int limit = bounded_limit( requested_limit, default_equipment_snapshot_limit,
-                                     maximum_snapshot_limit, "game.equipment_snapshot" );
+                                     maximum_snapshot_limit, "services.equipment_snapshot" );
     const avatar &player = get_avatar();
     const std::vector<const item *> inventory = player.inv_dump();
     const item *weapon = nullptr;
@@ -363,7 +363,7 @@ sol::table item_contents_snapshot( sol::this_state lua, std::int64_t uid,
                                    sol::optional<int> requested_limit )
 {
     const int limit = bounded_limit( requested_limit, default_contents_snapshot_limit,
-                                     maximum_snapshot_limit, "game.item_contents_snapshot" );
+                                     maximum_snapshot_limit, "services.item_contents_snapshot" );
     const avatar &player = get_avatar();
     const std::vector<const item *> inventory = player.inv_dump();
     const item *target = nullptr;
@@ -407,7 +407,7 @@ sol::table item_contents_snapshot( sol::this_state lua, std::int64_t uid,
 sol::table current_tile_snapshot( sol::this_state lua, sol::optional<int> requested_field_limit )
 {
     const int field_limit = bounded_limit( requested_field_limit, default_field_snapshot_limit,
-                                           maximum_snapshot_limit, "game.current_tile_snapshot" );
+                                           maximum_snapshot_limit, "services.current_tile_snapshot" );
     const avatar &player = get_avatar();
     map &here = get_map();
     const tripoint_bub_ms position = player.pos_bub();
@@ -464,7 +464,7 @@ sol::table current_tile_snapshot( sol::this_state lua, sol::optional<int> reques
 sol::table mutations_snapshot( sol::this_state lua, sol::optional<int> requested_limit )
 {
     const int limit = bounded_limit( requested_limit, default_mutation_snapshot_limit,
-                                     maximum_snapshot_limit, "game.mutations_snapshot" );
+                                     maximum_snapshot_limit, "services.mutations_snapshot" );
     const avatar &player = get_avatar();
     const std::vector<trait_id> mutations = player.get_mutations( false );
     const std::size_t returned = std::min( mutations.size(), static_cast<std::size_t>( limit ) );
@@ -498,7 +498,7 @@ sol::table mutations_snapshot( sol::this_state lua, sol::optional<int> requested
 sol::table bionics_snapshot( sol::this_state lua, sol::optional<int> requested_limit )
 {
     const int limit = bounded_limit( requested_limit, default_bionic_snapshot_limit,
-                                     maximum_snapshot_limit, "game.bionics_snapshot" );
+                                     maximum_snapshot_limit, "services.bionics_snapshot" );
     const avatar &player = get_avatar();
     const bionic_collection &bionics = *player.my_bionics;
     const std::size_t returned = std::min( bionics.size(), static_cast<std::size_t>( limit ) );
@@ -557,7 +557,7 @@ sol::table snapshot_mission( sol::state_view &state, const mission &entry, const
 sol::table missions_snapshot( sol::this_state lua, sol::optional<int> requested_limit )
 {
     const int limit = bounded_limit( requested_limit, default_mission_snapshot_limit,
-                                     maximum_snapshot_limit, "game.missions_snapshot" );
+                                     maximum_snapshot_limit, "services.missions_snapshot" );
     const avatar &player = get_avatar();
     const std::vector<mission *> active = player.get_active_missions();
     const std::vector<mission *> completed = player.get_completed_missions();
@@ -616,7 +616,7 @@ sol::table snapshot_activity( sol::state_view &state, const avatar &player,
 sol::table activity_snapshot( sol::this_state lua, sol::optional<int> requested_backlog_limit )
 {
     const int limit = bounded_limit( requested_backlog_limit, default_activity_snapshot_limit,
-                                     maximum_snapshot_limit, "game.activity_snapshot" );
+                                     maximum_snapshot_limit, "services.activity_snapshot" );
     const avatar &player = get_avatar();
     sol::state_view state( lua );
     sol::table result = state.create_table();
@@ -645,12 +645,12 @@ sol::table nearby_creatures_snapshot( sol::this_state lua, sol::optional<int> re
 {
     const int raw_radius = requested_radius.value_or( default_creature_snapshot_radius );
     if( raw_radius < 0 ) {
-        throw std::invalid_argument( "game.nearby_creatures_snapshot radius cannot be negative" );
+        throw std::invalid_argument( "services.nearby_creatures_snapshot radius cannot be negative" );
     }
     const int radius = std::min( raw_radius, maximum_creature_snapshot_radius );
     const int limit = bounded_limit( requested_limit, default_creature_snapshot_limit,
                                      maximum_creature_snapshot_limit,
-                                     "game.nearby_creatures_snapshot" );
+                                     "services.nearby_creatures_snapshot" );
     const avatar &player = get_avatar();
     map &here = get_map();
     std::vector<Creature *> creatures;
@@ -778,4 +778,4 @@ void install_game_snapshot_api( sol::table &game, std::function<void()> require_
     } );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua

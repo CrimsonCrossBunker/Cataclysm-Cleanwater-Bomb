@@ -1,4 +1,4 @@
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 
 #include "item_factory.h"
 
@@ -1875,12 +1875,12 @@ void Item_factory::load_item_blacklist( const JsonObject &json )
     item_blacklist.sub_blacklist.emplace_back( whitelist, tmp_blacklist );
 }
 
-std::size_t cata::lua_platform::detail::platform_item_blacklist_count()
+std::size_t cata::lua::detail::platform_item_blacklist_count()
 {
     return item_blacklist.sub_blacklist.size();
 }
 
-void cata::lua_platform::detail::insert_platform_item_blacklist(
+void cata::lua::detail::insert_platform_item_blacklist(
     const platform_blacklist_data &value )
 {
     std::set<itype_id> entries;
@@ -1890,7 +1890,7 @@ void cata::lua_platform::detail::insert_platform_item_blacklist(
     item_blacklist.sub_blacklist.emplace_back( value.whitelist, entries );
 }
 
-void cata::lua_platform::detail::truncate_platform_item_blacklist(
+void cata::lua::detail::truncate_platform_item_blacklist(
     const std::size_t count )
 {
     if( count > item_blacklist.sub_blacklist.size() ) {

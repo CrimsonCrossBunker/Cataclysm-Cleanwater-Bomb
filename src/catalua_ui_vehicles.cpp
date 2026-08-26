@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_vehicles.h"
 
@@ -31,7 +31,7 @@
 #include "vehicle.h"
 #include "vehicle_price.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -86,18 +86,18 @@ definition_options read_definition_options(
     if( result.offset < 0 ||
         result.offset > maximum_definition_offset ) {
         throw std::invalid_argument(
-            "game.vehicles.definitions offset "
+            "services.vehicles.definitions offset "
             "must be within 0..1000000" );
     }
     if( result.limit < 0 ) {
         throw std::invalid_argument(
-            "game.vehicles.definitions limit cannot be negative" );
+            "services.vehicles.definitions limit cannot be negative" );
     }
     result.limit = std::min(
                        result.limit, maximum_definition_limit );
     if( result.query.size() > maximum_query_bytes ) {
         throw std::invalid_argument(
-            "game.vehicles.definitions query exceeds 128 bytes" );
+            "services.vehicles.definitions query exceeds 128 bytes" );
     }
     return result;
 }
@@ -244,7 +244,7 @@ sol::table get_definition(
     sol::this_state lua, const script_game_id &id )
 {
     require_vehicle_prototype_id(
-        id, "game.vehicles.definition" );
+        id, "services.vehicles.definition" );
     return snapshot_definition(
                sol::state_view( lua ),
                vproto_id( id.value() ).obj() );
@@ -548,12 +548,12 @@ part_options read_part_options(
     if( result.offset < 0 ||
         result.offset > maximum_part_offset ) {
         throw std::invalid_argument(
-            "game.vehicles.parts offset "
+            "services.vehicles.parts offset "
             "must be within 0..1000000" );
     }
     if( result.limit < 0 ) {
         throw std::invalid_argument(
-            "game.vehicles.parts limit cannot be negative" );
+            "services.vehicles.parts limit cannot be negative" );
     }
     result.limit = std::min(
                        result.limit, maximum_part_limit );
@@ -762,18 +762,18 @@ void validate_vehicle_name( const std::string &name )
 {
     if( name.empty() ) {
         throw std::invalid_argument(
-            "game.vehicles.rename name cannot be empty" );
+            "services.vehicles.rename name cannot be empty" );
     }
     if( name.size() > maximum_vehicle_name_bytes ) {
         throw std::invalid_argument(
-            "game.vehicles.rename name exceeds 256 bytes" );
+            "services.vehicles.rename name exceeds 256 bytes" );
     }
     if( std::any_of(
     name.begin(), name.end(), []( const unsigned char ch ) {
     return ch < 0x20U || ch == 0x7fU;
 } ) ) {
         throw std::invalid_argument(
-            "game.vehicles.rename name cannot contain "
+            "services.vehicles.rename name cannot contain "
             "control characters" );
     }
 }
@@ -812,7 +812,7 @@ sol::table set_cruise_velocity(
     if( requested_velocity < -maximum_requested_velocity ||
         requested_velocity > maximum_requested_velocity ) {
         throw std::invalid_argument(
-            "game.vehicles.set_cruise_velocity velocity "
+            "services.vehicles.set_cruise_velocity velocity "
             "must be within -1000000..1000000" );
     }
     sol::state_view state( lua );
@@ -862,19 +862,19 @@ stop_options read_stop_options(
     for( const auto &entry : *requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.vehicles.stop option keys must be strings" );
+                "services.vehicles.stop option keys must be strings" );
         }
         const std::string key =
             entry.first.as<std::string>();
         if( key != "motion" && key != "engines" &&
             key != "autopilot" ) {
             throw std::invalid_argument(
-                "game.vehicles.stop received unknown option '" +
+                "services.vehicles.stop received unknown option '" +
                 key + "'" );
         }
         if( !entry.second.is<bool>() ) {
             throw std::invalid_argument(
-                "game.vehicles.stop option '" + key +
+                "services.vehicles.stop option '" + key +
                 "' must be a boolean" );
         }
         const bool enabled = entry.second.as<bool>();
@@ -889,7 +889,7 @@ stop_options read_stop_options(
     if( !result.motion && !result.engines &&
         !result.autopilot ) {
         throw std::invalid_argument(
-            "game.vehicles.stop requires at least one action" );
+            "services.vehicles.stop requires at least one action" );
     }
     return result;
 }
@@ -981,7 +981,7 @@ sol::table set_vehicle_part_enabled(
     if( part_index < 0 ||
         part_index >= entry->part_count() ) {
         throw std::invalid_argument(
-            "game.vehicles.set_part_enabled part index "
+            "services.vehicles.set_part_enabled part index "
             "is outside this vehicle" );
     }
     vehicle_part &part =
@@ -1046,7 +1046,7 @@ sol::table set_vehicle_part_enabled(
 
 int prototype_value( const script_game_id &id, const bool post_cataclysm )
 {
-    require_vehicle_prototype_id( id, "game.vehicles.prototype_value" );
+    require_vehicle_prototype_id( id, "services.vehicles.prototype_value" );
     const vehicle_prototype &prototype = vproto_id( id.value() ).obj();
     return prototype.blueprint ?
            vehicle_part_base_price( *prototype.blueprint, post_cataclysm ) : 0;
@@ -1126,28 +1126,28 @@ vehicle_spawn_options read_vehicle_spawn_options(
         if( owner.valid() && owner.get_type() != sol::type::nil ) {
             if( !owner.is<script_game_id>() ) {
                 throw std::invalid_argument(
-                    "game.vehicles.spawn owner must be a GameId<faction>" );
+                    "services.vehicles.spawn owner must be a GameId<faction>" );
             }
             const script_game_id id = owner.as<script_game_id>();
             if( id.kind() != "faction" || !id.is_valid() ) {
                 throw std::invalid_argument(
-                    "game.vehicles.spawn owner must be a valid GameId<faction>" );
+                    "services.vehicles.spawn owner must be a valid GameId<faction>" );
             }
             result.owner = faction_id( id.value() );
         }
     }
     if( result.rotation_degrees < -360 || result.rotation_degrees > 360 ) {
         throw std::invalid_argument(
-            "game.vehicles.spawn rotation_degrees must be within -360..360" );
+            "services.vehicles.spawn rotation_degrees must be within -360..360" );
     }
     if( result.fuel_percent < minimum_spawn_fuel ||
         result.fuel_percent > maximum_spawn_fuel ) {
         throw std::invalid_argument(
-            "game.vehicles.spawn fuel_percent must be within -1..100" );
+            "services.vehicles.spawn fuel_percent must be within -1..100" );
     }
     if( result.status < -1 || result.status > 2 ) {
         throw std::invalid_argument(
-            "game.vehicles.spawn status must be within -1..2" );
+            "services.vehicles.spawn status must be within -1..2" );
     }
     return result;
 }
@@ -1159,11 +1159,11 @@ sol::table spawn_vehicle(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    require_vehicle_prototype_id( prototype, "game.vehicles.spawn" );
+    require_vehicle_prototype_id( prototype, "services.vehicles.spawn" );
     const vehicle_spawn_options options = read_vehicle_spawn_options( requested );
     map &here = get_map();
     const tripoint_bub_ms local = require_loaded_position(
-                                      here, position, "game.vehicles.spawn" );
+                                      here, position, "services.vehicles.spawn" );
     vehicle *created = here.add_vehicle(
                            vproto_id( prototype.value() ), local,
                            units::from_degrees( options.rotation_degrees ),
@@ -1222,7 +1222,7 @@ sol::table set_vehicle_owner(
 {
     if( owner.kind() != "faction" || !owner.is_valid() ) {
         throw std::invalid_argument(
-            "game.vehicles.set_owner requires a valid GameId<faction>" );
+            "services.vehicles.set_owner requires a valid GameId<faction>" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1255,7 +1255,7 @@ sol::table vehicle_has_part_flag(
         return ch < 0x20U || ch == 0x7fU;
     } ) ) {
         throw std::invalid_argument(
-            "game.vehicles.has_part_flag requires 1 to 128 non-control bytes" );
+            "services.vehicles.has_part_flag requires 1 to 128 non-control bytes" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1359,7 +1359,7 @@ sol::table quote_full_repair(
     if( !std::isfinite( repair_multiplier ) || repair_multiplier <= 0.0 ||
         repair_multiplier > 1000.0 ) {
         throw std::invalid_argument(
-            "game.vehicles.quote_full_repair multiplier must be within (0, 1000]" );
+            "services.vehicles.quote_full_repair multiplier must be within (0, 1000]" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1423,7 +1423,7 @@ sol::table open_part_service(
         repair_multiplier > 1000.0 || !std::isfinite( install_multiplier ) ||
         install_multiplier <= 0.0 || install_multiplier > 1000.0 ) {
         throw std::invalid_argument(
-            "game.vehicles.open_part_service multipliers must be within (0, 1000]" );
+            "services.vehicles.open_part_service multipliers must be within (0, 1000]" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1676,6 +1676,6 @@ void install_vehicle_api(
     game["vehicles"] = std::move( vehicles_api );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

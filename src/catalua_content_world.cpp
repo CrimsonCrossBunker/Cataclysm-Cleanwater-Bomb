@@ -1,6 +1,6 @@
-#include "catalua_platform_world_content.h"
+#include "catalua_content_world.h"
 
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <algorithm>
 #include <array>
@@ -22,8 +22,8 @@
 
 #include "calendar.h"
 #include "catacharset.h"
-#include "catalua_platform_content.h"
-#include "catalua_platform_runtime.h"
+#include "catalua_content.h"
+#include "catalua_runtime.h"
 #include "color.h"
 #include "coordinates.h"
 #include "dialogue_chatbin.h"
@@ -45,7 +45,7 @@
 #include "veh_type.h"
 #include "vehicle_group.h"
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 
 namespace
@@ -4205,11 +4205,11 @@ void world_content_transaction::append_fingerprint( std::uint64_t &state ) const
     hash_registrations( state, "vehicle", pimpl_->vehicles );
 }
 
-} // namespace cata::lua_platform
+} // namespace cata::lua
 
 #else
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 
 struct world_content_transaction::impl {};
@@ -4271,6 +4271,6 @@ void world_content_transaction::seal() {}
 void world_content_transaction::discard() {}
 void world_content_transaction::append_fingerprint( std::uint64_t & ) const {}
 
-} // namespace cata::lua_platform
+} // namespace cata::lua
 
 #endif

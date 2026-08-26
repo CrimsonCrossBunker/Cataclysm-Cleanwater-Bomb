@@ -391,25 +391,16 @@ def render_dynamic_item_activation_effect(
     """Render an item activation whose method comes from a typed variable."""
     if (
         actor_expression is None or key not in effect or
-        set(effect) - {key, "target_var"}
+        set(effect) != {key}
     ):
         return None
     method = render_eoc_string_expression(effect[key], actor_expression)
     if method is None:
         return None
-    options = ""
-    if "target_var" in effect:
-        target = _coordinate_source_expression(
-            effect["target_var"], avatar_actor_proven,
-            npc_actor_proven,
-        )
-        if target is None:
-            return None
-        options = f", {{ target = {target} }}"
     return [
         "    if context.actors.item ~= nil and " + actor_expression + " ~= nil then",
         "        service_value(services.items.activate(",
-        "            context.actors.item, " + actor_expression + ", " + method + options + "))",
+        "            context.actors.item, " + actor_expression + ", " + method + "))",
         "    end",
     ]
 
@@ -4031,10 +4022,15 @@ def render_static_run_eocs(
             delay_turns_expression not in (None, "0")
         ):
             return None
-        lines = prefix + [
-            f"    local run_eocs_iterations = {loop_count_expression}",
-            "    for _ = 1, run_eocs_iterations do",
-        ]
+        if loop_count_expression.isdigit():
+            lines = prefix + [
+                f"    for _ = 1, {loop_count_expression} do",
+            ]
+        else:
+            lines = prefix + [
+                f"    local run_eocs_iterations = {loop_count_expression}",
+                "    for _ = 1, run_eocs_iterations do",
+            ]
         if condition_expression not in (None, "true"):
             lines.append(f"        if not ({condition_expression}) then break end")
         lines.extend(callback_lines(context_expression, "        "))
@@ -4331,13 +4327,23 @@ def render_static_spawn_item_effect(
             "; return services.random.int(math.min(lower, upper), "
             "math.max(lower, upper)) end)()"
         )
+    elif (
+        isinstance(raw_count, int) and
+        not isinstance(raw_count, bool) and
+        1 <= raw_count <= 100
+    ):
+        count_expression = str(raw_count)
     else:
         count_expression = render_eoc_numeric_expression(
             raw_count, "1", "actor"
         )
     if item_expression is None or count_expression is None:
         return None
-    if not isinstance(raw_count, list):
+    if not isinstance(raw_count, list) and not (
+        isinstance(raw_count, int) and
+        not isinstance(raw_count, bool) and
+        1 <= raw_count <= 100
+    ):
         count_expression = (
             "math.max(1, math.min(100, math.floor((" +
             count_expression + ") + 0.5)))"
@@ -22445,7 +22451,7 @@ def render_static_character_sound(
             return [
                 f"    local selected_sound_snippet = services.snippets.random_named({category_expression})",
                 "    if selected_sound_snippet ~= nil then",
-                "        game.sound.emit(",
+                "        services.sound.emit(",
                 f"            {position}, {volume_expression}, {lua_quote(category)}, "
                 "services.snippets.expand(selected_sound_snippet.text), "
                 f"{'true' if ambient else 'false'})",
@@ -22453,7 +22459,7 @@ def render_static_character_sound(
             ]
         message_expression = f"(services.snippets.random({category_expression}) or \"\")"
     return [
-        "    game.sound.emit(",
+        "    services.sound.emit(",
         f"        {position}, {volume_expression}, {lua_quote(category)}, {message_expression}, "
         f"{'true' if ambient else 'false'})",
     ]
@@ -26108,7 +26114,7 @@ def render_eoc(
         eoc_id in character_override_ids or inline_item_actor or
         value.get("__inline_actor_kind") == "character"
     )
-    if _node_has_item_actor(value):
+    if _node_has_item_actor(value) and not has_event_trigger:
         inline_item_actor = True
         nested_character_override = True
     if inline_eoc and any(
@@ -26186,6 +26192,7 @@ def render_eoc(
     unbound_mixed_talker_contract = (
         not required_event and not avatar_fatal_hook and not avatar_death_hook and
         not npc_fatal_hook and not inline_eoc and
+        eoc_id not in eoc_referenced_ids and
         shape_has_u_actor and shape_has_npc_actor
     )
     unbound_condition_actor_contract = (
@@ -26311,8 +26318,11 @@ def render_eoc(
         lines.append("    context.actors = context.actors or {}")
     if unbound_mixed_talker_contract:
         lines.extend([
-            "    local actor = actor_override or context.actors.alpha",
-            "    if actor == nil or context.actors.beta == nil then",
+            "    local actor = actor_override",
+            "    if actor == nil then",
+            "        return false",
+            "    end",
+            "    if context.actors.beta == nil then",
             "        return false",
             "    end",
         ])
@@ -30551,7 +30561,9 @@ def render_eoc(
             f"{source.location}: EOC {eoc_id} is source-unwired and was "
             "preserved as an unattached stable Platform handler"
         )
-        has_trigger = True
+        result.todos.append(
+            f"{source.location}: EOC {eoc_id} needs an explicit Platform trigger"
+        )
     if (
         recurrence_value is not None and recurrence_expression is None
     ):

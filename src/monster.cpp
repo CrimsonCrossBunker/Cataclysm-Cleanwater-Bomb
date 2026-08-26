@@ -18,8 +18,8 @@
 #include "cached_options.h"
 #include "cata_imgui.h"
 #include "catacharset.h"
-#include "catalua_platform_runtime.h"
-#include "catalua_ui.h"
+#include "catalua_runtime.h"
+#include "catalua_hook.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature_tracker.h"
@@ -3215,7 +3215,7 @@ void monster::die( map *here, Creature *nkiller )
         }
     }
 
-    cata::lua_platform::invoke_monster_death_handler(
+    cata::lua::invoke_monster_death_handler(
         type->id.str(), type->mdeath_effect.lua_platform_mod,
         type->mdeath_effect.lua_platform_handler, *this, killer, pos_abs() );
 
@@ -3338,7 +3338,7 @@ void monster::die( map *here, Creature *nkiller )
         }
     }
 
-    cata::lua_ui::dispatch_native_hook(
+    cata::lua::dispatch_native_hook(
     "on_mon_death", {
         { "monster", static_cast<const Creature *>( this ) },
         {
@@ -3609,15 +3609,15 @@ void monster::process_one_effect( effect &it, bool is_new )
     const std::string body_part =
         it.get_bp() == bodypart_str_id::NULL_ID() ?
         std::string() : it.get_bp().id().str();
-    const cata::lua_ui::native_callback_arguments payload = {
+    const cata::lua::native_callback_arguments payload = {
         { "monster", static_cast<const Creature *>( this ) },
         {
-            "effect", cata::lua_ui::native_callback_id {
+            "effect", cata::lua::native_callback_id {
                 "effect", it.get_id().str()
             }
         },
         {
-            "body_part", cata::lua_ui::native_callback_id {
+            "body_part", cata::lua::native_callback_id {
                 "body_part", body_part
             }
         },
@@ -3625,16 +3625,16 @@ void monster::process_one_effect( effect &it, bool is_new )
     };
     const bool dispatch_added =
         it.has_flag( flag_EFFECT_LUA_ON_ADDED ) &&
-        cata::lua_ui::has_native_hook( "on_mon_effect_added" );
+        cata::lua::has_native_hook( "on_mon_effect_added" );
     const bool dispatch_tick =
         it.has_flag( flag_EFFECT_LUA_ON_TICK ) &&
-        cata::lua_ui::has_native_hook( "on_mon_effect" );
+        cata::lua::has_native_hook( "on_mon_effect" );
     if( dispatch_added ) {
-        cata::lua_ui::dispatch_native_hook(
+        cata::lua::dispatch_native_hook(
             "on_mon_effect_added", payload );
     }
     if( dispatch_tick ) {
-        cata::lua_ui::dispatch_native_hook(
+        cata::lua::dispatch_native_hook(
             "on_mon_effect", payload );
     }
 }
@@ -3649,7 +3649,7 @@ void monster::process_effects()
         int intensity;
     };
     const bool has_lua_effect_hook =
-        cata::lua_ui::has_native_hook( "on_mon_effect" );
+        cata::lua::has_native_hook( "on_mon_effect" );
     std::vector<lua_effect_tick> lua_effect_ticks;
     // Monster only effects
     for( auto &elem : *effects ) {
@@ -3670,19 +3670,19 @@ void monster::process_effects()
         }
     }
     for( const lua_effect_tick &tick : lua_effect_ticks ) {
-        cata::lua_ui::dispatch_native_hook(
+        cata::lua::dispatch_native_hook(
         "on_mon_effect", {
             {
                 "monster",
                 static_cast<const Creature *>( this )
             },
             {
-                "effect", cata::lua_ui::native_callback_id {
+                "effect", cata::lua::native_callback_id {
                     "effect", tick.effect
                 }
             },
             {
-                "body_part", cata::lua_ui::native_callback_id {
+                "body_part", cata::lua::native_callback_id {
                     "body_part", tick.body_part
                 }
             },
@@ -3872,18 +3872,11 @@ void monster::make_pet()
 void monster::make_pet( Character &actor )
 {
     make_pet();
-    const cata::lua_ui::native_callback_arguments payload = {
+    const cata::lua::native_callback_arguments payload = {
         { "character", static_cast<const Character *>( &actor ) },
-        { "monster", static_cast<const Creature *>( this ) },
-        {
-            "monster_type", cata::lua_ui::native_callback_id {
-                "monster", type->id.str()
-            }
-        }
+        { "monster", static_cast<const Creature *>( this ) }
     };
-    cata::lua_ui::dispatch_native_callback(
-        "monster", type->id.str(), "on_tame", payload );
-    cata::lua_ui::dispatch_native_hook(
+    cata::lua::dispatch_native_hook(
         "on_monster_tame", payload );
 }
 
@@ -4316,18 +4309,18 @@ void monster::on_unload()
 void monster::on_load()
 {
     const auto dispatch_lua_loaded_hooks = [this]() {
-        const cata::lua_ui::native_callback_arguments payload = {
+        const cata::lua::native_callback_arguments payload = {
             { "creature", static_cast<const Creature *>( this ) },
             { "monster", static_cast<const Creature *>( this ) }
         };
-        if( cata::lua_ui::has_native_hook(
+        if( cata::lua::has_native_hook(
                 "on_creature_loaded" ) ) {
-            cata::lua_ui::dispatch_native_hook(
+            cata::lua::dispatch_native_hook(
                 "on_creature_loaded", payload );
         }
-        if( cata::lua_ui::has_native_hook(
+        if( cata::lua::has_native_hook(
                 "on_monster_loaded" ) ) {
-            cata::lua_ui::dispatch_native_hook(
+            cata::lua::dispatch_native_hook(
                 "on_monster_loaded", payload );
         }
     };

@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_vitamins.h"
 
@@ -19,7 +19,7 @@
 #include "enum_conversions.h"
 #include "vitamin.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -65,18 +65,18 @@ definition_options read_definition_options(
     if( result.offset < 0 ||
         result.offset > maximum_definition_offset ) {
         throw std::invalid_argument(
-            "game.vitamins.definitions offset "
+            "services.vitamins.definitions offset "
             "must be within 0..1000000" );
     }
     if( result.limit < 0 ) {
         throw std::invalid_argument(
-            "game.vitamins.definitions limit cannot be negative" );
+            "services.vitamins.definitions limit cannot be negative" );
     }
     result.limit = std::min(
                        result.limit, maximum_definition_limit );
     if( result.query.size() > maximum_query_bytes ) {
         throw std::invalid_argument(
-            "game.vitamins.definitions query exceeds 128 bytes" );
+            "services.vitamins.definitions query exceeds 128 bytes" );
     }
     return result;
 }
@@ -218,7 +218,7 @@ sol::table get_definition(
     sol::this_state lua, const script_game_id &id )
 {
     require_vitamin_id(
-        id, "game.vitamins.definition" );
+        id, "services.vitamins.definition" );
     return snapshot_definition(
                sol::state_view( lua ),
                vitamin_id( id.value() ).obj() );
@@ -287,11 +287,11 @@ state_list_options read_state_list_options(
     }
     if( result.offset < 0 || result.offset > maximum_state_offset ) {
         throw std::invalid_argument(
-            "game.vitamins.list offset must be within 0..1000000" );
+            "services.vitamins.list offset must be within 0..1000000" );
     }
     if( result.limit < 0 ) {
         throw std::invalid_argument(
-            "game.vitamins.list limit cannot be negative" );
+            "services.vitamins.list limit cannot be negative" );
     }
     result.limit = std::min(
                        result.limit, maximum_state_limit );
@@ -362,7 +362,7 @@ sol::table get_state(
     const std::size_t world_generation )
 {
     require_vitamin_id(
-        requested_id, "game.vitamins.get" );
+        requested_id, "services.vitamins.get" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -386,11 +386,11 @@ sol::table set_state(
     const std::size_t world_generation )
 {
     require_vitamin_id(
-        requested_id, "game.vitamins.set" );
+        requested_id, "services.vitamins.set" );
     if( requested_amount < -maximum_pool_adjustment ||
         requested_amount > maximum_pool_adjustment ) {
         throw std::invalid_argument(
-            "game.vitamins.set amount must be within "
+            "services.vitamins.set amount must be within "
             "-1000000000..1000000000" );
     }
     sol::state_view state( lua );
@@ -425,11 +425,11 @@ sol::table modify_state(
     const std::size_t world_generation )
 {
     require_vitamin_id(
-        requested_id, "game.vitamins.modify" );
+        requested_id, "services.vitamins.modify" );
     if( requested_delta < -maximum_pool_adjustment ||
         requested_delta > maximum_pool_adjustment ) {
         throw std::invalid_argument(
-            "game.vitamins.modify delta must be within "
+            "services.vitamins.modify delta must be within "
             "-1000000000..1000000000" );
     }
     sol::state_view state( lua );
@@ -467,7 +467,7 @@ sol::table reset_daily_state(
     const std::size_t world_generation )
 {
     require_vitamin_id(
-        requested_id, "game.vitamins.reset_daily" );
+        requested_id, "services.vitamins.reset_daily" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -573,6 +573,6 @@ void install_vitamin_api(
     game["vitamins"] = std::move( vitamins );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

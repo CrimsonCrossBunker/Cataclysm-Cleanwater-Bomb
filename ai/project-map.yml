@@ -18,21 +18,22 @@ entries:
     boundaries:
       - Preserve stable IDs or provide explicit migration data.
   - id: lua-api
-    paths: [data/lua/, tools/lua_api/, src/main.cpp, src/game_io.cpp, 'src/catalua_ui*.cpp', 'src/catalua_ui*.h']
-    purpose: Versioned Lua runtime, declarations, registrations, and coverage inventories.
+    paths: [data/lua/types/ccb_platform_v1.d.lua, data/lua/reference/, tools/lua_api/, src/main.cpp, src/game_io.cpp, src/catalua_loader.cpp, src/catalua_runtime.cpp, 'src/catalua*.cpp', 'src/catalua*.h']
+    purpose: Lua-first Platform v1 declarations, native registrations, generated inventory, and contract checks.
     instructions: data/lua/AGENTS.md
     validation_ids: [lua-contract]
     boundaries:
-      - Schema, LuaLS declarations, native registrations, generated inventories, and runtime validation tests are authoritative.
-      - Lua API v5 describes shipped behaviour and is separate from the planned Lua-first Platform v1.
+      - Platform v1 declarations, registrations, generated inventory, and contract checks are authoritative.
+      - This is a contract-validation route within the sole Platform runtime, not a second Lua system.
   - id: lua-first-platform
-    paths: [data/lua/LUA_FIRST_PLATFORM.md, data/lua/, data/lua/templates/, data/lua/types/ccb_platform_v1.d.lua, data/mods/Lua_First_Example/, ai/lua-first-roadmap.yml, ai/lua-first-roadmap.schema.json, ai/lua-first-replacement-ledger.yml, ai/lua-first-replacement-ledger.schema.json, tools/agent/generate_lua_first_replacement_ledger.py, tools/agent/check_lua_first_replacement_ledger.py, tools/create_lua_mod.py, tools/migrate_lua_first.py, src/catalua_platform.cpp, src/catalua_platform.h, src/catalua_platform_runtime.cpp, src/catalua_platform_runtime.h, src/mod_manager.cpp, src/mod_manager.h, src/mod_manager_ui.cpp, src/game_io.cpp, src/game.cpp, src/do_turn.cpp]
-    purpose: Accepted pure-Lua authoring architecture, EOC-capability workflow, replacement boundary, and checked implementation roadmap.
+    paths: [data/lua/, data/mods/Lua_First_Example/, ai/lua-first-roadmap.yml, ai/lua-first-roadmap.schema.json, ai/lua-first-replacement-ledger.yml, ai/lua-first-replacement-ledger.schema.json, tools/lua_api/, tools/agent/*lua_first*, tools/create_lua_mod.py, tools/migrate_lua_first.py, 'src/catalua*.cpp', 'src/catalua*.h', src/mod_manager.cpp, src/mod_manager.h, src/mod_manager_ui.cpp, src/game_io.cpp, src/game.cpp, src/do_turn.cpp]
+    purpose: Sole CCB Lua runtime, pure-Lua authoring architecture, EOC-capability workflow, replacement boundary, and checked implementation roadmap.
     instructions: data/lua/AGENTS.md
     validation_ids: [agent-context]
     boundaries:
       - The architecture contract defines target design; source and tests alone prove a capability is available.
       - Public Platform APIs use native domain objects and services rather than exposing JSON loaders or EOC-key-shaped wrappers.
+      - API v5, CBN compatibility, authored Lua manifests, `game.*`, and a second Lua state are prohibited.
       - Core serialization such as saves, settings, caches, and generated inventories may remain JSON internally.
       - The exact replacement ledger distinguishes implemented, bounded-implemented, primitive-available, planned, private-adapter, and reviewed-not-applicable selectors.
       - Migration output is a reviewable Lua skeleton plus explicit TODO report, never a hidden JSON/EOC compatibility call.

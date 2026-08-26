@@ -41,7 +41,7 @@ const SpeechBubble &get_speech( const std::string &label )
     return random_entry_ref( speech_type->second );
 }
 
-const std::vector<SpeechBubble> *cata::lua_platform::detail::speech_registry_find(
+const std::vector<SpeechBubble> *cata::lua::detail::speech_registry_find(
     const std::string_view label )
 {
     const auto found = speech.find( std::string( label ) );
@@ -49,7 +49,7 @@ const std::vector<SpeechBubble> *cata::lua_platform::detail::speech_registry_fin
 }
 
 std::vector<std::pair<std::string, std::vector<SpeechBubble>>>
-cata::lua_platform::detail::speech_registry_snapshot()
+cata::lua::detail::speech_registry_snapshot()
 {
     std::vector<std::pair<std::string, std::vector<SpeechBubble>>> result;
     result.reserve( speech.size() );
@@ -59,13 +59,13 @@ cata::lua_platform::detail::speech_registry_snapshot()
     return result;
 }
 
-void cata::lua_platform::detail::speech_registry_set(
+void cata::lua::detail::speech_registry_set(
     const std::string &label, std::vector<SpeechBubble> lines )
 {
     speech[label] = std::move( lines );
 }
 
-void cata::lua_platform::detail::speech_registry_erase( const std::string_view label )
+void cata::lua::detail::speech_registry_erase( const std::string_view label )
 {
     speech.erase( std::string( label ) );
 }

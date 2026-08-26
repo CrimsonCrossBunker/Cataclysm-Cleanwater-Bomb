@@ -14,7 +14,7 @@
 #include "bodygraph.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "catalua_ui.h"
+#include "catalua_hook.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -374,15 +374,6 @@ Character::wear( item_location item_wear, bool interactive )
 std::optional<std::list<item>::iterator> outfit::wear_item( Character &guy, const item &to_wear,
         bool interactive, bool do_calc_encumbrance, bool do_sort_items, bool quiet )
 {
-    if( !cata::lua_ui::dispatch_native_callback(
-    "iwearable", to_wear.typeId().str(), "can_wear", {
-    { "character", static_cast<const Character *>( &guy ) },
-        { "item", static_cast<const item *>( &to_wear ) },
-        { "interactive", interactive }
-    } ) ) {
-        return std::nullopt;
-    }
-
     const map &here = get_map();
 
     const bool was_deaf = guy.is_deaf();
@@ -1565,15 +1556,6 @@ bool outfit::takeoff( item_location loc, std::list<item> *res, Character &guy )
         add_msg( m_info, "%s", ret.c_str() );
         return false;
     }
-    if( !cata::lua_ui::dispatch_native_callback(
-    "iwearable", it.typeId().str(), "can_takeoff", {
-    { "character", static_cast<const Character *>( &guy ) },
-        { "item", static_cast<const item *>( &it ) },
-        { "to_inventory", res == nullptr }
-    } ) ) {
-        return false;
-    }
-
     auto iter = std::find_if( worn.begin(), worn.end(), [&it]( const item & wit ) {
         return &it == &wit;
     } );

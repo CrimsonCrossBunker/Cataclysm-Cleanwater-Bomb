@@ -9,7 +9,7 @@
 #include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
-#include "catalua_platform_runtime.h"
+#include "catalua_runtime.h"
 #include "character.h"
 #include "creature.h"
 #include "debug.h"
@@ -280,7 +280,7 @@ void player_activity::do_turn( Character &you )
     const bool travel_activity = id() == ACT_TRAVELLING;
     you.set_activity_level( exertion_level() );
 
-    const bool lua_first_activity = cata::lua_platform::invoke_activity_type_handler(
+    const bool lua_first_activity = cata::lua::invoke_activity_type_handler(
                                         type.str(), "do_turn", *this, you );
     if( !*this ) {
         activity_handlers::clean_may_activity_occupancy_items_var_if_is_avatar_and_no_activity_now( you );
@@ -367,7 +367,7 @@ void player_activity::do_turn( Character &you )
     if( *this && moves_left <= 0 ) {
         // Note: For some activities "finish" is a misnomer; that's why we explicitly check if the
         // type is ACT_NULL below.
-        const bool lua_first_completion = cata::lua_platform::invoke_activity_type_handler(
+        const bool lua_first_completion = cata::lua::invoke_activity_type_handler(
                                               type.str(), "completion", *this, you );
         if( *this && moves_left <= 0 && !lua_first_completion &&
             !type->completion_EOC.is_null() ) {

@@ -20,7 +20,6 @@
 #include "avatar.h"
 #include "cached_options.h" // IWYU pragma: keep
 #include "cata_utility.h"
-#include "catalua_ui.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -874,9 +873,6 @@ action_id handle_action_menu( map &here )
 {
     const input_context ctxt = get_default_mode_input_context();
     std::string catgname;
-    const std::vector<cata::lua_ui::action_menu_entry_info>
-    lua_action_entries =
-        cata::lua_ui::registered_action_menu_entries();
     const auto category_name = []( const std::string & category_id ) -> std::string {
         if( category_id == "look" )
         {
@@ -1004,9 +1000,7 @@ action_id handle_action_menu( map &here )
         std::vector<uilist_entry> entries;
         uilist_entry *entry;
         std::map<int, std::string> categories_by_int;
-        std::map<int, std::uint64_t> lua_entries_by_int;
         int last_category = NUM_ACTIONS + 1;
-        int next_lua_entry = 4 * NUM_ACTIONS;
 
         if( category == "back" ) {
             std::vector<std::pair<action_id, int> >::iterator it;
@@ -1051,13 +1045,6 @@ action_id handle_action_menu( map &here )
                 register_category( "debug" );
                 if( ( entry = &entries.back() ) ) {
                     entry->hotkey = hotkey_for_action( ACTION_DEBUG, /*maximum_modifier_count=*/1 );
-                }
-            }
-            for( const cata::lua_ui::action_menu_entry_info &lua_entry :
-                 lua_action_entries ) {
-                if( lua_entry.enabled &&
-                    lua_entry.category != "back" ) {
-                    register_category( lua_entry.category );
                 }
             }
         } else if( category == "look" ) {
@@ -1191,21 +1178,6 @@ action_id handle_action_menu( map &here )
         }
 
         if( category != "back" ) {
-            for( const cata::lua_ui::action_menu_entry_info &lua_entry :
-                 lua_action_entries ) {
-                if( !lua_entry.enabled ||
-                    lua_entry.category != category ) {
-                    continue;
-                }
-                entries.emplace_back(
-                    next_lua_entry, true, lua_entry.hotkey,
-                    lua_entry.name );
-                lua_entries_by_int[next_lua_entry++] =
-                    lua_entry.registration_id;
-            }
-        }
-
-        if( category != "back" ) {
             std::string msg = _( "Back" );
             msg += "…";
             entries.emplace_back( 2 * NUM_ACTIONS, true,
@@ -1222,13 +1194,7 @@ action_id handle_action_menu( map &here )
         const int selection = query_action_menu_entries(
                                   title, entries, "gameplay.action_menu", _( "Actions" ) );
 
-        const auto lua_selection =
-            lua_entries_by_int.find( selection );
-        if( lua_selection != lua_entries_by_int.end() ) {
-            cata::lua_ui::invoke_action_menu_entry(
-                lua_selection->second );
-            return ACTION_NULL;
-        } else if( selection < 0 || selection == NUM_ACTIONS ) {
+        if( selection < 0 || selection == NUM_ACTIONS ) {
             return ACTION_NULL;
         } else if( selection == 2 * NUM_ACTIONS ) {
             if( category != "back" ) {
@@ -1249,7 +1215,6 @@ action_id handle_action_menu( map &here )
 
 action_id handle_main_menu()
 {
-    constexpr int lua_extensions_entry = NUM_ACTIONS + 1;
     const input_context ctxt = get_default_mode_input_context();
     std::vector<uilist_entry> entries;
 
@@ -1277,9 +1242,6 @@ action_id handle_main_menu()
     REGISTER_ACTION( ACTION_COLOR );
     REGISTER_ACTION( ACTION_WORLD_MODS );
     REGISTER_ACTION( ACTION_ACTIONMENU );
-    if( cata::lua_ui::is_enabled() ) {
-        entries.emplace_back( lua_extensions_entry, true, std::nullopt, _( "Extensions" ) );
-    }
 #if defined(__ANDROID__)
     entries.emplace_back( ACTION_MANAGE_ANDROID_EXTRA_BUTTONS, true, std::nullopt,
                           android_ui_mode::is_new_ui_build() ?
@@ -1302,10 +1264,6 @@ action_id handle_main_menu()
                               _( "MAIN MENU" ), entries,
                               "gameplay.main_menu", _( "MAIN MENU" ) );
 
-    if( selection == lua_extensions_entry ) {
-        cata::lua_ui::show_slot( "ingame.extensions" );
-        return ACTION_NULL;
-    }
     if( selection < 0 || selection >= NUM_ACTIONS ) {
         return ACTION_NULL;
     } else {

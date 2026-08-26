@@ -1,23 +1,21 @@
 # `data/lua/` agent instructions
 
-This subtree contains:
+This subtree contains the sole CCB Lua Platform runtime, examples, inventories,
+and LuaLS declarations.  `LUA_FIRST_PLATFORM.md` is the architecture
+specification for pure-Lua core and Mod authoring; implementation status is
+tracked in `ai/lua-first-roadmap.yml`.
 
-- the implemented CCB Lua 0.1 runtime, manifest, examples, inventories, and
-  LuaLS declarations; and
-- `LUA_FIRST_PLATFORM.md`, the platform architecture specification for pure-Lua
-  core and Mod authoring. Its implementation status is tracked in
-  `ai/lua-first-roadmap.yml`.
-
-- `manifest.schema.json`, `types/ccb_api_v5.d.lua`, native registrations, and
-  generated inventories are authoritative for the current Lua runtime contract.
+- `types/ccb_platform_v1.d.lua`, native Platform registrations, and generated
+  Platform inventories are authoritative for the current Lua runtime contract.
 - `LUA_FIRST_PLATFORM.md` is authoritative for CCB Lua 0.1 platform design decisions.
 - `LUA_FIRST_EOC_WORKFLOW.md` defines the active EOC-capability objective,
   domain-batch development cadence, and deferred acceptance gate.  Follow it
   for Lua-first EOC parity work.
 - Never hand-edit generated reference inventories; run their named generator.
-- Maintenance of existing v5 code keeps declaring the minimum capabilities it
-  uses.  New Platform code follows the separately versioned Platform contract
-  and does not expose JSON loaders or EOC-key-shaped APIs.
+- Do not add or retain a second v5/CBN-compatibility Lua runtime, `game.*`
+  surface, capability sandbox, authored manifest, JSON loader, EOC runner, or
+  EOC-key-shaped API.  Useful native operations belong under the Platform
+  contract; compatibility-only operations are deleted.
 - Keep examples runnable and synchronized with declarations.
 - `templates/minimal/` and `templates/complete/` contain no JSON/EOC and are
   copied by `tools/create_lua_mod.py`; never make their suggested directories
@@ -56,7 +54,7 @@ contract commands include:
 
 ```sh
 python3 tools/lua_api/check_luals_declarations.py
-python3 tools/lua_api/check_coverage.py
+python3 tools/lua_api/check_ccb_inventory.py
 python3 -m unittest discover -s tools/lua_api -p 'test_*.py'
 python3 tools/agent/check_project_metadata.py
 ```

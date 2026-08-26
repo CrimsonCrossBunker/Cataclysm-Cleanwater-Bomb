@@ -16,10 +16,10 @@
 #include "game_constants.h"
 #include "item.h"
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 class content_transaction;
-} // namespace cata::lua_platform
+} // namespace cata::lua
 #include "translation.h"
 #include "type_id.h"
 
@@ -45,7 +45,7 @@ struct construction {
         construction_category_id category;
         // Which group does this construction belong to.
         construction_group_str_id group;
-        friend class cata::lua_platform::content_transaction;
+        friend class cata::lua::content_transaction;
         // Additional note displayed along with construction requirements.
         translation pre_note;
         // Beginning terrain(s) for construction

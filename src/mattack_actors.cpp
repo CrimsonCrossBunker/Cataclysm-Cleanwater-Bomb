@@ -13,7 +13,7 @@
 #include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
-#include "catalua_platform_runtime.h"
+#include "catalua_runtime.h"
 #include "character.h"
 #include "character_attire.h"
 #include "condition.h"
@@ -1167,7 +1167,7 @@ bool melee_actor::call( monster &z ) const
     }
     const auto handler = z.type->lua_platform_attack_handlers.find( id );
     if( handler != z.type->lua_platform_attack_handlers.end() ) {
-        cata::lua_platform::invoke_monster_attack_result_handler(
+        cata::lua::invoke_monster_attack_result_handler(
             z.type->id.str(), id, z.type->lua_platform_attack_mod,
             handler->second, z, target, damage_total );
     }

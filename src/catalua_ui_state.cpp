@@ -11,7 +11,7 @@
 #include "flexbuffer_json.h"
 #include "json.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -183,4 +183,4 @@ script_persistent_state read_persistent_state( const JsonValue &input )
     return result;
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua

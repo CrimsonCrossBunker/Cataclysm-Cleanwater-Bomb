@@ -51,20 +51,20 @@ AGENT_METADATA = {
     "ai/task-router.yml",
 }
 API_CONTRACTS = {
-    "data/lua/manifest.schema.json",
-    "data/lua/reference/ccb_public_api_v5.schema.json",
-    "data/lua/reference/ccb_public_api_v5_coverage.schema.json",
-    "data/lua/types/ccb_api_v5.d.lua",
     "data/lua/types/ccb_platform_v1.d.lua",
     "tools/json_api/contract-inventory.schema.json",
 }
 ARCHITECTURE_CONTRACTS = {
+    "data/lua/LUA_FIRST_EOC_WORKFLOW.md",
     "data/lua/LUA_FIRST_PLATFORM.md",
 }
 CCB_DOCS_IDS = {
     "data/lua/LUA_FIRST_PLATFORM.md": [
         "architecture.lua-first-platform",
         "architecture.lua-first-glossary",
+    ],
+    "data/lua/LUA_FIRST_EOC_WORKFLOW.md": [
+        "architecture.lua-first-eoc-workflow",
     ],
     "ai/lua-first-roadmap.yml": ["architecture.lua-first-roadmap"],
     "ai/lua-first-roadmap.schema.json": ["architecture.lua-first-roadmap"],
@@ -141,18 +141,8 @@ def generated_by(path: str) -> str | None:
         return "python3 tools/agent/generate_migration_reports.py"
     if path.startswith("data/lua/reference/"):
         generators = {
-            "cbn_api_inventory": (
-                "python3 tools/lua_api/generate_cbn_inventory.py"
-            ),
-            "cbn_coverage": "python3 tools/lua_api/generate_cbn_coverage.py",
             "ccb_native_inventory": (
                 "python3 tools/lua_api/generate_ccb_inventory.py"
-            ),
-            "ccb_public_api_v5": (
-                "python3 tools/lua_api/generate_public_contract.py"
-            ),
-            "ccb_public_api_v5_coverage": (
-                "python3 tools/lua_api/generate_public_contract.py"
             ),
         }
         return generators.get(

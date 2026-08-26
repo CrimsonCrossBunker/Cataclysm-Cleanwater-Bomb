@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_proficiencies.h"
 
@@ -18,7 +18,7 @@
 #include "creature.h"
 #include "proficiency.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -151,7 +151,7 @@ sol::table list_categories(
 {
     const definition_options options =
         read_definition_options(
-            requested, "game.proficiencies.categories" );
+            requested, "services.proficiencies.categories" );
     const std::vector<const proficiency_category *> categories =
         matching_categories( options.query );
     const std::size_t first = std::min<std::size_t>(
@@ -179,7 +179,7 @@ sol::table get_category(
     sol::this_state lua, const script_game_id &id )
 {
     require_category_id(
-        id, "game.proficiencies.category" );
+        id, "services.proficiencies.category" );
     return snapshot_category(
                sol::state_view( lua ),
                proficiency_category_id( id.value() ).obj() );
@@ -279,7 +279,7 @@ sol::table list_definitions(
 {
     const definition_options options =
         read_definition_options(
-            requested, "game.proficiencies.definitions" );
+            requested, "services.proficiencies.definitions" );
     const std::vector<const proficiency *> definitions =
         matching_definitions( options.query );
     const std::size_t first = std::min<std::size_t>(
@@ -307,7 +307,7 @@ sol::table get_definition(
     sol::this_state lua, const script_game_id &id )
 {
     require_proficiency_id(
-        id, "game.proficiencies.definition" );
+        id, "services.proficiencies.definition" );
     return snapshot_definition(
                sol::state_view( lua ),
                proficiency_id( id.value() ).obj() );
@@ -405,12 +405,12 @@ state_list_options read_state_list_options(
     }
     if( result.offset < 0 || result.offset > maximum_state_offset ) {
         throw std::invalid_argument(
-            "game.proficiencies.list offset "
+            "services.proficiencies.list offset "
             "must be within 0..1000000" );
     }
     if( result.limit < 0 ) {
         throw std::invalid_argument(
-            "game.proficiencies.list limit cannot be negative" );
+            "services.proficiencies.list limit cannot be negative" );
     }
     result.limit = std::min(
                        result.limit, maximum_state_limit );
@@ -490,7 +490,7 @@ sol::table get_state(
     const std::size_t world_generation )
 {
     require_proficiency_id(
-        requested_id, "game.proficiencies.get" );
+        requested_id, "services.proficiencies.get" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -522,18 +522,18 @@ grant_options read_grant_options(
     for( const auto &entry : *requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.proficiencies.grant option keys "
+                "services.proficiencies.grant option keys "
                 "must be strings" );
         }
         const std::string key = entry.first.as<std::string>();
         if( key != "ignore_requirements" && key != "recursive" ) {
             throw std::invalid_argument(
-                "game.proficiencies.grant received unknown option '" +
+                "services.proficiencies.grant received unknown option '" +
                 key + "'" );
         }
         if( !entry.second.is<bool>() ) {
             throw std::invalid_argument(
-                "game.proficiencies.grant option '" + key +
+                "services.proficiencies.grant option '" + key +
                 "' must be a boolean" );
         }
         if( key == "ignore_requirements" ) {
@@ -554,7 +554,7 @@ sol::table grant_state(
     const std::size_t world_generation )
 {
     require_proficiency_id(
-        requested_id, "game.proficiencies.grant" );
+        requested_id, "services.proficiencies.grant" );
     const grant_options options =
         read_grant_options( requested_options );
     sol::state_view state( lua );
@@ -597,7 +597,7 @@ sol::table remove_state(
     const std::size_t world_generation )
 {
     require_proficiency_id(
-        requested_id, "game.proficiencies.remove" );
+        requested_id, "services.proficiencies.remove" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -635,10 +635,10 @@ sol::table practice_state(
     const std::size_t world_generation )
 {
     require_proficiency_id(
-        requested_id, "game.proficiencies.practice" );
+        requested_id, "services.proficiencies.practice" );
     if( requested_amount.turns() <= 0 ) {
         throw std::invalid_argument(
-            "game.proficiencies.practice amount "
+            "services.proficiencies.practice amount "
             "must be positive" );
     }
     sol::state_view state( lua );
@@ -676,10 +676,10 @@ sol::table set_progress_state(
     const std::size_t world_generation )
 {
     require_proficiency_id(
-        requested_id, "game.proficiencies.set_progress" );
+        requested_id, "services.proficiencies.set_progress" );
     if( requested_progress.turns() < 0 ) {
         throw std::invalid_argument(
-            "game.proficiencies.set_progress progress "
+            "services.proficiencies.set_progress progress "
             "cannot be negative" );
     }
     sol::state_view state( lua );
@@ -698,13 +698,13 @@ sol::table set_progress_state(
     const time_duration total = definition.time_to_learn();
     if( progress > total ) {
         throw std::invalid_argument(
-            "game.proficiencies.set_progress progress "
+            "services.proficiencies.set_progress progress "
             "cannot exceed time_to_learn" );
     }
     if( progress == total &&
         !character->has_prof_prereqs( id ) ) {
         throw std::invalid_argument(
-            "game.proficiencies.set_progress cannot complete "
+            "services.proficiencies.set_progress cannot complete "
             "a proficiency with unmet prerequisites" );
     }
 
@@ -831,6 +831,6 @@ void install_proficiency_api(
     game["proficiencies"] = std::move( proficiencies );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

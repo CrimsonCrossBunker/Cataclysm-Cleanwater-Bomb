@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_npc_services.h"
 
@@ -33,7 +33,7 @@
 #include "player_activity.h"
 #include "type_id.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -147,7 +147,7 @@ sol::table provide_medical_aid(
 {
     if( level != "basic" && level != "advanced" ) {
         throw std::invalid_argument(
-            "game.npcs.medical.provide_aid level must be basic or advanced" );
+            "services.npcs.medical.provide_aid level must be basic or advanced" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -195,7 +195,7 @@ sol::table open_bionic_service(
 {
     if( operation != "install" && operation != "remove" ) {
         throw std::invalid_argument(
-            "game.npcs.medical.open_bionic_service operation must be install or remove" );
+            "services.npcs.medical.open_bionic_service operation must be install or remove" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -290,7 +290,7 @@ sol::table open_grooming_style(
 {
     if( area != "hair" && area != "beard" ) {
         throw std::invalid_argument(
-            "game.npcs.grooming.open_style area must be hair or beard" );
+            "services.npcs.grooming.open_style area must be hair or beard" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -326,7 +326,7 @@ sol::table provide_grooming(
 {
     if( service != "haircut" && service != "shave" ) {
         throw std::invalid_argument(
-            "game.npcs.grooming.provide service must be haircut or shave" );
+            "services.npcs.grooming.provide service must be haircut or shave" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -361,7 +361,7 @@ sol::table request_npc_equipment(
 {
     if( allowance < 0 || allowance > 1000000000 ) {
         throw std::invalid_argument(
-            "game.npcs.equipment.request_gift allowance must be within 0..1000000000" );
+            "services.npcs.equipment.request_gift allowance must be within 0..1000000000" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -678,7 +678,7 @@ sol::table offer_npc_mission(
     if( requested_mission.kind() != "mission" ||
         !requested_mission.is_valid() ) {
         throw std::invalid_argument(
-            "game.npcs.missions.offer requires a valid GameId<mission>" );
+            "services.npcs.missions.offer requires a valid GameId<mission>" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -913,7 +913,7 @@ sol::table run_npc_order(
     };
     if( known_orders.count( order ) == 0 ) {
         throw std::invalid_argument(
-            "game.npcs.orders.run received an unknown order" );
+            "services.npcs.orders.run received an unknown order" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -974,7 +974,7 @@ sol::table open_npc_pickup_rules(
     if( !entry->is_player_ally() ) {
         return make_game_error_result( state, {
             "not_an_ally",
-            "game.npcs.orders.open_pickup_rules requires an allied NPC"
+            "services.npcs.orders.open_pickup_rules requires an allied NPC"
         } );
     }
     const bool before = !entry->rules.pickup_whitelist->empty();
@@ -1122,7 +1122,7 @@ sol::table add_assigned_npc_mission(
     if( requested_mission.kind() != "mission" ||
         !requested_mission.is_valid() ) {
         throw std::invalid_argument(
-            "game.npcs.missions.add_assigned requires a valid GameId<mission>" );
+            "services.npcs.missions.add_assigned requires a valid GameId<mission>" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1217,7 +1217,7 @@ bool configure_training_domain(
         return true;
     }
     throw std::invalid_argument(
-        "game.npcs.training.start subject must be a skill, proficiency, martial_art, or spell GameId" );
+        "services.npcs.training.start subject must be a skill, proficiency, martial_art, or spell GameId" );
 }
 
 sol::table start_npc_training(
@@ -1245,7 +1245,7 @@ sol::table start_npc_training(
         if( !entry.first.is<lua_Integer>() ||
             !entry.second.is<game_handle>() ) {
             throw std::invalid_argument(
-                "game.npcs.training.start students must be a dense GameHandle array" );
+                "services.npcs.training.start students must be a dense GameHandle array" );
         }
         const lua_Integer raw_index =
             entry.first.as<lua_Integer>();
@@ -1253,7 +1253,7 @@ sol::table start_npc_training(
             static_cast<std::uint64_t>( raw_index ) >
             maximum_training_students ) {
             throw std::invalid_argument(
-                "game.npcs.training.start student index must be within 1..64" );
+                "services.npcs.training.start student index must be within 1..64" );
         }
         const game_handle handle =
             entry.second.as<game_handle>();
@@ -1268,7 +1268,7 @@ sol::table start_npc_training(
             !student_ids.insert(
                 student->getID() ).second ) {
             throw std::invalid_argument(
-                "game.npcs.training.start students must be unique and cannot include the teacher" );
+                "services.npcs.training.start students must be unique and cannot include the teacher" );
         }
         indexed_students.emplace(
             static_cast<std::size_t>( raw_index ),
@@ -1278,7 +1278,7 @@ sol::table start_npc_training(
         indexed_students.rbegin()->first !=
         indexed_students.size() ) {
         throw std::invalid_argument(
-            "game.npcs.training.start requires a non-empty dense student array" );
+            "services.npcs.training.start requires a non-empty dense student array" );
     }
 
     std::vector<Character *> students;
@@ -1369,7 +1369,7 @@ sol::table start_selected_npc_training(
             *provider );
     } else {
         throw std::invalid_argument(
-            "game.npcs.training.start_selected mode must be player, npc, or seminar" );
+            "services.npcs.training.start_selected mode must be player, npc, or seminar" );
     }
     static const activity_id training_activity(
         "ACT_TRAIN" );
@@ -1693,6 +1693,6 @@ void install_npc_domain_services(
     npcs["orders"] = std::move( orders );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_overmap.h"
 
@@ -29,7 +29,7 @@
 #include "recipe_groups.h"
 #include "type_id.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -686,7 +686,7 @@ sol::table overmap_tile(
     return snapshot_overmap_tile(
                sol::state_view( lua ),
                require_absolute_omt(
-                   position, "game.overmap.tile" ) );
+                   position, "services.overmap.tile" ) );
 }
 
 sol::table overmap_limits( sol::this_state lua )
@@ -723,7 +723,7 @@ sol::table overmap_search(
     const sol::optional<sol::table> &requested )
 {
     constexpr std::string_view api_name =
-        "game.overmap.search";
+        "services.overmap.search";
     const tripoint_abs_omt native_origin =
         require_absolute_omt(
             origin, std::string( api_name ) );
@@ -782,7 +782,7 @@ sol::table overmap_closest(
     const sol::optional<sol::table> &requested )
 {
     constexpr std::string_view api_name =
-        "game.overmap.closest";
+        "services.overmap.closest";
     const tripoint_abs_omt native_origin =
         require_absolute_omt(
             origin, std::string( api_name ) );
@@ -797,7 +797,7 @@ sol::table overmap_closest(
     if( !native_compatible &&
         options.radius > maximum_search_radius ) {
         throw std::invalid_argument(
-            "game.overmap.closest long-range queries require terrain types "
+            "services.overmap.closest long-range queries require terrain types "
             "without exclude_types, explored, or offset filters" );
     }
     std::optional<tripoint_abs_omt> native_match;
@@ -863,7 +863,7 @@ sol::table overmap_closest_city(
     const sol::optional<bool> &requested_known )
 {
     constexpr std::string_view api_name =
-        "game.overmap.closest_city";
+        "services.overmap.closest_city";
     if( origin.native_origin() != coords::origin::abs ||
         origin.native_scale() != coords::scale::map_square ) {
         throw std::invalid_argument(
@@ -913,7 +913,7 @@ sol::table overmap_random(
     const std::function<std::size_t( std::size_t )> &random_index )
 {
     constexpr std::string_view api_name =
-        "game.overmap.random";
+        "services.overmap.random";
     const tripoint_abs_omt native_origin =
         require_absolute_omt(
             origin, std::string( api_name ) );
@@ -928,7 +928,7 @@ sol::table overmap_random(
     if( !native_compatible &&
         options.radius > maximum_search_radius ) {
         throw std::invalid_argument(
-            "game.overmap.random long-range queries require terrain types "
+            "services.overmap.random long-range queries require terrain types "
             "without exclude_types, explored, or offset filters" );
     }
     std::vector<tripoint_abs_omt> native_matches;
@@ -976,7 +976,7 @@ sol::table overmap_random(
         random_index( match_count );
     if( selected >= match_count ) {
         throw std::runtime_error(
-            "game.overmap.random selector returned an invalid index" );
+            "services.overmap.random selector returned an invalid index" );
     }
     const tripoint_abs_omt matched = native_compatible ?
                                       native_matches[selected] :
@@ -1000,7 +1000,7 @@ bool overmap_matches(
     const sol::optional<script_enum_value> &requested_match )
 {
     constexpr std::string_view api_name =
-        "game.overmap.matches";
+        "services.overmap.matches";
     terrain_selector selector =
         read_selector(
             requested, std::string( api_name ) );
@@ -1029,7 +1029,7 @@ bool overmap_is_camp(
 {
     const tripoint_abs_omt native_position =
         require_absolute_omt(
-            position, "game.overmap.is_camp" );
+            position, "services.overmap.is_camp" );
     if( overmap_buffer.has_camp( native_position ) ) {
         return true;
     }
@@ -1046,7 +1046,7 @@ bool overmap_is_camp_start(
 {
     const tripoint_abs_omt native_position =
         require_absolute_omt(
-            position, "game.overmap.is_camp_start" );
+            position, "services.overmap.is_camp_start" );
     const oter_id terrain =
         overmap_buffer.ter( native_position );
     const std::optional<mapgen_arguments> *arguments =
@@ -1062,7 +1062,7 @@ sol::table set_overmap_terrain(
     const script_game_id &requested )
 {
     constexpr std::string_view api_name =
-        "game.overmap.set_terrain";
+        "services.overmap.set_terrain";
     if( requested.kind() != "overmap_terrain" ||
         !requested.is_valid() ) {
         throw std::invalid_argument(
@@ -1126,7 +1126,7 @@ sol::table set_overmap_seen(
     const script_enum_value &requested )
 {
     constexpr std::string_view api_name =
-        "game.overmap.set_seen";
+        "services.overmap.set_seen";
     const om_vision_level target =
         require_vision_level(
             requested, std::string( api_name ) );
@@ -1169,7 +1169,7 @@ sol::table set_overmap_explored(
     const bool requested )
 {
     constexpr std::string_view api_name =
-        "game.overmap.set_explored";
+        "services.overmap.set_explored";
     const tripoint_abs_omt native_position =
         require_absolute_omt(
             position, std::string( api_name ) );
@@ -1225,7 +1225,7 @@ sol::table set_overmap_note(
     const sol::optional<std::string> &requested )
 {
     constexpr std::string_view api_name =
-        "game.overmap.set_note";
+        "services.overmap.set_note";
     const std::string target =
         requested.value_or( std::string() );
     validate_note(
@@ -1290,7 +1290,7 @@ sol::table set_overmap_note_danger(
     const bool dangerous )
 {
     constexpr std::string_view api_name =
-        "game.overmap.set_note_danger";
+        "services.overmap.set_note_danger";
     if( radius < 0 ||
         radius > maximum_note_danger_radius ) {
         throw std::invalid_argument(
@@ -1359,7 +1359,7 @@ sol::table reveal_existing_overmap(
     const int radius )
 {
     constexpr std::string_view api_name =
-        "game.overmap.reveal";
+        "services.overmap.reveal";
     if( radius < 0 ||
         radius > maximum_reveal_radius ) {
         throw std::invalid_argument(
@@ -1439,7 +1439,7 @@ sol::table reveal_overmap_route(
     const int radius, const bool road_only )
 {
     constexpr std::string_view api_name =
-        "game.overmap.reveal_route";
+        "services.overmap.reveal_route";
     if( radius < 0 || radius > maximum_reveal_radius ) {
         throw std::invalid_argument(
             std::string( api_name ) +
@@ -1548,7 +1548,7 @@ void install_overmap_api(
         require_read();
         return overmap_buffer.is_safe(
                    require_absolute_omt(
-                       position, "game.overmap.is_safe" ) );
+                       position, "services.overmap.is_safe" ) );
     } );
     overmap.set_function(
         "is_camp",
@@ -1575,7 +1575,7 @@ void install_overmap_api(
         if( position.native_origin() != coords::origin::abs ||
             position.native_scale() != coords::scale::map_square ) {
             throw std::invalid_argument(
-                "game.overmap.is_in_city requires an absolute map-square Tripoint" );
+                "services.overmap.is_in_city requires an absolute map-square Tripoint" );
         }
         const tripoint_abs_omt target_pos = project_to<coords::omt>(
                                                 tripoint_abs_ms( position.to_native() ) );
@@ -1663,6 +1663,6 @@ void install_overmap_api(
     game["overmap"] = std::move( overmap );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

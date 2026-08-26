@@ -151,13 +151,15 @@ make -j2 json-check
 
 ### Lua
 
-New Lua code targets public API v5. Read `data/lua/AGENTS.md`; treat the
-manifest schema, LuaLS declarations, native registrations, and generated
-inventories as one contract. Declare only the capabilities the mod needs.
+All Lua code targets Platform v1, the repository's sole Lua runtime and public
+authoring contract.  Read `data/lua/AGENTS.md`; treat the Platform LuaLS
+declarations, native registrations, generated inventories, and tests as one
+contract.  Do not add API v5/CBN compatibility surfaces or authored manifests.
 
 ```sh
 python3 tools/lua_api/check_luals_declarations.py
-python3 tools/lua_api/check_coverage.py
+python3 tools/lua_api/check_ccb_inventory.py
+python3 tools/lua_api/check_cmake_contract.py
 python3 -m unittest discover -s tools/lua_api -p 'test_*.py'
 ```
 
@@ -250,7 +252,9 @@ make -j2 json-check
 
 # Lua public contract
 python3 tools/lua_api/check_luals_declarations.py
-python3 tools/lua_api/check_coverage.py
+python3 tools/lua_api/check_ccb_inventory.py
+python3 tools/lua_api/check_cmake_contract.py
+python3 -m unittest discover -s tools/lua_api -p 'test_*.py'
 ```
 
 In the PR, list exact commands, platform/toolchain, result, skipped checks, and
@@ -266,6 +270,7 @@ CCB avoids unnecessary breakage. Explicitly review:
 - stable JSON IDs and obsolete/migration entries;
 - bundled and third-party mod compatibility;
 - Lua API version, capabilities, and deprecations;
+- the single Platform v1 Lua runtime and its native service contract;
 - desktop and Android differences;
 - localization and translated strings;
 - CCB divergence from upstream.

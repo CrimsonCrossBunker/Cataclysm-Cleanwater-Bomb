@@ -63,29 +63,29 @@ entries:
     cost: medium
   - id: lua-contract
     paths: [src/CMakeLists.txt, src/lua/CMakeLists.txt, src/main.cpp, 'src/catalua*.cpp', 'src/catalua*.h', src/event.h, data/lua/, tools/lua_api/]
-    command: python3 tools/lua_api/check_luals_declarations.py && python3 tools/lua_api/check_ccb_inventory.py && python3 tools/lua_api/generate_public_contract.py --check && python3 tools/lua_api/check_public_contract.py && python3 tools/lua_api/check_examples.py && python3 tools/lua_api/check_cmake_contract.py && python3 -m unittest discover -s tools/lua_api -p 'test_*.py'
+    command: python3 tools/lua_api/check_luals_declarations.py && python3 tools/lua_api/check_ccb_inventory.py && python3 tools/lua_api/check_cmake_contract.py && python3 -m unittest discover -s tools/lua_api -p 'test_*.py'
     workdir: .
     cost: fast
   - id: lua-playable-mvp
     paths:
-      - src/catalua_platform.cpp
-      - src/catalua_platform_runtime.cpp
+      - src/catalua_loader.cpp
+      - src/catalua_runtime.cpp
       - src/game_io.cpp
       - src/mod_manager.cpp
       - src/mod_manager_ui.cpp
       - data/mods/Lua_First_Example/
-      - tests/catalua_ui_test.cpp
+      - tests/catalua_platform_test.cpp
       - tests/mod_manager_test.cpp
-    command: make -j2 BUILD_PREFIX=lua-mvp- ODIR=lua-mvp-obj CATA_ENABLE_LUA_UI=1 ASTYLE=0 LINTJSON=0 LOCALIZE=0 DEBUGSYMS= tests && ./tests/lua-mvp-cata_test '[playable_mvp]' --rng-seed 20260812
+    command: make -j2 BUILD_PREFIX=lua-mvp- ODIR=lua-mvp-obj CATA_ENABLE_LUA_PLATFORM=1 ASTYLE=0 LINTJSON=0 LOCALIZE=0 DEBUGSYMS= tests && ./tests/lua-mvp-cata_test '[playable_mvp]' --rng-seed 20260812
     workdir: .
     cost: expensive
   - id: lua-disabled-build
     paths:
-      - src/catalua_platform.cpp
+      - src/catalua_loader.cpp
       - src/mod_manager.cpp
       - data/mods/Lua_First_Example/
       - tests/mod_manager_test.cpp
-    command: make -j2 BUILD_PREFIX=lua-disabled- ODIR=lua-disabled-obj CATA_ENABLE_LUA_UI=0 ASTYLE=0 LINTJSON=0 LOCALIZE=0 DEBUGSYMS= tests && ./tests/lua-disabled-cata_test 'lua_first_platform_disabled_build_rejects_runtime_sources' --rng-seed 20260812
+    command: make -j2 BUILD_PREFIX=lua-disabled- ODIR=lua-disabled-obj CATA_ENABLE_LUA_PLATFORM=0 ASTYLE=0 LINTJSON=0 LOCALIZE=0 DEBUGSYMS= tests && ./tests/lua-disabled-cata_test 'lua_first_platform_disabled_build_rejects_runtime_sources' --rng-seed 20260812
     workdir: .
     cost: expensive
   - id: cmake-configure

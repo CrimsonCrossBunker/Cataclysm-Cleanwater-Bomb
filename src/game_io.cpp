@@ -37,8 +37,7 @@
 #include "cata_utility.h"
 #include "cata_variant.h"
 #include "catacharset.h"
-#include "catalua_platform.h"
-#include "catalua_ui.h"
+#include "catalua_loader.h"
 #include "char_validity_check.h"
 #include "character.h"
 #include "character_id.h"
@@ -105,10 +104,10 @@ static const mod_id MOD_INFORMATION_dda( "dda" );
 
 #define dbg(x) DebugLog((x),D_GAME) << __FILE__ << ":" << __LINE__ << ": "
 
-static std::vector<cata::lua_platform::mod_source> lua_platform_sources(
+static std::vector<cata::lua::mod_source> lua_platform_sources(
     const std::vector<mod_id> &mods )
 {
-    std::vector<cata::lua_platform::mod_source> result;
+    std::vector<cata::lua::mod_source> result;
     std::set<mod_id> seen;
     for( const mod_id &mod_id : mods ) {
         if( !seen.insert( mod_id ).second || !mod_id.is_valid() ) {
@@ -231,40 +230,24 @@ bool game::check_mod_data( const std::vector<mod_id> &opts )
             std::vector<mod_id> platform_order = dep_vector;
             platform_order.push_back( mod.ident );
             std::string platform_error;
-            if( !cata::lua_platform::prepare_mods( lua_platform_sources( platform_order ),
+            if( !cata::lua::prepare_mods( lua_platform_sources( platform_order ),
                                                    platform_error ) ) {
                 throw std::runtime_error( "Error loading Lua-first Platform Mods: " +
                                           platform_error );
             }
             on_out_of_scope discard_platform_candidate( []() {
-                cata::lua_platform::discard_prepared_mods();
+                cata::lua::discard_prepared_mods();
             } );
-            if( !cata::lua_platform::apply_prepared_content( platform_error ) ) {
+            if( !cata::lua::apply_prepared_content( platform_error ) ) {
                 throw std::runtime_error( "Error applying Lua-first native content: " +
                                           platform_error );
             }
             DynamicDataLoader::get_instance().finalize_loaded_data();
-            if( !cata::lua_platform::validate_finalized_prepared_content( platform_error ) ) {
+            if( !cata::lua::validate_finalized_prepared_content( platform_error ) ) {
                 throw std::runtime_error( "Error finalizing Lua-first native content: " +
                                           platform_error );
             }
 
-            std::vector<std::string> lua_mod_ids;
-            lua_mod_ids.reserve( dep_vector.size() + 1 );
-            std::set<std::string> seen_lua_mod_ids;
-            for( const mod_id &dep : dep_vector ) {
-                if( seen_lua_mod_ids.insert( dep.str() ).second ) {
-                    lua_mod_ids.push_back( dep.str() );
-                }
-            }
-            if( seen_lua_mod_ids.insert( mod.ident.str() ).second ) {
-                lua_mod_ids.push_back( mod.ident.str() );
-            }
-            std::string lua_error;
-            if( !cata::lua_ui::validate_mod_scripts( lua_mod_ids, lua_error ) ) {
-                std::cerr << "Error loading Lua Mod scripts: " << lua_error << std::endl;
-                mod_valid = false;
-            }
         } catch( const std::exception &err ) {
             std::cerr << "Error loading data: " << err.what() << std::endl;
             mod_valid = false;
@@ -535,12 +518,8 @@ bool game::load( const save_t &name )
                     u.reset();
                     u.recalculate_enchantment_cache();
                     u.enchantment_cache->activate_passive( u );
-                    if constexpr( cata::lua_platform::is_enabled() ) {
-                        cata::lua_platform::on_world_ready( false );
-                    }
-                    if constexpr( cata::lua_ui::is_enabled() ) {
-                        cata::lua_ui::on_world_ready(
-                            cata::lua_ui::world_ready_kind::loaded_game );
+                    if constexpr( cata::lua::is_enabled() ) {
+                        cata::lua::on_world_ready( false );
                     }
                     events().send<event_type::game_load>( getVersionString() );
                     time_of_last_load = std::chrono::steady_clock::now();
@@ -621,25 +600,25 @@ void game::load_world_modfiles()
                                         "mod_interactions", "custom" );
 
     std::string platform_error;
-    if( !cata::lua_platform::prepare_mods( lua_platform_sources( mods ), platform_error ) ) {
+    if( !cata::lua::prepare_mods( lua_platform_sources( mods ), platform_error ) ) {
         throw std::runtime_error( "Error loading Lua-first Platform Mods: " + platform_error );
     }
-    if( !cata::lua_platform::apply_prepared_content( platform_error ) ) {
-        cata::lua_platform::discard_prepared_mods();
+    if( !cata::lua::apply_prepared_content( platform_error ) ) {
+        cata::lua::discard_prepared_mods();
         throw std::runtime_error( "Error applying Lua-first native content: " + platform_error );
     }
     try {
         DynamicDataLoader::get_instance().finalize_loaded_data();
     } catch( ... ) {
-        cata::lua_platform::discard_prepared_mods();
+        cata::lua::discard_prepared_mods();
         throw;
     }
-    if( !cata::lua_platform::validate_finalized_prepared_content( platform_error ) ) {
-        cata::lua_platform::discard_prepared_mods();
+    if( !cata::lua::validate_finalized_prepared_content( platform_error ) ) {
+        cata::lua::discard_prepared_mods();
         throw std::runtime_error( "Error finalizing Lua-first native content: " +
                                   platform_error );
     }
-    cata::lua_platform::commit_prepared_mods();
+    cata::lua::commit_prepared_mods();
 }
 
 void game::load_packs( const std::string &msg, const std::vector<mod_id> &packs )
@@ -845,11 +824,8 @@ bool game::save()
         : std::chrono::duration_cast<std::chrono::seconds>(
             std::chrono::steady_clock::now() - time_of_last_load );
     std::chrono::seconds total_time_played = time_played_at_last_load + time_since_load;
-    if constexpr( cata::lua_platform::is_enabled() ) {
-        cata::lua_platform::before_save();
-    }
-    if constexpr( cata::lua_ui::is_enabled() ) {
-        cata::lua_ui::on_game_save();
+    if constexpr( cata::lua::is_enabled() ) {
+        cata::lua::before_save();
     }
     events().send<event_type::game_save>( time_since_load, total_time_played );
     try {
@@ -869,27 +845,20 @@ bool game::save()
             uistate.serialize( jsout );
         }, _( "uistate data" ) ) ) {
             debugmsg( "game not saved" );
-            if constexpr( cata::lua_platform::is_enabled() ) {
-                cata::lua_platform::after_save( false, "main game save failed" );
+            if constexpr( cata::lua::is_enabled() ) {
+                cata::lua::after_save( false, "main game save failed" );
             }
             return false;
         } else {
             std::string platform_state_error;
             bool platform_state_saved = true;
-            if constexpr( cata::lua_platform::is_enabled() ) {
-                platform_state_saved = cata::lua_platform::save_persistent_state(
+            if constexpr( cata::lua::is_enabled() ) {
+                platform_state_saved = cata::lua::save_persistent_state(
                                            platform_state_error );
                 if( !platform_state_saved ) {
                     add_msg( m_warning,
                              _( "Game saved, but Lua-first Platform state could not be saved: %s" ),
                              platform_state_error );
-                }
-            }
-            if constexpr( cata::lua_ui::is_enabled() ) {
-                std::string lua_state_error;
-                if( !cata::lua_ui::save_persistent_state( lua_state_error ) ) {
-                    add_msg( m_warning, _( "Game saved, but Lua UI state could not be saved: %s" ),
-                             lua_state_error );
                 }
             }
             world_generator->last_world_name = world_generator->active_world->world_name;
@@ -906,15 +875,15 @@ bool game::save()
             // is called.
             EM_ASM( window.game_unsaved = false; );
 #endif
-            if constexpr( cata::lua_platform::is_enabled() ) {
-                cata::lua_platform::after_save( platform_state_saved,
+            if constexpr( cata::lua::is_enabled() ) {
+                cata::lua::after_save( platform_state_saved,
                                                 platform_state_error );
             }
             return true;
         }
     } catch( std::ios::failure & ) {
-        if constexpr( cata::lua_platform::is_enabled() ) {
-            cata::lua_platform::after_save( false, "I/O failure while saving game" );
+        if constexpr( cata::lua::is_enabled() ) {
+            cata::lua::after_save( false, "I/O failure while saving game" );
         }
         popup( _( "Failed to save game data" ) );
         return false;

@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_activities.h"
 
@@ -37,7 +37,7 @@
 #include "type_id.h"
 #include "units.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -1271,6 +1271,6 @@ void install_activity_api(
     game["activities"] = std::move( activities );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

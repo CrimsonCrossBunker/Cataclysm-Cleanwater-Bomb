@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_missions.h"
 
@@ -25,7 +25,7 @@
 #include "mission.h"
 #include "type_id.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -390,17 +390,17 @@ page_options read_definition_options(
         const sol::object key_object = entry.first;
         if( key_object.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.missions.definitions option keys must be strings" );
+                "services.missions.definitions option keys must be strings" );
         }
         const sol::object value = entry.second;
         if( !value.is<lua_Integer>() ) {
             throw std::invalid_argument(
-                "game.missions.definitions options must be integers" );
+                "services.missions.definitions options must be integers" );
         }
         const lua_Integer number = value.as<lua_Integer>();
         if( number < 0 ) {
             throw std::invalid_argument(
-                "game.missions.definitions options cannot be negative" );
+                "services.missions.definitions options cannot be negative" );
         }
         const std::string key = key_object.as<std::string>();
         if( key == "offset" ) {
@@ -414,7 +414,7 @@ page_options read_definition_options(
                                    maximum_definition_limit ) );
         } else {
             throw std::invalid_argument(
-                "game.missions.definitions received unknown option '" +
+                "services.missions.definitions received unknown option '" +
                 key + "'" );
         }
     }
@@ -469,7 +469,7 @@ sol::table get_definition(
     sol::this_state lua, const script_game_id &requested_id )
 {
     require_mission_id(
-        requested_id, "game.missions.definition" );
+        requested_id, "services.missions.definition" );
     sol::state_view state( lua );
     return snapshot_definition(
                state,
@@ -598,20 +598,20 @@ instance_options read_instance_options(
         const sol::object key_object = entry.first;
         if( key_object.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.missions.list option keys must be strings" );
+                "services.missions.list option keys must be strings" );
         }
         const std::string key = key_object.as<std::string>();
         const sol::object value = entry.second;
         if( key == "offset" || key == "limit" ) {
             if( !value.is<lua_Integer>() ) {
                 throw std::invalid_argument(
-                    "game.missions.list pagination options must be integers" );
+                    "services.missions.list pagination options must be integers" );
             }
             const lua_Integer number =
                 value.as<lua_Integer>();
             if( number < 0 ) {
                 throw std::invalid_argument(
-                    "game.missions.list pagination options cannot be negative" );
+                    "services.missions.list pagination options cannot be negative" );
             }
             if( key == "offset" ) {
                 result.offset = static_cast<std::size_t>(
@@ -626,24 +626,24 @@ instance_options read_instance_options(
         } else if( key == "scope" || key == "status" ) {
             if( value.get_type() != sol::type::string ) {
                 throw std::invalid_argument(
-                    "game.missions.list filters must be strings" );
+                    "services.missions.list filters must be strings" );
             }
             if( key == "scope" ) {
                 result.scope = value.as<std::string>();
                 if( !valid_scope( result.scope ) ) {
                     throw std::invalid_argument(
-                        "game.missions.list received an unknown scope" );
+                        "services.missions.list received an unknown scope" );
                 }
             } else {
                 result.status = value.as<std::string>();
                 if( !valid_status( result.status ) ) {
                     throw std::invalid_argument(
-                        "game.missions.list received an unknown status" );
+                        "services.missions.list received an unknown status" );
                 }
             }
         } else {
             throw std::invalid_argument(
-                "game.missions.list received unknown option '" +
+                "services.missions.list received unknown option '" +
                 key + "'" );
         }
     }
@@ -761,7 +761,7 @@ sol::table avatar_has_active(
     sol::this_state lua, const script_game_id &requested_id )
 {
     require_mission_id(
-        requested_id, "game.missions.avatar_has_active" );
+        requested_id, "services.missions.avatar_has_active" );
     const mission_type_id requested_type(
         requested_id.value() );
     sol::state_view state( lua );
@@ -811,10 +811,10 @@ sol::table random_definition(
 {
     const mission_origin native_origin =
         require_origin(
-            origin, "game.missions.random_definition" );
+            origin, "services.missions.random_definition" );
     const tripoint_abs_omt native_position =
         require_absolute_omt(
-            position, "game.missions.random_definition" );
+            position, "services.missions.random_definition" );
     sol::state_view state( lua );
     const mission_type_id id =
         mission_type::get_random_id(
@@ -854,7 +854,7 @@ sol::table reserve_instance(
     const std::size_t world_generation )
 {
     require_mission_id(
-        requested_id, "game.missions.reserve" );
+        requested_id, "services.missions.reserve" );
     sol::state_view state( lua );
     mission *entry = mission::reserve_new(
                          mission_type_id(
@@ -885,10 +885,10 @@ sol::table reserve_random_instance(
 {
     const mission_origin native_origin =
         require_origin(
-            origin, "game.missions.reserve_random" );
+            origin, "services.missions.reserve_random" );
     const tripoint_abs_omt native_position =
         require_absolute_omt(
-            position, "game.missions.reserve_random" );
+            position, "services.missions.reserve_random" );
     sol::state_view state( lua );
     mission *entry = mission::reserve_random(
                          native_origin, native_position,
@@ -1044,7 +1044,7 @@ sol::table step_instance(
 {
     if( step < 0 || step > maximum_mission_step ) {
         throw std::invalid_argument(
-            "game.missions.step_complete step is outside its limit" );
+            "services.missions.step_complete step is outside its limit" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1488,6 +1488,6 @@ void install_mission_api(
     game["missions"] = std::move( missions );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

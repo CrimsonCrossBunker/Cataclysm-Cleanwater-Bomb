@@ -5,7 +5,7 @@
 #include <utility>
 
 #include "cata_utility.h"
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 #include "character.h"
 #include "creature_tracker.h"
 #include "debug.h"
@@ -25,12 +25,12 @@ namespace
 generic_factory<climbing_aid> climbing_aid_factory( "climbing_aid" );
 } // namespace
 
-generic_factory<climbing_aid> &cata::lua_platform::detail::climbing_aid_registry()
+generic_factory<climbing_aid> &cata::lua::detail::climbing_aid_registry()
 {
     return climbing_aid_factory;
 }
 
-void cata::lua_platform::detail::refresh_climbing_aid_registry()
+void cata::lua::detail::refresh_climbing_aid_registry()
 {
     climbing_aid::finalize_all();
 }

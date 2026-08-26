@@ -27,7 +27,7 @@
 #include "calendar.h"
 #include "cata_assert.h"
 #include "cata_utility.h"
-#include "catalua_ui.h"
+#include "catalua_hook.h"
 #include "character_attire.h"
 #include "color.h"
 #include "coordinates.h"
@@ -502,7 +502,7 @@ void Character::die( map *, Creature *nkiller )
     }
     mission::on_creature_death( *this );
 
-    cata::lua_ui::dispatch_native_hook(
+    cata::lua::dispatch_native_hook(
     "on_character_death", {
         { "character", static_cast<const Character *>( this ) },
         { "killer", static_cast<const Creature *>( nkiller ) }

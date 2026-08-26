@@ -133,11 +133,11 @@ class CcbInventoryGeneratorTest(unittest.TestCase):
             entry["id"]: set(entry["roots"])
             for entry in inventory["export_surfaces"]
         }
-        self.assertEqual(len(inventory["export_roots"]), 174)
-        self.assertEqual(len(surfaces["api_v5"]), 16)
-        self.assertEqual(len(surfaces["platform_v1"]), 171)
         self.assertEqual(
-            len(surfaces["api_v5"] & surfaces["platform_v1"]), 13
+            set(surfaces), {"platform_v1"}
+        )
+        self.assertEqual(
+            len(inventory["export_roots"]), len(surfaces["platform_v1"])
         )
 
     def test_repository_inventory_records_alias_and_dispositions(self) -> None:
@@ -164,7 +164,7 @@ class CcbInventoryGeneratorTest(unittest.TestCase):
         }
         self.assertEqual(
             point_members["native.line_to"]["lua_access"],
-            ["game.coords.line", "ccb.services.coords.line"],
+            ["ccb.services.coords.line"],
         )
         handle_members = {
             entry["id"]: entry

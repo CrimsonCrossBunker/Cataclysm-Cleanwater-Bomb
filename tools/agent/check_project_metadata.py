@@ -9,6 +9,7 @@ import json
 import re
 import subprocess
 from collections import Counter
+from functools import lru_cache
 from pathlib import Path
 
 import jsonschema
@@ -47,6 +48,35 @@ def tracked_paths() -> list[str]:
         stdout=subprocess.PIPE,
     ).stdout.decode("utf-8")
     return [item for item in output.split("\0") if item]
+
+
+@lru_cache(maxsize=None)
+def historical_source_text(source_commit: str, path: str) -> str:
+    """Read frozen inventory evidence from its recorded Git commit.
+
+    Migration entries intentionally retain historical source paths even when
+    the current Platform cleanup removes those files.  Keep validation tied to
+    the inventory's recorded commit instead of requiring every historical path
+    to remain in the current worktree.
+    """
+    if "obj-lua" in Path(path).parts:
+        raise ValueError("obj-lua is forbidden in inventory source paths")
+    result = subprocess.run(
+        ["git", "show", f"{source_commit}:{path}"],
+        cwd=ROOT,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    if result.returncode != 0:
+        current_path = ROOT / path
+        if current_path.is_file():
+            return current_path.read_bytes().decode("utf-8", errors="replace")
+        raise ValueError(
+            f"missing source path {path} at inventory commit {source_commit} "
+            "and in the current worktree"
+        )
+    return result.stdout.decode("utf-8", errors="replace")
 
 
 def path_pattern_exists(pattern: str, known: list[str]) -> bool:
@@ -386,7 +416,6 @@ def validate_inventory() -> None:
         raise ValueError("Markdown action summary is stale")
     if summary["migration_statuses"] != dict(sorted(status_counts.items())):
         raise ValueError("Markdown migration-status summary is stale")
-    known_paths = set(tracked_paths())
     for entry in inventory["documents"]:
         if any(
             "obj-lua" in Path(path).parts
@@ -399,16 +428,8 @@ def validate_inventory() -> None:
                 raise ValueError(
                     f"unsafe contributor in {entry['original_path']}: {reason}"
                 )
-        missing_sources = sorted(
-            path for path in entry["source_paths"] if path not in known_paths
-        )
-        if missing_sources:
-            raise ValueError(
-                f"missing source paths for {entry['original_path']}: "
-                f"{missing_sources}"
-            )
         source_text = "\n".join(
-            (ROOT / path).read_text(encoding="utf-8", errors="replace")
+            historical_source_text(inventory["source_commit"], path)
             for path in entry["source_paths"]
         )
         missing_symbols = sorted(

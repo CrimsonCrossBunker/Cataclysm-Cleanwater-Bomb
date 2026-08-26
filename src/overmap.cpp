@@ -1,5 +1,5 @@
-#include "catalua_platform_content.h"
-#include "catalua_platform_runtime.h"
+#include "catalua_content.h"
+#include "catalua_runtime.h"
 
 #include "cube_direction.h" // IWYU pragma: associated
 #include "omdata.h" // IWYU pragma: associated
@@ -1349,20 +1349,20 @@ void overmap::load_oter_id_migration( const JsonObject &jo )
     }
 }
 
-void cata::lua_platform::detail::insert_platform_oter_migration(
+void cata::lua::detail::insert_platform_oter_migration(
     const platform_migration_data &value )
 {
     oter_id_migrations.insert_or_assign( value.from_id, value.to_id );
 }
 
-void cata::lua_platform::detail::erase_platform_oter_migration(
+void cata::lua::detail::erase_platform_oter_migration(
     const platform_migration_data &value )
 {
     oter_id_migrations.erase( value.from_id );
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua_platform::detail::oter_migration_snapshot()
+cata::lua::detail::oter_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( oter_id_migrations.size() );
@@ -3015,7 +3015,7 @@ bool overmap::can_place_special( const overmap_special &special, const tripoint_
         tripoint_abs_omt{ base, p.z() } + point_rel_omt{ p.x(), p.y() };
     const city &nearest_city = get_nearest_city( p );
     const std::optional<bool> lua_condition =
-        cata::lua_platform::invoke_overmap_special_condition_handler(
+        cata::lua::invoke_overmap_special_condition_handler(
             special.id.str(), absolute_position, static_cast<int>( dir ),
             nearest_city.name, nearest_city.size, nearest_city.population );
     if( lua_condition && !*lua_condition ) {

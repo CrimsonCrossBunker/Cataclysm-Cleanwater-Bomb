@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_magic.h"
 
@@ -28,7 +28,7 @@
 #include "player_activity.h"
 #include "type_id.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -589,7 +589,7 @@ sol::table list_definitions(
                                      requested_options,
                                      default_definition_limit,
                                      maximum_definition_limit,
-                                     "game.spells.definitions" );
+                                     "services.spells.definitions" );
     std::vector<const spell_type *> definitions;
     const std::vector<spell_type> &all =
         spell_type::get_all();
@@ -632,7 +632,7 @@ sol::table get_definition(
     sol::this_state lua, const script_game_id &requested_id )
 {
     require_spell_id(
-        requested_id, "game.spells.definition" );
+        requested_id, "services.spells.definition" );
     sol::state_view state( lua );
     return snapshot_definition(
                state, spell_id( requested_id.value() ).obj() );
@@ -707,7 +707,7 @@ sol::table list_known(
                                      requested_options,
                                      default_known_limit,
                                      maximum_known_limit,
-                                     "game.spells.list" );
+                                     "services.spells.list" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -756,7 +756,7 @@ sol::table knows_spell(
     const std::size_t world_generation )
 {
     require_spell_id(
-        requested_id, "game.spells.knows" );
+        requested_id, "services.spells.knows" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -778,7 +778,7 @@ sol::table get_known(
     const std::size_t world_generation )
 {
     require_spell_id(
-        requested_id, "game.spells.get" );
+        requested_id, "services.spells.get" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -810,7 +810,7 @@ sol::table can_learn_spell(
     const std::size_t world_generation )
 {
     require_spell_id(
-        requested_id, "game.spells.can_learn" );
+        requested_id, "services.spells.can_learn" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -852,21 +852,21 @@ learn_options read_learn_options(
         const sol::object key_object = entry.first;
         if( key_object.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.spells.learn option keys must be strings" );
+                "services.spells.learn option keys must be strings" );
         }
         const std::string key = key_object.as<std::string>();
         const sol::object value = entry.second;
         if( key == "force" ) {
             if( value.get_type() != sol::type::boolean ) {
                 throw std::invalid_argument(
-                    "game.spells.learn force must be a boolean" );
+                    "services.spells.learn force must be a boolean" );
             }
             result.force = value.as<bool>();
         } else if( key == "level" ||
                    key == "experience" ) {
             if( !value.is<lua_Integer>() ) {
                 throw std::invalid_argument(
-                    "game.spells.learn level and experience must be integers" );
+                    "services.spells.learn level and experience must be integers" );
             }
             const lua_Integer number =
                 value.as<lua_Integer>();
@@ -875,7 +875,7 @@ learn_options read_learn_options(
                                 maximum_spell_experience;
             if( number < 0 || number > maximum ) {
                 throw std::invalid_argument(
-                    "game.spells.learn " + key +
+                    "services.spells.learn " + key +
                     " is outside its limit" );
             }
             if( key == "level" ) {
@@ -886,13 +886,13 @@ learn_options read_learn_options(
             }
         } else {
             throw std::invalid_argument(
-                "game.spells.learn received unknown option '" +
+                "services.spells.learn received unknown option '" +
                 key + "'" );
         }
     }
     if( result.level && result.experience ) {
         throw std::invalid_argument(
-            "game.spells.learn accepts either level or experience, not both" );
+            "services.spells.learn accepts either level or experience, not both" );
     }
     return result;
 }
@@ -905,7 +905,7 @@ sol::table learn_spell(
     const std::size_t world_generation )
 {
     require_spell_id(
-        requested_id, "game.spells.learn" );
+        requested_id, "services.spells.learn" );
     const learn_options options =
         read_learn_options( requested_options );
     sol::state_view state( lua );
@@ -966,7 +966,7 @@ sol::table forget_spell(
     const std::size_t world_generation )
 {
     require_spell_id(
-        requested_id, "game.spells.forget" );
+        requested_id, "services.spells.forget" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -1012,12 +1012,12 @@ sol::table adjust_spell(
 {
     const std::string api_name =
         adjustment == spell_adjustment::set_experience ?
-        "game.spells.set_experience" :
+        "services.spells.set_experience" :
         adjustment == spell_adjustment::gain_experience ?
-        "game.spells.gain_experience" :
+        "services.spells.gain_experience" :
         adjustment == spell_adjustment::set_level ?
-        "game.spells.set_level" :
-        "game.spells.gain_levels";
+        "services.spells.set_level" :
+        "services.spells.gain_levels";
     require_spell_id( requested_id, api_name );
     const bool setting_experience =
         adjustment == spell_adjustment::set_experience;
@@ -1096,7 +1096,7 @@ sol::table spell_count(
 {
     const std::optional<trait_id> school =
         optional_spell_school(
-            requested_school, "game.spells.count" );
+            requested_school, "services.spells.count" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -1124,13 +1124,13 @@ sol::table spell_level_sum(
 {
     const std::optional<trait_id> school =
         optional_spell_school(
-            requested_school, "game.spells.level_sum" );
+            requested_school, "services.spells.level_sum" );
     const int minimum_level =
         requested_minimum_level.value_or( 0 );
     if( minimum_level < 0 ||
         minimum_level > maximum_spell_level ) {
         throw std::invalid_argument(
-            "game.spells.level_sum minimum_level is outside its limit" );
+            "services.spells.level_sum minimum_level is outside its limit" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1159,7 +1159,7 @@ sol::table school_level(
     const std::size_t world_generation )
 {
     require_spell_school_id(
-        requested_school, "game.spells.school_level" );
+        requested_school, "services.spells.school_level" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -1188,7 +1188,7 @@ sol::table spell_difficulty(
     const std::size_t world_generation )
 {
     require_spell_id(
-        requested_id, "game.spells.difficulty" );
+        requested_id, "services.spells.difficulty" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -1212,10 +1212,10 @@ int spell_experience_for_level(
     const script_game_id &requested_id, const int level )
 {
     require_spell_id(
-        requested_id, "game.spells.experience_for_level" );
+        requested_id, "services.spells.experience_for_level" );
     if( level < 0 || level > maximum_spell_level ) {
         throw std::invalid_argument(
-            "game.spells.experience_for_level level is outside its limit" );
+            "services.spells.experience_for_level level is outside its limit" );
     }
     return spell_id( requested_id.value() )->exp_for_level( level );
 }
@@ -1228,7 +1228,7 @@ sol::table spell_level_adjustment(
 {
     if( requested_id ) {
         require_spell_id(
-            *requested_id, "game.spells.level_adjustment" );
+            *requested_id, "services.spells.level_adjustment" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1259,7 +1259,7 @@ sol::table set_spell_level_adjustment(
     const std::size_t world_generation )
 {
     const std::string api_name =
-        "game.spells.set_level_adjustment";
+        "services.spells.set_level_adjustment";
     require_finite_spell_adjustment( amount, api_name );
     if( requested_id ) {
         require_spell_id( *requested_id, api_name );
@@ -1304,7 +1304,7 @@ sol::table school_level_adjustment(
 {
     require_spell_school_id(
         requested_school,
-        "game.spells.school_level_adjustment" );
+        "services.spells.school_level_adjustment" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -1331,7 +1331,7 @@ sol::table set_school_level_adjustment(
     const std::size_t world_generation )
 {
     const std::string api_name =
-        "game.spells.set_school_level_adjustment";
+        "services.spells.set_school_level_adjustment";
     require_spell_school_id( requested_school, api_name );
     require_finite_spell_adjustment( amount, api_name );
     sol::state_view state( lua );
@@ -1386,27 +1386,27 @@ spellcasting_adjustment_options read_spellcasting_adjustment_options(
         const sol::object key_object = entry.first;
         if( key_object.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.spells.adjust_casting option keys must be strings" );
+                "services.spells.adjust_casting option keys must be strings" );
         }
         const std::string key = key_object.as<std::string>();
         const sol::object value = entry.second;
         if( key == "spell" || key == "school" || key == "mod" ) {
             if( !value.is<script_game_id>() ) {
                 throw std::invalid_argument(
-                    "game.spells.adjust_casting filters must be typed GameIds" );
+                    "services.spells.adjust_casting filters must be typed GameIds" );
             }
             const script_game_id id = value.as<script_game_id>();
             if( key == "spell" ) {
-                require_spell_id( id, "game.spells.adjust_casting" );
+                require_spell_id( id, "services.spells.adjust_casting" );
                 result.scope = spell_filter_scope::spell;
                 result.spell_filter = spell_id( id.value() );
             } else if( key == "school" ) {
                 require_spell_school_id(
-                    id, "game.spells.adjust_casting" );
+                    id, "services.spells.adjust_casting" );
                 result.scope = spell_filter_scope::school;
                 result.school_filter = trait_id( id.value() );
             } else {
-                require_mod_id( id, "game.spells.adjust_casting" );
+                require_mod_id( id, "services.spells.adjust_casting" );
                 result.scope = spell_filter_scope::mod;
                 result.mod_filter = mod_id( id.value() );
             }
@@ -1415,7 +1415,7 @@ spellcasting_adjustment_options read_spellcasting_adjustment_options(
                    key == "flag_blacklist" ) {
             if( value.get_type() != sol::type::string ) {
                 throw std::invalid_argument(
-                    "game.spells.adjust_casting flag filters must be strings" );
+                    "services.spells.adjust_casting flag filters must be strings" );
             }
             if( key == "flag_whitelist" ) {
                 result.flag_whitelist = value.as<std::string>();
@@ -1424,13 +1424,13 @@ spellcasting_adjustment_options read_spellcasting_adjustment_options(
             }
         } else {
             throw std::invalid_argument(
-                "game.spells.adjust_casting received unknown option '" +
+                "services.spells.adjust_casting received unknown option '" +
                 key + "'" );
         }
     }
     if( scope_filters > 1 ) {
         throw std::invalid_argument(
-            "game.spells.adjust_casting accepts only one of spell, school, or mod" );
+            "services.spells.adjust_casting accepts only one of spell, school, or mod" );
     }
     return result;
 }
@@ -1453,7 +1453,7 @@ sol::table adjust_spellcasting(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    const std::string api_name = "game.spells.adjust_casting";
+    const std::string api_name = "services.spells.adjust_casting";
     if( !valid_spellcasting_adjustment_property( property ) ) {
         throw std::invalid_argument(
             api_name + " received unknown property '" + property + "'" );
@@ -1565,8 +1565,8 @@ sol::table change_mana(
     const std::size_t world_generation )
 {
     const std::string api_name = relative ?
-                                 "game.spells.modify_mana" :
-                                 "game.spells.set_mana";
+                                 "services.spells.modify_mana" :
+                                 "services.spells.set_mana";
     if( amount < ( relative ? -maximum_mana_value : 0 ) ||
         amount > maximum_mana_value ) {
         throw std::invalid_argument(
@@ -1634,7 +1634,7 @@ sol::table set_favorite(
     const std::size_t world_generation )
 {
     require_spell_id(
-        requested_id, "game.spells.set_favorite" );
+        requested_id, "services.spells.set_favorite" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -1685,9 +1685,9 @@ sol::table queue_cast(
     const std::size_t world_generation )
 {
     require_spell_id(
-        requested_id, "game.spells.queue_cast" );
+        requested_id, "services.spells.queue_cast" );
     require_absolute_map_square(
-        requested_target, "game.spells.queue_cast" );
+        requested_target, "services.spells.queue_cast" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -2090,6 +2090,6 @@ void install_magic_api(
     game["spells"] = std::move( spells );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

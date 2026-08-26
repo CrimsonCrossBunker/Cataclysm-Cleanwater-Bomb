@@ -46,20 +46,12 @@ META_FUNCTION_NAMES = {
 }
 
 # Each installer is located independently so the inventory can prove which
-# registrations are reachable from each public Lua surface.  Shared installers
-# deliberately have one node even though both surfaces call them.
+# registrations are reachable from the sole Lua-first Platform surface.
 INSTALLER_SPECS = (
-    {
-        "id": "api_v5.initialize_state",
-        "function": "initialize_state",
-        "path": "src/catalua_ui.cpp",
-        "signature": "void initialize_state( runtime_state &state )",
-        "namespace": "global",
-    },
     {
         "id": "platform_v1.initialize_state",
         "function": "initialize_state",
-        "path": "src/catalua_platform.cpp",
+        "path": "src/catalua_loader.cpp",
         "signature": (
             "void initialize_state( sol::state &lua, "
             "const fs::path &requested_root,"
@@ -69,14 +61,14 @@ INSTALLER_SPECS = (
     {
         "id": "platform_v1.install_mod_definition",
         "function": "install_mod_definition",
-        "path": "src/catalua_platform.cpp",
+        "path": "src/catalua_loader.cpp",
         "signature": "void install_mod_definition( sol::table &ccb )",
         "namespace": "ccb",
     },
     {
         "id": "platform_v1.install_runtime_api",
         "function": "install_runtime_api",
-        "path": "src/catalua_platform_runtime.cpp",
+        "path": "src/catalua_runtime.cpp",
         "signature": (
             "void install_runtime_api( "
             "const std::shared_ptr<runtime> &value,"
@@ -86,7 +78,7 @@ INSTALLER_SPECS = (
     {
         "id": "platform_v1.content_transaction.install_lua_api",
         "function": "content_transaction::install_lua_api",
-        "path": "src/catalua_platform_runtime.cpp",
+        "path": "src/catalua_runtime.cpp",
         "signature": (
             "void content_transaction::install_lua_api( "
             "sol::state &lua, sol::table &ccb,"
@@ -96,7 +88,7 @@ INSTALLER_SPECS = (
     {
         "id": "platform_v1.world_content_transaction.install_lua_api",
         "function": "world_content_transaction::install_lua_api",
-        "path": "src/catalua_platform_world_content.cpp",
+        "path": "src/catalua_content_world.cpp",
         "signature": (
             "void world_content_transaction::install_lua_api( "
             "sol::state &lua, sol::table &ccb,"
@@ -163,36 +155,6 @@ INSTALLER_SPECS = (
 
 INSTALLER_EDGE_SPECS = (
     (
-        "api_v5.initialize_state",
-        "shared.install_value_type_api",
-        "install_value_type_api(",
-    ),
-    (
-        "api_v5.initialize_state",
-        "shared.install_game_handle_api",
-        "install_game_handle_api(",
-    ),
-    (
-        "api_v5.initialize_state",
-        "shared.install_zone_api",
-        "install_zone_api(",
-    ),
-    (
-        "api_v5.initialize_state",
-        "shared.install_mission_api",
-        "install_mission_api(",
-    ),
-    (
-        "api_v5.initialize_state",
-        "shared.install_horde_api",
-        "install_horde_api(",
-    ),
-    (
-        "api_v5.initialize_state",
-        "shared.install_script_mapgen_context_api",
-        "install_script_mapgen_context_api(",
-    ),
-    (
         "platform_v1.initialize_state",
         "platform_v1.install_mod_definition",
         "install_mod_definition(",
@@ -256,12 +218,6 @@ INSTALLER_EDGE_SPECS = (
 
 EXPORT_SURFACES = (
     {
-        "id": "api_v5",
-        "api_version": 5,
-        "declarations": "data/lua/types/ccb_api_v5.d.lua",
-        "entrypoint": "api_v5.initialize_state",
-    },
-    {
         "id": "platform_v1",
         "api_version": 1,
         "declarations": "data/lua/types/ccb_platform_v1.d.lua",
@@ -271,17 +227,14 @@ EXPORT_SURFACES = (
 
 NATIVE_DOMAINS = (
     ("achievements", "Inspect achievement definitions and world progress."),
-    ("actions", "Queue safe player and input-context actions."),
     ("addictions", "Inspect and mutate character addictions."),
     ("bionics", "Inspect definitions and mutate installed bionics."),
-    ("callbacks", "Attach Lua methods to native JSON callback actors."),
     ("camps", "Inspect faction camps and their world locations."),
     ("characters", "Query, snapshot, and mutate active characters."),
     ("crafting", "Inspect requirements and start bounded crafting work."),
     ("definitions", "Validate and inspect stable native definition ids."),
     ("diagnostics", "Inspect bounded runtime health and errors."),
     ("effects", "Inspect and mutate native creature effects."),
-    ("eocs", "Test and activate authored effect-on-condition programs."),
     ("factions", "Inspect faction state and player relationships."),
     ("handles", "Reference live creatures, items, and vehicles safely."),
     ("hooks", "Observe and intercept documented native lifecycles."),
@@ -290,7 +243,6 @@ NATIVE_DOMAINS = (
     ("mapgen", "Inspect and post-process native map generation."),
     ("martial_arts", "Inspect and mutate known martial arts."),
     ("missions", "Inspect definitions and control mission instances."),
-    ("modules", "Compose source-scoped Lua modules and services."),
     ("mutations", "Inspect definitions and mutate character mutations."),
     ("native_events", "Subscribe to every typed native event bus event."),
     ("needs", "Inspect and adjust character physiological needs."),
@@ -298,12 +250,10 @@ NATIVE_DOMAINS = (
     ("overmap", "Query and mutate existing overmap state."),
     ("proficiencies", "Inspect definitions and mutate character learning."),
     ("recipes", "Search recipes and evaluate native requirements."),
-    ("scheduler", "Run bounded source-owned deferred callbacks."),
     ("skills", "Inspect definitions and mutate character skills."),
     ("spells", "Inspect definitions and mutate character spellbooks."),
     ("statistics", "Inspect native event statistics and score values."),
     ("time", "Inspect calendar values and control world time."),
-    ("ui", "Build portable pages, menus, sidebars, and navigation."),
     ("vehicles", "Query, snapshot, and control active vehicles."),
     ("vitamins", "Inspect definitions and mutate character vitamins."),
     ("weather", "Inspect forecasts and control weather overrides."),
@@ -922,7 +872,6 @@ def add_reviewed_dispositions(
                     f"class {cpp_type}",
                 ),
                 lua_access=[
-                    "game.coords.line",
                     "ccb.services.coords.line",
                 ],
                 reason_code="bounded-service-adapter",
@@ -1027,7 +976,7 @@ def add_reviewed_dispositions(
         ),
     )
 
-    platform_runtime = "src/catalua_platform_runtime.cpp"
+    platform_runtime = "src/catalua_runtime.cpp"
     for root in roots.values():
         cpp_type = str(root["cpp_type"])
         if not cpp_type.endswith("_definition_handle"):
@@ -1148,7 +1097,7 @@ def add_reviewed_dispositions(
             ),
         )
 
-    platform_header = "src/catalua_platform.h"
+    platform_header = "src/catalua_loader.h"
     for field in (
         "id_set",
         "name_set",

@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_weather.h"
 
@@ -29,7 +29,7 @@
 #include "weather_gen.h"
 #include "weather_type.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -292,7 +292,7 @@ weather_list_options read_weather_list_options(
     const sol::optional<sol::table> &requested )
 {
     constexpr std::string_view api_name =
-        "game.weather.types";
+        "services.weather.types";
     weather_list_options result;
     if( !requested ) {
         return result;
@@ -303,7 +303,7 @@ weather_list_options read_weather_list_options(
         if( key_object.get_type() !=
             sol::type::string ) {
             throw std::invalid_argument(
-                "game.weather.types option keys "
+                "services.weather.types option keys "
                 "must be strings" );
         }
         const std::string key =
@@ -333,7 +333,7 @@ weather_list_options read_weather_list_options(
             if( result.query.size() >
                 maximum_query_bytes ) {
                 throw std::invalid_argument(
-                    "game.weather.types option "
+                    "services.weather.types option "
                     "'query' exceeds 128 bytes" );
             }
         } else if( key == "dangerous" ) {
@@ -350,7 +350,7 @@ weather_list_options read_weather_list_options(
                     key );
         } else {
             throw std::invalid_argument(
-                "game.weather.types received "
+                "services.weather.types received "
                 "unknown option '" + key + "'" );
         }
     }
@@ -450,7 +450,7 @@ sol::table get_weather_type(
 {
     const weather_type &entry =
         resolve_weather(
-            id, "game.weather.type" );
+            id, "services.weather.type" );
     sol::state_view state( lua );
     return snapshot_weather_definition(
                state, entry );
@@ -536,7 +536,7 @@ sol::table snapshot_current_weather(
     sol::this_state lua )
 {
     require_active_game(
-        "game.weather.current" );
+        "services.weather.current" );
     const weather_manager &weather =
         get_weather_const();
     sol::state_view state( lua );
@@ -648,7 +648,7 @@ sol::table snapshot_generator(
     sol::this_state lua )
 {
     require_active_game(
-        "game.weather.generator" );
+        "services.weather.generator" );
     const weather_generator &generator =
         get_weather_const().
         get_cur_weather_gen();
@@ -733,7 +733,7 @@ tripoint_abs_ms require_forecast_position(
         position.native_scale() !=
         coords::scale::map_square ) {
         throw std::invalid_argument(
-            "game.weather.forecast option 'position' "
+            "services.weather.forecast option 'position' "
             "must be an absolute map-square Tripoint" );
     }
     return tripoint_abs_ms(
@@ -752,7 +752,7 @@ forecast_options read_forecast_options(
     const sol::optional<sol::table> &requested )
 {
     require_active_game(
-        "game.weather.forecast" );
+        "services.weather.forecast" );
     forecast_options result;
     result.position =
         get_avatar().pos_abs();
@@ -765,7 +765,7 @@ forecast_options read_forecast_options(
         if( key_object.get_type() !=
             sol::type::string ) {
             throw std::invalid_argument(
-                "game.weather.forecast option keys "
+                "services.weather.forecast option keys "
                 "must be strings" );
         }
         const std::string key =
@@ -775,7 +775,7 @@ forecast_options read_forecast_options(
         if( key == "start" ) {
             if( !value.is<script_time_point>() ) {
                 throw std::invalid_argument(
-                    "game.weather.forecast option "
+                    "services.weather.forecast option "
                     "'start' must be a TimePoint" );
             }
             result.start =
@@ -784,7 +784,7 @@ forecast_options read_forecast_options(
         } else if( key == "position" ) {
             if( !value.is<script_tripoint_coord>() ) {
                 throw std::invalid_argument(
-                    "game.weather.forecast option "
+                    "services.weather.forecast option "
                     "'position' must be a TripointCoord" );
             }
             result.position =
@@ -794,7 +794,7 @@ forecast_options read_forecast_options(
         } else if( key == "step" ) {
             if( !value.is<script_time_duration>() ) {
                 throw std::invalid_argument(
-                    "game.weather.forecast option "
+                    "services.weather.forecast option "
                     "'step' must be a TimeDuration" );
             }
             result.step =
@@ -804,7 +804,7 @@ forecast_options read_forecast_options(
             result.limit =
                 require_nonnegative_integer(
                     value,
-                    "game.weather.forecast",
+                    "services.weather.forecast",
                     key );
             if( result.limit >
                 maximum_forecast_limit ) {
@@ -815,11 +815,11 @@ forecast_options read_forecast_options(
             result.respect_override =
                 require_boolean(
                     value,
-                    "game.weather.forecast",
+                    "services.weather.forecast",
                     key );
         } else {
             throw std::invalid_argument(
-                "game.weather.forecast received "
+                "services.weather.forecast received "
                 "unknown option '" + key + "'" );
         }
     }
@@ -831,7 +831,7 @@ forecast_options read_forecast_options(
         result.step >
         maximum_forecast_step ) {
         throw std::invalid_argument(
-            "game.weather.forecast option 'step' "
+            "services.weather.forecast option 'step' "
             "must be within 1 minute..24 hours" );
     }
     const std::int64_t horizon =
@@ -843,7 +843,7 @@ forecast_options read_forecast_options(
         to_turns<std::int64_t>(
             maximum_forecast_horizon ) ) {
         throw std::invalid_argument(
-            "game.weather.forecast horizon "
+            "services.weather.forecast horizon "
             "exceeds 14 days" );
     }
     const std::int64_t start_turn =
@@ -855,7 +855,7 @@ forecast_options read_forecast_options(
             calendar::turn_max ) -
         horizon ) {
         throw std::invalid_argument(
-            "game.weather.forecast range is "
+            "services.weather.forecast range is "
             "outside turn_zero..turn_max" );
     }
     return result;
@@ -951,9 +951,9 @@ sol::table set_weather_override(
     const weather_type &entry =
         resolve_weather(
             id,
-            "game.weather.set_override" );
+            "services.weather.set_override" );
     require_active_game(
-        "game.weather.set_override" );
+        "services.weather.set_override" );
     weather_manager &weather =
         get_weather();
     weather.weather_override =
@@ -966,7 +966,7 @@ sol::table clear_weather_override(
     sol::this_state lua )
 {
     require_active_game(
-        "game.weather.clear_override" );
+        "services.weather.clear_override" );
     weather_manager &weather =
         get_weather();
     weather.weather_override =
@@ -982,7 +982,7 @@ sol::table set_temperature_override(
     if( temperature.kind() !=
         "temperature" ) {
         throw std::invalid_argument(
-            "game.weather.set_temperature_override "
+            "services.weather.set_temperature_override "
             "requires UnitValue<temperature>" );
     }
     const double kelvin =
@@ -993,11 +993,11 @@ sol::table set_temperature_override(
         kelvin >
         maximum_temperature_kelvin ) {
         throw std::invalid_argument(
-            "game.weather.set_temperature_override "
+            "services.weather.set_temperature_override "
             "must be within 0..1000 kelvin" );
     }
     require_active_game(
-        "game.weather.set_temperature_override" );
+        "services.weather.set_temperature_override" );
     weather_manager &weather =
         get_weather();
     weather.forced_temperature =
@@ -1018,7 +1018,7 @@ sol::table clear_temperature_override(
     sol::this_state lua )
 {
     require_active_game(
-        "game.weather.clear_temperature_override" );
+        "services.weather.clear_temperature_override" );
     weather_manager &weather =
         get_weather();
     weather.forced_temperature =
@@ -1048,7 +1048,7 @@ int require_wind_integer(
 {
     if( !value.is<lua_Integer>() ) {
         throw std::invalid_argument(
-            "game.weather.set_wind option '" +
+            "services.weather.set_wind option '" +
             key + "' must be an integer" );
     }
     const lua_Integer number =
@@ -1056,7 +1056,7 @@ int require_wind_integer(
     if( number < 0 ||
         number > maximum ) {
         throw std::invalid_argument(
-            "game.weather.set_wind option '" +
+            "services.weather.set_wind option '" +
             key + "' is outside its supported range" );
     }
     return static_cast<int>( number );
@@ -1072,7 +1072,7 @@ wind_options read_wind_options(
         if( key_object.get_type() !=
             sol::type::string ) {
             throw std::invalid_argument(
-                "game.weather.set_wind option keys "
+                "services.weather.set_wind option keys "
                 "must be strings" );
         }
         const std::string key =
@@ -1096,7 +1096,7 @@ wind_options read_wind_options(
             result.clear_speed =
                 require_boolean(
                     value,
-                    "game.weather.set_wind",
+                    "services.weather.set_wind",
                     key );
             result.changed =
                 result.changed ||
@@ -1106,32 +1106,32 @@ wind_options read_wind_options(
             result.clear_direction =
                 require_boolean(
                     value,
-                    "game.weather.set_wind",
+                    "services.weather.set_wind",
                     key );
             result.changed =
                 result.changed ||
                 result.clear_direction;
         } else {
             throw std::invalid_argument(
-                "game.weather.set_wind received "
+                "services.weather.set_wind received "
                 "unknown option '" + key + "'" );
         }
     }
     if( result.speed &&
         result.clear_speed ) {
         throw std::invalid_argument(
-            "game.weather.set_wind cannot set and "
+            "services.weather.set_wind cannot set and "
             "clear speed together" );
     }
     if( result.direction &&
         result.clear_direction ) {
         throw std::invalid_argument(
-            "game.weather.set_wind cannot set and "
+            "services.weather.set_wind cannot set and "
             "clear direction together" );
     }
     if( !result.changed ) {
         throw std::invalid_argument(
-            "game.weather.set_wind requires at "
+            "services.weather.set_wind requires at "
             "least one override change" );
     }
     return result;
@@ -1145,7 +1145,7 @@ sol::table set_wind(
         read_wind_options(
             requested );
     require_active_game(
-        "game.weather.set_wind" );
+        "services.weather.set_wind" );
     weather_manager &weather =
         get_weather();
     if( options.speed ) {
@@ -1170,7 +1170,7 @@ sol::table clear_overrides(
     sol::this_state lua )
 {
     require_active_game(
-        "game.weather.clear_overrides" );
+        "services.weather.clear_overrides" );
     weather_manager &weather =
         get_weather();
     weather.weather_override =
@@ -1190,7 +1190,7 @@ sol::table refresh_weather(
     sol::this_state lua )
 {
     require_active_game(
-        "game.weather.refresh" );
+        "services.weather.refresh" );
     return refreshed_weather_result(
                lua, get_weather() );
 }
@@ -1199,7 +1199,7 @@ sol::table activate_lightning(
     sol::this_state lua )
 {
     require_active_game(
-        "game.weather.activate_lightning" );
+        "services.weather.activate_lightning" );
     weather_manager &weather =
         get_weather();
     // Preserve the legacy lightning EOC's altitude gate.  The effect only
@@ -1223,19 +1223,19 @@ sol::table override_light(
     const sol::optional<std::string> &requested_key )
 {
     constexpr std::string_view api_name =
-        "game.weather.override_light";
+        "services.weather.override_light";
     require_active_game( api_name );
     if( level < 0 ||
         level > maximum_custom_light_level ) {
         throw std::invalid_argument(
-            "game.weather.override_light level must be within 0..1000000" );
+            "services.weather.override_light level must be within 0..1000000" );
     }
     const time_duration duration =
         requested_duration.to_native();
     if( duration < 0_turns ||
         duration > maximum_custom_light_duration ) {
         throw std::invalid_argument(
-            "game.weather.override_light duration must be within 0 turns..10000 days" );
+            "services.weather.override_light duration must be within 0 turns..10000 days" );
     }
     const std::string key =
         requested_key.value_or( std::string() );
@@ -1243,7 +1243,7 @@ sol::table override_light(
             maximum_custom_light_key_bytes ||
         key.find( '\0' ) != std::string::npos ) {
         throw std::invalid_argument(
-            "game.weather.override_light key exceeds 256 bytes" );
+            "services.weather.override_light key exceeds 256 bytes" );
     }
     const time_point expires_at =
         calendar::turn + duration + 1_seconds;
@@ -1434,6 +1434,6 @@ void install_weather_api(
         std::move( weather );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

@@ -8,7 +8,7 @@
 #include "catalua_sol.h"
 #include "catalua_ui_state.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 struct script_value_map_limits {
@@ -26,6 +26,6 @@ script_value_map read_script_value_map(
 sol::table script_value_map_to_lua( sol::state_view lua,
                                     const script_value_map &values );
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
 #endif // CATA_SRC_CATALUA_UI_VALUES_H

@@ -52,25 +52,10 @@ entries:
     tracked: false
     generated_by: make style-json or formatter target
     validation_id: json-load
-  - id: cbn-api-inventory
-    paths: [data/lua/reference/cbn_api_inventory.json]
-    tracked: true
-    generated_by: python3 tools/lua_api/generate_cbn_inventory.py
-    validation_id: lua-contract
-  - id: cbn-api-coverage
-    paths: [data/lua/reference/cbn_coverage.json]
-    tracked: true
-    generated_by: python3 tools/lua_api/generate_cbn_coverage.py
-    validation_id: lua-contract
   - id: ccb-native-inventory
     paths: [data/lua/reference/ccb_native_inventory.json]
     tracked: true
     generated_by: python3 tools/lua_api/generate_ccb_inventory.py
-    validation_id: lua-contract
-  - id: ccb-lua-v5-public-contract
-    paths: [data/lua/reference/ccb_public_api_v5.json, data/lua/reference/ccb_public_api_v5_coverage.json]
-    tracked: true
-    generated_by: python3 tools/lua_api/generate_public_contract.py
     validation_id: lua-contract
   - id: json-eoc-contract-inventories
     paths:

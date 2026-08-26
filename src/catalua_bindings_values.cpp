@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_bindings_values.h"
 
@@ -52,7 +52,7 @@
 #include "type_id.h"
 #include "vitamin.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -226,13 +226,13 @@ const id_kind_definition *find_id_kind( const std::string_view kind )
 void validate_id_text( const std::string &value )
 {
     if( value.size() > 256 ) {
-        throw std::invalid_argument( "game.types.id value exceeds 256 bytes" );
+        throw std::invalid_argument( "services.types.id value exceeds 256 bytes" );
     }
     if( std::any_of( value.begin(), value.end(), []( const unsigned char ch ) {
     return ch == '\0' || ch < 0x20U || ch == 0x7fU;
 } ) ) {
         throw std::invalid_argument(
-            "game.types.id value cannot contain control characters" );
+            "services.types.id value cannot contain control characters" );
     }
 }
 
@@ -391,7 +391,7 @@ std::variant<std::int64_t, double> checked_canonical_value(
         std::nullopt )
 {
     if( !std::isfinite( value ) ) {
-        throw std::invalid_argument( "game.units values must be finite" );
+        throw std::invalid_argument( "services.units values must be finite" );
     }
     if( kind.integral ) {
         const long double rounded = std::round( value );
@@ -410,18 +410,18 @@ std::variant<std::int64_t, double> checked_canonical_value(
         }
         if( !exactly_representable ) {
             throw std::invalid_argument(
-                "game.units value is not exactly representable in " +
+                "services.units value is not exactly representable in " +
                 std::string( kind.canonical_unit ) );
         }
         if( rounded < static_cast<long double>( std::numeric_limits<std::int64_t>::min() ) ||
             rounded > static_cast<long double>( std::numeric_limits<std::int64_t>::max() ) ) {
-            throw std::overflow_error( "game.units integral value is out of range" );
+            throw std::overflow_error( "services.units integral value is out of range" );
         }
         return static_cast<std::int64_t>( rounded );
     }
     const double result = static_cast<double>( value );
     if( !std::isfinite( result ) ) {
-        throw std::overflow_error( "game.units floating-point value is out of range" );
+        throw std::overflow_error( "services.units floating-point value is out of range" );
     }
     return result;
 }
@@ -437,18 +437,18 @@ std::int64_t checked_integral_conversion(
         static_cast<long double>( factor ) != conversion.factor ||
         static_cast<long double>( offset ) != conversion.offset ) {
         throw std::logic_error(
-            "game.units integral conversion is not an integer transform" );
+            "services.units integral conversion is not an integer transform" );
     }
     if( value > std::numeric_limits<std::int64_t>::max() / factor ||
         value < std::numeric_limits<std::int64_t>::min() / factor ) {
-        throw std::overflow_error( "game.units integral value is out of range" );
+        throw std::overflow_error( "services.units integral value is out of range" );
     }
     const std::int64_t product = value * factor;
     if( ( offset > 0 &&
           product > std::numeric_limits<std::int64_t>::max() - offset ) ||
         ( offset < 0 &&
           product < std::numeric_limits<std::int64_t>::min() - offset ) ) {
-        throw std::overflow_error( "game.units integral value is out of range" );
+        throw std::overflow_error( "services.units integral value is out of range" );
     }
     return product + offset;
 }
@@ -459,12 +459,12 @@ const unit_kind_definition &require_same_unit_kind(
 {
     if( lhs.kind() != rhs.kind() ) {
         throw std::invalid_argument(
-            "game.units cannot " + std::string( operation ) + " '" + lhs.kind() +
+            "services.units cannot " + std::string( operation ) + " '" + lhs.kind() +
             "' and '" + rhs.kind() + "'" );
     }
     const unit_kind_definition *kind = find_unit_kind( lhs.kind() );
     if( kind == nullptr ) {
-        throw std::runtime_error( "game.units value has an unknown kind" );
+        throw std::runtime_error( "services.units value has an unknown kind" );
     }
     return *kind;
 }
@@ -501,12 +501,12 @@ std::int64_t checked_turn_count( const long double turns, const std::string_view
     if( !std::isfinite( turns ) || turns < static_cast<long double>( minimum ) ||
         turns > static_cast<long double>( maximum ) ) {
         throw std::overflow_error(
-            "game.time " + std::string( operation ) + " exceeds the engine time range" );
+            "services.time " + std::string( operation ) + " exceeds the engine time range" );
     }
     const long double rounded = std::round( turns );
     if( turns != rounded ) {
         throw std::invalid_argument(
-            "game.time " + std::string( operation ) + " must resolve to whole turns" );
+            "services.time " + std::string( operation ) + " must resolve to whole turns" );
     }
     return static_cast<std::int64_t>( rounded );
 }
@@ -550,7 +550,7 @@ script_game_id::script_game_id( std::string kind, std::string value )
     : kind_( std::move( kind ) ), value_( std::move( value ) )
 {
     if( !is_supported_game_id_kind( kind_ ) ) {
-        throw std::invalid_argument( "game.types.id received an unknown id kind: " + kind_ );
+        throw std::invalid_argument( "services.types.id received an unknown id kind: " + kind_ );
     }
     validate_id_text( value_ );
 }
@@ -615,12 +615,12 @@ script_unit_value script_unit_value::from(
     const unit_kind_definition *kind = find_unit_kind( kind_name );
     if( kind == nullptr ) {
         throw std::invalid_argument(
-            "game.units.new received an unknown unit kind: " + std::string( kind_name ) );
+            "services.units.new received an unknown unit kind: " + std::string( kind_name ) );
     }
     const unit_conversion *conversion = find_unit_conversion( *kind, unit_name );
     if( conversion == nullptr ) {
         throw std::invalid_argument(
-            "game.units.new received an unknown " + std::string( kind_name ) +
+            "services.units.new received an unknown " + std::string( kind_name ) +
             " unit: " + std::string( unit_name ) );
     }
     const auto convert = [conversion]( const double input ) {
@@ -647,14 +647,14 @@ script_unit_value script_unit_value::from_integer(
     const unit_kind_definition *kind = find_unit_kind( kind_name );
     if( kind == nullptr ) {
         throw std::invalid_argument(
-            "game.units.new received an unknown unit kind: " +
+            "services.units.new received an unknown unit kind: " +
             std::string( kind_name ) );
     }
     const unit_conversion *conversion =
         find_unit_conversion( *kind, unit_name );
     if( conversion == nullptr ) {
         throw std::invalid_argument(
-            "game.units.new received an unknown " +
+            "services.units.new received an unknown " +
             std::string( kind_name ) + " unit: " +
             std::string( unit_name ) );
     }
@@ -681,7 +681,7 @@ script_unit_value script_unit_value::from_canonical_integer(
     if( kind == nullptr || !kind->integral ||
         kind->canonical_unit != unit_name ) {
         throw std::invalid_argument(
-            "game.serde received an invalid integral unit descriptor" );
+            "services.serde received an invalid integral unit descriptor" );
     }
     return script_unit_value(
                std::string( kind->name ), std::string( kind->canonical_unit ),
@@ -696,7 +696,7 @@ script_unit_value script_unit_value::from_canonical_number(
     if( kind == nullptr || kind->integral ||
         kind->canonical_unit != unit_name ) {
         throw std::invalid_argument(
-            "game.serde received an invalid floating-point unit descriptor" );
+            "services.serde received an invalid floating-point unit descriptor" );
     }
     return script_unit_value(
                std::string( kind->name ), std::string( kind->canonical_unit ),
@@ -721,7 +721,7 @@ bool script_unit_value::is_integral() const noexcept
 std::int64_t script_unit_value::canonical_integer() const
 {
     if( !is_integral() ) {
-        throw std::logic_error( "game.units value does not use an integral canonical unit" );
+        throw std::logic_error( "services.units value does not use an integral canonical unit" );
     }
     return std::get<std::int64_t>( canonical_ );
 }
@@ -742,12 +742,12 @@ double script_unit_value::value_as( const std::string_view unit_name ) const
 {
     const unit_kind_definition *kind = find_unit_kind( kind_ );
     if( kind == nullptr ) {
-        throw std::runtime_error( "game.units value has an unknown kind" );
+        throw std::runtime_error( "services.units value has an unknown kind" );
     }
     const unit_conversion *conversion = find_unit_conversion( *kind, unit_name );
     if( conversion == nullptr ) {
         throw std::invalid_argument(
-            "game.units.value received an unknown " + kind_ +
+            "services.units.value received an unknown " + kind_ +
             " unit: " + std::string( unit_name ) );
     }
     return static_cast<double>(
@@ -777,10 +777,10 @@ script_unit_value script_unit_value::scale( const double factor ) const
 {
     const unit_kind_definition *kind = find_unit_kind( kind_ );
     if( kind == nullptr ) {
-        throw std::runtime_error( "game.units value has an unknown kind" );
+        throw std::runtime_error( "services.units value has an unknown kind" );
     }
     if( !std::isfinite( factor ) ) {
-        throw std::invalid_argument( "game.units scale factor must be finite" );
+        throw std::invalid_argument( "services.units scale factor must be finite" );
     }
     const long double product =
         canonical_wide() * factor;
@@ -829,7 +829,7 @@ std::vector<std::string> supported_units_for_kind( const std::string_view kind_n
     const unit_kind_definition *kind = find_unit_kind( kind_name );
     if( kind == nullptr ) {
         throw std::invalid_argument(
-            "game.units.units received an unknown unit kind: " + std::string( kind_name ) );
+            "services.units.units received an unknown unit kind: " + std::string( kind_name ) );
     }
     std::vector<std::string> result;
     result.reserve( kind->conversion_count );
@@ -850,7 +850,7 @@ script_time_duration script_time_duration::from(
     const time_unit_definition *definition = find_time_unit( unit );
     if( definition == nullptr ) {
         throw std::invalid_argument(
-            "game.time.duration received an unknown unit: " + std::string( unit ) );
+            "services.time.duration received an unknown unit: " + std::string( unit ) );
     }
     return script_time_duration( checked_turn_count(
                                      static_cast<long double>( value ) * definition->turns,
@@ -1116,7 +1116,7 @@ void install_value_type_api(
         require_values();
         if( value.get_type() != sol::type::number ) {
             throw std::invalid_argument(
-                "game.units.new value must be a number" );
+                "services.units.new value must be a number" );
         }
         if( value.is<lua_Integer>() ) {
             return script_unit_value::from_integer(
@@ -1249,6 +1249,6 @@ void install_value_type_api(
     install_serde_api( lua, game, std::move( require_values ) );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

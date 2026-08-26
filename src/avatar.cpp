@@ -26,7 +26,8 @@
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "catacharset.h"
-#include "catalua_ui.h"
+#include "catalua_hook.h"
+#include "catalua_runtime.h"
 #include "character.h"
 #include "character_id.h"
 #include "character_martial_arts.h"
@@ -192,7 +193,7 @@ void avatar::control_npc( npc &np, const bool debug )
     get_event_bus().send<event_type::game_avatar_new>( /*is_new_game=*/false, debug, getID(), name,
             custom_profession );
 
-    cata::lua_ui::dispatch_native_hook(
+    cata::lua::dispatch_native_hook(
     "on_control_npc", {
         { "avatar", static_cast<const Character *>( this ) },
         { "npc", static_cast<const Character *>( &np ) },
@@ -1453,8 +1454,8 @@ bool avatar::invoke_item( item *used, const tripoint_bub_ms &pt, int pre_obtain_
     const int num_methods = use_methods.size();
 
     const bool has_relic = used->has_relic_activation() && used->can_use_relic( *this );
-    const bool has_lua_use = cata::lua_ui::has_native_callback(
-                                 "iuse", used->typeId().str(), "on_use" );
+    const bool has_lua_use = cata::lua::has_platform_item_use_handler(
+                                 used->typeId().str() );
     const bool lua_only = use_methods.empty() && has_lua_use;
     if( use_methods.empty() && !has_relic && !has_lua_use ) {
         return false;

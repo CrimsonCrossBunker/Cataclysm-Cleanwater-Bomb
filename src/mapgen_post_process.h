@@ -17,7 +17,7 @@ class map;
 template<typename E> struct enum_traits;
 template<typename T> class generic_factory;
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 class content_transaction;
 }
@@ -118,7 +118,7 @@ class pp_generator
                       std::vector<pp_sub_decision> *decisions = nullptr ) const;
 
     private:
-        friend class cata::lua_platform::content_transaction;
+        friend class cata::lua::content_transaction;
         void load( const JsonObject &jo, std::string_view src );
         void check() const;
         bool was_loaded = false;

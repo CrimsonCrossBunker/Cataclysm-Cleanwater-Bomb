@@ -14,7 +14,7 @@
 class time_duration;
 class time_point;
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 class script_game_id
@@ -149,11 +149,11 @@ class script_time_point
         std::int64_t turn_ = 0;
 };
 
-// Installs immutable v5 value factories under game.types.  The authorization
-// callback must enforce both game.read and the source API version.
+// Installs immutable Platform value factories under services.types. The
+// authorization callback enforces the runtime's read boundary.
 void install_value_type_api(
     sol::state &lua, sol::table &game, std::function<void()> require_values );
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
 #endif // CATA_SRC_CATALUA_BINDINGS_VALUES_H

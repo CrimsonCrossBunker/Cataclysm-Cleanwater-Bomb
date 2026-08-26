@@ -1,4 +1,4 @@
-#include "catalua_platform.h"
+#include "catalua_loader.h"
 
 #include <algorithm>
 #include <array>
@@ -17,12 +17,12 @@
 
 #include "debug.h"
 
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
-#include "catalua_platform_runtime.h"
+#include "catalua_runtime.h"
 #include "catalua_sol.h"
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 
 namespace
@@ -360,7 +360,7 @@ sol::object require_local_module( sol::state &lua, const fs::path &root,
 void initialize_state( sol::state &lua, const fs::path &requested_root,
                        const std::shared_ptr<runtime> &platform = nullptr )
 {
-    // Platform Mods are trusted extensions, not v5 capability-sandboxed scripts.
+    // Platform Mods are the sole trusted Lua extension contract.
     lua.open_libraries();
 
     std::error_code filesystem_error;
@@ -697,11 +697,11 @@ void on_turn()
     runtime_process_tasks();
 }
 
-} // namespace cata::lua_platform
+} // namespace cata::lua
 
-#else // CATA_ENABLE_LUA_UI
+#else // CATA_ENABLE_LUA_PLATFORM
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 
 namespace
@@ -799,6 +799,6 @@ void on_turn()
 {
 }
 
-} // namespace cata::lua_platform
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

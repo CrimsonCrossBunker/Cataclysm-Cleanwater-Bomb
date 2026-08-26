@@ -1,5 +1,5 @@
 #include "coordinates.h"
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 #include "debug.h"
 #include "enum_conversions.h"
 #include "flexbuffer_json.h"
@@ -105,18 +105,18 @@ generic_factory<dimension_region_layout> dimension_regions_factory( "dimension_r
 generic_factory<dimension_world> dimension_factory( "dimension" );
 } // namespace
 
-generic_factory<dimension_world> &cata::lua_platform::detail::dimension_registry()
+generic_factory<dimension_world> &cata::lua::detail::dimension_registry()
 {
     return dimension_factory;
 }
 
 generic_factory<dimension_region_layout> &
-cata::lua_platform::detail::dimension_region_layout_registry()
+cata::lua::detail::dimension_region_layout_registry()
 {
     return dimension_regions_factory;
 }
 
-dimension_world cata::lua_platform::detail::make_dimension_native(
+dimension_world cata::lua::detail::make_dimension_native(
     const dimension_native_definition &definition )
 {
     dimension_world result;
@@ -126,7 +126,7 @@ dimension_world cata::lua_platform::detail::make_dimension_native(
     return result;
 }
 
-dimension_region_layout cata::lua_platform::detail::make_dimension_region_layout_native(
+dimension_region_layout cata::lua::detail::make_dimension_region_layout_native(
     const dimension_region_layout_native_definition &definition )
 {
     dimension_region_layout result;

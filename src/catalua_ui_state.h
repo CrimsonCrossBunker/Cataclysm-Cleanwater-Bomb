@@ -12,7 +12,7 @@
 
 class JsonValue;
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 using script_persistent_value = std::variant<bool, std::int64_t, double, std::string>;
@@ -36,6 +36,6 @@ void assign_persistent_value( script_persistent_state &state, const std::string 
 void write_persistent_state( std::ostream &output, const script_persistent_state &state );
 script_persistent_state read_persistent_state( const JsonValue &input );
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
 #endif // CATA_SRC_CATALUA_UI_STATE_H

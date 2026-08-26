@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:2d3e47e4ca7b885ebbc9d026bba2675ef2b21576197f1581944491cce55af675",
+    "source_fingerprint": "sha256:54a8aba90b999ad3afa6fa47814011b299c30c47c23c8eea106b003faa024f32",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -30,7 +30,7 @@
     ],
     "observed_not_registered": [],
     "tracked_json_files": 6731,
-    "top_level_objects": 94371,
+    "top_level_objects": 94372,
     "top_level_objects_without_string_type": 1,
     "schema_complete_types": 0
   },
@@ -3086,7 +3086,7 @@
             "default_expression": null,
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 110,
+              "line": 111,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3097,7 +3097,7 @@
             "default_expression": null,
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 106,
+              "line": 107,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3108,7 +3108,7 @@
             "default_expression": null,
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 114,
+              "line": 115,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3119,7 +3119,7 @@
             "default_expression": "eoc_type::NUM_EOC_TYPES",
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 94,
+              "line": 95,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3130,7 +3130,7 @@
             "default_expression": null,
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 116,
+              "line": 117,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3141,7 +3141,7 @@
             "default_expression": "false",
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 122,
+              "line": 123,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3152,7 +3152,7 @@
             "default_expression": null,
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 93,
+              "line": 94,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3163,7 +3163,7 @@
             "default_expression": null,
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 100,
+              "line": 101,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3174,7 +3174,7 @@
             "default_expression": null,
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 128,
+              "line": 129,
               "symbol": "effect_on_condition::load"
             }
           },
@@ -3185,7 +3185,7 @@
             "default_expression": "false",
             "source": {
               "path": "src/effect_on_condition.cpp",
-              "line": 121,
+              "line": 122,
               "symbol": "effect_on_condition::load"
             }
           }
@@ -4356,7 +4356,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3198
+            "line": 3202
           }
         ],
         "confidence": "lexical_only"
@@ -5307,7 +5307,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4474
+            "line": 4478
           }
         ],
         "confidence": "lexical_only"
@@ -6231,7 +6231,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4675
+            "line": 4679
           }
         ],
         "confidence": "lexical_only"
@@ -6408,7 +6408,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4438
+            "line": 4442
           }
         ],
         "confidence": "lexical_only"
@@ -7431,7 +7431,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 8177,
+        "occurrences": 8178,
         "examples": [
           {
             "path": "data/json/items/armor/jewelry.json",
@@ -9372,7 +9372,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4317
+            "line": 4321
           }
         ],
         "confidence": "lexical_only"
@@ -10360,7 +10360,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3054
+            "line": 3058
           }
         ],
         "confidence": "lexical_only"
@@ -10532,7 +10532,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3003
+            "line": 3007
           }
         ],
         "confidence": "lexical_only"
@@ -10650,7 +10650,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3055
+            "line": 3059
           }
         ],
         "confidence": "lexical_only"
@@ -10709,7 +10709,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3049
+            "line": 3053
           }
         ],
         "confidence": "lexical_only"
@@ -10827,7 +10827,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3089
+            "line": 3093
           }
         ],
         "confidence": "lexical_only"
@@ -11004,7 +11004,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4634
+            "line": 4638
           }
         ],
         "confidence": "lexical_only"

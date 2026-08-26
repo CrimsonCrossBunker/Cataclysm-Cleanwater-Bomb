@@ -6,15 +6,15 @@
 
 #include "catalua_sol.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
-// Install the bounded API v5 value codec under game.serde.  The codec uses a
-// strict native allowlist and never invokes a Lua constructor by serialized
-// type name.
+// Install the bounded Platform value codec under services.serde. The codec
+// uses a strict native allowlist and never invokes a Lua constructor by
+// serialized type name.
 void install_serde_api(
     sol::state &lua, sol::table &game, std::function<void()> require_values );
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
 #endif // CATA_SRC_CATALUA_BINDINGS_SERDE_H

@@ -1,6 +1,6 @@
 #pragma once
-#ifndef CATA_SRC_CATALUA_PLATFORM_CONTENT_H
-#define CATA_SRC_CATALUA_PLATFORM_CONTENT_H
+#ifndef CATA_SRC_CATALUA_CONTENT_H
+#define CATA_SRC_CATALUA_CONTENT_H
 
 #include <array>
 #include <cstddef>
@@ -144,7 +144,7 @@ namespace behavior
 class node_t;
 } // namespace behavior
 
-namespace cata::lua_platform::detail
+namespace cata::lua::detail
 {
 
 /** Internal native registries used by the Lua-first content transaction. */
@@ -554,6 +554,6 @@ void rotatable_symbol_registry_set( const std::vector<std::uint32_t> &symbols );
 void rotatable_symbol_registry_restore(
     const std::vector<rotatable_symbol_native_entry> &snapshot );
 
-} // namespace cata::lua_platform::detail
+} // namespace cata::lua::detail
 
-#endif // CATA_SRC_CATALUA_PLATFORM_CONTENT_H
+#endif // CATA_SRC_CATALUA_CONTENT_H

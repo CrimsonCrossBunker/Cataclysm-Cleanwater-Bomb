@@ -8,7 +8,7 @@
 
 #include "bodypart.h"
 #include "cata_assert.h"
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 #include "character.h"
 #include "color.h"
 #include "debug.h"
@@ -61,19 +61,19 @@ namespace
 std::map<efftype_id, effect_type> effect_types;
 } // namespace
 
-const effect_type *cata::lua_platform::detail::effect_type_registry_find(
+const effect_type *cata::lua::detail::effect_type_registry_find(
     const std::string &id )
 {
     const auto found = effect_types.find( efftype_id( id ) );
     return found == effect_types.end() ? nullptr : &found->second;
 }
 
-void cata::lua_platform::detail::effect_type_registry_set( const effect_type &value )
+void cata::lua::detail::effect_type_registry_set( const effect_type &value )
 {
     effect_types[value.id] = value;
 }
 
-void cata::lua_platform::detail::effect_type_registry_erase( const std::string &id )
+void cata::lua::detail::effect_type_registry_erase( const std::string &id )
 {
     effect_types.erase( efftype_id( id ) );
 }
@@ -1757,7 +1757,7 @@ void effect_migration::load( const JsonObject &jo )
     effect_migrations.emplace( migration.id_old, migration );
 }
 
-void cata::lua_platform::detail::insert_platform_effect_migration(
+void cata::lua::detail::insert_platform_effect_migration(
     const platform_migration_data &value )
 {
     effect_migration migration;
@@ -1768,14 +1768,14 @@ void cata::lua_platform::detail::insert_platform_effect_migration(
     effect_migrations.emplace( migration.id_old, migration );
 }
 
-void cata::lua_platform::detail::erase_platform_effect_migration(
+void cata::lua::detail::erase_platform_effect_migration(
     const platform_migration_data &value )
 {
     effect_migrations.erase( efftype_id( value.from_id ) );
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua_platform::detail::effect_migration_snapshot()
+cata::lua::detail::effect_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( effect_migrations.size() );

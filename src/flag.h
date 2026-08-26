@@ -16,7 +16,7 @@
 class JsonObject;
 template <typename T> class generic_factory;
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 class content_transaction;
 namespace detail
@@ -37,7 +37,7 @@ struct json_flag_snapshot_entry {
 };
 std::vector<json_flag_snapshot_entry> json_flag_snapshot();
 } // namespace detail
-} // namespace cata::lua_platform
+} // namespace cata::lua
 
 // Bit positions for the flags that drive item::stacks_with.
 // Reload-safe: positions are compile-time constants, not int_ids.
@@ -480,9 +480,9 @@ class json_flag
 {
         friend class DynamicDataLoader;
         friend class generic_factory<json_flag>;
-        friend class cata::lua_platform::content_transaction;
-        friend std::vector<cata::lua_platform::detail::json_flag_snapshot_entry>
-        cata::lua_platform::detail::json_flag_snapshot();
+        friend class cata::lua::content_transaction;
+        friend std::vector<cata::lua::detail::json_flag_snapshot_entry>
+        cata::lua::detail::json_flag_snapshot();
 
     public:
         // used by generic_factory

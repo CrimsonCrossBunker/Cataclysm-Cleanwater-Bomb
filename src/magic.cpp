@@ -14,9 +14,8 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_imgui.h"
-#include "catalua_lua_call.h"
-#include "catalua_platform_content.h"
-#include "catalua_platform_runtime.h"
+#include "catalua_content.h"
+#include "catalua_runtime.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
@@ -294,7 +293,7 @@ namespace
 generic_factory<spell_type> spell_factory( "spell" );
 } // namespace
 
-generic_factory<spell_type> &cata::lua_platform::detail::spell_registry()
+generic_factory<spell_type> &cata::lua::detail::spell_registry()
 {
     return spell_factory;
 }
@@ -345,14 +344,6 @@ void spell_type::load( const JsonObject &jo, std::string_view src )
     optional( jo, was_loaded, "sound_id", sound_id, sound_id_default );
     optional( jo, was_loaded, "sound_variant", sound_variant, sound_variant_default );
     mandatory( jo, was_loaded, "effect", effect_name );
-    if( effect_name == "lua" ) {
-        if( jo.has_member( "lua" ) || !was_loaded ) {
-            lua_effect.emplace();
-            lua_effect->load( jo, "lua" );
-        }
-    } else {
-        lua_effect.reset();
-    }
     const auto found_effect = spell_effect::effect_map.find( effect_name );
     if( found_effect == spell_effect::effect_map.cend() ) {
         effect = spell_effect::none;
@@ -1346,7 +1337,7 @@ float spell::spell_fail( const Character &guy ) const
         }
     }
     const std::optional<double> platform_fail_chance = type->magic_type ?
-            cata::lua_platform::invoke_magic_type_number_handler(
+            cata::lua::invoke_magic_type_number_handler(
                 type->magic_type->str(), "failure_chance", id().str(), &guy ) :
             std::nullopt;
     bool has_type_fail_chance = platform_fail_chance.has_value() ||
@@ -1832,7 +1823,7 @@ double spell::get_failure_cost_percent( Creature &caster ) const
 {
     if( type->magic_type.has_value() ) {
         if( const std::optional<double> value =
-                cata::lua_platform::invoke_magic_type_number_handler(
+                cata::lua::invoke_magic_type_number_handler(
                     type->magic_type->str(), "failure_cost", id().str(), &caster ) ) {
             return *value;
         }
@@ -1847,7 +1838,7 @@ double spell::get_failure_exp_percent( Creature &caster ) const
 {
     if( type->magic_type.has_value() ) {
         if( const std::optional<double> value =
-                cata::lua_platform::invoke_magic_type_number_handler(
+                cata::lua::invoke_magic_type_number_handler(
                     type->magic_type->str(), "failure_experience", id().str(), &caster ) ) {
             return *value;
         }
@@ -1921,7 +1912,7 @@ std::vector<effect_on_condition_id> spell::get_failure_eoc_ids() const
 void spell::invoke_magic_type_failure( Character &caster ) const
 {
     if( type->magic_type ) {
-        cata::lua_platform::invoke_magic_type_failure_handler(
+        cata::lua::invoke_magic_type_failure_handler(
             type->magic_type->str(), id().str(), caster );
     }
 }
@@ -1935,7 +1926,7 @@ int spell_type::get_level( int experience ) const
 {
     if( magic_type ) {
         if( const std::optional<double> value =
-                cata::lua_platform::invoke_magic_type_number_handler(
+                cata::lua::invoke_magic_type_number_handler(
                     magic_type->str(), "level_for_experience", id.str(), nullptr,
                     static_cast<double>( experience ) ) ) {
             return std::max( static_cast<int>( std::floor( *value ) ), 0 );
@@ -2033,7 +2024,7 @@ int spell_type::exp_for_level( int level ) const
     }
     if( magic_type ) {
         if( const std::optional<double> value =
-                cata::lua_platform::invoke_magic_type_number_handler(
+                cata::lua::invoke_magic_type_number_handler(
                     magic_type->str(), "experience_for_level", id.str(), nullptr,
                     static_cast<double>( level ) ) ) {
             return static_cast<int>( std::ceil( *value ) );
@@ -2077,7 +2068,7 @@ int spell::casting_exp( const Character &guy ) const
 {
     if( type->magic_type ) {
         if( const std::optional<double> value =
-                cata::lua_platform::invoke_magic_type_number_handler(
+                cata::lua::invoke_magic_type_number_handler(
                     type->magic_type->str(), "casting_experience", id().str(), &guy ) ) {
             return static_cast<int>( std::round( *value ) );
         }

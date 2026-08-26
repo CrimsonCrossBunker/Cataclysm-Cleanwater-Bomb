@@ -12,7 +12,7 @@
 #include "catalua_sol.h"
 #include "coords_fwd.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 class script_point_coord
@@ -130,10 +130,11 @@ std::vector<script_tripoint_coord> script_coordinate_box(
     const script_tripoint_coord &from, const script_tripoint_coord &to,
     std::int64_t max_points );
 
-// Installs immutable, coordinate-space-aware v5 values under game.coords.
+// Installs immutable, coordinate-space-aware Platform values under
+// services.coords.
 void install_coordinate_value_api(
     sol::state &lua, sol::table &game, std::function<void()> require_values );
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
 #endif // CATA_SRC_CATALUA_BINDINGS_COORDS_H

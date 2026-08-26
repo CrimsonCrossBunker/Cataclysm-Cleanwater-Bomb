@@ -30,7 +30,7 @@
 #include "type_id.h"
 #include "units.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -491,7 +491,7 @@ class script_registry_catalog
 
     private:
         void refresh_language() {
-            const int language_revision = detail::get_current_language_version();
+            const int language_revision = ::detail::get_current_language_version();
             if( language_revision_ == language_revision ) {
                 return;
             }
@@ -617,12 +617,12 @@ list_options read_list_options( const sol::optional<sol::table> &options )
 } // namespace
 
 void install_registry_api(
-    sol::state &lua, sol::table &game,
+    sol::state &lua, sol::table &services,
     std::function<void()> require_read,
     std::function<void()> require_typed_read )
 {
     auto catalog = std::make_shared<script_registry_catalog>();
-    sol::table registry = lua.create_named_table( "registry" );
+    sol::table registry = lua.create_table();
     registry.set_function( "kinds", [require_read]( sol::this_state lua_state ) {
         require_read();
         return string_array( sol::state_view( lua_state ), registry_kinds() );
@@ -708,7 +708,7 @@ void install_registry_api(
         require_typed_read();
         if( !is_supported_game_id_kind( kind ) ) {
             throw std::invalid_argument(
-                "game.definitions.describe received an unknown id kind" );
+                "services.registry.definitions.describe received an unknown id kind" );
         }
         sol::state_view state( lua_state );
         sol::table result = state.create_table();
@@ -746,11 +746,11 @@ void install_registry_api(
         require_typed_read();
         if( !is_supported_game_id_kind( kind ) ) {
             throw std::invalid_argument(
-                "game.definitions.list received an unknown id kind" );
+                "services.registry.definitions.list received an unknown id kind" );
         }
         if( !valid_kind( kind ) ) {
             throw std::invalid_argument(
-                "game.definitions.list cannot enumerate this id kind" );
+                "services.registry.definitions.list cannot enumerate this id kind" );
         }
         const list_options options = read_list_options( raw_options );
         sol::state_view state( lua_state );
@@ -798,7 +798,8 @@ void install_registry_api(
         require_typed_read();
         return catalog->revision();
     } );
-    game["definitions"] = std::move( definitions );
+    registry["definitions"] = std::move( definitions );
+    services["registry"] = std::move( registry );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua

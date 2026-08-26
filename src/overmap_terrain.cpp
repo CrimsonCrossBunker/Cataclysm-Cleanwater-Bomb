@@ -10,8 +10,8 @@
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "catacharset.h"
-#include "catalua_platform.h"
-#include "catalua_platform_content.h"
+#include "catalua_loader.h"
+#include "catalua_content.h"
 #include "coordinates.h"
 #include "debug.h"
 #include "generic_factory.h"
@@ -89,23 +89,23 @@ generic_factory<oter_t> terrains( "overmap terrain" );
 
 } // namespace
 
-generic_factory<oter_type_t> &cata::lua_platform::detail::overmap_terrain_type_registry()
+generic_factory<oter_type_t> &cata::lua::detail::overmap_terrain_type_registry()
 {
     return terrain_types;
 }
 
-generic_factory<oter_t> &cata::lua_platform::detail::overmap_terrain_registry()
+generic_factory<oter_t> &cata::lua::detail::overmap_terrain_registry()
 {
     return terrains;
 }
 
 generic_factory<overmap_land_use_code> &
-cata::lua_platform::detail::overmap_land_use_code_registry()
+cata::lua::detail::overmap_land_use_code_registry()
 {
     return land_use_codes;
 }
 
-generic_factory<oter_vision> &cata::lua_platform::detail::overmap_vision_registry()
+generic_factory<oter_vision> &cata::lua::detail::overmap_vision_registry()
 {
     return oter_vision_factory;
 }
@@ -936,7 +936,7 @@ void overmap_terrains::check_consistency()
             }
             check_mapgen_consistent_with( mid, elem );
         } else if( !elem.has_uniform_terrain() &&
-                   !cata::lua_platform::has_primary_mapgen_for( elem.id.str() ) ) {
+                   !cata::lua::has_primary_mapgen_for( elem.id.str() ) ) {
             debugmsg( "No mapgen terrain exists for \"%s\".", mid.c_str() );
         }
     }

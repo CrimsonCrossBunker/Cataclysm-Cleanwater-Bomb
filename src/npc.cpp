@@ -19,8 +19,8 @@
 #include "basecamp.h"
 #include "bodypart.h"
 #include "catacharset.h"
-#include "catalua_platform_runtime.h"
-#include "catalua_ui.h"
+#include "catalua_runtime.h"
+#include "catalua_hook.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_id.h"
@@ -3256,7 +3256,7 @@ void npc::die( map *here, Creature *nkiller )
         return;
     }
     prevent_death_reminder = false;
-    if( !cata::lua_ui::dispatch_npc_fatal( *this, nkiller ) ) {
+    if( !cata::lua::dispatch_npc_fatal( *this, nkiller ) ) {
         return;
     }
     dialogue d( get_talker_for( this ), nkiller == nullptr ? nullptr : get_talker_for( nkiller ) );
@@ -3268,7 +3268,7 @@ void npc::die( map *here, Creature *nkiller )
         }
     }
     const std::optional<bool> continue_death =
-        cata::lua_platform::invoke_npc_death_handler(
+        cata::lua::invoke_npc_death_handler(
             idz.str(), lua_platform_death_mod, lua_platform_death_handler,
             *this, nkiller, pos_abs() );
     if( continue_death && !*continue_death ) {
@@ -3643,16 +3643,16 @@ void npc::on_load( map *here )
     reconcile_schedule_on_load();
     shop_restock();
 
-    const cata::lua_ui::native_callback_arguments payload = {
+    const cata::lua::native_callback_arguments payload = {
         { "creature", static_cast<const Creature *>( this ) },
         { "npc", static_cast<const Character *>( this ) }
     };
-    if( cata::lua_ui::has_native_hook( "on_creature_loaded" ) ) {
-        cata::lua_ui::dispatch_native_hook(
+    if( cata::lua::has_native_hook( "on_creature_loaded" ) ) {
+        cata::lua::dispatch_native_hook(
             "on_creature_loaded", payload );
     }
-    if( cata::lua_ui::has_native_hook( "on_npc_loaded" ) ) {
-        cata::lua_ui::dispatch_native_hook(
+    if( cata::lua::has_native_hook( "on_npc_loaded" ) ) {
+        cata::lua::dispatch_native_hook(
             "on_npc_loaded", payload );
     }
 }

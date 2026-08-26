@@ -27,8 +27,8 @@
 #include "bionics.h"
 #include "cached_options.h"
 #include "calendar.h"
-#include "catalua_platform.h"
-#include "catalua_ui.h"
+#include "catalua_loader.h"
+#include "catalua_hook.h"
 #ifdef TILES
     #include "cata_imgui.h"
 #endif
@@ -327,11 +327,11 @@ void monmove()
     int mon_count = 0;
     std::string mon_slow_log;
     const bool has_creature_do_turn =
-        cata::lua_ui::has_native_hook( "on_creature_do_turn" );
+        cata::lua::has_native_hook( "on_creature_do_turn" );
     const bool has_monster_do_turn =
-        cata::lua_ui::has_native_hook( "on_monster_do_turn" );
+        cata::lua::has_native_hook( "on_monster_do_turn" );
     const bool has_npc_do_turn =
-        cata::lua_ui::has_native_hook( "on_npc_do_turn" );
+        cata::lua::has_native_hook( "on_npc_do_turn" );
     for( monster &critter : g->all_monsters() ) {
         if( !m.inbounds( critter.pos_abs() ) ) {
             continue;
@@ -367,19 +367,19 @@ void monmove()
 
         if( !critter.is_dead() ) {
             if( has_creature_do_turn || has_monster_do_turn ) {
-                cata::lua_ui::native_callback_arguments payload = {
+                cata::lua::native_callback_arguments payload = {
                     {
                         "creature",
                         static_cast<const Creature *>( &critter )
                     }
                 };
                 if( has_creature_do_turn ) {
-                    cata::lua_ui::dispatch_native_hook(
+                    cata::lua::dispatch_native_hook(
                         "on_creature_do_turn", payload );
                 }
                 if( has_monster_do_turn ) {
                     payload.front().name = "monster";
-                    cata::lua_ui::dispatch_native_hook(
+                    cata::lua::dispatch_native_hook(
                         "on_monster_do_turn", payload );
                 }
             }
@@ -459,19 +459,19 @@ void monmove()
             continue;
         }
         if( has_creature_do_turn || has_npc_do_turn ) {
-            cata::lua_ui::native_callback_arguments payload = {
+            cata::lua::native_callback_arguments payload = {
                 {
                     "creature",
                     static_cast<const Creature *>( &guy )
                 }
             };
             if( has_creature_do_turn ) {
-                cata::lua_ui::dispatch_native_hook(
+                cata::lua::dispatch_native_hook(
                     "on_creature_do_turn", payload );
             }
             if( has_npc_do_turn ) {
                 payload.front().name = "npc";
-                cata::lua_ui::dispatch_native_hook(
+                cata::lua::dispatch_native_hook(
                     "on_npc_do_turn", payload );
             }
         }
@@ -734,11 +734,8 @@ void game::simulate_turn_prefix()
             calendar::turn += 1_turns;
         }
     }
-    if constexpr( cata::lua_ui::is_enabled() ) {
-        cata::lua_ui::on_turn();
-    }
-    if constexpr( cata::lua_platform::is_enabled() ) {
-        cata::lua_platform::on_turn();
+    if constexpr( cata::lua::is_enabled() ) {
+        cata::lua::on_turn();
     }
     //used for dimension swapping
     if( swapping_dimensions ) {

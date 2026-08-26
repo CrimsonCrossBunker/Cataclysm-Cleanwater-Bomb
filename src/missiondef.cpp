@@ -3,7 +3,7 @@
 #include <algorithm>
 
 #include "condition.h"
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 #include "debug.h"
 #include "dialogue.h"
 #include "flexbuffer_json.h"
@@ -87,7 +87,7 @@ std::string enum_to_string<mission_goal>( mission_goal data )
 
 static generic_factory<mission_type> mission_type_factory( "mission_type" );
 
-generic_factory<mission_type> &cata::lua_platform::detail::mission_type_registry()
+generic_factory<mission_type> &cata::lua::detail::mission_type_registry()
 {
     return mission_type_factory;
 }

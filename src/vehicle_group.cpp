@@ -6,7 +6,7 @@
 #include <string>
 #include <utility>
 
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 #include "coordinates.h"
 #include "debug.h"
 #include "enums.h"
@@ -24,62 +24,62 @@ std::unordered_map<vgroup_id, VehicleGroup> vgroups;
 static std::unordered_map<vplacement_id, VehiclePlacement> vplacements;
 static std::unordered_map<vspawn_id, VehicleSpawn> vspawns;
 
-const VehicleGroup *cata::lua_platform::detail::vehicle_group_registry_find(
+const VehicleGroup *cata::lua::detail::vehicle_group_registry_find(
     const std::string &id )
 {
     const auto found = vgroups.find( vgroup_id( id ) );
     return found == vgroups.end() ? nullptr : &found->second;
 }
 
-void cata::lua_platform::detail::vehicle_group_registry_set(
+void cata::lua::detail::vehicle_group_registry_set(
     const std::string &id, const VehicleGroup &value )
 {
     vgroups[vgroup_id( id )] = value;
 }
 
-void cata::lua_platform::detail::vehicle_group_registry_erase( const std::string &id )
+void cata::lua::detail::vehicle_group_registry_erase( const std::string &id )
 {
     vgroups.erase( vgroup_id( id ) );
 }
 
-const VehiclePlacement *cata::lua_platform::detail::vehicle_placement_registry_find(
+const VehiclePlacement *cata::lua::detail::vehicle_placement_registry_find(
     const std::string &id )
 {
     const auto found = vplacements.find( vplacement_id( id ) );
     return found == vplacements.end() ? nullptr : &found->second;
 }
 
-void cata::lua_platform::detail::vehicle_placement_registry_set(
+void cata::lua::detail::vehicle_placement_registry_set(
     const std::string &id, const VehiclePlacement &value )
 {
     vplacements[vplacement_id( id )] = value;
 }
 
-void cata::lua_platform::detail::vehicle_placement_registry_erase( const std::string &id )
+void cata::lua::detail::vehicle_placement_registry_erase( const std::string &id )
 {
     vplacements.erase( vplacement_id( id ) );
 }
 
-const VehicleSpawn *cata::lua_platform::detail::vehicle_spawn_registry_find(
+const VehicleSpawn *cata::lua::detail::vehicle_spawn_registry_find(
     const std::string &id )
 {
     const auto found = vspawns.find( vspawn_id( id ) );
     return found == vspawns.end() ? nullptr : &found->second;
 }
 
-void cata::lua_platform::detail::vehicle_spawn_registry_set(
+void cata::lua::detail::vehicle_spawn_registry_set(
     const std::string &id, const VehicleSpawn &value )
 {
     vspawns[vspawn_id( id )] = value;
 }
 
-void cata::lua_platform::detail::vehicle_spawn_registry_erase( const std::string &id )
+void cata::lua::detail::vehicle_spawn_registry_erase( const std::string &id )
 {
     vspawns.erase( vspawn_id( id ) );
 }
 
 std::vector<std::pair<std::string, int>>
-cata::lua_platform::detail::vehicle_group_weighted_entries( const vgroup_id &id )
+cata::lua::detail::vehicle_group_weighted_entries( const vgroup_id &id )
 {
     std::vector<std::pair<std::string, int>> result;
     const auto found = vgroups.find( id );

@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_eocs.h"
 
@@ -30,162 +30,16 @@
 #include "math_parser_diag_value.h"
 #include "vehicle.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
 {
 
-constexpr int default_page_limit = 64;
-constexpr int maximum_page_limit = 256;
-constexpr int maximum_page_offset = 1000000;
-constexpr std::size_t maximum_query_bytes = 128;
-constexpr std::size_t maximum_context_entries = 128;
 constexpr std::size_t maximum_context_key_bytes = 128;
 constexpr std::size_t maximum_context_string_bytes = 8192;
 constexpr std::size_t maximum_context_nodes = 512;
 constexpr int maximum_context_depth = 8;
-
-struct eoc_list_options {
-    int offset = 0;
-    int limit = default_page_limit;
-    std::string query;
-};
-
-eoc_list_options read_list_options(
-    const sol::optional<sol::table> &requested )
-{
-    eoc_list_options result;
-    if( requested ) {
-        result.offset = requested->get_or( "offset", result.offset );
-        result.limit = requested->get_or( "limit", result.limit );
-        result.query = requested->get_or( "query", result.query );
-    }
-    if( result.offset < 0 || result.offset > maximum_page_offset ) {
-        throw std::invalid_argument(
-            "game.eocs.list offset must be within 0..1000000" );
-    }
-    if( result.limit < 0 || result.limit > maximum_page_limit ) {
-        throw std::invalid_argument(
-            "game.eocs.list limit must be within 0..256" );
-    }
-    if( result.query.size() > maximum_query_bytes ) {
-        throw std::invalid_argument(
-            "game.eocs.list query exceeds 128 bytes" );
-    }
-    return result;
-}
-
-void require_eoc_id( const script_game_id &id,
-                     const std::string_view api_name )
-{
-    if( id.kind() != "effect_on_condition" ) {
-        throw std::invalid_argument(
-            std::string( api_name ) +
-            " requires GameId<effect_on_condition>" );
-    }
-    if( !id.is_valid() ) {
-        throw std::invalid_argument(
-            std::string( api_name ) +
-            " requires a valid GameId<effect_on_condition>" );
-    }
-}
-
-sol::table snapshot_eoc(
-    sol::state_view lua, const effect_on_condition &definition )
-{
-    sol::table result = lua.create_table();
-    result["id"] = script_game_id(
-                       "effect_on_condition", definition.id.str() );
-    result["value"] = definition.id.str();
-    result["type"] = io::enum_to_string( definition.type );
-    result["has_condition"] = definition.has_condition;
-    result["has_false_effect"] = definition.has_false_effect;
-    result["has_deactivate_condition"] =
-        definition.has_deactivate_condition;
-    result["global"] = definition.global;
-    result["run_for_npcs"] = definition.run_for_npcs;
-    if( definition.type == eoc_type::EVENT ) {
-        result["required_event"] =
-            io::enum_to_string( definition.required_event );
-    }
-    sol::table sources = lua.create_table(
-                             static_cast<int>( definition.src.size() ), 0 );
-    for( std::size_t index = 0; index < definition.src.size(); ++index ) {
-        sol::table source = lua.create_table();
-        source["id"] = definition.src[index].first.str();
-        source["mod"] = definition.src[index].second.str();
-        sources[index + 1] = std::move( source );
-    }
-    result["sources"] = std::move( sources );
-    return result;
-}
-
-std::vector<const effect_on_condition *> sorted_eocs()
-{
-    const std::vector<effect_on_condition> &definitions =
-        effect_on_conditions::get_all();
-    std::vector<const effect_on_condition *> result;
-    result.reserve( definitions.size() );
-    for( const effect_on_condition &definition : definitions ) {
-        result.push_back( &definition );
-    }
-    std::sort(
-        result.begin(), result.end(),
-        []( const effect_on_condition * lhs,
-    const effect_on_condition * rhs ) {
-        return lhs->id.str() < rhs->id.str();
-    } );
-    return result;
-}
-
-sol::table list_eocs(
-    sol::this_state lua, const sol::optional<sol::table> &requested )
-{
-    const eoc_list_options options = read_list_options( requested );
-    const std::vector<const effect_on_condition *> definitions =
-        sorted_eocs();
-    std::vector<const effect_on_condition *> matches;
-    matches.reserve( definitions.size() );
-    for( const effect_on_condition *definition : definitions ) {
-        if( options.query.empty() ||
-            definition->id.str().find( options.query ) !=
-            std::string::npos ) {
-            matches.push_back( definition );
-        }
-    }
-
-    const std::size_t first = std::min<std::size_t>(
-                                  options.offset, matches.size() );
-    const std::size_t last = std::min<std::size_t>(
-                                 first + options.limit, matches.size() );
-    sol::state_view state( lua );
-    sol::table items = state.create_table(
-                           static_cast<int>( last - first ), 0 );
-    for( std::size_t index = first; index < last; ++index ) {
-        items[index - first + 1] =
-            snapshot_eoc( state, *matches[index] );
-    }
-    sol::table result = state.create_table();
-    result["items"] = std::move( items );
-    result["offset"] = options.offset;
-    result["limit"] = options.limit;
-    result["total"] = matches.size();
-    result["returned"] = last - first;
-    result["has_more"] = last < matches.size();
-    return result;
-}
-
-sol::table get_eoc(
-    sol::this_state lua, const script_game_id &id )
-{
-    require_eoc_id( id, "game.eocs.get" );
-    sol::state_view state( lua );
-    return make_game_value_result(
-               state, sol::make_object(
-                   state, snapshot_eoc(
-                       state, effect_on_condition_id( id.value() ).obj() ) ) );
-}
 
 void require_active_callback(
     const std::function<bool()> &has_active_callback,
@@ -201,11 +55,11 @@ void require_active_callback(
 void validate_context_key( const std::string &key )
 {
     if( key.empty() || key.size() > maximum_context_key_bytes ||
-    std::any_of( key.begin(), key.end(), []( const unsigned char ch ) {
-    return ch == '\0' || ch < 0x20U || ch == 0x7fU;
-} ) ) {
+        std::any_of( key.begin(), key.end(), []( const unsigned char ch ) {
+        return ch == '\0' || ch < 0x20U || ch == 0x7fU;
+    } ) ) {
         throw std::invalid_argument(
-            "game.eocs context keys must contain 1..128 printable bytes" );
+            "services.variables context keys must contain 1..128 printable bytes" );
     }
 }
 
@@ -219,7 +73,7 @@ diag_value context_value_from_lua(
         const double number = value.as<double>();
         if( !std::isfinite( number ) ) {
             throw std::invalid_argument(
-                "game.eocs context value '" + key +
+                "services.variables context value '" + key +
                 "' must be finite" );
         }
         return diag_value( number );
@@ -228,7 +82,7 @@ diag_value context_value_from_lua(
         const std::string text = value.as<std::string>();
         if( text.size() > maximum_context_string_bytes ) {
             throw std::invalid_argument(
-                "game.eocs context value '" + key +
+                "services.variables context value '" + key +
                 "' exceeds 8192 bytes" );
         }
         return diag_value( text );
@@ -239,37 +93,14 @@ diag_value context_value_from_lua(
         if( position.native_origin() != coords::origin::abs ||
             position.native_scale() != coords::scale::map_square ) {
             throw std::invalid_argument(
-                "game.eocs context coordinates must be absolute "
+                "services.variables context coordinates must be absolute "
                 "map-square coordinates" );
         }
         return diag_value( tripoint_abs_ms( position.to_native() ) );
     }
     throw std::invalid_argument(
-        "game.eocs context value '" + key +
+        "services.variables context value '" + key +
         "' must be boolean, number, string, or TripointCoord" );
-}
-
-void apply_context(
-    dialogue &conversation, const sol::optional<sol::table> &context )
-{
-    if( !context ) {
-        return;
-    }
-    std::size_t count = 0;
-    for( const auto &entry : *context ) {
-        if( ++count > maximum_context_entries ) {
-            throw std::invalid_argument(
-                "game.eocs context exceeds 128 entries" );
-        }
-        if( entry.first.get_type() != sol::type::string ) {
-            throw std::invalid_argument(
-                "game.eocs context keys must be strings" );
-        }
-        const std::string key = entry.first.as<std::string>();
-        validate_context_key( key );
-        conversation.set_value(
-            key, context_value_from_lua( entry.second, key ) );
-    }
 }
 
 sol::object context_value_to_lua(
@@ -279,7 +110,7 @@ sol::object context_value_to_lua(
     if( ++nodes > maximum_context_nodes ||
         depth > maximum_context_depth ) {
         throw std::runtime_error(
-            "game.eocs returned context exceeds its structural limits" );
+            "services.variables returned context exceeds its structural limits" );
     }
     if( value.is_empty() ) {
         return sol::make_object( lua, sol::nil );
@@ -291,7 +122,7 @@ sol::object context_value_to_lua(
         const std::string &text = value.str();
         if( text.size() > maximum_context_string_bytes ) {
             throw std::runtime_error(
-                "game.eocs returned context string exceeds 8192 bytes" );
+                "services.variables returned context string exceeds 8192 bytes" );
         }
         return sol::make_object( lua, text );
     }
@@ -312,221 +143,6 @@ sol::object context_value_to_lua(
         return sol::make_object( lua, std::move( result ) );
     }
     return sol::make_object( lua, value.to_string() );
-}
-
-sol::table context_snapshot(
-    sol::state_view lua, const dialogue &conversation )
-{
-    const global_variables::impl_t &context =
-        conversation.get_context();
-    if( context.size() > maximum_context_entries ) {
-        throw std::runtime_error(
-            "game.eocs returned context exceeds 128 entries" );
-    }
-    std::vector<std::pair<std::string, const diag_value *>> ordered;
-    ordered.reserve( context.size() );
-    for( const auto &[key, value] : context ) {
-        ordered.emplace_back( key, &value );
-    }
-    std::sort(
-        ordered.begin(), ordered.end(),
-    []( const auto & lhs, const auto & rhs ) {
-        return lhs.first < rhs.first;
-    } );
-    sol::table result = lua.create_table();
-    std::size_t nodes = 0;
-    for( const auto &[key, value] : ordered ) {
-        result[key] = context_value_to_lua(
-                          lua, *value, 0, nodes );
-    }
-    return result;
-}
-
-std::unique_ptr<talker> resolve_talker_option(
-    const sol::optional<sol::table> &options,
-    const std::string &field,
-    const bool default_avatar,
-    const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation,
-    std::optional<game_handle_error> &error )
-{
-    sol::object requested;
-    if( options ) {
-        requested = options->get<sol::object>( field );
-    }
-    if( !requested.valid() ||
-        requested.get_type() == sol::type::nil ) {
-        return default_avatar ?
-               get_talker_for( get_avatar() ) : nullptr;
-    }
-    if( !requested.is<game_handle>() ) {
-        throw std::invalid_argument(
-            "game.eocs option '" + field +
-            "' must be a creature GameHandle" );
-    }
-    const native_handle_result<Creature> resolved =
-        requested.as<game_handle>().resolve_creature(
-            runtime_generation, world_generation );
-    if( !resolved ) {
-        error = resolved.error;
-        return nullptr;
-    }
-    return get_talker_for( *resolved.value );
-}
-
-void validate_eoc_options(
-    const sol::optional<sol::table> &options )
-{
-    if( !options ) {
-        return;
-    }
-    for( const auto &entry : *options ) {
-        if( entry.first.get_type() != sol::type::string ) {
-            throw std::invalid_argument(
-                "game.eocs option keys must be strings" );
-        }
-        const std::string key = entry.first.as<std::string>();
-        if( key != "alpha" && key != "beta" &&
-            key != "context" ) {
-            throw std::invalid_argument(
-                "game.eocs received unknown option '" + key + "'" );
-        }
-    }
-}
-
-struct prepared_eoc_dialogue {
-    std::unique_ptr<dialogue> conversation;
-    std::optional<game_handle_error> error;
-};
-
-prepared_eoc_dialogue prepare_eoc_dialogue(
-    const sol::optional<sol::table> &options,
-    const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation )
-{
-    validate_eoc_options( options );
-    prepared_eoc_dialogue result;
-    std::unique_ptr<talker> alpha = resolve_talker_option(
-                                        options, "alpha", true,
-                                        runtime_generation, world_generation,
-                                        result.error );
-    if( result.error ) {
-        return result;
-    }
-    std::unique_ptr<talker> beta = resolve_talker_option(
-                                       options, "beta", false,
-                                       runtime_generation, world_generation,
-                                       result.error );
-    if( result.error ) {
-        return result;
-    }
-    result.conversation = std::make_unique<dialogue>(
-                              std::move( alpha ), std::move( beta ) );
-    if( options ) {
-        const sol::object context =
-            options->get<sol::object>( "context" );
-        if( context.valid() &&
-            context.get_type() != sol::type::nil ) {
-            if( context.get_type() != sol::type::table ) {
-                throw std::invalid_argument(
-                    "game.eocs option 'context' must be a table" );
-            }
-            apply_context(
-                *result.conversation, context.as<sol::table>() );
-        }
-    }
-    return result;
-}
-
-sol::table test_eoc(
-    sol::this_state lua, const script_game_id &id,
-    const sol::optional<sol::table> &options,
-    const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation )
-{
-    require_eoc_id( id, "game.eocs.test" );
-    sol::state_view state( lua );
-    prepared_eoc_dialogue prepared = prepare_eoc_dialogue(
-                                         options, runtime_generation,
-                                         world_generation );
-    if( prepared.error ) {
-        return make_game_error_result( state, *prepared.error );
-    }
-    const bool matched =
-        effect_on_condition_id( id.value() )->test_condition(
-            *prepared.conversation );
-    sol::table value = state.create_table();
-    value["matched"] = matched;
-    value["context"] = context_snapshot(
-                           state, *prepared.conversation );
-    return make_game_value_result(
-               state, sol::make_object( state, std::move( value ) ) );
-}
-
-sol::table activate_eoc(
-    sol::this_state lua, const script_game_id &id,
-    const sol::optional<sol::table> &options,
-    const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation )
-{
-    require_eoc_id( id, "game.eocs.activate" );
-    sol::state_view state( lua );
-    prepared_eoc_dialogue prepared = prepare_eoc_dialogue(
-                                         options, runtime_generation,
-                                         world_generation );
-    if( prepared.error ) {
-        return make_game_error_result( state, *prepared.error );
-    }
-    const bool activated =
-        effect_on_condition_id( id.value() )->activate(
-            *prepared.conversation );
-    sol::table value = state.create_table();
-    value["activated"] = activated;
-    value["context"] = context_snapshot(
-                           state, *prepared.conversation );
-    return make_game_value_result(
-               state, sol::make_object( state, std::move( value ) ) );
-}
-
-sol::table queue_eoc(
-    sol::this_state lua, const script_game_id &id,
-    const script_time_duration &delay,
-    const sol::optional<sol::table> &options,
-    const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation )
-{
-    require_eoc_id( id, "game.eocs.queue" );
-    if( delay.turns() < 0 ) {
-        throw std::invalid_argument(
-            "game.eocs.queue delay cannot be negative" );
-    }
-    sol::state_view state( lua );
-    prepared_eoc_dialogue prepared = prepare_eoc_dialogue(
-                                         options, runtime_generation,
-                                         world_generation );
-    if( prepared.error ) {
-        return make_game_error_result( state, *prepared.error );
-    }
-    talker *alpha = prepared.conversation->actor( false );
-    Character *character =
-        alpha == nullptr ? nullptr : alpha->get_character();
-    if( character == nullptr ) {
-        return make_game_error_result(
-        state, {
-            "wrong_subtype",
-            "game.eocs.queue alpha must reference a character"
-        } );
-    }
-    effect_on_conditions::queue_effect_on_condition(
-        delay.to_native(), effect_on_condition_id( id.value() ),
-        *character, prepared.conversation->get_context() );
-    sol::table value = state.create_table();
-    value["queued"] = true;
-    value["delay"] = delay;
-    value["eoc"] = id;
-    value["character_id"] = character->getID().get_value();
-    return make_game_value_result(
-               state, sol::make_object( state, std::move( value ) ) );
 }
 
 struct resolved_variable_talker {
@@ -607,7 +223,7 @@ resolved_variable_talker resolve_variable_talker(
     }
     result.error = game_handle_error{
         "wrong_kind",
-        "game.variables requires a creature, item, or vehicle GameHandle"
+        "services.variables requires a creature, item, or vehicle GameHandle"
     };
     return result;
 }
@@ -771,7 +387,7 @@ sol::table resolve_variable(
     validate_context_key( key );
     if( scope != "u" && scope != "npc" && scope != "global" &&
         scope != "context" && scope != "var" ) {
-        throw std::invalid_argument( "game.variables.resolve received an unknown scope" );
+        throw std::invalid_argument( "services.variables.resolve received an unknown scope" );
     }
     sol::state_view state( lua );
     std::string current_scope = scope;
@@ -802,7 +418,7 @@ sol::table resolve_variable(
             }
             if( !stored.is<std::string>() ) {
                 throw std::invalid_argument(
-                    "game.variables.resolve var scope must name another variable" );
+                    "services.variables.resolve var scope must name another variable" );
             }
             const var_info nested = process_variable( stored.as<std::string>() );
             switch( nested.type ) {
@@ -864,7 +480,7 @@ sol::table resolve_variable(
         return make_game_value_result(
                    state, sol::make_object( state, std::move( result ) ) );
     }
-    throw std::runtime_error( "game.variables.resolve exceeded variable indirection depth" );
+    throw std::runtime_error( "services.variables.resolve exceeded variable indirection depth" );
 }
 
 sol::table set_resolved_variable(
@@ -877,7 +493,7 @@ sol::table set_resolved_variable(
     validate_context_key( key );
     if( scope != "u" && scope != "npc" && scope != "global" &&
         scope != "context" && scope != "var" ) {
-        throw std::invalid_argument( "game.variables.set_resolved received an unknown scope" );
+        throw std::invalid_argument( "services.variables.set_resolved received an unknown scope" );
     }
     if( scope == "global" ) {
         return set_global_variable( lua, key, requested );
@@ -887,7 +503,7 @@ sol::table set_resolved_variable(
             sol::state_view state( lua );
             return make_game_error_result( state, {
                 "missing_actor",
-                "game.variables.set_resolved requires an actor for u/npc scope"
+                "services.variables.set_resolved requires an actor for u/npc scope"
             } );
         }
         return set_variable(
@@ -898,7 +514,7 @@ sol::table set_resolved_variable(
         sol::state_view state( lua );
         return make_game_error_result( state, {
             "missing_context",
-            "game.variables.set_resolved requires context scope data"
+            "services.variables.set_resolved requires context scope data"
         } );
     }
     if( scope == "context" ) {
@@ -923,12 +539,12 @@ sol::table set_resolved_variable(
         sol::state_view state( lua );
         return make_game_error_result( state, {
             "missing_indirection",
-            "game.variables.set_resolved var scope has no target variable"
+            "services.variables.set_resolved var scope has no target variable"
         } );
     }
     if( !stored.is<std::string>() ) {
         throw std::invalid_argument(
-            "game.variables.set_resolved var scope must name another variable" );
+            "services.variables.set_resolved var scope must name another variable" );
     }
     const var_info nested = process_variable( stored.as<std::string>() );
     std::string nested_scope;
@@ -957,99 +573,15 @@ sol::table set_resolved_variable(
 
 } // namespace
 
-void install_eoc_api(
-    sol::table &game,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write,
-    std::function<bool()> has_active_callback )
-{
-    sol::state_view lua( game.lua_state() );
-    sol::table eocs = lua.create_table();
-    eocs.set_function(
-        "list",
-        [require_read]( sol::this_state lua_state,
-    const sol::optional<sol::table> &options ) {
-        require_read();
-        return list_eocs( lua_state, options );
-    } );
-    eocs.set_function(
-        "get",
-        [require_read]( sol::this_state lua_state,
-    const script_game_id & id ) {
-        require_read();
-        return get_eoc( lua_state, id );
-    } );
-    eocs.set_function(
-        "test",
-        [current_runtime_generation, current_world_generation,
-                                     require_read, has_active_callback](
-            sol::this_state lua_state, const script_game_id & id,
-    const sol::optional<sol::table> &options ) {
-        require_read();
-        require_active_callback(
-            has_active_callback, "game.eocs.test" );
-        return test_eoc(
-                   lua_state, id, options,
-                   current_runtime_generation(),
-                   current_world_generation() );
-    } );
-    eocs.set_function(
-        "activate",
-        [current_runtime_generation, current_world_generation,
-                                     require_write, has_active_callback](
-            sol::this_state lua_state, const script_game_id & id,
-    const sol::optional<sol::table> &options ) {
-        require_write();
-        require_active_callback(
-            has_active_callback, "game.eocs.activate" );
-        return activate_eoc(
-                   lua_state, id, options,
-                   current_runtime_generation(),
-                   current_world_generation() );
-    } );
-    eocs.set_function(
-        "queue",
-        [current_runtime_generation, current_world_generation,
-                                     require_write, has_active_callback](
-            sol::this_state lua_state, const script_game_id & id,
-            const script_time_duration & delay,
-    const sol::optional<sol::table> &options ) {
-        require_write();
-        require_active_callback(
-            has_active_callback, "game.eocs.queue" );
-        return queue_eoc(
-                   lua_state, id, delay, options,
-                   current_runtime_generation(),
-                   current_world_generation() );
-    } );
-    eocs.set_function( "limits", [require_read]( sol::this_state lua_state ) {
-        require_read();
-        sol::state_view state( lua_state );
-        return state.create_table_with(
-                   "page", 256,
-                   "context_entries", 128,
-                   "context_key_bytes", 128,
-                   "context_string_bytes", 8192 );
-    } );
-    game["eocs"] = std::move( eocs );
-
-    install_variable_api( game, std::move( current_runtime_generation ),
-                          std::move( current_world_generation ),
-                          std::move( require_read ), std::move( require_write ),
-                          std::move( has_active_callback ) );
-}
-
 void install_variable_api(
-    sol::table &game,
+    sol::table &services,
     std::function<game_handle_runtime()> current_runtime_generation,
     std::function<std::size_t()> current_world_generation,
     std::function<void()> require_read,
     std::function<void()> require_write,
     std::function<bool()> has_active_callback )
 {
-    sol::state_view lua( game.lua_state() );
+    sol::state_view lua( services.lua_state() );
 
     sol::table variables = lua.create_table();
     variables.set_function(
@@ -1072,7 +604,7 @@ void install_variable_api(
     const std::string & key, const sol::object & value ) {
         require_write();
         require_active_callback(
-            has_active_callback, "game.variables.set" );
+            has_active_callback, "services.variables.set" );
         return set_variable(
                    lua_state, handle, key, value,
                    current_runtime_generation(),
@@ -1086,7 +618,7 @@ void install_variable_api(
     const std::string & key ) {
         require_write();
         require_active_callback(
-            has_active_callback, "game.variables.remove" );
+            has_active_callback, "services.variables.remove" );
         return remove_variable(
                    lua_state, handle, key,
                    current_runtime_generation(),
@@ -1103,7 +635,7 @@ void install_variable_api(
         [require_write, has_active_callback]( sol::this_state lua_state,
     const std::string &key, const sol::object &value ) {
         require_write();
-        require_active_callback( has_active_callback, "game.variables.set_global" );
+        require_active_callback( has_active_callback, "services.variables.set_global" );
         return set_global_variable( lua_state, key, value );
     } );
     variables.set_function(
@@ -1111,7 +643,7 @@ void install_variable_api(
         [require_write, has_active_callback]( sol::this_state lua_state,
     const std::string &key ) {
         require_write();
-        require_active_callback( has_active_callback, "game.variables.remove_global" );
+        require_active_callback( has_active_callback, "services.variables.remove_global" );
         return remove_global_variable( lua_state, key );
     } );
     variables.set_function(
@@ -1133,14 +665,14 @@ void install_variable_api(
             const sol::optional<game_handle> &actor, const std::string &scope,
             const std::string &key, const sol::object &value ) {
         require_write();
-        require_active_callback( has_active_callback, "game.variables.set_resolved" );
+        require_active_callback( has_active_callback, "services.variables.set_resolved" );
         return set_resolved_variable(
                    lua_state, context, actor, scope, key, value,
                    current_runtime_generation(), current_world_generation() );
     } );
-    game["variables"] = std::move( variables );
+    services["variables"] = std::move( variables );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

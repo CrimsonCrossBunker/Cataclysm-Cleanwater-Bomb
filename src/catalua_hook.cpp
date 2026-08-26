@@ -1,13 +1,270 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
-#include "catalua_ui_callbacks.h"
+#include "catalua_hook.h"
 
 #include <algorithm>
+#include <exception>
 #include <stdexcept>
 #include <utility>
 
-namespace cata::lua_ui
+#include "character.h"
+#include "catalua_dialogue_common.h"
+#include "debug.h"
+#include "catalua_runtime.h"
+#include "thread_pool.h"
+
+namespace cata::lua
 {
+
+bool native_hook_supports_result_field( const std::string_view name,
+                                        const std::string_view field )
+{
+    const script_hook_spec *spec = find_script_hook_spec( name );
+    return spec != nullptr && script_hook_supports_result( *spec, field );
+}
+
+bool native_hook_contract_exists( const std::string_view name )
+{
+    return find_script_hook_spec( name ) != nullptr;
+}
+
+native_hook_result dispatch_native_hook_result(
+    const std::string_view name,
+    const native_callback_arguments &arguments )
+{
+    if( is_pool_worker_thread() ) {
+        return {};
+    }
+    try {
+        return dispatch_runtime_hook( name, arguments, {} );
+    } catch( const std::exception &exception ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first Platform native hook '"
+                                    << name << "' failed: " << exception.what();
+        return {};
+    }
+}
+
+bool dispatch_native_hook(
+    const std::string_view name,
+    const native_callback_arguments &arguments )
+{
+    return dispatch_native_hook_result( name, arguments ).allowed;
+}
+
+namespace
+{
+
+bool dispatch_character_fatal( const std::string_view hook,
+                               Character &character, const Creature *killer )
+{
+    const bool allowed = dispatch_native_hook( hook, {
+        { "character", static_cast<const Character *>( &character ) },
+        { "killer", killer }
+    } );
+    if( !allowed ) {
+        character.prevent_death();
+    }
+    return allowed;
+}
+
+} // namespace
+
+bool dispatch_avatar_fatal( Character &character, const Creature *killer )
+{
+    return dispatch_character_fatal( "on_avatar_fatal", character, killer );
+}
+
+bool dispatch_npc_fatal( Character &character, const Creature *killer )
+{
+    return dispatch_character_fatal( "on_npc_fatal", character, killer );
+}
+
+bool has_native_hook( const std::string_view name )
+{
+    return !is_pool_worker_thread() && has_runtime_hook( name );
+}
+
+std::vector<std::string> collect_native_mapgen_factory_usages(
+    const std::vector<std::string> &candidates )
+{
+    if( is_pool_worker_thread() ) {
+        return {};
+    }
+    return dispatch_native_hook_result(
+               "on_make_mapgen_factory_list", {
+                   { "candidates", candidates }
+               } ).results;
+}
+
+void dispatch_native_monster_spawn(
+    const Creature &monster, const std::string_view source )
+{
+    const bool has_creature_spawn = has_native_hook( "on_creature_spawn" );
+    const bool has_monster_spawn = has_native_hook( "on_monster_spawn" );
+    if( !has_creature_spawn && !has_monster_spawn ) {
+        return;
+    }
+    native_callback_arguments payload = {
+        { "creature", &monster },
+        { "source", std::string( source ) }
+    };
+    if( has_creature_spawn ) {
+        dispatch_native_hook( "on_creature_spawn", payload );
+    }
+    if( has_monster_spawn ) {
+        payload.front().name = "monster";
+        dispatch_native_hook( "on_monster_spawn", payload );
+    }
+}
+
+void dispatch_native_npc_spawn(
+    const Character &npc, const std::string_view source )
+{
+    const bool has_creature_spawn = has_native_hook( "on_creature_spawn" );
+    const bool has_npc_spawn = has_native_hook( "on_npc_spawn" );
+    if( !has_creature_spawn && !has_npc_spawn ) {
+        return;
+    }
+    native_callback_arguments payload = {
+        { "creature", static_cast<const Creature *>( &npc ) },
+        { "source", std::string( source ) }
+    };
+    if( has_creature_spawn ) {
+        dispatch_native_hook( "on_creature_spawn", payload );
+    }
+    if( has_npc_spawn ) {
+        payload.front().name = "npc";
+        payload.front().value = &npc;
+        dispatch_native_hook( "on_npc_spawn", payload );
+    }
+}
+
+std::string dispatch_character_display_skill_info(
+    const Character &character, const std::string_view skill )
+{
+    if( !has_native_hook( "on_character_display_skill_info" ) ) {
+        return {};
+    }
+    return dispatch_native_hook_result( "on_character_display_skill_info", {
+        { "character", &character },
+        { "skill", native_callback_id { "skill", std::string( skill ) } }
+    } ).text;
+}
+
+bool dispatch_character_display_skill_action(
+    const Character &character, const std::string_view skill,
+    const std::string_view action )
+{
+    if( !has_native_hook( "on_character_display_skill_action" ) ) {
+        return false;
+    }
+    return dispatch_native_hook_result( "on_character_display_skill_action", {
+        { "character", &character },
+        { "skill", native_callback_id { "skill", std::string( skill ) } },
+        { "action", std::string( action ) }
+    } ).handled;
+}
+
+native_hook_result dispatch_native_dialogue_hook(
+    const std::string_view name, const const_talker &alpha,
+    const const_talker &beta, const std::string_view topic,
+    const std::optional<std::string_view> option,
+    const bool by_radio, const std::optional<std::string_view> reason )
+{
+    native_callback_arguments payload = {
+        { "alpha", &alpha },
+        { "beta", &beta },
+        { "topic", std::string( topic ) },
+        { "by_radio", by_radio },
+        { "reason", reason ? std::string( *reason ) : std::string() }
+    };
+    if( option ) {
+        payload.push_back( {
+            "option", std::string( *option )
+        } );
+    }
+    return dispatch_native_hook_result( name, payload );
+}
+
+void clear_dialogue_response_callbacks()
+{
+    cata::lua_dialogue::clear_response_callbacks(
+        cata::lua_dialogue::response_callback_origin::platform );
+}
+
+std::optional<std::string> dialogue_dynamic_line(
+    dialogue &d, const talk_topic &topic )
+{
+    return platform_dialogue_dynamic_line( d, topic );
+}
+
+void apply_lua_dialogue_speaker_effects(
+    dialogue &d, const talk_topic &topic )
+{
+    apply_platform_dialogue_speaker_effects( d, topic );
+}
+
+bool gen_lua_dialogue_responses(
+    dialogue &d, const talk_topic &topic )
+{
+    return gen_platform_dialogue_responses( d, topic );
+}
+
+void extend_lua_dialogue_responses(
+    dialogue &d, const talk_topic &topic )
+{
+    extend_platform_dialogue_responses( d, topic );
+}
+
+talk_topic apply_lua_dialogue_response(
+    dialogue &d, const std::uint64_t response_id,
+    const talk_topic &fallback, const bool trial_success )
+{
+    return cata::lua_dialogue::apply_response_callback(
+               d, response_id, fallback, trial_success );
+}
+
+bool begin_native_npc_interaction(
+    const Character &avatar, const Character &npc )
+{
+    const native_callback_arguments payload = {
+        { "avatar", &avatar },
+        { "npc", &npc }
+    };
+    if( !dispatch_native_hook( "on_try_npc_interaction", payload ) ) {
+        return false;
+    }
+    dispatch_native_hook( "on_npc_interaction", payload );
+    return true;
+}
+
+bool allow_native_monster_interaction(
+    const Character &avatar, const Creature &monster )
+{
+    return dispatch_native_hook( "on_try_monster_interaction", {
+        { "avatar", &avatar },
+        { "monster", &monster }
+    } );
+}
+
+bool allow_native_elevator_use(
+    const Character &character,
+    const native_callback_point &position,
+    const native_callback_point &destination )
+{
+    return dispatch_native_hook( "on_elevator_try_use", {
+        { "character", &character },
+        { "position", position },
+        { "destination", destination }
+    } );
+}
+
+std::vector<native_menu_entry> collect_native_hook_menu_entries(
+    const std::string_view name,
+    const native_callback_arguments &arguments )
+{
+    return dispatch_native_hook_result( name, arguments ).menu_entries;
+}
 
 const std::vector<script_hook_spec> &script_hook_specs()
 {
@@ -301,237 +558,6 @@ std::string_view script_hook_mode_name( const script_hook_mode mode )
     throw std::invalid_argument( "unknown Lua hook mode" );
 }
 
-const std::vector<script_callback_kind_spec> &script_callback_kind_specs()
-{
-    static const std::vector<script_callback_kind_spec> specs = {
-        {
-            "iuse", "item", {
-                { "can_use", true }, { "on_use", true }
-            }
-        },
-        {
-            "iwieldable", "item", {
-                { "can_unwield", true }, { "can_wield", true },
-                { "on_unwield", false }, { "on_wield", false }
-            }
-        },
-        {
-            "iwearable", "item", {
-                { "can_takeoff", true }, { "can_wear", true },
-                { "on_takeoff", false }, { "on_wear", false }
-            }
-        },
-        {
-            "iequippable", "item", {
-                { "on_break", false }, { "on_durability_change", false },
-                { "on_repair", false }
-            }
-        },
-        {
-            "istate", "item", {
-                { "on_drop", true, true }, { "on_pickup", false },
-                { "on_tick", false }
-            }
-        },
-        {
-            "imelee", "item", {
-                { "on_block", false }, { "on_hit", false },
-                { "on_melee_attack", true }, { "on_miss", false }
-            }
-        },
-        {
-            "iranged", "item", {
-                { "can_fire", true }, { "can_reload", true },
-                { "on_fire", true }, { "on_reload", false }
-            }
-        },
-        {
-            "bionic", "bionic", {
-                { "on_activate", false }, { "on_deactivate", false },
-                { "on_installed", false }, { "on_removed", false }
-            }
-        },
-        {
-            "mutation", "mutation", {
-                { "on_activate", false }, { "on_deactivate", false },
-                { "on_gain", false }, { "on_loss", false }
-            }
-        },
-        {
-            "trap", "trap", {
-                { "can_trigger", true }, { "on_trigger", false },
-                { "on_trigger_aftermath", false }
-            }
-        },
-        {
-            "monster", "monster", {
-                { "get_examine_menu_entries", true },
-                { "on_examine_menu_entry", false },
-                { "on_tame", false }
-            }
-        }
-    };
-    return specs;
-}
+} // namespace cata::lua
 
-const script_callback_kind_spec *find_script_callback_kind_spec(
-    const std::string_view kind )
-{
-    const std::vector<script_callback_kind_spec> &specs =
-        script_callback_kind_specs();
-    const auto found = std::find_if(
-                           specs.begin(), specs.end(),
-    [kind]( const script_callback_kind_spec & spec ) {
-        return spec.kind == kind;
-    } );
-    return found == specs.end() ? nullptr : &*found;
-}
-
-const script_callback_method_spec *find_script_callback_method_spec(
-    const script_callback_kind_spec &kind, const std::string_view method )
-{
-    const auto found = std::find_if(
-                           kind.methods.begin(), kind.methods.end(),
-    [method]( const script_callback_method_spec & spec ) {
-        return spec.name == method;
-    } );
-    return found == kind.methods.end() ? nullptr : &*found;
-}
-
-std::uint64_t script_callback_registry::subscribe(
-    std::string kind, std::string target, std::vector<std::string> methods,
-    const int priority, const std::size_t source_index, const bool once )
-{
-    const script_callback_kind_spec *kind_spec =
-        find_script_callback_kind_spec( kind );
-    if( kind_spec == nullptr ) {
-        throw std::invalid_argument( "unknown Lua callback actor kind: " + kind );
-    }
-    if( target.empty() || target.size() > 256 ) {
-        throw std::invalid_argument(
-            "Lua callback target must contain 1 to 256 bytes" );
-    }
-    if( methods.empty() ) {
-        throw std::invalid_argument(
-            "Lua callback registration requires at least one method" );
-    }
-    std::sort( methods.begin(), methods.end() );
-    if( std::adjacent_find( methods.begin(), methods.end() ) != methods.end() ) {
-        throw std::invalid_argument(
-            "Lua callback registration repeats a method" );
-    }
-    for( const std::string &method : methods ) {
-        if( find_script_callback_method_spec( *kind_spec, method ) == nullptr ) {
-            throw std::invalid_argument(
-                "unknown method '" + method + "' for Lua callback kind '" +
-                kind + "'" );
-        }
-    }
-    if( priority < minimum_priority || priority > maximum_priority ) {
-        throw std::invalid_argument(
-            "Lua callback priority must be within -10000..10000" );
-    }
-    if( registrations_.size() >= maximum_registrations ) {
-        throw std::runtime_error( "Lua callback registration limit reached" );
-    }
-    const std::size_t target_count = static_cast<std::size_t>( std::count_if(
-                                         registrations_.begin(), registrations_.end(),
-    [&kind, &target]( const script_callback_registration & entry ) {
-        return entry.kind == kind && entry.target == target;
-    } ) );
-    if( target_count >= maximum_registrations_per_target ) {
-        throw std::runtime_error(
-            "Lua callback per-target registration limit reached" );
-    }
-
-    const std::uint64_t id = next_id_++;
-    registrations_.push_back( {
-        id, std::move( kind ), std::move( target ), std::move( methods ),
-        priority, source_index, next_sequence_++, once
-    } );
-    return id;
-}
-
-bool script_callback_registry::unsubscribe(
-    const std::uint64_t id, const std::size_t source_index )
-{
-    const auto found = std::find_if(
-                           registrations_.begin(), registrations_.end(),
-    [id, source_index]( const script_callback_registration & entry ) {
-        return entry.id == id && entry.source_index == source_index;
-    } );
-    if( found == registrations_.end() ) {
-        return false;
-    }
-    registrations_.erase( found );
-    return true;
-}
-
-bool script_callback_registry::unsubscribe_unchecked( const std::uint64_t id )
-{
-    const auto found = std::find_if(
-                           registrations_.begin(), registrations_.end(),
-    [id]( const script_callback_registration & entry ) {
-        return entry.id == id;
-    } );
-    if( found == registrations_.end() ) {
-        return false;
-    }
-    registrations_.erase( found );
-    return true;
-}
-
-std::vector<script_callback_registration> script_callback_registry::matching(
-    const std::string_view kind, const std::string_view target,
-    const std::string_view method ) const
-{
-    std::vector<script_callback_registration> result;
-    for( const script_callback_registration &entry : registrations_ ) {
-        if( entry.kind == kind && entry.target == target &&
-            std::find( entry.methods.begin(), entry.methods.end(), method ) !=
-            entry.methods.end() ) {
-            result.push_back( entry );
-        }
-    }
-    std::stable_sort(
-        result.begin(), result.end(),
-        []( const script_callback_registration & left,
-    const script_callback_registration & right ) {
-        if( left.priority != right.priority ) {
-            return left.priority > right.priority;
-        }
-        return left.sequence < right.sequence;
-    } );
-    return result;
-}
-
-bool script_callback_registry::contains( const std::uint64_t id ) const
-{
-    return std::any_of(
-               registrations_.begin(), registrations_.end(),
-    [id]( const script_callback_registration & entry ) {
-        return entry.id == id;
-    } );
-}
-
-std::size_t script_callback_registry::size() const
-{
-    return registrations_.size();
-}
-
-const std::vector<script_callback_registration> &
-script_callback_registry::all() const
-{
-    return registrations_;
-}
-
-void script_callback_registry::clear()
-{
-    registrations_.clear();
-    next_id_ = 1;
-    next_sequence_ = 1;
-}
-
-} // namespace cata::lua_ui
-
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

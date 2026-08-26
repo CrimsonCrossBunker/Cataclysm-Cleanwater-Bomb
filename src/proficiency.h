@@ -25,10 +25,10 @@ template<typename E> struct enum_traits;
 template<typename T>
 class generic_factory;
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 class content_transaction;
-} // namespace cata::lua_platform
+} // namespace cata::lua
 
 enum class proficiency_bonus_type : int {
     strength,
@@ -68,7 +68,7 @@ class proficiency
 {
         friend class generic_factory<proficiency>;
         friend struct mod_tracker;
-        friend class cata::lua_platform::content_transaction;
+        friend class cata::lua::content_transaction;
 
         proficiency_id id;
         proficiency_category_id _category;

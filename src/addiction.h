@@ -15,7 +15,7 @@ class JsonObject;
 class JsonOut;
 template<typename T> class generic_factory;
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 class content_transaction;
 }
@@ -62,7 +62,7 @@ struct add_type {
             return _builtin;
         }
     private:
-        friend class cata::lua_platform::content_transaction;
+        friend class cata::lua::content_transaction;
 };
 
 class addiction

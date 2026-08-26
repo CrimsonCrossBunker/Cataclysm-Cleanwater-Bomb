@@ -1,17 +1,17 @@
 #pragma once
-#ifndef CATA_SRC_CATALUA_PLATFORM_WORLD_CONTENT_H
-#define CATA_SRC_CATALUA_PLATFORM_WORLD_CONTENT_H
+#ifndef CATA_SRC_CATALUA_CONTENT_WORLD_H
+#define CATA_SRC_CATALUA_CONTENT_WORLD_H
 
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
 
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "catalua_sol.h"
 #endif
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 
 class runtime;
@@ -29,7 +29,7 @@ class world_content_transaction
         world_content_transaction( const world_content_transaction & ) = delete;
         world_content_transaction &operator=( const world_content_transaction & ) = delete;
 
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
         void install_lua_api( sol::state &lua, sol::table &ccb, sol::table &content );
         bool register_definition( const sol::object &value, int operation );
 #endif
@@ -59,6 +59,6 @@ class world_content_transaction
         std::unique_ptr<impl> pimpl_;
 };
 
-} // namespace cata::lua_platform
+} // namespace cata::lua
 
-#endif // CATA_SRC_CATALUA_PLATFORM_WORLD_CONTENT_H
+#endif // CATA_SRC_CATALUA_CONTENT_WORLD_H

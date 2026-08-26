@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_achievements.h"
 
@@ -17,7 +17,7 @@
 #include "catalua_game_handle.h"
 #include "enum_conversions.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -433,11 +433,11 @@ sol::table list_achievement_definitions(
     const achievement_list_options options =
         read_list_options(
             requested,
-            "game.achievements.definitions" );
+            "services.achievements.definitions" );
     if( options.completion ||
         options.valid ) {
         throw std::invalid_argument(
-            "game.achievements.definitions does not accept live-state filters" );
+            "services.achievements.definitions does not accept live-state filters" );
     }
     const std::unordered_set <
     achievement_id > empty_valid;
@@ -490,7 +490,7 @@ sol::table get_achievement_definition(
                sol::state_view( lua ),
                resolve_achievement(
                    id,
-                   "game.achievements.definition" ) );
+                   "services.achievements.definition" ) );
 }
 
 sol::table list_achievement_states(
@@ -500,7 +500,7 @@ sol::table list_achievement_states(
     const achievement_list_options options =
         read_list_options(
             requested,
-            "game.achievements.list" );
+            "services.achievements.list" );
     const std::unordered_set <
     achievement_id > valid_ids =
         valid_achievement_ids();
@@ -559,7 +559,7 @@ sol::table get_achievement_state(
     const achievement &entry =
         resolve_achievement(
             id,
-            "game.achievements.get" );
+            "services.achievements.get" );
     const std::unordered_set <
     achievement_id > valid_ids =
         valid_achievement_ids();
@@ -619,11 +619,11 @@ sol::table report_manual_achievement(
     const achievement &entry =
         resolve_achievement(
             id,
-            "game.achievements.report" );
+            "services.achievements.report" );
     const achievement_completion completion =
         read_completion(
             requested_completion,
-            "game.achievements.report" );
+            "services.achievements.report" );
     sol::state_view state( lua );
     if( !entry.is_manually_given() ) {
         return make_game_error_result(
@@ -677,7 +677,7 @@ sol::table reset_manual_achievement(
     const achievement &entry =
         resolve_achievement(
             id,
-            "game.achievements.reset" );
+            "services.achievements.reset" );
     sol::state_view state( lua );
     if( !entry.is_manually_given() ) {
         return make_game_error_result(
@@ -800,6 +800,6 @@ void install_achievement_api(
         std::move( achievements );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

@@ -13,8 +13,7 @@
 #include "android_ui_mode.h"
 #include "cached_options.h"
 #include "calendar.h"
-#include "catalua_platform_content.h"
-#include "catalua_ui.h"
+#include "catalua_content.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "color.h"
@@ -94,7 +93,6 @@ struct options_snapshot {
     int selected_tab = 0;
     bool world_options_only = false;
     bool with_tabs = false;
-    bool has_mod_pages = false;
     bool has_hud_editor = false;
 };
 
@@ -105,7 +103,6 @@ enum class options_action_type : int {
     next_value,
     previous_tab,
     next_tab,
-    open_mod_pages,
     open_hud_editor,
     close,
 };
@@ -322,18 +319,8 @@ class options_imgui_page : public cataimgui::window
                         ImGui::PopStyleColor( 3 );
                     }
                 }
-                if( snapshot.has_mod_pages ) {
-                    if( !snapshot.tabs.empty() ) {
-                        ImGui::SameLine();
-                    }
-                    if( ImGui::Button( _( "Mods" ),
-                                       ImVec2( profile.width_compact,
-                                               profile.row_compact ) ) ) {
-                        actions.push_back( { options_action_type::open_mod_pages, 0 } );
-                    }
-                }
                 if( snapshot.has_hud_editor ) {
-                    if( !snapshot.tabs.empty() || snapshot.has_mod_pages ) {
+                    if( !snapshot.tabs.empty() ) {
                         ImGui::SameLine();
                     }
                     if( ImGui::Button( _( "HUD layout" ),
@@ -474,12 +461,12 @@ class options_imgui_page : public cataimgui::window
 
 } // namespace
 
-generic_factory<option_slider> &cata::lua_platform::detail::option_slider_registry()
+generic_factory<option_slider> &cata::lua::detail::option_slider_registry()
 {
     return option_slider_factory;
 }
 
-option_slider cata::lua_platform::detail::make_option_slider_native(
+option_slider cata::lua::detail::make_option_slider_native(
     const option_slider_native_definition &definition )
 {
     option_slider result;
@@ -4559,8 +4546,6 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
         snapshot.world_options_only = world_options_only;
         snapshot.with_tabs = with_tabs;
         snapshot.selected_tab = iCurrentPage;
-        snapshot.has_mod_pages = !world_options_only &&
-                                 cata::lua_ui::has_registered_pages( "settings.mods" );
 #if defined(__ANDROID__)
         snapshot.has_hud_editor = !world_options_only;
 #endif
@@ -4652,9 +4637,6 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
                     case options_action_type::next_tab:
                         action = "NEXT_TAB";
                         break;
-                    case options_action_type::open_mod_pages:
-                        cata::lua_ui::show_slot( "settings.mods" );
-                        continue;
                     case options_action_type::open_hud_editor:
 #if defined(__ANDROID__)
                         android_native_ui::show_android_hud_manager();

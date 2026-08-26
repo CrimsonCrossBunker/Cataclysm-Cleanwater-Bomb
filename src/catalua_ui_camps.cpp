@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_camps.h"
 
@@ -25,7 +25,7 @@
 #include "npctalk.h"
 #include "overmapbuffer.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -74,11 +74,11 @@ camp_options read_camp_options(
     if( result.offset < 0 ||
         result.offset > maximum_camp_offset ) {
         throw std::invalid_argument(
-            "game.camps list offset must be within 0..1000000" );
+            "services.camps list offset must be within 0..1000000" );
     }
     if( result.limit < 0 ) {
         throw std::invalid_argument(
-            "game.camps list limit cannot be negative" );
+            "services.camps list limit cannot be negative" );
     }
     result.limit = std::min(
                        result.limit, maximum_camp_limit );
@@ -86,12 +86,12 @@ camp_options read_camp_options(
         result.radius_omt >
         maximum_camp_radius_omt ) {
         throw std::invalid_argument(
-            "game.camps list radius_omt must be within 0..360" );
+            "services.camps list radius_omt must be within 0..360" );
     }
     if( result.query.size() >
         maximum_query_bytes ) {
         throw std::invalid_argument(
-            "game.camps list query exceeds 128 bytes" );
+            "services.camps list query exceeds 128 bytes" );
     }
     return result;
 }
@@ -362,7 +362,7 @@ sol::table camps_near(
     return list_camps_near(
                lua,
                require_absolute_omt(
-                   center, "game.camps.near" ),
+                   center, "services.camps.near" ),
                requested );
 }
 
@@ -386,7 +386,7 @@ sol::table get_camp(
 {
     const tripoint_abs_omt native_position =
         require_absolute_omt(
-            position, "game.camps.get" );
+            position, "services.camps.get" );
     sol::state_view state( lua );
     basecamp *entry =
         resolve_camp( native_position );
@@ -430,19 +430,19 @@ void validate_camp_name(
 {
     if( name.empty() ) {
         throw std::invalid_argument(
-            "game.camps.rename name cannot be empty" );
+            "services.camps.rename name cannot be empty" );
     }
     if( name.size() >
         maximum_camp_name_bytes ) {
         throw std::invalid_argument(
-            "game.camps.rename name exceeds 25 bytes" );
+            "services.camps.rename name exceeds 25 bytes" );
     }
     if( std::any_of(
     name.begin(), name.end(), []( const unsigned char ch ) {
     return ch < 0x20U || ch == 0x7fU;
 } ) ) {
         throw std::invalid_argument(
-            "game.camps.rename name cannot contain control characters" );
+            "services.camps.rename name cannot contain control characters" );
     }
 }
 
@@ -454,7 +454,7 @@ sol::table rename_camp(
     validate_camp_name( requested_name );
     const tripoint_abs_omt native_position =
         require_absolute_omt(
-            position, "game.camps.rename" );
+            position, "services.camps.rename" );
     sol::state_view state( lua );
     basecamp *entry =
         resolve_camp( native_position );
@@ -493,10 +493,10 @@ sol::table set_camp_owner(
     const script_game_id &owner )
 {
     require_faction_id(
-        owner, "game.camps.set_owner" );
+        owner, "services.camps.set_owner" );
     const tripoint_abs_omt native_position =
         require_absolute_omt(
-            position, "game.camps.set_owner" );
+            position, "services.camps.set_owner" );
     sol::state_view state( lua );
     basecamp *entry =
         resolve_camp( native_position );
@@ -548,15 +548,15 @@ sol::table set_camp_board_position(
     const tripoint_abs_omt native_position =
         require_absolute_omt(
             position,
-            "game.camps.set_board_position" );
+            "services.camps.set_board_position" );
     const tripoint_abs_ms native_board =
         require_absolute_ms(
             board_position,
-            "game.camps.set_board_position" );
+            "services.camps.set_board_position" );
     if( project_to<coords::omt>(
             native_board ) != native_position ) {
         throw std::invalid_argument(
-            "game.camps.set_board_position board must remain inside the camp overmap tile" );
+            "services.camps.set_board_position board must remain inside the camp overmap tile" );
     }
     sol::state_view state( lua );
     basecamp *entry =
@@ -879,6 +879,6 @@ void install_camp_api(
     game["camps"] = std::move( camps );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

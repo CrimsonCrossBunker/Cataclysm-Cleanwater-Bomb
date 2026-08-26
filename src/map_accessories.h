@@ -15,16 +15,16 @@ class generic_factory;
 
 class JsonObject;
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 class content_transaction;
-} // namespace cata::lua_platform
+} // namespace cata::lua
 
 class bash_damage_profile
 {
         friend class generic_factory<bash_damage_profile>;
         friend struct mod_tracker;
-        friend class cata::lua_platform::content_transaction;
+        friend class cata::lua::content_transaction;
 
         bool was_loaded = false;
         bash_damage_profile_id id;

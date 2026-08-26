@@ -6,7 +6,7 @@
 
 #include "catalua_sol.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 // Install native achievement definitions, live progress, and manual controls.
@@ -15,6 +15,6 @@ void install_achievement_api(
     std::function<void()> require_read,
     std::function<void()> require_write );
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
 #endif // CATA_SRC_CATALUA_UI_ACHIEVEMENTS_H

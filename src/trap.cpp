@@ -1,14 +1,14 @@
 #include "trap.h"
 
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 
 #include <cmath>
 #include <typeinfo>
 #include <vector>
 
 #include "bodypart.h"
-#include "catalua_platform_runtime.h"
-#include "catalua_ui.h"
+#include "catalua_runtime.h"
+#include "catalua_hook.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -45,7 +45,7 @@ generic_factory<trap> trap_factory( "trap" );
 
 } // namespace
 
-generic_factory<trap> &cata::lua_platform::detail::trap_registry()
+generic_factory<trap> &cata::lua::detail::trap_registry()
 {
     return trap_factory;
 }
@@ -348,29 +348,8 @@ void trap::trigger( const tripoint_bub_ms &pos, Creature *creature,
     if( creature != nullptr && !is_real_creature ) {
         return;
     }
-    const cata::lua_ui::native_callback_arguments payload = {
-        { "creature", static_cast<const Creature *>( creature ) },
-        { "item", static_cast<const item *>( triggering_item ) },
-        {
-            "trap", cata::lua_ui::native_callback_id {
-                "trap", id.str()
-            }
-        },
-        {
-            "position", cata::lua_ui::native_callback_point {
-                "bub_ms", tripoint_rel_ms( pos.x(), pos.y(), pos.z() )
-            }
-        }
-    };
-    if( !cata::lua_ui::dispatch_native_callback(
-            "trap", id.str(), "can_trigger", payload ) ) {
-        return;
-    }
-    cata::lua_ui::dispatch_native_callback(
-        "trap", id.str(), "on_trigger", payload );
-
     const std::optional<bool> continue_native =
-        cata::lua_platform::invoke_trap_trigger_handler(
+        cata::lua::invoke_trap_trigger_handler(
             id.str(), lua_platform_mod, lua_platform_trigger_handler,
             get_map().get_abs( pos ), creature, triggering_item );
     const bool triggered = continue_native && !*continue_native ?
@@ -384,8 +363,6 @@ void trap::trigger( const tripoint_bub_ms &pos, Creature *creature,
                 ch->getID(), id );
         }
     }
-    cata::lua_ui::dispatch_native_callback(
-        "trap", id.str(), "on_trigger_aftermath", payload );
 }
 
 bool trap::is_null() const

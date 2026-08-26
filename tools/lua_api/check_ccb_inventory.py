@@ -41,7 +41,6 @@ def check(path: Path) -> dict[str, int]:
         str(surface["id"]): surface
         for surface in expected["export_surfaces"]
     }
-    api_v5_roots = set(surfaces["api_v5"]["roots"])
     platform_v1_roots = set(surfaces["platform_v1"]["roots"])
     member_dispositions = sum(
         len(root["member_disposition"]["members"])
@@ -53,9 +52,7 @@ def check(path: Path) -> dict[str, int]:
         "event_types": len(expected["event_types"]),
         "native_domains": len(expected["native_domains"]),
         "export_roots": len(expected["export_roots"]),
-        "api_v5_roots": len(api_v5_roots),
         "platform_v1_roots": len(platform_v1_roots),
-        "shared_roots": len(api_v5_roots & platform_v1_roots),
         "member_dispositions": member_dispositions,
     }
 
@@ -76,10 +73,8 @@ def main() -> int:
         f"{summary['json_types']} JSON types, "
         f"{summary['event_types']} events, "
         f"{summary['native_domains']} runtime domains, "
-        f"{summary['export_roots']} unique export roots "
-        f"({summary['api_v5_roots']} API v5, "
-        f"{summary['platform_v1_roots']} Platform v1, "
-        f"{summary['shared_roots']} shared), and "
+        f"{summary['export_roots']} unique Platform export roots "
+        f"({summary['platform_v1_roots']} Platform v1), and "
         f"{summary['member_dispositions']} member dispositions"
     )
     return 0

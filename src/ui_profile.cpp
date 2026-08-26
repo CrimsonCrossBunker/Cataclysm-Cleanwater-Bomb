@@ -15,7 +15,7 @@
 
 #include "android_ui_mode.h"
 
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
     #include "catalua_sol.h"
     #include "path_info.h"
 #endif
@@ -26,7 +26,7 @@ namespace cata::ui
 namespace
 {
 
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 namespace fs = std::filesystem;
 
 constexpr int profile_schema = 1;
@@ -237,7 +237,7 @@ profile fallback_for_build()
 #endif
 }
 
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 std::string selected_profile_id()
 {
 #if defined(__ANDROID__)
@@ -521,7 +521,7 @@ std::string profile_last_error()
 bool load_profile_from_lua( const std::string_view source, const std::string_view source_name,
                             const profile &fallback, profile &result, std::string &error )
 {
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
     try {
         profile_memory_tracker memory;
         sol::state lua( sol::default_at_panic, profile_allocator, &memory );
@@ -675,7 +675,7 @@ bool load_profile_from_lua( const std::string_view source, const std::string_vie
 #else
     ( void )source;
     result = fallback;
-    error = std::string( source_name ) + ": Lua UI is not enabled in this build";
+    error = std::string( source_name ) + ": Lua Platform is not enabled in this build";
     return false;
 #endif
 }

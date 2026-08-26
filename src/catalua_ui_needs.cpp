@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_needs.h"
 
@@ -21,7 +21,7 @@
 #include "morale_types.h"
 #include "vitamin.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -200,7 +200,7 @@ sol::table set_needs(
 {
     const need_adjustments adjustments =
         read_need_adjustments(
-            requested_adjustments, "game.needs.set" );
+            requested_adjustments, "services.needs.set" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -262,7 +262,7 @@ sol::table modify_needs(
 {
     const need_adjustments deltas =
         read_need_adjustments(
-            requested_deltas, "game.needs.modify" );
+            requested_deltas, "services.needs.modify" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -324,7 +324,7 @@ sol::table set_calories(
     if( requested_kcal < 0 ||
         requested_kcal > maximum_stored_kcal ) {
         throw std::invalid_argument(
-            "game.needs.set_calories kcal "
+            "services.needs.set_calories kcal "
             "must be within 0..2000000" );
     }
     sol::state_view state( lua );
@@ -357,7 +357,7 @@ sol::table modify_calories(
     if( requested_delta < -maximum_need_magnitude ||
         requested_delta > maximum_need_magnitude ) {
         throw std::invalid_argument(
-            "game.needs.modify_calories delta "
+            "services.needs.modify_calories delta "
             "must be within -1000000..1000000" );
     }
     sol::state_view state( lua );
@@ -431,7 +431,7 @@ sol::table set_gut_calories(
 {
     if( requested_kcal < 0 ) {
         throw std::invalid_argument(
-            "game.needs.set_gut_calories kcal cannot be negative" );
+            "services.needs.set_gut_calories kcal cannot be negative" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -483,7 +483,7 @@ sol::table get_gut_vitamin(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    require_vitamin_id( id, "game.needs.get_gut_vitamin" );
+    require_vitamin_id( id, "services.needs.get_gut_vitamin" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -504,10 +504,10 @@ sol::table set_gut_vitamin(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    require_vitamin_id( id, "game.needs.set_gut_vitamin" );
+    require_vitamin_id( id, "services.needs.set_gut_vitamin" );
     if( requested_amount < 0 ) {
         throw std::invalid_argument(
-            "game.needs.set_gut_vitamin amount cannot be negative" );
+            "services.needs.set_gut_vitamin amount cannot be negative" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -534,7 +534,7 @@ sol::table modify_gut_vitamin(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    require_vitamin_id( id, "game.needs.modify_gut_vitamin" );
+    require_vitamin_id( id, "services.needs.modify_gut_vitamin" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -563,7 +563,7 @@ sol::table get_vitamin(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    require_vitamin_id( id, "game.needs.get_vitamin" );
+    require_vitamin_id( id, "services.needs.get_vitamin" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -584,11 +584,11 @@ sol::table set_vitamin(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    require_vitamin_id( id, "game.needs.set_vitamin" );
+    require_vitamin_id( id, "services.needs.set_vitamin" );
     if( std::abs( static_cast<std::int64_t>( requested_amount ) ) >
         maximum_need_magnitude ) {
         throw std::invalid_argument(
-            "game.needs.set_vitamin amount is outside its limit" );
+            "services.needs.set_vitamin amount is outside its limit" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -616,11 +616,11 @@ sol::table modify_vitamin(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    require_vitamin_id( id, "game.needs.modify_vitamin" );
+    require_vitamin_id( id, "services.needs.modify_vitamin" );
     if( std::abs( static_cast<std::int64_t>( requested_delta ) ) >
         maximum_need_magnitude ) {
         throw std::invalid_argument(
-            "game.needs.modify_vitamin delta is outside its limit" );
+            "services.needs.modify_vitamin delta is outside its limit" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -653,13 +653,13 @@ sol::table get_daily_calories(
     const int day = requested_day.value_or( 0 );
     if( day < 0 || day > 30 ) {
         throw std::invalid_argument(
-            "game.needs.daily_calories day must be within 0..30" );
+            "services.needs.daily_calories day must be within 0..30" );
     }
     const std::string type = requested_type.value_or( "total" );
     if( type != "spent" && type != "gained" &&
         type != "ingested" && type != "total" ) {
         throw std::invalid_argument(
-            "game.needs.daily_calories type must be spent, gained, ingested, or total" );
+            "services.needs.daily_calories type must be spent, gained, ingested, or total" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -721,7 +721,7 @@ sol::table get_morale(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    constexpr std::string_view api_name = "game.needs.morale";
+    constexpr std::string_view api_name = "services.needs.morale";
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_character(
@@ -756,26 +756,26 @@ morale_add_options read_morale_add_options(
     for( const auto &entry : *requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.needs.add_morale option names must be strings" );
+                "services.needs.add_morale option names must be strings" );
         }
         const std::string key = entry.first.as<std::string>();
         if( key == "maximum_bonus" ) {
             if( !entry.second.is<lua_Integer>() ) {
                 throw std::invalid_argument(
-                    "game.needs.add_morale maximum_bonus must be an integer" );
+                    "services.needs.add_morale maximum_bonus must be an integer" );
             }
             const lua_Integer value = entry.second.as<lua_Integer>();
             if( value < -maximum_morale_magnitude ||
                 value > maximum_morale_magnitude ) {
                 throw std::invalid_argument(
-                    "game.needs.add_morale maximum_bonus must be within "
+                    "services.needs.add_morale maximum_bonus must be within "
                     "-1000000..1000000" );
             }
             result.maximum_bonus = static_cast<int>( value );
         } else if( key == "duration" || key == "decay_start" ) {
             if( !entry.second.is<script_time_duration>() ) {
                 throw std::invalid_argument(
-                    "game.needs.add_morale option '" + key +
+                    "services.needs.add_morale option '" + key +
                     "' must be a TimeDuration" );
             }
             const script_time_duration value =
@@ -783,7 +783,7 @@ morale_add_options read_morale_add_options(
             if( value.to_native() < 0_turns ||
                 value.to_native() > 10000_days ) {
                 throw std::invalid_argument(
-                    "game.needs.add_morale option '" + key +
+                    "services.needs.add_morale option '" + key +
                     "' must be within 0 turns..10000 days" );
             }
             if( key == "duration" ) {
@@ -794,12 +794,12 @@ morale_add_options read_morale_add_options(
         } else if( key == "capped" ) {
             if( !entry.second.is<bool>() ) {
                 throw std::invalid_argument(
-                    "game.needs.add_morale capped must be a boolean" );
+                    "services.needs.add_morale capped must be a boolean" );
             }
             result.capped = entry.second.as<bool>();
         } else {
             throw std::invalid_argument(
-                "game.needs.add_morale received unknown option '" +
+                "services.needs.add_morale received unknown option '" +
                 key + "'" );
         }
     }
@@ -813,11 +813,11 @@ sol::table add_morale(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    constexpr std::string_view api_name = "game.needs.add_morale";
+    constexpr std::string_view api_name = "services.needs.add_morale";
     if( bonus < -maximum_morale_magnitude ||
         bonus > maximum_morale_magnitude ) {
         throw std::invalid_argument(
-            "game.needs.add_morale bonus must be within -1000000..1000000" );
+            "services.needs.add_morale bonus must be within -1000000..1000000" );
     }
     const morale_type native_type =
         require_morale_id( requested_type,
@@ -863,7 +863,7 @@ sol::table remove_morale(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    constexpr std::string_view api_name = "game.needs.remove_morale";
+    constexpr std::string_view api_name = "services.needs.remove_morale";
     const morale_type native_type =
         require_morale_id( requested_type,
                            std::string( api_name ) );
@@ -908,13 +908,13 @@ sol::table clear_morale(
     sol::optional<script_game_id> no_type;
     sol::table before = morale_state(
                             state, *character, no_type,
-                            "game.needs.clear_morale" );
+                            "services.needs.clear_morale" );
     character->clear_morale();
     sol::table value = state.create_table();
     value["before"] = std::move( before );
     value["after"] = morale_state(
                          state, *character, no_type,
-                         "game.needs.clear_morale" );
+                         "services.needs.clear_morale" );
     return make_game_value_result(
                state, sol::make_object(
                    state, std::move( value ) ) );
@@ -932,18 +932,18 @@ sleep_adjustments read_sleep_adjustments(
     for( const auto &entry : requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.needs.modify_sleep option keys "
+                "services.needs.modify_sleep option keys "
                 "must be strings" );
         }
         const std::string key = entry.first.as<std::string>();
         if( key != "daily" && key != "continuous" ) {
             throw std::invalid_argument(
-                "game.needs.modify_sleep received unknown option '" +
+                "services.needs.modify_sleep received unknown option '" +
                 key + "'" );
         }
         if( !entry.second.is<script_time_duration>() ) {
             throw std::invalid_argument(
-                "game.needs.modify_sleep option '" + key +
+                "services.needs.modify_sleep option '" + key +
                 "' must be a TimeDuration" );
         }
         const script_time_duration value =
@@ -951,7 +951,7 @@ sleep_adjustments read_sleep_adjustments(
         if( value.turns() < -maximum_sleep_adjustment_turns ||
             value.turns() > maximum_sleep_adjustment_turns ) {
             throw std::invalid_argument(
-                "game.needs.modify_sleep option '" + key +
+                "services.needs.modify_sleep option '" + key +
                 "' cannot exceed 366 days in magnitude" );
         }
         if( key == "daily" ) {
@@ -962,7 +962,7 @@ sleep_adjustments read_sleep_adjustments(
     }
     if( !result.daily && !result.continuous ) {
         throw std::invalid_argument(
-            "game.needs.modify_sleep requires "
+            "services.needs.modify_sleep requires "
             "at least one adjustment" );
     }
     return result;
@@ -1012,7 +1012,7 @@ sol::table reset_sleep(
     if( scope != "daily" && scope != "continuous" &&
         scope != "all" ) {
         throw std::invalid_argument(
-            "game.needs.reset_sleep scope must be "
+            "services.needs.reset_sleep scope must be "
             "'daily', 'continuous', or 'all'" );
     }
     sol::state_view state( lua );
@@ -1053,23 +1053,23 @@ health_adjustments read_health_adjustments(
     for( const auto &entry : requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.needs.set_health option keys must be strings" );
+                "services.needs.set_health option keys must be strings" );
         }
         const std::string key = entry.first.as<std::string>();
         if( key != "lifestyle" && key != "daily_health" ) {
             throw std::invalid_argument(
-                "game.needs.set_health received unknown option '" +
+                "services.needs.set_health received unknown option '" +
                 key + "'" );
         }
         if( !entry.second.is<int>() ) {
             throw std::invalid_argument(
-                "game.needs.set_health option '" + key +
+                "services.needs.set_health option '" + key +
                 "' must be an integer" );
         }
         const int value = entry.second.as<int>();
         if( value < -200 || value > 200 ) {
             throw std::invalid_argument(
-                "game.needs.set_health option '" + key +
+                "services.needs.set_health option '" + key +
                 "' must be within -200..200" );
         }
         if( key == "lifestyle" ) {
@@ -1080,7 +1080,7 @@ health_adjustments read_health_adjustments(
     }
     if( !result.lifestyle && !result.daily_health ) {
         throw std::invalid_argument(
-            "game.needs.set_health requires "
+            "services.needs.set_health requires "
             "at least one adjustment" );
     }
     return result;
@@ -1134,7 +1134,7 @@ health_deltas read_health_deltas(
     for( const auto &entry : requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "game.needs.modify_health option keys "
+                "services.needs.modify_health option keys "
                 "must be strings" );
         }
         const std::string key = entry.first.as<std::string>();
@@ -1142,12 +1142,12 @@ health_deltas read_health_deltas(
             key != "daily_health_cap" &&
             key != "health_tally" ) {
             throw std::invalid_argument(
-                "game.needs.modify_health received unknown option '" +
+                "services.needs.modify_health received unknown option '" +
                 key + "'" );
         }
         if( !entry.second.is<int>() ) {
             throw std::invalid_argument(
-                "game.needs.modify_health option '" + key +
+                "services.needs.modify_health option '" + key +
                 "' must be an integer" );
         }
         const int value = entry.second.as<int>();
@@ -1156,7 +1156,7 @@ health_deltas read_health_deltas(
             maximum_need_magnitude : 200;
         if( value < -maximum || value > maximum ) {
             throw std::invalid_argument(
-                "game.needs.modify_health option '" + key +
+                "services.needs.modify_health option '" + key +
                 "' exceeds its supported magnitude" );
         }
         if( key == "lifestyle" ) {
@@ -1172,13 +1172,13 @@ health_deltas read_health_deltas(
     if( !result.lifestyle && !result.daily_health &&
         !result.daily_health_cap && !result.health_tally ) {
         throw std::invalid_argument(
-            "game.needs.modify_health requires "
+            "services.needs.modify_health requires "
             "at least one adjustment" );
     }
     if( result.daily_health.has_value() !=
         result.daily_health_cap.has_value() ) {
         throw std::invalid_argument(
-            "game.needs.modify_health daily_health and "
+            "services.needs.modify_health daily_health and "
             "daily_health_cap must be provided together" );
     }
     return result;
@@ -1488,6 +1488,6 @@ void install_need_api(
     game["needs"] = std::move( needs );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

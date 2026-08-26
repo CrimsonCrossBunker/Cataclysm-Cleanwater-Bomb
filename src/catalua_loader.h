@@ -1,20 +1,20 @@
 #pragma once
-#ifndef CATA_SRC_CATALUA_PLATFORM_H
-#define CATA_SRC_CATALUA_PLATFORM_H
+#ifndef CATA_SRC_CATALUA_LOADER_H
+#define CATA_SRC_CATALUA_LOADER_H
 
 #include <filesystem>
 #include <string>
 #include <string_view>
 #include <vector>
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 
 constexpr int platform_version = 1;
 
 constexpr bool is_enabled() noexcept
 {
-#if defined(CATA_ENABLE_LUA_UI) && CATA_ENABLE_LUA_UI
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
     return true;
 #else
     return false;
@@ -110,6 +110,6 @@ void after_save( bool success, const std::string &error );
 /** Run due named persistent tasks at the current game turn. */
 void on_turn();
 
-} // namespace cata::lua_platform
+} // namespace cata::lua
 
-#endif // CATA_SRC_CATALUA_PLATFORM_H
+#endif // CATA_SRC_CATALUA_LOADER_H

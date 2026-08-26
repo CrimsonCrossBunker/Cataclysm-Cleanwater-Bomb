@@ -6,16 +6,16 @@
 
 #include "catalua_sol.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
-// Extend the immutable game.time value factories with native calendar
+// Extend immutable services.time value factories with native calendar
 // snapshots and checked world-clock controls.
 void install_time_api(
     sol::table &game,
     std::function<void()> require_read,
     std::function<void()> require_write );
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
 #endif // CATA_SRC_CATALUA_UI_TIME_H

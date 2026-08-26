@@ -77,7 +77,7 @@ function ui.open_codex_menu(context)
         elseif choice == "chapter_1" then
             show_chapter_dialog(
                 "第 1 章：零配置发现与 mod.lua 架构",
-                "• 零配置发现：只需在 Mod 根目录放置 main.lua，无需 modinfo.json 或 manifest.json。\n" ..
+                "• 零配置发现：只需在 Mod 根目录放置 main.lua，无需 modinfo.json。\n" ..
                 "• mod.lua：可选的高级元数据文件，返回 ccb.ModDefinition { id, name, version, dependencies }。\n" ..
                 "• 模块组织：建议将数据定义放入 content/，行为逻辑放入 runtime/，通过 local require 载入。\n" ..
                 "• 事务与安全：Platform v1 提供加载时事务暂存与冲突回滚，Lua 接收代际安全句柄。"

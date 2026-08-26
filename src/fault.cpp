@@ -4,7 +4,7 @@
 #include <utility>
 #include <vector>
 
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
@@ -26,13 +26,13 @@ std::map<std::string, std::vector<fault_id>> faults_by_type;
 
 } // namespace
 
-generic_factory<fault> &cata::lua_platform::detail::fault_registry()
+generic_factory<fault> &cata::lua::detail::fault_registry()
 {
     return fault_factory;
 }
 
-std::vector<cata::lua_platform::detail::fault_snapshot_entry>
-cata::lua_platform::detail::fault_registry_snapshot()
+std::vector<cata::lua::detail::fault_snapshot_entry>
+cata::lua::detail::fault_registry_snapshot()
 {
     std::vector<fault_snapshot_entry> result;
     for( const fault &value : fault_factory.get_all() ) {
@@ -70,12 +70,12 @@ cata::lua_platform::detail::fault_registry_snapshot()
     return result;
 }
 
-generic_factory<fault_fix> &cata::lua_platform::detail::fault_fix_registry()
+generic_factory<fault_fix> &cata::lua::detail::fault_fix_registry()
 {
     return fault_fixes_factory;
 }
 
-generic_factory<fault_group> &cata::lua_platform::detail::fault_group_registry()
+generic_factory<fault_group> &cata::lua::detail::fault_group_registry()
 {
     return fault_group_factory;
 }

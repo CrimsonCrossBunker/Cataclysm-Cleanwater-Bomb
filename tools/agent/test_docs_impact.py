@@ -13,11 +13,11 @@ from check_docs_impact import (
 )
 
 
-def complete_body(document_id: str = "api.lua.v5.overview") -> str:
+def complete_body(document_id: str = "architecture.lua-first-platform") -> str:
     return f"""#### Responsible human
 @maintainer
 #### Documentation impact
-Refresh the Lua v5 contract reference after the source change.
+Refresh the Lua-first Platform contract reference after the source change.
 #### Related CCB-Docs PR
 https://github.com/CrimsonCrossBunker/CCB-Docs/pull/42
 #### Affected documentation IDs
@@ -41,8 +41,8 @@ class DocsImpactTest(unittest.TestCase):
             {
                 "id": "lua",
                 "enforcement": "required",
-                "patterns": ["data/lua/*", "src/catalua_ui_*"],
-                "documentation_ids": ["api.lua.v5.overview"],
+                "patterns": ["data/lua/*", "src/catalua_*"],
+                "documentation_ids": ["architecture.lua-first-platform"],
                 "generated_reference_impact": True,
                 "required_check_ids": ["agent-context", "lua-contract"],
             },
@@ -50,10 +50,10 @@ class DocsImpactTest(unittest.TestCase):
 
     def test_matches_only_relevant_paths(self) -> None:
         result = impacts(
-            ["src/game.cpp", "data/lua/manifest.schema.json"], self.rules
+            ["src/game.cpp", "data/lua/types/ccb_platform_v1.d.lua"], self.rules
         )
         self.assertEqual(
-            ["data/lua/manifest.schema.json"], result[0]["matched_files"]
+            ["data/lua/types/ccb_platform_v1.d.lua"], result[0]["matched_files"]
         )
         self.assertEqual(result[0]["enforcement"], "required")
 
@@ -69,7 +69,7 @@ class DocsImpactTest(unittest.TestCase):
         self.assertEqual(len(documentation_field_warnings(body, result)), 4)
 
     def test_required_mapping_blocks_missing_fields(self) -> None:
-        result = impacts(["data/lua/manifest.schema.json"], self.rules)
+        result = impacts(["data/lua/types/ccb_platform_v1.d.lua"], self.rules)
         body = "#### Responsible human\n@maintainer\n"
         errors = validate_pr_body(body, result)
         self.assertEqual(len(errors), 4)
@@ -79,7 +79,7 @@ class DocsImpactTest(unittest.TestCase):
         self.assertEqual(documentation_field_warnings(body, result), [])
 
     def test_required_mapping_blocks_template_placeholders(self) -> None:
-        result = impacts(["data/lua/manifest.schema.json"], self.rules)
+        result = impacts(["data/lua/types/ccb_platform_v1.d.lua"], self.rules)
         body = """#### Responsible human
 @maintainer
 #### Documentation impact
@@ -96,11 +96,11 @@ TBD
         self.assertTrue(all("placeholder" in error for error in errors))
 
     def test_required_mapping_accepts_complete_fields(self) -> None:
-        result = impacts(["data/lua/manifest.schema.json"], self.rules)
+        result = impacts(["data/lua/types/ccb_platform_v1.d.lua"], self.rules)
         self.assertEqual(validate_pr_body(complete_body(), result), [])
 
     def test_required_mapping_rejects_wrong_docs_repository(self) -> None:
-        result = impacts(["data/lua/manifest.schema.json"], self.rules)
+        result = impacts(["data/lua/types/ccb_platform_v1.d.lua"], self.rules)
         body = complete_body().replace(
             "CrimsonCrossBunker/CCB-Docs", "CrimsonCrossBunker/Other"
         )
@@ -108,7 +108,7 @@ TBD
         self.assertTrue(any("CCB-Docs" in error for error in errors))
 
     def test_required_mapping_rejects_unmapped_document_id(self) -> None:
-        result = impacts(["data/lua/manifest.schema.json"], self.rules)
+        result = impacts(["data/lua/types/ccb_platform_v1.d.lua"], self.rules)
         errors = validate_pr_body(complete_body("unrelated.page"), result)
         self.assertTrue(any("mapped ID" in error for error in errors))
 
@@ -128,7 +128,7 @@ TBD
         errors = validate_pr_body(complete_body(), result)
         self.assertEqual(len(errors), 1)
         self.assertIn("eoc", errors[0])
-        body = complete_body("api.lua.v5.overview, eoc.overview")
+        body = complete_body("architecture.lua-first-platform, eoc.overview")
         self.assertEqual(validate_pr_body(body, result), [])
 
     def test_responsible_human_cannot_be_placeholder_or_bot(self) -> None:
@@ -141,7 +141,7 @@ TBD
         self.assertTrue(validate_pr_body("#### Responsible human\nNone\n"))
 
     def test_report_names_enforcement_and_checks(self) -> None:
-        result = impacts(["data/lua/manifest.schema.json"], self.rules)
+        result = impacts(["data/lua/types/ccb_platform_v1.d.lua"], self.rules)
         output = report(result)
         self.assertIn("[required] lua", output)
         self.assertIn("agent-context, lua-contract", output)

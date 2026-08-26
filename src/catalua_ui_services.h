@@ -7,7 +7,7 @@
 #include <string_view>
 #include <vector>
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 struct script_service_definition {
@@ -43,6 +43,6 @@ class script_service_registry
 bool is_safe_service_identifier( std::string_view value );
 bool is_safe_service_provider_identifier( std::string_view value );
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
 #endif // CATA_SRC_CATALUA_UI_SERVICES_H

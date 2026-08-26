@@ -1,4 +1,4 @@
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 
 #include "shop_cons_rate.h"
 
@@ -62,19 +62,19 @@ void shopkeeper_blacklist::reset()
 }
 
 generic_factory<shopkeeper_blacklist> &
-cata::lua_platform::detail::shopkeeper_blacklist_registry()
+cata::lua::detail::shopkeeper_blacklist_registry()
 {
     return shop_blacklist_factory;
 }
 
 generic_factory<shopkeeper_whitelist> &
-cata::lua_platform::detail::shopkeeper_whitelist_registry()
+cata::lua::detail::shopkeeper_whitelist_registry()
 {
     return shop_whitelist_factory;
 }
 
 generic_factory<shopkeeper_cons_rates> &
-cata::lua_platform::detail::shopkeeper_cons_rates_registry()
+cata::lua::detail::shopkeeper_cons_rates_registry()
 {
     return shop_cons_rate_factory;
 }

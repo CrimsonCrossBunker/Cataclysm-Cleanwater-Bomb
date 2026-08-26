@@ -24,6 +24,7 @@
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "catacharset.h"
+#include "catalua_hook.h"
 #include "catalua_ui.h"
 #include "character_id.h"
 #include "city.h"
@@ -378,7 +379,7 @@ void map::generate( const tripoint_abs_omt &p, const time_point &when, bool save
                 }
             }
             if( any_missing || !save_results ) {
-                cata::lua_ui::dispatch_mapgen_postprocess( dat );
+                cata::lua::dispatch_mapgen_postprocess( dat );
                 set_queued_points();
             }
         }
@@ -602,7 +603,7 @@ class mapgen_factory
             const std::vector<std::string> candidates(
                 result.begin(), result.end() );
             const std::vector<std::string> script_usages =
-                cata::lua_ui::collect_native_mapgen_factory_usages(
+                cata::lua::collect_native_mapgen_factory_usages(
                     candidates );
             result.insert( script_usages.begin(), script_usages.end() );
             return result;
@@ -6559,7 +6560,7 @@ void map::draw_map( mapgendata &dat )
     const std::string function_key = terrain_type->get_mapgen_id();
 
     if( !run_mapgen_func( function_key, dat ) &&
-        !cata::lua_ui::dispatch_mapgen_generate( dat ) ) {
+        !cata::lua::dispatch_mapgen_generate( dat ) ) {
         debugmsg( "Error: tried to generate map for omtype %s, \"%s\" (id_mapgen %s)",
                   terrain_type.id().c_str(), terrain_type->get_name( om_vision_level::full ), function_key.c_str() );
         // Fallback to the default mapgen for this z-level or just a grass fill if something has gone horribly wrong

@@ -20,12 +20,12 @@ void load_speech( const JsonObject &jo );
 void reset_speech();
 const SpeechBubble &get_speech( const std::string &label );
 
-namespace cata::lua_platform::detail
+namespace cata::lua::detail
 {
 const std::vector<SpeechBubble> *speech_registry_find( std::string_view label );
 std::vector<std::pair<std::string, std::vector<SpeechBubble>>> speech_registry_snapshot();
 void speech_registry_set( const std::string &label, std::vector<SpeechBubble> lines );
 void speech_registry_erase( std::string_view label );
-} // namespace cata::lua_platform::detail
+} // namespace cata::lua::detail
 
 #endif // CATA_SRC_SPEECH_H

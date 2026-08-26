@@ -1,6 +1,6 @@
 #include "gates.h"
 
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 
 #include <algorithm>
 #include <array>
@@ -60,7 +60,7 @@ static gate_id get_gate_id( const tripoint_bub_ms &pos )
 
 generic_factory<gate_data> gates_data( "gate type" );
 
-generic_factory<gate_data> &cata::lua_platform::detail::gate_registry()
+generic_factory<gate_data> &cata::lua::detail::gate_registry()
 {
     return gates_data;
 }

@@ -225,7 +225,7 @@ jobs:
         SOUND: ${{ matrix.sound }}
         SDL3: ${{ matrix.sdl3 }}
         LOCALIZE: ${{ matrix.localize }}
-        CATA_ENABLE_LUA_UI: 1
+        CATA_ENABLE_LUA_PLATFORM: 1
         MODS: ${{ matrix.mods }}
         SANITIZE: ${{ matrix.sanitize }}
         TEST_STAGE: ${{ matrix.test-stage }}

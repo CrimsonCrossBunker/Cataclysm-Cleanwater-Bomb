@@ -20,20 +20,20 @@
 // header static like CBN does.
 static std::unordered_map<vpalette_id, VehiclePalette> vehicle_color_palettes;
 
-const VehiclePalette *cata::lua_platform::detail::vehicle_color_palette_registry_find(
+const VehiclePalette *cata::lua::detail::vehicle_color_palette_registry_find(
     const vpalette_id &id )
 {
     const auto iter = vehicle_color_palettes.find( id );
     return iter == vehicle_color_palettes.end() ? nullptr : &iter->second;
 }
 
-void cata::lua_platform::detail::vehicle_color_palette_registry_set(
+void cata::lua::detail::vehicle_color_palette_registry_set(
     const VehiclePalette &value )
 {
     vehicle_color_palettes[value.id] = value;
 }
 
-void cata::lua_platform::detail::vehicle_color_palette_registry_erase(
+void cata::lua::detail::vehicle_color_palette_registry_erase(
     const vpalette_id &id )
 {
     vehicle_color_palettes.erase( id );

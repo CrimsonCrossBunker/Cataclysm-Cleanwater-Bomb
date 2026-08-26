@@ -12,8 +12,8 @@
 
 #include "bodypart.h"
 #include "cata_imgui.h"
-#include "catalua_platform_content.h"
-#include "catalua_platform_runtime.h"
+#include "catalua_content.h"
+#include "catalua_runtime.h"
 #include "cata_utility.h"
 #include "character.h"
 #include "character_attire.h"
@@ -76,22 +76,22 @@ generic_factory<ma_buff> ma_buffs( "martial art buff" );
 generic_factory<attack_vector> attack_vector_factory( "attack vector" );
 } // namespace
 
-generic_factory<weapon_category> &cata::lua_platform::detail::weapon_category_registry()
+generic_factory<weapon_category> &cata::lua::detail::weapon_category_registry()
 {
     return weapon_category_factory;
 }
 
-generic_factory<attack_vector> &cata::lua_platform::detail::attack_vector_registry()
+generic_factory<attack_vector> &cata::lua::detail::attack_vector_registry()
 {
     return attack_vector_factory;
 }
 
-generic_factory<ma_technique> &cata::lua_platform::detail::ma_technique_registry()
+generic_factory<ma_technique> &cata::lua::detail::ma_technique_registry()
 {
     return ma_techniques;
 }
 
-generic_factory<martialart> &cata::lua_platform::detail::martialart_registry()
+generic_factory<martialart> &cata::lua::detail::martialart_registry()
 {
     return martialarts;
 }
@@ -676,7 +676,7 @@ class ma_buff_effect_type : public effect_type
 };
 } // namespace
 
-void cata::lua_platform::detail::refresh_attack_vector_registry()
+void cata::lua::detail::refresh_attack_vector_registry()
 {
     attack_vector_factory.finalize();
     for( attack_vector &vector : attack_vector_factory.get_all_mod() ) {
@@ -715,7 +715,7 @@ void finalize_martial_arts()
         // bother us because ma_buff_effect_type does not have any members that can be sliced.
         effect_type::register_ma_buff_effect( new_eff );
     }
-    cata::lua_platform::detail::refresh_attack_vector_registry();
+    cata::lua::detail::refresh_attack_vector_registry();
     ma_buffs.finalize();
 }
 
@@ -1370,67 +1370,67 @@ void martialart::activate_eocs( Character &u,
 void martialart::apply_static_eocs( Character &u ) const
 {
     activate_eocs( u, static_eocs );
-    cata::lua_platform::invoke_martial_art_handler( id.str(), "static", u );
+    cata::lua::invoke_martial_art_handler( id.str(), "static", u );
 }
 
 void martialart::apply_onmove_eocs( Character &u ) const
 {
     activate_eocs( u, onmove_eocs );
-    cata::lua_platform::invoke_martial_art_handler( id.str(), "move", u );
+    cata::lua::invoke_martial_art_handler( id.str(), "move", u );
 }
 
 void martialart::apply_onpause_eocs( Character &u ) const
 {
     activate_eocs( u, onpause_eocs );
-    cata::lua_platform::invoke_martial_art_handler( id.str(), "pause", u );
+    cata::lua::invoke_martial_art_handler( id.str(), "pause", u );
 }
 
 void martialart::apply_onhit_eocs( Character &u ) const
 {
     activate_eocs( u, onhit_eocs );
-    cata::lua_platform::invoke_martial_art_handler( id.str(), "hit", u );
+    cata::lua::invoke_martial_art_handler( id.str(), "hit", u );
 }
 
 void martialart::apply_onattack_eocs( Character &u ) const
 {
     activate_eocs( u, onattack_eocs );
-    cata::lua_platform::invoke_martial_art_handler( id.str(), "attack", u );
+    cata::lua::invoke_martial_art_handler( id.str(), "attack", u );
 }
 
 void martialart::apply_ondodge_eocs( Character &u ) const
 {
     activate_eocs( u, ondodge_eocs );
-    cata::lua_platform::invoke_martial_art_handler( id.str(), "dodge", u );
+    cata::lua::invoke_martial_art_handler( id.str(), "dodge", u );
 }
 
 void martialart::apply_onblock_eocs( Character &u ) const
 {
     activate_eocs( u, onblock_eocs );
-    cata::lua_platform::invoke_martial_art_handler( id.str(), "block", u );
+    cata::lua::invoke_martial_art_handler( id.str(), "block", u );
 }
 
 void martialart::apply_ongethit_eocs( Character &u ) const
 {
     activate_eocs( u, ongethit_eocs );
-    cata::lua_platform::invoke_martial_art_handler( id.str(), "gethit", u );
+    cata::lua::invoke_martial_art_handler( id.str(), "gethit", u );
 }
 
 void martialart::apply_onmiss_eocs( Character &u ) const
 {
     activate_eocs( u, onmiss_eocs );
-    cata::lua_platform::invoke_martial_art_handler( id.str(), "miss", u );
+    cata::lua::invoke_martial_art_handler( id.str(), "miss", u );
 }
 
 void martialart::apply_oncrit_eocs( Character &u ) const
 {
     activate_eocs( u, oncrit_eocs );
-    cata::lua_platform::invoke_martial_art_handler( id.str(), "crit", u );
+    cata::lua::invoke_martial_art_handler( id.str(), "crit", u );
 }
 
 void martialart::apply_onkill_eocs( Character &u ) const
 {
     activate_eocs( u, onkill_eocs );
-    cata::lua_platform::invoke_martial_art_handler( id.str(), "kill", u );
+    cata::lua::invoke_martial_art_handler( id.str(), "kill", u );
 }
 
 bool martialart::has_technique( const Character &u, const matec_id &tec_id ) const

@@ -41,10 +41,10 @@ using mon_action_defend = void ( * )( monster &, Creature *, dealt_projectile_at
 using bodytype_id = std::string;
 class JsonObject;
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 class content_transaction;
-} // namespace cata::lua_platform
+} // namespace cata::lua
 
 // These are triggers which may affect the monster's anger or morale.
 // They are handled in monster::check_triggers(), in monster.cpp
@@ -343,7 +343,7 @@ struct revive_type {
 struct mtype {
     private:
         friend class MonsterGenerator;
-        friend class cata::lua_platform::content_transaction;
+        friend class cata::lua::content_transaction;
 
         enum_bitset<mon_trigger> anger;
         enum_bitset<mon_trigger> fear;

@@ -24,7 +24,7 @@
 #include "cached_options.h"
 #include "calendar.h"
 #include "catacharset.h"
-#include "catalua_ui.h"
+#include "catalua_hook.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
@@ -1541,15 +1541,6 @@ bool Character::unwield()
     if( !can_unwield( weapon ).success() ) {
         return false;
     }
-    if( !cata::lua_ui::dispatch_native_callback(
-    "iwieldable", weapon.typeId().str(), "can_unwield", {
-    { "character", static_cast<const Character *>( this ) },
-        { "item", static_cast<const item *>( &weapon ) }
-    } ) ) {
-        return false;
-    }
-    item callback_item = weapon;
-
     // currently the only way to unwield NO_UNWIELD weapon is if it's a bionic that can be deactivated
     if( weapon.has_flag( flag_NO_UNWIELD ) ) {
         std::optional<bionic *> bio_opt = find_bionic_by_uid( get_weapon_bionic_uid() );
@@ -1564,11 +1555,6 @@ bool Character::unwield()
         inv->unsort();
     }
 
-    cata::lua_ui::dispatch_native_callback(
-    "iwieldable", callback_item.typeId().str(), "on_unwield", {
-        { "character", static_cast<const Character *>( this ) },
-        { "item", static_cast<const item *>( &callback_item ) }
-    } );
     return true;
 }
 
@@ -2947,14 +2933,6 @@ bool Character::wield( item &it, std::optional<int> obtain_cost, bool combat )
     if( !can_wield( it ).success() ) {
         return false;
     }
-    if( !cata::lua_ui::dispatch_native_callback(
-    "iwieldable", it.typeId().str(), "can_wield", {
-    { "character", static_cast<const Character *>( this ) },
-        { "item", static_cast<const item *>( &it ) }
-    } ) ) {
-        return false;
-    }
-
     bool combine_stacks = wielded && it.can_combine( *wielded );
     cached_info.erase( "weapon_value" );
 
@@ -3050,14 +3028,6 @@ bool Character::wield_contents( item &container, item *internal_item, bool penal
         add_msg_if_player( m_info, "%s", ret.c_str() );
         return false;
     }
-    if( !cata::lua_ui::dispatch_native_callback(
-    "iwieldable", internal_item->typeId().str(), "can_wield", {
-    { "character", static_cast<const Character *>( this ) },
-        { "item", static_cast<const item *>( internal_item ) }
-    } ) ) {
-        return false;
-    }
-
     int mv = 0;
 
     if( has_wield_conflicts( *internal_item ) ) {

@@ -16,7 +16,7 @@
 class JsonObject;
 class item;
 
-namespace cata::lua_platform
+namespace cata::lua
 {
 class content_transaction;
 namespace detail
@@ -37,7 +37,7 @@ struct item_category_snapshot_entry {
 };
 std::vector<item_category_snapshot_entry> item_category_snapshot();
 } // namespace detail
-} // namespace cata::lua_platform
+} // namespace cata::lua
 
 // this is a helper struct with rules for picking a zone
 struct zone_priority_data {
@@ -58,9 +58,9 @@ struct zone_priority_data {
  */
 class item_category
 {
-        friend class cata::lua_platform::content_transaction;
-        friend std::vector<cata::lua_platform::detail::item_category_snapshot_entry>
-        cata::lua_platform::detail::item_category_snapshot();
+        friend class cata::lua::content_transaction;
+        friend std::vector<cata::lua::detail::item_category_snapshot_entry>
+        cata::lua::detail::item_category_snapshot();
     private:
         /** Name of category for displaying to the user */
         translation name_header_; // in inventory UI headers etc

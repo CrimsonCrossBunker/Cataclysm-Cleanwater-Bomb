@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 
-#include "catalua_platform_content.h"
+#include "catalua_content.h"
 #include "dialogue.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
@@ -12,42 +12,42 @@
 #include "math_parser_diag.h"
 #include "string_formatter.h"
 
-namespace cata::lua_platform::detail
+namespace cata::lua::detail
 {
 generic_factory<jmath_func> &jmath_func_registry()
 {
     static generic_factory<jmath_func> jmath_func_factory( "jmath_function" );
     return jmath_func_factory;
 }
-} // namespace cata::lua_platform::detail
+} // namespace cata::lua::detail
 
 /** @relates string_id */
 template <>
 jmath_func const &string_id<jmath_func>::obj() const
 {
-    return cata::lua_platform::detail::jmath_func_registry().obj( *this );
+    return cata::lua::detail::jmath_func_registry().obj( *this );
 }
 
 /** @relates string_id */
 template <>
 bool string_id<jmath_func>::is_valid() const
 {
-    return cata::lua_platform::detail::jmath_func_registry().is_valid( *this );
+    return cata::lua::detail::jmath_func_registry().is_valid( *this );
 }
 
 void jmath_func::reset()
 {
-    cata::lua_platform::detail::jmath_func_registry().reset();
+    cata::lua::detail::jmath_func_registry().reset();
 }
 
 std::vector<jmath_func> const &jmath_func::get_all()
 {
-    return cata::lua_platform::detail::jmath_func_registry().get_all();
+    return cata::lua::detail::jmath_func_registry().get_all();
 }
 
 void jmath_func::load_func( const JsonObject &jo, std::string const &src )
 {
-    cata::lua_platform::detail::jmath_func_registry().load( jo, src );
+    cata::lua::detail::jmath_func_registry().load( jo, src );
 }
 
 void jmath_func::load( JsonObject const &jo, std::string_view /*src*/ )
@@ -67,7 +67,7 @@ void jmath_func::load( JsonObject const &jo, std::string_view /*src*/ )
 
 void jmath_func::finalize_all()
 {
-    cata::lua_platform::detail::jmath_func_registry().finalize();
+    cata::lua::detail::jmath_func_registry().finalize();
 }
 
 void jmath_func::finalize()

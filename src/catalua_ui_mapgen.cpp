@@ -1,4 +1,4 @@
-#if CATA_ENABLE_LUA_UI
+#if CATA_ENABLE_LUA_PLATFORM
 
 #include "catalua_ui_mapgen.h"
 
@@ -38,7 +38,7 @@
 #include "vehicle_group.h"
 #include "veh_type.h"
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -141,7 +141,7 @@ script_mapgen_context::require_write_state() const
     context_state &state = require_state();
     if( !state.allow_write ) {
         throw std::runtime_error(
-            "Lua mapgen mutation requires capability 'game.write'" );
+            "Lua mapgen mutation requires an active Platform write callback" );
     }
     return state;
 }
@@ -1464,6 +1464,6 @@ void install_script_mapgen_context_api( sol::state &lua )
         "generate", &script_mapgen_context::generate );
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
 
-#endif // CATA_ENABLE_LUA_UI
+#endif // CATA_ENABLE_LUA_PLATFORM

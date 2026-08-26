@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <utility>
 
-namespace cata::lua_ui
+namespace cata::lua
 {
 
 namespace
@@ -99,4 +99,4 @@ sol::table script_value_map_to_lua( sol::state_view lua,
     return result;
 }
 
-} // namespace cata::lua_ui
+} // namespace cata::lua
