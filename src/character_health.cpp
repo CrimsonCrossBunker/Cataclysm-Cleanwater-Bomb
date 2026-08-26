@@ -1487,7 +1487,7 @@ void Character::update_sensitive()
         return;
     }
 
-    double rate = 0.05; // fraction of the remaining gap closed per tick
+    double rate = 0.05; // fraction of the remaining gap closed per 1 minute
     rate = enchantment_cache->modify_value( enchant_vals::mod::SENSITIVE_RATE, rate );
     if( gap > 0 ) {
         rate *= 1.0 + std::max( -1.0, enchantment_cache->get_value_add(
