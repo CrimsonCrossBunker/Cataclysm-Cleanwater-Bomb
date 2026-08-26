@@ -273,7 +273,7 @@ bool Character::armor_absorb( damage_unit &du, item &armor, const bodypart_id &b
     // -1 is passed as roll so that each material is rolled individually
     armor.mitigate_damage( du, sbp, -1 );
 
-    // check if the armor was damaged - crowd pressure (damage_armor=false) still mitigates but does not degrade durability
+    // check if the armor was damaged - damage_armor=false still mitigates but does not degrade durability
     const double dmg_mult = damage_armor ? calculate_by_enchantment( 1,
                                         enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ) : 0.0;
     item::armor_status damaged = armor.damage_armor_durability( du, pre_mitigation, bp, dmg_mult,
@@ -312,7 +312,7 @@ bool Character::armor_absorb( damage_unit &du, item &armor, const bodypart_id &b
     // -1 is passed as roll so that each material is rolled individually
     armor.mitigate_damage( du, bp, -1 );
 
-    // check if the armor was damaged - crowd pressure (damage_armor=false) still mitigates but does not degrade durability
+    // check if the armor was damaged - damage_armor=false still mitigates but does not degrade durability
     const double dmg_mult = damage_armor ? calculate_by_enchantment( 1,
                                         enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ) : 0.0;
     item::armor_status damaged = armor.damage_armor_durability( du, pre_mitigation, bp, dmg_mult,
@@ -350,7 +350,7 @@ bool Character::ablative_armor_absorb( damage_unit &du, item &armor, const sub_b
                 // mitigate the actual damage instance
                 ablative_armor.mitigate_damage( du );
 
-                // check if the item will break - crowd pressure (damage_armor=false) still mitigates but does not degrade plates
+                // check if the item will break - damage_armor=false still mitigates but does not degrade plates
                 item::armor_status damaged = item::armor_status::UNDAMAGED;
                 if( ablative_armor.find_armor_data()->non_functional != itype_id() ) {
                     // if the item transforms on destruction damage it that way
