@@ -506,6 +506,12 @@ class const_talker
         virtual int get_stim() const {
             return 0;
         }
+        virtual int get_sensitive() const {
+            return 100;
+        }
+        virtual int get_sensitive_mod() const {
+            return 100;
+        }
         virtual int get_addiction_intensity( const addiction_id & ) const {
             return 0;
         }
@@ -873,6 +879,8 @@ class talker: virtual public const_talker
         virtual void mod_stored_kcal( int, bool ) {}
         virtual void set_stored_kcal( int ) {}
         virtual void set_stim( int ) {}
+        virtual void set_sensitive( int ) {}
+        virtual void set_sensitive_mod( int ) {}
         virtual void set_thirst( int ) {}
         virtual void say( const std::string & ) {}
         virtual void shout( const std::string & = "", bool = false ) {}

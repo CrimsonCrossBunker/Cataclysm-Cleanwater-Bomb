@@ -1122,6 +1122,10 @@ Character status value  | Description
 `SLEEPINESS`               | Affects how fast your sleepiness grows over time - bigger value makes you tired faster. Since it's a percent, using `multiply` is recommended.
 `SLEEPINESS_REGEN`         | Affects how much of your sleepiness and sleep deprivation drops when resting. Since it's a percent, using `multiply` is recommended.
 `SLEEPY`                | The higher this the easier you fall asleep.
+`SENSITIVE_MOD`         | Affects the equilibrium of the `sensitive` value. `add` applies directly; `multiply` scales the deviation from the neutral baseline of 100.
+`SENSITIVE_RATE`        | Modifies the rate at which `sensitive` drifts towards its equilibrium in both directions.
+`SENSITIVE_RATE_UP`     | Like `SENSITIVE_RATE`, but only applies while sensitivity is rising.
+`SENSITIVE_RATE_DOWN`   | Like `SENSITIVE_RATE`, but only applies while sensitivity is falling.
 `SMASH_BONUS`           | The higher this is, the better you are at smashing things.  Unlike increasing strength or boosting melee damage, this doesn't increase damage against enemies.
 `SOCIAL_INTIMIDATE`     | Affects your ability to intimidate.
 `SOCIAL_LIE`            | Affects your ability to lie.

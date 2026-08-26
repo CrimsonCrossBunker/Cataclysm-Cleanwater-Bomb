@@ -515,6 +515,11 @@ void item::med_info( const item *med_item, std::vector<iteminfo> &info, const it
         info.emplace_back( "MED", name );
     }
 
+    if( med_com->sensitive != 0 && parts->test( iteminfo_parts::MED_SENSITIVE ) ) {
+        info.emplace_back( "MED", _( "Sensitivity: " ), "", iteminfo::show_plus,
+                           med_com->sensitive );
+    }
+
     if( parts->test( iteminfo_parts::MED_PORTIONS ) ) {
         info.emplace_back( "MED", _( "Portions: " ),
                            std::abs( static_cast<int>( med_item->count() ) * batch ) );
@@ -605,6 +610,13 @@ void item::food_info( const item *food_item, std::vector<iteminfo> &info,
     if( parts->test( iteminfo_parts::FOOD_HEALTH ) && food_item->get_comestible()->healthy != 0 ) {
         info.emplace_back( "MED", _( "Health: " ),
                            healthy_bar( food_item->get_comestible()->healthy ) );
+    }
+
+    if( food_item->get_comestible()->sensitive != 0 &&
+        parts->test( iteminfo_parts::FOOD_SENSITIVE ) ) {
+        info.emplace_back( "FOOD", _( "Sensitivity: " ), "",
+                           iteminfo::show_plus,
+                           food_item->get_comestible()->sensitive );
     }
 
     if( parts->test( iteminfo_parts::FOOD_PORTIONS ) ) {

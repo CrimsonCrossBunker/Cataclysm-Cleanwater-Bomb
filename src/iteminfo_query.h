@@ -33,6 +33,7 @@ enum class iteminfo_parts : size_t {
     MED_JOY,
     MED_PORTIONS,
     MED_STIMULATION,
+    MED_SENSITIVE,
     MED_QUENCH,
     MED_CONSUME_TIME,
 
@@ -52,6 +53,7 @@ enum class iteminfo_parts : size_t {
     FOOD_ROT,
     FOOD_CONSUME_TIME,
     FOOD_HEALTH,
+    FOOD_SENSITIVE,
 
     MAGAZINE_COMPATIBLE_GUNS,
     MAGAZINE_CAPACITY,

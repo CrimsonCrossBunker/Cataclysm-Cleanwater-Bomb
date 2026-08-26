@@ -1333,6 +1333,10 @@ float Character::get_dodge() const
     ret /= anatomy( get_all_body_parts() ).get_size_ratio( anatomy_human_anatomy );
     add_msg_debug( debugmode::DF_MELEE, "Dodge after bodysize modifier %.1f", ret );
 
+    // Sensitivity weakly shifts dodging, ±5% across 0..250.
+    ret *= clamp( 1.0 + 0.05 * std::log( std::clamp( get_sensitive(), 1, 250 ) / 100.0 ) /
+                  std::log( 2.5 ), 0.95, 1.05 );
+
     return std::max( 0.0f, ret );
 }
 

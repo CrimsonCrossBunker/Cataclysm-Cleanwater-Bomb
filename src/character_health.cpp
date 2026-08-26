@@ -119,6 +119,8 @@ static const damage_type_id damage_cut( "cut" );
 static const damage_type_id damage_electric( "electric" );
 static const damage_type_id damage_stab( "stab" );
 
+static const efftype_id effect_dulled_senses( "dulled_senses" );
+static const efftype_id effect_heightened_senses( "heightened_senses" );
 static const efftype_id effect_adrenaline( "adrenaline" );
 static const efftype_id effect_alarm_clock( "alarm_clock" );
 static const efftype_id effect_bandaged( "bandaged" );
@@ -297,6 +299,9 @@ void Character::react_to_felt_pain( int intensity )
     if( has_effect( effect_sleep ) && get_effect( effect_sleep ).get_duration() > 0_turns &&
         !has_effect( effect_narcosis ) ) {
         int pain_thresh = rng( 3, 5 );
+
+        // Sensitivity shifts the pain wake-up threshold by up to ±100%.
+        pain_thresh = std::max( 1, pain_thresh + ( 100 - get_sensitive() ) / 25 );
 
         if( has_bionic( bio_sleep_shutdown ) ) {
             pain_thresh += 999;
@@ -622,7 +627,18 @@ void Character::update_mental_focus()
         const double multiplier =
             ( 1.0 + enchantment_cache->get_value_add( enchant_vals::mod::FOCUS_REGEN ) ) *
             ( 1.0 + enchantment_cache->get_value_multiply( enchant_vals::mod::FOCUS_REGEN ) );
-        focus_change = static_cast<int>( focus_change * multiplier );
+
+        // Low sensitivity dulls focus recovery down to -25%, high sensitivity up to +25%.
+        double sens_mod = 1.0;
+        const int s = get_sensitive();
+        if( s < 75 ) {
+            sens_mod -= std::min( 0.25, 0.25 * std::log( 1.0 + ( 75.0 - s ) / 75.0 ) /
+                                  std::log( 2.0 ) );
+        } else if( s > 125 ) {
+            sens_mod += std::min( 0.25, 0.25 * std::log( s / 125.0 ) / std::log( 4.0 ) );
+        }
+
+        focus_change = static_cast<int>( focus_change * multiplier * sens_mod );
     }
     focus_pool += 10 * focus_change;
 }
@@ -1464,6 +1480,61 @@ bool Character::needs_food() const
     return !( is_npc() && get_option<bool>( "NO_NPC_FOOD" ) );
 }
 
+void Character::update_sensitive()
+{
+    const int gap = get_sensitive_mod_total() - sensitive;
+    if( gap == 0 ) {
+        return;
+    }
+
+    double rate = 0.05; // fraction of the remaining gap closed per 1 minute
+    rate = enchantment_cache->modify_value( enchant_vals::mod::SENSITIVE_RATE, rate );
+    if( gap > 0 ) {
+        rate = enchantment_cache->modify_value( enchant_vals::mod::SENSITIVE_RATE_UP, rate );
+    } else {
+        rate = enchantment_cache->modify_value( enchant_vals::mod::SENSITIVE_RATE_DOWN, rate );
+    }
+
+    int change = roll_remainder( gap * rate );
+    if( change == 0 || ( gap > 0 ) != ( change > 0 ) ) {
+        change = gap > 0 ? 1 : -1;
+    }
+    mod_sensitive( change );
+}
+
+void Character::update_sensitive_per_effects()
+{
+    const int s = get_sensitive();
+
+    const int want_dulled = s < 50 ? 2 : ( s < 75 ? 1 : 0 );
+    if( want_dulled == 0 ) {
+        remove_effect( effect_dulled_senses );
+    } else {
+        if( !has_effect( effect_dulled_senses ) ) {
+            add_effect( effect_dulled_senses, 1_minutes, bodypart_str_id::NULL_ID(), true,
+                        want_dulled );
+        }
+        effect &eff = get_effect( effect_dulled_senses );
+        if( eff.get_int_dur_factor() > 0_turns ) {
+            eff.set_duration( eff.get_int_dur_factor() * want_dulled );
+        }
+    }
+
+    const int want_heightened = s > 400 ? 2 : ( s > 200 ? 1 : 0 );
+    if( want_heightened == 0 ) {
+        remove_effect( effect_heightened_senses );
+    } else {
+        if( !has_effect( effect_heightened_senses ) ) {
+            add_effect( effect_heightened_senses, 1_minutes, bodypart_str_id::NULL_ID(), true,
+                        want_heightened );
+        }
+        effect &eff = get_effect( effect_heightened_senses );
+        if( eff.get_int_dur_factor() > 0_turns ) {
+            eff.set_duration( eff.get_int_dur_factor() * want_heightened );
+        }
+    }
+}
+
 void Character::update_needs( int rate_multiplier )
 {
     // Stasis NPCs don't accumulate any needs.
@@ -2186,6 +2257,79 @@ void Character::set_stim( int new_stim )
 void Character::mod_stim( int mod )
 {
     stim += mod;
+}
+
+void Character::set_sensitive( int nsensitive )
+{
+    nsensitive = clamp( nsensitive, 0, INT_MAX );
+    if( sensitive != nsensitive ) {
+        sensitive = nsensitive;
+        on_stat_change( "sensitive", sensitive );
+    }
+}
+
+void Character::mod_sensitive( int mod )
+{
+    const long long next = static_cast<long long>( sensitive ) + mod;
+    set_sensitive( static_cast<int>( clamp( next, 0LL, static_cast<long long>( INT_MAX ) ) ) );
+}
+
+int Character::get_sensitive() const
+{
+    return sensitive;
+}
+
+void Character::set_sensitive_mod( int nsensitive_mod )
+{
+    nsensitive_mod = clamp( nsensitive_mod, 0, 500 );
+    if( sensitive_mod != nsensitive_mod ) {
+        sensitive_mod = nsensitive_mod;
+        on_stat_change( "sensitive_mod", sensitive_mod );
+    }
+}
+
+void Character::mod_sensitive_mod( int mod )
+{
+    const long long next = static_cast<long long>( sensitive_mod ) + mod;
+    set_sensitive_mod( static_cast<int>( clamp( next, 0LL, 500LL ) ) );
+}
+
+int Character::get_sensitive_mod() const
+{
+    return sensitive_mod;
+}
+
+int Character::get_sensitive_mod_total() const
+{
+    const double base = 100.0;
+
+    // Stimulants raise equilibrium sensitivity, depressants lower it.
+    double stim_effect = 25.0 * std::copysign( std::log( 1.0 + std::abs( stim ) / 25.0 ),
+                           stim );
+
+    // Painkillers dull sensitivity, saturating at -15 around 200 pkill.
+    double pkill_effect = -std::min( 15.0, 18.0 * std::log( 1.0 + get_painkiller() / 150.0 ) );
+
+    // When both dull sensitivity, only half of the weaker effect stacks.
+    if( stim_effect < 0 && pkill_effect < 0 ) {
+        const double stronger = std::max( stim_effect, pkill_effect );
+        const double weaker = std::min( stim_effect, pkill_effect );
+        stim_effect = stronger;
+        pkill_effect = weaker / 2;
+    }
+
+    // Sleep deprivation dulls sensitivity, saturating at -10.
+    const double sleep_effect = -10.0 * std::min( 1.0, std::log( 1.0 + get_sleep_deprivation() /
+            1000.0 ) / std::log( 21.0 ) );
+
+    double total = sensitive_mod + stim_effect + pkill_effect + sleep_effect;
+
+    // Enchantment multipliers scale the deviation from baseline; additions apply after.
+    total += ( total - base ) * enchantment_cache->get_value_multiply(
+                 enchant_vals::mod::SENSITIVE_MOD );
+    total += enchantment_cache->get_value_add( enchant_vals::mod::SENSITIVE_MOD );
+
+    return clamp( static_cast<int>( std::round( total ) ), 0, 500 );
 }
 
 int Character::get_rad() const
@@ -3450,11 +3594,41 @@ int Character::mod_pain( int npain, const bodypart_id bp )
 
         npain *= bp->pain_mod;
 
+        // Sensitivity scales the pain actually gained.
+        npain = roll_remainder( npain * sensitive_pain_multiplier() );
+
         // no matter how powerful the enchantment if we are gaining pain we don't lose any
         npain = std::max( 0, npain );
     }
     Creature::mod_pain( npain );
     return npain;
+}
+
+double Character::sensitive_pain_multiplier() const
+{
+    const int s = get_sensitive();
+
+    // Numbness: linear between -75% at 0, -25% at 50, -5% at 80, neutral at 95.
+    if( s < 50 ) {
+        return 0.25 + s / 50.0 * 0.50;
+    }
+    if( s < 80 ) {
+        return 0.75 + ( s - 50 ) / 30.0 * 0.20;
+    }
+    if( s < 95 ) {
+        return 0.95 + ( s - 80 ) / 15.0 * 0.05;
+    }
+    // Neutral band, then ramp to +50% at 200 and +150% at 500, capped above.
+    if( s <= 120 ) {
+        return 1.0;
+    }
+    if( s <= 200 ) {
+        return 1.0 + ( s - 120 ) / 80.0 * 0.50;
+    }
+    if( s <= 500 ) {
+        return 1.50 + ( s - 200 ) / 300.0 * 1.00;
+    }
+    return 2.50;
 }
 
 void Character::set_pain( int npain )

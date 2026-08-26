@@ -1347,6 +1347,35 @@ void Character::modify_health( const islot_comestible &comest )
     mod_daily_health( effective_health, effective_health >= 0 ? health_cap : -health_cap );
 }
 
+void Character::modify_sensitive( const islot_comestible &comest )
+{
+    if( comest.sensitive == 0 ) {
+        return;
+    }
+
+    // Diminishing returns only push further away from the equilibrium once the
+    // effect thresholds of high or low sensitivity are crossed.
+    int amount = comest.sensitive;
+    const int equilibrium = get_sensitive_mod_total();
+    const int current = get_sensitive();
+
+    if( amount > 0 && current >= equilibrium ) {
+        if( current >= 500 ) {
+            amount /= 4;
+        } else if( current >= 200 ) {
+            amount /= 2;
+        }
+    } else if( amount < 0 && current <= equilibrium ) {
+        if( current <= 50 ) {
+            amount /= 4;
+        } else if( current <= 75 ) {
+            amount /= 2;
+        }
+    }
+
+    mod_sensitive( amount );
+}
+
 void Character::modify_stimulation( const islot_comestible &comest )
 {
     if( comest.stim == 0 ) {
@@ -1709,6 +1738,7 @@ bool Character::consume_effects( item &food )
         modify_health( comest );
     }
     modify_stimulation( comest );
+    modify_sensitive( comest );
     modify_sleepiness( comest );
     modify_addiction( comest );
     modify_morale( food, nutr );
@@ -1991,6 +2021,7 @@ static bool consume_med( item &target, Character &you )
         // Assume that parenteral meds don't spoil, so don't apply rot
         you.modify_health( comest );
         you.modify_stimulation( comest );
+        you.modify_sensitive( comest );
         you.modify_sleepiness( comest );
         you.modify_addiction( comest );
         you.modify_morale( target );

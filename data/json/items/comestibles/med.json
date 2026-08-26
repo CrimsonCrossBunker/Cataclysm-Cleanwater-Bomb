@@ -2513,6 +2513,7 @@
     "symbol": "!",
     "color": "white",
     "flags": [ "NO_TEMP" ],
+    "sensitive": 5,
     "use_action": { "type": "consume_drug", "activation_message": "You set the pill under your tongue and let it dissolve." },
     "stackable": true
   },
@@ -2531,6 +2532,7 @@
     "symbol": "!",
     "color": "yellow",
     "flags": [ "NO_INGEST", "NO_TEMP" ],
+    "sensitive": -3,
     "use_action": {
       "type": "consume_drug",
       "tools_needed": { "syringe": -1 },

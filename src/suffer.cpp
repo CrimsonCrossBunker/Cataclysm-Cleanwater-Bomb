@@ -2141,6 +2141,15 @@ void Character::apply_wetness_morale( units::temperature temperature )
             morale_effect = -1;
         }
     }
+
+    // Sensitivity scales how much being wet affects morale, ±50% across 0..500.
+    const double sens_mult = clamp( 1.0 + 0.5 * std::log( std::clamp( get_sensitive(), 1,
+                                           500 ) / 100.0 ) / std::log( 5.0 ), 0.5, 1.5 );
+    const int scaled_effect = round( morale_effect * sens_mult );
+    if( scaled_effect != 0 || morale_effect == 0 ) {
+        morale_effect = scaled_effect;
+    }
+
     // 61_seconds because decay is applied in 1_minutes increments
     add_morale( morale_wet, morale_effect, total_morale, 61_seconds, 61_seconds, true );
 }

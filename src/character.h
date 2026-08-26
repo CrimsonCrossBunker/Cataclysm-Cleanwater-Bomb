@@ -667,6 +667,22 @@ class Character : public Creature, public visitable
         void set_lifestyle( int nhealthy );
         void set_daily_health( int nhealthy_mod );
 
+        /** Getters for sensitivity values exclusive to characters */
+        int get_sensitive() const;
+        int get_sensitive_mod() const;
+        /** Equilibrium sensitivity after stim, painkillers, sleep deprivation and enchantments */
+        int get_sensitive_mod_total() const;
+        /** Multiplier applied to pain gained, driven by current sensitivity */
+        double sensitive_pain_multiplier() const;
+
+        /** Modifiers for sensitivity values exclusive to characters */
+        void mod_sensitive( int nsensitive );
+        void mod_sensitive_mod( int nsensitive_mod );
+
+        /** Setters for sensitivity values exclusive to characters */
+        void set_sensitive( int nsensitive );
+        void set_sensitive_mod( int nsensitive_mod );
+
         /** Getter for need values exclusive to characters */
         int get_stored_kcal() const;
         int get_healthy_kcal() const;
@@ -953,6 +969,10 @@ class Character : public Creature, public visitable
         bool needs_food() const;
         /** Increases hunger, thirst, sleepiness and stimulants wearing off. `rate_multiplier` is for retroactive updates. */
         void update_needs( int rate_multiplier );
+        /** Move sensitivity one tick towards its equilibrium */
+        void update_sensitive();
+        /** Refresh threshold-based perception effects driven by sensitivity */
+        void update_sensitive_per_effects();
         needs_rates calc_needs_rates() const;
         void calc_sleep_recovery_rate( needs_rates &rates ) const;
         /** Kills the player if too hungry, stimmed up etc., forces tired player to sleep and prints warnings. */
@@ -3550,6 +3570,8 @@ class Character : public Creature, public visitable
 
         /** Used to apply stimulation modifications from food and medication **/
         void modify_stimulation( const islot_comestible &comest );
+        /** Used to apply immediate sensitivity modifications from food and medication **/
+        void modify_sensitive( const islot_comestible &comest );
         /** Used to apply sleepiness modifications from food and medication **/
         /** Used to apply radiation from food and medication **/
         void modify_sleepiness( const islot_comestible &comest );
@@ -4141,6 +4163,10 @@ class Character : public Creature, public visitable
         int lifestyle = 0;
         int daily_health = 0;
         int health_tally = 0;
+
+        /** Sensitivity to external stimuli, and its equilibrium target. */
+        int sensitive = 100;
+        int sensitive_mod = 100;
 
         // Our bmr at no activity level
         int base_bmr() const;

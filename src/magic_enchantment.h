@@ -156,6 +156,10 @@ enum class mod : int {
     TOTAL_WEIGHT,
     FUEL_USAGE,
     TURNING_DIFFICULTY,
+    SENSITIVE_MOD,
+    SENSITIVE_RATE,
+    SENSITIVE_RATE_UP,
+    SENSITIVE_RATE_DOWN,
     NUM_MOD
 };
 } // namespace enchant_vals

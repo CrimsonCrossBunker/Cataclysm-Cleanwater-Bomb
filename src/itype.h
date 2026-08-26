@@ -235,6 +235,9 @@ struct islot_comestible {
         /** stimulant effect */
         int stim = 0;
 
+        /** immediate sensitivity change */
+        int sensitive = 0;
+
         /**sleepiness altering effect*/
         int sleepiness_mod = 0;
 

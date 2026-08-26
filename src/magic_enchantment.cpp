@@ -181,6 +181,10 @@ namespace io
             case enchant_vals::mod::TOTAL_WEIGHT: return "TOTAL_WEIGHT";
             case enchant_vals::mod::FUEL_USAGE: return "FUEL_USAGE";
             case enchant_vals::mod::TURNING_DIFFICULTY: return "TURNING_DIFFICULTY";
+            case enchant_vals::mod::SENSITIVE_MOD: return "SENSITIVE_MOD";
+            case enchant_vals::mod::SENSITIVE_RATE: return "SENSITIVE_RATE";
+            case enchant_vals::mod::SENSITIVE_RATE_UP: return "SENSITIVE_RATE_UP";
+            case enchant_vals::mod::SENSITIVE_RATE_DOWN: return "SENSITIVE_RATE_DOWN";
             case enchant_vals::mod::NUM_MOD: break;
         }
         cata_fatal( "Invalid enchant_vals::mod" );
