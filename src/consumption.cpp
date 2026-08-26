@@ -1349,9 +1349,31 @@ void Character::modify_health( const islot_comestible &comest )
 
 void Character::modify_sensitive( const islot_comestible &comest )
 {
-    if( comest.sensitive != 0 ) {
-        mod_sensitive( comest.sensitive );
+    if( comest.sensitive == 0 ) {
+        return;
     }
+
+    // Diminishing returns only push further away from the equilibrium once the
+    // effect thresholds of high or low sensitivity are crossed.
+    int amount = comest.sensitive;
+    const int equilibrium = get_sensitive_mod_total();
+    const int current = get_sensitive();
+
+    if( amount > 0 && current >= equilibrium ) {
+        if( current >= 500 ) {
+            amount /= 4;
+        } else if( current >= 200 ) {
+            amount /= 2;
+        }
+    } else if( amount < 0 && current <= equilibrium ) {
+        if( current <= 50 ) {
+            amount /= 4;
+        } else if( current <= 75 ) {
+            amount /= 2;
+        }
+    }
+
+    mod_sensitive( amount );
 }
 
 void Character::modify_stimulation( const islot_comestible &comest )
