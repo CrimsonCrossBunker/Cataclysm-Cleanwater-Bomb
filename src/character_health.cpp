@@ -1511,7 +1511,7 @@ void Character::update_sensitive_per_effects()
         remove_effect( effect_dulled_senses );
     } else {
         if( !has_effect( effect_dulled_senses ) ) {
-            add_effect( effect_dulled_senses, 10_minutes, bodypart_str_id::NULL_ID(), true,
+            add_effect( effect_dulled_senses, 1_turns, bodypart_str_id::NULL_ID(), true,
                         want_dulled );
         }
         effect &eff = get_effect( effect_dulled_senses );
@@ -1530,7 +1530,7 @@ void Character::update_sensitive_per_effects()
         remove_effect( effect_heightened_senses );
     } else {
         if( !has_effect( effect_heightened_senses ) ) {
-            add_effect( effect_heightened_senses, 10_minutes, bodypart_str_id::NULL_ID(), true,
+            add_effect( effect_heightened_senses, 1_turns, bodypart_str_id::NULL_ID(), true,
                         want_heightened );
         }
         effect &eff = get_effect( effect_heightened_senses );
