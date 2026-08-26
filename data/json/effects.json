@@ -5920,7 +5920,7 @@
     ],
     "rating": "bad",
     "max_intensity": 2,
-    "max_duration": "10 m",
+    "int_dur_factor": "5 m",
     "scaling_mods": { "per_mod": [ -1 ] },
     "show_in_info": true
   },
@@ -5934,7 +5934,7 @@
     ],
     "rating": "good",
     "max_intensity": 2,
-    "max_duration": "10 m",
+    "int_dur_factor": "5 m",
     "scaling_mods": { "per_mod": [ 1 ] },
     "show_in_info": true
   }
