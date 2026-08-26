@@ -1496,7 +1496,7 @@ void Character::update_sensitive()
     }
 
     int change = roll_remainder( gap * static_cast<float>( rate ) );
-    if( change == 0 ) {
+    if( change == 0 || ( gap > 0 ) != ( change > 0 ) ) {
         change = gap > 0 ? 1 : -1;
     }
     mod_sensitive( change );
