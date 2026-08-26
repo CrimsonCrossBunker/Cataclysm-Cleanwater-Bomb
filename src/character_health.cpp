@@ -1509,21 +1509,39 @@ void Character::update_sensitive_per_effects()
     const int want_dulled = s < 50 ? 2 : ( s < 75 ? 1 : 0 );
     if( want_dulled == 0 ) {
         remove_effect( effect_dulled_senses );
-    } else if( !has_effect( effect_dulled_senses ) ||
-               get_effect_int( effect_dulled_senses ) != want_dulled ) {
-        remove_effect( effect_dulled_senses );
-        add_effect( effect_dulled_senses, 10_minutes, bodypart_str_id::NULL_ID(), true,
-                    want_dulled );
+    } else {
+        if( !has_effect( effect_dulled_senses ) ) {
+            add_effect( effect_dulled_senses, 10_minutes, bodypart_str_id::NULL_ID(), true,
+                        want_dulled );
+        }
+        effect &eff = get_effect( effect_dulled_senses );
+        if( eff.get_int_dur_factor() > 0_turns ) {
+            eff.set_duration( eff.get_int_dur_factor() * want_dulled );
+        } else {
+            if( eff.get_intensity() != want_dulled ) {
+                eff.set_intensity( want_dulled );
+            }
+            eff.set_duration( 10_minutes );
+        }
     }
 
     const int want_heightened = s > 400 ? 2 : ( s > 200 ? 1 : 0 );
     if( want_heightened == 0 ) {
         remove_effect( effect_heightened_senses );
-    } else if( !has_effect( effect_heightened_senses ) ||
-               get_effect_int( effect_heightened_senses ) != want_heightened ) {
-        remove_effect( effect_heightened_senses );
-        add_effect( effect_heightened_senses, 10_minutes, bodypart_str_id::NULL_ID(), true,
-                    want_heightened );
+    } else {
+        if( !has_effect( effect_heightened_senses ) ) {
+            add_effect( effect_heightened_senses, 10_minutes, bodypart_str_id::NULL_ID(), true,
+                        want_heightened );
+        }
+        effect &eff = get_effect( effect_heightened_senses );
+        if( eff.get_int_dur_factor() > 0_turns ) {
+            eff.set_duration( eff.get_int_dur_factor() * want_heightened );
+        } else {
+            if( eff.get_intensity() != want_heightened ) {
+                eff.set_intensity( want_heightened );
+            }
+            eff.set_duration( 10_minutes );
+        }
     }
 }
 
