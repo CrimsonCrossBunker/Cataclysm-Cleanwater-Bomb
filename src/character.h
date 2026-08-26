@@ -3570,6 +3570,8 @@ class Character : public Creature, public visitable
 
         /** Used to apply stimulation modifications from food and medication **/
         void modify_stimulation( const islot_comestible &comest );
+        /** Used to apply immediate sensitivity modifications from food and medication **/
+        void modify_sensitive( const islot_comestible &comest );
         /** Used to apply sleepiness modifications from food and medication **/
         /** Used to apply radiation from food and medication **/
         void modify_sleepiness( const islot_comestible &comest );
