@@ -623,7 +623,11 @@
       { "x": 0, "y": -1, "parts": [ "controls_electronic", "plating_military" ] },
       { "x": 0, "y": -1, "parts": [ "roof", "seatbelt_heavyduty" ] },
       { "x": 0, "y": -2, "parts": [ "frame#vertical_right", "plating_military", "windshield#vertical_left" ] },
-      { "x": 1, "y": 0, "parts": [ "frame#vertical_right", "plating_military", "door#front_right", "strong_door_window" ] },
+      {
+        "x": 1,
+        "y": 0,
+        "parts": [ "frame#vertical_right", "plating_military", "door#front_right", "strong_door_window" ]
+      },
       { "x": 1, "y": -1, "parts": [ "frame#vertical_2", "plating_military", "roof" ] },
       { "x": 1, "y": -1, "parts": [ "windshield#horizontal_rear" ] },
       { "x": 1, "y": -2, "parts": [ "frame#vertical_left", "plating_military", "door#nw", "strong_door_window" ] },
@@ -743,7 +747,11 @@
       { "x": 0, "y": -1, "parts": [ "controls_electronic", "plating_military" ] },
       { "x": 0, "y": -1, "parts": [ "roof", "seatbelt_heavyduty" ] },
       { "x": 0, "y": -2, "parts": [ "frame#vertical_right", "plating_military", "windshield#vertical_left" ] },
-      { "x": 1, "y": 0, "parts": [ "frame#vertical_right", "plating_military", "door#front_right", "strong_door_window" ] },
+      {
+        "x": 1,
+        "y": 0,
+        "parts": [ "frame#vertical_right", "plating_military", "door#front_right", "strong_door_window" ]
+      },
       { "x": 1, "y": -1, "parts": [ "frame#vertical_2", "plating_military", "roof" ] },
       { "x": 1, "y": -1, "parts": [ "windshield#horizontal_rear" ] },
       { "x": 1, "y": -2, "parts": [ "frame#vertical_left", "plating_military", "door#nw", "strong_door_window" ] },
