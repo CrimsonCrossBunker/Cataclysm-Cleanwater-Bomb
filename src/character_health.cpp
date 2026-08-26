@@ -2290,7 +2290,8 @@ void Character::set_sensitive_mod( int nsensitive_mod )
 
 void Character::mod_sensitive_mod( int mod )
 {
-    set_sensitive_mod( sensitive_mod + mod );
+    const long long next = static_cast<long long>( sensitive_mod ) + mod;
+    set_sensitive_mod( static_cast<int>( clamp( next, 0LL, 500LL ) ) );
 }
 
 int Character::get_sensitive_mod() const
