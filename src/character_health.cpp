@@ -2255,7 +2255,7 @@ void Character::mod_stim( int mod )
 
 void Character::set_sensitive( int nsensitive )
 {
-    nsensitive = std::max( nsensitive, 0 );
+    nsensitive = clamp( nsensitive, 0, INT_MAX );
     if( sensitive != nsensitive ) {
         sensitive = nsensitive;
         on_stat_change( "sensitive", sensitive );
@@ -2264,7 +2264,8 @@ void Character::set_sensitive( int nsensitive )
 
 void Character::mod_sensitive( int mod )
 {
-    set_sensitive( sensitive + mod );
+    const long long next = static_cast<long long>( sensitive ) + mod;
+    set_sensitive( static_cast<int>( clamp( next, 0LL, static_cast<long long>( INT_MAX ) ) ) );
 }
 
 int Character::get_sensitive() const
