@@ -3856,6 +3856,7 @@ void islot_comestible::deserialize( const JsonObject &jo )
     optional( jo, was_loaded, "quench", quench );
     optional( jo, was_loaded, "fun", fun );
     optional( jo, was_loaded, "stim", stim );
+    optional( jo, was_loaded, "sensitive", sensitive );
     optional( jo, was_loaded, "sleepiness_mod", sleepiness_mod );
     optional( jo, was_loaded, "healthy", healthy );
     optional( jo, was_loaded, "parasites", parasites, numeric_bound_reader<int> {0} );
