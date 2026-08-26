@@ -779,7 +779,6 @@ sol::table modify_health(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
-} // namespace
 
 struct sensitive_adjustments {
     std::optional<int> sensitive;
