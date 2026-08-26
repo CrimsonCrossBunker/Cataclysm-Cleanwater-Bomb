@@ -789,7 +789,6 @@ struct sensitive_adjustments {
 sensitive_adjustments read_sensitive_adjustments(
     const sol::table &requested, const std::string &api_name, bool allow_negative )
 {
-{
     sensitive_adjustments result;
     for( const auto &entry : requested ) {
         if( entry.first.get_type() != sol::type::string ) {
