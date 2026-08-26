@@ -330,3 +330,46 @@ TEST_CASE( "comestible_sensitive_field_modifies_sensitivity", "[sensitive][chara
     dummy.modify_sensitive( comest );
     CHECK( dummy.get_sensitive() == 0 );
 }
+
+TEST_CASE( "comestible_sensitivity_has_diminishing_returns_past_thresholds",
+           "[sensitive][character][item]" )
+{
+    avatar &dummy = get_avatar();
+    clear_character( dummy );
+
+    islot_comestible comest;
+
+    // Pushing above the equilibrium and past the +50% pain anchor halves the gain.
+    dummy.set_sensitive( 250 );
+    comest.sensitive = 10;
+    dummy.modify_sensitive( comest );
+    CHECK( dummy.get_sensitive() == 255 );
+
+    // Past the +150% cap only a quarter applies: 10 / 4.
+    dummy.set_sensitive( 600 );
+    dummy.modify_sensitive( comest );
+    CHECK( dummy.get_sensitive() == 602 );
+
+    // Rising back towards the equilibrium from below is never diminished.
+    dummy.set_sensitive_mod( 300 );
+    dummy.set_sensitive( 40 );
+    comest.sensitive = 30;
+    dummy.modify_sensitive( comest );
+    CHECK( dummy.get_sensitive() == 70 );
+
+    // Mirror image for dulling agents past the perception thresholds.
+    dummy.set_sensitive_mod( 100 );
+    dummy.set_sensitive( 80 );
+    comest.sensitive = -20;
+    dummy.modify_sensitive( comest );
+    CHECK( dummy.get_sensitive() == 60 );
+
+    dummy.set_sensitive( 60 );
+    dummy.modify_sensitive( comest );
+    CHECK( dummy.get_sensitive() == 50 );
+
+    dummy.set_sensitive( 45 );
+    comest.sensitive = -20;
+    dummy.modify_sensitive( comest );
+    CHECK( dummy.get_sensitive() == 40 );
+}
