@@ -1511,17 +1511,12 @@ void Character::update_sensitive_per_effects()
         remove_effect( effect_dulled_senses );
     } else {
         if( !has_effect( effect_dulled_senses ) ) {
-            add_effect( effect_dulled_senses, 1_turns, bodypart_str_id::NULL_ID(), true,
+            add_effect( effect_dulled_senses, 1_minutes, bodypart_str_id::NULL_ID(), true,
                         want_dulled );
         }
         effect &eff = get_effect( effect_dulled_senses );
         if( eff.get_int_dur_factor() > 0_turns ) {
             eff.set_duration( eff.get_int_dur_factor() * want_dulled );
-        } else {
-            if( eff.get_intensity() != want_dulled ) {
-                eff.set_intensity( want_dulled );
-            }
-            eff.set_duration( 10_minutes );
         }
     }
 
@@ -1530,17 +1525,12 @@ void Character::update_sensitive_per_effects()
         remove_effect( effect_heightened_senses );
     } else {
         if( !has_effect( effect_heightened_senses ) ) {
-            add_effect( effect_heightened_senses, 1_turns, bodypart_str_id::NULL_ID(), true,
+            add_effect( effect_heightened_senses, 1_minutes, bodypart_str_id::NULL_ID(), true,
                         want_heightened );
         }
         effect &eff = get_effect( effect_heightened_senses );
         if( eff.get_int_dur_factor() > 0_turns ) {
             eff.set_duration( eff.get_int_dur_factor() * want_heightened );
-        } else {
-            if( eff.get_intensity() != want_heightened ) {
-                eff.set_intensity( want_heightened );
-            }
-            eff.set_duration( 10_minutes );
         }
     }
 }
