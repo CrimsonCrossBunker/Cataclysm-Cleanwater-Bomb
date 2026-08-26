@@ -7,6 +7,7 @@
 #include "cata_catch.h"
 #include "character.h"
 #include "effect.h"
+#include "itype.h"
 #include "map_helpers.h"
 #include "player_helpers.h"
 #include "skill.h"
@@ -303,4 +304,29 @@ TEST_CASE( "focus_drain_while_practicing_scales_with_sensitivity",
     CHECK( drain_to( 0 ) == 197 );
     // Every 10 points above 200 slow it by 1%, capped at -50%: 1000 drained.
     CHECK( drain_to( 700 ) == 199 );
+}
+
+TEST_CASE( "comestible_sensitive_field_modifies_sensitivity", "[sensitive][character][item]" )
+{
+    avatar &dummy = get_avatar();
+    clear_character( dummy );
+
+    islot_comestible comest;
+
+    comest.sensitive = 10;
+    dummy.modify_sensitive( comest );
+    CHECK( dummy.get_sensitive() == 110 );
+
+    comest.sensitive = -30;
+    dummy.modify_sensitive( comest );
+    CHECK( dummy.get_sensitive() == 80 );
+
+    // Zero is a no-op and the value never drops below zero.
+    comest.sensitive = 0;
+    dummy.modify_sensitive( comest );
+    CHECK( dummy.get_sensitive() == 80 );
+
+    comest.sensitive = -500;
+    dummy.modify_sensitive( comest );
+    CHECK( dummy.get_sensitive() == 0 );
 }
