@@ -1495,7 +1495,7 @@ void Character::update_sensitive()
         rate = enchantment_cache->modify_value( enchant_vals::mod::SENSITIVE_RATE_DOWN, rate );
     }
 
-    int change = roll_remainder( gap * static_cast<float>( rate ) );
+    int change = roll_remainder( gap * rate );
     if( change == 0 || ( gap > 0 ) != ( change > 0 ) ) {
         change = gap > 0 ? 1 : -1;
     }
