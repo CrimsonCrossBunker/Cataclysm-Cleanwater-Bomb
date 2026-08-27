@@ -149,7 +149,7 @@ jobs:
             lua_platform: 1
             pr_artifact: linux-curses
             dont_skip_data_only_changes: 1
-            mods: --mods=magiclysm
+            mods: magiclysm|xedra_evolved
             title: Basic Build (Clang oldest supported, Ubuntu, Curses)
             ccache_limit: 4.5G
             ccache_key: linux-llvm-13
