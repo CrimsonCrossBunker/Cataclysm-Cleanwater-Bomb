@@ -147,14 +147,25 @@ const weakpoint *Character::absorb_hit( const weakpoint_attack &, const bodypart
     return nullptr;
 }
 
-void Character::absorb_hit( const sub_bodypart_id &sbp, damage_instance &dam,
-                            bool allow_torso_neck_fallback )
+const weakpoint *Character::absorb_hit( const weakpoint_attack &attack, const bodypart_id &bp,
+                                        damage_instance &dam, const weakpoint &wp,
+                                        bool damage_armor )
 {
-    absorb_damage( sbp->parent.id(), sbp, dam, allow_torso_neck_fallback );
+    ( void )attack;
+    ( void )wp;
+    absorb_damage( bp, std::nullopt, dam, false, damage_armor );
+    return nullptr;
+}
+
+void Character::absorb_hit( const sub_bodypart_id &sbp, damage_instance &dam,
+                            bool allow_torso_neck_fallback, bool damage_armor )
+{
+    absorb_damage( sbp->parent.id(), sbp, dam, allow_torso_neck_fallback, damage_armor );
 }
 
 void Character::absorb_damage( const bodypart_id &bp, const std::optional<sub_bodypart_id> &sbp,
-                               damage_instance &dam, bool allow_torso_neck_fallback )
+                               damage_instance &dam, bool allow_torso_neck_fallback,
+                               bool damage_armor )
 {
     std::list<item> worn_remains;
     bool armor_destroyed = false;
@@ -208,7 +219,7 @@ void Character::absorb_damage( const bodypart_id &bp, const std::optional<sub_bo
         adjust_taken_damage_by_enchantments( elem );
 
         worn.absorb_damage( *this, elem, bp, worn_remains, armor_destroyed, sbp,
-                            allow_torso_neck_fallback );
+                            allow_torso_neck_fallback, damage_armor );
 
         passive_absorb_hit( bp, elem );
 
@@ -237,7 +248,7 @@ void Character::armor_use_power_when_hit( damage_unit &du, item &armor ) const
 }
 
 bool Character::armor_absorb( damage_unit &du, item &armor, const bodypart_id &bp,
-                              const sub_bodypart_id &sbp, int roll ) const
+                              const sub_bodypart_id &sbp, int roll, bool damage_armor ) const
 {
     item::cover_type ctype = item::get_cover_type( du.type );
 
@@ -262,10 +273,10 @@ bool Character::armor_absorb( damage_unit &du, item &armor, const bodypart_id &b
     // -1 is passed as roll so that each material is rolled individually
     armor.mitigate_damage( du, sbp, -1 );
 
-    // check if the armor was damaged
-    item::armor_status damaged = armor.damage_armor_durability( du, pre_mitigation, bp,
-                                 calculate_by_enchantment( 1,
-                                         enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ),
+    // check if the armor was damaged - damage_armor=false still mitigates but does not degrade durability
+    const double dmg_mult = damage_armor ? calculate_by_enchantment( 1,
+                                        enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ) : 0.0;
+    item::armor_status damaged = armor.damage_armor_durability( du, pre_mitigation, bp, dmg_mult,
                                  this );
 
     // describe what happened if the armor took damage
@@ -276,7 +287,8 @@ bool Character::armor_absorb( damage_unit &du, item &armor, const bodypart_id &b
     return damaged == item::armor_status::DESTROYED;
 }
 
-bool Character::armor_absorb( damage_unit &du, item &armor, const bodypart_id &bp, int roll ) const
+bool Character::armor_absorb( damage_unit &du, item &armor, const bodypart_id &bp, int roll,
+                           bool damage_armor ) const
 {
     item::cover_type ctype = item::get_cover_type( du.type );
 
@@ -300,10 +312,10 @@ bool Character::armor_absorb( damage_unit &du, item &armor, const bodypart_id &b
     // -1 is passed as roll so that each material is rolled individually
     armor.mitigate_damage( du, bp, -1 );
 
-    // check if the armor was damaged
-    item::armor_status damaged = armor.damage_armor_durability( du, pre_mitigation, bp,
-                                 calculate_by_enchantment( 1,
-                                         enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ),
+    // check if the armor was damaged - damage_armor=false still mitigates but does not degrade durability
+    const double dmg_mult = damage_armor ? calculate_by_enchantment( 1,
+                                        enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ) : 0.0;
+    item::armor_status damaged = armor.damage_armor_durability( du, pre_mitigation, bp, dmg_mult,
                                  this );
 
     // describe what happened if the armor took damage
@@ -315,11 +327,13 @@ bool Character::armor_absorb( damage_unit &du, item &armor, const bodypart_id &b
 }
 
 bool Character::ablative_armor_absorb( damage_unit &du, item &armor, const sub_bodypart_id &bp,
-                                       int roll )
+                                       int roll, bool damage_armor )
 {
     const map &here = get_map();
 
     item::cover_type ctype = item::get_cover_type( du.type );
+    const double dmg_mult = damage_armor ? calculate_by_enchantment( 1,
+                                        enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ) : 0.0;
 
     for( item_pocket *const pocket : armor.get_ablative_pockets() ) {
         // if the pocket is ablative and not empty we should use its values
@@ -336,17 +350,15 @@ bool Character::ablative_armor_absorb( damage_unit &du, item &armor, const sub_b
                 // mitigate the actual damage instance
                 ablative_armor.mitigate_damage( du );
 
-                // check if the item will break
+                // check if the item will break - damage_armor=false still mitigates but does not degrade plates
                 item::armor_status damaged = item::armor_status::UNDAMAGED;
                 if( ablative_armor.find_armor_data()->non_functional != itype_id() ) {
                     // if the item transforms on destruction damage it that way
                     // ablative armor is concerned with incoming damage not mitigated damage
-                    damaged = ablative_armor.damage_armor_transforms( pre_mitigation, calculate_by_enchantment( 1,
-                              enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ) );
+                    damaged = ablative_armor.damage_armor_transforms( pre_mitigation, dmg_mult );
                 } else {
                     damaged = ablative_armor.damage_armor_durability( du, pre_mitigation, bp->parent,
-                              calculate_by_enchantment( 1,
-                                                        enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ),
+                              dmg_mult,
                               this );
                 }
 

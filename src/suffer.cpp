@@ -424,7 +424,7 @@ void suffer::while_grabbed( Character &you )
     bool pressure_absorbed = true;
     const auto absorb_bodypart_pressure = [&]( const bodypart_id & bp, float pressure_amount ) {
         damage_instance pressure( damage_bash, pressure_amount );
-        you.absorb_hit( weakpoint_attack(), bp, pressure );
+        you.absorb_hit( weakpoint_attack(), bp, pressure, weakpoint(), false );
         if( pressure.total_damage() > 0.0f ) {
             pressure_absorbed = false;
         }
@@ -432,7 +432,7 @@ void suffer::while_grabbed( Character &you )
     const auto absorb_sub_bodypart_pressure = [&]( const sub_bodypart_id & sbp, float pressure_amount,
     bool allow_torso_neck_fallback = false ) {
         damage_instance pressure( damage_bash, pressure_amount );
-        you.absorb_hit( sbp, pressure, allow_torso_neck_fallback );
+        you.absorb_hit( sbp, pressure, allow_torso_neck_fallback, false );
         if( pressure.total_damage() > 0.0f ) {
             pressure_absorbed = false;
         }
