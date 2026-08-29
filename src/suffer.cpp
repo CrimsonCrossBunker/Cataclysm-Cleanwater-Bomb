@@ -429,16 +429,15 @@ void suffer::while_grabbed( Character &you )
             pressure_absorbed = false;
         }
     };
-    const auto absorb_sub_bodypart_pressure = [&]( const sub_bodypart_id & sbp, float pressure_amount,
-    bool allow_torso_neck_fallback = false ) {
+    const auto absorb_sub_bodypart_pressure = [&]( const sub_bodypart_id & sbp, float pressure_amount ) {
         damage_instance pressure( damage_bash, pressure_amount );
-        you.absorb_hit( sbp, pressure, allow_torso_neck_fallback, false );
+        you.absorb_hit( sbp, pressure, false );
         if( pressure.total_damage() > 0.0f ) {
             pressure_absorbed = false;
         }
     };
     absorb_sub_bodypart_pressure( sub_body_part_torso_upper.id(), pressure_per_part );
-    absorb_sub_bodypart_pressure( sub_body_part_torso_neck.id(), pressure_per_part, true );
+    absorb_sub_bodypart_pressure( sub_body_part_torso_neck.id(), pressure_per_part );
     absorb_bodypart_pressure( body_part_mouth.id(), pressure_per_part );
     absorb_bodypart_pressure( body_part_head.id(), pressure_per_part );
 
