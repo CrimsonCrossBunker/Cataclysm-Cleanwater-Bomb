@@ -146,6 +146,7 @@ json_flag_SUNBURN_SUPERNATURAL_REDUCTION( "SUNBURN_SUPERNATURAL_REDUCTION" );
 static const damage_type_id damage_bash( "bash" );
 static const sub_bodypart_str_id sub_body_part_torso_upper( "torso_upper" );
 static const sub_bodypart_str_id sub_body_part_torso_neck( "torso_neck" );
+static const sub_bodypart_str_id sub_body_part_head_throat( "head_throat" );
 
 static const morale_type morale_feeling_bad( "morale_feeling_bad" );
 static const morale_type morale_feeling_good( "morale_feeling_good" );
@@ -420,7 +421,7 @@ void suffer::while_grabbed( Character &you )
                           crowd_pressure / ( crowd - impassable_ter ) );
     }
 
-    const float pressure_per_part = crowd_pressure / 4;
+    const float pressure_per_part = crowd_pressure / 3;
     bool pressure_absorbed = true;
     const auto absorb_bodypart_pressure = [&]( const bodypart_id & bp, float pressure_amount ) {
         damage_instance pressure( damage_bash, pressure_amount );
@@ -433,13 +434,19 @@ void suffer::while_grabbed( Character &you )
         damage_instance pressure( damage_bash, pressure_amount );
         you.absorb_hit( sbp, pressure, false );
         if( pressure.total_damage() > 0.0f ) {
-            pressure_absorbed = false;
+            if ( sbp == sub_body_part_head_throat.id() ) {
+                you.absorb_hit( sub_body_part_torso_neck.id(), pressure, false );
+                if( pressure.total_damage() > 0.0f ) {
+                    pressure_absorbed = false;
+                }
+            } else {
+                pressure_absorbed = false;
+            }
         }
     };
     absorb_sub_bodypart_pressure( sub_body_part_torso_upper.id(), pressure_per_part );
-    absorb_sub_bodypart_pressure( sub_body_part_torso_neck.id(), pressure_per_part );
+    absorb_sub_bodypart_pressure( sub_body_part_head_throat.id(), pressure_per_part );
     absorb_bodypart_pressure( body_part_mouth.id(), pressure_per_part );
-    absorb_bodypart_pressure( body_part_head.id(), pressure_per_part );
 
     if( pressure_absorbed ) {
         return;
