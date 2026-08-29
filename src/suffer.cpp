@@ -440,7 +440,7 @@ void suffer::while_grabbed( Character &you )
     absorb_sub_bodypart_pressure( sub_body_part_torso_upper.id(), pressure_per_part );
     absorb_sub_bodypart_pressure( sub_body_part_torso_neck.id(), pressure_per_part, true );
     absorb_bodypart_pressure( body_part_mouth.id(), pressure_per_part );
-    absorb_bodypart_pressure( body_part_eyes.id(), pressure_per_part );
+    absorb_bodypart_pressure( body_part_head.id(), pressure_per_part );
 
     if( pressure_absorbed ) {
         return;
