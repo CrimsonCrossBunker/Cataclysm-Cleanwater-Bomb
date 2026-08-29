@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:54a8aba90b999ad3afa6fa47814011b299c30c47c23c8eea106b003faa024f32",
+    "source_fingerprint": "sha256:f03d328ac36933e18432633f75bbc1cc79480a2bf6d9c89f4eb1cc0b16193158",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,9 +29,9 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6731,
-    "top_level_objects": 94372,
-    "top_level_objects_without_string_type": 1,
+    "tracked_json_files": 6730,
+    "top_level_objects": 94373,
+    "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
   "policy": {
@@ -5148,7 +5148,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 604,
+        "occurrences": 606,
         "examples": [
           {
             "path": "data/json/npcs/Backgrounds/OtherSurvivorStories/Brigitte_LaCroix_Background.json",

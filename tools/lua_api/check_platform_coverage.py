@@ -16,7 +16,10 @@ try:
         serialize_coverage,
     )
 except ImportError:
-    from generate_platform_contract import DEFAULT_NATIVE_INVENTORY, load_json  # type: ignore
+    from generate_platform_contract import (  # type: ignore
+        DEFAULT_NATIVE_INVENTORY,
+        load_json,
+    )
     from generate_platform_coverage import (  # type: ignore
         DEFAULT_CONTRACT_OUTPUT,
         DEFAULT_OUTPUT,
@@ -46,7 +49,10 @@ def check(
         )
     sync = actual.get("platform_sync")
     if not isinstance(sync, dict) or not sync.get("synchronized", False):
-        raise RuntimeError("Platform LuaLS/native/public-contract synchronization is incomplete")
+        raise RuntimeError(
+            "Platform LuaLS/native/public-contract synchronization is "
+            "incomplete"
+        )
     return {
         "luals_classes": int(sync["luals_class_count"]),
         "luals_functions": int(sync["luals_function_count"]),
@@ -58,8 +64,12 @@ def check(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--coverage", type=Path, default=DEFAULT_OUTPUT)
-    parser.add_argument("--native-inventory", type=Path, default=DEFAULT_NATIVE_INVENTORY)
-    parser.add_argument("--contract", type=Path, default=DEFAULT_CONTRACT_OUTPUT)
+    parser.add_argument(
+        "--native-inventory", type=Path, default=DEFAULT_NATIVE_INVENTORY
+    )
+    parser.add_argument(
+        "--contract", type=Path, default=DEFAULT_CONTRACT_OUTPUT
+    )
     parser.add_argument("--schema", type=Path, default=DEFAULT_SCHEMA)
     arguments = parser.parse_args()
     summary = check(

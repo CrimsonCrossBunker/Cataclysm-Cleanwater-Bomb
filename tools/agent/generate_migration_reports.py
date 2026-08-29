@@ -117,11 +117,9 @@ def render_report(data: dict) -> str:
 def build_batches(data: dict) -> dict:
     grouped: dict[str, list[dict]] = defaultdict(list)
     for item in data["documents"]:
-        if (
-            item["original_path"] in CURRENT_PLATFORM_DOCUMENTS
-            or is_retired_platform_path(item["original_path"])
-            or item["migration_status"] in {"verified", "stubbed", "archived"}
-        ):
+        if (item["original_path"] in CURRENT_PLATFORM_DOCUMENTS or
+                is_retired_platform_path(item["original_path"]) or
+                item["migration_status"] in {"verified", "stubbed", "archived"}):
             continue
         if not item["migration_batch"]:
             continue

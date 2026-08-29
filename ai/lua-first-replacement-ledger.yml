@@ -10,17 +10,17 @@ sources:
 - id: json-object-types
   path: data/reference/json/ccb_json_object_types.json
   selector: type
-  source_fingerprint: sha256:54a8aba90b999ad3afa6fa47814011b299c30c47c23c8eea106b003faa024f32
+  source_fingerprint: sha256:f03d328ac36933e18432633f75bbc1cc79480a2bf6d9c89f4eb1cc0b16193158
   entry_count: 190
 - id: eoc-conditions
   path: data/reference/json/ccb_eoc_conditions.json
   selector: key
-  source_fingerprint: sha256:54a8aba90b999ad3afa6fa47814011b299c30c47c23c8eea106b003faa024f32
+  source_fingerprint: sha256:f03d328ac36933e18432633f75bbc1cc79480a2bf6d9c89f4eb1cc0b16193158
   entry_count: 275
 - id: eoc-effects
   path: data/reference/json/ccb_eoc_effects.json
   selector: key
-  source_fingerprint: sha256:54a8aba90b999ad3afa6fa47814011b299c30c47c23c8eea106b003faa024f32
+  source_fingerprint: sha256:f03d328ac36933e18432633f75bbc1cc79480a2bf6d9c89f4eb1cc0b16193158
   entry_count: 309
 summary:
   total: 774
@@ -5801,7 +5801,7 @@ entries:
 - inventory: eoc-effects
   selector: npc_mutate
   target_kind: shared_service
-  target: services.mutations
+  target: services.characters
   status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
@@ -5816,7 +5816,7 @@ entries:
 - inventory: eoc-effects
   selector: npc_mutate_category
   target_kind: shared_service
-  target: services.mutations
+  target: services.characters
   status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
@@ -5831,7 +5831,7 @@ entries:
 - inventory: eoc-effects
   selector: npc_mutate_towards
   target_kind: shared_service
-  target: services.mutations
+  target: services.characters
   status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
@@ -7717,7 +7717,7 @@ entries:
 - inventory: eoc-effects
   selector: u_mutate
   target_kind: shared_service
-  target: services.mutations
+  target: services.characters
   status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
@@ -7732,7 +7732,7 @@ entries:
 - inventory: eoc-effects
   selector: u_mutate_category
   target_kind: shared_service
-  target: services.mutations
+  target: services.characters
   status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
@@ -7747,7 +7747,7 @@ entries:
 - inventory: eoc-effects
   selector: u_mutate_towards
   target_kind: shared_service
-  target: services.mutations
+  target: services.characters
   status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:

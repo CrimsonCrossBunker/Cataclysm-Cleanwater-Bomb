@@ -529,7 +529,6 @@ class LuaFirstMigrationTest(unittest.TestCase):
             result = migrate_lua_first.migrate(
                 migrate_lua_first.load_objects([source]), "predicate_mod"
             )
-            main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(result.converted, [])
@@ -3902,14 +3901,11 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 migrate_lua_first.load_objects([source]), "dialogue_mission_predicates_mod"
             )
             main = result.files[Path("main.lua")]
-            report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.converted), 2)
             self.assertEqual(len(result.partial), 0)
             self.assertIn('services.gameplay.environment.is_outside(context.data["loc"])', main)
             self.assertNotIn("run_eoc", main)
-
-
 
     def test_dynamic_or_unproven_u_has_profession_shapes_stay_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -6910,7 +6906,6 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 migrate_lua_first.load_objects([source]), "dream_mod"
             )
             main = result.files[Path("main.lua")]
-            report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.converted), 1)
             self.assertEqual(result.partial, [])
@@ -6992,7 +6987,6 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 migrate_lua_first.load_objects([source]), "blacklist_mod"
             )
             main = result.files[Path("main.lua")]
-            report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.converted), 3)
             self.assertEqual(result.partial, [])
@@ -7112,7 +7106,6 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 migrate_lua_first.load_objects([source]), "migration_mod"
             )
             main = result.files[Path("main.lua")]
-            report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.converted), 3)
             self.assertEqual(result.partial, [])
@@ -7208,7 +7201,6 @@ class LuaFirstMigrationTest(unittest.TestCase):
             result = migrate_lua_first.migrate(
                 migrate_lua_first.load_objects([source]), "sound_mod"
             )
-            main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.partial), 2)
@@ -8671,13 +8663,13 @@ class LuaFirstMigrationTest(unittest.TestCase):
             with patch.object(
                 migrate_lua_first,
                 "PROVEN_NPC_ACTOR_EVENTS",
-                migrate_lua_first.PROVEN_NPC_ACTOR_EVENTS
-                | {"character_takes_damage"},
+                migrate_lua_first.PROVEN_NPC_ACTOR_EVENTS |
+                {"character_takes_damage"},
             ), patch.object(
                 migrate_lua_first,
                 "AVATAR_ACTOR_EVENTS",
-                migrate_lua_first.AVATAR_ACTOR_EVENTS
-                | {"character_takes_damage"},
+                migrate_lua_first.AVATAR_ACTOR_EVENTS |
+                {"character_takes_damage"},
             ):
                 result = migrate_lua_first.migrate(
                     migrate_lua_first.load_objects([source]),
@@ -9445,7 +9437,6 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 migrate_lua_first.load_objects([source]), "selection_mod"
             )
             main = result.files[Path("main.lua")]
-            report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.converted), 0)
             self.assertTrue(result.partial)
@@ -14529,8 +14520,8 @@ class LuaFirstMigrationTest(unittest.TestCase):
                             "name": "Boston",
                             "population": 650000,
                             "size": 12,
-                            "pos_om": [ 10, 20 ],
-                            "pos": [ 30, 40 ],
+                            "pos_om": [10, 20],
+                            "pos": [30, 40],
                         },
                         {
                             "type": "faction_mission",
@@ -14544,8 +14535,8 @@ class LuaFirstMigrationTest(unittest.TestCase):
                             "time": "2 Hours",
                             "positions": 2,
                             "items_label": "Rewards",
-                            "items_possibilities": [ "canteen", "matchbook" ],
-                            "effects": [ "Uncovers map tiles." ],
+                            "items_possibilities": ["canteen", "matchbook"],
+                            "effects": ["Uncovers map tiles."],
                             "footer": "Report back to base.",
                         },
                         {
@@ -14559,9 +14550,9 @@ class LuaFirstMigrationTest(unittest.TestCase):
                             "park_radius": 20,
                             "park_sigma": 80,
                             "name_snippet": "city_names",
-                            "houses": [ [ "house_suburban", 50 ] ],
-                            "shops": [ [ "shop_grocery", 25 ] ],
-                            "parks": [ [ "park_central", 10 ] ],
+                            "houses": [["house_suburban", 50]],
+                            "shops": [["shop_grocery", 25]],
+                            "parks": [["park_central", 10]],
                         },
                         {
                             "type": "region_settings_city",
@@ -14569,10 +14560,10 @@ class LuaFirstMigrationTest(unittest.TestCase):
                             "copy-from": "default_city",
                             "city_size": 10,
                             "extend": {
-                                "houses": [ [ "house_modern", 40 ] ],
+                                "houses": [["house_modern", 40]],
                             },
                             "delete": {
-                                "shops": [ [ "shop_grocery", 25 ] ],
+                                "shops": [["shop_grocery", 25]],
                             },
                         },
                         {
@@ -14582,13 +14573,13 @@ class LuaFirstMigrationTest(unittest.TestCase):
                             "item_group": "forest",
                             "item_group_chance": 60,
                             "item_spawn_iterations": 1,
-                            "terrains": [ "forest", "special_forest" ],
-                            "components": [ "trees_forest" ],
-                            "groundcover": [ [ "t_region_groundcover_forest", 1 ] ],
+                            "terrains": ["forest", "special_forest"],
+                            "components": ["trees_forest"],
+                            "groundcover": [["t_region_groundcover_forest", 1]],
                             "terrain_furniture": {
                                 "t_water_murky": {
                                     "chance": 2,
-                                    "furniture": [ [ "f_region_water_plant", 1 ] ],
+                                    "furniture": [["f_region_water_plant", 1]],
                                 },
                             },
                         },
@@ -14598,9 +14589,9 @@ class LuaFirstMigrationTest(unittest.TestCase):
                             "copy-from": "default_biome",
                             "sparseness_adjacency_factor": 4,
                             "extend": {
-                                "terrains": [ "forest_thick" ],
-                                "components": [ "shrubs_forest" ],
-                                "groundcover": [ [ "t_region_groundcover_swamp", 2 ] ],
+                                "terrains": ["forest_thick"],
+                                "components": ["shrubs_forest"],
+                                "groundcover": [["t_region_groundcover_swamp", 2]],
                             },
                         },
                     ]
@@ -14611,7 +14602,6 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 migrate_lua_first.load_objects([source]), "g4_mod"
             )
             main = result.files[Path("main.lua")]
-            report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.converted), 6)
             self.assertEqual(len(result.partial), 0)
@@ -16875,8 +16865,6 @@ class LuaFirstMigrationTest(unittest.TestCase):
             result = migrate_lua_first.migrate(
                 migrate_lua_first.load_objects([source]), "empty_math_mod"
             )
-            main = result.files[Path("main.lua")]
-            report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.partial), 1)
 

@@ -17,8 +17,8 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT = (
     REPOSITORY_ROOT / "data/lua/reference/ccb_platform_native_inventory.json"
 )
-DEFAULT_SCHEMA = (
-    REPOSITORY_ROOT / "data/lua/reference/ccb_platform_native_inventory.schema.json"
+DEFAULT_SCHEMA = REPOSITORY_ROOT / (
+    "data/lua/reference/ccb_platform_native_inventory.schema.json"
 )
 
 ID_DEFINITION_PATTERN = re.compile(
@@ -1913,10 +1913,14 @@ def main() -> int:
     )
     if arguments.check:
         if not arguments.output.exists():
-            raise SystemExit(f"missing Platform native inventory: {arguments.output}")
+            raise SystemExit(
+                f"missing Platform native inventory: {arguments.output}"
+            )
         actual = arguments.output.read_text(encoding="utf-8")
         if actual != expected:
-            raise SystemExit(f"stale Platform native inventory: {arguments.output}")
+            raise SystemExit(
+                f"stale Platform native inventory: {arguments.output}"
+            )
         return 0
     arguments.output.parent.mkdir(parents=True, exist_ok=True)
     arguments.output.write_text(expected, encoding="utf-8")

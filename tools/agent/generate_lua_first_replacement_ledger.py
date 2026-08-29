@@ -839,33 +839,33 @@ _STATIC_CATALOG_EVIDENCE = [
     "tools/migrate_lua_first.py",
     "data/lua/LUA_FIRST_PLATFORM.md",
 ]
-IMPLEMENTED_JSON.update( {
-    "SPELL": { "target": "content.magic" },
-    "bionic": { "target": "content.bionics" },
-    "city_building": { "target": "content.map" },
-    "enchantment": { "target": "content.enchantments" },
-    "faction": { "target": "content.factions" },
-    "jmath_function": { "target": "content.state-and-values" },
-    "mission_definition": { "target": "content.missions" },
-    "mutation": { "target": "content.mutations" },
-    "npc": { "target": "content.characters" },
-    "npc_class": { "target": "content.characters" },
-    "overmap_special": { "target": "content.map" },
-    "overmap_terrain": { "target": "content.map" },
-    "pp_generator": { "target": "content.map" },
-    "profession": { "target": "content.professions" },
-    "profession_item_substitutions": { "target": "content.items" },
-    "relic_procgen_data": { "target": "content.relics" },
-    "ter_furn_transform": { "target": "content.map" },
-    "vehicle": { "target": "content.vehicles" },
-    "vehicle_part": { "target": "content.vehicles" },
-    "vehicle_placement": { "target": "content.vehicles" },
-    "vehicle_spawn": { "target": "content.vehicles" },
-    "widget": { "target": "content.widgets" },
-} )
+IMPLEMENTED_JSON.update({
+    "SPELL": {"target": "content.magic"},
+    "bionic": {"target": "content.bionics"},
+    "city_building": {"target": "content.map"},
+    "enchantment": {"target": "content.enchantments"},
+    "faction": {"target": "content.factions"},
+    "jmath_function": {"target": "content.state-and-values"},
+    "mission_definition": {"target": "content.missions"},
+    "mutation": {"target": "content.mutations"},
+    "npc": {"target": "content.characters"},
+    "npc_class": {"target": "content.characters"},
+    "overmap_special": {"target": "content.map"},
+    "overmap_terrain": {"target": "content.map"},
+    "pp_generator": {"target": "content.map"},
+    "profession": {"target": "content.professions"},
+    "profession_item_substitutions": {"target": "content.items"},
+    "relic_procgen_data": {"target": "content.relics"},
+    "ter_furn_transform": {"target": "content.map"},
+    "vehicle": {"target": "content.vehicles"},
+    "vehicle_part": {"target": "content.vehicles"},
+    "vehicle_placement": {"target": "content.vehicles"},
+    "vehicle_spawn": {"target": "content.vehicles"},
+    "widget": {"target": "content.widgets"},
+})
 for _entry in IMPLEMENTED_JSON.values():
     if "evidence" not in _entry:
-        _entry["evidence"] = list( _STATIC_CATALOG_EVIDENCE )
+        _entry["evidence"] = list(_STATIC_CATALOG_EVIDENCE)
 
 BOUNDED_IMPLEMENTED_JSON = {
     "event_statistic": {
@@ -2318,40 +2318,49 @@ BOUNDED_IMPLEMENTED_EOC = {
     # Charge-aware inventory queries and wielded/worn predicates now lower to
     # the typed inventory API for proven avatar/NPC actors.  Dynamic variable
     # forms remain explicit TODOs in the migrator.
-    ("eoc-conditions", "has_ammo"): "services.items.ammo_sufficient",
-    ("eoc-conditions", "is_rotten"): "services.items.snapshot",
-    ("eoc-conditions", "u_has_item"): "services.inventory.resources",
-    ("eoc-conditions", "npc_has_item"): "services.inventory.resources",
-    ("eoc-conditions", "u_has_items"): "services.inventory.resources",
-    ("eoc-conditions", "npc_has_items"): "services.inventory.resources",
-    ("eoc-conditions", "u_has_item_with_flag"): "services.inventory.has_item_flag",
-    ("eoc-conditions", "npc_has_item_with_flag"): "services.inventory.has_item_flag",
-    ("eoc-conditions", "u_has_item_category"): "services.inventory.category_count",
-    ("eoc-conditions", "npc_has_item_category"): "services.inventory.category_count",
-    ("eoc-conditions", "u_has_software"): "services.inventory.has_software",
-    ("eoc-conditions", "npc_has_software"): "services.inventory.has_software",
-    ("eoc-conditions", "u_has_worn_with_flag"): "services.inventory.has_worn_flag",
-    ("eoc-conditions", "npc_has_worn_with_flag"): "services.inventory.has_worn_flag",
-    ("eoc-conditions", "u_has_wielded_with_flag"): "services.inventory.wielded_matches",
-    ("eoc-conditions", "npc_has_wielded_with_flag"): "services.inventory.wielded_matches",
-    ("eoc-conditions", "u_has_wielded_with_weapon_category"): "services.inventory.wielded_matches",
-    ("eoc-conditions", "npc_has_wielded_with_weapon_category"): "services.inventory.wielded_matches",
-    ("eoc-conditions", "u_has_wielded_with_skill"): "services.inventory.wielded_matches",
-    ("eoc-conditions", "npc_has_wielded_with_skill"): "services.inventory.wielded_matches",
-    ("eoc-conditions", "u_has_wielded_with_ammotype"): "services.inventory.wielded_matches",
-    ("eoc-conditions", "npc_has_wielded_with_ammotype"): "services.inventory.wielded_matches",
-    ("eoc-conditions", "npc_see_u"): "services.creatures.perception",
-    ("eoc-conditions", "u_see_npc"): "services.creatures.perception",
+    ("eoc-conditions", "has_ammo"): "services.items",
+    ("eoc-conditions", "is_rotten"): "services.items",
+    ("eoc-conditions", "u_has_item"): "services.inventory",
+    ("eoc-conditions", "npc_has_item"): "services.inventory",
+    ("eoc-conditions", "u_has_items"): "services.items",
+    ("eoc-conditions", "npc_has_items"): "services.items",
+    ("eoc-conditions", "u_has_item_with_flag"): "services.items",
+    ("eoc-conditions", "npc_has_item_with_flag"): "services.items",
+    ("eoc-conditions", "u_has_item_category"): "services.items",
+    ("eoc-conditions", "npc_has_item_category"): "services.items",
+    ("eoc-conditions", "u_has_software"): "services.characters",
+    ("eoc-conditions", "npc_has_software"): "services.characters",
+    ("eoc-conditions", "u_has_worn_with_flag"): "services.characters",
+    ("eoc-conditions", "npc_has_worn_with_flag"): "services.characters",
+    ("eoc-conditions", "u_has_wielded_with_flag"): (
+        "services.inventory-and-items"
+    ),
+    ("eoc-conditions", "npc_has_wielded_with_flag"): (
+        "services.inventory-and-items"
+    ),
+    ("eoc-conditions", "u_has_wielded_with_weapon_category"): (
+        "services.items"
+    ),
+    ("eoc-conditions", "npc_has_wielded_with_weapon_category"): (
+        "services.items"
+    ),
+    ("eoc-conditions", "u_has_wielded_with_skill"): "services.items",
+    ("eoc-conditions", "npc_has_wielded_with_skill"): "services.items",
+    ("eoc-conditions", "u_has_wielded_with_ammotype"): "services.items",
+    ("eoc-conditions", "npc_has_wielded_with_ammotype"): "services.items",
+    ("eoc-conditions", "npc_see_u"): "services.characters",
+    ("eoc-conditions", "u_see_npc"): "services.characters",
     ("eoc-conditions", "npc_see_u_loc"): "services.creatures.perception",
     ("eoc-conditions", "u_see_npc_loc"): "services.creatures.perception",
-    ("eoc-conditions", "u_monsters_in_direction"): "services.creatures.perception",
-    ("eoc-conditions", "npc_has_visible_trait"): "services.mutations.visibility",
-    ("eoc-conditions", "u_has_visible_trait"): "services.mutations.visibility",
-    ("eoc-conditions", "npc_allies"): "services.npcs",
-    ("eoc-conditions", "npc_allies_global"): "services.npcs",
-    ("eoc-conditions", "npc_role_nearby"): "services.npcs",
-    ("eoc-conditions", "npc_near_om_location"): "services.overmap",
-    ("eoc-conditions", "u_near_om_location"): "services.overmap",
+    ("eoc-conditions", "u_monsters_in_direction"):
+        "services.creatures.perception",
+    ("eoc-conditions", "npc_has_visible_trait"): "services.characters",
+    ("eoc-conditions", "u_has_visible_trait"): "services.characters",
+    ("eoc-conditions", "npc_allies"): "services.characters",
+    ("eoc-conditions", "npc_allies_global"): "services.characters",
+    ("eoc-conditions", "npc_role_nearby"): "services.characters",
+    ("eoc-conditions", "npc_near_om_location"): "services.map",
+    ("eoc-conditions", "u_near_om_location"): "services.map",
     ("eoc-conditions", "at_safe_space"): (
         "services.overmap-safety-and-characters"
     ),
@@ -2371,12 +2380,12 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "npc_set_random_fault_of_type"): "services.items",
     ("eoc-effects", "u_set_fault"): "services.items",
     ("eoc-effects", "u_set_random_fault_of_type"): "services.items",
-    ("eoc-effects", "u_pick_bodypart"): "services.body-parts-and-wounds",
-    ("eoc-effects", "npc_pick_bodypart"): "services.body-parts-and-wounds",
-    ("eoc-effects", "u_travel_to_dimension"): "workflows.dimension-travel",
+    ("eoc-effects", "u_pick_bodypart"): "services.characters",
+    ("eoc-effects", "npc_pick_bodypart"): "services.characters",
+    ("eoc-effects", "u_travel_to_dimension"): "services.relocation",
     ("eoc-effects", "u_activate"): "services.items",
     ("eoc-effects", "npc_activate"): "services.items",
-    ("eoc-effects", "custom_light_level"): "services.gameplay.environment",
+    ("eoc-effects", "custom_light_level"): "services.gameplay",
     ("eoc-effects", "alter_timed_events"): "services.time",
     ("eoc-effects", "dimension_name"): "services.gameplay.environment",
     ("eoc-effects", "mirror_coordinates"): "services.coords",
@@ -2407,13 +2416,9 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-conditions", "u_can_drop_weapon"): (
         "services.inventory-and-martial-arts"
     ),
-    ("eoc-conditions", "u_has_item"): "services.inventory",
     ("eoc-conditions", "u_is_wearing"): "services.inventory",
     ("eoc-conditions", "u_has_move_mode"): "services.characters.movement",
     ("eoc-conditions", "u_has_weapon"): "services.inventory-and-martial-arts",
-    ("eoc-conditions", "u_has_wielded_with_flag"): (
-        "services.inventory-and-items"
-    ),
     ("eoc-conditions", "u_has_any_trait"): "services.mutations",
     ("eoc-conditions", "u_has_martial_art"): "services.martial_arts",
     ("eoc-conditions", "u_has_proficiency"): "services.proficiencies",
@@ -2464,7 +2469,9 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-conditions", "map_terrain_id"): "services.gameplay.environment",
     ("eoc-conditions", "map_furniture_id"): "services.gameplay.environment",
     ("eoc-conditions", "map_field_id"): "services.gameplay.environment",
-    ("eoc-conditions", "map_terrain_with_flag"): "services.gameplay.environment",
+    ("eoc-conditions", "map_terrain_with_flag"): (
+        "services.gameplay.environment"
+    ),
     ("eoc-conditions", "map_in_city"): "services.overmap",
     ("eoc-conditions", "map_is_outside"): "services.gameplay.environment",
     ("eoc-conditions", "u_is_on_terrain"): "services.gameplay.environment",
@@ -2473,10 +2480,18 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-conditions", "npc_is_on_furniture"): "services.gameplay.environment",
     ("eoc-conditions", "u_is_in_field"): "services.gameplay.environment",
     ("eoc-conditions", "npc_is_in_field"): "services.gameplay.environment",
-    ("eoc-conditions", "u_is_on_terrain_with_flag"): "services.gameplay.environment",
-    ("eoc-conditions", "npc_is_on_terrain_with_flag"): "services.gameplay.environment",
-    ("eoc-conditions", "u_is_on_furniture_with_flag"): "services.gameplay.environment",
-    ("eoc-conditions", "npc_is_on_furniture_with_flag"): "services.gameplay.environment",
+    ("eoc-conditions", "u_is_on_terrain_with_flag"): (
+        "services.gameplay.environment"
+    ),
+    ("eoc-conditions", "npc_is_on_terrain_with_flag"): (
+        "services.gameplay.environment"
+    ),
+    ("eoc-conditions", "u_is_on_furniture_with_flag"): (
+        "services.gameplay.environment"
+    ),
+    ("eoc-conditions", "npc_is_on_furniture_with_flag"): (
+        "services.gameplay.environment"
+    ),
     ("eoc-conditions", "u_is_falling"): "services.characters",
     ("eoc-conditions", "npc_is_falling"): "services.characters",
     ("eoc-conditions", "u_is_floating"): "services.characters",
@@ -2649,7 +2664,6 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-conditions", "npc_can_see"): "services.creatures.perception",
     ("eoc-conditions", "u_has_species"): "services.characters",
     ("eoc-conditions", "npc_has_species"): "services.characters",
-    ("eoc-conditions", "u_has_activity"): "services.activities",
     ("eoc-conditions", "u_has_stolen_item"): "services.inventory",
     ("eoc-conditions", "u_can_stow_weapon"): "services.inventory",
     ("eoc-conditions", "u_are_owed"): "services.characters",
@@ -2726,23 +2740,13 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "goto_location"): "services.npcs",
     ("eoc-effects", "u_deal_damage"): "services.characters",
     ("eoc-effects", "npc_deal_damage"): "services.characters",
-    ("eoc-effects", "u_pick_bodypart"): "services.characters",
-    ("eoc-effects", "npc_pick_bodypart"): "services.characters",
     ("eoc-effects", "trigger_event"): "services.gameplay",
     ("eoc-effects", "set_browsed"): "services.items",
     ("eoc-effects", "transform_item"): "services.items",
     ("eoc-effects", "clear_dimension"): "services.dialogue",
     ("eoc-effects", "clear_overrides"): "services.dialogue",
     ("eoc-effects", "place_override"): "services.dialogue",
-    ("eoc-effects", "custom_light_level"): "services.gameplay",
-    ("eoc-effects", "u_activate"): "services.items",
-    ("eoc-effects", "npc_activate"): "services.items",
-    ("eoc-effects", "u_set_fault"): "services.items",
-    ("eoc-effects", "npc_set_fault"): "services.items",
-    ("eoc-effects", "u_set_random_fault_of_type"): "services.items",
-    ("eoc-effects", "npc_set_random_fault_of_type"): "services.items",
     ("eoc-effects", "transform_line"): "services.world",
-    ("eoc-effects", "u_travel_to_dimension"): "services.relocation",
     ("eoc-effects", "u_assign_activity"): "services.activities",
     ("eoc-effects", "npc_assign_activity"): "services.activities",
     ("eoc-conditions", "npc_has_activity"): "services.activities",
@@ -2791,31 +2795,17 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "npc_set_field"): "services.map",
     ("eoc-conditions", "npc_at_om_location"): "services.map",
     ("eoc-conditions", "npc_can_see_location"): "services.map",
-    ("eoc-conditions", "npc_near_om_location"): "services.map",
     ("eoc-conditions", "overmap_at_point"): "services.map",
     ("eoc-conditions", "u_at_om_location"): "services.map",
     ("eoc-conditions", "u_can_see_location"): "services.map",
-    ("eoc-conditions", "has_ammo"): "services.items",
-    ("eoc-conditions", "is_rotten"): "services.items",
-    ("eoc-conditions", "npc_can_drop_weapon"): "services.inventory-and-martial-arts",
-    ("eoc-conditions", "npc_has_item"): "services.inventory",
-    ("eoc-conditions", "npc_has_item_category"): "services.items",
-    ("eoc-conditions", "npc_has_item_with_flag"): "services.items",
-    ("eoc-conditions", "npc_has_items"): "services.items",
+    ("eoc-conditions", "npc_can_drop_weapon"): (
+        "services.inventory-and-martial-arts"
+    ),
     ("eoc-conditions", "npc_has_items_sum"): "services.inventory",
-    ("eoc-conditions", "npc_has_weapon"): "services.inventory-and-martial-arts",
-    ("eoc-conditions", "npc_has_wielded_with_ammotype"): "services.items",
-    ("eoc-conditions", "npc_has_wielded_with_flag"): "services.inventory-and-items",
-    ("eoc-conditions", "npc_has_wielded_with_skill"): "services.items",
-    ("eoc-conditions", "npc_has_wielded_with_weapon_category"): "services.items",
-    ("eoc-conditions", "u_has_item_category"): "services.items",
-    ("eoc-conditions", "u_has_item_with_flag"): "services.items",
-    ("eoc-conditions", "u_has_items"): "services.items",
+    ("eoc-conditions", "npc_has_weapon"): (
+        "services.inventory-and-martial-arts"
+    ),
     ("eoc-conditions", "u_has_items_sum"): "services.inventory",
-    ("eoc-conditions", "u_has_wielded_with_ammotype"): "services.items",
-    ("eoc-conditions", "u_has_wielded_with_skill"): "services.items",
-    ("eoc-conditions", "u_has_wielded_with_weapon_category"): "services.items",
-    ("eoc-conditions", "u_near_om_location"): "services.map",
     ("eoc-effects", "drop_stolen_item"): "services.items",
     ("eoc-effects", "drop_weapon"): "services.items",
     ("eoc-effects", "give_equipment"): "services.inventory-and-presentation",
@@ -2835,7 +2825,9 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "reveal_map"): "services.map",
     ("eoc-effects", "revert_location"): "services.map",
     ("eoc-effects", "set_furniture"): "services.map",
-    ("eoc-effects", "set_item_category_spawn_rates"): "services.item_categories",
+    ("eoc-effects", "set_item_category_spawn_rates"): (
+        "services.item_categories"
+    ),
     ("eoc-effects", "set_terrain"): "services.map",
     ("eoc-effects", "u_buy_item"): "services.items",
     ("eoc-effects", "u_consume_item"): "services.items",
@@ -2849,38 +2841,14 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "u_set_field"): "services.map",
     ("eoc-effects", "u_set_flag"): "services.items",
     ("eoc-effects", "u_unset_flag"): "services.items",
-    ("eoc-effects", "u_set_goal"): "services.npcs",
-    ("eoc-effects", "npc_set_goal"): "services.npcs",
-    ("eoc-effects", "u_set_guard_pos"): "services.npcs",
-    ("eoc-effects", "npc_set_guard_pos"): "services.npcs",
-    ("eoc-conditions", "npc_allies"): "services.characters",
-    ("eoc-conditions", "npc_allies_global"): "services.characters",
     ("eoc-conditions", "npc_has_any_effect"): "services.characters",
     ("eoc-conditions", "npc_has_effect"): "services.characters",
     ("eoc-conditions", "npc_has_move_mode"): "services.characters.movement",
-    ("eoc-conditions", "npc_has_part_temp"): "services.characters",
-    ("eoc-conditions", "npc_has_software"): "services.characters",
-    ("eoc-conditions", "npc_has_visible_trait"): "services.characters",
-    ("eoc-conditions", "npc_has_worn_with_flag"): "services.characters",
-    ("eoc-conditions", "npc_is_alive"): "services.characters",
-    ("eoc-conditions", "npc_is_underwater"): "services.characters",
     ("eoc-conditions", "npc_query"): "services.characters",
-    ("eoc-conditions", "npc_role_nearby"): "services.characters",
-    ("eoc-conditions", "npc_see_u"): "services.characters",
-    ("eoc-conditions", "npc_see_u_loc"): "services.creatures.perception",
     ("eoc-conditions", "npc_service"): "services.characters",
     ("eoc-conditions", "u_has_any_effect"): "services.characters",
     ("eoc-conditions", "u_has_effect"): "services.characters",
     ("eoc-conditions", "u_has_faction_trust"): "services.characters",
-    ("eoc-conditions", "u_has_part_temp"): "services.characters",
-    ("eoc-conditions", "u_has_software"): "services.characters",
-    ("eoc-conditions", "u_has_visible_trait"): "services.characters",
-    ("eoc-conditions", "u_has_worn_with_flag"): "services.characters",
-    ("eoc-conditions", "u_is_underwater"): "services.characters",
-    ("eoc-conditions", "u_monsters_in_direction"): "services.creatures.perception",
-    ("eoc-conditions", "u_query"): "services.presentation",
-    ("eoc-conditions", "u_see_npc"): "services.characters",
-    ("eoc-conditions", "u_see_npc_loc"): "services.creatures.perception",
     ("eoc-conditions", "u_service"): "services.characters",
     ("eoc-effects", "clear_npc_rule"): "services.characters",
     ("eoc-effects", "copy_npc_rules"): "services.npcs",
@@ -2910,9 +2878,10 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "npc_query_omt"): "services.targeting",
     ("eoc-effects", "npc_query_tile"): "services.targeting",
     ("eoc-effects", "npc_ranged_attack"): "services.characters",
-    ("eoc-effects", "npc_recalculate_enchantment_cache"): "services.characters",
+    ("eoc-effects", "npc_recalculate_enchantment_cache"): (
+        "services.characters"
+    ),
     ("eoc-effects", "npc_roll_remainder"): "services.characters",
-    ("eoc-effects", "npc_rules_menu"): "services.npcs",
     ("eoc-effects", "npc_run_fixed_zone_eocs"): "services.characters",
     ("eoc-effects", "npc_run_inv_eocs"): "services.characters",
     ("eoc-effects", "npc_run_monster_eocs"): "services.characters",
@@ -2927,9 +2896,7 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "set_npc_cbm_recharge_rule"): "services.characters",
     ("eoc-effects", "set_npc_cbm_reserve_rule"): "services.characters",
     ("eoc-effects", "set_npc_engagement_rule"): "services.characters",
-    ("eoc-effects", "set_npc_pickup"): "services.npcs",
     ("eoc-effects", "set_npc_rule"): "services.characters",
-    ("eoc-effects", "start_training_npc"): "services.npcs",
     ("eoc-effects", "toggle_npc_rule"): "services.characters",
     ("eoc-effects", "u_add_var"): "services.variables",
     ("eoc-effects", "u_attack"): "services.characters",
@@ -2967,31 +2934,6 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "u_spend_cash"): "services.characters",
     ("eoc-effects", "u_transform_radius"): "services.characters",
     ("eoc-effects", "add_debt"): "services.npcs",
-    ("eoc-effects", "u_set_goal"): "services.npcs",
-    ("eoc-effects", "npc_set_goal"): "services.npcs",
-    ("eoc-effects", "u_set_guard_pos"): "services.npcs",
-    ("eoc-effects", "npc_set_guard_pos"): "services.npcs",
-    ("eoc-effects", "u_assign_activity"): "services.activities",
-    ("eoc-effects", "npc_assign_activity"): "services.activities",
-    ("eoc-conditions", "npc_has_activity"): "services.activities",
-    ("eoc-effects", "assign_mission"): "services.missions-and-dialogue",
-    ("eoc-effects", "finish_mission"): "services.missions",
-    ("eoc-effects", "clear_mission"): "services.missions",
-    ("eoc-effects", "mission_failure"): "services.missions",
-    ("eoc-effects", "mission_success"): "services.missions",
-    ("eoc-effects", "mission_reward"): "services.missions",
-    ("eoc-effects", "offer_mission"): "services.missions",
-    ("eoc-effects", "remove_active_mission"): "services.missions",
-    ("eoc-effects", "abandon_camp"): "services.camps",
-    ("eoc-effects", "assign_camp"): "services.camps",
-    ("eoc-effects", "return_to_camp_duties"): "services.camps",
-    ("eoc-effects", "start_camp"): "services.camps",
-    ("eoc-effects", "npc_mutate"): "services.mutations",
-    ("eoc-effects", "npc_mutate_category"): "services.mutations",
-    ("eoc-effects", "npc_mutate_towards"): "services.mutations",
-    ("eoc-effects", "u_mutate"): "services.mutations",
-    ("eoc-effects", "u_mutate_category"): "services.mutations",
-    ("eoc-effects", "u_mutate_towards"): "services.mutations",
 }
 
 BOUNDED_IMPLEMENTED_EOC_EVIDENCE = [
@@ -3755,10 +3697,6 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/lua_platform_npcs.cpp",
         "src/talker_npc.cpp",
     ],
-    ("eoc-conditions", "is_outside"): [
-        "src/condition.cpp",
-        "src/lua_platform_runtime.cpp",
-    ],
     ("eoc-conditions", "npc_is_outside"): [
         "src/condition.cpp",
         "src/lua_platform_runtime.cpp",
@@ -4256,7 +4194,8 @@ EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
     ],
     ("eoc-conditions", "npc_can_drop_weapon"): [
         "src/melee.cpp", "src/lua_platform_items.cpp",
-        "src/lua_platform_martial_arts.cpp", "data/lua/types/ccb_platform_v1.d.lua",
+        "src/lua_platform_martial_arts.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "npc_has_activity"): [
         "src/condition.cpp", "src/player_activity.cpp",
@@ -4271,7 +4210,8 @@ EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
     ],
     ("eoc-conditions", "npc_has_weapon"): [
         "src/melee.cpp", "src/lua_platform_items.cpp",
-        "src/lua_platform_martial_arts.cpp", "data/lua/types/ccb_platform_v1.d.lua",
+        "src/lua_platform_martial_arts.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-conditions", "npc_has_wielded_with_flag"): [
         "src/talker_character.cpp", "src/lua_platform_items.cpp",
@@ -4312,7 +4252,7 @@ EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
     ("eoc-effects", "u_set_fac_relation"): [
         "src/npctalk.cpp",
         "src/talker_character.cpp",
-        "src/lua_platform_creatures.cpp",
+        "src/lua_platform_factions.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "lightning"): [
@@ -4350,12 +4290,6 @@ EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
         "src/npctalk.cpp", "src/lua_platform_items.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
     ],
-    ("eoc-effects", "u_set_fac_relation"): [
-        "src/npctalk.cpp",
-        "src/talker_character.cpp",
-        "src/lua_platform_factions.cpp",
-        "data/lua/types/ccb_platform_v1.d.lua",
-    ],
     ("eoc-effects", "u_unset_flag"): [
         "src/npctalk.cpp", "src/lua_platform_items.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
@@ -4384,9 +4318,13 @@ EXPLICIT_PLANNED_EOC_EXTRA_EVIDENCE = {
     ("eoc-effects", "morale_chat_activity"): ["src/npctalk_funcs.cpp"],
     ("eoc-effects", "npc_activate"): [
         "src/npctalk.cpp", "src/lua_platform_items.cpp",
+        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
     ],
     ("eoc-effects", "u_activate"): [
         "src/npctalk.cpp", "src/lua_platform_items.cpp",
+        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
+        "data/lua/LUA_FIRST_PLATFORM.md",
     ],
     ("eoc-effects", "npc_assign_activity"): [
         "src/npctalk.cpp", "src/character.cpp",
@@ -4397,10 +4335,14 @@ EXPLICIT_PLANNED_EOC_EXTRA_EVIDENCE = {
     ("eoc-effects", "npc_add_wet"): ["src/weather.cpp", "src/suffer.cpp"],
     ("eoc-effects", "u_add_wet"): ["src/weather.cpp", "src/suffer.cpp"],
     ("eoc-effects", "npc_pick_bodypart"): [
-        "src/bodypart.cpp", "src/npctalk.cpp",
+        "src/npctalk.cpp", "src/lua_platform_creatures.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
     ],
     ("eoc-effects", "u_pick_bodypart"): [
-        "src/bodypart.cpp", "src/npctalk.cpp",
+        "src/npctalk.cpp", "src/lua_platform_creatures.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
     ],
     ("eoc-effects", "npc_set_fault"): [
         "src/npctalk.cpp", "src/lua_platform_items.cpp",
@@ -4410,32 +4352,6 @@ EXPLICIT_PLANNED_EOC_EXTRA_EVIDENCE = {
     ],
     ("eoc-effects", "npc_set_random_fault_of_type"): [
         "src/npctalk.cpp", "src/lua_platform_items.cpp",
-    ],
-    ("eoc-effects", "u_pick_bodypart"): [
-        "src/npctalk.cpp", "src/lua_platform_creatures.cpp",
-        "data/lua/types/ccb_platform_v1.d.lua",
-        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
-    ],
-    ("eoc-effects", "npc_pick_bodypart"): [
-        "src/npctalk.cpp", "src/lua_platform_creatures.cpp",
-        "data/lua/types/ccb_platform_v1.d.lua",
-        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
-    ],
-    ("eoc-effects", "u_travel_to_dimension"): [
-        "src/npctalk.cpp", "src/game.cpp",
-        "src/lua_platform_world_services.cpp",
-        "data/lua/types/ccb_platform_v1.d.lua",
-        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
-    ],
-    ("eoc-effects", "u_activate"): [
-        "src/npctalk.cpp", "src/lua_platform_items.cpp",
-        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
-        "data/lua/LUA_FIRST_PLATFORM.md",
-    ],
-    ("eoc-effects", "npc_activate"): [
-        "src/npctalk.cpp", "src/lua_platform_items.cpp",
-        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
-        "data/lua/LUA_FIRST_PLATFORM.md",
     ],
     ("eoc-effects", "u_set_random_fault_of_type"): [
         "src/npctalk.cpp", "src/lua_platform_items.cpp",
@@ -4473,7 +4389,8 @@ def service_for(selector: str) -> str:
 
 
 def legacy_evidence(inventory: str, entry: dict) -> list[str]:
-    """Point to the real inventory without importing legacy implementation paths."""
+    """Point to the real inventory without importing legacy implementation
+    paths."""
     del entry
     return [INVENTORY_PATHS[inventory]]
 
@@ -4489,13 +4406,13 @@ def normalize_evidence(inventory: str, values: list[str]) -> list[str]:
     for value in values:
         value = str(value)
         if (
-            value in allowed
-            or value.startswith("src/lua_platform")
-            or (
-                value.startswith("tests/")
-                and "obj-lua" not in value
-            )
-            or value.startswith("data/reference/json/")
+            value in allowed or
+            value.startswith("src/lua_platform") or
+            (
+                value.startswith("tests/") and
+                "obj-lua" not in value
+            ) or
+            value.startswith("data/reference/json/")
         ):
             normalized.add(value)
     return sorted(normalized)

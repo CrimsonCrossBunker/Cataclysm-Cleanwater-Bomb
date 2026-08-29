@@ -138,7 +138,9 @@ class PlatformNativeInventoryGeneratorTest(unittest.TestCase):
         self.assertEqual(
             {
                 str(registration["lua_name"]): str(registration["_installer"])
-                for installer_id, registrations in registrations_by_installer.items()
+                for installer_id, registrations in (
+                    registrations_by_installer.items()
+                )
                 if installer_id in expected_roots
                 for registration in registrations
             },

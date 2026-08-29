@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check the generated Lua-first Platform v1 public contract for source drift."""
+"""Check generated Lua-first Platform v1 contract for source drift."""
 
 from __future__ import annotations
 
@@ -68,8 +68,12 @@ def check(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--contract", type=Path, default=DEFAULT_OUTPUT)
-    parser.add_argument("--native-inventory", type=Path, default=DEFAULT_NATIVE_INVENTORY)
-    parser.add_argument("--declarations", type=Path, default=DEFAULT_DECLARATIONS)
+    parser.add_argument(
+        "--native-inventory", type=Path, default=DEFAULT_NATIVE_INVENTORY
+    )
+    parser.add_argument(
+        "--declarations", type=Path, default=DEFAULT_DECLARATIONS
+    )
     parser.add_argument("--schema", type=Path, default=DEFAULT_SCHEMA)
     arguments = parser.parse_args()
     summary = check(

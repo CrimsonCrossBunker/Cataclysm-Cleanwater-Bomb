@@ -27,7 +27,10 @@ class LuaLsPlatformTest(unittest.TestCase):
         contents = DECLARATIONS.read_text(encoding="utf-8")
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / DECLARATIONS.name
-            path.write_text(contents.replace("Platform v1", "API v5", 1), encoding="utf-8")
+            path.write_text(
+                contents.replace("Platform v1", "API v5", 1),
+                encoding="utf-8",
+            )
             with self.assertRaisesRegex(RuntimeError, "Platform v1"):
                 check(path)
 

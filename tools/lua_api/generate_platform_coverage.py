@@ -30,8 +30,12 @@ except ImportError:
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_OUTPUT = REPOSITORY_ROOT / "data/lua/reference/ccb_platform_api_v1_coverage.json"
-DEFAULT_SCHEMA = REPOSITORY_ROOT / "data/lua/reference/ccb_platform_api_v1_coverage.schema.json"
+DEFAULT_OUTPUT = REPOSITORY_ROOT / (
+    "data/lua/reference/ccb_platform_api_v1_coverage.json"
+)
+DEFAULT_SCHEMA = REPOSITORY_ROOT / (
+    "data/lua/reference/ccb_platform_api_v1_coverage.schema.json"
+)
 
 
 def build_coverage(
@@ -56,7 +60,10 @@ def build_coverage(
     }
     contract_roots = native["export_roots"]
     inventory_roots = native_inventory.get("export_roots")
-    if not isinstance(contract_roots, list) or not isinstance(inventory_roots, list):
+    if (
+        not isinstance(contract_roots, list) or
+        not isinstance(inventory_roots, list)
+    ):
         raise RuntimeError("Platform export roots must be arrays")
     contract_root_names = {
         str(root["lua_name"])
@@ -67,8 +74,8 @@ def build_coverage(
     entries = []
     unmatched = []
     missing_from_inventory = sorted(
-        contract_root_names
-        - {
+        contract_root_names -
+        {
             str(root["lua_name"])
             for root in roots
             if isinstance(root.get("lua_name"), str)
@@ -94,16 +101,29 @@ def build_coverage(
         "schema_version": 1,
         "coverage_id": "ccb_platform_api_v1_coverage",
         "schema": DEFAULT_SCHEMA.relative_to(REPOSITORY_ROOT).as_posix(),
-        "coverage_kind": "platform_luals_native_registration_public_contract_synchronization",
+        "coverage_kind": (
+            "platform_luals_native_registration_public_contract_"
+            "synchronization"
+        ),
         "source": {
-            "public_contract": DEFAULT_CONTRACT_OUTPUT.relative_to(REPOSITORY_ROOT).as_posix(),
-            "declarations": DEFAULT_DECLARATIONS.relative_to(REPOSITORY_ROOT).as_posix(),
-            "native_inventory": DEFAULT_NATIVE_INVENTORY.relative_to(REPOSITORY_ROOT).as_posix(),
+            "public_contract": (
+                DEFAULT_CONTRACT_OUTPUT.relative_to(REPOSITORY_ROOT).as_posix()
+            ),
+            "declarations": (
+                DEFAULT_DECLARATIONS.relative_to(REPOSITORY_ROOT).as_posix()
+            ),
+            "native_inventory": (
+                DEFAULT_NATIVE_INVENTORY.relative_to(
+                    REPOSITORY_ROOT
+                ).as_posix()
+            ),
         },
         "platform_sync": {
             "luals_class_count": len(classes),
             "luals_function_count": int(declarations["function_count"]),
-            "native_registration_file_count": len(native["registration_files"]),
+            "native_registration_file_count": len(
+                native["registration_files"]
+            ),
             "native_export_root_count": len(roots),
             "native_export_roots_declared": len(roots) - len(unmatched),
             "public_contract_export_root_count": len(contract_root_names),
@@ -111,7 +131,9 @@ def build_coverage(
                 [entry for entry in entries if not entry["in_public_contract"]]
             ),
             "unmatched_native_export_roots": sorted(unmatched),
-            "contract_export_roots_missing_from_inventory": missing_from_inventory,
+            "contract_export_roots_missing_from_inventory": (
+                missing_from_inventory
+            ),
             "synchronized": not unmatched and not missing_from_inventory,
         },
         "entries": entries,
@@ -125,22 +147,34 @@ def build_coverage(
 
 
 def serialize_coverage(coverage: dict[str, object]) -> str:
-    return json.dumps(coverage, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    return json.dumps(
+        coverage, ensure_ascii=False, indent=2, sort_keys=True
+    ) + "\n"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
-    parser.add_argument("--contract", type=Path, default=DEFAULT_CONTRACT_OUTPUT)
-    parser.add_argument("--native-inventory", type=Path, default=DEFAULT_NATIVE_INVENTORY)
+    parser.add_argument(
+        "--contract", type=Path, default=DEFAULT_CONTRACT_OUTPUT
+    )
+    parser.add_argument(
+        "--native-inventory", type=Path, default=DEFAULT_NATIVE_INVENTORY
+    )
     parser.add_argument("--schema", type=Path, default=DEFAULT_SCHEMA)
-    parser.add_argument("--check", action="store_true", help="check without writing")
+    parser.add_argument(
+        "--check", action="store_true", help="check without writing"
+    )
     arguments = parser.parse_args()
     contract_path = arguments.contract.resolve()
     inventory_path = arguments.native_inventory.resolve()
-    contract = load_json(contract_path) if contract_path.exists() else build_contract(
-        native_inventory_path=inventory_path,
-        schema_path=DEFAULT_CONTRACT_SCHEMA,
+    contract = (
+        load_json(contract_path)
+        if contract_path.exists()
+        else build_contract(
+            native_inventory_path=inventory_path,
+            schema_path=DEFAULT_CONTRACT_SCHEMA,
+        )
     )
     coverage = build_coverage(
         contract=contract,
@@ -150,9 +184,15 @@ def main() -> int:
     expected = serialize_coverage(coverage)
     if arguments.check:
         if not arguments.output.exists():
-            raise SystemExit(f"missing Platform synchronization coverage: {arguments.output}")
+            raise SystemExit(
+                "missing Platform synchronization coverage: "
+                f"{arguments.output}"
+            )
         if arguments.output.read_text(encoding="utf-8") != expected:
-            raise SystemExit(f"stale Platform synchronization coverage: {arguments.output}")
+            raise SystemExit(
+                "stale Platform synchronization coverage: "
+                f"{arguments.output}"
+            )
         return 0
     arguments.output.parent.mkdir(parents=True, exist_ok=True)
     arguments.output.write_text(expected, encoding="utf-8")

@@ -349,7 +349,7 @@ def render_static_item_fault_effect(
         options = [option for option in options if option != "holder = actor"]
     return [
         "    if context.actors.item ~= nil then",
-        f"        services.items.{ 'set_fault' if key in {'npc_set_fault', 'u_set_fault'} else 'set_random_fault' }(",
+        f"        services.items.{'set_fault' if key in {'npc_set_fault', 'u_set_fault'} else 'set_random_fault'}(",
         "            context.actors.item,",
         f"            {lua_quote(raw_value)}," if key in {"npc_set_random_fault_of_type", "u_set_random_fault_of_type"} else
         "            services.types.id(\"fault\", " + lua_quote(raw_value) + "),",
@@ -524,8 +524,10 @@ def render_dynamic_light_override(
         return None
     return [
         "    service_value(services.weather.override_light(",
-        f"        math.floor(({level}) + 0.5), {duration}"
-        + (f", {lua_quote(key)}))" if key else "))"),
+        (
+            f"        math.floor(({level}) + 0.5), {duration}, "
+            f"{lua_quote(key)}))" if key else "))"
+        ),
     ]
 
 
@@ -707,7 +709,8 @@ def parse_seconds(value: Any) -> int | None:
     )
 
 
-def parse_turns(value: Any) -> int | None:    return parse_integral_unit(
+def parse_turns(value: Any) -> int | None:
+    return parse_integral_unit(
         value,
         {
             "turn": 1,
@@ -2558,8 +2561,8 @@ def render_vehicle_color_palette(
                 )
                 continue
             lines.append(
-                "definition:group("
-                + "{ " + ", ".join(
+                "definition:group(" +
+                "{ " + ", ".join(
                     lua_quote(entry) for entry in fuzzy_ids
                 ) + " }, {"
             )
@@ -2638,7 +2641,6 @@ def render_dialogue_trade_effect(
         effect = effect["effect"]
     if isinstance(effect, str):
         key = effect
-        payload: dict[str, Any] = {}
     elif isinstance(effect, dict):
         keys = [
             name for name in (
@@ -2647,10 +2649,9 @@ def render_dialogue_trade_effect(
                 "quote_npc_trade_item",
             ) if name in effect
         ]
-        if len( keys ) != 1:
+        if len(keys) != 1:
             return None
         key = keys[0]
-        payload = effect
     else:
         return None
 
@@ -3005,9 +3006,17 @@ def render_static_traversal(
             "            local target = entry.handle",
             "            local target_z = entry.snapshot.position.z",
             "            if (",
-                f"                {z_expressions['z_min']} <= target_z" if "z_min" in z_expressions else "                true",
+            (
+                f"                {z_expressions['z_min']} <= target_z"
+                if "z_min" in z_expressions
+                else "                true"
+            ),
             ") and (",
-                f"                target_z <= {z_expressions['z_max']}" if "z_max" in z_expressions else "                true",
+            (
+                f"                target_z <= {z_expressions['z_max']}"
+                if "z_max" in z_expressions
+                else "                true"
+            ),
             ") and (",
             "                target_z == npc_origin.z" if local and "z_min" not in z_expressions and "z_max" not in z_expressions else "                true",
             ") and (",
@@ -3802,9 +3811,9 @@ def render_static_run_eocs(
             return None
         if delay_turns_expression is None:
             delay_turns_expression = (
-                "math.floor(("
-                + dynamic_delay
-                + ") + 0.5)"
+                "math.floor((" +
+                dynamic_delay +
+                ") + 0.5)"
             )
     else:
         if delay_turns_expression is None:
@@ -4985,8 +4994,8 @@ def render_static_false_effect(
                         for effect_id in effect_ids:
                             rendered.extend([
                                 "        services.effects.remove(",
-                                f"            {target}, services.types.id(\"effect\", {lua_quote(effect_id)})"
-                                + (
+                                f"            {target}, services.types.id(\"effect\", {lua_quote(effect_id)})" +
+                                (
                                     ", services.types.id(\"body_part\", " +
                                     lua_quote(part) + "))"
                                     if part is not None else ")"
@@ -5650,13 +5659,13 @@ def _lua_choice(value: Any) -> str | None:
     if all(isinstance(entry, str) and entry for entry in value):
         return _lua_literal(value)
     if all(
-        isinstance(entry, list)
-        and len(entry) == 2
-        and isinstance(entry[0], str)
-        and entry[0]
-        and isinstance(entry[1], (int, float))
-        and not isinstance(entry[1], bool)
-        and entry[1] > 0
+        isinstance(entry, list) and
+        len(entry) == 2 and
+        isinstance(entry[0], str) and
+        entry[0] and
+        isinstance(entry[1], (int, float)) and
+        not isinstance(entry[1], bool) and
+        entry[1] > 0
         for entry in value
     ):
         return _lua_literal(value)
@@ -5794,6 +5803,7 @@ def _mapgen_symbol_descriptors(
 def _mapgen_terrain_ids(value: Any) -> list[str]:
     result: list[str] = []
     values = value if isinstance(value, list) else [value]
+
     def visit(entry: Any) -> None:
         if isinstance(entry, str) and entry:
             result.append(entry)
@@ -5821,10 +5831,10 @@ def render_mapgen(source: SourceObject, result: MigrationResult) -> str | None:
     todo_count = len(result.todos)
     rows = object_value.get("rows")
     if rows is not None and (
-        not isinstance(rows, list)
-        or any(not isinstance(row, str) for row in rows)
-        or len(rows) > 24
-        or any(len(row) > 24 for row in rows)
+        not isinstance(rows, list) or
+        any(not isinstance(row, str) for row in rows) or
+        len(rows) > 24 or
+        any(len(row) > 24 for row in rows)
     ):
         result.todos.append(f"{source.location}: mapgen {mapgen_id} rows exceed the 24x24 Platform shape")
         rows = []
@@ -6024,8 +6034,8 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
         unsupported = set(entry) - {"text", "topic", "effect"}
         if unsupported:
             result.todos.append(
-                f"{source.location}: talk topic {topic_id} response fields need Lua conversion: "
-                + ", ".join(sorted(unsupported))
+                f"{source.location}: talk topic {topic_id} response fields need Lua conversion: " +
+                ", ".join(sorted(unsupported))
             )
     descriptor: dict[str, Any] = {
         "id": topic_id,
@@ -6126,31 +6136,36 @@ def render_overmap_connection(
                     for flag in raw_flags
                 )
             )
-            if not isinstance(terrain, str) or not terrain or \
-                    not isinstance(basic_cost, int) or \
-                    isinstance(basic_cost, bool) or \
-                    not 0 <= basic_cost <= NATIVE_INT_MAX or \
-                    not isinstance(locations, list) or \
-                    any(
-                        not isinstance(location, str) or not location
-                        for location in locations
-                    ) or not flags_valid or any(
-                        field in raw_subtype
-                        for field in set(raw_subtype) -
-                        {"terrain", "basic_cost", "locations", "flags"}
-                    ):
+            if (
+                not isinstance(terrain, str) or not terrain or
+                not isinstance(basic_cost, int) or
+                isinstance(basic_cost, bool) or
+                not 0 <= basic_cost <= NATIVE_INT_MAX or
+                not isinstance(locations, list) or
+                any(
+                    not isinstance(location, str) or not location
+                    for location in locations
+                ) or
+                not flags_valid or
+                any(
+                    field in raw_subtype
+                    for field in set(raw_subtype) - {
+                        "terrain", "basic_cost", "locations", "flags"
+                    }
+                )
+            ):
                 result.todos.append(
                     f"{source.location}: overmap connection {connection_id} "
                     "subtype needs review"
                 )
                 continue
             lines.append(
-                f"definition:subtype({lua_quote(terrain)}, {basic_cost}, "
-                + "{ " + ", ".join(
+                f"definition:subtype({lua_quote(terrain)}, {basic_cost}, " +
+                "{ " + ", ".join(
                     lua_quote(location) for location in locations
-                ) + " }, "
-                + f"{'true' if 'ORTHOGONAL' in raw_flags else 'false'}, "
-                + f"{'true' if 'PERPENDICULAR_CROSSING' in raw_flags else 'false'})"
+                ) + " }, " +
+                f"{'true' if 'ORTHOGONAL' in raw_flags else 'false'}, " +
+                f"{'true' if 'PERPENDICULAR_CROSSING' in raw_flags else 'false'})"
             )
     else:
         result.todos.append(
@@ -6319,7 +6334,6 @@ def render_butchery_requirement(
             if not math.isfinite(speed) or speed < 0 or \
                     not isinstance(raw_sizes, list) or \
                     len(raw_sizes) != len(size_names):
-                valid = False
                 result.todos.append(
                     f"{source.location}: butchery requirement {requirement_id} "
                     f"speed row {raw_speed!r} needs review"
@@ -6436,15 +6450,15 @@ def render_technique(source: SourceObject, result: MigrationResult) -> str | Non
         "dummy", "dodge_counter", "block_counter", "miss_recovery",
         "grab_break", "knockback_follow",
     )
-    for field in bool_fields:
-        entry = value.get(field)
+    for field_name in bool_fields:
+        entry = value.get(field_name)
         if isinstance(entry, bool):
             lines.append(
-                f"    {field} = {lua_boolean(entry)},"
+                f"    {field_name} = {lua_boolean(entry)},"
             )
-        elif field in value:
+        elif field_name in value:
             result.todos.append(
-                f"{source.location}: technique {technique_id} {field} needs review"
+                f"{source.location}: technique {technique_id} {field_name} needs review"
             )
     int_fields = (
         ("weighting", 1, 0, None),
@@ -6454,15 +6468,15 @@ def render_technique(source: SourceObject, result: MigrationResult) -> str | Non
         ("stun_dur", 0, 0, None),
         ("knockback_dist", 0, 0, None),
     )
-    for field, default, minimum, _ in int_fields:
-        entry = value.get(field, default)
+    for field_name, default, minimum, _ in int_fields:
+        entry = value.get(field_name, default)
         if isinstance(entry, int) and not isinstance(entry, bool) and \
                 minimum <= entry <= NATIVE_INT_MAX:
-            lines.append(f"    {field} = {entry},")
+            lines.append(f"    {field_name} = {entry},")
         else:
-            lines.append(f"    {field} = {default},")
+            lines.append(f"    {field_name} = {default},")
             result.todos.append(
-                f"{source.location}: technique {technique_id} {field} needs review"
+                f"{source.location}: technique {technique_id} {field_name} needs review"
             )
     spread = value.get("knockback_spread", 0)
     if isinstance(spread, (int, float)) and not isinstance(spread, bool) and \
@@ -6476,13 +6490,13 @@ def render_technique(source: SourceObject, result: MigrationResult) -> str | Non
     aoe = value.get("aoe")
     if isinstance(aoe, str):
         lines.append(f"    aoe = {lua_quote(aoe)},")
-    for field in ("unarmed_allowed", "melee_allowed", "strictly_unarmed"):
-        entry = value.get(field)
+    for field_name in ("unarmed_allowed", "melee_allowed", "strictly_unarmed"):
+        entry = value.get(field_name)
         if isinstance(entry, bool):
-            lines.append(f"    {field} = {lua_boolean(entry)},")
-        elif field in value:
+            lines.append(f"    {field_name} = {lua_boolean(entry)},")
+        elif field_name in value:
             result.todos.append(
-                f"{source.location}: technique {technique_id} {field} needs review"
+                f"{source.location}: technique {technique_id} {field_name} needs review"
             )
     lines.append("}")
     flags = value.get("flags")
@@ -6579,15 +6593,15 @@ def render_martial_art(source: SourceObject, result: MigrationResult) -> str | N
         ("priority", 0), ("learn_difficulty", 0),
         ("arm_block", 0), ("leg_block", 0),
     )
-    for field, default in int_fields:
-        entry = value.get(field, default)
+    for field_name, default in int_fields:
+        entry = value.get(field_name, default)
         if isinstance(entry, int) and not isinstance(entry, bool) and \
                 NATIVE_INT_MIN <= entry <= NATIVE_INT_MAX:
-            lines.append(f"    {field} = {entry},")
+            lines.append(f"    {field_name} = {entry},")
         else:
-            lines.append(f"    {field} = {default},")
+            lines.append(f"    {field_name} = {default},")
             result.todos.append(
-                f"{source.location}: martial art {art_id} {field} needs review"
+                f"{source.location}: martial art {art_id} {field_name} needs review"
             )
     primary = value.get("primary_skill")
     if isinstance(primary, str) and primary:
@@ -6597,13 +6611,13 @@ def render_martial_art(source: SourceObject, result: MigrationResult) -> str | N
         "leg_block_with_bio_armor_legs", "strictly_unarmed", "strictly_melee",
         "allow_all_weapons", "force_unarmed", "prevent_weapon_blocking",
     )
-    for field in bool_fields:
-        entry = value.get(field)
+    for field_name in bool_fields:
+        entry = value.get(field_name)
         if isinstance(entry, bool):
-            lines.append(f"    {field} = {lua_boolean(entry)},")
-        elif field in value:
+            lines.append(f"    {field_name} = {lua_boolean(entry)},")
+        elif field_name in value:
             result.todos.append(
-                f"{source.location}: martial art {art_id} {field} needs review"
+                f"{source.location}: martial art {art_id} {field_name} needs review"
             )
     lines.append("}")
     autolearn = value.get("autolearn")
@@ -6713,23 +6727,23 @@ def render_trap(source: SourceObject, result: MigrationResult) -> str | None:
         ("trigger_weight_grams", 500), ("sound_threshold_min", 0),
         ("sound_threshold_max", 0),
     )
-    for field, default in int_fields:
-        entry = value.get(field, default)
+    for field_name, default in int_fields:
+        entry = value.get(field_name, default)
         if isinstance(entry, int) and not isinstance(entry, bool) and \
                 entry >= 0:
-            lines.append(f"    {field} = {entry},")
+            lines.append(f"    {field_name} = {entry},")
         else:
-            lines.append(f"    {field} = {default},")
+            lines.append(f"    {field_name} = {default},")
             result.todos.append(
-                f"{source.location}: trap {trap_id} {field} needs review"
+                f"{source.location}: trap {trap_id} {field_name} needs review"
             )
-    for field in ("benign", "always_invisible"):
-        entry = value.get(field)
+    for field_name in ("benign", "always_invisible"):
+        entry = value.get(field_name)
         if isinstance(entry, bool):
-            lines.append(f"    {field} = {lua_boolean(entry)},")
-        elif field in value:
+            lines.append(f"    {field_name} = {lua_boolean(entry)},")
+        elif field_name in value:
             result.todos.append(
-                f"{source.location}: trap {trap_id} {field} needs review"
+                f"{source.location}: trap {trap_id} {field_name} needs review"
             )
     memorials = [value.get("memorial_male"), value.get("memorial_female")]
     if all(isinstance(entry, str) and entry for entry in memorials):
@@ -7001,15 +7015,15 @@ def render_furniture(source: SourceObject, result: MigrationResult) -> str | Non
         ("comfort", 0), ("max_volume_ml", 0), ("mass_grams", 0),
         ("keg_capacity_ml", 0),
     )
-    for field, default in int_fields:
-        entry = value.get(field, default)
+    for field_name, default in int_fields:
+        entry = value.get(field_name, default)
         if isinstance(entry, int) and not isinstance(entry, bool) and \
                 entry >= 0:
-            lines.append(f"    {field} = {entry},")
+            lines.append(f"    {field_name} = {entry},")
         else:
-            lines.append(f"    {field} = {default},")
+            lines.append(f"    {field_name} = {default},")
             result.todos.append(
-                f"{source.location}: furniture {furniture_id} {field} needs review"
+                f"{source.location}: furniture {furniture_id} {field_name} needs review"
             )
     transparent = value.get("transparent")
     if isinstance(transparent, bool):
@@ -7018,14 +7032,14 @@ def render_furniture(source: SourceObject, result: MigrationResult) -> str | Non
         result.todos.append(
             f"{source.location}: furniture {furniture_id} transparent needs review"
         )
-    for field in ("open", "close", "lockpick_result", "crafting_pseudo_item",
-                  "deployed_item"):
-        entry = value.get(field)
+    for field_name in ("open", "close", "lockpick_result", "crafting_pseudo_item",
+                       "deployed_item"):
+        entry = value.get(field_name)
         if isinstance(entry, str) and entry:
-            lines.append(f"    {field} = {lua_quote(entry)},")
-        elif field in value:
+            lines.append(f"    {field_name} = {lua_quote(entry)},")
+        elif field_name in value:
             result.todos.append(
-                f"{source.location}: furniture {furniture_id} {field} needs review"
+                f"{source.location}: furniture {furniture_id} {field_name} needs review"
             )
     lines.append("}")
     flags = value.get("flags")
@@ -7103,15 +7117,15 @@ def render_terrain(source: SourceObject, result: MigrationResult) -> str | None:
         ("move_cost", 0), ("light_emitted", 0), ("comfort", 0),
         ("max_volume_ml", 0), ("heat_radiation", 0),
     )
-    for field, default in int_fields:
-        entry = value.get(field, default)
+    for field_name, default in int_fields:
+        entry = value.get(field_name, default)
         if isinstance(entry, int) and not isinstance(entry, bool) and \
                 entry >= 0:
-            lines.append(f"    {field} = {entry},")
+            lines.append(f"    {field_name} = {entry},")
         else:
-            lines.append(f"    {field} = {default},")
+            lines.append(f"    {field_name} = {default},")
             result.todos.append(
-                f"{source.location}: terrain {terrain_id} {field} needs review"
+                f"{source.location}: terrain {terrain_id} {field_name} needs review"
             )
     transparent = value.get("transparent")
     if isinstance(transparent, bool):
@@ -7120,14 +7134,14 @@ def render_terrain(source: SourceObject, result: MigrationResult) -> str | None:
         result.todos.append(
             f"{source.location}: terrain {terrain_id} transparent needs review"
         )
-    for field in ("open", "close", "transforms_into", "roof",
-                  "lockpick_result", "trap"):
-        entry = value.get(field)
+    for field_name in ("open", "close", "transforms_into", "roof",
+                       "lockpick_result", "trap"):
+        entry = value.get(field_name)
         if isinstance(entry, str) and entry:
-            lines.append(f"    {field} = {lua_quote(entry)},")
-        elif field in value:
+            lines.append(f"    {field_name} = {lua_quote(entry)},")
+        elif field_name in value:
             result.todos.append(
-                f"{source.location}: terrain {terrain_id} {field} needs review"
+                f"{source.location}: terrain {terrain_id} {field_name} needs review"
             )
     lines.append("}")
     flags = value.get("flags")
@@ -7211,23 +7225,23 @@ def render_gate(
         f"    door = {lua_quote(door)},",
         f"    floor = {lua_quote(floor)},",
     ]
-    for field in ("moves", "bashing_damage"):
-        entry = value.get(field, 0)
+    for field_name in ("moves", "bashing_damage"):
+        entry = value.get(field_name, 0)
         if isinstance(entry, int) and not isinstance(entry, bool) and \
                 entry >= 0:
-            lines.append(f"    {field} = {entry},")
+            lines.append(f"    {field_name} = {entry},")
         else:
-            lines.append(f"    {field} = 0,")
+            lines.append(f"    {field_name} = 0,")
             result.todos.append(
-                f"{source.location}: gate {gate_id} {field} needs review"
+                f"{source.location}: gate {gate_id} {field_name} needs review"
             )
     messages = value.get("messages")
     if isinstance(messages, dict):
-        for key, field in (("pull", "pull_message"), ("open", "open_message"),
-                           ("close", "close_message"), ("fail", "fail_message")):
+        for key, field_name in (("pull", "pull_message"), ("open", "open_message"),
+                                ("close", "close_message"), ("fail", "fail_message")):
             entry = messages.get(key)
             if isinstance(entry, str) and entry:
-                lines.append(f"    {field} = {lua_quote(entry)},")
+                lines.append(f"    {field_name} = {lua_quote(entry)},")
             elif key in messages:
                 result.todos.append(
                     f"{source.location}: gate {gate_id} {key} message needs review"
@@ -7282,16 +7296,16 @@ def render_fault(source: SourceObject, result: MigrationResult) -> str | None:
         f"    fault_type = {lua_quote(fault_type)},",
         f"    name = {lua_quote(name)},",
     ]
-    for field in ("description", "item_prefix", "item_suffix", "message",
-                  "color"):
-        entry = value.get(field)
+    for field_name in ("description", "item_prefix", "item_suffix", "message",
+                       "color"):
+        entry = value.get(field_name)
         if isinstance(entry, str) and entry:
-            lines.append(f"    {field} = {lua_quote(entry)},")
-        elif field in value:
+            lines.append(f"    {field_name} = {lua_quote(entry)},")
+        elif field_name in value:
             result.todos.append(
-                f"{source.location}: fault {fault_id} {field} needs review"
+                f"{source.location}: fault {fault_id} {field_name} needs review"
             )
-    for source_field, field, default in (
+    for source_field, field_name, default in (
         ("degradation_mod", "degradation_mod", 0),
         ("instant_damage", "instant_damage", 0),
         # Legacy defaults to no vehicle move penalty.
@@ -7301,13 +7315,13 @@ def render_fault(source: SourceObject, result: MigrationResult) -> str | None:
     ):
         entry = value.get(source_field, default)
         if isinstance(entry, int) and not isinstance(entry, bool):
-            lines.append(f"    {field} = {entry},")
+            lines.append(f"    {field_name} = {entry},")
         else:
-            lines.append(f"    {field} = {default},")
+            lines.append(f"    {field_name} = {default},")
             result.todos.append(
                 f"{source.location}: fault {fault_id} {source_field} needs review"
             )
-    for source_field, field, default in (
+    for source_field, field_name, default in (
         ("price_modifier", "price_modifier", 1.0),
         ("contact_area_mod", "contact_area_mod", 1.0),
         ("rolling_resistance_mod", "rolling_resistance_mod", 1.0),
@@ -7316,9 +7330,9 @@ def render_fault(source: SourceObject, result: MigrationResult) -> str | None:
         entry = value.get(source_field, default)
         if isinstance(entry, (int, float)) and not isinstance(entry, bool) and \
                 entry >= 0:
-            lines.append(f"    {field} = {entry},")
+            lines.append(f"    {field_name} = {entry},")
         else:
-            lines.append(f"    {field} = {default},")
+            lines.append(f"    {field_name} = {default},")
             result.todos.append(
                 f"{source.location}: fault {fault_id} {source_field} needs review"
             )
@@ -7404,14 +7418,14 @@ def render_fault_fix(source: SourceObject, result: MigrationResult) -> str | Non
                 f"{source.location}: fault fix {fix_id} time needs unit review"
             )
     lines.append(f"    time_seconds = {seconds},")
-    for field, default in (("mod_damage", 0), ("mod_degradation", 0)):
-        entry = value.get(field, default)
+    for field_name, default in (("mod_damage", 0), ("mod_degradation", 0)):
+        entry = value.get(field_name, default)
         if isinstance(entry, int) and not isinstance(entry, bool):
-            lines.append(f"    {field} = {entry},")
+            lines.append(f"    {field_name} = {entry},")
         else:
-            lines.append(f"    {field} = {default},")
+            lines.append(f"    {field_name} = {default},")
             result.todos.append(
-                f"{source.location}: fault fix {fix_id} {field} needs review"
+                f"{source.location}: fault fix {fix_id} {field_name} needs review"
             )
     lines.append("}")
     skills = value.get("skills")
@@ -7632,8 +7646,8 @@ def render_option_slider(source: SourceObject, result: MigrationResult) -> str |
         )
         if unknown_level:
             result.todos.append(
-                f"{source.location}: option slider {slider_id} level {level} unresolved fields: "
-                + ", ".join(unknown_level)
+                f"{source.location}: option slider {slider_id} level {level} unresolved fields: " +
+                ", ".join(unknown_level)
             )
         lines.extend((
             "        {",
@@ -7689,8 +7703,8 @@ def render_option_slider(source: SourceObject, result: MigrationResult) -> str |
             )
             if unknown_option:
                 result.todos.append(
-                    f"{source.location}: option slider {slider_id} level {level} option {option_id} unresolved fields: "
-                    + ", ".join(unknown_option)
+                    f"{source.location}: option slider {slider_id} level {level} option {option_id} unresolved fields: " +
+                    ", ".join(unknown_option)
                 )
             literal = lua_scalar_literal(option_value)
             assert literal is not None
@@ -7867,24 +7881,24 @@ def _render_event_constraints(
     if not isinstance(constraints, dict):
         result.todos.append(f"{source.location}: {owner} value_constraints need review")
         return
-    for field, raw_constraint in constraints.items():
-        if not isinstance(field, str) or not safe_platform_id(field):
+    for field_name, raw_constraint in constraints.items():
+        if not isinstance(field_name, str) or not safe_platform_id(field_name):
             result.todos.append(f"{source.location}: {owner} constraint field needs review")
             continue
         if not isinstance(raw_constraint, dict) or len(raw_constraint) != 1:
             result.todos.append(
-                f"{source.location}: {owner} {field} constraint needs review"
+                f"{source.location}: {owner} {field_name} constraint needs review"
             )
             continue
         kind, raw_value = next(iter(raw_constraint.items()))
         if kind == "equals_statistic":
             if isinstance(raw_value, str) and safe_platform_id(raw_value):
                 lines.append(
-                    f"definition:where_statistic({lua_quote(field)}, {lua_quote(raw_value)})"
+                    f"definition:where_statistic({lua_quote(field_name)}, {lua_quote(raw_value)})"
                 )
             else:
                 result.todos.append(
-                    f"{source.location}: {owner} {field} statistic constraint needs review"
+                    f"{source.location}: {owner} {field_name} statistic constraint needs review"
                 )
             continue
         if kind in {"equals", "lt", "lteq", "gteq", "gt"}:
@@ -7897,16 +7911,16 @@ def _render_event_constraints(
                     if kind == "equals":
                         lines.append(
                             "definition:where_equals("
-                            f"{lua_quote(field)}, {lua_quote(raw_value[0])}, {value_literal})"
+                            f"{lua_quote(field_name)}, {lua_quote(raw_value[0])}, {value_literal})"
                         )
                     else:
                         lines.append(
                             "definition:where_" + kind + "("
-                            f"{lua_quote(field)}, {value_literal})"
+                            f"{lua_quote(field_name)}, {value_literal})"
                         )
                     continue
             result.todos.append(
-                f"{source.location}: {owner} {field} {kind} constraint needs review"
+                f"{source.location}: {owner} {field_name} {kind} constraint needs review"
             )
             continue
         if kind == "equals_any":
@@ -7919,16 +7933,16 @@ def _render_event_constraints(
                 if all(literal is not None for literal in literals):
                     lines.append(
                         "definition:where_any("
-                        f"{lua_quote(field)}, {lua_quote(raw_value[0])}, "
+                        f"{lua_quote(field_name)}, {lua_quote(raw_value[0])}, "
                         "{ " + ", ".join(literals) + " })"
                     )
                     continue
             result.todos.append(
-                f"{source.location}: {owner} {field} equals_any constraint needs review"
+                f"{source.location}: {owner} {field_name} equals_any constraint needs review"
             )
             continue
         result.todos.append(
-            f"{source.location}: {owner} {field} constraint kind needs review"
+            f"{source.location}: {owner} {field_name} constraint kind needs review"
         )
 
 
@@ -7958,9 +7972,9 @@ def render_event_transformation(source: SourceObject, result: MigrationResult) -
             f"{source.location}: event transformation {transformation_id} new_fields need review"
         )
     else:
-        for field, raw_definition in new_fields.items():
+        for field_name, raw_definition in new_fields.items():
             if (
-                not isinstance(field, str) or not safe_platform_id(field) or
+                not isinstance(field_name, str) or not safe_platform_id(field_name) or
                 not isinstance(raw_definition, dict) or len(raw_definition) != 1
             ):
                 result.todos.append(
@@ -7973,19 +7987,19 @@ def render_event_transformation(source: SourceObject, result: MigrationResult) -
                 not isinstance(input_field, str) or not safe_platform_id(input_field)
             ):
                 result.todos.append(
-                    f"{source.location}: event transformation {transformation_id} derived field {field} needs review"
+                    f"{source.location}: event transformation {transformation_id} derived field {field_name} needs review"
                 )
                 continue
             lines.append(
                 "definition:derive("
-                f"{lua_quote(field)}, {lua_quote(transformation)}, {lua_quote(input_field)})"
+                f"{lua_quote(field_name)}, {lua_quote(transformation)}, {lua_quote(input_field)})"
             )
     _render_event_constraints(source, result, lines, f"event transformation {transformation_id}")
     drop_fields = value.get("drop_fields", [])
     if isinstance(drop_fields, list):
-        for field in drop_fields:
-            if isinstance(field, str) and safe_platform_id(field):
-                lines.append(f"definition:drop({lua_quote(field)})")
+        for field_name in drop_fields:
+            if isinstance(field_name, str) and safe_platform_id(field_name):
+                lines.append(f"definition:drop({lua_quote(field_name)})")
             else:
                 result.todos.append(
                     f"{source.location}: event transformation {transformation_id} drop field needs review"
@@ -8186,12 +8200,12 @@ def normalize_generic_platform_payload(
                 result[new] = result[old]
     # JSON translation objects are valid legacy values but the bounded native
     # constructors intentionally accept one resolved author-facing string.
-    for field in (
+    for field_name in (
         "name", "description", "desc", "job_description", "label",
         "string", "text", "suffix", "temporary_suffix",
     ):
-        if isinstance(result.get(field), dict):
-            result[field] = display_text(result[field], "")
+        if isinstance(result.get(field_name), dict):
+            result[field_name] = display_text(result[field_name], "")
     variants = result.get("variants")
     if isinstance(variants, list):
         normalized_variants: list[Any] = []
@@ -8626,31 +8640,31 @@ def render_weather_generator(source: SourceObject, result: MigrationResult) -> s
         "local definition = content.WeatherGenerator {",
         f"    id = {lua_quote(generator_id)},",
     ]
-    for field, default in (
+    for field_name, default in (
         ("base_temperature", 0.0), ("base_humidity", 0.0),
         ("base_pressure", 0.0), ("base_wind", 0.0),
     ):
-        entry = value.get(field, default)
+        entry = value.get(field_name, default)
         if isinstance(entry, (int, float)) and not isinstance(entry, bool):
-            lines.append(f"    {field} = {entry},")
+            lines.append(f"    {field_name} = {entry},")
         else:
-            lines.append(f"    {field} = {default},")
+            lines.append(f"    {field_name} = {default},")
             result.todos.append(
-                f"{source.location}: weather generator {generator_id} {field} needs review"
+                f"{source.location}: weather generator {generator_id} {field_name} needs review"
             )
-    for field in (
+    for field_name in (
         "base_wind_distrib_peaks", "summer_temp_manual_mod",
         "spring_temp_manual_mod", "autumn_temp_manual_mod",
         "winter_temp_manual_mod", "spring_humidity_manual_mod",
         "summer_humidity_manual_mod", "autumn_humidity_manual_mod",
         "winter_humidity_manual_mod",
     ):
-        entry = value.get(field, 0)
+        entry = value.get(field_name, 0)
         if isinstance(entry, int) and not isinstance(entry, bool):
-            lines.append(f"    {field} = {entry},")
-        elif field in value:
+            lines.append(f"    {field_name} = {entry},")
+        elif field_name in value:
             result.todos.append(
-                f"{source.location}: weather generator {generator_id} {field} needs review"
+                f"{source.location}: weather generator {generator_id} {field_name} needs review"
             )
     lines.append("}")
     for member, method in (("weather_black_list", "blacklisted_weather"),
@@ -13385,7 +13399,7 @@ def render_weighted_catalog(
         if (
             not isinstance(entry_id, str) or
             not entry_id or
-            ( not allow_duplicates and entry_id in seen ) or
+            (not allow_duplicates and entry_id in seen) or
             not isinstance(weight, int) or
             isinstance(weight, bool) or
             not 1 <= weight <= NATIVE_INT_MAX
@@ -16194,7 +16208,7 @@ def render_region_settings_highway(source: SourceObject, result: MigrationResult
         f"    straightness_chance = {lua_number(straightness_chance)},",
     ]
 
-    for field in [
+    for field_name in [
         "reserved_terrain_id", "reserved_terrain_water_id", "segment_flat_special",
         "segment_ramp_special", "segment_road_bridge_special", "segment_bridge_special",
         "segment_bridge_supports_special", "segment_overpass_special", "clockwise_slant_special",
@@ -16202,14 +16216,14 @@ def render_region_settings_highway(source: SourceObject, result: MigrationResult
         "fallback_three_way_intersection_special", "fallback_four_way_intersection_special",
         "fallback_supports",
     ]:
-        if field not in value:
+        if field_name not in value:
             continue
-        val = value[field]
+        val = value[field_name]
         if bounded_platform_id(val):
-            lines.append(f"    {field} = {lua_quote(val)},")
+            lines.append(f"    {field_name} = {lua_quote(val)},")
         else:
             result.todos.append(
-                f"{source.location}: region settings highway {highway_id} {field} needs a bounded native id"
+                f"{source.location}: region settings highway {highway_id} {field_name} needs a bounded native id"
             )
 
     for required_slant in (
@@ -17901,8 +17915,8 @@ def render_eoc_value_expression(
         return f"context.data[{quoted}]"
     if key == "global_val":
         return (
-            "(service_value(services.variables.get_global(" + quoted + ")).value or "
-            + missing_default + ")"
+            "(service_value(services.variables.get_global(" + quoted + ")).value or " +
+            missing_default + ")"
         )
     scope = {
         "u_val": "u",
@@ -17932,8 +17946,8 @@ def render_eoc_string_expression(
         if monster_id is None:
             return None
         return (
-            "(function() local definition = services.registry.get(\"monster\", "
-            + monster_id + "); return definition and "
+            "(function() local definition = services.registry.get(\"monster\", " +
+            monster_id + "); return definition and "
             "definition.default_faction.value or \"\" end)()"
         )
     if "str" in value and set(value) <= {"str", "i18n", "//~"}:
@@ -18691,10 +18705,11 @@ def render_static_npc_goal_effect(
         not safe_platform_id(terrain) or
         (special is not None and not safe_platform_id(special)) or
         any(
-        field in target for field in (
-            "om_terrain_match_type", "random", "z", "var",
-            "om_terrain_replace",
-        )
+            field in target
+            for field in (
+                "om_terrain_match_type", "random", "z", "var",
+                "om_terrain_replace",
+            )
         )
     ):
         return None
@@ -18972,7 +18987,7 @@ def render_static_remove_active_mission_effect(
         "        })",
         "        for _, entry in ipairs(active_missions.items) do",
         f"            if entry.id == {mission_id} then",
-                "                service_value(services.missions.abandon(actor, entry.token))",
+        "                service_value(services.missions.abandon(actor, entry.token))",
         "                mission_done = true",
         "                break",
         "            end",
@@ -20157,7 +20172,7 @@ def render_static_bulk_trade_effect(
     A proven actor or item actor alone does not prove the participant pair,
     exact holder, or stable Item needed by the commit API.
     """
-    return render_static_trade_commit_effect( effect, key )
+    return render_static_trade_commit_effect(effect, key)
 
 
 def render_static_quote_trade_effect(
@@ -20166,7 +20181,7 @@ def render_static_quote_trade_effect(
 ) -> list[str] | None:
     # A legacy type-id quote cannot save a QuoteToken for a later UI event.
     # Only a complete same-event descriptor can lower through quote -> commit.
-    return render_static_trade_commit_effect( effect, key )
+    return render_static_trade_commit_effect(effect, key)
 
 
 def render_static_vehicle_service_effect(
@@ -20418,6 +20433,7 @@ def render_static_dimension_travel_effect(
         failure is not None and failure_expression is None
     ):
         return None
+
     def radius_expression(value: Any, minimum: int, maximum: int) -> str | None:
         literal = _literal_integer_or_none(value, minimum, maximum)
         if literal is not None:
@@ -21041,10 +21057,10 @@ def render_static_combat_cast_spell(
         spell.get("max_level", -1), -1, 1000, integer=True
     )
     if (
-        literal_min_level is not None
-        and literal_max_level is not None
-        and literal_max_level >= 0
-        and literal_max_level < literal_min_level
+        literal_min_level is not None and
+        literal_max_level is not None and
+        literal_max_level >= 0 and
+        literal_max_level < literal_min_level
     ):
         return None
     options: list[str] = []
@@ -21177,7 +21193,7 @@ def _static_coordinate_variable_descriptor(
     Character handle, so coordinate effects must stay fail-closed unless the
     source and destination are explicit ``u_val``/``npc_val`` variables.
     """
-    return _static_character_variable_descriptor( value )
+    return _static_character_variable_descriptor(value)
 
 
 def _coordinate_variable_handle(
@@ -22555,7 +22571,6 @@ def render_static_pickup_items(
     holder_lines = render_explicit_map_tile_holder(effect[key])
     if holder_lines is None:
         return None
-    actor = "actor"
     return holder_lines + [
         "    local destination_holder = { kind = \"character\", character = actor, slot = \"inventory\" }",
         "    local map_page = service_value(services.items.page(map_holder, {",
@@ -22718,7 +22733,7 @@ def render_static_set_terrain_or_furniture(
 ) -> list[str] | None:
     if key not in effect:
         return None
-    return _render_static_map_state_edit( effect, False, False )
+    return _render_static_map_state_edit(effect, False, False)
 
 
 def render_static_mapgen_update(
@@ -24645,8 +24660,10 @@ def render_dynamic_character_condition(
         return None
 
     actor_specs = {
-        "u": (avatar_actor_proven, "actor" if avatar_actor_proven else
-               "services.characters.avatar()"),
+        "u": (
+            avatar_actor_proven,
+            "actor" if avatar_actor_proven else "services.characters.avatar()",
+        ),
         "npc": (npc_actor_proven, npc_actor_expression),
     }
 
@@ -24874,7 +24891,7 @@ def render_dynamic_character_condition(
             f"service_value(services.characters.snapshot({actor})).movement.id == {mode}"
         )
 
-    for key, scope, field in (
+    for key, scope, field_name in (
         ("u_has_cash", "u", "cash"),
         ("u_has_strength", "u", "strength"),
         ("u_has_dexterity", "u", "dexterity"),
@@ -24893,7 +24910,7 @@ def render_dynamic_character_condition(
         amount = render_eoc_numeric_expression(condition[key], "0", actor)
         if amount is None:
             return None
-        return f"service_value(services.characters.snapshot({actor})).{('stats.' + field) if field != 'cash' else field} >= ({amount})"
+        return f"service_value(services.characters.snapshot({actor})).{('stats.' + field_name) if field_name != 'cash' else field_name} >= ({amount})"
 
     return None
 
@@ -25555,6 +25572,7 @@ def render_eoc_condition_expression(
             continue
         if set(raw) - {"item", "count", "charges"}:
             continue
+
         def quantity_expression(value: Any) -> tuple[str, float | None] | None:
             literal = finite_number_literal(value)
             if literal is not None:
@@ -25630,8 +25648,8 @@ def render_eoc_condition_expression(
                 else "services.characters.avatar()"
             )
             return (
-                f"service_value(services.inventory.has_items_sum({actor}, {{ "
-                + ", ".join(rendered_entries) + " }))"
+                f"service_value(services.inventory.has_items_sum({actor}, {{ " +
+                ", ".join(rendered_entries) + " }))"
             )
     for item_key, actor_proven in (
         ("u_has_item_with_flag", avatar_actor_proven),
@@ -26713,8 +26731,8 @@ def render_eoc(
 ) -> str:
     value = source.value
     eoc_id = stable_id(value, f"anonymous_{source.index}")
-    function_name = ( eoc_function_names or {} ).get(
-        eoc_id, lua_function_name( eoc_id )
+    function_name = (eoc_function_names or {}).get(
+        eoc_id, lua_function_name(eoc_id)
     )
     stable_handler = isinstance(value.get("id"), str) and bool(value["id"])
     handler_id = f"migrated.{eoc_id}"
@@ -26834,7 +26852,7 @@ def render_eoc(
     npc_event_character_actor_proven = npc_event_character_actor_proven or npc_fatal_hook
     callback_character_actor_proven = False
     referenced_requirement = (
-        (eoc_actor_requirements or {}).get( eoc_id )
+        (eoc_actor_requirements or {}).get(eoc_id)
         if eoc_id in eoc_referenced_ids else None
     )
     if referenced_requirement == "avatar":
@@ -28153,7 +28171,7 @@ def render_eoc(
                     )
                 converted_effect = True
             elif (
-        (avatar_actor_proven or creature_actor_proven) and
+                (avatar_actor_proven or creature_actor_proven) and
                 isinstance(effect, dict) and
                 set(effect) <= {"u_lose_effect", "target_part"} and
                 (
@@ -28918,8 +28936,7 @@ def render_eoc(
                         not isinstance(effect.get("count"), bool) and
                         1 <= effect["count"] <= 100
                     )
-                )
-                and (
+                ) and (
                     "use_item_group" not in effect or
                     isinstance(effect.get("use_item_group"), bool)
                 ) and (
@@ -29068,7 +29085,7 @@ def render_eoc(
                     npc_event_character_actor_proven,
                 )
                 if rendered is not None:
-                    lines.extend( rendered )
+                    lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
@@ -31606,12 +31623,12 @@ def migrate(objects: list[SourceObject], mod_id: str,
         source.value.get("type") not in exclude_types
     }
     eoc_function_names = {
-        stable_id( source.value, f"anonymous_{source.index}" ): lua_function_name(
-            stable_id( source.value, f"anonymous_{source.index}" )
+        stable_id(source.value, f"anonymous_{source.index}"): lua_function_name(
+            stable_id(source.value, f"anonymous_{source.index}")
         )
         for source in objects
-        if source.value.get( "type" ) in EOC_TYPES and
-        source.value.get( "type" ) not in exclude_types
+        if source.value.get("type") in EOC_TYPES and
+        source.value.get("type") not in exclude_types
     }
     eoc_referenced_ids = _collect_eoc_references(
         objects, set(eoc_function_names)

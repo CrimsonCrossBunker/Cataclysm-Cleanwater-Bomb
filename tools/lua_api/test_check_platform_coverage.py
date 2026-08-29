@@ -10,17 +10,26 @@ from pathlib import Path
 
 try:
     from .check_platform_coverage import check
-    from .generate_platform_contract import build_contract, parse_luals_declarations
+    from .generate_platform_contract import (
+        build_contract,
+        parse_luals_declarations,
+    )
     from .generate_platform_coverage import build_coverage
 except ImportError:
     from check_platform_coverage import check  # type: ignore
-    from generate_platform_contract import build_contract, parse_luals_declarations  # type: ignore
+    from generate_platform_contract import (  # type: ignore
+        build_contract,
+        parse_luals_declarations,
+    )
     from generate_platform_coverage import build_coverage  # type: ignore
 
 try:
     from .test_generate_platform_contract import DECLARATIONS, NATIVE_INVENTORY
 except ImportError:
-    from test_generate_platform_contract import DECLARATIONS, NATIVE_INVENTORY  # type: ignore
+    from test_generate_platform_contract import (  # type: ignore
+        DECLARATIONS,
+        NATIVE_INVENTORY,
+    )
 
 
 class PlatformCoverageCheckTest(unittest.TestCase):
@@ -34,7 +43,9 @@ class PlatformCoverageCheckTest(unittest.TestCase):
             path = Path(directory) / "coverage.json"
             inventory = Path(directory) / "inventory.json"
             path.write_text(json.dumps(coverage), encoding="utf-8")
-            inventory.write_text(json.dumps(NATIVE_INVENTORY), encoding="utf-8")
+            inventory.write_text(
+                json.dumps(NATIVE_INVENTORY), encoding="utf-8"
+            )
             summary = check(path, inventory, expected=coverage)
             self.assertEqual(summary["native_roots"], 1)
 
@@ -43,7 +54,9 @@ class PlatformCoverageCheckTest(unittest.TestCase):
             declarations=parse_luals_declarations(DECLARATIONS),
             native_inventory=NATIVE_INVENTORY,
         )
-        coverage = build_coverage(contract, {"export_roots": [{"lua_name": "MissingRoot"}]})
+        coverage = build_coverage(
+            contract, {"export_roots": [{"lua_name": "MissingRoot"}]}
+        )
         self.assertFalse(coverage["platform_sync"]["synchronized"])
 
 

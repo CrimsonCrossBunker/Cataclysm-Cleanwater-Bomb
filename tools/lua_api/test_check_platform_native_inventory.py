@@ -11,17 +11,30 @@ from pathlib import Path
 
 try:
     from .check_platform_native_inventory import check
-    from .generate_platform_native_inventory import DEFAULT_OUTPUT, build_native_inventory
+    from .generate_platform_native_inventory import (
+        DEFAULT_OUTPUT,
+        build_native_inventory,
+    )
 except ImportError:
     from check_platform_native_inventory import check
-    from generate_platform_native_inventory import DEFAULT_OUTPUT, build_native_inventory
+    from generate_platform_native_inventory import (
+        DEFAULT_OUTPUT,
+        build_native_inventory,
+    )
 
 
 class PlatformNativeInventoryCheckTest(unittest.TestCase):
     def test_checked_in_inventory_matches_sources(self) -> None:
         summary = check(DEFAULT_OUTPUT)
-        for key in ("id_kinds", "json_types", "event_types", "native_domains",
-                    "export_roots", "platform_v1_roots", "member_dispositions"):
+        for key in (
+            "id_kinds",
+            "json_types",
+            "event_types",
+            "native_domains",
+            "export_roots",
+            "platform_v1_roots",
+            "member_dispositions",
+        ):
             self.assertGreater(summary[key], 0)
         self.assertEqual(summary["export_roots"], summary["platform_v1_roots"])
 

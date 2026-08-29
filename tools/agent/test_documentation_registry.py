@@ -55,8 +55,14 @@ class DocumentationRegistryTest(unittest.TestCase):
         legacy = registry.load_inventory()
         current = registry.classify("data/lua/README.md", legacy)
         self.assertEqual(current["status"], "active")
-        self.assertEqual(current["stable_document_id"], "lua.platform.overview")
-        self.assertIn("architecture.lua-first-platform", current["ccb_docs_ids"])
+        self.assertEqual(
+            current["stable_document_id"],
+            "lua.platform.overview",
+        )
+        self.assertIn(
+            "architecture.lua-first-platform",
+            current["ccb_docs_ids"],
+        )
 
     def test_retired_platform_docs_are_historical_and_not_indexed(self):
         legacy = registry.load_inventory()

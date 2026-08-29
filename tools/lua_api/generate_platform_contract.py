@@ -22,8 +22,12 @@ DEFAULT_DECLARATIONS = REPOSITORY_ROOT / "data/lua/types/ccb_platform_v1.d.lua"
 DEFAULT_NATIVE_INVENTORY = (
     REPOSITORY_ROOT / "data/lua/reference/ccb_platform_native_inventory.json"
 )
-DEFAULT_SCHEMA = REPOSITORY_ROOT / "data/lua/reference/ccb_platform_api_v1.schema.json"
-DEFAULT_OUTPUT = REPOSITORY_ROOT / "data/lua/reference/ccb_platform_api_v1.json"
+DEFAULT_SCHEMA = REPOSITORY_ROOT / (
+    "data/lua/reference/ccb_platform_api_v1.schema.json"
+)
+DEFAULT_OUTPUT = REPOSITORY_ROOT / (
+    "data/lua/reference/ccb_platform_api_v1.json"
+)
 
 CLASS_PATTERN = re.compile(r"^---@class\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)")
 FIELD_PATTERN = re.compile(
@@ -52,7 +56,9 @@ def parse_luals_declarations(text: str) -> dict[str, object]:
         class_match = CLASS_PATTERN.match(line)
         if class_match:
             current_class = class_match.group("name")
-            classes.setdefault(current_class, {"name": current_class, "fields": []})
+            classes.setdefault(
+                current_class, {"name": current_class, "fields": []}
+            )
             continue
 
         field_match = FIELD_PATTERN.match(line)
@@ -136,7 +142,14 @@ def validate_luals_declarations(declarations: dict[str, object]) -> None:
     if not isinstance(classes, list):
         raise RuntimeError("Platform LuaLS classes must be an array")
     root = next(
-        (entry for entry in classes if isinstance(entry, dict) and entry.get("name") == "CcbPlatformV1"),
+        (
+            entry
+            for entry in classes
+            if (
+                isinstance(entry, dict) and
+                entry.get("name") == "CcbPlatformV1"
+            )
+        ),
         None,
     )
     if not isinstance(root, dict):
@@ -144,7 +157,11 @@ def validate_luals_declarations(declarations: dict[str, object]) -> None:
     fields = root.get("fields")
     if not isinstance(fields, list):
         raise RuntimeError("CcbPlatformV1 fields are missing")
-    field_names = {str(field.get("name")) for field in fields if isinstance(field, dict)}
+    field_names = {
+        str(field.get("name"))
+        for field in fields
+        if isinstance(field, dict)
+    }
     required = {
         "platform_version",
         "content",
@@ -164,7 +181,10 @@ def read_declarations(path: Path = DEFAULT_DECLARATIONS) -> dict[str, object]:
     text = path.read_text(encoding="utf-8")
     for token in FORBIDDEN_DECLARATION_TOKENS:
         if token in text:
-            raise RuntimeError(f"Platform LuaLS declarations retain forbidden token: {token}")
+            raise RuntimeError(
+                "Platform LuaLS declarations retain forbidden token: "
+                f"{token}"
+            )
     declarations = parse_luals_declarations(text)
     validate_luals_declarations(declarations)
     return declarations
@@ -181,7 +201,8 @@ def validate_platform_entrypoint() -> None:
     missing = [marker for marker in required_markers if marker not in loader]
     if missing:
         raise RuntimeError(
-            f"Platform loader is missing sole ccb entrypoint markers: {missing}"
+            "Platform loader is missing sole ccb entrypoint markers: "
+            f"{missing}"
         )
     forbidden_global_tables = (
         'loaded["game"]',
@@ -211,17 +232,22 @@ def registration_files() -> list[str]:
 def native_root_facts(inventory: dict[str, object]) -> list[dict[str, object]]:
     roots = inventory.get("export_roots")
     if not isinstance(roots, list):
-        raise RuntimeError("Platform native inventory export_roots must be an array")
+        raise RuntimeError(
+            "Platform native inventory export_roots must be an array"
+        )
     result = []
     for root in roots:
         if not isinstance(root, dict):
-            raise RuntimeError("Platform native inventory export root is malformed")
+            raise RuntimeError(
+                "Platform native inventory export root is malformed"
+            )
         surfaces = root.get("surfaces", [])
         if not isinstance(surfaces, list) or any(
             surface != "platform_v1" for surface in surfaces
         ):
             raise RuntimeError(
-                "Platform native inventory contains a non-Platform export surface"
+                "Platform native inventory contains a non-Platform export "
+                "surface"
             )
         result.append(
             {
@@ -232,7 +258,10 @@ def native_root_facts(inventory: dict[str, object]) -> list[dict[str, object]]:
                 "surfaces": root.get("surfaces", []),
             }
         )
-    return sorted(result, key=lambda root: str(root.get("lua_name", root.get("id"))))
+    return sorted(
+        result,
+        key=lambda root: str(root.get("lua_name", root.get("id"))),
+    )
 
 
 def build_contract(
@@ -261,7 +290,9 @@ def build_contract(
     classes = declarations["classes"]
     assert isinstance(classes, list)
     root_class = next(
-        entry for entry in classes if isinstance(entry, dict) and entry.get("name") == "CcbPlatformV1"
+        entry
+        for entry in classes
+        if isinstance(entry, dict) and entry.get("name") == "CcbPlatformV1"
     )
     contract = {
         "schema_version": 1,
@@ -285,21 +316,37 @@ def build_contract(
             "export_roots": roots,
         },
     }
-    validate_schema_document(contract, schema_path, "Platform v1 public contract")
+    validate_schema_document(
+        contract,
+        schema_path,
+        "Platform v1 public contract",
+    )
     return contract
 
 
 def serialize_contract(contract: dict[str, object]) -> str:
-    return json.dumps(contract, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    return json.dumps(
+        contract, ensure_ascii=False, indent=2, sort_keys=True
+    ) + "\n"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
-    parser.add_argument("--native-inventory", type=Path, default=DEFAULT_NATIVE_INVENTORY)
-    parser.add_argument("--declarations", type=Path, default=DEFAULT_DECLARATIONS)
+    parser.add_argument(
+        "--native-inventory",
+        type=Path,
+        default=DEFAULT_NATIVE_INVENTORY,
+    )
+    parser.add_argument(
+        "--declarations",
+        type=Path,
+        default=DEFAULT_DECLARATIONS,
+    )
     parser.add_argument("--schema", type=Path, default=DEFAULT_SCHEMA)
-    parser.add_argument("--check", action="store_true", help="check without writing")
+    parser.add_argument(
+        "--check", action="store_true", help="check without writing"
+    )
     arguments = parser.parse_args()
     declarations_path = arguments.declarations.resolve()
     native_inventory_path = arguments.native_inventory.resolve()
@@ -314,9 +361,13 @@ def main() -> int:
     expected = serialize_contract(contract)
     if arguments.check:
         if not arguments.output.exists():
-            raise SystemExit(f"missing Platform v1 public contract: {arguments.output}")
+            raise SystemExit(
+                f"missing Platform v1 public contract: {arguments.output}"
+            )
         if arguments.output.read_text(encoding="utf-8") != expected:
-            raise SystemExit(f"stale Platform v1 public contract: {arguments.output}")
+            raise SystemExit(
+                f"stale Platform v1 public contract: {arguments.output}"
+            )
         return 0
     arguments.output.parent.mkdir(parents=True, exist_ok=True)
     arguments.output.write_text(expected, encoding="utf-8")

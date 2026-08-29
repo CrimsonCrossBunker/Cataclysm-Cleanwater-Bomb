@@ -1680,17 +1680,17 @@ sol::table relocate_npc(
         } ) );
     }
 
+    if( const std::optional<game_handle_error> token_error =
+                validate_map_tile_token(
+                    target_token, runtime_generation, world_generation ) ) {
+        return make_game_error_result( state, *token_error );
+    }
+
     if( value->is_dead() || !value->is_active() ) {
         return make_game_error_result( state, {
             "unsupported_state",
             "services.relocation.move does not support a dead or inactive NPC"
         } );
-    }
-
-    if( const std::optional<game_handle_error> token_error =
-                validate_map_tile_token(
-                    target_token, runtime_generation, world_generation ) ) {
-        return make_game_error_result( state, *token_error );
     }
 
     map &here = get_map();

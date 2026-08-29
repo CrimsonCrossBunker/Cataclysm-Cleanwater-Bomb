@@ -67,11 +67,21 @@ class PlatformContractGeneratorTest(unittest.TestCase):
         )
         self.assertEqual(contract["entrypoint"]["module"], "ccb")
         self.assertEqual(contract["entrypoint"]["global_tables"], [])
-        self.assertEqual(contract["native"]["export_roots"][0]["lua_name"], "GameHandle")
-        self.assertIn('"contract_id": "ccb_platform_api_v1"', serialize_contract(contract))
+        self.assertEqual(
+            contract["native"]["export_roots"][0]["lua_name"], "GameHandle"
+        )
+        self.assertIn(
+            '"contract_id": "ccb_platform_api_v1"',
+            serialize_contract(contract),
+        )
 
-    def test_forbidden_game_surface_is_rejected_by_build_validation(self) -> None:
-        invalid = DECLARATIONS.replace("---@field services table", "---@field services table\n-- game.handlers")
+    def test_forbidden_game_surface_is_rejected_by_build_validation(
+        self,
+    ) -> None:
+        invalid = DECLARATIONS.replace(
+            "---@field services table",
+            "---@field services table\n-- game.handlers",
+        )
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "declarations.d.lua"
             path.write_text(invalid, encoding="utf-8")

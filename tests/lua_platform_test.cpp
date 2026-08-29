@@ -7112,7 +7112,11 @@ TEST_CASE( "lua_platform_camp_resource_work_liability_and_food_list_are_persiste
     basecamp duplicate_restored;
     const JsonValue duplicate_saved = json_loader::from_string(
                                            write_task_save( true, true ) );
-    duplicate_restored.deserialize( duplicate_saved.get_object() );
+    const std::string dmsg = capture_debugmsg_during( [&]() {
+        duplicate_restored.deserialize( duplicate_saved.get_object() );
+    } );
+    CHECK_THAT( dmsg,
+                Catch::Matchers::Contains( "Discarding invalid persisted Platform camp task" ) );
     CHECK( duplicate_restored.platform_task_snapshot().empty() );
 }
 
@@ -9603,6 +9607,7 @@ struct platform_monster_relocation_fixture {
         runtime( runtime_owner, runtime_number ),
         active_runtime( runtime ),
         active_world_generation( world_number ) {
+        clear_avatar();
         clear_map_without_vision();
         get_creature_tracker().clear();
         cata::lua_platform::reset_map_tile_tokens();
@@ -9894,9 +9899,11 @@ struct platform_npc_relocation_fixture {
         active_runtime( runtime ),
         active_world_generation( world_number ) {
         clear_npcs();
+        clear_avatar();
         clear_map_without_vision();
         cata::lua_platform::reset_map_tile_tokens();
-        local = tripoint_bub_ms::zero;
+        get_avatar().setpos( get_map(), tripoint_bub_ms( 60, 60, 0 ) );
+        local = tripoint_bub_ms( 58, 60, 0 );
         target_local = local + tripoint::east;
         source_abs = get_map().get_abs( local );
         target_abs = get_map().get_abs( target_local );
@@ -9969,6 +9976,9 @@ struct platform_npc_relocation_fixture {
     }
 
     ~platform_npc_relocation_fixture() {
+        if( test_npc != nullptr ) {
+            test_npc->in_vehicle = false;
+        }
         clear_npcs();
         cata::lua_platform::reset_map_tile_tokens();
     }
@@ -10024,6 +10034,8 @@ struct platform_vehicle_relocation_fixture {
         runtime( runtime_owner, runtime_number ),
         active_runtime( runtime ),
         active_world_generation( world_number ) {
+        clear_avatar();
+        get_avatar().in_vehicle = false;
         clear_vehicles();
         get_creature_tracker().clear();
         clear_map_without_vision();
@@ -10125,8 +10137,22 @@ struct platform_vehicle_relocation_fixture {
 
     ~platform_vehicle_relocation_fixture() {
         g->setremoteveh( nullptr );
-        get_avatar().grab( object_type::NONE );
-        get_map().unboard_vehicle( source_local );
+        avatar &player = get_avatar();
+        player.grab( object_type::NONE );
+        bool unboarded = false;
+        if( player.in_vehicle && test_vehicle != nullptr ) {
+            for( const int part_index : test_vehicle->boarded_parts() ) {
+                if( test_vehicle->get_passenger( part_index ) == &player ) {
+                    get_map().unboard_vehicle(
+                        vpart_reference( *test_vehicle, part_index ), &player );
+                    unboarded = true;
+                    break;
+                }
+            }
+        }
+        if( !unboarded ) {
+            player.in_vehicle = false;
+        }
         clear_avatar();
         clear_vehicles();
         for( const shared_ptr_fast<monster> &entry : extra_monsters ) {
@@ -11434,7 +11460,7 @@ TEST_CASE( "lua_platform_map_mutation_invalidates_token_cursor_and_quote",
     item &first = here.add_item(
                        fixture.local, item( itype_id( "rock" ), calendar::turn_zero ) );
     item &second = here.add_item(
-                        fixture.local, item( itype_id( "knife" ), calendar::turn_zero ) );
+                        fixture.local, item( itype_id( "knife_combat" ), calendar::turn_zero ) );
     REQUIRE( !first.is_null() );
     REQUIRE( !second.is_null() );
 
@@ -11549,8 +11575,10 @@ TEST_CASE( "lua_platform_relocation_moves_monster_with_explicit_token",
     map &here = fixture.get_map();
     const ter_str_id floor_id( "t_floor" );
     REQUIRE( floor_id.is_valid() );
-    REQUIRE( here.ter_set( fixture.local, floor_id.id() ) );
-    REQUIRE( here.ter_set( fixture.target_local, floor_id.id() ) );
+    here.ter_set( fixture.local, floor_id.id() );
+    here.ter_set( fixture.target_local, floor_id.id() );
+    REQUIRE( here.ter( fixture.local ) == floor_id.id() );
+    REQUIRE( here.ter( fixture.target_local ) == floor_id.id() );
 
     const sol::protected_function tile = fixture.map_api()["tile"];
     const sol::protected_function_result token_result = tile(
@@ -11567,15 +11595,11 @@ TEST_CASE( "lua_platform_relocation_moves_monster_with_explicit_token",
     CHECK_FALSE( move( fixture.monster_handle, token, force_options ).valid() );
     CHECK( fixture.test_monster->pos_abs() == fixture.source_abs );
 
-    avatar other_avatar;
-    const cata::lua_platform::game_handle avatar_handle =
-        cata::lua_platform::game_handle::from_creature(
-            other_avatar, { "avatar", 1, 0, 0, 0, {} },
-            fixture.runtime, fixture.active_world_generation );
+    const cata::lua_platform::game_handle unsupported_handle;
     const sol::table strict_options = fixture.lua.create_table_with(
                                            "strict", true );
     const sol::protected_function_result unsupported = move(
-            avatar_handle, token, strict_options );
+            unsupported_handle, token, strict_options );
     REQUIRE( unsupported.valid() );
     const sol::table unsupported_envelope = unsupported.get<sol::table>();
     REQUIRE_FALSE( unsupported_envelope["ok"].get<bool>() );
@@ -11962,7 +11986,7 @@ TEST_CASE( "lua_platform_relocation_rejects_unloaded_inactive_npc_without_mutati
         const sol::table stale_envelope = stale.get<sol::table>();
         REQUIRE_FALSE( stale_envelope["ok"].get<bool>() );
         CHECK( stale_envelope["error"].get<sol::table>()
-               ["code"].get<std::string>() == "stale_token" );
+               ["code"].get<std::string>() == "stale_owner" );
         CHECK( source_npc->pos_abs() == source_position );
         CHECK( cata::lua_platform::map_mutation_epoch() == epoch_before );
         CHECK( g->find_npc( npc_id ) == source_npc );
@@ -11988,8 +12012,13 @@ TEST_CASE( "lua_platform_relocation_rejects_unloaded_inactive_npc_without_mutati
         const character_id npc_id = fixture.npc_id;
         const std::uint64_t epoch_before =
             cata::lua_platform::map_mutation_epoch();
-        clear_npcs();
-        CHECK( g->find_npc( npc_id ) == nullptr );
+        fixture.test_npc->on_unload();
+        get_creature_tracker().clear_npcs();
+        const shared_ptr_fast<npc> unloaded_npc =
+            overmap_buffer.find_npc( npc_id );
+        REQUIRE( unloaded_npc );
+        CHECK( unloaded_npc.get() == fixture.test_npc );
+        CHECK_FALSE( unloaded_npc->is_active() );
 
         const sol::protected_function_result rejected = move(
                 npc_handle, token, strict_options );
@@ -12230,7 +12259,8 @@ TEST_CASE( "lua_platform_relocation_rejects_blocked_occupied_z_and_unloaded",
     const ter_str_id wall_id( "t_wall" );
     REQUIRE( floor_id.is_valid() );
     REQUIRE( wall_id.is_valid() );
-    REQUIRE( here.ter_set( fixture.target_local, floor_id.id() ) );
+    here.ter_set( fixture.target_local, floor_id.id() );
+    REQUIRE( here.ter( fixture.target_local ) == floor_id.id() );
 
     const sol::protected_function tile = fixture.map_api()["tile"];
     const sol::protected_function_result token_result = tile(
@@ -12350,7 +12380,7 @@ TEST_CASE( "lua_platform_relocation_rejects_blocked_occupied_z_and_unloaded",
         stale_token_result.get<sol::table>();
     REQUIRE_FALSE( stale_token_envelope["ok"].get<bool>() );
     CHECK( stale_token_envelope["error"].get<sol::table>()
-           ["code"].get<std::string>() == "stale_token" );
+           ["code"].get<std::string>() == "stale_owner" );
     CHECK( fixture.test_monster->pos_abs() == stale_position );
     CHECK( get_creature_tracker().find( fixture.source_abs ).get() ==
            stale_source_tracker.get() );
@@ -12369,7 +12399,8 @@ TEST_CASE( "lua_platform_relocation_rolls_back_and_updates_tracker_atomically",
     const ter_str_id wall_id( "t_wall" );
     REQUIRE( floor_id.is_valid() );
     REQUIRE( wall_id.is_valid() );
-    REQUIRE( here.ter_set( fixture.target_local, floor_id.id() ) );
+    here.ter_set( fixture.target_local, floor_id.id() );
+    REQUIRE( here.ter( fixture.target_local ) == floor_id.id() );
 
     const sol::protected_function tile = fixture.map_api()["tile"];
     const sol::protected_function_result token_result = tile(
@@ -12549,7 +12580,7 @@ TEST_CASE( "lua_platform_relocation_avatar_never_loads_map_or_uses_fallback",
     const sol::table stale_envelope = stale.get<sol::table>();
     REQUIRE_FALSE( stale_envelope["ok"].get<bool>() );
     CHECK( stale_envelope["error"].get<sol::table>()
-           ["code"].get<std::string>() == "stale_token" );
+           ["code"].get<std::string>() == "stale_owner" );
     CHECK( get_avatar().pos_abs() == stale_position );
     CHECK( cata::lua_platform::map_mutation_epoch() == epoch_before_stale_token );
     CHECK( here.get_abs_sub() == map_origin_before );
@@ -12652,6 +12683,13 @@ TEST_CASE( "lua_platform_relocation_rejects_vehicle_coupled_states_without_mutat
     SECTION( "active remote" ) {
         platform_vehicle_relocation_fixture fixture( 730, 29 );
         REQUIRE( fixture.test_vehicle );
+        item_location remote_control = get_avatar().i_add(
+                                           item( itype_id( "remotevehcontrol" ),
+                                                 calendar::turn_zero ) );
+        REQUIRE( remote_control != item_location::nowhere );
+        remote_control->active = true;
+        REQUIRE( get_avatar().has_active_item(
+                     itype_id( "remotevehcontrol" ) ) );
         g->setremoteveh( fixture.test_vehicle );
         REQUIRE( g->remoteveh() == fixture.test_vehicle );
         check_rejected( fixture );
@@ -12683,13 +12721,25 @@ TEST_CASE( "lua_platform_relocation_rejects_vehicle_coupled_states_without_mutat
         avatar &player = get_avatar();
         map &here = fixture.get_map();
         player.setpos( here, fixture.source_local, false );
+        const int cargo_part = fixture.test_vehicle->part_with_feature(
+                                   point_rel_ms::zero,
+                                   vpart_bitflags::VPFLAG_CARGO, true );
+        REQUIRE( cargo_part >= 0 );
+        fixture.test_vehicle->remove_part(
+            fixture.test_vehicle->part( cargo_part ) );
+        REQUIRE( fixture.test_vehicle->part( cargo_part ).removed );
+        fixture.test_vehicle->part_removal_cleanup( here );
         static const vpart_id seat( "seat" );
         REQUIRE( fixture.test_vehicle->install_part(
                      here, point_rel_ms::zero, seat ) >= 0 );
         here.add_vehicle_to_cache( fixture.test_vehicle );
         here.board_vehicle( fixture.source_local, &player );
         REQUIRE( player.in_vehicle );
-        REQUIRE_FALSE( fixture.test_vehicle->boarded_parts().empty() );
+        const std::vector<int> boarded_parts =
+            fixture.test_vehicle->boarded_parts();
+        REQUIRE( boarded_parts.size() == 1 );
+        const int boarded_part = boarded_parts.front();
+        REQUIRE( fixture.test_vehicle->get_passenger( boarded_part ) == &player );
 
         const sol::protected_function tile = fixture.map_api()["tile"];
         const sol::protected_function_result token_result = tile(
@@ -12721,7 +12771,8 @@ TEST_CASE( "lua_platform_relocation_rejects_vehicle_coupled_states_without_mutat
         CHECK( fixture.vehicle_handle.identity_generation() ==
                vehicle_identity_generation );
 
-        here.unboard_vehicle( fixture.source_local );
+        here.unboard_vehicle(
+            vpart_reference( *fixture.test_vehicle, boarded_part ), &player );
     }
 }
 

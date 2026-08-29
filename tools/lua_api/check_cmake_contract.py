@@ -21,7 +21,10 @@ def validate_cmake_contract(
     signature = "function(configure_lua_platform TARGET)"
     start = engine_source.find(signature)
     if start == -1:
-        errors.append("src/CMakeLists.txt: missing configure_lua_platform helper")
+        errors.append(
+            "src/CMakeLists.txt: missing configure_lua_platform "
+            "helper"
+        )
     else:
         end = engine_source.find("endfunction()", start)
         if end == -1:
@@ -37,8 +40,8 @@ def validate_cmake_contract(
                 )
             if "target_link_libraries(${TARGET} PUBLIC libsol)" not in helper:
                 errors.append(
-                    "src/CMakeLists.txt: configure_lua_platform must propagate "
-                    "libsol"
+                    "src/CMakeLists.txt: configure_lua_platform must "
+                    "propagate libsol"
                 )
 
     normalized_lua = " ".join(lua_source.split())

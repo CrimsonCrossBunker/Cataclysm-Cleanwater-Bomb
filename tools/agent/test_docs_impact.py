@@ -50,10 +50,15 @@ class DocsImpactTest(unittest.TestCase):
 
     def test_matches_only_relevant_paths(self) -> None:
         result = impacts(
-            ["src/game.cpp", "data/lua/types/ccb_platform_v1.d.lua"], self.rules
+            [
+                "src/game.cpp",
+                "data/lua/types/ccb_platform_v1.d.lua",
+            ],
+            self.rules,
         )
         self.assertEqual(
-            ["data/lua/types/ccb_platform_v1.d.lua"], result[0]["matched_files"]
+            ["data/lua/types/ccb_platform_v1.d.lua"],
+            result[0]["matched_files"],
         )
         self.assertEqual(result[0]["enforcement"], "required")
 

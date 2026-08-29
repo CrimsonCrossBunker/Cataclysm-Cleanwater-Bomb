@@ -22,10 +22,15 @@ class MigrationReportsTest(unittest.TestCase):
         expected = sum(
             1
             for item in data["documents"]
-            if item["migration_batch"]
-            and item["original_path"] not in reports.CURRENT_PLATFORM_DOCUMENTS
-            and not reports.is_retired_platform_path(item["original_path"])
-            and item["migration_status"] not in {"verified", "stubbed", "archived"}
+            if (
+                item["migration_batch"] and
+                item["original_path"] not in
+                reports.CURRENT_PLATFORM_DOCUMENTS and
+                not reports.is_retired_platform_path(item["original_path"]) and
+                item["migration_status"] not in {
+                    "verified", "stubbed", "archived"
+                }
+            )
         )
 
         self.assertEqual(batches["document_count"], expected)

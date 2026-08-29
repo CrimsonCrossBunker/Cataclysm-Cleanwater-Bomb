@@ -26,7 +26,10 @@ except ImportError:
 try:
     from .test_generate_platform_contract import DECLARATIONS, NATIVE_INVENTORY
 except ImportError:
-    from test_generate_platform_contract import DECLARATIONS, NATIVE_INVENTORY  # type: ignore
+    from test_generate_platform_contract import (  # type: ignore
+        DECLARATIONS,
+        NATIVE_INVENTORY,
+    )
 
 
 class PlatformContractCheckTest(unittest.TestCase):
@@ -41,14 +44,18 @@ class PlatformContractCheckTest(unittest.TestCase):
             inventory = Path(directory) / "inventory.json"
             path.write_text(serialize_contract(contract), encoding="utf-8")
             declarations.write_text(DECLARATIONS, encoding="utf-8")
-            inventory.write_text(json.dumps(NATIVE_INVENTORY), encoding="utf-8")
+            inventory.write_text(
+                json.dumps(NATIVE_INVENTORY), encoding="utf-8"
+            )
             expected_contract = build_contract(
                 declarations=parse_luals_declarations(DECLARATIONS),
                 native_inventory=NATIVE_INVENTORY,
                 declarations_path=declarations,
                 native_inventory_path=inventory,
             )
-            path.write_text(serialize_contract(expected_contract), encoding="utf-8")
+            path.write_text(
+                serialize_contract(expected_contract), encoding="utf-8"
+            )
             summary = check(path, inventory, declarations)
             self.assertEqual(summary["export_roots"], 1)
 
@@ -64,7 +71,9 @@ class PlatformContractCheckTest(unittest.TestCase):
             inventory = Path(directory) / "inventory.json"
             path.write_text(json.dumps(contract), encoding="utf-8")
             declarations.write_text(DECLARATIONS, encoding="utf-8")
-            inventory.write_text(json.dumps(NATIVE_INVENTORY), encoding="utf-8")
+            inventory.write_text(
+                json.dumps(NATIVE_INVENTORY), encoding="utf-8"
+            )
             with self.assertRaisesRegex(RuntimeError, "stale"):
                 check(path, inventory, declarations)
 
