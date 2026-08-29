@@ -20,7 +20,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "catalua_runtime.h"
+#include "lua_platform_runtime.h"
 #include "character.h"
 #include "color.h"
 #include "contents_change_handler.h"
@@ -1670,7 +1670,7 @@ static void activate_consume_eocs( Character &you, item &target )
     for( const effect_on_condition_id &eoc : comest.consumption_eocs ) {
         eoc->activate( d );
     }
-    cata::lua::invoke_item_consumption_handler(
+    cata::lua_platform::invoke_item_consumption_handler(
         target.typeId().str(), comest.lua_platform_mod,
         comest.lua_platform_consume_handler, you, target );
 }

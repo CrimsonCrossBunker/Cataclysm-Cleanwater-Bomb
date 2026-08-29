@@ -14,7 +14,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "catalua_hook.h"
+#include "lua_platform_hooks.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -825,26 +825,26 @@ bool monexamine::pet_menu( monster &z )
             amenu.addentry( insert_bat, false, 'x', _( "You need a %s to power this mech" ), type.nname( 1 ) );
         }
     }
-    const cata::lua::native_callback_arguments menu_payload = {
+    const cata::lua_platform::native_callback_arguments menu_payload = {
         {
             "character",
             static_cast<const Character *>( &player_character )
         },
         { "monster", static_cast<const Creature *>( &z ) },
         {
-            "monster_type", cata::lua::native_callback_id {
+            "monster_type", cata::lua_platform::native_callback_id {
                 "monster", z.type->id.str()
             }
         }
     };
-    std::vector<cata::lua::native_menu_entry> script_entries =
-        cata::lua::collect_native_hook_menu_entries(
+    std::vector<cata::lua_platform::native_menu_entry> script_entries =
+        cata::lua_platform::collect_native_hook_menu_entries(
             "on_monster_get_examine_menu_entries", menu_payload );
 
     std::map<int, std::string> script_entry_ids;
     std::set<std::string> seen_script_entry_ids;
     int next_script_choice = stop_bleeding + 1;
-    for( const cata::lua::native_menu_entry &entry : script_entries ) {
+    for( const cata::lua_platform::native_menu_entry &entry : script_entries ) {
         if( !seen_script_entry_ids.insert( entry.id ).second ) {
             continue;
         }
@@ -859,9 +859,9 @@ bool monexamine::pet_menu( monster &z )
     int choice = amenu.ret;
     std::string selected_entry;
     const auto notify_menu_entry = [&]( const std::string & entry ) {
-        cata::lua::native_callback_arguments payload = menu_payload;
+        cata::lua_platform::native_callback_arguments payload = menu_payload;
         payload.push_back( { "entry", entry } );
-        cata::lua::dispatch_native_hook(
+        cata::lua_platform::dispatch_native_hook(
             "on_monster_examine_menu_entry", payload );
     };
 

@@ -10,7 +10,7 @@
 
 #include "body_part_set.h"
 #include "calendar.h"
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "creature.h"
 #include "debug.h"
 #include "enum_conversions.h"
@@ -110,17 +110,17 @@ std::unordered_map<bodypart_str_id, std::vector<bodypart_str_id>> combined_simil
 
 } // namespace
 
-generic_factory<limb_score> &cata::lua::detail::limb_score_registry()
+generic_factory<limb_score> &cata::lua_platform::detail::limb_score_registry()
 {
     return limb_score_factory;
 }
 
-generic_factory<body_part_type> &cata::lua::detail::body_part_registry()
+generic_factory<body_part_type> &cata::lua_platform::detail::body_part_registry()
 {
     return body_part_factory;
 }
 
-void cata::lua::detail::refresh_body_part_similarity_cache()
+void cata::lua_platform::detail::refresh_body_part_similarity_cache()
 {
     combined_similar_bodyparts.clear();
     for( const body_part_type &part : body_part_factory.get_all() ) {
@@ -131,7 +131,7 @@ void cata::lua::detail::refresh_body_part_similarity_cache()
     }
 }
 
-void cata::lua::detail::refresh_body_part_wound_cache()
+void cata::lua_platform::detail::refresh_body_part_wound_cache()
 {
     for( body_part_type &part : body_part_factory.get_all_mod() ) {
         part.potential_wounds.clear();
@@ -572,7 +572,7 @@ void body_part_type::reset()
 void body_part_type::finalize_all()
 {
     body_part_factory.finalize();
-    cata::lua::detail::refresh_body_part_similarity_cache();
+    cata::lua_platform::detail::refresh_body_part_similarity_cache();
 }
 
 void body_part_type::finalize()

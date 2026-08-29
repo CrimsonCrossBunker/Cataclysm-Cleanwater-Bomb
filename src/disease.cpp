@@ -1,6 +1,6 @@
 #include "disease.h"
 
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "debug.h"
 #include "generic_factory.h"
 
@@ -9,7 +9,7 @@ namespace
 generic_factory<disease_type> disease_factory( "disease_type" );
 } // namespace
 
-generic_factory<disease_type> &cata::lua::detail::disease_type_registry()
+generic_factory<disease_type> &cata::lua_platform::detail::disease_type_registry()
 {
     return disease_factory;
 }

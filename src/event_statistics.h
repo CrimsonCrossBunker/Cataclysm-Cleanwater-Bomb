@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "clone_ptr.h"
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "translation.h"
 #include "type_id.h"
 
@@ -26,7 +26,7 @@ enum class monotonically : int;
 template<typename T>
 class generic_factory;
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
 namespace detail
@@ -77,8 +77,8 @@ class event_transformation
         class impl;
 
     private:
-        friend event_transformation cata::lua::detail::make_event_transformation(
-            const cata::lua::detail::event_transformation_native_definition &definition );
+        friend event_transformation cata::lua_platform::detail::make_event_transformation(
+            const cata::lua_platform::detail::event_transformation_native_definition &definition );
         cata::clone_ptr<impl> impl_;
 };
 
@@ -111,8 +111,8 @@ class event_statistic
         class impl;
 
     private:
-        friend event_statistic cata::lua::detail::make_event_statistic(
-            const cata::lua::detail::event_statistic_native_definition &definition );
+        friend event_statistic cata::lua_platform::detail::make_event_statistic(
+            const cata::lua_platform::detail::event_statistic_native_definition &definition );
         translation description_;
         cata::clone_ptr<impl> impl_;
 };
@@ -137,7 +137,7 @@ class score
         std::vector<std::pair<string_id<score>, mod_id>> src;
         bool was_loaded = false;
     private:
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
         translation description_;
         string_id<event_statistic> stat_;
 };

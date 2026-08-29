@@ -14,16 +14,16 @@ class Creature;
 class JsonObject;
 class map;
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
-} // namespace cata::lua
+} // namespace cata::lua_platform
 
 struct gate_data;
 using gate_id = string_id<gate_data>;
 
 struct gate_data {
-    friend class cata::lua::content_transaction;
+    friend class cata::lua_platform::content_transaction;
 
     gate_data() :
         moves( 0 ),

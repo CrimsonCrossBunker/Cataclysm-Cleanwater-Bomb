@@ -6,7 +6,7 @@
 #include <optional>
 #include <string>
 
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
@@ -28,12 +28,12 @@ generic_factory<harvest_drop_type> harvest_drop_type_factory( "harvest_drop_type
 generic_factory<harvest_list> harvest_list_factory( "harvest_list" );
 } //namespace
 
-generic_factory<harvest_drop_type> &cata::lua::detail::harvest_drop_type_registry()
+generic_factory<harvest_drop_type> &cata::lua_platform::detail::harvest_drop_type_registry()
 {
     return harvest_drop_type_factory;
 }
 
-generic_factory<harvest_list> &cata::lua::detail::harvest_list_registry()
+generic_factory<harvest_list> &cata::lua_platform::detail::harvest_list_registry()
 {
     return harvest_list_factory;
 }

@@ -22,7 +22,7 @@
 
 #include "calendar.h"
 #include "cata_imgui.h"
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
@@ -86,7 +86,7 @@ generic_factory<crafting_category> craft_cat_list( "recipe_category" );
 
 } // namespace
 
-generic_factory<crafting_category> &cata::lua::detail::crafting_category_registry()
+generic_factory<crafting_category> &cata::lua_platform::detail::crafting_category_registry()
 {
     return craft_cat_list;
 }

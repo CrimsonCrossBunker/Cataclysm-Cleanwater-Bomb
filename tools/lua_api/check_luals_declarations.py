@@ -11,7 +11,10 @@ from pathlib import Path
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DECLARATIONS = REPOSITORY_ROOT / "data/lua/types/ccb_platform_v1.d.lua"
 
-CLASS_PATTERN = re.compile(r"^---@class\s+([A-Za-z_][A-Za-z0-9_]*)$", re.MULTILINE)
+CLASS_PATTERN = re.compile(
+    r"^---@class\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s*:\s*[^\r\n]+)?$",
+    re.MULTILINE,
+)
 METHOD_PATTERN = re.compile(
     r"^function\s+([A-Za-z_][A-Za-z0-9_]*)[:.]([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)",
     re.MULTILINE,
@@ -26,8 +29,12 @@ def check(path: Path) -> dict[str, int]:
     contents = path.read_text(encoding="utf-8")
     if "Lua-first Platform v1" not in contents:
         raise RuntimeError(f"{path} is not a Platform v1 declaration file")
-    if "ccb_api_v5" in contents or "game." in contents:
-        raise RuntimeError(f"{path} retains a legacy game/API-v5 declaration")
+    forbidden = ("api_version", "capabilities", "manifest.json", "game.")
+    for token in forbidden:
+        if token in contents:
+            raise RuntimeError(
+                f"{path} retains a forbidden Platform declaration token: {token}"
+            )
 
     classes = CLASS_PATTERN.findall(contents)
     if len(classes) != len(set(classes)):
@@ -63,8 +70,8 @@ def check(path: Path) -> dict[str, int]:
     if missing:
         raise RuntimeError(f"{path} omits required Platform classes: {missing}")
 
-    runtime_source = (REPOSITORY_ROOT / "src/catalua_runtime.cpp").read_text(encoding="utf-8")
-    loader_source = (REPOSITORY_ROOT / "src/catalua_loader.cpp").read_text(encoding="utf-8")
+    runtime_source = (REPOSITORY_ROOT / "src/lua_platform_runtime.cpp").read_text(encoding="utf-8")
+    loader_source = (REPOSITORY_ROOT / "src/lua_platform_loader.cpp").read_text(encoding="utf-8")
     for marker in ('ccb["runtime"]', 'ccb["dialogue"]', 'ccb["services"]'):
         if marker not in runtime_source:
             raise RuntimeError(f"native Platform registration is missing {marker}")

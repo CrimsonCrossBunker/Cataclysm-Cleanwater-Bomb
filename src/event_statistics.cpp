@@ -11,7 +11,7 @@
 
 #include "cata_assert.h"
 #include "cata_variant.h"
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "debug.h"
 #include "enum_conversions.h"
 #include "enums.h"
@@ -60,18 +60,18 @@ generic_factory<score> score_factory( "score" );
 
 } // namespace
 
-generic_factory<score> &cata::lua::detail::score_registry()
+generic_factory<score> &cata::lua_platform::detail::score_registry()
 {
     return score_factory;
 }
 
 generic_factory<event_transformation> &
-cata::lua::detail::event_transformation_registry()
+cata::lua_platform::detail::event_transformation_registry()
 {
     return event_transformation_factory;
 }
 
-generic_factory<event_statistic> &cata::lua::detail::event_statistic_registry()
+generic_factory<event_statistic> &cata::lua_platform::detail::event_statistic_registry()
 {
     return event_statistic_factory;
 }
@@ -1325,7 +1325,7 @@ monotonically event_statistic::monotonicity() const
 namespace
 {
 std::unique_ptr<event_source> make_platform_event_source(
-    const cata::lua::detail::event_source_native_definition &definition )
+    const cata::lua_platform::detail::event_source_native_definition &definition )
 {
     if( definition.kind == "event_type" ) {
         return std::make_unique<event_type_event_source>(
@@ -1339,7 +1339,7 @@ std::unique_ptr<event_source> make_platform_event_source(
 }
 } // namespace
 
-event_transformation cata::lua::detail::make_event_transformation(
+event_transformation cata::lua_platform::detail::make_event_transformation(
     const event_transformation_native_definition &definition )
 {
     std::map<std::string, new_field> new_fields;
@@ -1407,7 +1407,7 @@ event_transformation cata::lua::detail::make_event_transformation(
     return result;
 }
 
-event_statistic cata::lua::detail::make_event_statistic(
+event_statistic cata::lua_platform::detail::make_event_statistic(
     const event_statistic_native_definition &definition )
 {
     event_statistic result;
@@ -1450,7 +1450,7 @@ event_statistic cata::lua::detail::make_event_statistic(
     return result;
 }
 
-namespace cata::lua::detail
+namespace cata::lua_platform::detail
 {
 
 struct event_transformation_snapshot {
@@ -1539,7 +1539,7 @@ void finalize_event_statistics()
     event_statistic_factory.finalize();
 }
 
-} // namespace cata::lua::detail
+} // namespace cata::lua_platform::detail
 
 std::string score::description( stats_tracker &stats ) const
 {

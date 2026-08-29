@@ -22,7 +22,7 @@ class JsonObject;
 class item;
 template <typename T> class generic_factory;
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
 namespace detail
@@ -73,7 +73,7 @@ class fault_fix
 {
     public:
         fault_fix_id id = fault_fix_id::NULL_ID();
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
         translation name;
         translation success_msg; // message to print on applying successfully
         time_duration time = 0_seconds;
@@ -106,9 +106,9 @@ class fault
 {
     public:
         fault_id id = fault_id::NULL_ID();
-        friend class cata::lua::content_transaction;
-        friend std::vector<cata::lua::detail::fault_snapshot_entry>
-        cata::lua::detail::fault_registry_snapshot();
+        friend class cata::lua_platform::content_transaction;
+        friend std::vector<cata::lua_platform::detail::fault_snapshot_entry>
+        cata::lua_platform::detail::fault_registry_snapshot();
         std::string name() const;
         std::string type() const; // use a set of types?
         std::string description() const;
@@ -177,7 +177,7 @@ class fault_group
         void load( const JsonObject &jo, std::string_view );
         bool was_loaded = false;
         friend class generic_factory<fault_group>;
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
         weighted_int_list<fault_id> fault_weighted_list;
 };
 

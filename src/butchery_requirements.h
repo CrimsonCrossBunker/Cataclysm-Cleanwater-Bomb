@@ -16,10 +16,10 @@ class read_only_visitable;
 enum class butcher_type : int;
 enum class creature_size : int;
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
-} // namespace cata::lua
+} // namespace cata::lua_platform
 
 /**
  * Contains several requirements, each with a speed modifier.
@@ -45,7 +45,7 @@ class butchery_requirements
         static void reset();
         bool is_valid() const;
     private:
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
         // int is speed bonus
         std::map<float, std::map<creature_size, std::map<butcher_type, requirement_id>>> requirements;
 };

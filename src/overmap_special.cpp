@@ -1,5 +1,5 @@
-#include "catalua_content.h"
-#include "catalua_runtime.h"
+#include "lua_platform_content.h"
+#include "lua_platform_runtime.h"
 
 #include "omdata.h" // IWYU pragma: associated
 #include "overmap.h" // IWYU pragma: associated
@@ -42,19 +42,19 @@ generic_factory<overmap_special_migration> migrations( "overmap special migratio
 
 } // namespace
 
-generic_factory<overmap_special> &cata::lua::detail::overmap_special_registry()
+generic_factory<overmap_special> &cata::lua_platform::detail::overmap_special_registry()
 {
     return specials;
 }
 
 generic_factory<overmap_special_migration> &
-cata::lua::detail::overmap_special_migration_registry()
+cata::lua_platform::detail::overmap_special_migration_registry()
 {
     return migrations;
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua::detail::overmap_special_migration_snapshot()
+cata::lua_platform::detail::overmap_special_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( migrations.size() );
@@ -304,7 +304,7 @@ special_placement_result overmap_special::place(
     const tripoint_abs_omt absolute_position =
         tripoint_abs_omt{ om.global_base_point(), origin.z() } +
         point_rel_omt{ origin.x(), origin.y() };
-    cata::lua::invoke_overmap_special_placement_handler(
+    cata::lua_platform::invoke_overmap_special_placement_handler(
         id.str(), absolute_position, static_cast<int>( dir ),
         cit.name, cit.size, cit.population );
     const bool blob = has_flag( "BLOB" );

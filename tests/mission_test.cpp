@@ -1,5 +1,6 @@
 #include <functional>
 #include <memory>
+#include <sstream>
 #include <vector>
 
 #include "avatar.h"
@@ -8,6 +9,8 @@
 #include "coordinates.h"
 #include "game.h"
 #include "item.h"
+#include "json.h"
+#include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "mission.h"
@@ -19,10 +22,43 @@ static const itype_id itype_test_rock( "test_rock" );
 
 static const mission_type_id mission_TEST_MISSION_GOAL_CONDITION1( "TEST_MISSION_GOAL_CONDITION1" );
 static const mission_type_id mission_TEST_MISSION_GOAL_CONDITION2( "TEST_MISSION_GOAL_CONDITION2" );
+static const mission_type_id mission_TEST_MISSION_GENERIC_REWARD( "TEST_MISSION_GENERIC_REWARD" );
 
 static const morale_type morale_feeling_good( "morale_feeling_good" );
 
 static const npc_template_id npc_template_test_talker( "test_talker" );
+
+TEST_CASE( "mission_generic_reward_claim_persists_across_copy_and_save",
+           "[mission][serialization]" )
+{
+    mission::clear_all();
+    mission *original = mission::reserve_new(
+                            mission_TEST_MISSION_GENERIC_REWARD, character_id() );
+    REQUIRE( original != nullptr );
+    CHECK_FALSE( original->generic_reward_claimed() );
+
+    original->commit_generic_reward_claim();
+    CHECK( original->generic_reward_claimed() );
+    const mission copied = *original;
+    CHECK( copied.generic_reward_claimed() );
+
+    std::ostringstream serialized;
+    JsonOut json( serialized );
+    original->serialize( json );
+    JsonObject saved = json_loader::from_string( serialized.str() );
+    mission loaded;
+    loaded.deserialize( saved );
+    CHECK( loaded.generic_reward_claimed() );
+
+    JsonObject legacy = json_loader::from_string(
+                            R"({
+  "type_id": "TEST_MISSION_GENERIC_REWARD",
+  "target": [ 0, 0, 0 ]
+})" );
+    loaded.deserialize( legacy );
+    CHECK_FALSE( loaded.generic_reward_claimed() );
+    mission::clear_all();
+}
 
 TEST_CASE( "mission_goal_condition_test", "[mission]" )
 {

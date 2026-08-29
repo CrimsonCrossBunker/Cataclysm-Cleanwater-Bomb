@@ -17,7 +17,7 @@
 
 #include "body_part_set.h"
 #include "bodypart.h"
-#include "catalua_hook.h"
+#include "lua_platform_hooks.h"
 #include "character.h"
 #include "character_id.h"
 #include "clothing_mod.h"

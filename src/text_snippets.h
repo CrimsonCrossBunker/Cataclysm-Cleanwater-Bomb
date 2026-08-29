@@ -18,7 +18,7 @@ class JsonArray;
 class JsonObject;
 class cata_path;
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
 }
@@ -138,7 +138,7 @@ class snippet_library
                 bool add_null_id = false );
 
     private:
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
         std::unordered_map<snippet_id, translation> snippets_by_id;
         // front facing name
         std::unordered_map<snippet_id, translation> name_by_id;

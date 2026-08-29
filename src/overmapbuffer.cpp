@@ -31,6 +31,9 @@
 #include "horde_map.h"
 #include "imgui/imgui.h"
 #include "json.h"
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include "lua_platform_handle.h"
+#endif
 #include "line.h"
 #include "map.h"
 #include "mapgendata.h"
@@ -252,6 +255,7 @@ void overmapbuffer::fix_npcs( overmap &new_overmap )
             const tripoint_abs_omt adjusted_omt_pos( clamp( npc_omt_pos.xy(), om_bounds ),  npc_omt_pos.z() );
             np.spawn_at_omt( adjusted_omt_pos );
             new_overmap.npcs.push_back( ptr );
+            platform_register_npc( ptr );
             continue;
         }
 
@@ -270,6 +274,8 @@ void overmapbuffer::save()
 
 void overmapbuffer::reset()
 {
+    platform_npc_index_.clear();
+    platform_authoritative_missing_npcs_.clear();
     overmaps.clear();
     global_state.highway_intersections.clear();
     last_requested_overmap = nullptr;
@@ -277,6 +283,8 @@ void overmapbuffer::reset()
 
 void overmapbuffer::clear()
 {
+    platform_npc_index_.clear();
+    platform_authoritative_missing_npcs_.clear();
     overmaps.clear();
     known_non_existing.clear();
     global_state.clear();
@@ -1609,6 +1617,91 @@ shared_ptr_fast<npc> overmapbuffer::find_npc( character_id id )
     return nullptr;
 }
 
+platform_npc_lookup_result overmapbuffer::lookup_platform_npc(
+    const character_id id ) const
+{
+    if( !id.is_valid() ) {
+        return { platform_npc_lookup_status::authoritative_not_found, nullptr };
+    }
+    const auto found = platform_npc_index_.find( id.get_value() );
+    if( found != platform_npc_index_.end() ) {
+        if( found->second.size() == 1 && found->second.front() ) {
+            return { platform_npc_lookup_status::found, found->second.front() };
+        }
+        if( found->second.size() > 1 ) {
+            return { platform_npc_lookup_status::ambiguous, nullptr };
+        }
+    }
+    if( platform_authoritative_missing_npcs_.count( id.get_value() ) != 0 ) {
+        return { platform_npc_lookup_status::authoritative_not_found, nullptr };
+    }
+    return { platform_npc_lookup_status::unknown, nullptr };
+}
+
+bool overmapbuffer::confirm_platform_npc_absence( const character_id id )
+{
+    if( !id.is_valid() || platform_npc_index_.count( id.get_value() ) != 0 ) {
+        return false;
+    }
+    platform_authoritative_missing_npcs_.insert( id.get_value() );
+    return true;
+}
+
+void overmapbuffer::platform_register_npc( const shared_ptr_fast<npc> &who )
+{
+    if( !who || !who->getID().is_valid() || who->is_dead() ) {
+        return;
+    }
+    const int id = who->getID().get_value();
+    std::vector<shared_ptr_fast<npc>> &instances = platform_npc_index_[id];
+    if( std::find_if( instances.begin(), instances.end(),
+    [&who]( const shared_ptr_fast<npc> &candidate ) {
+        return candidate && candidate.get() == who.get();
+    } ) == instances.end() ) {
+        instances.push_back( who );
+    }
+    platform_authoritative_missing_npcs_.erase( id );
+}
+
+void overmapbuffer::platform_register_npc( const npc &who )
+{
+    if( !who.getID().is_valid() || who.is_dead() ) {
+        return;
+    }
+    const shared_ptr_fast<npc> loaded = find_npc( who.getID() );
+    if( loaded && loaded.get() == &who ) {
+        platform_register_npc( loaded );
+    }
+}
+
+void overmapbuffer::platform_unregister_npc( const shared_ptr_fast<npc> &who )
+{
+    if( !who ) {
+        return;
+    }
+    platform_unregister_npc( *who );
+}
+
+void overmapbuffer::platform_unregister_npc( const npc &who )
+{
+    if( !who.getID().is_valid() ) {
+        return;
+    }
+    const int id = who.getID().get_value();
+    const auto found = platform_npc_index_.find( id );
+    if( found == platform_npc_index_.end() ) {
+        return;
+    }
+    std::vector<shared_ptr_fast<npc>> &instances = found->second;
+    instances.erase( std::remove_if( instances.begin(), instances.end(),
+    [&who]( const shared_ptr_fast<npc> &candidate ) {
+        return !candidate || candidate.get() == &who;
+    } ), instances.end() );
+    if( instances.empty() ) {
+        platform_npc_index_.erase( found );
+    }
+}
+
 void overmapbuffer::populate_followers_vec( std::vector<npc *> &followers,
         bool only_following, bool ignore_hallu ) const
 {
@@ -1655,6 +1748,53 @@ std::optional<basecamp *> overmapbuffer::find_camp( const point_abs_omt &p )
     return std::nullopt;
 }
 
+void overmapbuffer::foreach_loaded_camp( const std::function<void( basecamp & )> &callback )
+{
+    for( auto &entry : overmaps ) {
+        overmap &current = *entry.second;
+        for( const auto &camp_entry : current.get_camps() ) {
+            if( std::optional<basecamp *> camp = current.find_camp( camp_entry.first ) ) {
+                callback( **camp );
+            }
+        }
+    }
+}
+
+void overmapbuffer::reconcile_platform_camp_tasks()
+{
+    const basecamp_platform_actor_lookup lookup = [this]( const character_id id ) {
+        const platform_npc_lookup_result result = lookup_platform_npc( id );
+        basecamp_platform_actor_lookup_result translated;
+        translated.actor = result.value;
+        switch( result.status ) {
+            case platform_npc_lookup_status::found:
+                translated.status = basecamp_platform_actor_lookup_status::found;
+                break;
+            case platform_npc_lookup_status::authoritative_not_found:
+                translated.status = basecamp_platform_actor_lookup_status::authoritative_not_found;
+                break;
+            case platform_npc_lookup_status::unknown:
+                translated.status = basecamp_platform_actor_lookup_status::unknown;
+                break;
+            case platform_npc_lookup_status::ambiguous:
+                translated.status = basecamp_platform_actor_lookup_status::ambiguous;
+                break;
+        }
+        return translated;
+    };
+    std::string first_error;
+    foreach_loaded_camp( [&]( basecamp &camp ) {
+        std::string error;
+        if( !camp.platform_reconcile_task_reservations(
+                lookup, error ) && first_error.empty() ) {
+            first_error = std::move( error );
+        }
+    } );
+    if( !first_error.empty() ) {
+        debugmsg( "%s", first_error );
+    }
+}
+
 void overmapbuffer::clear_camps( const point_abs_omt &p )
 {
     const overmap_with_local_coords om_loc = get_existing_om_global( p );
@@ -1666,6 +1806,29 @@ void overmapbuffer::clear_camps( const point_abs_omt &p )
 void overmapbuffer::insert_npc( const shared_ptr_fast<npc> &who )
 {
     cata_assert( who );
+    const character_id id = who->getID();
+    if( id.is_valid() ) {
+        // Remove every other loaded instance before inserting a replacement.
+        // A plain erase is an unload/relocation boundary and must not retire
+        // tasks; this explicit same-id conflict is the terminal replacement
+        // producer that is allowed to do so.
+        for( auto &entry : overmaps ) {
+            overmap &current = *entry.second;
+            while( true ) {
+                const shared_ptr_fast<npc> existing = current.find_npc( id );
+                if( !existing || existing.get() == who.get() ) {
+                    break;
+                }
+                current.erase_npc( id );
+                foreach_loaded_camp( [&existing]( basecamp &camp ) {
+                    camp.platform_retire_tasks_for_worker( *existing );
+                } );
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+                cata::lua_platform::retire_npc_handle_identity( *existing );
+#endif
+            }
+        }
+    }
     const tripoint_abs_omt npc_omt_pos = who->pos_abs_omt();
     const point_abs_om npc_om_pos = project_to<coords::om>( npc_omt_pos.xy() );
     get( npc_om_pos ).insert_npc( who );

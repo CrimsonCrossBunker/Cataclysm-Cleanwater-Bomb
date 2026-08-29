@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_MISSION_H
 #define CATA_SRC_MISSION_H
 
+#include <cstddef>
 #include <functional>
 #include <map>
 #include <optional>
@@ -324,6 +325,11 @@ class mission
         mission_type_id follow_up;
         // The id of the player that has accepted this mission.
         character_id player_id;
+        // Persistent Platform generic-reward claim state.  Core dialogue
+        // reward UI retains its existing sequencing and does not use this.
+        bool generic_reward_claimed_ = false;
+        // Platform tokens bind to this instance generation in addition to uid.
+        std::size_t identity_generation_ = 0;
     public:
 
         std::string name() const;
@@ -349,6 +355,8 @@ class mission
         character_id get_npc_id() const;
         const talk_effect_fun_t::likely_rewards_t &get_likely_rewards() const;
         bool has_generic_rewards() const;
+        bool generic_reward_claimed() const noexcept;
+        void commit_generic_reward_claim() noexcept;
         void register_kill_needed() {
             monster_kill_goal++;
         };
@@ -381,16 +389,24 @@ class mission
 
         /** Called when the mission has failed, calls the mission fail callback. */
         void fail();
+        /** Explicit-player variant used by generation-safe Platform services. */
+        void fail( avatar &player_character );
         /** Handles mission completion tasks (remove given item, etc.). */
         void wrap_up();
+        /** Explicit-player variant used by generation-safe Platform services. */
+        void wrap_up( avatar &player_character );
         /** Handles partial mission completion (kill complete, now report back!). */
         void step_complete( int step );
         /** Checks if the player has completed the matching mission and returns true if they have. */
         bool is_complete( const character_id &npc_id ) const;
+        /** Explicit-player variant used by generation-safe Platform services. */
+        bool is_complete( const character_id &npc_id, avatar &player_character ) const;
         /** Checks if the player has failed the matching mission and returns true if they have. */
         bool has_failed() const;
         /** Checks if the mission is started, but not failed and not succeeded. */
         bool in_progress() const;
+        /** Generation incremented whenever a native mission instance is inserted. */
+        std::size_t identity_generation() const noexcept;
         /** Processes this mission. */
         void process();
         /** Called when the player talks with an NPC. May resolve mission goals, e.g. MGOAL_TALK_TO_NPC. */

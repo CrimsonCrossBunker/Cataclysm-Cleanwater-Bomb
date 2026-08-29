@@ -17,10 +17,10 @@ template <typename T> class generic_factory;
 
 using butchery_requirements_id = string_id<butchery_requirements>;
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
-} // namespace cata::lua
+} // namespace cata::lua_platform
 
 class harvest_drop_type
 {
@@ -72,7 +72,7 @@ class harvest_drop_type
         std::string msg_dissect_fail;
         friend class generic_factory<harvest_drop_type>;
         friend struct mod_tracker;
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
 };
 
 // Could be reused for butchery
@@ -164,7 +164,7 @@ class harvest_list
         translation message_;
         butchery_requirements_id butchery_requirements_;
 
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
 
 };
 

@@ -1,6 +1,6 @@
 #include "construction.h"
 
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 
 #include <algorithm>
 #include <array>
@@ -240,7 +240,7 @@ namespace
 generic_factory<construction> construction_factory( "construction" );
 } // namespace
 
-generic_factory<construction> &cata::lua::detail::construction_registry()
+generic_factory<construction> &cata::lua_platform::detail::construction_registry()
 {
     return construction_factory;
 }

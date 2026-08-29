@@ -7,7 +7,7 @@
 #include <set>
 
 #include "bodypart.h"
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
@@ -49,7 +49,7 @@ namespace
 generic_factory<wound_type> wound_type_factory( "wound" );
 } // namespace
 
-generic_factory<wound_type> &cata::lua::detail::wound_type_registry()
+generic_factory<wound_type> &cata::lua_platform::detail::wound_type_registry()
 {
     return wound_type_factory;
 }
@@ -76,7 +76,7 @@ bool string_id<wound_type>::is_valid() const
 void wound_type::reset()
 {
     wound_type_factory.reset();
-    cata::lua::detail::refresh_body_part_wound_cache();
+    cata::lua_platform::detail::refresh_body_part_wound_cache();
 }
 
 void wound_type::check_consistency()
@@ -97,7 +97,7 @@ const std::vector<wound_type> &wound_type::get_all()
 void wound_type::finalize_all()
 {
     wound_type_factory.finalize();
-    cata::lua::detail::refresh_body_part_wound_cache();
+    cata::lua_platform::detail::refresh_body_part_wound_cache();
 }
 
 void wound_type::finalize()
@@ -110,12 +110,12 @@ namespace
 generic_factory<wound_fix> wound_fix_factory( "wound_fix" );
 } // namespace
 
-generic_factory<wound_fix> &cata::lua::detail::wound_fix_registry()
+generic_factory<wound_fix> &cata::lua_platform::detail::wound_fix_registry()
 {
     return wound_fix_factory;
 }
 
-void cata::lua::detail::refresh_wound_fix_links()
+void cata::lua_platform::detail::refresh_wound_fix_links()
 {
     for( wound_type &wound_def : wound_type_factory.get_all_mod() ) {
         wound_def.fixes.clear();
@@ -162,7 +162,7 @@ bool string_id<wound_fix>::is_valid() const
 void wound_fix::reset()
 {
     wound_fix_factory.reset();
-    cata::lua::detail::refresh_wound_fix_links();
+    cata::lua_platform::detail::refresh_wound_fix_links();
 }
 
 void wound_fix::check_consistency()
@@ -201,7 +201,7 @@ void wound_fix::check() const
 void wound_fix::finalize_all()
 {
     wound_fix_factory.finalize();
-    cata::lua::detail::refresh_wound_fix_links();
+    cata::lua_platform::detail::refresh_wound_fix_links();
 }
 
 void wound_fix::finalize()

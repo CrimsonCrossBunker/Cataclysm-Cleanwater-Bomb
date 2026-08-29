@@ -18,7 +18,7 @@
 #include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
-#include "catalua_hook.h"
+#include "lua_platform_hooks.h"
 #include "character.h"
 #include "character_martial_arts.h"
 #include "color.h"

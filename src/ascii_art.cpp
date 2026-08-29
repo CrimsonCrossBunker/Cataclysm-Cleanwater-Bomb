@@ -3,7 +3,7 @@
 #include <string>
 
 #include "catacharset.h"
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "debug.h"
 #include "generic_factory.h"
 #include "output.h"
@@ -15,7 +15,7 @@ namespace
 generic_factory<ascii_art> ascii_art_factory( "ascii_art" );
 } // namespace
 
-generic_factory<ascii_art> &cata::lua::detail::ascii_art_registry()
+generic_factory<ascii_art> &cata::lua_platform::detail::ascii_art_registry()
 {
     return ascii_art_factory;
 }

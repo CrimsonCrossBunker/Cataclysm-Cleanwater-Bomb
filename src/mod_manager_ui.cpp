@@ -4,7 +4,7 @@
 #include <exception>
 
 #include "color.h"
-#include "catalua_loader.h"
+#include "lua_platform_loader.h"
 #include "debug.h"
 #include "dependency_tree.h"
 #include "output.h"
@@ -29,7 +29,7 @@ std::string mod_ui::get_information( const MOD_INFORMATION *mod )
                     _( "Lua-first Platform Mod: trusted Lua code may run while Mods are scanned "
                        "and loaded.  It has full game-process privileges, including file, process, "
                        "and native-module access." ), c_red ) + "\n";
-        if( mod->lua_platform_error.empty() && !cata::lua::is_enabled() ) {
+        if( mod->lua_platform_error.empty() && !cata::lua_platform::is_enabled() ) {
             info += colorize( _( "Unavailable: Lua-first Platform is not enabled in this build." ),
                               c_red ) + "\n";
         }

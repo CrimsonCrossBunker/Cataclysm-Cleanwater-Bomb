@@ -1,6 +1,6 @@
 #include "vehicle_part_location.h"
 
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "generic_factory.h"
 
 class JsonObject;
@@ -22,7 +22,7 @@ generic_factory<vpart_location> vehicle_part_location_factory( "vehicle_part_loc
 } // namespace
 
 generic_factory<vpart_location> &
-cata::lua::detail::vehicle_part_location_registry()
+cata::lua_platform::detail::vehicle_part_location_registry()
 {
     return vehicle_part_location_factory;
 }

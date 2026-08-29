@@ -10,7 +10,7 @@
 #include "monster.h"
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-    #include "catalua_ui_identity.h"
+    #include "lua_platform_identity.h"
 #endif
 
 struct mtype;
@@ -52,7 +52,7 @@ struct horde_entity {
     // This could be a 16-bit index instead of a 32-to-64-bit+ unique_pointer
     std::unique_ptr<monster> monster_data;
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-    cata::lua::native_object_identity lua_identity_;
+    cata::lua_platform::native_object_identity lua_identity_;
 #endif
 };
 

@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ccb.local/schema/ccb_platform_native_inventory.schema.json",
+  "title": "CCB Lua-first Platform native inventory",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "source",
+    "id_kinds",
+    "json_types",
+    "event_types",
+    "native_domains",
+    "export_surfaces",
+    "export_installation_graph",
+    "export_roots"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 2 },
+    "source": {
+      "type": "object",
+      "required": [
+        "project",
+        "id_registry",
+        "json_registry",
+        "event_registry",
+        "export_registry"
+      ],
+      "properties": {
+        "project": { "const": "Cataclysm-Cleanwater-Bomb" },
+        "id_registry": { "const": "src/lua_platform_bindings_values.cpp" },
+        "json_registry": { "const": "src/init.cpp" },
+        "event_registry": { "const": "src/event.h" },
+        "export_registry": { "const": "src/lua_platform*.cpp" }
+      },
+      "additionalProperties": false
+    },
+    "id_kinds": { "type": "array" },
+    "json_types": { "type": "array" },
+    "event_types": { "type": "array" },
+    "native_domains": { "type": "array" },
+    "export_surfaces": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "api_version", "declarations", "entrypoint", "roots"],
+        "properties": {
+          "id": { "const": "platform_v1" },
+          "api_version": { "const": 1 },
+          "declarations": { "const": "data/lua/types/ccb_platform_v1.d.lua" },
+          "entrypoint": { "const": "platform_v1.initialize_state" },
+          "roots": { "type": "array", "items": { "type": "string" } }
+        },
+        "additionalProperties": false
+      }
+    },
+    "export_installation_graph": { "type": "object" },
+    "export_roots": { "type": "array" }
+  },
+  "additionalProperties": false
+}

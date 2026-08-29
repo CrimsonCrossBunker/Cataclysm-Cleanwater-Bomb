@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "enum_bitset.h"
 #include "mattack_common.h"
 #include "mtype.h"
@@ -125,14 +125,14 @@ class MonsterGenerator
         friend class string_id<species_type>;
         friend class string_id<mattack_actor>;
         friend generic_factory<species_type> &
-        cata::lua::detail::species_registry();
+        cata::lua_platform::detail::species_registry();
         friend generic_factory<mtype> &
-        cata::lua::detail::monster_type_registry();
+        cata::lua_platform::detail::monster_type_registry();
         friend const mtype_special_attack *
-        cata::lua::detail::monster_attack_registry_find( const std::string &id );
-        friend void cata::lua::detail::monster_attack_registry_set(
+        cata::lua_platform::detail::monster_attack_registry_find( const std::string &id );
+        friend void cata::lua_platform::detail::monster_attack_registry_set(
             const mtype_special_attack &value );
-        friend void cata::lua::detail::monster_attack_registry_erase(
+        friend void cata::lua_platform::detail::monster_attack_registry_erase(
             const std::string &id );
 
         pimpl<generic_factory<mtype>> mon_templates;

@@ -1,6 +1,6 @@
 #include "map_extras.h"
 
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 
 #include <array>
 #include <cstdlib>
@@ -205,7 +205,7 @@ generic_factory<map_extra> extras( "map extra" );
 
 } // namespace
 
-generic_factory<map_extra> &cata::lua::detail::map_extra_registry()
+generic_factory<map_extra> &cata::lua_platform::detail::map_extra_registry()
 {
     return extras;
 }

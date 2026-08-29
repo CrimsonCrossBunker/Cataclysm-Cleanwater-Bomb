@@ -10,7 +10,7 @@
 #include <utility>
 #include <variant>
 
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
@@ -59,97 +59,97 @@ generic_factory<region_settings> region_settings_factory( "region_settings_new" 
 } // namespace
 
 generic_factory<map_extra_collection> &
-cata::lua::detail::map_extra_collection_registry()
+cata::lua_platform::detail::map_extra_collection_registry()
 {
     return map_extra_collection_factory;
 }
 
 generic_factory<region_settings_ravine> &
-cata::lua::detail::region_settings_ravine_registry()
+cata::lua_platform::detail::region_settings_ravine_registry()
 {
     return region_settings_ravine_factory;
 }
 
 generic_factory<region_settings_lake> &
-cata::lua::detail::region_settings_lake_registry()
+cata::lua_platform::detail::region_settings_lake_registry()
 {
     return region_settings_lake_factory;
 }
 
 generic_factory<region_settings_ocean> &
-cata::lua::detail::region_settings_ocean_registry()
+cata::lua_platform::detail::region_settings_ocean_registry()
 {
     return region_settings_ocean_factory;
 }
 
 generic_factory<region_settings_forest> &
-cata::lua::detail::region_settings_forest_registry()
+cata::lua_platform::detail::region_settings_forest_registry()
 {
     return region_settings_forest_factory;
 }
 
 generic_factory<region_settings_river> &
-cata::lua::detail::region_settings_river_registry()
+cata::lua_platform::detail::region_settings_river_registry()
 {
     return region_settings_river_factory;
 }
 
 generic_factory<region_settings_forest_mapgen> &
-cata::lua::detail::region_settings_forest_mapgen_registry()
+cata::lua_platform::detail::region_settings_forest_mapgen_registry()
 {
     return region_settings_forest_mapgen_factory;
 }
 
 generic_factory<region_settings_map_extras> &
-cata::lua::detail::region_settings_map_extras_registry()
+cata::lua_platform::detail::region_settings_map_extras_registry()
 {
     return region_settings_map_extras_factory;
 }
 
 generic_factory<region_settings_terrain_furniture> &
-cata::lua::detail::region_settings_terrain_furniture_registry()
+cata::lua_platform::detail::region_settings_terrain_furniture_registry()
 {
     return region_settings_terrain_furniture_factory;
 }
 
 generic_factory<region_settings_forest_trail> &
-cata::lua::detail::region_settings_forest_trail_registry()
+cata::lua_platform::detail::region_settings_forest_trail_registry()
 {
     return region_settings_forest_trail_factory;
 }
 
 generic_factory<region_settings_highway> &
-cata::lua::detail::region_settings_highway_registry()
+cata::lua_platform::detail::region_settings_highway_registry()
 {
     return region_settings_highway_factory;
 }
 
 generic_factory<region_terrain_furniture> &
-cata::lua::detail::region_terrain_furniture_registry()
+cata::lua_platform::detail::region_terrain_furniture_registry()
 {
     return region_terrain_furniture_factory;
 }
 
 generic_factory<forest_biome_component> &
-cata::lua::detail::forest_biome_component_registry()
+cata::lua_platform::detail::forest_biome_component_registry()
 {
     return forest_biome_feature_factory;
 }
 
 generic_factory<region_settings_city> &
-cata::lua::detail::region_settings_city_registry()
+cata::lua_platform::detail::region_settings_city_registry()
 {
     return region_settings_city_factory;
 }
 
 generic_factory<forest_biome_mapgen> &
-cata::lua::detail::forest_biome_mapgen_registry()
+cata::lua_platform::detail::forest_biome_mapgen_registry()
 {
     return forest_biome_mapgen_factory;
 }
 
 generic_factory<region_settings> &
-cata::lua::detail::region_settings_registry()
+cata::lua_platform::detail::region_settings_registry()
 {
     return region_settings_factory;
 }

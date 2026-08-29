@@ -48,13 +48,13 @@ entries:
       - EOC syntax may differ when CCB registrations lag or diverge from upstream.
   - id: lua-api
     keywords: [Lua, LuaLS, Platform, callback, hook, 脚本, 能力]
-    paths: [data/lua/, tools/lua_api/, src/main.cpp, src/game_io.cpp, 'src/catalua*.cpp', 'src/catalua*.h']
+    paths: [data/lua/, tools/lua_api/, src/main.cpp, src/game_io.cpp, 'src/lua_platform*.cpp', 'src/lua_platform*.h']
     project_ids: [lua-api]
     documentation_ids: [architecture.lua-first-platform, architecture.lua-first-glossary]
     source_symbols: [platform_version]
     validation_ids: [lua-contract]
     compatibility:
-      - Keep Platform metadata, LuaLS, native registration, inventory, examples, and runtime validation in parity.
+      - Keep Platform metadata, LuaLS, native registration, native inventory, public contract, synchronization coverage, examples, and runtime validation in parity.
     upstream_differences:
       - CCB Platform v1 is a CCB contract and is not inferred from CBN or CDDA APIs.
   - id: lua-first-platform

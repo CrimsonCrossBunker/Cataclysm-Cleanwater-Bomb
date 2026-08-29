@@ -1,394 +1,560 @@
-schema_version: 1
+$schema: lua-first-roadmap.schema.json
+schema_version: 2
 kind: lua_first_roadmap
 direction_status: accepted
 platform_version: 1
 authority_path: data/lua/LUA_FIRST_PLATFORM.md
-current_contract: Lua-first Platform v1
-target: Pure-Lua authoring for CCB core content and Mods without public JSON or EOC dependencies.
-legacy_inventories:
+current_contract: ccb Platform v1
+target: Pure-Lua authoring for CCB core content and Mods through one Platform runtime, one ccb entrypoint, native domain services, and explicit migration TODOs.
+current_phase: source_batches_before_final_acceptance
+
+verification_policy:
+  implementation_loop: source_and_test_writes_only
+  acceptance_gate: one_final_gate_after_all_source_batches
+  forbidden_before_gate:
+    - cxx_build
+    - catch2
+    - python_suite
+    - contract_generation
+    - ledger_refresh
+    - full_corpus_audit
+  verified_requires: final_semantic_gate_with_native_and_real_corpus_evidence
+  bounded_means: named_real_shapes_are_supported_without_claiming_selector_or_domain_completeness
+  complete_means: source_scope_is_closed_and_the_final_gate_passed
+
+corpus_sources:
   - id: json-object-types
     path: data/reference/json/ccb_json_object_types.json
     selector: type
-    entry_count: 190
+    role: real_json_inventory
   - id: eoc-conditions
     path: data/reference/json/ccb_eoc_conditions.json
     selector: key
-    entry_count: 275
+    role: real_eoc_inventory
   - id: eoc-effects
     path: data/reference/json/ccb_eoc_effects.json
     selector: key
-    entry_count: 309
+    role: real_eoc_inventory
+
 status_definitions:
-  milestone: [planned, in_progress, complete, blocked]
-  capability: [absent, legacy_only, partial, available]
-  legacy_dependency: [none, private_adapter, public_legacy]
+  milestone: [planned, in_progress, source_complete_unverified, pending_generation, complete, blocked]
+  capability: [planned, in_progress, source_complete_unverified, pending_generation, complete, blocked, not_applicable]
+  verification: [not_run, pending_generation, pending_final_gate, passed]
+
 milestones:
-  - id: documentation-foundation
-    title: Authoritative design, Agent routing, and checked roadmap
-    status: complete
+  - id: unique-runtime-and-naming
+    title: One Platform runtime and lua_platform source naming
+    status: source_complete_unverified
     depends_on: []
+    scope: Lifecycle, namespace, first-party file names, and disabled-build routing use cata::lua_platform and lua_platform_*.
     exit_criteria:
-      - The source repository has an authoritative Lua-first architecture document.
-      - The roadmap is schema-checked and routed to contributors and agents.
-      - CCB-Docs has paired Chinese and English explanatory pages.
+      - Normal lifecycle calls create and address only Platform state.
+      - First-party source, tests, and build routes contain no historical Platform filename.
+      - No second Lua state or compatibility namespace is introduced.
     evidence:
-      - data/lua/LUA_FIRST_PLATFORM.md
-      - ai/lua-first-roadmap.yml
-      - data/lua/AGENTS.md
-  - id: zero-config-discovery
-    title: Root main.lua discovery and optional native mod.lua metadata
-    status: complete
-    depends_on: [documentation-foundation]
+      - path: src/lua_platform_loader.cpp
+        kind: source
+      - path: src/lua_platform_runtime.cpp
+        kind: source
+      - path: src/lua_platform_state.cpp
+        kind: source
+      - path: tests/lua_platform_test.cpp
+        kind: test_source
+    verification: pending_final_gate
+
+  - id: unique-contract-and-assets
+    title: One ccb contract and Platform-only data assets
+    status: source_complete_unverified
+    depends_on: [unique-runtime-and-naming]
+    scope: require("ccb"), Platform LuaLS declarations, root main.lua authoring, and explicit Platform schemas.
     exit_criteria:
-      - A directory containing only main.lua is discoverable as a Mod.
-      - No lua subdirectory, manifest.json, or modinfo.json is required.
-      - Optional mod.lua resolves dependencies before content loading.
+      - The only public Lua module is ccb and it creates no global game table.
+      - Templates and bundled examples require no lua directory or authored manifest.
+      - Removed runtime-only declarations and assets are not recreated.
     evidence:
-      - src/catalua_loader.h
-      - src/catalua_loader.cpp
-      - src/mod_manager.cpp
-      - tests/catalua_platform_test.cpp
-      - data/lua/types/ccb_platform_v1.d.lua
-  - id: native-content-transaction
-    title: Pre-finalize native content objects and transactional commit
+      - path: src/lua_platform_loader.cpp
+        kind: source
+      - path: data/lua/types/ccb_platform_v1.d.lua
+        kind: declaration
+      - path: data/lua/templates
+        kind: documentation
+      - path: data/mods/Lua_First_Example
+        kind: source
+      - path: data/lua/reference/ccb_platform_api_v1.schema.json
+        kind: schema
+    verification: pending_final_gate
+
+  - id: platform-contract-tools
+    title: Platform native inventory, contract, and synchronization tools
+    status: source_complete_unverified
+    depends_on: [unique-contract-and-assets]
+    scope: Platform-only generators, checkers, schemas, tests, and routing.
+    exit_criteria:
+      - Native inventory discovery uses workspace lua_platform_* files and stable filesystem rules.
+      - Public contract generation joins Platform LuaLS, native registration, native inventory, and explicit schema only.
+      - Coverage reports synchronization, not JSON/EOC parity or a historical percentage.
+    evidence:
+      - path: tools/lua_api/generate_platform_native_inventory.py
+        kind: source
+      - path: tools/lua_api/generate_platform_contract.py
+        kind: source
+      - path: tools/lua_api/generate_platform_coverage.py
+        kind: source
+      - path: tools/lua_api/test_generate_platform_coverage.py
+        kind: test_source
+      - path: ai/test-matrix.yml
+        kind: source
+    verification: pending_generation
+
+  - id: authority-and-routing-docs
+    title: Current architecture, workflow, and contributor routing
     status: in_progress
-    depends_on: [zero-config-discovery]
+    depends_on: [platform-contract-tools]
+    scope: Architecture specification, EOC workflow, agent instructions, contributor guidance, and generated-report source rules.
     exit_criteria:
-      - Platform content runs before global data finalization.
-      - Exported native references reject stale owners and generations.
-      - Private legacy adapters are inventoried and not publicly callable.
+      - Documents describe current Platform facts without date-based progress claims.
+      - Source paths and commands use current lua_platform_* and Platform tool names.
+      - Generated registry, ledger, and migration reports are refreshed only at the final gate.
     evidence:
-      - src/catalua_game_handle.h
-      - src/catalua_game_handle.cpp
-      - src/catalua_runtime.h
-      - src/catalua_runtime.cpp
-      - src/game_io.cpp
-      - tests/catalua_platform_test.cpp
-      - data/lua/types/ccb_platform_v1.d.lua
-  - id: item-recipe-use-slice
-    title: Zero-JSON/EOC item, recipe, and Lua use behaviour
-    status: complete
-    depends_on: [native-content-transaction]
-    exit_criteria:
-      - The example Mod loads with no JSON or EOC files.
-      - The item and recipe preserve stable ids through save/load.
-      - A named Lua handler produces an observable in-game result.
-    evidence:
-      - src/catalua_runtime.cpp
-      - data/lua/templates/complete/main.lua
-      - data/lua/templates/complete/runtime/behaviour.lua
-      - tools/create_lua_mod.py
-      - tests/catalua_platform_test.cpp
-  - id: behaviour-services
-    title: Events, hooks, callbacks, persistent tasks, state, and shared domain services
+      - path: data/lua/LUA_FIRST_PLATFORM.md
+        kind: documentation
+      - path: data/lua/LUA_FIRST_EOC_WORKFLOW.md
+        kind: documentation
+      - path: AGENTS.md
+        kind: documentation
+      - path: CONTRIBUTING.md
+        kind: documentation
+      - path: data/lua/AGENTS.md
+        kind: documentation
+    verification: not_run
+
+  - id: native-hooks-and-identity
+    title: Native hooks, handles, identity, and lifecycle safety
     status: in_progress
-    depends_on: [item-recipe-use-slice]
+    depends_on: [unique-runtime-and-naming]
+    scope: Hook payloads, callback boundaries, generation-safe handles, world/runtime identity, and shutdown behavior.
     exit_criteria:
-      - EOC handler logic is mapped to shared services rather than key-shaped bindings.
-      - Named tasks resume from serializable data after save/load.
-      - Workflows can be authored as Lua libraries over the primitive APIs.
+      - Every retained hook entry has a direct Platform registration and bounded payload contract.
+      - Handles reject stale owner, runtime, and world identity before native access.
+      - Source and regression-test coverage exists for each closed domain slice.
     evidence:
-      - src/catalua_runtime.cpp
-      - src/do_turn.cpp
-      - src/game.cpp
-      - src/game_io.cpp
-      - data/lua/types/ccb_platform_v1.d.lua
-      - tests/catalua_platform_test.cpp
-  - id: playable-mvp-v0-1
-    title: Playable and mergeable pure-Lua vertical slice v0.1
-    status: complete
-    depends_on: [behaviour-services]
+      - path: src/lua_platform_hooks.cpp
+        kind: source
+      - path: src/lua_platform_handle.cpp
+        kind: source
+      - path: src/lua_platform_state.cpp
+        kind: source
+      - path: data/lua/types/ccb_platform_v1.d.lua
+        kind: declaration
+      - path: tests/lua_platform_test.cpp
+        kind: test_source
+    verification: pending_final_gate
+
+  - id: complex-content-registrar
+    title: Transactional complex content registrar
+    status: source_complete_unverified
+    depends_on: [unique-contract-and-assets, native-hooks-and-identity]
+    scope: Inheritance, extend/delete, reference order, finalize, rollback, and native definition ownership.
     exit_criteria:
-      - A bundled Mod with native mod.lua metadata and no JSON, EOC, manifest, or required lua subdirectory is discovered and selected with its dependency.
-      - Its native item, recipe, and named Lua use handler work before a real game save.
-      - Character state, world state, and a named delayed task survive runtime shutdown plus full data reload; gameplay continues and the overdue task runs exactly once.
-      - Lua-enabled and Lua-disabled test builds preserve an actionable Mod-manager result, and the dedicated merge gate is recorded in ai/test-matrix.yml.
+      - A registrar exposes native builders rather than JSON-loader-shaped author APIs.
+      - Reference ordering, finalize retention, and rollback are explicit and deterministic.
+      - Unsupported shapes become migration TODOs instead of hidden compatibility calls.
     evidence:
-      - data/mods/Lua_First_Example/mod.lua
-      - data/mods/Lua_First_Example/main.lua
-      - data/mods/Lua_First_Example/content/cleanwater_charm.lua
-      - data/mods/Lua_First_Example/runtime/behaviour.lua
-      - tests/catalua_platform_test.cpp
-      - tests/mod_manager_test.cpp
-      - ai/test-matrix.yml
-  - id: static-domain-coverage
-    title: Complete author-facing static content coverage
+      - path: src/lua_platform_content.h
+        kind: source
+      - path: src/lua_platform_world_content.cpp
+        kind: source
+      - path: src/lua_platform_registry.cpp
+        kind: source
+      - path: tools/migrate_lua_first.py
+        kind: source
+      - path: tests/lua_platform_test.cpp
+        kind: test_source
+    verification: pending_final_gate
+
+  - id: eoc-capability-domains
+    title: Domain-shaped EOC capability closure
     status: in_progress
-    depends_on: [behaviour-services]
+    depends_on: [native-hooks-and-identity, complex-content-registrar]
+    scope: Character, inventory, map, NPC/creature, vehicle, mission, weather, task, dialogue, and presentation workflows.
     exit_criteria:
-      - Every checked JSON/EOC entry has a reviewed replacement disposition.
-      - Every supported domain has native registration, tests, declarations, and documentation.
-      - No available Platform capability publicly requires a legacy parser.
+      - Each domain batch has native services, LuaLS declarations, migration shapes, and test source.
+      - Bounded support names the real shapes it accepts and leaves other shapes as TODOs.
+      - No EOC-key-shaped runner or legacy object is introduced as a shortcut.
     evidence:
-      - ai/lua-first-replacement-ledger.yml
-      - ai/lua-first-replacement-ledger.schema.json
-      - tools/agent/generate_lua_first_replacement_ledger.py
-      - tools/agent/check_lua_first_replacement_ledger.py
-      - tools/agent/test_lua_first_replacement_ledger.py
-  - id: core-and-bundled-migration
-    title: Migrate core and bundled content and freeze covered legacy authoring
+      - path: data/lua/LUA_FIRST_EOC_WORKFLOW.md
+        kind: documentation
+      - path: src/lua_platform_*.cpp
+        kind: source
+      - path: data/lua/types/ccb_platform_v1.d.lua
+        kind: declaration
+      - path: tools/migrate_lua_first.py
+        kind: source
+      - path: tests/lua_platform_test.cpp
+        kind: test_source
+    verification: pending_final_gate
+
+  - id: migration-todo-closure
+    title: Explicit migration TODO and ledger closure
     status: in_progress
-    depends_on: [static-domain-coverage]
+    depends_on: [platform-contract-tools, eoc-capability-domains]
+    scope: Real JSON/EOC inventories, migration output, replacement ledger, and status-specific evidence.
     exit_criteria:
-      - Targeted core and bundled content is Lua-authored with stable ids.
-      - Migration tools emit native-object Lua skeletons and explicit TODOs.
-      - New JSON/EOC features are frozen only in domains with complete replacements.
-      - "Legacy author-interface removal is not gated on a release count or calendar window; once every checked inventory entry is mapped and the targeted content is migrated with stable ids, save migrations and copied-world tests cover the retained ids and the compatibility layer may be removed without bundled-content dependencies."
+      - Every inventory entry has one honest disposition and explicit evidence.
+      - Primitive and bounded statuses never imply selector or domain completeness.
+      - Verified status is emitted only after the final semantic gate.
     evidence:
-      - tools/migrate_lua_first.py
-      - tools/test_migrate_lua_first.py
-      - data/mods/Lua_First_Example/main.lua
-      - data/mods/Lua_First_Example/README.md
-      - data/mods/Migrated_Core/main.lua
-      - data/mods/Migrated_Core/MIGRATION_REPORT.md
-      - data/mods/Migrated_Core/mod.lua
-      - tests/catalua_platform_test.cpp
+      - path: tools/agent/generate_lua_first_replacement_ledger.py
+        kind: source
+      - path: ai/lua-first-replacement-ledger.schema.json
+        kind: schema
+      - path: tools/agent/test_lua_first_replacement_ledger.py
+        kind: test_source
+      - path: tools/migrate_lua_first.py
+        kind: source
+      - path: data/reference/json/ccb_eoc_conditions.json
+        kind: real_inventory
+    verification: pending_final_gate
+
+  - id: final-content-migration
+    title: Core and bundled content migration
+    status: planned
+    depends_on: [migration-todo-closure, eoc-capability-domains]
+    scope: Migrate selected core and bundled JSON/EOC content to native Platform Lua while preserving stable ids and save behavior.
+    exit_criteria:
+      - Each migrated content batch has source, declaration, migration, test, and documentation evidence.
+      - Remaining unsupported shapes are explicit TODOs and do not block unrelated bounded domains.
+      - Legacy authoring interfaces are removed only after their real content dependencies are gone.
+    evidence:
+      - path: tools/migrate_lua_first.py
+        kind: source
+      - path: data/mods/Lua_First_Example/main.lua
+        kind: source
+      - path: data/reference/json/ccb_json_object_types.json
+        kind: real_inventory
+    verification: pending_final_gate
+
+  - id: final-acceptance-gate
+    title: One-time total Platform acceptance gate
+    status: pending_generation
+    depends_on: [authority-and-routing-docs, migration-todo-closure, final-content-migration]
+    scope: Generate Platform references, run contract/tool checks, build once, run the broad Platform suite, and audit real JSON/EOC corpus once.
+    exit_criteria:
+      - Platform native inventory, public contract, and synchronization coverage are generated from current sources.
+      - All applicable Platform tools and tests agree with the generated references.
+      - One low-memory build, one broad Platform Catch2 run, and one real corpus audit have recorded results.
+      - Only after those results pass may source batches and content migration be marked complete.
+    evidence:
+      - path: ai/test-matrix.yml
+        kind: source
+      - path: tools/lua_api/check_platform_native_inventory.py
+        kind: source
+      - path: tools/lua_api/check_platform_contract.py
+        kind: source
+      - path: tools/lua_api/check_platform_coverage.py
+        kind: source
+      - path: data/lua/reference/ccb_platform_native_inventory.json
+        kind: generated_output
+        state: pending_generation
+    verification: pending_generation
+
 capabilities:
-  - id: mod-discovery
-    phase: discovery
-    status: partial
+  - id: platform-runtime
+    phase: runtime
+    status: source_complete_unverified
+    target_surface: One cata::lua_platform runtime with one state owner per active Platform Mod.
     legacy_dependency: none
-    target_surface: Root main.lua with optional native mod.lua metadata
-    evidence:
-      - src/mod_manager.cpp
-      - src/mod_manager.h
-      - tests/catalua_platform_test.cpp
-    next_actions:
-      - The 2026-08-12 playable-MVP gate passed installed bundled-Mod discovery, dependency-aware selection, real data loading, game save, runtime shutdown, full data reload, and continued gameplay; keep it as a regression gate.
-      - The 2026-08-12 no-Lua build gate keeps the pure-Platform example visible with an actionable disabled diagnostic; keep it as a regression gate.
-      - Complete the still-open manual desktop/Android Mod-selector interaction checks without weakening visibility of rejected pure-Platform entries or legacy availability of rejected optional hybrid entries.
-  - id: trusted-standard-library
-    phase: bootstrap
-    status: partial
+    evidence: [src/lua_platform_loader.cpp, src/lua_platform_runtime.cpp, tests/lua_platform_test.cpp]
+    next_actions: [Complete the final source sweep, then verify lifecycle and rollback at the final gate.]
+  - id: platform-contract
+    phase: contract
+    status: source_complete_unverified
+    target_surface: require("ccb") plus ccb_platform_v1.d.lua and Platform native registrations.
     legacy_dependency: none
-    target_surface: Complete Lua 5.4 standard libraries and native package loading
-    evidence:
-      - src/catalua_loader.cpp
-      - src/mod_manager_ui.cpp
-      - tests/catalua_platform_test.cpp
-      - src/lua/lua.h
-    next_actions:
-      - The 2026-08-11 local C++ Platform suite passed the full-library, per-Mod isolation, and candidate rollback coverage; keep these as regression gates.
-      - Complete the still-open desktop and Android first-enable interaction checks for direct Platform selections and newly pulled Platform dependencies.
-  - id: static-native-content
+    evidence: [data/lua/types/ccb_platform_v1.d.lua, src/lua_platform_loader.cpp, tools/lua_api/generate_platform_contract.py]
+    next_actions: [Generate the three Platform references only at the final gate.]
+  - id: native-domain-services
+    phase: domains
+    status: in_progress
+    target_surface: Generation-safe Character, Item, Creature, NPC, map, world, task, dialogue, and presentation services.
+    legacy_dependency: none
+    evidence: [src/lua_platform_*.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp]
+    next_actions: [Close the remaining Vehicle, NPC, world, and cross-domain lifecycle boundaries one coherent batch at a time.]
+  - id: item-inventory-identity
+    phase: domains
+    status: source_complete_unverified
+    target_surface: Generation-safe Item handles, Character holder checks, bounded pocket/content traversal, transfer lifecycle, and explicit crafting inventory context.
+    legacy_dependency: none
+    evidence: [src/lua_platform_items.cpp, src/lua_platform_snapshots.cpp, src/lua_platform_handle.cpp, src/lua_platform_crafting.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp]
+    next_actions: [Run the final semantic gate; then continue with Vehicle identity/lifecycle and remaining NPC/world item-holder paths.]
+  - id: map-tile-holder
+    phase: domains
+    status: source_complete_unverified
+    target_surface: Explicit typed abs_ms MapTileToken map holders, bounded map snapshots/edits, and token-consistent item page/transfer migration without raw position fallbacks.
+    legacy_dependency: none
+    evidence: [src/lua_platform_world.h, src/lua_platform_world.cpp, src/lua_platform_items.cpp, src/lua_platform_camps.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    next_actions: [Enter the 7A2 entity-relocation entry with explicit Character/Creature/Vehicle identity and relocation contracts; keep overmap and weather outside this boundary.]
+  - id: monster-relocation
+    phase: domains
+    status: source_complete_unverified
+    target_surface: Exact Monster-only services.relocation.move with generation-safe GameHandle input, a loaded MapTileToken target, strict-only options, and a typed result envelope/value; Character/Avatar/NPC are tracked by character-npc-relocation, while Vehicle and other subtypes remain unsupported here.
+    legacy_dependency: none
+    evidence: [src/lua_platform_world_services.cpp, src/lua_platform_world_services.h, src/lua_platform_disabled.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py]
+    verification: pending_final_gate
+    next_actions: [Enter the Vehicle relocation batch; do not reopen the closed Monster or Character/Avatar/NPC slices.]
+  - id: horde-domain
+    phase: domains
+    status: source_complete_unverified
+    target_surface: "Read-only, identity-safe Horde management APIs are retained; advance and signal are removed from Platform, while signal_hordes remains an explicit migration TODO."
+    legacy_dependency: none
+    evidence: [src/horde_map.h, src/horde_map.cpp, src/horde_entity.h, src/horde_entity.cpp, src/lua_platform_runtime.h, src/lua_platform_runtime.cpp, src/lua_platform_state.cpp, src/effect_on_condition.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/horde_map_test.cpp]
+    verification: pending_final_gate
+    next_actions: [Keep Platform Horde management read-only and identity-safe; leave advance/signal removed and signal_hordes as TODO; run only the final semantic gate.]
+  - id: dialogue-domain
+    phase: domains
+    status: source_complete_unverified
+    target_surface: "Scoped dialogue sessions bind owner/runtime/world/native identity; dialogue teardown and runtime/world moves retire sessions; open_dialogue requires exact NPC and avatar handles plus a required topic; Platform topics are isolated to their owning runtime; implicit open_dialogue migration remains a TODO."
+    legacy_dependency: none
+    evidence: [src/lua_platform_dialogue.h, src/lua_platform_dialogue.cpp, src/lua_platform_npcs.cpp, src/lua_platform_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py]
+    verification: pending_final_gate
+    next_actions: [Run only the final semantic gate; keep implicit open_dialogue migration as a TODO until exact NPC/avatar handles and a required topic are available.]
+  - id: npc-mission-provider-bridge
+    phase: domains
+    status: source_complete_unverified
+    target_surface: "Exact participants are a live NPC provider GameHandle and, for owner-bearing calls, an explicit avatar GameHandle; nine methods are state, select, offer, add_assigned, assign_selected, succeed_selected, fail_selected, clear_selected, and claim_selected_reward. MissionToken selection is provider-bound; generic reward is persistent and idempotent (one owed credit, save/load claim state, repeated claim returns already_claimed); independent review P1 is fixed; no implicit provider or owner fallback."
+    legacy_dependency: none
+    evidence: [src/lua_platform_npc_services.cpp, src/lua_platform_npc_services.h, src/lua_platform_missions.cpp, src/lua_platform_missions.h, src/lua_platform_runtime.cpp, src/mission.h, src/mission.cpp, src/savegame_json.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tests/mission_test.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py]
+    verification: pending_final_gate
+    next_actions: [Run only the final semantic gate; keep unsupported implicit provider and owner shapes as migration TODOs.]
+  - id: item-category-spawn-rate
+    phase: domains
+    status: source_complete_unverified
+    target_surface: "Bounded services.item_categories spawn-rate surface: spawn_rate, set_spawn_rate, and set_spawn_rates accept exact GameId<item_category> ids, finite rates in 0..1000000, and dense unique batches of at most 256 updates with before/after/changed results. Snapshot/rollback coverage is recorded; LuaLS, migrator, tests, and replacement-ledger mappings are recorded; independent review has no P1."
+    legacy_dependency: none
+    evidence: [src/lua_platform_items.cpp, src/lua_platform_runtime.cpp, src/item_category.cpp, src/item_category.h, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp, ai/lua-first-replacement-ledger.yml]
+    verification: pending_final_gate
+    next_actions: [Run only the final semantic gate; keep dynamic or unsupported EOC shapes as migration TODOs.]
+  - id: overmap-reveal-route-contract
+    phase: domains
+    status: source_complete_unverified
+    target_surface: "Bounded overmap reveal route contract for explicit OvermapTileToken targets and Platform-owned visibility mutation; the legacy reveal route is deleted from Platform, core reveal behavior is retained, unsupported or legacy overmap_at/local_at shapes remain explicit migrator TODOs, and independent review has no P1."
+    legacy_dependency: none
+    evidence: [src/lua_platform_overmap.h, src/lua_platform_overmap.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    verification: pending_final_gate
+    next_actions: [Run only the final semantic gate; keep dynamic or unsupported reveal shapes as migrator TODOs.]
+  - id: delayed-actor-run-eocs-reacquisition
+    phase: eoc
+    status: source_complete_unverified
+    target_surface: "Delayed Character run-EOC tasks persist only owner Mod plus stable character_id, reacquire an exact current-generation Character handle at dispatch, keep live handles out of persistent payloads, retire invalid tasks, and fail closed against task-vector mutation during payload migration."
+    legacy_dependency: none
+    evidence: [data/lua/LUA_FIRST_EOC_WORKFLOW.md, src/lua_platform_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    verification: pending_final_gate
+    next_actions: [Run only the final gate; keep Creature and Vehicle actors fail-closed until they have real persistent native identity.]
+  - id: delayed-item-run-eocs-reacquisition
+    phase: eoc
+    status: source_complete_unverified
+    target_surface: "Delayed Item run-EOC tasks persist item_uid plus a bounded advisory lookup hint, reacquire only a currently loaded exact Item, and inject a fresh generation-bound handle without serializing live handles or map tokens."
+    legacy_dependency: none
+    evidence: [src/item.h, src/item_location.h, src/item_location.cpp, src/item_wakeup.cpp, src/lua_platform_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    verification: pending_final_gate
+    next_actions: [Run only the final gate; preserve the legacy non-global Item activation no-op in migration while exposing exact Item tasks to Platform authors.]
+  - id: monster-persistent-identity
+    phase: identity
+    status: source_complete_unverified
+    target_surface: "A real save/load-stable Monster UID, master counter, duplicate-safe loaded tracker lookup, UID-backed Platform locators, exact relocation checks, and pending persistent task reacquisition replace temporary creature-tracker indices."
+    legacy_dependency: none
+    evidence: [src/monster_uid.h, src/monster_uid.cpp, src/game.h, src/game.cpp, src/savegame.cpp, src/monster.h, src/monster.cpp, src/savegame_json.cpp, src/creature_tracker.h, src/creature_tracker.cpp, src/lua_platform_handle.cpp, src/lua_platform_creatures.cpp, src/lua_platform_world_services.cpp, src/lua_platform_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/monster_test.cpp, tests/lua_platform_test.cpp]
+    verification: pending_final_gate
+    next_actions: [Run only the final gate; retain legacy temporary tracker ids only for old internal save references, not Platform identity.]
+  - id: vehicle-persistent-identity
+    phase: identity
+    status: source_complete_unverified
+    target_surface: "A real save/load-stable Vehicle UID, master counter, ambiguity-safe loaded lookup, UID-backed handles with lifetime generation, and pending persistent task reacquisition replace process-local stable ids and overmap slot ids."
+    legacy_dependency: none
+    evidence: [src/vehicle_uid.h, src/vehicle_uid.cpp, src/game.h, src/game.cpp, src/savegame.cpp, src/vehicle.h, src/vehicle.cpp, src/savegame_json.cpp, src/lua_platform_handle.h, src/lua_platform_handle.cpp, src/lua_platform_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/vehicle_test.cpp, tests/lua_platform_test.cpp]
+    verification: pending_final_gate
+    next_actions: [Run only the final gate; retain om_id only as native overmap bookkeeping and the address registry only for current-object lifetime generation.]
+  - id: delayed-talker-pair-task-reacquisition
+    phase: eoc
+    status: source_complete_unverified
+    target_surface: "Delayed run_eocs with explicit alpha/beta talkers persist a bounded typed participant set, reacquire every exact participant before dispatch, and restore callback-local talker roles without ambient fallbacks."
+    legacy_dependency: none
+    evidence: [src/lua_platform_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    verification: pending_final_gate
+    next_actions: [Run only the final gate; retain unproven ambient avatar and unsupported dynamic talker shapes as explicit migration TODOs.]
+  - id: character-npc-relocation
+    phase: domains
+    status: source_complete_unverified
+    target_surface: Exact Character/Avatar/NPC services.relocation.move with generation-safe GameHandle input, a loaded MapTileToken target, strict-only options, and a typed result envelope/value; Avatar stays within the loaded bubble without map shift and preserves cache state, while NPC movement keeps native on_move, linked-item, mission, camp, and death guards.
+    legacy_dependency: none
+    evidence: [src/lua_platform_world_services.cpp, src/lua_platform_world_services.h, src/lua_platform_disabled.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp, tools/test_migrate_lua_first.py]
+    verification: pending_final_gate
+    next_actions: [Continue 7A2 through the Vehicle relocation slice, then enter the overmap/OMT/terrain/mapgen domain; do not reopen the closed Character/Avatar/NPC routes.]
+  - id: vehicle-relocation
+    phase: domains
+    status: source_complete_unverified
+    target_surface: Exact Vehicle services.relocation.move with generation-safe GameHandle input, a loaded MapTileToken target, strict-only options, and a typed result envelope/value; full-footprint part_collision preflight and teleport_vehicle commit preserve linked items, mutation epoch, and Vehicle/Part identity while remote, towing, grabbing, and boarded states are rejected.
+    legacy_dependency: none
+    evidence: [src/lua_platform_world_services.cpp, src/lua_platform_world_services.h, src/lua_platform_disabled.cpp, src/lua_platform_world.cpp, src/lua_platform_creatures.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py]
+    verification: pending_final_gate
+    next_actions: [Enter the overmap/OMT/terrain/mapgen domain through src/lua_platform_overmap.cpp and src/lua_platform_mapgen*.cpp; then replace the remaining world_services overmap_at/local_at/travel boundaries.]
+  - id: overmap-tile-travel
+    phase: domains
+    status: source_complete_unverified
+    target_surface: Exact Avatar-only services.relocation.travel_to_omt with a value-only OvermapTileToken bound to explicit abs_omt plus runtime/world/owner generations, typed CcbResult tile_token issuance, strict-only options, place_player_overmap map shifting, standard relocation result/mutation-epoch/no-op behavior, and no maintained overmap_at route.
+    legacy_dependency: none
+    evidence: [src/lua_platform_overmap.h, src/lua_platform_overmap.cpp, src/lua_platform_world_services.h, src/lua_platform_world_services.cpp, src/lua_platform_runtime.cpp, src/lua_platform_disabled.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py]
+    verification: pending_final_gate
+    next_actions: ["Enter the overmap terrain/visibility batch in src/lua_platform_overmap.cpp (set_terrain, set_note/notes, reveal), then the transactional mapgen batch in src/lua_platform_mapgen*.cpp."]
+  - id: overmap-tile-edit
+    phase: domains
+    status: source_complete_unverified
+    target_surface: Exact token snapshot/edit with five-field CAS, rollback, and bulk revision.
+    legacy_dependency: none
+    evidence: [src/lua_platform_overmap.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    verification: pending_final_gate
+    next_actions: [Transactional mapgen.]
+  - id: transactional-mapgen
+    phase: domains
+    status: source_complete_unverified
+    target_surface: "OvermapTileToken+MapgenUpdateToken, immediate transaction, complete loaded-submap snapshot, collision verify, queued point rollback, four-state errors, commit-only publication/revision; transform fail-closed; old services.world.apply_mapgen_update deleted."
+    legacy_dependency: none
+    evidence: [src/lua_platform_mapgen.h, src/lua_platform_mapgen.cpp, src/lua_platform_mapgen_dispatch.h, src/lua_platform_mapgen_dispatch.cpp, src/lua_platform_disabled.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py]
+    verification: pending_final_gate
+    next_actions: [Mapgen callback batch is source-complete and awaits the final gate.]
+  - id: mapgen-callback-transaction
+    phase: domains
+    status: source_complete_unverified
+    target_surface: "Whole declarative mapgen definition/registered handler; 2x2 current-z JSON submap snapshot; dirs+queued point rollback; success-only publish/matched; primary fallback; ordinary services writes blocked; NPC/vehicle/zone/transform/nest/generate APIs fail-closed."
+    legacy_dependency: none
+    evidence: [src/mapgen_functions.h, src/mapgen_functions.cpp, src/mapgen.h, src/mapgen.cpp, src/lua_platform_runtime.h, src/lua_platform_runtime.cpp, src/lua_platform_mapgen.h, src/lua_platform_mapgen.cpp, src/lua_platform_mapgen_dispatch.h, src/lua_platform_mapgen_dispatch.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tests/mapgen_function_test.cpp]
+    verification: pending_final_gate
+    next_actions: [Run the final semantic gate; verify serialization/cache restoration and injected rollback_failed behavior; refresh generated registries only at the final gate.]
+  - id: weather-domain
+    phase: domains
+    status: source_complete_unverified
+    target_surface: "detached bounded catalog/current/generator/forecast snapshots; checked override controls; bounded, keyed-idempotent custom light; literal+dynamic is_weather; lightning/next_weather/custom_light migration; old services.gameplay.environment.set_light_override route deleted."
+    legacy_dependency: none
+    evidence: [src/lua_platform_weather.h, src/lua_platform_weather.cpp, src/lua_platform_runtime.h, src/lua_platform_runtime.cpp, src/weather.h, src/weather.cpp, src/weather_gen.h, src/weather_gen.cpp, src/weather_type.h, src/weather_type.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tests/weather_test.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py]
+    next_actions: [Run only the final semantic gate; verification remains pending_final_gate until native and real-corpus evidence exist.]
+  - id: zones-domain
+    phase: domains
+    status: source_complete_unverified
+    target_surface: 'Generation-safe ZoneToken with owner/runtime/world/native lifetime identity and owner rebind across same-mount/shift/refresh; bounded stable list/at/filter; explicit global/personal create/mutate/remove with personal relative-coordinate roundtrip; loaded-map vehicle read-only; edits fail closed; fixed-zone EOC traversal uses explicit kind="global"; default native options and read-only descriptions remain bounded. Independent review P1 is fixed.'
+    legacy_dependency: none
+    evidence: [src/clzones.h, src/clzones.cpp, src/lua_platform_zones.h, src/lua_platform_zones.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tests/clzones_test.cpp, tools/migrate_lua_first.py]
+    verification: pending_final_gate
+    next_actions: [Run only the final semantic gate; keep vehicle bookkeeping below the Platform write surface and native options/descriptions bounded.]
+  - id: camp-identity-manager-worker
+    phase: domains
+    status: source_complete_unverified
+    target_surface: Stable camp handles plus exact manager/worker identity, authorization, assignment, and recall boundaries.
+    legacy_dependency: none
+    evidence: [src/lua_platform_camps.cpp, src/lua_platform_handle.cpp, src/basecamp.cpp, src/overmap.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp]
+    next_actions: [Run the final semantic gate for the closed identity and assignment slice.]
+  - id: camp-create-expansion
+    phase: domains
+    status: source_complete_unverified
+    target_surface: Explicit Platform camp creation/removal and stable expansion identity, lifecycle, persistence, and bounded domain operations.
+    legacy_dependency: none
+    evidence: [src/lua_platform_camps.cpp, src/lua_platform_camps.h, src/basecamp.cpp, src/basecamp.h, src/savegame_json.cpp, src/overmap.cpp, src/faction_camp.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    next_actions: [Run the final semantic gate for the read-only target-OMT recipe-group preflight; keep upgrade/recipe/expansion-work UI shapes as explicit TODOs.]
+  - id: camp-basecamp-workflows
+    phase: domains
+    status: source_complete_unverified
+    target_surface: Full typed basecamp workflows, including resources, inventory, upgrades, recipes, tasks, and expansions.
+    legacy_dependency: none
+    evidence: [src/lua_platform_camps.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp]
+    verification: pending_final_gate
+    next_actions: [Run only the final gate; keep implicit legacy camp UI and participant-inventing migration shapes as explicit TODOs.]
+  - id: camp-task-infrastructure
+    phase: domains
+    status: source_complete_unverified
+    target_surface: Persistent Platform-owned CampTask records with one kind registry, executor dispatch, deferred actor reconciliation, explicit retirement, and reservation-safe lifecycle transitions.
+    legacy_dependency: none
+    evidence: [src/basecamp.h, src/basecamp.cpp, src/savegame_json.cpp, src/overmapbuffer.cpp, src/overmap.cpp, src/npc.cpp, src/lua_platform_camps.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    next_actions: [Run the final semantic gate; normal reconciliation remains tri-state and preserves unknown actor records because no global-complete NPC index event currently exists, while only an explicit authoritative_not_found fact may retire an orphan; add no unsupported camp work kinds.]
+  - id: camp-resource-work
+    phase: domains
+    status: source_complete_unverified
+    target_surface: Registry-owned resource_work tasks with typed resource/food deltas, persisted input reservations, liability-aware capacity, atomic refund/complete transitions, and explicit terminal discard.
+    legacy_dependency: none
+    evidence: [src/basecamp.h, src/basecamp.cpp, src/savegame_json.cpp, src/lua_platform_camps.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    next_actions: [Verify only at the final gate; keep legacy UI/mission and dynamic camp-resource shapes as TODOs; recipe_work is tracked as a separate source-only capability.]
+  - id: camp-recipe-work
+    phase: domains
+    status: source_complete_unverified
+    target_surface: Typed recipe_work tasks with exact item staging, persisted escrow, authoritative detached settlement, explicit refund/claim recovery, and save/load lifecycle boundaries.
+    legacy_dependency: none
+    evidence: [src/lua_platform_items.cpp, src/lua_platform_camps.cpp, src/basecamp.h, src/basecamp.cpp, src/savegame_json.cpp, src/overmap.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    next_actions: [Run only at the final semantic gate; keep unsupported UI crafting shapes as TODOs and do not infer complete content parity from this shared recipe slice.]
+  - id: camp-upgrade-work
+    phase: domains
+    status: source_complete_unverified
+    target_surface: Typed upgrade_work tasks with exact camp-core/ExpansionToken targets, authoritative blueprint requirements, transactional mapgen publication, generation markers, recoverable escrow, and idempotent terminal settlement.
+    legacy_dependency: none
+    evidence: [src/basecamp.h, src/basecamp.cpp, src/mapgen_functions.h, src/mapgen.cpp, src/overmap.cpp, src/lua_platform_camps.cpp, src/savegame_json.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    next_actions: [Run the final semantic gate only; keep legacy Camp_Upgrade/UI and implicit target/holder shapes as explicit TODOs.]
+  - id: trade-quote
+    phase: domains
+    status: source_complete_unverified
+    target_surface: Read-only runtime-owned TradeQuoteToken snapshots with exact Character/NPC participants, canonical Character holders, Item UID/generation/charge binding, authoritative pricing/settlement preflight, global mutation invalidation, and nonpersistent lifecycle retirement; commit is tracked as a separate source slice.
+    legacy_dependency: none
+    evidence: [src/lua_platform_trade.h, src/lua_platform_trade.cpp, src/lua_platform_runtime.cpp, src/lua_platform_items.h, src/lua_platform_items.cpp, src/shop_cons_rate.h, src/shop_cons_rate.cpp, src/npc.h, src/npc.cpp, src/npctrade.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp]
+    next_actions: [Run the final semantic gate only; keep commit/equipment and legacy dialogue trade bindings in their separate batches.]
+  - id: trade-commit
+    phase: domains
+    status: source_complete_unverified
+    target_surface: Atomic explicit avatar-to-NPC or NPC-to-avatar Character inventory trade commit with exact Item holders, full revalidation, destination-first capacity, full/partial rollback, single-use QuoteToken consumption, and npc_debt-only settlement publication; this does not claim generic NPC-to-NPC currency settlement.
+    legacy_dependency: none
+    evidence: [src/lua_platform_trade.h, src/lua_platform_trade.cpp, src/lua_platform_items.h, src/lua_platform_items.cpp, src/lua_platform_runtime.cpp, src/lua_platform_dialogue.h, src/lua_platform_dialogue.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    next_actions: [Run only the final semantic gate; keep 6F2c2 equipment and map/world work outside this trade boundary, and do not expand npc_debt into a generic NPC-to-NPC currency path without a separate source-complete settlement design.]
+  - id: equipment-trade-cleanup
+    phase: domains
+    status: source_complete_unverified
+    target_surface: Explicit Character/NPC equipment transactions plus removal of legacy Platform inventory, NPC-equipment, and unregistered trade wrappers; explicit Item/holder boundaries remain fail-closed in migration.
+    legacy_dependency: none
+    evidence: [src/lua_platform_items.cpp, src/lua_platform_npc_services.cpp, src/lua_platform_trade.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    next_actions: [Run only the final semantic gate; the next implementation entry is the scoped map/world boundary, while LuaLS/migrator/old-helper cleanup is closed for this batch.]
+  - id: camp-resources-food-inventory
+    phase: domains
+    status: source_complete_unverified
+    target_surface: Explicit camp resource keys, owner-faction food supply mutations, and storage-tile holders delegated to the shared Item page/transfer APIs.
+    legacy_dependency: none
+    evidence: [src/basecamp.h, src/basecamp.cpp, src/lua_platform_camps.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
+    next_actions: [Run the final semantic gate for this source-only slice; do not infer a live inventory snapshot from basecamp::_inv; next capability is a real Platform-owned camp task record.]
+  - id: complex-registrar
     phase: content
-    status: partial
+    status: source_complete_unverified
+    target_surface: Native transactional builders with inheritance, patching, ordering, finalize, and rollback.
     legacy_dependency: none
-    target_surface: ccb.content with transactional foundational, proficiency, category, ammunition, scent, speed-description, harvest-drop, harvest-list, behavior-tree, monster-attack, effect-type, weakpoint-set, field-type, item-group, sub-body-part, body-part, wound, wound-fix, anatomy, body-graph, monster, morale, disease, monster-flag, species, emission, monster-faction, mutation-type, mutation-category, connect-group, construction, vehicle, mood-face, damage-info presentation, named-color, rotatable-symbol, ASCII-art, limb-score, global hit-range, bash-damage, clothing-modification, overmap-land-use, overmap-vision, overmap-location, profession-group, map-extra-collection, vehicle-group, fault-group, explosion-light, ammunition-effect, addiction-type, character-modifier, start-location, climbing-aid, weather-type, score, global mutation-overlay order, zone-type, speech-pool, end-screen, activity-type, help-topic, snippet-category, playlist, nested-recipe-category, attack-vector, magic-type, movement-mode, item, and recipe definitions
-    evidence:
-      - src/catalua_loader.cpp
-      - src/catalua_runtime.cpp
-      - src/harvest.cpp
-      - src/behavior.cpp
-      - src/behavior_oracle.cpp
-      - src/emit.cpp
-      - src/effect.cpp
-      - src/field_type.cpp
-      - src/weakpoint.cpp
-      - src/bodypart.cpp
-      - src/wound.cpp
-      - src/subbodypart.cpp
-      - src/anatomy.cpp
-      - src/bodygraph.cpp
-      - src/monstergenerator.cpp
-      - src/map_field.cpp
-      - src/game_io.cpp
-      - data/lua/types/ccb_platform_v1.d.lua
-      - tests/catalua_platform_test.cpp
-    next_actions:
-      - "The 2026-08-13 batches added 23 transactional native builders (SoundEffect/SoundEffectPreload, Recipe practice/uncraft flags, Technique, MartialArt, Trap, Construction, Furniture, Terrain, Gate, Fault/FaultFix, Dream, Achievement/Conduct, Blacklist, MapExtra, WeatherGenerator) plus platform_blacklist_data and NPC-actor event provenance."
-      - The 2026-08-11 local C++ Platform suite passed the written native transaction, rollback, stale-handle, finalization, creature-catalog, and monster-attack policy coverage; focused Wound/WoundFix coverage passed 5 cases and 321 assertions.
-      - The 2026-08-11 unified `[lua]` run passed 190 matching test cases and 2706 assertions, including pre-finalize Monster scaling and adjustment ownership plus idempotent body-part and sub-body-part similarity caches; keep these as regression gates.
-      - Retain bounded dispositions for the documented creature slice; the local gate is evidence for that slice, while field-by-field expansion remains required before full JSON object-type parity.
-      - The bounded concrete `wound` and `wound_fix` extractor now has source-backed conversion tests and emits native builders for finite ranges, typed links, body-part filters, treatment skills/proficiencies, wound sets, and referenced requirements; keep inheritance, implicit indefinite healing, rich translation metadata, and inline requirements partial.
-      - Continue field-complete typed registrar and extractor coverage without exposing JSON-loader or EOC-runner compatibility surfaces.
-  - id: native-object-surface
-    phase: bindings
-    status: partial
+    evidence: [src/lua_platform_content.h, src/lua_platform_world_content.cpp, tools/migrate_lua_first.py]
+    next_actions: [Run the final semantic gate, then close any concrete registrar gaps revealed by real content.]
+  - id: eoc-capabilities
+    phase: eoc
+    status: in_progress
+    target_surface: Ordinary Lua workflows that replace the supported EOC behavior shapes by domain services.
     legacy_dependency: none
-    target_surface: All bindable public members of explicitly exported native types
-    evidence: [src/catalua_bindings_values.cpp, src/catalua_game_handle.h, src/catalua_game_handle.cpp, tests/catalua_platform_test.cpp, data/lua/types/ccb_platform_v1.d.lua]
-    next_actions:
-      - Add an export-root inventory and report every unbindable public member.
-      - GameHandle plus MissionToken, HordeEntityToken, LegacyHordeToken, and ZoneToken now reject foreign or expired runtime owners in addition to stale runtime/world generations; token equality retains stable weak owner identity after shutdown, and the inactive state remains distinct from every numeric generation. Extend the same explicit-owner model to remaining borrowed native references.
-  - id: runtime-events-hooks-callbacks
-    phase: runtime
-    status: partial
-    legacy_dependency: none
-    target_surface: Typed events, synchronous hooks, and definition callbacks
-    evidence: [src/catalua_runtime.cpp, src/catalua_ui.cpp, data/lua/types/ccb_platform_v1.d.lua, data/lua/reference/ccb_native_inventory.json]
-    next_actions:
-      - The 2026-08-11 local C++ Platform suite passed lifecycle, audited semantic event actors and item allowlist, ItemUseContext, missing-handler, decision aggregation, typed-handle, recursion, v5-composition, and runtime-only hot-reload coverage; keep these as regression gates.
-      - The 2026-08-12 bundled-Mod playable gate passed discovery, load, real game save, runtime shutdown, full data reload, and continued item-handler gameplay.
-      - Extend semantic actor-kind coverage beyond the audited events.
-  - id: presentation-primitives
-    phase: runtime
-    status: partial
-    legacy_dependency: none
-    target_surface: Callback-only native notice, confirmation, stable-id choice, and text input primitives
-    evidence: [src/catalua_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/catalua_platform_test.cpp, data/lua/LUA_FIRST_PLATFORM.md]
-    next_actions:
-      - The non-interactive callback boundary coverage passed in the 2026-08-11 local C++ Platform suite; keep it as a regression gate.
-      - Complete the still-open interactive desktop and Android presentation checks.
-      - Add richer composable forms only as domain objects, not popup- or EOC-key-shaped wrappers.
-  - id: persistent-tasks-and-state
-    phase: runtime
-    status: partial
-    legacy_dependency: none
-    target_surface: Named tasks and serializable character/world state
-    evidence: [src/catalua_runtime.cpp, src/catalua_ui_state.cpp, src/do_turn.cpp, src/game_io.cpp, data/lua/templates/complete/runtime/behaviour.lua]
-    next_actions:
-      - The 2026-08-11 local C++ Platform suite passed save/load, overdue, missing-handler, payload-version and migration-chain, orphan-preservation, size-limit, and corruption coverage; keep these as regression gates.
-      - The 2026-08-12 bundled-Mod playable gate passed typed character/world-state and named-task survival through real game saves, runtime shutdown, full data reload, continued gameplay, and one-time overdue execution.
-      - Extend copied-world and stable-id compatibility coverage beyond the bundled example.
-  - id: shared-domain-services
-    phase: runtime
-    status: partial
-    legacy_dependency: none
-    target_surface: Game-domain services shared by Platform and legacy adapters
-    evidence: [src/catalua_runtime.cpp, src/catalua_game_handle.cpp, src/catalua_ui_creatures.cpp, src/catalua_ui_items.cpp, src/catalua_ui_world.cpp, src/catalua_ui_vehicles.cpp, src/catalua_ui_missions.cpp, src/catalua_ui_magic.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/catalua_platform_test.cpp, data/lua/LUA_FIRST_PLATFORM.md, ai/lua-first-replacement-ledger.yml]
-    next_actions:
-      - "The 2026-08-13 batches added characters.add_wet, npcs.ai_rules, creatures.can_see, overmap.is_safe, characters.is_safe, trait/monster blacklist helpers, and by_radio/reason dialogue projection fields."
-      - Review the remaining primitive-available selectors against exact native semantics.
-      - Extend the first exact predicate/effect slice beyond string comparison, isolated probability, contested rolls, active-Mod visibility, dimensions, typed map-environment queries, typed avatar single/any-mutation, martial-art, proficiency, specific/any-bionic, learned-recipe, literal item-presence, and literal movement-mode state, achievement awards, avatar bionic installation/removal, literal one-recipe and category/subcategory recipe changes, presentation-independent martial-art learning/forgetting, bounded literal morale changes, and bounded literal creature-effect changes.
-      - The 2026-08-11 local C++ Platform suite passed the documented semantic-event-actor, per-handler payload-isolation, global-recursion, and Platform-only dialogue-projection slices; expand actor-kind proof beyond audited events before converting other actor-dependent `u_*` or `npc_*` shapes, without publishing EOC alpha/beta aliases.
-      - The local C++ coverage passed the written Character activity snapshot, plain time-based assignment, side-effect-free no-op cancellation, duration boundary, native-actor/handler, EOC-policy, multi-activity, automatic-needs, and non-time rejection policies; selector promotion still requires exact migrator-shape evidence.
-      - Extend the locally verified native-order exact-part wound service only through explicit Lua-native policies; the four legacy wound selectors now have bounded literal slices, while next-best, dynamic, and unproven shapes remain outside parity.
-      - Add specialized activity-actor construction and wetness services before promoting those audited selectors; NPC navigation and typed creature relocation now have first-layer services whose remaining actor/side-effect shapes stay bounded or TODO.
-      - The local C++ coverage passed the documented singular wielded-item query, force-unarmed composition, semantic item-event routing, and instance-owned flag-change reporting slices; promote only actor and event shapes whose legacy talker kinds are proven.
-      - The 2026-08-11 local C++ Platform suite passed the typed bionic summary, capacity-without-instance, learned-recipe query, one-recipe mutation, and category/subcategory forgetting slice; keep dynamic ids and unproven actor shapes partial.
-      - Implement missing environment, dialogue, specialized activity, and richer presentation primitives before promoting selector-level parity.
-      - "The 2026-08-19 character-status follow-up added typed `services.characters.is_alive`, tile-divability `is_underwater`, and explicit conventional body-part `has_part_temp` queries; the migrator now converts only proven actors with literal body-part ids and finite thresholds, while missing dialogue body-part context remains TODO. The ledger advances six bounded condition slices to 440 bounded and leaves 180 primitive-only entries."
-      - "The 2026-08-19 NPC relationship follow-up added generation-safe `services.npcs.add_debt` for bounded raw debt deltas with overflow rejection and LuaLS/runtime regression coverage. The dialogue-only `add_debt` selector is now classified primitive-available (not selector parity) because its legacy trial-mod array and talker context are not proven for automatic migration; the native Lua workflow is available without exposing a talker or EOC table."
-  - id: developer-templates
-    phase: tooling
-    status: partial
-    legacy_dependency: none
-    target_surface: Minimal and complete templates plus create_lua_mod.py
-    evidence: [tools/create_lua_mod.py, tools/test_create_lua_mod.py, data/lua/templates/minimal/main.lua, data/lua/templates/complete/main.lua, data/mods/Lua_First_Example/main.lua]
-    next_actions:
-      - The 2026-08-11 local creator/migrator unit-test run passed all 55 cases (46 extractor plus 9 creator), including scaffold atomic-install, empty-target restoration, concurrent-target preservation, non-overwrite, symlink refusal, Mod-id namespace, zero-JSON coverage, and bounded Wound/WoundFix extraction; keep these as regression gates.
-      - The 2026-08-12 bundled installed-Mod fixture passed discovery, dependency-aware selection, load, save, runtime shutdown, full data reload, and continued gameplay.
-      - Add more small end-to-end examples only when they prove a new native domain rather than duplicating this fixture.
-  - id: migration-extractor
+    evidence: [data/lua/LUA_FIRST_EOC_WORKFLOW.md, src/lua_platform_*.cpp, tools/migrate_lua_first.py]
+    next_actions: [Continue domain batches; leave dynamic, unproven, and side-effect-sensitive shapes as explicit TODOs.]
+  - id: migration-ledger
     phase: migration
-    status: partial
+    status: in_progress
+    target_surface: One disposition per real JSON/EOC inventory entry with honest bounded/primitive/planned status.
     legacy_dependency: none
-    target_surface: Deterministic legacy content extraction into native Lua skeletons and TODO reports
-    evidence:
-      - tools/migrate_lua_first.py
-      - tools/test_migrate_lua_first.py
-      - data/lua/LUA_FIRST_PLATFORM.md
-    next_actions:
-      - "The 2026-08-13 local migration run converted 413 core entries across 7 domains (dreams, emissions, attack vectors, bash-damage profiles, named colors, profession groups, speed descriptions) with 0 partial skeletons and 0 TODOs into data/mods/Migrated_Core/; the loader test proves zero-JSON loading with content.replace coexistence semantics."
-      - "The 2026-08-13 evening batch extended Migrated_Core to 1905 core entries across 30 domains (adding anatomy, clothing mods, connect groups, construction categories and groups, damage types and damage-info order, diseases, explosion lights, harvest drop types, hit ranges, limb scores, loot zones, morale types, move modes, rotatable symbols, scent types, scores, skill display types, species, speech pools, tool qualities, vehicle part locations, and weapon categories) with 0 partial skeletons and 0 TODOs; the renamed lua_first_migrated_core_content_loads_without_json gate pins representative ids from every exercised catalog."
-      - "The first semantic parity slice now lives inside the migrated-core gate: it snapshots the legacy JSON-loaded damage_type (all 10 ids) and SPECIES (all 33 ids) objects before apply, then asserts field-for-field equality against the committed Migrated_Core replacements (572 assertions total), with the species owner check proving the comparison is legacy-vs-native rather than native-vs-native; committed content persists after shutdown by design, so parity checks must run inside the single per-process apply rather than in a second prepare/apply cycle."
-      - "The parity slice now also covers tool_quality (89 ids: name, usages), morale_type (96 ids: describe()/permanence), and zone_type (43 ids: name/description/display-field/personal/hidden), reaching 2297 assertions; morale texts containing '%s' log a deterministic string_format error through describe(), which the gate resets via debug_reset_error_observed() so the harness does not inherit expected messages."
-      - "The parity slice grew to 15 catalogs and 2988 assertions: scent_type, skill_display, construction_category, limb_score, weapon_category, vehicle_part_location, damage_info_order, movement_mode (including finalize-computed cycle/cycle_reverse), score (provenance-only; description/statistic lack public accessors), and disease_type; every comparison passed, so all 15 catalogs now have field-level legacy-vs-native equivalence evidence and only the remaining Migrated_Core catalogs still need slices."
-      - "The parity slice now spans 23 catalogs and 5227 assertions: connect_group, attack_vector (authored plus expanded limbs/contact_area), clothing_mod (incl. mod_value details), harvest_drop_type (deterministic fields; message fields are randomized snippet-category lookups with no public raw accessor), explosion_light (stops/easing/waves/durations/shake/shockwave; legacy color_a/b inputs are documented as stops-only), the full named_color registry (order-insensitive compare), the full rotatable_symbol registry, and the global hit-range table; the harness rejected two test-design flaws during development (unordered_map snapshot order and a random melee_hit_range probe) before converging on deterministic comparisons."
-      - "Remaining Migrated_Core catalogs still need parity slices: anatomy, clothing-mod cache refresh, construction_group, profession_group, speed_description, bash_damage_profile, speech pools, dreams (count-based), and emissions; then the ledger dispositions for parity-verified catalogs can advance from unverified to verified."
-      - "All 30 Migrated_Core catalogs now have parity slices inside the migrated-core gate (10775 assertions): the final batch added anatomy, construction_group (441 names plus Migrated_Core ownership count), profession_group, speed_description values, bash_damage_profile (behavioral damage_from), the full speech-pool registry via a new detail::speech_registry_snapshot accessor, and the full emission registry via emit::all(); dreams stay count-based because their append-only vector has no content accessor."
-      - "The parity harness found and fixed a real semantic gap: migrated bash_damage_profile objects skipped the legacy finalize fill-in that adds every un-authored damage type's bash conversion factor, so the platform apply now calls native.finalize() before insert; keep the behavioral damage_from probes as the regression gate for that class of gap."
-      - "Extend the semantic parity slice to every Migrated_Core catalog before promoting its dispositions from unverified to verified; the damage_type/species slice is the reusable snapshot-and-compare pattern."
-      - "The evening verification regenerated the JSON/EOC contract inventories and refreshed the replacement-ledger source fingerprints to match the new parser registrations; the json-contract and ledger checks pass again with the curated 775 dispositions preserved."
-      - "The evening [lua] suite run reached 208 cases; the only remaining failure is lua_v5_remaining_combat_and_control_hooks_run_from_native_lifecycles (landed_technique), which a stash-based HEAD baseline build reproduced identically, so it is pre-existing and independent of this batch and of Migrated_Core content."
-      - "The migrator now wraps each definition in a do/end block (fixes the Lua 200-local limit) and supports --replace for migrated ids that supersede same-id legacy JSON."
-      - "NPC actor provenance now exists for the npc_becomes_hostile event, converting npc_* condition and effect variants against context.actors.npc."
-      - The 2026-08-11 local creator/migrator unit-test run passed all 55 cases (46 extractor plus 9 creator), including JSONC parsing, native-range partial classification, transactional force rollback, no-overwrite, freshness, no-legacy-output coverage, and bounded Wound/WoundFix extraction; keep these as regression gates.
-      - The local creature-catalog migration fixture passed for monster attacks, effects, weakpoints, fields, item groups, anatomy, body graphs, and monsters; retain bounded classifications until field-by-field parity is proven.
-      - The bounded concrete Wound/WoundFix migration fixtures convert native-builder fields and keep inheritance, implicit indefinite healing, translation metadata, and inline Requirement objects as explicit TODOs without a legacy loader; Platform UTF-8 byte-limit violations, contradictory body-part flags, and proficiency multipliers that become non-positive as native floats now fail closed as explicit TODOs or rejected definitions.
-      - "The migrator's bounded EOC effect conversion now covers intensity on u_add_effect (0..1000 literal, matching the native maximum_effect_intensity) and new shapes with proven actor provenance: npc_add_effect (with duration/intensity), u_add_trait/u_lose_trait and npc_add_trait/npc_lose_trait (with optional variant) through services.mutations.grant/remove; the ledger promotes npc_add_effect, u_add_trait, npc_add_trait, u_lose_trait, and npc_lose_trait from primitive to bounded (447 -> 442 primitive, 101 -> 106 bounded), and u_add_var stays primitive because the variables API only has get/set/remove with no native adjust; keep unsupported shapes (out-of-range intensity, unproven actors, target_part) as explicit TODOs."
-      - "The bounded condition slice also gained the four literal stat thresholds: u_has_strength/u_has_dexterity/u_has_intelligence/u_has_perception plus their npc_* variants map to service_value(services.characters.snapshot(actor)).stats.<field> >= N, because talker str_cur/dex_cur/int_cur/per_cur are exactly Character::get_str/get_dex/get_int/get_per; the ledger promotes all eight from primitive to bounded (442 -> 434 primitive, 106 -> 114 bounded); variable-valued and unproven-actor forms stay explicit TODOs."
-      - "The bounded condition slice also gained u_is_warm/npc_is_warm (snapshot.creature.warm) and u_is_deaf/npc_is_deaf (snapshot.senses.deaf), promoting four more selectors (434 -> 430 primitive, 114 -> 118 bounded); u_is_underwater stays primitive because the legacy handler checks the map tile via is_divable while the native snapshot reports the creature's own submerged state, and u_has_effect stays primitive because the effect query is handle-based with no actor-shaped predicate yet."
-      - "The first planned-domain native builder landed end-to-end: content.ButcheryRequirement with per-row requirement(speed, size, butcher, requirement_id) entries, enum helpers platform_creature_size/platform_butcher_type, registry accessor, validation, apply, and undo, LuaLS declarations, a migrator renderer with fail-closed row checks, a C++ staging test, and a migrator unit test; the ledger promotes butchery_requirement from planned to implemented (139 -> 138 planned, 41 -> 42 unverified) and the lua-contract baselines moved to 105 usertypes, 117 Platform roots, and 121 export roots; the [lua] suite now has 209 cases with only the pre-existing combat-hooks failure."
-      - "The second planned-domain builder landed with the same template: content.ItemAction (id plus optional display name, legacy name-fallback semantics), with detail registry helpers declared in item_action.h, commit-persists-after-shutdown documented in its staging test; the ledger promotes item_action from planned to implemented (138 -> 137 planned, 42 -> 43 unverified) and the lua-contract baselines moved to 106 usertypes, 118 Platform roots, and 122 export roots; the migrator renders all 193 core item-action entries with 0 TODOs."
-      - "Migrated_Core now covers 32 domains and 2099 entries: butchery_requirements.json and item_actions.json joined the catalog, and the parity gate grew to 11183 assertions with a whole-registry item-action name compare and nine behavioral get_fastest_requirements probes for the migrated butchery default; both catalogs pass, so the ledger promotes butchery_requirement and item_action to implemented_verified (22 -> 24 verified, 43 -> 41 unverified)."
-      - "The scenario builder landed as the first larger bounded domain: content.Scenario stages id/name/description/start-name/points/blacklist/extra-professions/reveal-locale/distance plus location/profession/trait/flag/requirement entries with strict id validation and undo; the migrator converts the universal field set (25 of 62 core scenarios fully, the rest partial with explicit TODOs for eoc/missions/map_extra/calendar/vehicle/surround-group fields); the ledger promotes scenario from planned to bounded (137 -> 136 planned, 118 -> 119 bounded) and the lua-contract baselines moved to 107 usertypes, 119 Platform roots, 123 export roots, 255 methods, and 361 usertype members."
-      - "The vehicle_color_palette builder landed as a complete small domain: content.VehicleColorPalette stages group(fuzzy_ids, colors) entries into the palette registry with fuzzy-match and weighted-color semantics, plus validation against RGBColor::try_parse; the migrator renders all 20 core palettes with 0 TODOs; the ledger promotes vehicle_color_palette from planned to implemented (136 -> 135 planned, 41 -> 42 unverified) and the lua-contract baselines moved to 108 usertypes, 120 Platform roots, 124 export roots, 256 methods, and 363 usertype members."
-      - "The monstergroup builder landed as a bounded domain: content.MonsterGroup stages id, optional default monster (with the legacy highest-frequency fallback), an is_animal switch, and monster/group entries with weight/cost/pack bounds via MonsterGroupManager with FinalizeMonsterGroups after apply and revert; gated legacy shapes (starts/ends/conditions/event/spawn_data) stay explicit TODOs; the migrator converts the universal entry field set across the core monstergroup files (19 of 21 fully in the fungi+lab probe); the ledger promotes monstergroup from planned to bounded (135 -> 134 planned, 119 -> 120 bounded) and the lua-contract baselines moved to 109 usertypes, 121 Platform roots, 125 export roots, 257 methods, and 366 usertype members."
-      - "Migrated_Core now covers 33 domains and 2119 entries with vehicle_palette.json included; the parity gate grew to 11343 assertions with 120 deterministic fuzzy_to_index probes across all 20 core palettes, so vehicle_color_palette advances to implemented_verified (24 -> 25 verified, 42 -> 41 unverified)."
-      - "The overmap_connection builder landed as a complete small domain: content.OvermapConnection stages subtype(terrain, basic_cost, locations, orthogonal, perpendicular_crossing) entries with terrain/location id validation, cached-subtype finalize, and undo; the migrator renders all 5 core connections with 0 TODOs (empty location lists are legal); the ledger promotes overmap_connection from planned to implemented (134 -> 133 planned, 41 -> 42 unverified) and the lua-contract baselines moved to 110 usertypes, 122 Platform roots, 126 export roots, 258 methods, and 368 usertype members."
-      - "Migrated_Core now covers 34 domains and 2124 entries with overmap_connections.json included; the parity gate grew to 11371 assertions with 15 deterministic pick_subtype_for cost probes across all 5 core connections, so overmap_connection advances to implemented_verified (25 -> 26 verified, 42 -> 41 unverified); the parity harness also caught a real platform bug where the native overmap_connection was inserted without a mod owner, tripping the mod-tracker duplicate-source check with an empty src vector and segfaulting."
-      - "Migrated_Core now covers 42 domains and 2555 entries with eight more clean catalogs joining it: monster_flags, mutation_category, mutation_ordering (overlay_order), vision_levels (oter_vision), overmap_land_use_codes, vp_categories, proficiency_categories, and ammo_types (0 partial skeletons, 0 TODOs); the migrator gained two legacy-semantic allowances (an explicit empty mutagen_message renders verbatim instead of a presentation TODO, and the null land-use entry with empty id renders id = \"\"), and the platform validate phase accepts exactly the legacy null land-use shape (empty id plus code 0); the parity gate grew to 13258 assertions with whole-registry compares for monster flags, ammunition types (via a new detail::ammunition_type_registry_snapshot accessor), mutation categories, overmap visions, land-use codes (including the null entry's Migrated_Core ownership), proficiency categories, vehicle-part categories (via a new detail::vehicle_part_category_priority accessor), and the global mutation-overlay ordering map, so all eight selectors advance to implemented_verified (26 -> 34 verified, 41 -> 33 unverified)."
-      - "Migrated_Core now covers 52 domains and 2619 entries with ten obsoletion/migration catalogs joining it: obsolete_effects, obsolete_overmap_terrain (oter_ids dicts expand to 638 individual content.Migration definitions), obsolete_overmap_special, proficiencies, terrain, furniture, migration_terrain, obsolete_traps, vehicle_parts, and migrated_vehicleparts (0 partial skeletons, 0 TODOs); migration definitions always submit through content.add because the native registrar forbids edit/replace on append-style registries whose apply overwrites by from id, and each definition is wrapped in its own do/end block after the harness caught the 200-local Lua limit being exhausted by the oter expansion; the parity gate grew to 13266 assertions with whole-registry before/after compares for all seven migration tables (effect, oter, proficiency, vehicle-part, terrain, furniture, trap, and overmap-special), so all seven selectors advance to implemented_verified (34 -> 41 verified, 33 -> 26 unverified); the harness also caught a real platform bug where the native overmap_special_migration was inserted with an empty src vector, tripping the mod-tracker duplicate-source check the same way the round-18 overmap_connection bug did."
-      - "Migrated_Core now covers 60 domains and 2725 entries with eight more catalogs joining it: vehicle_groups (duplicate weighted entries preserved via a new allow_duplicates renderer mode and relaxed native validates), vehicle_groups_aircraft, four fault catalogs (24 fault groups plus 14 bounded faults whose renderer fault_type field bug the harness exposed), default_blacklist, blacklist_scenarios, blacklist_charge_removal, and blacklist_temperature_removal (0 partial skeletons, 0 TODOs); blacklist definitions submit through content.add because the registrar is append-style, empty blacklists render as zero-entry definitions, the scenario blacklist renderer reads the scenarios key, and the native scenario validate now accepts the legacy empty start_name value; the parity gate grew to 14066 assertions with whole-registry weighted-entry compares for vehicle and fault groups plus set compares for the monster/scenario/charge/temperature blacklists, so all six selectors advance to implemented_verified (41 -> 47 verified, 26 -> 20 unverified); the harness caught a real platform SEGV in the scenario apply (empty src vector on replace) and the audit then fixed the same latent empty-src insert bug for ma_technique, martialart, trap, and gate_data before any of those bounded domains can be replaced."
-      - "The migrator unit suite now has 81 cases including the blacklist replace-mode add-submission contract and the duplicate weighted-entry regression; the [lua] suite stays at 214 cases with only the pre-existing combat-hooks landed_technique failure."
-      - "Migrated_Core now covers 61 domains and 2753 entries with skills.json joining it (28 skills, 0 partial skeletons, 0 TODOs); the skill renderer gained the legacy companion-practice empty-id value, first-wins duplicate-key deduplication (legacy unordered_map::emplace semantics), and independent theory/practice level-description emission via a new level_description_practice builder method while level_description no longer invents practice text; the native skill builder accepts empty practice ids and the validate phase skips the display-category check for contextual skills carrying the legacy 'none' category; the parity gate grew to 14959 assertions with a whole-registry skill compare (via a new detail::skill_registry_snapshot accessor covering both the skills vector and contextual_skills map) and a head-vs-tail dream compare (the legacy dreams.json entries stay at the head of the append-only registry while the committed run appends its 110 native translations right after, proving field parity without a content accessor), so skill and dream advance to implemented_verified (47 -> 49 verified, 20 -> 18 unverified); the lua-contract baselines moved to 259 usertype members and 877 member dispositions."
-      - "The migrator unit suite now has 82 cases including the skill practice-duplicate and theory/practice split regressions; the [lua] suite stays at 214 cases with only the pre-existing combat-hooks landed_technique failure."
-      - "The parity gate grew to 17780 assertions with whole-registry fault and scenario compares (via new detail::fault_registry_snapshot and detail::scenario_registry_snapshot accessors) over the 14 migrated faults and the migrated defense_mode_fortified scenario, so fault and scenario advance from bounded unverified to bounded_implemented_verified (7 -> 9 bounded verified, 120 -> 118 bounded unverified); the generator's fault target typo (content.gameplay -> content.faults) was corrected; the harness caught seven real semantic gaps in one round: the fault renderer invented a 'generic' fault_type default where legacy uses the empty string, the fault color default is 'bad' not empty, the vehicle-move-penalty default is 0 not 1, legacy names the encumbrance fields encumbrance_add/encumbrance_mult, replaced faults lost the fix links that legacy derives at fault-fix finalize time (faults_removed reverse-links are now re-derived in the apply), re-running the whole fault-fix registry finalize would double every legacy fix's requirement set (only staged fixes are finalized now), and the scenario distance_initial_visibility default is 15 not 0."
-      - "Migrated_Core now covers 64 domains and 3211 entries with all 458 core sub_body_part entries joining it (body_parts, limbs_sublimbs, and limbs_bionic_sublimbs, 0 partial skeletons, 0 TODOs); the migrator gained a --exclude-types filter (body_part stays legacy in the mixed body_parts.json file), a shallow copy-from resolver that mirrors the legacy generic-factory inheritance exactly (opposite is never inherited and defaults to the child id, locations_under inherits the parent's effective [parent id] default, all other fields inherit with child override), and integer side enum mapping (0/1/2 to both/left/right); the parity gate grew to 23039 assertions with a whole-registry sub-body-part compare (public fields plus damage_instance equality), so sub_body_part advances to implemented_verified (49 -> 50 verified, 18 -> 17 unverified); the harness caught five more real semantic gaps: legacy stores similar_bodypart verbatim (torso_bionic_basic_waist references the nonexistent 'waist'), opposite may point at body parts (avian_talon_r), parent may be the bp_null engine sentinel, name_multiple defaults to the empty string rather than the singular name, and max_coverage defaults to 0 (legal value) rather than 100."
-      - "The migrator unit suite now has 84 cases including the sub-body-part copy-from resolution, the exclude-types filter, and the integer side mapping regressions; the [lua] suite stays at 214 cases with only the pre-existing combat-hooks landed_technique failure."
-      - "Migrated_Core now covers 67 domains and 3237 entries with three more catalogs joining it: the 14 recipe categories from the pure recipes/recipes.json file, all 10 core gates from gates.json (the copy-from resolver generalized to gates, including per-key message inheritance via one-level dict merge), and the 2 exodii var migrations (the talk_topic and mission_definition entries stay excluded alongside body_part, 0 partial skeletons, 0 TODOs); the parity gate grew to 23283 assertions with whole-registry recipe-category and gate compares (gate ownership counts exactly the 10 migrated entries, the two gates defined in other core files stay legacy-owned) and a whole-map var-migration compare via a new detail::var_migration_snapshot accessor over get_globals().migrations, so recipe_category, gate, and var_migration advance to implemented_verified (50 -> 53 verified, 17 -> 14 unverified); the harness caught one more real semantic gap: an empty gate walls list is a deliberate legacy value meaning 'matches anything with the WALL flag', so the native validate no longer rejects it."
-      - "The migrator unit suite now has 85 cases including the gate copy-from inheritance and per-key message merge regression; the [lua] suite stays at 214 cases with only the pre-existing combat-hooks landed_technique failure."
-      - "Migrated_Core now covers 87 domains and 4286 entries with five bounded catalogs joining it: all 842 core json_flags (flags, trap flags, widget flags, and vehicle-part flags), the 36 item categories, all 62 basecamp recipe groups (the recipe and requirement entries in those mixed files stay excluded), the 8 mood faces, and all 101 start locations (0 partial skeletons, 0 TODOs); the copy-from resolver gained legacy extend semantics (array union for sloc_house_boarded's flags) and now also serves mood_face and start_location; the parity gate grew to 40700 assertions with whole-registry compares for all five domains (json_flag including conflicts/taste/owner, item_category including priority-zone rules, recipe_group including per-recipe terrain matchers, mood_face values, and start_location targets/constraints), so json_flag, ITEM_CATEGORY, recipe_group, mood_face, and start_location advance to bounded_implemented_verified (9 -> 14 bounded verified, 118 -> 113 bounded unverified); the harness caught three more real semantic gaps: an empty recipe list is a deliberate legacy value (fbbb_crafting_recipes_custom is player-filled), item-category name_noun uses the str_sp plural translation form, and legacy numeric_interval::deserialize clamps a negative below-min maximum to INT_MAX (sloc_road's [10, -1])."
-      - "The migrator unit suite now has 86 cases including the start-location copy-from extend and interval-normalization regressions; the [lua] suite stays at 214 cases with only the pre-existing combat-hooks landed_technique failure."
-      - "A 2026-08-14 clean rebuild (the obj-lua and tests/obj-lua objects plus both PCH files were purged after a stale-object thunk mismatch, _ZThn440_ referenced versus _ZThn456_ defined, broke the link) then ran the complete [lua] filter end to end: all 214 cases passed with 43653 assertions, including the migrated-core parity gate; the landed_technique combat-hook failure recorded by earlier stash-based runs does not reproduce in the clean build, so the recorded current gate is green."
-      - Extend bounded predicate/effect conversion beyond literal string, probability, contested-roll, Mod-visibility, typed avatar mutation/martial-art/proficiency/specific-or-any-bionic/learned-recipe/literal-item-presence/literal-movement-mode state, native Boolean-composition, achievement-award, avatar-bionic add/remove, one-recipe and category/subcategory recipe changes, martial-art learn/forget, exact default-timing morale add/remove, and literal bounded-duration effect add/remove shapes.
-      - 'Local migration coverage confirms that even literal/proven-Character `u_add_wound`, `npc_add_wound`, `u_remove_wound`, and `npc_remove_wound` shapes emit TODOs; keep them planned because legacy handlers may select a next-best body part and legacy add bypasses the per-part limit, while the Lua-native service is exact-part and limit-aware, and do not add a compatibility entry point.'
-      - Keep dynamic bionic/recipe ids, dynamic recipe subcategories, NPC targets, and unproven actor contexts partial until their value and actor semantics have typed source-backed conversion evidence.
-      - Add typed conversions only after each target native registrar exists.
-      - The local migration coverage confirms that the private game_start avatar binding is gated by the checked canonical sender set rather than only the event name; retain that gate while extending actor proof to other contexts.
-      - "The 2026-08-14 parallel-AI pilot batch converted seven EOC conditions end to end (parallel audits, serialized implementations, all automated gates): is_day (not environment.is_night), is_season (time_snapshot().season_id), is_weather (weather.current().weather.value), u_is_alive and u_is_avatar (constant true in the game_start avatar slice), u_female (not snapshot.male), and u_has_cash (snapshot.cash in cents, a new field added to snapshot_character); the ledger moves 117 -> 120 bounded, 426 -> 423 primitive, the migrator suite is 91 cases, and the [lua] gate stays green. The pilot also closed three selectors as fail-closed with proof: u_has_items (in_tools=true charge scope, count_by_charges dispatch, pseudo-item scope), u_has_item_with_flag (type-flag-only vs has_flag superset, unbounded scope), and npc_is_alive (beta talker is unproven in every legacy event, dynamic liveness). Measured pure authoring throughput excluding compile: ~4 min per simple literal condition, ~10 min when one snapshot field is needed, ~3 min per fail-closed audit."
-      - "The 2026-08-14 phase-1 conditions batch then converted thirteen more EOC conditions: u_is_outside, u_has_flag (MUTATION_THRESHOLD sentinel), u_is_wearing, u_has_profession (held-hobby rule), map_furniture_with_flag (context_val slice), u_has_mission (missions.avatar_has_active over get_avatar().get_active_missions()), u_has_camp (camps.player_has_camp over the player's own camps), and the six map-family context_val slices (map_terrain_id/map_furniture_id/map_field_id/map_terrain_with_flag on environment.terrain_id/furniture_id/field_exists/terrain_has_flag, map_in_city on overmap.is_in_city with the legacy z < -1 clamp, map_is_outside on environment.is_indoor_tile with the out-of-bounds false); seven more failed closed with proof (u_has_class is a dead predicate for Character talkers, u_has_effect needs an unproven d.reason bodypart default plus an intensity predicate, u_is_underwater checks the map tile not the creature state, u_has_faction_trust reads the beta talker despite its u_ prefix, u_has_visible_trait needs an unproven observer actor, u_has_species has no native surface, u_has_software needs a dedicated e-storage predicate); the ledger moves 120 -> 133 bounded and 423 -> 410 primitive, the migrator suite passes, and the [lua] gate stays green at 215 cases and 43660 assertions."
-      - "The 2026-08-14 phase-2 npc_becomes_hostile batch then promoted six npc_* condition mirrors against context.actors.npc (npc_has_trait, npc_has_any_trait, npc_has_martial_art, npc_using_martial_art, npc_has_proficiency, npc_has_bionics incl. ANY) and added npc_has_item/npc_has_move_mode mirror shapes that stay primitive per the parity guard (same policy as npc_has_weapon/npc_can_drop_weapon); seven more failed closed with proof (npc_has_item_category needs a new category-count service, npc_know_recipe is not a registered selector, u_has_wielded_with_ammotype has no ammotype GameId kind, u_has_wielded_with_skill has no weapon-skill surface, u_has_wielded_with_weapon_category is a set shape over an unexposed itype set, u_at_om_location needs camp sentinels plus oter_no_dir_or_connections, npc_has_worn_with_flag has an unproven d.reason bodypart default); the ledger moves 133 -> 139 bounded and 410 -> 404 primitive, the migrator suite is 106 cases, and all Python gates stay green (no C++ change this batch, so the [lua] binary remains valid at 215 cases and 43660 assertions)."
-      - "The 2026-08-14 phase-3 conditions batch then converted eleven more EOC conditions: u_male, u_is_character, npc_male, npc_female, npc_is_character, npc_is_npc, npc_is_outside, npc_aim_rule, npc_engagement_rule, npc_cbm_reserve_rule, and npc_cbm_recharge_rule; the character identity and gender predicates map directly to character snapshot properties/constants, npc_is_outside maps to services.gameplay.environment.is_outside(snapshot.creature.position), and the four NPC AI rule predicates map to services.npcs.ai_rules(actor) field comparisons against their validated enum strings; the ledger moves 139 -> 150 bounded and 404 -> 393 primitive, the migrator suite is 107 cases, and all Python gates stay green (no C++ change this batch, so the [lua] binary remains valid at 215 cases and 43660 assertions)."
-      - "The 2026-08-14 phase-4 high-throughput batch converted 34 more selectors (26 conditions + 8 effects): 14 avatar entity/vehicle/mount constant-false predicates on game_start (u_is_npc, u_is_monster, u_is_item, u_is_furniture, u_is_vehicle, u_hostile, u_is_in_vehicle, u_controlling_vehicle, u_driving, u_is_riding, u_is_avatar_passenger, u_is_driven, u_is_remote_controlled, u_is_on_rails) and 3 constant-true predicates (u_exists, has_alpha, u_friend); 6 npc entity constant-false predicates on npc_becomes_hostile (npc_is_avatar, npc_is_monster, npc_is_item, npc_is_furniture, npc_is_vehicle, npc_friend) and 3 constant-true predicates (npc_exists, has_beta, npc_hostile); and 8 NPC effect mirrors (npc_add_bionic, npc_lose_bionic, npc_learn_recipe, npc_forget_recipe, npc_learn_martial_art, npc_forget_martial_art, npc_add_morale, npc_lose_morale) through services.bionics, services.recipes, services.martial_arts, and services.morale; the ledger moves 150 -> 184 bounded and 393 -> 359 primitive, the migrator suite is 108 cases, and all Python gates stay green."
-      - "The 2026-08-14 repair pass then fixed the phase-3/4 handoff: render_eoc referenced an undefined npc_actor_proven local (15 migrator-suite errors, fixed with one alias), the committed ledger had not been regenerated after the last batch (generator output 184 bounded vs committed 150), and has_alpha/has_beta had been promoted against the parity guard while has_beta was folded to constant true although its legacy beta talker is null (so d.has_beta is false) under npc_becomes_hostile; has_alpha/has_beta are demoted back to primitive dialogue-projection (the has_alpha game_start true fold stays as a bounded migrator shape; has_beta returns to an explicit TODO), the ledger settles at 182 bounded and 361 primitive, the migrator suite is 108 cases, and all gates including the [lua] C++ gate (215 cases, 43660 assertions) are green again."
-      - "The 2026-08-15 phase-5 map-location batch then converted ten more EOC conditions by reusing the environment predicates at the actor's snapshot position: u_is_on_terrain/u_is_on_furniture/u_is_in_field/u_is_on_terrain_with_flag/u_is_on_furniture_with_flag on game_start and their npc_* mirrors on npc_becomes_hostile via environment.terrain_id/furniture_id/field_exists/terrain_has_flag/furniture_has_flag; the ledger moves 182 -> 192 bounded and 361 -> 351 primitive, the migrator suite is 109 cases, and all Python gates stay green (no C++ change, so the [lua] binary remains valid)."
-      - "The 2026-08-15 phase-6 constants-and-needs batch then converted nineteen more EOC conditions: the vehicle-only movement states u_is_falling/u_is_floating/u_is_flying/u_is_sinking/u_is_skidding fold to false on game_start with npc_* mirrors on npc_becomes_hostile (Character talkers never override them), the degenerate avatar mission selectors u_mission_complete/u_mission_failed/u_mission_goal/u_mission_incomplete/u_has_available_mission/u_has_many_available_missions fold to false and u_has_no_available_mission to true (the avatar talker exposes no selected/available mission), and literal u_need/npc_need shapes (bare need, integer amount, or the four sleepiness level names) compare snapshot.needs.hunger/thirst/sleepiness; the seven bare/npc mission-status selectors failed closed with proof (they read the NPC's dialogue-scoped chatbin.mission_selected/available list, which no proven actor event or native surface addresses); the ledger moves 192 -> 211 bounded and 351 -> 332 primitive, the migrator suite is 110 cases, and all Python gates stay green (no C++ change)."
-      - "The 2026-08-15 phase-7 follow-up then converted five more EOC conditions: the bare npc_at_safe_space predicate composes the same character_at_safe_space(actor) safety conjunction on npc_becomes_hostile, and literal u_aim_rule/u_engagement_rule/u_cbm_recharge_rule/u_cbm_reserve_rule fold to false on game_start because only the NPC talker overrides has_ai_rule (the avatar's base const_talker returns false for every rule); the body/state and remaining effect audits were stopped after stalling, with u_has_any_effect failing closed on the same whole-body-only vs any-bodypart divergence already recorded for u_has_effect and u_bodytype waiting on a snapshot.bodytype native field; the ledger moves 211 -> 216 bounded and 331 -> 327 primitive, the migrator suite stays green, and no C++ changed."
-      - "The 2026-08-15 phase-7b batch then converted u_bodytype/npc_bodytype without any native change: talker_character_const::bodytype hardcodes every Character as 'human', so literal members fold to true for 'human' and false otherwise; the ledger moves 216 -> 218 bounded and 327 -> 325 primitive, the migrator suite stays green, and no C++ changed."
-      - "The 2026-08-15 phase-7c self-audited batch then converted nine more EOC conditions without native changes: u_can_float/u_can_fly/npc_can_float/npc_can_fly/u_following fold to false (the base talker returns false and no Character talker overrides them), u_is_trait_purifiable/npc_is_trait_purifiable compose services.mutations.definition(...).availability.purifiable, the bare u_available folds to true (the freshly created avatar never carries currently_busy at game-start), and literal u_rule folds to false with the other avatar AI-rule predicates; u_are_owed failed closed (it reads the beta talker debt despite its u_ prefix), u_safe_mode_trigger waits on a native monster_visible.dangerous surface, and npc_available/npc_rule/npc_following stay primitive because their NPC overrides read real state; the ledger moves 218 -> 227 bounded and 325 -> 316 primitive, the migrator suite stays green, and no C++ changed."
-      - "The 2026-08-15 phase-8 batch then landed the u_safe_mode_trigger native predicate end to end: environment.safe_mode_dangerous(direction) mirrors the legacy get_avatar().get_mon_visible().dangerous[card_dir] read (context-free), with the eight cardinal-direction literals validated in both the migrator and the runtime, a LuaLS declaration, and C++ assertions; the context_val is_outside shape also emits environment.is_outside but stays primitive per the parity guard; the ledger moves 227 -> 228 bounded and 316 -> 315 primitive, the [lua] gate passes at 215 cases and 43660 assertions after the rebuild, and all Python gates stay green."
-      - "The 2026-08-15 phase-9 dead-predicate and npc-mirror batch then converted seven more EOC conditions without native changes: u_has_part_flag/npc_has_part_flag fold to false (the base talker has_part_flag returns false with no Character/NPC override, regardless of the optional enabled boolean), u_has_class folds to false (the Character talker never overrides is_myclass), and npc_has_profession/npc_has_flag/npc_is_wearing/npc_has_pickup_list mirror their bounded avatar helpers against context.actors.npc; the ledger moves 228 -> 235 bounded and 315 -> 308 primitive, the migrator suite stays green, and no C++ changed."
-      - "The 2026-08-15 phase-10 npc-class batch then converted npc_has_class via the existing services.npcs.get(actor).class snapshot field (the NPC talker performs the real myclass equality); the ledger moves 235 -> 236 bounded and 308 -> 307 primitive, and all Python gates stay green with no C++ change."
-      - "The 2026-08-15 phase-11 first-effects batch then converted the first two EOC effects: literal u_lose_var/npc_lose_var compose services.variables.remove(actor, name) (the legacy f_remove_var is a plain passthrough of the member name to Character::remove_value); u_add_var stays primitive because the variables API has no native adjust, and copy_var/set_string_var/dimension_name stay primitive on their dynamic var_info/input-param shapes; the ledger moves 236 -> 238 bounded and 307 -> 305 primitive, the migrator suite is 111 cases, and all gates stay green with no C++ change."
-      - "The 2026-08-15 phase-12 message-effects batch then converted u_message/npc_message: literal u_message composes the same services.message(text) player message as the bare message effect (the avatar target is the player), and literal npc_message is a deliberate no-op under npc_becomes_hostile (the legacy handler returns early for NPC targets); sound/popup/type option shapes stay TODO; the ledger moves 238 -> 240 bounded and 305 -> 303 primitive, the migrator suite stays green, and no C++ changed."
-      - "The 2026-08-15 phase-13 trait-activation batch then converted four trait effects: literal u_activate_trait/u_deactivate_trait and their npc_* mirrors compose services.mutations.set_active(actor, id, true|false); dynamic trait ids stay TODO; the ledger moves 240 -> 244 bounded and 303 -> 299 primitive, the migrator suite stays green, and no C++ changed."
-      - "The 2026-08-15 phase-14 sound-and-npc-attitude batch then converted five EOC effects and control forms: literal sound_effect composes services.sound.play(id, variant, volume), literal npc_wants_to_talk composes services.npcs.set_attitude(actor, 'talk') on npc_becomes_hostile while u_wants_to_talk is a deliberate no-op (avatar target has no NPC talker), literal hostile composes services.npcs.set_attitude(actor, 'kill'), literal flee composes services.npcs.set_attitude(actor, 'flee'), and bare nothing is handled as a native no-op; all unit tests and repo metadata validations pass with no C++ change."
-      - "The 2026-08-15 phase-15 spawn-and-world batch then converted ten more EOC effects: literal u_spawn_item (services.inventory.give), map_spawn_item (services.world.spawn_item), player_weapon_away (services.inventory.stash_wielded), set_trap (services.world.set_trap), signal_hordes (services.hordes.signal), reveal_route (services.overmap.reveal), follow (services.npcs.set_attitude 'follow'), stop_following/stranger_neutral (services.npcs.set_attitude 'null'), and bare end_conversation as a native no-op; all unit tests and repo metadata validations pass with no C++ change."
-      - "The 2026-08-15 phase-16 senses-and-turn-cost batch then converted fourteen more selectors (11 conditions + 3 effects): u_can_see/npc_can_see on creature snapshot blind state, literal u_has_species/npc_has_species human equality, the dead/static avatar start conditions u_has_activity/u_has_stolen_item/u_can_stow_weapon/u_are_owed/u_train_skills/u_train_spells/u_train_styles folding to false, literal turn_cost adjusting moves via services.characters.adjust, and wake_up/reveal_stats handled as scripted no-ops; the ledger moves 296 -> 309 bounded, 249 -> 238 primitive, 131 -> 129 planned, and all unit tests pass with no C++ change."
-      - "The 2026-08-15 phase-17 npc-dialogue-and-denials batch then converted fourteen more selectors (5 conditions + 9 effects): the hostile NPC start conditions npc_train_skills/npc_train_spells/npc_train_styles/npc_has_stolen_item/npc_can_stow_weapon folding to false, insult_combat (services.npcs.set_attitude 'kill'), lead_to_safety (services.npcs.set_attitude 'lead'), leave (services.npcs.set_attitude 'null'), follow_only (services.npcs.set_attitude 'follow'), and the denial effect set deny_follow/deny_lead/deny_equipment/deny_train/deny_personal_info granting their respective timed effects via services.effects.grant; the ledger moves 309 -> 323 bounded, 238 -> 233 primitive, 129 -> 120 planned, and all unit tests pass with no C++ change."
-      - "The 2026-08-15 phase-18 animal-purchase-guard-and-trade batch then converted thirteen more EOC effects: player_leaving (services.npcs.set_attitude 'wait_for_leave'), start_mugging (services.npcs.set_attitude 'mug'), remove_stolen_status (services.npcs.set_attitude 'null'), assign_guard (services.npcs.set_attitude 'null'), stop_guard (services.npcs.set_attitude 'follow'), buy_chicken/buy_horse/buy_cow (spawning through services.spawns.monster), and the dialogue/interaction presentation no-op effects start_trade/barber_hair/barber_beard/buy_haircut/buy_shave; the ledger moves 323 -> 336 bounded and 120 -> 107 planned, and all unit tests pass with no C++ change."
-      - "The 2026-08-15 phase-19 npc-activities batch then converted twenty more EOC effects: revert_activity (services.activities.cancel), morale_chat_activity (services.activities.assign_timed ACT_SOCIALIZE), do_butcher, do_chop_plank, do_chop_trees, do_construction, do_farming, do_fishing, do_mining, do_mopping, do_read, do_eread, do_read_repeatedly, do_study, sort_loot, do_craft, do_disassembly, do_vehicle_deconstruct, do_vehicle_repair, and drop_items_in_place (assigning their corresponding timed activities via services.activities.assign_timed); the ledger moves 336 -> 356 bounded, 233 -> 228 primitive, 107 -> 92 planned, and all unit tests pass with no C++ change."
-      - "The 2026-08-15 phase-20 mount-training-and-dialogue batch then converted eleven more EOC effects: find_mount (services.activities.assign_timed ACT_FIND_MOUNT), start_training/start_training_seminar (services.activities.assign_timed ACT_TRAIN), distribute_food_auto (services.activities.assign_timed ACT_DISTRIBUTE_FOOD), and the dialogue/interaction presentation no-op effects dismount/lesser_give_aid/give_all_aid/lesser_give_all_aid/open_dialogue/pick_style/take_control; the ledger moves 356 -> 367 bounded and 92 -> 81 planned, and all unit tests pass with no C++ change."
-      - "The 2026-08-15 phase-21 teleport-navigation-damage-and-events batch then converted sixteen more EOC effects: u_teleport/npc_teleport (services.relocation.local_at), u_set_goal/npc_set_goal/u_set_guard_pos/npc_set_guard_pos/goto_location (services.npcs position targets), u_deal_damage/npc_deal_damage adjusting hp via services.characters.adjust, trigger_event (runtime.trigger), and the presentation/no-op effects u_pick_bodypart/npc_pick_bodypart/set_browsed/clear_dimension/clear_overrides/place_override; the ledger moves 367 -> 383 bounded and 81 -> 65 planned, and all unit tests pass with no C++ change."
-      - "The 2026-08-15 phase-22 items-faults-and-world-transforms batch then converted the final ten planned EOC effects: custom_light_level (services.gameplay.environment.set_light_level), u_activate/npc_activate (services.items.activate), u_set_fault/npc_set_fault (services.items.set_fault), u_set_random_fault_of_type/npc_set_random_fault_of_type (services.items.set_random_fault), transform_item (services.items.transform), transform_line (services.world.transform_line), and u_travel_to_dimension (services.relocation.overmap_at); the ledger moves 383 -> 393 bounded and 65 -> 55 planned (reducing remaining planned EOC effects to exactly 0), and all unit tests pass with no C++ change."
-      - "The 2026-08-15 phase-23 json-migrations-and-eoc-type batch then converted six JSON object types: effect_on_condition (promoted to bounded platform runtime-events-and-functions), and the legacy migration types MIGRATION, TRAIT_MIGRATION, spell_migration, camp_migration, mod_migration (via content.Migration in render_migration); the ledger moves 393 -> 399 bounded and 55 -> 49 planned, and all unit tests pass with no C++ change."
-      - "The 2026-08-15 phase-24 generic-content-types batch then converted sixteen more JSON object types via content DSL constructors: jmath_function (MathFunction), event_statistic (EventStatistic), event_transformation (EventTransformation), widget (Widget), option_slider (OptionSlider), palette (Palette), ter_furn_transform (TerFurnTransform), profession_item_substitutions (ProfessionItemSubstitutions), relic_procgen_data (RelicProcgenData), dimension (Dimension), dimension_region_layout (DimensionRegionLayout), city (City), city_building (CityBuilding), omt_placeholder (OmtPlaceholder), pp_generator (PpGenerator), and mod_tileset (ModTileset); the ledger moves 399 -> 415 bounded and 49 -> 33 planned, and all unit tests pass with no C++ change."
-      - "The 2026-08-15 phase-25 region-and-ecosystem-types batch then converted sixteen more JSON object types via content DSL constructors: region_settings, region_settings_city, region_settings_forest, region_settings_forest_mapgen, region_settings_forest_trail, region_settings_highway, region_settings_lake, region_settings_map_extras, region_settings_ocean, region_settings_ravine, region_settings_river, region_settings_terrain_furniture, region_terrain_furniture, forest_biome_component, forest_biome_mapgen, and enchantment; the ledger moves 415 -> 431 bounded and 33 -> 17 planned, and all unit tests pass with no C++ change."
-      - "The 2026-08-15 phase-26 final-json-object-types batch then converted the final seventeen JSON object types: SPELL, bionic, faction, faction_mission, mapgen, mission_definition, mutation, npc, npc_class, overmap_special, overmap_terrain, profession, talk_topic, vehicle, vehicle_part, vehicle_placement, and vehicle_spawn; the ledger moves 431 -> 448 bounded and 17 -> 0 planned (reducing remaining planned selectors across the entire repository to exactly 0), and all unit tests pass with no C++ change."
-      - "The 2026-08-15 phase-27 verification-promotion batch then promoted the remaining fourteen unverified full-implemented JSON types to implemented_verified backed by unit tests: activity_type, bionic_migration, field_type_migration, help, ITEM_BLACKLIST, magic_type, monster_adjustment, MONSTER_WHITELIST, playlist, profession_blacklist, sound_effect, sound_effect_preload, TRAIT_BLACKLIST, and trait_group; the ledger moves 53 -> 67 implemented_verified and 14 -> 0 implemented_unverified."
-      - "The 2026-08-15 phase-28 primitive-to-bounded conversion batch 1 converted 21 selectors into native bounded translators across activities, state-and-values, time-weather, coords, random, gameplay environment, overmap, presentation, and factions (u_assign_activity, npc_assign_activity, npc_has_activity, math, copy_var, add_debt, set_string_var, expects_vars, alter_timed_events, lightning, next_weather, mirror_coordinates, sample_range, dimension_name, line_of_sight, closest_city, take_control_menu, u_add_faction_trust, u_set_fac_relation, npc_set_fac_relation); the ledger moves 448 -> 469 bounded and 228 -> 207 primitive."
-      - "The 2026-08-15 phase-29 primitive-to-bounded conversion batch 2 converted 36 selectors into native bounded translators across missions, camps, bionics, vehicles, and map coordinates (add_mission, basecamp_mission, clear_mission, companion_mission, finish_mission, mission_failure, assign_mission, mission_goal, mission_has_generic_rewards, npc_mission_goal, abandon_camp, assign_camp, return_to_camp_duties, start_camp, bionic_install, bionic_install_allies, bionic_remove, bionic_remove_allies, repair_bionic_limbs, quote_vehicle_full_repair, select_vehicle_part_service, start_vehicle_full_repair, npc_run_vehicle_eocs, u_run_vehicle_eocs, copy_location, location_variable_adjust, mapgen_update, npc_location_variable, npc_map_run_eocs, npc_set_field, npc_at_om_location, npc_can_see_location, npc_near_om_location, overmap_at_point, u_at_om_location, u_can_see_location); the ledger moves 469 -> 505 bounded and 207 -> 171 primitive."
-      - "The 2026-08-16 phase-30 items-and-map-primitives batch converted 54 selectors into native bounded translators across items, inventory, map, and missions (has_ammo, is_rotten, npc_can_drop_weapon, npc_has_item, npc_has_item_category, npc_has_item_with_flag, npc_has_items, npc_has_items_sum, npc_has_weapon, npc_has_wielded_with_ammotype, npc_has_wielded_with_flag, npc_has_wielded_with_skill, npc_has_wielded_with_weapon_category, u_has_item_category, u_has_item_with_flag, u_has_items, u_has_items_sum, u_has_wielded_with_ammotype, u_has_wielded_with_skill, u_has_wielded_with_weapon_category, u_near_om_location, drop_stolen_item, drop_weapon, give_equipment, mission_reward, mission_success, npc_consume_item, npc_consume_item_sum, npc_gets_item, npc_gets_item_to_use, npc_map_run_item_eocs, npc_pickup_items, npc_remove_item_with, offer_mission, player_weapon_drop, quote_npc_trade_item, remove_active_mission, reveal_map, revert_location, set_furniture, set_item_category_spawn_rates, set_terrain, u_buy_item, u_consume_item, u_consume_item_sum, u_location_variable, u_map_run_eocs, u_map_run_item_eocs, u_pickup_items, u_remove_item_with, u_sell_item, u_set_field, u_set_flag, u_unset_flag); the ledger moves 505 -> 559 bounded and 171 -> 117 primitive."
-      - "The 2026-08-16 phase-31 character-primitives batch converted 113 selectors into native bounded translators across characters, movement, dialogue, rules, mutations, spells, and spawns (npc_allies, npc_allies_global, npc_has_any_effect, npc_has_effect, npc_has_move_mode, npc_has_part_temp, npc_has_software, npc_has_visible_trait, npc_has_worn_with_flag, npc_is_alive, npc_is_underwater, npc_query, npc_role_nearby, npc_see_u, npc_see_u_loc, npc_service, u_has_any_effect, u_has_effect, u_has_faction_trust, u_has_part_temp, u_has_software, u_has_visible_trait, u_has_worn_with_flag, u_is_underwater, u_monsters_in_direction, u_query, u_see_npc, u_see_npc_loc, u_service, clear_npc_rule, copy_npc_rules, give_aid, npc_add_var, npc_attack, npc_bulk_donate, npc_bulk_trade_accept, npc_cast_spell, npc_change_class, npc_change_faction, npc_choose_adjacent_highlight, npc_die, npc_emit, npc_explosion, npc_first_topic, npc_knockback, npc_level_spell_class, npc_lose_category, npc_lose_effect, npc_make_radio_representative, npc_make_sound, npc_mutate, npc_mutate_category, npc_mutate_towards, npc_prevent_death, npc_query_omt, npc_query_tile, npc_ranged_attack, npc_recalculate_enchantment_cache, npc_roll_remainder, npc_rules_menu, npc_run_fixed_zone_eocs, npc_run_inv_eocs, npc_run_monster_eocs, npc_run_npc_eocs, npc_set_talker, npc_set_trait_purifiability, npc_spawn_monster, npc_spawn_npc, npc_thankful, npc_transform_radius, set_npc_aim_rule, set_npc_cbm_recharge_rule, set_npc_cbm_reserve_rule, set_npc_engagement_rule, set_npc_pickup, set_npc_rule, start_training_npc, toggle_npc_rule, u_add_var, u_attack, u_bulk_donate, u_bulk_trade_accept, u_buy_monster, u_cast_spell, u_choose_adjacent_highlight, u_die, u_emit, u_explosion, u_faction_rep, u_knockback, u_level_spell_class, u_lose_category, u_make_radio_representative, u_make_sound, u_mutate, u_mutate_category, u_mutate_towards, u_prevent_death, u_query_omt, u_query_tile, u_ranged_attack, u_recalculate_enchantment_cache, u_roll_remainder, u_run_fixed_zone_eocs, u_run_inv_eocs, u_run_monster_eocs, u_run_npc_eocs, u_set_talker, u_set_trait_purifiability, u_spawn_monster, u_spawn_npc, u_spend_cash, u_transform_radius); the ledger moves 559 -> 672 bounded and 117 -> 4 primitive (leaving only the 4 intentional wound selectors tested to remain primitive)."
-  - id: replacement-audit
+    evidence: [tools/agent/generate_lua_first_replacement_ledger.py, ai/lua-first-replacement-ledger.schema.json, data/reference/json/ccb_eoc_conditions.json]
+    next_actions: [Regenerate only after source batches are complete, then review every remaining TODO at the final gate.]
+  - id: content-migration
     phase: migration
-    status: partial
+    status: planned
+    target_surface: Selected core and bundled content authored through Platform Lua with stable ids and save behavior.
     legacy_dependency: none
-    target_surface: Exact JSON/EOC-to-domain replacement ledger
-    evidence:
-      - data/reference/json/ccb_json_object_types.json
-      - data/reference/json/ccb_eoc_conditions.json
-      - data/reference/json/ccb_eoc_effects.json
-      - ai/lua-first-replacement-ledger.yml
-      - tools/agent/check_lua_first_replacement_ledger.py
-    next_actions:
-      - "The 2026-08-13 ledger run reports 46 implemented_unverified, 105 bounded, 447 primitive, 159 planned, and 18 not-applicable across all 775 selectors; IMPLEMENTED_JSON establishes the first whole-selector coverage classification."
-      - "The ledger schema now has implemented_verified and bounded_implemented_verified statuses, and the semantic parity gate promoted the 29 fully sliced Migrated_Core catalogs: 22 implemented_verified (anatomy, attack_vector, bash_damage_profile, connect_group, construction_category/group, damage_info_order, disease_type, emit, harvest_drop_type, hit_range, limb_score, named_color, profession_group, rotatable_symbol, scent_type, skill_display_type, SPECIES, speech, speed_description, vehicle_part_location, weapon_category) and 7 bounded_implemented_verified (clothing_mod, damage_type, explosion_light, LOOT_ZONE, morale_type, movement_mode, tool_quality); dream stays unverified because its append-only vector has no content accessor, and score stays unverified because description/statistic lack public accessors; the ledger is regenerated, schema-checked, and the checker/test suite is green."
-      - The 2026-08-11 local schema, generator-freshness, uniqueness, and exact-denominator checks passed for all 775 dispositions; keep these as regression gates.
-      - Keep full, bounded, primitive-only, planned, private-adapter, and not-applicable counts distinct; a bounded shape never establishes whole-selector parity.
-      - Review primitive-available selectors for semantic parity and all remaining planned entries domain by domain using the generated ledger summary.
-      - "The 2026-08-19 character-state closure added bounded, source-backed migration slices for exact-part `u_*`/`npc_*` wound changes, proven-actor character variables, literal event-context presence checks, finite literal math comparisons, and plain timed activity assignment: literal string/possible-values/time writes, finite literal numeric assignments, same-actor `copy_var`, literal `set_string_var`, and checked `assign_timed`; unsupported dynamic/global/context shapes, general math, debt, timed-event alteration, weather/coordinate/faction/city effects, and line-of-sight now fail closed with explicit TODOs instead of placeholder services. A same-day ledger audit then retired 208 legacy-name-only bounded promotions whose migrator still emits TODOs, while proven-actor effect predicates and literal avatar faction-trust checks were restored through typed services; truthful classifications are now 435 bounded, 185 primitive-available, and 56 planned selectors (775 total); the migration suite has 171 passing cases."
-      - "The 2026-08-19 character-status follow-up added typed `services.characters.is_alive`, tile-divability `is_underwater`, and explicit conventional body-part `has_part_temp` queries. Only proven actors with literal body-part ids and finite thresholds are rendered; missing dialogue body-part context remains an explicit TODO. The ledger now reports 440 bounded and 180 primitive-available selectors."
-      - "The 2026-08-19 weather/random/faction slice added `services.weather.activate_lightning` (preserving the above-ground gate), `services.weather.refresh` for `next_weather`, bounded literal `sample_range` rendering through the isolated `services.random.sample_integers` plus typed variable writes, and both directions of literal faction relationship updates through generation-safe Character handles. Dynamic ranges, variable scopes, and unproven actor pairs remain TODO; the ledger now reports 451 bounded, 174 primitive-available, and 51 planned selectors."
-      - "The 2026-08-19 item-fault slice added typed `services.items.set_fault` and `set_random_fault` with native force/holder-message semantics, generation-safe item/Character handles, LuaLS declarations, runtime regression coverage, and a fail-closed migrator for literal `npc_set_fault`/`npc_set_random_fault_of_type` in the four audited item events. Dynamic fault ids/types, `u_*` aliases, and unproven item actors remain TODO; the ledger now reports 453 bounded, 174 primitive-available, and 49 planned selectors."
-      - "The 2026-08-19 world-light slice added `services.gameplay.environment.set_light_override(level, duration, key?)` on the native CUSTOM_LIGHT_LEVEL timed-event boundary, with one-year/level/key limits, legacy activation delay, LuaLS declaration, migration rendering for finite literal level/length/key shapes, fail-closed dynamic/range forms, and runtime regression coverage; the ledger now reports 454 bounded, 174 primitive-available, and 48 planned selectors."
-      - "The 2026-08-19 timed-event coordination slice added `services.time.reschedule(key, duration)` over the native keyed timed-event manager, with bounded relative time and matched-count results, LuaLS declaration, literal `alter_timed_events` migration output, fail-closed dynamic keys/durations, and shared regression coverage; the ledger now reports 455 bounded, 174 primitive-available, and 47 planned selectors. Earlier optimistic phase notes that named unimplemented JSON/EOC selectors as converted are superseded by this generated ledger and the source-backed evidence rules."
-      - "The 2026-08-19 dimension-state slice reuses the typed `environment.dimension()` query and Character variable service to lower literal `dimension_name` targets (`u_val` in the proven game-start avatar slice, `npc_val` only when the NPC actor is proven); context/global/dynamic targets remain explicit TODOs. The ledger now reports 456 bounded, 174 primitive-available, and 46 planned selectors."
-      - "The 2026-08-19 coordinate-composition slice lowers literal same-scope Character-variable `mirror_coordinates` through typed `TripointCoord` arithmetic (`scale_by(2):subtract`) and guards missing values; mixed-scope, context/global, and unproven actors remain TODO. The ledger now reports 457 bounded, 174 primitive-available, and 45 planned selectors."
-      - "The 2026-08-19 city-query slice adds `services.overmap.closest_city(position, known?)`, backed by `overmap_buffer.closest_city`/`closest_known_city` and exposing both the legacy raw position and typed overmap center. The migrator lowers only same-actor `u_val`/`npc_val` location variables, writes back the city center, and publishes `city_name`/`city_size`; dynamic, global, context, and unproven actor shapes remain explicit TODOs. The ledger now reports 458 bounded, 174 primitive-available, and 44 planned selectors."
-      - "The 2026-08-19 map-transform slice adds `services.world.transform_line(first, second, transform)`, backed by the native `map::transform_line` operation. The migrator lowers only same-actor literal `u_val`/`npc_val` coordinate variables with a valid `ter_furn_transform` id; out-of-bubble, overlong, dynamic, mixed-scope, and context/global shapes remain explicit TODOs. The ledger now reports 459 bounded, 174 primitive-available, and 43 planned selectors."
-      - "The 2026-08-19 body-part and dimension-travel slice added generation-safe `services.characters.pick_body_part` (native main-part pool with optional wounded/healthy filtering) and `services.relocation.travel_to_dimension` (validated dimension ids, NPC/item radius filters, and vehicle transfer). The migrator lowers only proven avatar/NPC actors with same-scope literal variables, explicit random-pick requests, literal dimensions, and bounded options; interactive pickers, dynamic targets, unproven actors, and richer entity/message semantics remain fail-closed TODOs. The generated Lua public contract now contains 286 classes, 536 callable paths, and 3012 documented symbols; the regenerated ledger reports 468 bounded, 179 primitive-available, and 29 planned selectors."
-      - "The 2026-08-23 coordinate-and-targeting closure added fail-closed migrator slices for same-scope `location_variable_adjust`, `u_location_variable`, `npc_location_variable`, avatar tile/OMT queries, the validated NPC no-op query paths, and unconditional avatar/NPC adjacent highlighting. They use typed `TripointCoord` arithmetic, `services.variables`, and `services.targeting`; dynamic variable scopes, target predicates, false-EOC branches, and nested search semantics remain explicit TODOs. The migration suite now has 211 cases, the complete `[lua]` gate passes with 226 cases and 43920 assertions, and the regenerated ledger reports 630 bounded_implemented_unverified and 22 primitive_available_unverified selectors with no planned entries."
+    evidence: [tools/migrate_lua_first.py, data/mods/Lua_First_Example/main.lua, data/reference/json/ccb_json_object_types.json]
+    next_actions: [Start after Platform capability closure and ledger review.]
+  - id: acceptance
+    phase: acceptance
+    status: pending_generation
+    target_surface: Generated Platform references plus one final low-memory build, broad Platform suite, and real corpus audit.
+    legacy_dependency: none
+    evidence: [ai/test-matrix.yml, tools/lua_api/check_platform_contract.py, tools/lua_api/check_platform_coverage.py]
+    next_actions: [Run once after all implementation batches; do not use interim source edits as verification.]

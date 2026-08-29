@@ -35,7 +35,7 @@
 #include "talker.h"
 #include "translations.h"
 #include "units.h"
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 
 const static flag_id json_flag_W_DISABLED_BY_DEFAULT( "W_DISABLED_BY_DEFAULT" );
 const static flag_id json_flag_W_DISABLED_WHEN_EMPTY( "W_DISABLED_WHEN_EMPTY" );
@@ -146,7 +146,7 @@ std::string trim_hud_trailing_spaces( const std::string_view line )
 }
 } // namespace
 
-generic_factory<widget> &cata::lua::detail::widget_registry()
+generic_factory<widget> &cata::lua_platform::detail::widget_registry()
 {
     return widget_factory;
 }

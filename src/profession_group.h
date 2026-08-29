@@ -12,7 +12,7 @@ class JsonObject;
 template<typename T>
 class generic_factory;
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
 }
@@ -32,7 +32,7 @@ struct profession_group {
 
     private:
         friend class generic_factory<profession_group>;
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
         std::vector<profession_id> profession_list;
 
 };

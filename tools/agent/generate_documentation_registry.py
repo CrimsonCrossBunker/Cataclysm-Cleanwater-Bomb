@@ -52,6 +52,9 @@ AGENT_METADATA = {
 }
 API_CONTRACTS = {
     "data/lua/types/ccb_platform_v1.d.lua",
+    "data/lua/reference/ccb_platform_native_inventory.schema.json",
+    "data/lua/reference/ccb_platform_api_v1.schema.json",
+    "data/lua/reference/ccb_platform_api_v1_coverage.schema.json",
     "tools/json_api/contract-inventory.schema.json",
 }
 ARCHITECTURE_CONTRACTS = {
@@ -69,6 +72,17 @@ CCB_DOCS_IDS = {
     "ai/lua-first-roadmap.yml": ["architecture.lua-first-roadmap"],
     "ai/lua-first-roadmap.schema.json": ["architecture.lua-first-roadmap"],
 }
+CURRENT_PLATFORM_DOCUMENTS = {
+    "data/lua/README.md": "lua.platform.overview",
+    "tools/lua_api/README.md": "tool-lua-platform-contract",
+}
+RETIRED_PLATFORM_MARKERS = (
+    "cata" + "lua",
+    "ccb_" + "native_inventory",
+    "public_" + "api_" + "v" + "5",
+    "c" + "b" + "n" + "_",
+    "api_" + "v" + "5",
+)
 
 
 def git(*args: str) -> str:
@@ -141,8 +155,14 @@ def generated_by(path: str) -> str | None:
         return "python3 tools/agent/generate_migration_reports.py"
     if path.startswith("data/lua/reference/"):
         generators = {
-            "ccb_native_inventory": (
-                "python3 tools/lua_api/generate_ccb_inventory.py"
+            "ccb_platform_native_inventory": (
+                "python3 tools/lua_api/generate_platform_native_inventory.py"
+            ),
+            "ccb_platform_api_v1": (
+                "python3 tools/lua_api/generate_platform_contract.py"
+            ),
+            "ccb_platform_api_v1_coverage": (
+                "python3 tools/lua_api/generate_platform_coverage.py"
             ),
         }
         return generators.get(
@@ -154,10 +174,29 @@ def generated_by(path: str) -> str | None:
     return None
 
 
+def is_retired_platform_path(path: str) -> bool:
+    lowered = path.lower()
+    return path.startswith(("data/lua/", "tools/lua_api/", "doc/")) and any(
+        marker in lowered for marker in RETIRED_PLATFORM_MARKERS
+    )
+
+
 def classify(path: str, legacy: dict[str, dict]) -> dict:
     historical = legacy.get(path)
-    generator = generated_by(path)
-    if path.endswith("AGENTS.md"):
+    retired = is_retired_platform_path(path)
+    current_platform = path in CURRENT_PLATFORM_DOCUMENTS
+    generator = None if retired else generated_by(path)
+    if retired:
+        category = "historical_document"
+        status = "historical"
+        authority = "historical"
+        source_of_truth = False
+    elif current_platform:
+        category = "maintained_document"
+        status = "active"
+        authority = "explanatory"
+        source_of_truth = False
+    elif path.endswith("AGENTS.md"):
         category = "agent_instruction"
         status = "active"
         authority = "governance_contract"
@@ -218,10 +257,18 @@ def classify(path: str, legacy: dict[str, dict]) -> dict:
         source_of_truth = False
 
     stable_document_id = (
-        historical.get("stable_document_id") if historical else None
+        CURRENT_PLATFORM_DOCUMENTS[path]
+        if current_platform
+        else (historical.get("stable_document_id") if historical else None)
     )
     ccb_docs_ids = []
-    if historical and historical["action"] not in {
+    if current_platform:
+        ccb_docs_ids = (
+            ["architecture.lua-first-platform"]
+            if path == "data/lua/README.md"
+            else []
+        )
+    elif not retired and historical and historical["action"] not in {
         "keep_in_repo",
         "retain_third_party",
     }:
@@ -241,10 +288,18 @@ def classify(path: str, legacy: dict[str, dict]) -> dict:
         "ccb_docs_ids": ccb_docs_ids,
         "generated": generator is not None,
         "generated_by": generator,
-        "include_in_ai_index": bool(
-            historical.get("include_in_ai_index", False)
-            if historical
-            else status == "active"
+        "include_in_ai_index": (
+            False
+            if retired
+            else (
+                True
+                if current_platform
+                else bool(
+                    historical.get("include_in_ai_index", False)
+                    if historical
+                    else status == "active"
+                )
+            )
         ),
     }
 

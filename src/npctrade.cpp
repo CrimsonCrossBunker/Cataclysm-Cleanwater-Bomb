@@ -209,11 +209,11 @@ int _trading_price( Character const &buyer, Character const &seller, item_locati
                     int amount )
 {
     if( seller.is_npc() ) {
-        if( !seller.as_npc()->wants_to_sell( it, 1 ).success() ) {
+        if( !seller.as_npc()->wants_to_sell( it, 1, buyer ).success() ) {
             return 0;
         }
     } else if( buyer.is_npc() ) {
-        if( !buyer.as_npc()->wants_to_buy( *it, 1 ).success() ) {
+        if( !buyer.as_npc()->wants_to_buy( *it, 1, seller ).success() ) {
             return 0;
         }
     }

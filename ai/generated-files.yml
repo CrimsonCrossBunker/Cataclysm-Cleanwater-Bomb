@@ -52,10 +52,20 @@ entries:
     tracked: false
     generated_by: make style-json or formatter target
     validation_id: json-load
-  - id: ccb-native-inventory
-    paths: [data/lua/reference/ccb_native_inventory.json]
+  - id: lua-platform-native-inventory
+    paths: [data/lua/reference/ccb_platform_native_inventory.json]
     tracked: true
-    generated_by: python3 tools/lua_api/generate_ccb_inventory.py
+    generated_by: python3 tools/lua_api/generate_platform_native_inventory.py
+    validation_id: lua-contract
+  - id: lua-platform-public-contract
+    paths: [data/lua/reference/ccb_platform_api_v1.json]
+    tracked: true
+    generated_by: python3 tools/lua_api/generate_platform_contract.py
+    validation_id: lua-contract
+  - id: lua-platform-synchronization-coverage
+    paths: [data/lua/reference/ccb_platform_api_v1_coverage.json]
+    tracked: true
+    generated_by: python3 tools/lua_api/generate_platform_coverage.py
     validation_id: lua-contract
   - id: json-eoc-contract-inventories
     paths:

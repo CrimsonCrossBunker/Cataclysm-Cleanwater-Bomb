@@ -5,6 +5,7 @@
 #include <array>
 #include <bitset>
 #include <cstddef>
+#include <cstdint>
 #include <list>
 #include <memory>
 #include <unordered_map>
@@ -35,6 +36,12 @@ class creature_tracker
          * Dead monsters are ignored and not returned.
          */
         shared_ptr_fast<monster> find( const tripoint_abs_ms &pos ) const;
+
+        /**
+         * Returns the loaded, live monster with the given UID.
+         * If there is no such monster, or the UID is invalid, returns nullptr.
+         */
+        shared_ptr_fast<monster> find_by_uid( int64_t uid ) const;
 
         /**
          * Returns the reachable creature matching the given predicate.

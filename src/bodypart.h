@@ -34,10 +34,10 @@ struct localized_comparator;
 template <typename E> struct enum_traits;
 template <typename T> class generic_factory;
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
-} // namespace cata::lua
+} // namespace cata::lua_platform
 
 using bodypart_id = int_id<body_part_type>;
 
@@ -143,7 +143,7 @@ struct limb_score {
         bool was_loaded = false;
         friend class generic_factory<limb_score>;
         friend struct mod_tracker;
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
 };
 
 struct bp_limb_score {
@@ -201,7 +201,7 @@ struct bp_qualities_provided {
 };
 
 struct body_part_type {
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
     public:
         /**
          * the different types of body parts there are.

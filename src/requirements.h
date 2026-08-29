@@ -29,10 +29,10 @@ class nc_color;
 class read_only_visitable;
 template <typename E> struct enum_traits;
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
-} // namespace cata::lua
+} // namespace cata::lua_platform
 
 enum class available_status : int {
     a_true = +1, // yes, it's available
@@ -217,7 +217,7 @@ struct requirement_data {
         // @see vpart_info::check
         // TODO: remove once all parts specify installation requirements directly
         friend class vpart_info;
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
 
         using alter_tool_comp_vector = std::vector<std::vector<tool_comp> >;
         using alter_quali_req_vector = std::vector<std::vector<quality_requirement> >;

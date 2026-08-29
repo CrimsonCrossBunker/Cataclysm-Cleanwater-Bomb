@@ -10,7 +10,7 @@
 
 #include "cached_options.h"
 #include "calendar.h"
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "cata_utility.h"
 #include "color.h"
 #include "condition.h"
@@ -57,22 +57,22 @@ namespace
 generic_factory<mon_flag> mon_flags( "monster flags" );
 } // namespace
 
-generic_factory<mon_flag> &cata::lua::detail::monster_flag_registry()
+generic_factory<mon_flag> &cata::lua_platform::detail::monster_flag_registry()
 {
     return mon_flags;
 }
 
-generic_factory<species_type> &cata::lua::detail::species_registry()
+generic_factory<species_type> &cata::lua_platform::detail::species_registry()
 {
     return *MonsterGenerator::generator().mon_species;
 }
 
-generic_factory<mtype> &cata::lua::detail::monster_type_registry()
+generic_factory<mtype> &cata::lua_platform::detail::monster_type_registry()
 {
     return *MonsterGenerator::generator().mon_templates;
 }
 
-const mtype_special_attack *cata::lua::detail::monster_attack_registry_find(
+const mtype_special_attack *cata::lua_platform::detail::monster_attack_registry_find(
     const std::string &id )
 {
     const auto &attacks = MonsterGenerator::generator().attack_map;
@@ -80,13 +80,13 @@ const mtype_special_attack *cata::lua::detail::monster_attack_registry_find(
     return found == attacks.end() ? nullptr : &found->second;
 }
 
-void cata::lua::detail::monster_attack_registry_set(
+void cata::lua_platform::detail::monster_attack_registry_set(
     const mtype_special_attack &value )
 {
     MonsterGenerator::generator().attack_map.insert_or_assign( value->id, value );
 }
 
-void cata::lua::detail::monster_attack_registry_erase( const std::string &id )
+void cata::lua_platform::detail::monster_attack_registry_erase( const std::string &id )
 {
     MonsterGenerator::generator().attack_map.erase( id );
 }
@@ -375,7 +375,7 @@ void load_monster_adjustment( const JsonObject &jsobj )
     adjustments.push_back( adj );
 }
 
-void cata::lua::detail::append_platform_monster_adjustment(
+void cata::lua_platform::detail::append_platform_monster_adjustment(
     const std::string &species, const std::string &stat,
     const double stat_adjust, const std::string &flag,
     const bool flag_val, const std::string &special )
@@ -390,12 +390,12 @@ void cata::lua::detail::append_platform_monster_adjustment(
     adjustments.push_back( adj );
 }
 
-std::size_t cata::lua::detail::platform_monster_adjustment_count()
+std::size_t cata::lua_platform::detail::platform_monster_adjustment_count()
 {
     return adjustments.size();
 }
 
-void cata::lua::detail::truncate_platform_monster_adjustments(
+void cata::lua_platform::detail::truncate_platform_monster_adjustments(
     const std::size_t count )
 {
     if( count <= adjustments.size() ) {

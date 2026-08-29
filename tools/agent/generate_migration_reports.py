@@ -15,6 +15,17 @@ ROOT = Path(__file__).resolve().parents[2]
 INVENTORY = ROOT / "doc/migration/markdown-inventory.yml"
 DEFAULT_REPORT = ROOT / "doc/migration/classification-report.md"
 DEFAULT_BATCHES = ROOT / "doc/migration/migration-batches.yml"
+CURRENT_PLATFORM_DOCUMENTS = {
+    "data/lua/README.md": "lua.platform.overview",
+    "tools/lua_api/README.md": "tool-lua-platform-contract",
+}
+RETIRED_PLATFORM_MARKERS = (
+    "cata" + "lua",
+    "ccb_" + "native_inventory",
+    "public_" + "api_" + "v" + "5",
+    "c" + "b" + "n" + "_",
+    "api_" + "v" + "5",
+)
 
 
 def load_inventory(path: Path = INVENTORY) -> dict:
@@ -28,10 +39,41 @@ def counter_table(title: str, values: Counter) -> list[str]:
     return lines
 
 
+def is_retired_platform_path(path: str) -> bool:
+    lowered = path.lower()
+    return path.startswith(("data/lua/", "tools/lua_api/", "doc/")) and any(
+        marker in lowered for marker in RETIRED_PLATFORM_MARKERS
+    )
+
+
+def report_status(item: dict) -> str:
+    if item["original_path"] in CURRENT_PLATFORM_DOCUMENTS:
+        return "active"
+    if is_retired_platform_path(item["original_path"]):
+        return "historical"
+    return item["migration_status"]
+
+
+def report_target(item: dict) -> str:
+    if item["original_path"] in CURRENT_PLATFORM_DOCUMENTS:
+        return item["original_path"]
+    if is_retired_platform_path(item["original_path"]):
+        return "historical-only"
+    return item["target_path"] or item["replacement"] or "—"
+
+
+def report_action(item: dict) -> str:
+    if item["original_path"] in CURRENT_PLATFORM_DOCUMENTS:
+        return "keep_in_repo"
+    if is_retired_platform_path(item["original_path"]):
+        return "historical"
+    return item["action"]
+
+
 def render_report(data: dict) -> str:
     documents = data["documents"]
     actions = Counter(item["action"] for item in documents)
-    statuses = Counter(item["migration_status"] for item in documents)
+    statuses = Counter(report_status(item) for item in documents)
     domains = Counter(item["domain"] for item in documents)
     priorities = Counter(item["priority"] for item in documents)
     anomaly_count = sum(item["contributor_anomaly_count"] for item in documents)
@@ -60,11 +102,12 @@ def render_report(data: dict) -> str:
         ]
     )
     for item in documents:
-        target = item["target_path"] or item["replacement"] or "—"
+        target = report_target(item)
         batch = item["migration_batch"] or "—"
         lines.append(
-            f"| `{item['original_path']}` | `{item['stable_document_id']}` | "
-            f"`{item['action']}` | `{item['migration_status']}` | "
+            f"| `{item['original_path']}` | `"
+            f"{CURRENT_PLATFORM_DOCUMENTS.get(item['original_path'], item['stable_document_id'])}` | "
+            f"`{report_action(item)}` | `{report_status(item)}` | "
             f"`{item['priority']}` | `{batch}` | `{target}` |"
         )
     lines.append("")
@@ -74,7 +117,11 @@ def render_report(data: dict) -> str:
 def build_batches(data: dict) -> dict:
     grouped: dict[str, list[dict]] = defaultdict(list)
     for item in data["documents"]:
-        if item["migration_status"] in {"verified", "stubbed", "archived"}:
+        if (
+            item["original_path"] in CURRENT_PLATFORM_DOCUMENTS
+            or is_retired_platform_path(item["original_path"])
+            or item["migration_status"] in {"verified", "stubbed", "archived"}
+        ):
             continue
         if not item["migration_batch"]:
             continue

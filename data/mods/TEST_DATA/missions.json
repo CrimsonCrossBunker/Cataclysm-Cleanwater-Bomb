@@ -29,6 +29,19 @@
     "origins": [  ]
   },
   {
+    "id": "TEST_MISSION_GENERIC_REWARD",
+    "type": "mission_definition",
+    "copy-from": "TEST_MISSION_GOAL_CONDITION1",
+    "value": 125,
+    "has_generic_rewards": true
+  },
+  {
+    "id": "TEST_MISSION_NO_GENERIC_REWARD",
+    "type": "mission_definition",
+    "copy-from": "TEST_MISSION_GENERIC_REWARD",
+    "has_generic_rewards": false
+  },
+  {
     "id": "TEST_MISSION_FIND_ITEM_GIVER",
     "type": "mission_definition",
     "name": { "str": "Test mission item giver" },

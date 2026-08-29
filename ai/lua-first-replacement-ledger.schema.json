@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://crimsoncrossbunker.github.io/schemas/lua-first-replacement-ledger-v1.json",
+  "$id": "https://crimsoncrossbunker.github.io/schemas/lua-first-replacement-ledger-v2.json",
   "title": "CCB Lua-first replacement ledger",
   "type": "object",
   "additionalProperties": false,
   "required": ["$schema", "schema_version", "kind", "contract", "sources", "summary", "entries"],
   "properties": {
     "$schema": { "const": "lua-first-replacement-ledger.schema.json" },
-    "schema_version": { "const": 1 },
+    "schema_version": { "const": 2 },
     "kind": { "const": "lua_first_replacement_ledger" },
     "contract": { "type": "string", "minLength": 1 },
     "sources": {
@@ -49,7 +49,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["inventory", "selector", "target_kind", "target", "status", "legacy_dependency", "evidence"],
+        "required": ["inventory", "selector", "target_kind", "target", "status", "legacy_dependency", "evidence", "verification"],
         "properties": {
           "inventory": { "enum": ["json-object-types", "eoc-conditions", "eoc-effects"] },
           "selector": { "type": "string", "minLength": 1 },
@@ -57,8 +57,41 @@
           "target": { "type": "string", "minLength": 1 },
           "status": { "enum": ["implemented_verified", "implemented_unverified", "bounded_implemented_verified", "bounded_implemented_unverified", "primitive_available_unverified", "planned", "private_adapter", "reviewed_not_applicable"] },
           "legacy_dependency": { "enum": ["none", "private_adapter", "public_legacy"] },
-          "evidence": { "type": "array", "items": { "type": "string" } }
-        }
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "not": {
+                "pattern": "(c[a]talua|ccb_[n]ative_inventory|generate_[c]cb_inventory|check_[c]cb_inventory|public_[a]pi_v5|c[b]n_)"
+              }
+            },
+            "uniqueItems": true
+          },
+          "verification": { "enum": ["not_run", "source_only", "final_semantic_gate"] }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "enum": ["implemented_verified", "bounded_implemented_verified"]
+                }
+              }
+            },
+            "then": { "properties": { "verification": { "const": "final_semantic_gate" } } }
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "enum": ["implemented_unverified", "bounded_implemented_unverified", "primitive_available_unverified"]
+                }
+              }
+            },
+            "then": { "properties": { "verification": { "const": "source_only" } } }
+          }
+        ]
       }
     }
   }

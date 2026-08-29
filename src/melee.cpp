@@ -23,8 +23,8 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "catalua_runtime.h"
-#include "catalua_hook.h"
+#include "lua_platform_runtime.h"
+#include "lua_platform_hooks.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
@@ -982,7 +982,7 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
         dealt_projectile_attack dp = dealt_projectile_attack();
         t.as_character()->on_hit( &here, this, bodypart_str_id::NULL_ID().id(), 0.0f, &dp );
     }
-    cata::lua::dispatch_native_hook(
+    cata::lua_platform::dispatch_native_hook(
     "on_creature_melee_attacked", {
         { "attacker", static_cast<const Character *>( this ) },
         { "target", static_cast<const Creature *>( &t ) },
@@ -1850,7 +1850,7 @@ void Character::perform_technique( const ma_technique &technique, Creature &t,
             eoc->activate_activation_only( d, "a technique activation", "technique being activated",
                                            "technique" );
         }
-        cata::lua::invoke_technique_application_handler(
+        cata::lua_platform::invoke_technique_application_handler(
             technique.id.str(), technique.lua_platform_mod,
             technique.lua_platform_apply_handler, *this, t, i + 1, rep,
             di.total_damage(), cur_weapon ? cur_weapon.get_item()->typeId().str() : std::string() );
@@ -2010,12 +2010,12 @@ void Character::perform_technique( const ma_technique &technique, Creature &t,
         moves = temp_moves;
         set_stamina( temp_stamina );
     }
-    cata::lua::dispatch_native_hook(
+    cata::lua_platform::dispatch_native_hook(
     "on_creature_performed_technique", {
         { "creature", static_cast<const Character *>( this ) },
         { "target", static_cast<const Creature *>( &t ) },
         {
-            "technique", cata::lua::native_callback_id {
+            "technique", cata::lua_platform::native_callback_id {
                 "martial_art_technique", technique.id.str()
             }
         },
@@ -2293,7 +2293,7 @@ bool Character::block_hit( Creature *source, bodypart_id &bp_hit, damage_instanc
 
     // fire martial arts block-triggered effects
     martial_arts_data->ma_onblock_effects( *this );
-    cata::lua::dispatch_native_hook(
+    cata::lua_platform::dispatch_native_hook(
     "on_creature_blocked", {
         { "creature", static_cast<const Character *>( this ) },
         { "source", static_cast<const Creature *>( source ) },

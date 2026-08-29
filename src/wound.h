@@ -18,10 +18,10 @@
 class JsonObject;
 class JsonOut;
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
-} // namespace cata::lua
+} // namespace cata::lua_platform
 
 enum class bp_type;
 
@@ -83,7 +83,7 @@ class wound_type
         // list of wounds this wound can lead to
         std::vector<wound_progress> wound_progression;
     private:
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
 
         translation name_;
         translation description_;
@@ -187,7 +187,7 @@ class wound_fix
     private:
 
         friend class wound;
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
         std::vector<std::pair<requirement_id, int>> requirement_refs;
         cata::value_ptr<requirement_data> requirements = cata::make_value<requirement_data>();
 };

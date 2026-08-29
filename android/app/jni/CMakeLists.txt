@@ -75,20 +75,20 @@ option(CCB_ANDROID_NEW_UI
 option(CATA_ENABLE_LUA_PLATFORM "Enable the Lua-first Platform runtime" ON)
 
 set(
-  CATALUA_PLATFORM_ENABLED_SOURCES
-  ${CATA_REPO_ROOT}/src/catalua_ui.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_game.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_registry.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_services.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_state.cpp
-  ${CATA_REPO_ROOT}/src/catalua_ui_values.cpp)
+  LUA_PLATFORM_ENABLED_SOURCES
+  ${CATA_REPO_ROOT}/src/lua_platform_mapgen_dispatch.cpp
+  ${CATA_REPO_ROOT}/src/lua_platform_snapshots.cpp
+  ${CATA_REPO_ROOT}/src/lua_platform_registry.cpp
+  ${CATA_REPO_ROOT}/src/lua_platform_services.cpp
+  ${CATA_REPO_ROOT}/src/lua_platform_state.cpp
+  ${CATA_REPO_ROOT}/src/lua_platform_values.cpp)
 if(CATA_ENABLE_LUA_PLATFORM)
   add_subdirectory(${CATA_REPO_ROOT}/src/lua lua)
   add_subdirectory(${CATA_REPO_ROOT}/src/sol sol)
   list(REMOVE_ITEM CATA_SOURCES
-       ${CATA_REPO_ROOT}/src/catalua_ui_disabled.cpp)
+       ${CATA_REPO_ROOT}/src/lua_platform_disabled.cpp)
 else()
-  list(REMOVE_ITEM CATA_SOURCES ${CATALUA_PLATFORM_ENABLED_SOURCES})
+  list(REMOVE_ITEM CATA_SOURCES ${LUA_PLATFORM_ENABLED_SOURCES})
 endif()
 
 add_library(main SHARED ${CATA_SOURCES})

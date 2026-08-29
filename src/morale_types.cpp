@@ -1,6 +1,6 @@
 #include "morale_types.h"
 
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "generic_factory.h"
 #include "itype.h"
 #include "string_formatter.h"
@@ -12,7 +12,7 @@ generic_factory<morale_type_data> morale_data( "morale type" );
 
 } // namespace
 
-generic_factory<morale_type_data> &cata::lua::detail::morale_type_registry()
+generic_factory<morale_type_data> &cata::lua_platform::detail::morale_type_registry()
 {
     return morale_data;
 }

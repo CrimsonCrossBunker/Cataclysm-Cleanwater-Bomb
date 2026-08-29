@@ -14,10 +14,10 @@
 #include "coords_fwd.h"
 #include "flat_set.h"
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
-} // namespace cata::lua
+} // namespace cata::lua_platform
 #include "magic.h"
 #include "translation.h"
 #include "type_id.h"
@@ -124,7 +124,7 @@ struct trap {
 
         int sym = 0;
         nc_color color;
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
     private:
         /**
          * How easy it is to spot the trap. Smaller values means it's easier to spot.

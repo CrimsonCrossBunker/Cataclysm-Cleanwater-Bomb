@@ -23,7 +23,7 @@ class item;
 template<typename T>
 class generic_factory;
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
 }
@@ -47,7 +47,7 @@ class profession
         using itypedecvec = std::vector<itypedec>;
         friend class string_id<profession>;
         friend class generic_factory<profession>;
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
         friend struct mod_tracker;
 
     private:

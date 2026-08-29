@@ -24,8 +24,8 @@
 #include "calendar.h"
 #include "cata_assert.h"
 #include "cata_utility.h"
-#include "catalua_runtime.h"
-#include "catalua_hook.h"
+#include "lua_platform_runtime.h"
+#include "lua_platform_hooks.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_id.h"
@@ -2600,10 +2600,10 @@ void Character::complete_craft( item &craft, const std::optional<tripoint_bub_ms
                 craft_result.set_random_fault_of_type( "crafting_defect" );
             }
         }
-        if( cata::lua::has_native_hook(
+        if( cata::lua_platform::has_native_hook(
                 "on_craft_result" ) ) {
             for( item &craft_result : newits ) {
-                cata::lua::dispatch_native_hook(
+                cata::lua_platform::dispatch_native_hook(
                 "on_craft_result", {
                     {
                         "character",
@@ -2611,7 +2611,7 @@ void Character::complete_craft( item &craft, const std::optional<tripoint_bub_ms
                     },
                     {
                         "recipe",
-                        cata::lua::native_callback_id {
+                        cata::lua_platform::native_callback_id {
                             "recipe", making.ident().str()
                         }
                     },
@@ -2690,7 +2690,7 @@ void Character::complete_craft( item &craft, const std::optional<tripoint_bub_ms
             eoc->activate_activation_only( d, "a recipe", "crafting", "recipe" );
         }
     }
-    cata::lua::invoke_recipe_completion_handler(
+    cata::lua_platform::invoke_recipe_completion_handler(
         making.ident().str(), making.lua_platform_mod,
         making.lua_platform_result_handler, *this, batch_size );
 }

@@ -6,7 +6,7 @@
 #include <string>
 
 #include "calendar.h"
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -94,7 +94,7 @@ namespace
 generic_factory<relic_procgen_data> relic_procgen_data_factory( "relic_procgen_data" );
 } // namespace
 
-generic_factory<relic_procgen_data> &cata::lua::detail::relic_procgen_registry()
+generic_factory<relic_procgen_data> &cata::lua_platform::detail::relic_procgen_registry()
 {
     return relic_procgen_data_factory;
 }

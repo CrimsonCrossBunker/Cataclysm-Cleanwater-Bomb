@@ -22,10 +22,10 @@ class JsonOut;
 class item;
 class recipe;
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
-} // namespace cata::lua
+} // namespace cata::lua_platform
 
 struct time_info_t {
     // Absolute floor on the time taken to attack.
@@ -36,7 +36,7 @@ struct time_info_t {
     int time_reduction_per_level = 25;
 };
 
-namespace cata::lua::detail
+namespace cata::lua_platform::detail
 {
 struct skill_snapshot_entry {
     std::string id;
@@ -59,14 +59,14 @@ struct skill_snapshot_entry {
     std::vector<std::string> requires_any;
 };
 std::vector<skill_snapshot_entry> skill_registry_snapshot();
-} // namespace cata::lua::detail
+} // namespace cata::lua_platform::detail
 
 class Skill
 {
         friend class string_id<Skill>;
-        friend class cata::lua::content_transaction;
-        friend std::vector<cata::lua::detail::skill_snapshot_entry>
-        cata::lua::detail::skill_registry_snapshot();
+        friend class cata::lua_platform::content_transaction;
+        friend std::vector<cata::lua_platform::detail::skill_snapshot_entry>
+        cata::lua_platform::detail::skill_registry_snapshot();
         skill_id _ident;
 
         translation _name;
@@ -332,7 +332,7 @@ class SkillLevelMap : public std::map<skill_id, SkillLevel>
 class SkillDisplayType
 {
         friend class string_id<SkillDisplayType>;
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
         skill_displayType_id _ident;
         translation _display_string;
     public:

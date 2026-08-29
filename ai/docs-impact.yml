@@ -46,10 +46,10 @@ entries:
   - id: lua-public-contract
     enforcement: required
     patterns:
-      - src/catalua*
+      - src/lua_platform*
       - src/event.h
       - data/lua/types/ccb_platform_v1.d.lua
-      - data/lua/reference/*
+      - data/lua/reference/ccb_platform_*
       - tools/lua_api/*
     documentation_ids:
       - architecture.lua-first-platform
@@ -81,14 +81,15 @@ entries:
       - data/mods/Lua_First_Example/**
       - tools/create_lua_mod.py
       - tools/migrate_lua_first.py
-      - src/catalua_loader.cpp
-      - src/catalua_loader.h
-      - src/catalua_runtime.cpp
-      - src/catalua_runtime.h
-      - src/catalua_content*.cpp
-      - src/catalua_content*.h
-      - src/catalua_hook.cpp
-      - src/catalua_hook.h
+      - src/lua_platform_loader.cpp
+      - src/lua_platform_loader.h
+      - src/lua_platform_runtime.cpp
+      - src/lua_platform_runtime.h
+      - src/lua_platform_content.h
+      - src/lua_platform_world_content.cpp
+      - src/lua_platform_world_content.h
+      - src/lua_platform_hooks.cpp
+      - src/lua_platform_hooks.h
       - src/mod_manager.cpp
       - src/mod_manager.h
       - src/mod_manager_ui.cpp

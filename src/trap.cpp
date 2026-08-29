@@ -1,14 +1,14 @@
 #include "trap.h"
 
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 
 #include <cmath>
 #include <typeinfo>
 #include <vector>
 
 #include "bodypart.h"
-#include "catalua_runtime.h"
-#include "catalua_hook.h"
+#include "lua_platform_runtime.h"
+#include "lua_platform_hooks.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -45,7 +45,7 @@ generic_factory<trap> trap_factory( "trap" );
 
 } // namespace
 
-generic_factory<trap> &cata::lua::detail::trap_registry()
+generic_factory<trap> &cata::lua_platform::detail::trap_registry()
 {
     return trap_factory;
 }
@@ -349,7 +349,7 @@ void trap::trigger( const tripoint_bub_ms &pos, Creature *creature,
         return;
     }
     const std::optional<bool> continue_native =
-        cata::lua::invoke_trap_trigger_handler(
+        cata::lua_platform::invoke_trap_trigger_handler(
             id.str(), lua_platform_mod, lua_platform_trigger_handler,
             get_map().get_abs( pos ), creature, triggering_item );
     const bool triggered = continue_native && !*continue_native ?

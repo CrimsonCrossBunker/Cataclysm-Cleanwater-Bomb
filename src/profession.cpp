@@ -1,4 +1,4 @@
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 
 #include "profession.h"
 
@@ -51,7 +51,7 @@ namespace
 generic_factory<profession> all_profs( "profession" );
 } // namespace
 
-generic_factory<profession> &cata::lua::detail::profession_registry()
+generic_factory<profession> &cata::lua_platform::detail::profession_registry()
 {
     return all_profs;
 }
@@ -64,15 +64,15 @@ class json_item_substitution
         void reset();
         void load( const JsonObject &jo );
         void check_consistency() const;
-        cata::lua::detail::profession_item_substitution_native_snapshot snapshot() const;
+        cata::lua_platform::detail::profession_item_substitution_native_snapshot snapshot() const;
         bool contains_substitution( const std::string &item ) const;
         bool contains_bonus( const std::string &group ) const;
         void set_substitution(
-            const cata::lua::detail::profession_item_substitution_native_entry &entry );
+            const cata::lua_platform::detail::profession_item_substitution_native_entry &entry );
         void set_bonus(
-            const cata::lua::detail::profession_item_bonus_native_entry &entry );
+            const cata::lua_platform::detail::profession_item_bonus_native_entry &entry );
         void restore(
-            const cata::lua::detail::profession_item_substitution_native_snapshot
+            const cata::lua_platform::detail::profession_item_substitution_native_snapshot
             &snapshot );
 
     private:
@@ -152,7 +152,7 @@ void profession_blacklist::check_consistency() const
     }
 }
 
-void cata::lua::detail::insert_platform_profession_blacklist(
+void cata::lua_platform::detail::insert_platform_profession_blacklist(
     const platform_blacklist_data &value )
 {
     prof_blacklist.whitelist = value.whitelist;
@@ -161,7 +161,7 @@ void cata::lua::detail::insert_platform_profession_blacklist(
     }
 }
 
-void cata::lua::detail::erase_platform_profession_blacklist(
+void cata::lua_platform::detail::erase_platform_profession_blacklist(
     const platform_blacklist_data &value )
 {
     for( const std::string &entry : value.entries ) {
@@ -927,10 +927,10 @@ void json_item_substitution::reset()
     bonuses.clear();
 }
 
-cata::lua::detail::profession_item_substitution_native_snapshot
+cata::lua_platform::detail::profession_item_substitution_native_snapshot
 json_item_substitution::snapshot() const
 {
-    using namespace cata::lua::detail;
+    using namespace cata::lua_platform::detail;
     profession_item_substitution_native_snapshot result;
     result.substitutions.reserve( substitutions.size() );
     for( const auto &[item_id, source_rules] : substitutions ) {
@@ -983,11 +983,11 @@ bool json_item_substitution::contains_bonus( const std::string &group ) const
 }
 
 void json_item_substitution::set_substitution(
-    const cata::lua::detail::profession_item_substitution_native_entry &entry )
+    const cata::lua_platform::detail::profession_item_substitution_native_entry &entry )
 {
     std::vector<substitution> native_rules;
     native_rules.reserve( entry.rules.size() );
-    for( const cata::lua::detail::profession_item_substitution_native_rule &source_rule :
+    for( const cata::lua_platform::detail::profession_item_substitution_native_rule &source_rule :
          entry.rules ) {
         substitution rule;
         for( const std::string &trait : source_rule.requirements.present ) {
@@ -997,7 +997,7 @@ void json_item_substitution::set_substitution(
             rule.trait_reqs.absent.emplace_back( trait );
         }
         rule.infos.reserve( source_rule.replacements.size() );
-        for( const cata::lua::detail::profession_item_substitution_native_replacement
+        for( const cata::lua_platform::detail::profession_item_substitution_native_replacement
              &source_info : source_rule.replacements ) {
             substitution::info info;
             info.new_item = itype_id( source_info.item );
@@ -1010,13 +1010,13 @@ void json_item_substitution::set_substitution(
 }
 
 void json_item_substitution::set_bonus(
-    const cata::lua::detail::profession_item_bonus_native_entry &entry )
+    const cata::lua_platform::detail::profession_item_bonus_native_entry &entry )
 {
     bonuses.erase( std::remove_if( bonuses.begin(), bonuses.end(),
     [&entry]( const auto &existing ) {
         return existing.first.str() == entry.group;
     } ), bonuses.end() );
-    for( const cata::lua::detail::profession_item_substitution_native_requirement
+    for( const cata::lua_platform::detail::profession_item_substitution_native_requirement
          &source_requirements : entry.requirements ) {
         trait_requirements requirements;
         for( const std::string &trait : source_requirements.present ) {
@@ -1030,16 +1030,16 @@ void json_item_substitution::set_bonus(
 }
 
 void json_item_substitution::restore(
-    const cata::lua::detail::profession_item_substitution_native_snapshot &snapshot )
+    const cata::lua_platform::detail::profession_item_substitution_native_snapshot &snapshot )
 {
     reset();
-    for( const cata::lua::detail::profession_item_substitution_native_entry &entry :
+    for( const cata::lua_platform::detail::profession_item_substitution_native_entry &entry :
          snapshot.substitutions ) {
         set_substitution( entry );
     }
-    for( const cata::lua::detail::profession_item_bonus_native_entry &entry :
+    for( const cata::lua_platform::detail::profession_item_bonus_native_entry &entry :
          snapshot.bonuses ) {
-        for( const cata::lua::detail::profession_item_substitution_native_requirement
+        for( const cata::lua_platform::detail::profession_item_substitution_native_requirement
              &source_requirements : entry.requirements ) {
             trait_requirements requirements;
             for( const std::string &trait : source_requirements.present ) {
@@ -1053,37 +1053,37 @@ void json_item_substitution::restore(
     }
 }
 
-cata::lua::detail::profession_item_substitution_native_snapshot
-cata::lua::detail::profession_item_substitution_registry_snapshot()
+cata::lua_platform::detail::profession_item_substitution_native_snapshot
+cata::lua_platform::detail::profession_item_substitution_registry_snapshot()
 {
     return item_substitutions.snapshot();
 }
 
-bool cata::lua::detail::profession_item_substitution_registry_contains(
+bool cata::lua_platform::detail::profession_item_substitution_registry_contains(
     const std::string &item )
 {
     return item_substitutions.contains_substitution( item );
 }
 
-bool cata::lua::detail::profession_item_bonus_registry_contains(
+bool cata::lua_platform::detail::profession_item_bonus_registry_contains(
     const std::string &group )
 {
     return item_substitutions.contains_bonus( group );
 }
 
-void cata::lua::detail::profession_item_substitution_registry_set(
+void cata::lua_platform::detail::profession_item_substitution_registry_set(
     const profession_item_substitution_native_entry &entry )
 {
     item_substitutions.set_substitution( entry );
 }
 
-void cata::lua::detail::profession_item_bonus_registry_set(
+void cata::lua_platform::detail::profession_item_bonus_registry_set(
     const profession_item_bonus_native_entry &entry )
 {
     item_substitutions.set_bonus( entry );
 }
 
-void cata::lua::detail::profession_item_substitution_registry_restore(
+void cata::lua_platform::detail::profession_item_substitution_registry_restore(
     const profession_item_substitution_native_snapshot &snapshot )
 {
     item_substitutions.restore( snapshot );

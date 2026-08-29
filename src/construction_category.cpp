@@ -1,6 +1,6 @@
 #include "construction_category.h"
 
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "generic_factory.h"
 
 namespace
@@ -11,7 +11,7 @@ generic_factory<construction_category> all_construction_categories( "constructio
 } // namespace
 
 generic_factory<construction_category> &
-cata::lua::detail::construction_category_registry()
+cata::lua_platform::detail::construction_category_registry()
 {
     return all_construction_categories;
 }

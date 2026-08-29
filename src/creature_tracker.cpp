@@ -49,6 +49,19 @@ shared_ptr_fast<monster> creature_tracker::find( const tripoint_abs_ms &pos ) co
     return nullptr;
 }
 
+shared_ptr_fast<monster> creature_tracker::find_by_uid( const int64_t uid ) const
+{
+    if( uid <= 0 ) {
+        return nullptr;
+    }
+
+    const auto iter = std::find_if( monsters_list.begin(), monsters_list.end(),
+    [uid]( const shared_ptr_fast<monster> &ptr ) {
+        return !ptr->is_dead() && ptr->uid().is_valid() && ptr->uid().get_value() == uid;
+    } );
+    return iter == monsters_list.end() ? nullptr : *iter;
+}
+
 int creature_tracker::temporary_id( const monster &critter ) const
 {
     const auto iter = std::find_if( monsters_list.begin(), monsters_list.end(),
@@ -94,6 +107,20 @@ bool creature_tracker::add( const shared_ptr_fast<monster> &critter_ptr )
     }
 
     if( MonsterGroupManager::monster_is_blacklisted( critter.type->id ) ) {
+        return false;
+    }
+
+    critter.ensure_uid();
+    if( !critter.uid().is_valid() ) {
+        return false;
+    }
+
+    const int64_t uid = critter.uid().get_value();
+    const auto duplicate = std::find_if( monsters_list.begin(), monsters_list.end(),
+    [uid]( const shared_ptr_fast<monster> &ptr ) {
+        return ptr->uid().is_valid() && ptr->uid().get_value() == uid;
+    } );
+    if( duplicate != monsters_list.end() ) {
         return false;
     }
 

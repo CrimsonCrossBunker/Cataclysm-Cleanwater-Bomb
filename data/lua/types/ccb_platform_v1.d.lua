@@ -3,8 +3,326 @@
 -- LuaLS declarations for the CCB Lua-first Platform v1 bootstrap surface.
 -- This is editor metadata. Do not require or copy it into runtime code.
 
+---@class CcbPlatformResultError
+---@field code string Stable fail-closed error code.
+---@field message string Human-readable diagnostic.
+
+---@class CcbResult
+---@field ok boolean True only when `value` is present.
+---@field value? any Detached value returned by the Platform operation.
+---@field error? CcbPlatformResultError Present when the exact handle or value was rejected.
+
+---@class GameId
+---@field kind string Native typed-id kind.
+---@field value string Stable string id.
+---@field is_null fun(self: GameId): boolean
+---@field is_valid fun(self: GameId): boolean
+---@operator eq(GameId): boolean
+
+---@class GameEnum
+---@field kind string Native enum kind.
+---@field name string Stable enum name.
+---@field ordinal integer Native enum ordinal.
+---@operator eq(GameEnum): boolean
+
+---@class PointCoord
+---@field origin string Coordinate origin tag.
+---@field scale string Coordinate scale tag.
+---@field type string Native coordinate type.
+---@field x integer
+---@field y integer
+---@field xy fun(self: PointCoord): PointCoord
+---@field add fun(self: PointCoord, other: PointCoord): PointCoord
+---@field subtract fun(self: PointCoord, other: PointCoord): PointCoord
+---@field scale_by fun(self: PointCoord, factor: integer): PointCoord
+---@field compare fun(self: PointCoord, other: PointCoord): integer
+---@field square_distance fun(self: PointCoord, other: PointCoord): integer
+---@field manhattan_distance fun(self: PointCoord, other: PointCoord): integer
+---@field euclidean_distance fun(self: PointCoord, other: PointCoord): number
+---@field project_to fun(self: PointCoord, scale: string): PointCoord
+---@field project_remain fun(self: PointCoord, scale: string): PointCoord
+---@field project_combine fun(self: PointCoord, remainder: PointCoord): PointCoord
+---@field to fun(self: PointCoord, origin: string, scale: string): PointCoord
+---@operator add(PointCoord): PointCoord
+---@operator sub(PointCoord): PointCoord
+---@operator mul(integer): PointCoord
+---@operator unm: PointCoord
+---@operator eq(PointCoord): boolean
+
+---@class TripointCoord: PointCoord
+---@field z integer
+---@field xy fun(self: TripointCoord): PointCoord
+---@field add fun(self: TripointCoord, other: TripointCoord): TripointCoord
+---@field subtract fun(self: TripointCoord, other: TripointCoord): TripointCoord
+---@field scale_by fun(self: TripointCoord, factor: integer): TripointCoord
+---@field project_to fun(self: TripointCoord, scale: string): TripointCoord
+---@field project_remain fun(self: TripointCoord, scale: string): TripointCoord
+---@field project_combine fun(self: TripointCoord, remainder: TripointCoord): TripointCoord
+---@field to fun(self: TripointCoord, origin: string, scale: string): TripointCoord
+
+---@class TimeDuration
+---@field turns integer
+---@field value integer
+---@field display fun(self: TimeDuration): string
+---@field compare fun(self: TimeDuration, other: TimeDuration): integer
+---@field scale fun(self: TimeDuration, factor: number): TimeDuration
+---@field divide fun(self: TimeDuration, divisor: number): TimeDuration
+---@operator add(TimeDuration): TimeDuration
+---@operator sub(TimeDuration): TimeDuration
+---@operator mul(number): TimeDuration
+---@operator div(number): TimeDuration
+---@operator unm: TimeDuration
+---@operator eq(TimeDuration): boolean
+
+---@class TimePoint
+---@field turn integer
+---@field display fun(self: TimePoint): string
+---@field compare fun(self: TimePoint, other: TimePoint): integer
+---@field hour_of_day fun(self: TimePoint): integer
+---@field minute_of_hour fun(self: TimePoint): integer
+---@field second_of_minute fun(self: TimePoint): integer
+---@field season fun(self: TimePoint): string
+---@field moon_phase fun(self: TimePoint): string
+---@field sunrise fun(self: TimePoint): TimePoint
+---@field sunset fun(self: TimePoint): TimePoint
+---@field is_dawn fun(self: TimePoint): boolean
+---@field is_day fun(self: TimePoint): boolean
+---@field is_dusk fun(self: TimePoint): boolean
+---@field is_night fun(self: TimePoint): boolean
+---@operator add(TimeDuration): TimePoint
+---@operator sub(TimePoint|TimeDuration): TimeDuration|TimePoint
+---@operator eq(TimePoint): boolean
+
+---@class UnitValue
+---@field kind string Native unit kind.
+---@field value number
+---@field canonical_unit string
+---@field is_integral boolean
+---@field add fun(self: UnitValue, other: UnitValue): UnitValue
+---@field subtract fun(self: UnitValue, other: UnitValue): UnitValue
+---@field scale fun(self: UnitValue, factor: number): UnitValue
+---@field compare fun(self: UnitValue, other: UnitValue): integer
+---@operator add(UnitValue): UnitValue
+---@operator sub(UnitValue): UnitValue
+---@operator eq(UnitValue): boolean
+
+---@class CcbCharacterNearbyOptions
+---@field offset? integer
+---@field limit? integer
+---@field radius? integer
+
+---@class CcbVehicleDefinitionQueryOptions
+---@field offset? integer
+---@field limit? integer
+---@field query? string
+
+---@class CcbVehiclePartPageOptions
+---@field offset? integer
+---@field limit? integer
+
+---@class CcbVehicleStopOptions
+---@field disable_cruise? boolean
+
+---@class CcbVehicleValueOptions
+---@field post_cataclysm? boolean
+
+---@class CcbMissionQueryOptions
+---@field offset? integer
+---@field limit? integer
+---@field status? string
+
+---@class CcbFactionQueryOptions
+---@field offset? integer
+---@field limit? integer
+---@field query? string
+
+---@class CcbFactionPolicyOptions
+---@field consumes_food? boolean
+---@field stealing? boolean
+
+---@class CcbFactionRelationshipOptions
+---@field kill_on_sight? boolean
+---@field watch_your_back? boolean
+---@field share_my_stuff? boolean
+---@field guard_your_stuff? boolean
+---@field lets_you_in? boolean
+
+---@class CcbInventoryChoiceOptions
+---@field title? string
+---@field allow_cancel? boolean
+
+---@class CcbInventoryGiveOptions
+---@field birthday? TimePoint
+---@field charges? integer
+
+---@class CcbNpcQueryOptions
+---@field offset? integer
+---@field limit? integer
+---@field query? string
+
+---@class CcbCreatureNearbyOptions
+---@field offset? integer
+---@field limit? integer
+---@field radius? integer
+
+---@class GameHandle
+---@field kind 'creature'|'item'|'vehicle'|'vehicle_part'|'camp'|'none' Broad native storage kind.
+---@field subtype 'avatar'|'character'|'npc'|'monster'|'creature'|'item'|'vehicle'|'vehicle_part'|'camp' Diagnostic subtype hint; exact domain APIs validate the live subtype again.
+---@field locator table<string, any> Bounded locator copied from native identity data.
+---@field identity_generation integer Native identity generation; changes when the referenced object is replaced, relocated, unloaded, or retired.
+---@field is_valid fun(self: GameHandle): boolean False after owner/runtime/world/entity invalidation.
+---@field status fun(self: GameHandle): CcbResult Typed status with a fail-closed error when stale, dead, or destroyed.
+
+---@class MapTileToken
+---@field position TripointCoord Explicit absolute map-square position captured by this token.
+---@field runtime_generation integer Lua Platform runtime generation bound at issuance.
+---@field world_generation integer World generation bound at issuance.
+---@field owner_generation integer Active map-token owner generation; changes on runtime/world/map reset.
+---@field is_valid fun(self: MapTileToken): boolean False when the owner/runtime/world, z-level, bounds, or loaded bubble no longer match.
+
+---@class OvermapTileToken
+---@field position TripointCoord Explicit absolute overmap-terrain (`abs_omt`) position captured by this token.
+---@field runtime_generation integer Lua Platform runtime generation bound at issuance.
+---@field world_generation integer World generation bound at issuance.
+---@field owner_generation integer Active overmap-token owner generation; changes when overmap token ownership is reset.
+---@field is_valid fun(self: OvermapTileToken): boolean False after the owner/runtime/world or absolute OMT identity is invalidated.
+---@field __tostring fun(self: OvermapTileToken): string Stable `OvermapTileToken<position:runtime:world:owner>` identity string.
+---@operator eq(OvermapTileToken): boolean Equality compares the absolute OMT position and runtime/world/owner identity generations.
+
+---@class CcbMapTileSnapshot
+---@field position TripointCoord Explicit absolute map-square position.
+---@field terrain GameId GameId<terrain> at the tile.
+---@field terrain_name string Detached terrain name.
+---@field furniture? GameId GameId<furniture>, absent when the tile has no furniture.
+---@field furniture_name? string Detached furniture name.
+---@field trap? GameId GameId<trap>, absent when the tile has no trap.
+---@field trap_name? string Detached trap name.
+---@field trap_benign? boolean Whether the detached trap is benign.
+---@field fields table<string, any> Bounded detached field page.
+---@field signage string Bounded detached signage text.
+---@field signage_truncated boolean True when signage exceeded the requested bound.
+---@field vehicle_part table<string, any> Detached vehicle-part snapshot; `present` is false when absent.
+---@field item_count integer Number of items currently on the tile.
+---@field revision integer Platform map mutation revision for compare-and-swap edits.
+
+---@class CcbMapTileFieldChange
+---@field id GameId GameId<field>.
+---@field intensity? integer Bounded native field intensity.
+---@field age? TimeDuration Bounded field age.
+---@field hit_player? boolean Unsupported by services.map.edit; retained only for explicit rejection diagnostics.
+---@field remove? boolean Remove this field instead of adding/updating it.
+
+---@class CcbMapTileChanges
+---@field terrain? GameId GameId<terrain> replacement.
+---@field furniture? GameId|table<string, boolean|GameId> Replacement or `{ clear = true }`.
+---@field furniture_clear? boolean Clear furniture when true.
+---@field trap? GameId|table<string, boolean|GameId> Replacement or `{ clear = true }`.
+---@field trap_clear? boolean Clear trap when true.
+---@field field? CcbMapTileFieldChange|CcbMapTileFieldChange[] One field change or a dense array.
+---@field fields? CcbMapTileFieldChange|CcbMapTileFieldChange[] Dense field changes.
+---@field remove_field? GameId|GameId[] One field id or a dense array of field ids.
+
+---@class CcbMapSnapshotOptions
+---@field field_limit? integer Maximum detached fields returned, from 0 through 128.
+---@field signage_limit? integer Maximum signage bytes returned, from 0 through 4096.
+
+---@class CcbMapApi
+local CcbMapApi = {}
+
+---@param position TripointCoord Explicit absolute map-square coordinate; local/OMT/raw tables are rejected.
+---@return CcbResult result `value` is a generation-bound MapTileToken.
+function CcbMapApi.tile(position) end
+
+---@param tile MapTileToken Exact token for a currently loaded map tile.
+---@param options? CcbMapSnapshotOptions Bounded detached snapshot limits.
+---@return CcbResult result `value` is a CcbMapTileSnapshot.
+function CcbMapApi.snapshot(tile, options) end
+
+---@param tile MapTileToken Exact token for a currently loaded map tile.
+---@param expected_revision integer Platform map revision captured by a prior snapshot.
+---@param changes CcbMapTileChanges Bounded tile-state changes; emit/event state is not accepted.
+---@return CcbResult result `value` is the committed CcbMapTileSnapshot.
+function CcbMapApi.edit(tile, expected_revision, changes) end
+
+---@class CcbOvermapTileSnapshot
+---@field position TripointCoord Explicit absolute overmap-terrain (`abs_omt`) position.
+---@field exists boolean Whether the overmap tile currently exists in the loaded buffer.
+---@field epoch integer Current overmap mutation epoch.
+---@field revision integer Compare-and-swap revision for this overmap tile.
+---@field terrain? GameId GameId<overmap_terrain> at the tile; present when exists is true.
+---@field terrain_type? string Native overmap-terrain type id; present when exists is true.
+---@field name? string Full native terrain name; present when exists is true.
+---@field visible_name? string Terrain name at the tile's current vision level; present when exists is true.
+---@field mapgen_id? string Native mapgen id; present when exists is true.
+---@field rotation? integer Native terrain rotation; present when exists is true.
+---@field linear? boolean Whether the terrain is linear; present when exists is true.
+---@field rotatable? boolean Whether the terrain is rotatable; present when exists is true.
+---@field vision? GameEnum GameEnum<OmVisionLevel>; present when exists is true.
+---@field seen? boolean Whether the tile has been seen; present when exists is true.
+---@field explored? boolean Whether the tile has been explored; present when exists is true.
+---@field note? string Bounded note text, or nil when no note exists.
+---@field note_truncated? boolean Whether the returned note exceeded the native bound.
+---@field note_dangerous? boolean Whether the tile note is marked dangerous.
+---@field note_danger_radius? integer Native note-danger radius, or -1 when not dangerous.
+---@field generated? boolean Whether the OMT has been map-generated; present when exists is true.
+---@field has_extra? boolean Whether the tile has an overmap extra; present when exists is true.
+---@field extra? string Overmap extra id, or nil when no extra exists.
+---@field has_camp? boolean Whether a camp exists at this position; present when exists is true.
+---@field has_vehicle? boolean Whether a vehicle exists at this position; present when exists is true.
+
+---@class CcbOvermapNoteValueChange
+---@field value string Note value; this shape is mutually exclusive with `clear`.
+
+---@class CcbOvermapNoteClearChange
+---@field clear true Clear the note; `clear` must be exactly true and is mutually exclusive with `value`.
+
+---@alias CcbOvermapNoteChange CcbOvermapNoteValueChange|CcbOvermapNoteClearChange
+
+---@class CcbOvermapNoteDangerChange
+---@field dangerous boolean Whether the note is dangerous.
+---@field radius integer Note-danger radius in the native 0..100 range.
+
+---@class CcbOvermapTileChanges
+---@field set_terrain? GameId GameId<overmap_terrain> replacement.
+---@field set_seen? GameEnum GameEnum<OmVisionLevel> replacement.
+---@field set_explored? boolean Replacement explored state.
+---@field set_note? CcbOvermapNoteChange Exactly `{ value = string }` or `{ clear = true }`.
+---@field set_note_danger? CcbOvermapNoteDangerChange Exactly `{ dangerous = boolean, radius = integer }`.
+
+---@class CcbOvermapEditResult
+---@field accepted boolean True when the edit was accepted.
+---@field changed boolean Whether the edit changed native overmap state.
+---@field position TripointCoord Explicit absolute overmap-terrain (`abs_omt`) position.
+---@field epoch integer Current overmap mutation epoch after the edit.
+---@field previous_revision integer Tile revision before the edit.
+---@field revision integer Tile revision after the edit.
+---@field snapshot CcbOvermapTileSnapshot Committed detached tile snapshot.
+
+---@class CcbOvermapApi
+local CcbOvermapApi = {}
+
+---@param position TripointCoord Explicit absolute overmap-terrain (`abs_omt`) coordinate; local/map-square/raw tables are rejected.
+---@return CcbResult result `value` is a generation-bound OvermapTileToken.
+function CcbOvermapApi.tile_token(position) end
+
+---@param token OvermapTileToken Exact token for the requested overmap tile.
+---@return CcbResult result `value` is a CcbOvermapTileSnapshot.
+function CcbOvermapApi.snapshot(token) end
+
+---@param token OvermapTileToken Exact token for the requested overmap tile.
+---@param expected_revision integer Tile revision captured by a prior snapshot.
+---@param changes CcbOvermapTileChanges Bounded overmap-tile changes.
+---@return CcbResult result `value` is a CcbOvermapEditResult.
+function CcbOvermapApi.edit(token, expected_revision, changes) end
+
+---@class CcbHandlesApi
+local CcbHandlesApi = {}
+
+---@return GameHandle
+function CcbHandlesApi.avatar() end
+
 ---@class ModDefinitionOptions
----@field id? string Stable 1-256-byte Mod id without `#`; inherits the sole legacy id in a hybrid root, otherwise the root directory name.
+---@field id? string Stable 1-256-byte Mod id without `#`; defaults to the root directory name when omitted.
 ---@field name? string 1-512-byte display name; defaults to the resolved Mod id.
 ---@field version? string 1-128-byte author-defined Mod version.
 ---@field entry? string Root-relative entry path of at most 4096 bytes; defaults to main.lua.
@@ -4000,6 +4318,7 @@ local FactionDefinition = {}
 ---@field trust? integer Minimum trust.
 ---@field strict? boolean Native strict matching flag.
 ---@field rigid? boolean Native rigid restock flag.
+---@field condition_handler? string Optional Platform handler used to evaluate this group.
 
 ---@class NpcPriceRuleOptions
 ---@field item? string Item id matched by this rule.
@@ -4009,6 +4328,7 @@ local FactionDefinition = {}
 ---@field premium? number Purchase premium; defaults to one.
 ---@field fixed_adjustment? number Optional fixed adjustment.
 ---@field price? integer Optional fixed price in cents.
+---@field condition_handler? string Optional Platform handler used to evaluate this rule.
 
 ---@class NpcClassDefinitionOptions
 ---@field id string Stable NPC-class id.
@@ -4048,6 +4368,7 @@ local NpcClassDefinition = {}
 ---@field stole_item_chat? string Stolen-item dialogue topic id.
 ---@field age? integer Fixed generated age.
 ---@field height? integer Fixed generated height in centimeters.
+---@field on_death? string Platform handler invoked when the NPC dies.
 
 ---@class NpcDefinition
 ---@field id string
@@ -4059,6 +4380,9 @@ local NpcDefinition = {}
 ---@field symbol? string Single display symbol.
 ---@field color? string Native color id.
 ---@field see_cost? string Native overmap see-cost enum name.
+---@field travel_cost? string Native overmap travel-cost enum name.
+---@field on_entry? string Platform handler invoked on entering this terrain.
+---@field on_exit? string Platform handler invoked on leaving this terrain.
 ---@field default_map_data? string Native map-data-summary id; defaults to `full_omt`.
 ---@field vision_levels? string Native overmap-vision id; defaults to `default`.
 ---@field monster_density? integer Native monster density.
@@ -4083,6 +4407,8 @@ local OvermapTerrainDefinition = {}
 
 ---@class OvermapSpecialDefinitionOptions
 ---@field id string Stable overmap-special id.
+---@field condition_handler? string Optional Platform placement-condition handler.
+---@field on_place? string Platform handler invoked when the special is placed.
 ---@field terrains? OvermapSpecialTerrainOptions[]
 ---@field connections? OvermapSpecialConnectionOptions[]
 ---@field locations? string[] Default overmap-location ids.
@@ -4118,6 +4444,16 @@ local OvermapSpecialDefinition = {}
 ---@field air_proficiencies? string[] Existing air-control proficiency ids.
 ---@field land_proficiencies? string[] Existing land-control proficiency ids.
 
+---@class VehiclePartCollectionPatch
+---@field extend_categories? string[] Add only categories absent from the inherited set.
+---@field delete_categories? string[] Remove only categories present in the inherited set.
+---@field extend_flags? string[] Add only flags absent from the inherited set.
+---@field delete_flags? string[] Remove only flags present in the inherited set.
+---@field extend_emissions? string[] Add only emissions absent from the inherited set.
+---@field delete_emissions? string[] Remove only emissions present in the inherited set.
+---@field extend_exhaust? string[] Add only exhaust emissions absent from the inherited set.
+---@field delete_exhaust? string[] Remove only exhaust emissions present in the inherited set.
+
 ---@class VehiclePartDefinitionOptions
 ---@field id string Stable vehicle-part id.
 ---@field copy_from? string Existing vehicle-part id used as the patch base.
@@ -4145,12 +4481,16 @@ local OvermapSpecialDefinition = {}
 ---@field flags? string[] Vehicle-part flags replacing inherited flags.
 ---@field variants? VehiclePartVariantOptions[] Variants replacing inherited variants.
 ---@field fuel_options? string[] Engine fuel item ids replacing inherited options.
+---@field engine_exclusions? string[] Engine exclusion flags replacing inherited exclusions.
+---@field variant_bases? VehiclePartVariantOptions[] Ordered inherited variant bases.
+---@field on_activate? string Platform handler invoked when the part activates.
 ---@field damage_reduction? table<string, number> Damage reduction keyed by damage-type id.
 ---@field breaks_into? string Existing or same-transaction item-group id.
 ---@field install? VehiclePartRequirementOptions
 ---@field removal? VehiclePartRequirementOptions
 ---@field repair? VehiclePartRequirementOptions
 ---@field control? VehiclePartControlOptions
+---@field patch? VehiclePartCollectionPatch Typed extend/delete operations; requires copy_from.
 
 ---@class VehiclePartDefinition
 ---@field id string
@@ -4185,11 +4525,17 @@ local VehiclePartDefinition = {}
 
 ---@class VehicleDefinitionOptions
 ---@field id string Stable vehicle prototype id.
+---@field copy_from? string Existing or same-transaction vehicle id used as the patch base.
 ---@field name string Player-facing vehicle name.
 ---@field color_palette? string Existing vehicle-color-palette id.
 ---@field parts VehiclePartPlacementOptions[]
 ---@field items? VehicleItemPlacementOptions[]
 ---@field zones? VehicleZonePlacementOptions[]
+---@field patch? VehicleDefinitionPatch Typed extend/delete operations; requires copy_from.
+
+---@class VehicleDefinitionPatch
+---@field extend_parts? VehiclePartPlacementOptions[] Add placements absent from the inherited vehicle.
+---@field delete_parts? VehiclePartPlacementOptions[] Remove exact placements from the inherited vehicle.
 
 ---@class VehicleDefinition
 ---@field id string
@@ -4548,12 +4894,6 @@ function CcbPlatformMessagesApi.add_from_outdoors(message, type) end
 ---@return any
 function CcbPlatformMessagesApi.add_if_audible(message, type) end
 
----@class CcbPlatformDialogueServiceApi
-local CcbPlatformDialogueServiceApi = {}
-
----@param topic string Existing native dialogue topic id.
----@return boolean opened
-function CcbPlatformDialogueServiceApi.open_topic(topic) end
 ---@class CcbPlatformSoundApi
 local CcbPlatformSoundApi = {}
 ---@param id string
@@ -4589,11 +4929,11 @@ function CcbPlatformSnippetsApi.random_named(category) end
 ---@class CcbPlatformTextApi
 local CcbPlatformTextApi = {}
 ---@param text string
----@param alpha_handle GameHandle
----@param beta_handle? GameHandle
+---@param speaker_handle GameHandle
+---@param interlocutor_handle? GameHandle Optional interlocutor; nil is not replaced by the avatar.
 ---@param item_id? string
 ---@return any
-function CcbPlatformTextApi.expand_for(text, alpha_handle, beta_handle, item_id) end
+function CcbPlatformTextApi.expand_for(text, speaker_handle, interlocutor_handle, item_id) end
 ---@class CcbPlatformTilesetApi
 local CcbPlatformTilesetApi = {}
 ---@return any
@@ -5596,28 +5936,36 @@ function CcbPlatformContent.edit_forest_biome_mapgen(id) end
 ---names such as `character`, `attacker`, `killer`, or `victim`. `item` exists
 ---only for character_wields_item, character_wears_item,
 ---character_takeoff_item, and character_armor_destroyed when the native event
----actually carries an item_location talker. No positional/avatar fallback or
----EOC alpha/beta aliases are added.
----@field actors table<string, GameHandle>
+---actually carries an item_location talker. Only semantic event-field names
+---and detached snapshots are exposed; no positional/avatar fallback or
+---compatibility aliases are added.
+---@field actors table<string, CcbDialogueParticipant|CcbDetachedDialogueParticipant>
+
+---@class CcbDetachedDialogueParticipant
+---@field kind 'computer'|'zone'|'topic'|'talker'|'item' Detached participant kind.
+---@field name string Bounded display name snapshot.
+---@field position TripointCoord Bounded absolute map-square position snapshot.
+
+---@alias CcbDialogueParticipant GameHandle|CcbDetachedDialogueParticipant
 
 ---@class CcbPlatformDialogueStartHook
----@field avatar GameHandle The avatar starting the dialogue.
----@field interlocutor GameHandle|table The creature/entity handle or detached non-entity talker snapshot.
+---@field speaker CcbDialogueParticipant Actual dialogue speaker; no positional avatar fallback.
+---@field interlocutor CcbDialogueParticipant The exact entity handle or detached non-entity snapshot.
 ---@field initial_topic string Initial dialogue topic id.
 ---@field by_radio? boolean Present and true only when the dialogue runs over radio contact.
 ---@field reason? string Present only when the dialogue was opened with a reason string.
 
 ---@class CcbPlatformDialogueOptionHook
----@field avatar GameHandle The avatar participating in the dialogue.
----@field interlocutor GameHandle|table The creature/entity handle or detached non-entity talker snapshot.
+---@field speaker CcbDialogueParticipant Actual dialogue speaker; no positional avatar fallback.
+---@field interlocutor CcbDialogueParticipant The exact entity handle or detached non-entity snapshot.
 ---@field current_topic string Topic being left.
 ---@field selected_topic string Topic selected by the native dialogue response.
 ---@field by_radio? boolean Present and true only when the dialogue runs over radio contact.
 ---@field reason? string Present only when the dialogue was opened with a reason string.
 
 ---@class CcbPlatformDialogueEndHook
----@field avatar GameHandle The avatar ending the dialogue.
----@field interlocutor GameHandle|table The creature/entity handle or detached non-entity talker snapshot.
+---@field speaker CcbDialogueParticipant Actual dialogue speaker; no positional avatar fallback.
+---@field interlocutor CcbDialogueParticipant The exact entity handle or detached non-entity snapshot.
 ---@field last_topic string Last processed dialogue topic id.
 ---@field by_radio? boolean Present and true only when the dialogue runs over radio contact.
 ---@field reason? string Present only when the dialogue was opened with a reason string.
@@ -5683,6 +6031,9 @@ local PlatformDialogueContext = {}
 ---@return boolean Whether this callback-scoped context can still be used.
 function PlatformDialogueContext:valid() end
 
+---@return integer Current dialogue session generation; stale contexts cannot be reused.
+function PlatformDialogueContext:generation() end
+
 ---@return string Native dialogue topic currently being rendered or selected.
 function PlatformDialogueContext:topic() end
 
@@ -5690,10 +6041,10 @@ function PlatformDialogueContext:topic() end
 function PlatformDialogueContext:topic_item() end
 
 ---@return boolean
-function PlatformDialogueContext:has_alpha() end
+function PlatformDialogueContext:has_speaker() end
 
 ---@return boolean
-function PlatformDialogueContext:has_beta() end
+function PlatformDialogueContext:has_interlocutor() end
 
 ---@return boolean
 function PlatformDialogueContext:by_radio() end
@@ -5721,11 +6072,11 @@ function PlatformDialogueContext:roll_trial(kind, difficulty, skill) end
 ---@return string
 function PlatformDialogueContext:expand_text(text, item_id) end
 
----@return any
-function PlatformDialogueContext:alpha() end
+---@return CcbDialogueParticipant|nil
+function PlatformDialogueContext:speaker() end
 
----@return any
-function PlatformDialogueContext:beta() end
+---@return CcbDialogueParticipant|nil
+function PlatformDialogueContext:interlocutor() end
 
 ---@param key string
 ---@return boolean|number|string|nil value
@@ -5737,16 +6088,6 @@ function PlatformDialogueContext:set(key, value) end
 
 ---@param key string
 function PlatformDialogueContext:remove(key) end
-
----@param item_id string
----@param count integer
----@param prefix string
----@return boolean quoted
-function PlatformDialogueContext:quote_trade_item(item_id, count, prefix) end
-
----@param prefix string
----@return boolean purchased
-function PlatformDialogueContext:buy_quoted_item(prefix) end
 
 ---@class CcbPlatformDialogueResponseDescriptor
 ---@field text string Player response displayed by the native dialogue window.
@@ -5787,8 +6128,12 @@ function CcbPlatformDialogueApi.extend_topic(descriptor) end
 function CcbPlatformDialogueApi.limits() end
 
 ---@class CcbPlatformDialogueRenderHook
----@field avatar GameHandle The avatar participating in the dialogue.
----@field interlocutor GameHandle|table The creature/entity handle or detached talker snapshot.
+---@field speaker CcbDialogueParticipant Actual dialogue speaker; no positional avatar fallback.
+---@field interlocutor CcbDialogueParticipant The exact entity handle or detached snapshot.
+---@field has_speaker boolean Whether the native speaker exists.
+---@field has_interlocutor boolean Whether the native interlocutor exists.
+---@field by_radio boolean Whether the dialogue is using radio contact.
+---@field reason string Dialogue reason, possibly empty.
 ---@field topic string Topic currently being rendered.
 ---@field phase 'line'|'responses' Return a string for `line`, or CcbPlatformDialogueResponse[] for `responses`.
 
@@ -5825,20 +6170,72 @@ function CcbPlatformStateScope.set(key, value) end
 ---@field id integer
 ---@field due_turn integer
 ---@field overdue_turns integer
+---@field recurring boolean
+---@field interval_turns integer
+---@field next_due_turn? integer
 ---@field owner 'character'|'world'
+---@field owner_mod_id string Exact owning Platform Mod id.
+---@field actor? GameHandle Transient callback-only exact live Character, Item, Monster, or Vehicle handle; never persisted in the payload.
+---@field actor_kind? 'character'|'item'|'monster'|'vehicle' Transient callback-only actor kind; nil when there is no actor.
+---@field actor_character_id? integer Transient callback-only stable Character id; nil for an Item, Monster, Vehicle, or absent actor.
+---@field actor_item_uid? integer Transient callback-only stable Item uid; nil for a Character, Monster, Vehicle, or absent actor.
+---@field actor_monster_uid? integer Transient callback-only stable Monster uid; nil for a Character, Item, Vehicle, or absent actor.
+---@field actor_vehicle_uid? integer Transient callback-only stable Vehicle uid; nil for a Character, Item, Monster, or absent actor.
+---@field participants table<string, GameHandle> Transient callback-only exact live required participant handles keyed by role; never persisted in the payload.
 ---@field payload_version integer
+---@field payload table<string, boolean|integer|number|string> Persistent scalar payload; live GameHandle values are rejected and never stored.
+
+---@class CcbPlatformTaskParticipantDescriptor
+---@field kind 'character'|'item'|'monster'|'vehicle' Persisted participant identity kind.
+---@field character_id? integer Stable Character id; nil unless kind is 'character'.
+---@field item_uid? integer Stable Item uid; nil unless kind is 'item'.
+---@field monster_uid? integer Stable Monster uid; nil unless kind is 'monster'.
+---@field vehicle_uid? integer Stable Vehicle uid; nil unless kind is 'vehicle'.
+---@field pending boolean True when this required participant is unavailable; the whole task retries after 3600 turns without invoking its handler or scheduling its next recurring cycle.
+
+---@class CcbPlatformTaskSnapshot
+---@field id integer
+---@field handler string
+---@field due_turn integer
+---@field remaining_turns integer
+---@field overdue_turns integer
+---@field recurring boolean
+---@field interval_turns integer
+---@field owner 'character'|'world'
+---@field owner_mod_id string Exact owning Platform Mod id.
+---@field actor_kind? 'character'|'item'|'monster'|'vehicle' Actor identity kind; nil when there is no actor.
+---@field actor_character_id? integer Stable Character id; nil unless actor_kind is 'character'.
+---@field actor_item_uid? integer Stable Item uid; nil unless actor_kind is 'item'.
+---@field actor_item_pending boolean True when an Item actor is absent from the bounded loaded lookup; the task retries after 3600 turns without invoking its handler or scheduling its next recurring cycle.
+---@field actor_monster_uid? integer Stable Monster uid; nil unless actor_kind is 'monster'.
+---@field actor_monster_pending boolean True when a Monster actor is absent from the loaded creature lookup; the task retries after 3600 turns without invoking its handler or scheduling its next recurring cycle.
+---@field actor_vehicle_uid? integer Stable Vehicle uid; nil unless actor_kind is 'vehicle'.
+---@field actor_vehicle_pending boolean True when a Vehicle actor is absent from the loaded map lookup; the task retries after 3600 turns without invoking its handler or scheduling its next recurring cycle.
+---@field participants table<string, CcbPlatformTaskParticipantDescriptor> Required participant descriptors keyed by validated role name; if any participant is pending, the whole task retries after 3600 turns without invoking its handler or scheduling its next recurring cycle.
+---@field payload_version integer
+---@field handler_available boolean
+---@field payload_current boolean
 ---@field payload table<string, boolean|integer|number|string>
+
+---@class CcbPlatformTaskPage
+---@field items CcbPlatformTaskSnapshot[]
+---@field total integer
+---@field returned integer
+---@field limit integer
+---@field truncated boolean
 
 ---@class CcbPlatformTasks
 local CcbPlatformTasks = {}
 
 ---@param turns integer Non-negative delay in game turns.
 ---@param handler_id string
----@param payload? table<string, boolean|integer|number|string>
+---@param payload? table<string, boolean|integer|number|string> Persistent scalar payload; live GameHandle values are rejected and never stored.
 ---@param payload_version? integer
----@param owner? 'character'|'world'
+---@param scope? 'character'|'world'
+---@param actor? GameHandle Exact live Character, Item, Monster, or Vehicle handle; only the stable actor identity is persisted and the live handle is callback-transient.
+---@param participants? table<string, GameHandle> Optional required participant handles keyed by unique role names; at most 4 participants. Role names must match ASCII `[A-Za-z_][A-Za-z0-9_]{0,31}`.
 ---@return integer task_id
-function CcbPlatformTasks.after(turns, handler_id, payload, payload_version, owner) end
+function CcbPlatformTasks.after(turns, handler_id, payload, payload_version, scope, actor, participants) end
 
 ---@param task_id integer
 ---@return boolean cancelled
@@ -5917,28 +6314,900 @@ function CcbPlatformInteractionApi.input_number(description, default_value) end
 ---@return CcbPlatformInteractionChoiceResult
 function CcbPlatformInteractionApi.choose(entries, options) end
 
+---Callback-scoped mapgen transaction context. A callback transaction failure
+---automatically rolls back its mapgen mutations. Ordinary `services` write
+---operations are prohibited from mapgen callbacks; use this context's
+---transactional operations instead.
+---@class ScriptMapgenContext
+local ScriptMapgenContext = {}
+
+---@return boolean
+function ScriptMapgenContext:valid() end
+
+---@return integer
+function ScriptMapgenContext:operations_used() end
+
+---@return integer
+function ScriptMapgenContext:operations_remaining() end
+
+---@return GameId
+function ScriptMapgenContext:id() end
+
+---@return GameId
+function ScriptMapgenContext:north() end
+
+---@return GameId
+function ScriptMapgenContext:east() end
+
+---@return GameId
+function ScriptMapgenContext:south() end
+
+---@return GameId
+function ScriptMapgenContext:west() end
+
+---@return GameId
+function ScriptMapgenContext:neast() end
+
+---@return GameId
+function ScriptMapgenContext:seast() end
+
+---@return GameId
+function ScriptMapgenContext:swest() end
+
+---@return GameId
+function ScriptMapgenContext:nwest() end
+
+---@return GameId
+function ScriptMapgenContext:above() end
+
+---@return GameId
+function ScriptMapgenContext:below() end
+
+---@param index integer
+---@return GameId
+function ScriptMapgenContext:get_nesw(index) end
+
+---@return integer
+function ScriptMapgenContext:zlevel() end
+
+---@param index integer
+---@return integer
+function ScriptMapgenContext:get_direction(index) end
+
+---@param index integer
+---@param value integer
+function ScriptMapgenContext:set_dir(index, value) end
+
+---@return integer
+function ScriptMapgenContext:get_rotation() end
+
+---@return string
+function ScriptMapgenContext:get_rot_suffix() end
+
+---@param minimum integer
+---@param maximum integer
+---@return integer
+function ScriptMapgenContext:random_int(minimum, maximum) end
+
+---@param numerator integer
+---@param denominator integer
+---@return boolean
+function ScriptMapgenContext:random_chance(numerator, denominator) end
+
+---@param x integer
+---@param y integer
+---@return GameId
+function ScriptMapgenContext:terrain_at(x, y) end
+
+---@param x integer
+---@param y integer
+---@return GameId|nil
+function ScriptMapgenContext:furniture_at(x, y) end
+
+---@param x integer
+---@param y integer
+---@return GameId|nil
+function ScriptMapgenContext:trap_at(x, y) end
+
+---@param x integer
+---@param y integer
+---@param id GameId
+---@return boolean
+function ScriptMapgenContext:set_terrain(x, y, id) end
+
+---@param x integer
+---@param y integer
+---@param id GameId|nil
+---@return boolean
+function ScriptMapgenContext:set_furniture(x, y, id) end
+
+---@param x integer
+---@param y integer
+---@param id GameId|nil
+---@return boolean
+function ScriptMapgenContext:set_trap(x, y, id) end
+
+---@param x integer
+---@param y integer
+---@param id string
+---@return boolean
+function ScriptMapgenContext:set_terrain_id(x, y, id) end
+
+---@param x integer
+---@param y integer
+---@param id string
+---@return boolean
+function ScriptMapgenContext:set_furniture_id(x, y, id) end
+
+---@param x integer
+---@param y integer
+---@param id string
+---@return boolean
+function ScriptMapgenContext:set_trap_id(x, y, id) end
+
+---@param terrain_id string
+function ScriptMapgenContext:reset(terrain_id) end
+
+---@param x integer
+---@param y integer
+---@param item_id string
+---@param quantity integer
+---@param charges integer
+---@param faction_id string
+function ScriptMapgenContext:place_item(x, y, item_id, quantity, charges, faction_id) end
+
+---@param x1 integer
+---@param y1 integer
+---@param x2 integer
+---@param y2 integer
+---@param group_id string
+---@param chance integer
+---@param faction_id string
+function ScriptMapgenContext:place_item_group(x1, y1, x2, y2, group_id, chance, faction_id) end
+
+---@param x integer
+---@param y integer
+---@param item_id string
+---@param charges integer
+function ScriptMapgenContext:place_liquid(x, y, item_id, charges) end
+
+---@param x integer
+---@param y integer
+---@param charges integer
+function ScriptMapgenContext:place_toilet(x, y, charges) end
+
+---@param x integer
+---@param y integer
+---@param field_id string
+---@param intensity integer
+---@param age_turns integer
+---@return boolean
+function ScriptMapgenContext:add_field(x, y, field_id, intensity, age_turns) end
+
+---@param x integer
+---@param y integer
+---@param field_id string
+---@return boolean
+function ScriptMapgenContext:remove_field(x, y, field_id) end
+
+---@param x integer
+---@param y integer
+---@param item_group_id string
+---@param reinforced boolean
+---@param lootable boolean
+---@param powered boolean
+---@param networked boolean
+function ScriptMapgenContext:place_vending_machine(x, y, item_group_id, reinforced, lootable, powered, networked) end
+
+---@param x integer
+---@param y integer
+---@param charges integer
+---@param fuel_id string
+function ScriptMapgenContext:place_gas_pump(x, y, charges, fuel_id) end
+
+---@param x1 integer
+---@param y1 integer
+---@param x2 integer
+---@param y2 integer
+---@param group_id string
+---@param chance integer
+---@param density number
+---@param individual boolean
+---@param friendly boolean
+---@param name string
+---@param mission_target boolean
+function ScriptMapgenContext:place_monster_group(x1, y1, x2, y2, group_id, chance, density, individual, friendly, name, mission_target) end
+
+---@param x integer
+---@param y integer
+---@param monster_id string
+---@param count integer
+---@param friendly boolean
+---@param name string
+---@param mission_target boolean
+function ScriptMapgenContext:place_monster(x, y, monster_id, count, friendly, name, mission_target) end
+
+---@param x integer
+---@param y integer
+---@param monster_id string
+---@param age_days integer
+function ScriptMapgenContext:place_corpse(x, y, monster_id, age_days) end
+
+---@param x integer
+---@param y integer
+---@param group_id string
+---@param age_days integer
+function ScriptMapgenContext:place_corpse_from_group(x, y, group_id, age_days) end
+
+---@param x integer
+---@param y integer
+---@param furniture_id string
+---@param items boolean
+---@param floor_terrain_id string
+---@param overwrite boolean
+function ScriptMapgenContext:make_rubble(x, y, furniture_id, items, floor_terrain_id, overwrite) end
+
+---@param x integer
+---@param y integer
+---@param name string
+---@param security integer
+---@param access_denied string
+---@param mission_target boolean
+---@return boolean
+function ScriptMapgenContext:place_computer(x, y, name, security, access_denied, mission_target) end
+
+---@param x integer
+---@param y integer
+---@param name string
+---@param action string
+---@param security integer
+function ScriptMapgenContext:add_computer_option(x, y, name, action, security) end
+
+---@param x integer
+---@param y integer
+---@param failure string
+function ScriptMapgenContext:add_computer_failure(x, y, failure) end
+
+---@param x integer
+---@param y integer
+---@param eoc_id string
+function ScriptMapgenContext:add_computer_eoc(x, y, eoc_id) end
+
+---@param x integer
+---@param y integer
+---@param handler_id string
+function ScriptMapgenContext:set_computer_access_handler(x, y, handler_id) end
+
+---@param x integer
+---@param y integer
+---@param topic_id string
+function ScriptMapgenContext:add_computer_chat_topic(x, y, topic_id) end
+
+---@param x integer
+---@param y integer
+---@param furniture_id string
+---@param item_id string
+---@param quantity integer
+---@param charges integer
+---@param item_group_name string
+---@param item_group_chance integer
+---@param faction_id string
+function ScriptMapgenContext:place_sealed_item(x, y, furniture_id, item_id, quantity, charges, item_group_name, item_group_chance, faction_id) end
+
+---@param x integer
+---@param y integer
+---@param text string
+---@param furniture_id string
+function ScriptMapgenContext:place_sign(x, y, text, furniture_id) end
+
+---@param x integer
+---@param y integer
+---@param text string
+function ScriptMapgenContext:set_graffiti(x, y, text) end
+
+---@param name string
+---@param x integer
+---@param y integer
+function ScriptMapgenContext:queue_point(name, x, y) end
+
+function ScriptMapgenContext:fill_groundcover() end
+
 ---@class CcbPlatformMapgenRegistrationOptions
 ---@field terrain_ids? string[] Concrete directional overmap-terrain ids to match.
 ---@field z_min? integer Minimum generated z level.
 ---@field z_max? integer Maximum generated z level.
 
----@class CcbPlatformMapgenApi
-local CcbPlatformMapgenApi = {}
+---@class MapgenUpdateToken
+---@field id GameId GameId<update_mapgen> Typed identity of the registered update-mapgen definition.
+---@field runtime_generation integer Lua Platform runtime generation bound at issuance.
+---@field world_generation integer World generation bound at issuance.
+---@field owner_is_current fun(self: MapgenUpdateToken): boolean False when the issuing runtime owner is no longer live.
+---@field is_valid fun(self: MapgenUpdateToken): boolean False when the owner, runtime, world, or registered update-mapgen identity is stale.
+
+---@class MapgenTransactionFootprint
+---@field min_submap_x integer Inclusive minimum submap x offset relative to the target OMT.
+---@field max_submap_x integer Inclusive maximum submap x offset relative to the target OMT.
+---@field min_submap_y integer Inclusive minimum submap y offset relative to the target OMT.
+---@field max_submap_y integer Inclusive maximum submap y offset relative to the target OMT.
+---@field min_z integer Inclusive minimum z-level in the transactional footprint.
+---@field max_z integer Inclusive maximum z-level in the transactional footprint.
+---@field complete_omt_z_stack boolean True when the footprint covers the complete target OMT z-stack.
+
+---@class MapgenTransactionResult
+---@field state 'committed' Committed native transaction state; this value is published only after commit.
+---@field code 'committed' Stable native transaction success code.
+---@field message '' Empty native transaction diagnostic on success.
+---@field footprint MapgenTransactionFootprint Exact valid transactional footprint committed by native mapgen.
+---@field target OvermapTileToken Exact target token supplied to the transaction.
+---@field update MapgenUpdateToken Exact update token supplied to the transaction.
+
+---@class CcbMapgenTransactionError: CcbPlatformResultError
+---@field state 'rejected'|'rolled_back'|'rollback_failed' Native terminal transaction failure state.
+---@field code string Stable native transaction failure code.
+---@field message string Native transaction diagnostic for the failed transaction.
+---@field footprint? MapgenTransactionFootprint Exact footprint when native preflight established one; omitted when no valid footprint exists.
+---@field target OvermapTileToken Exact target token supplied to the transaction.
+---@field update MapgenUpdateToken Exact update token supplied to the transaction.
+
+---@class CcbMapgenTransactionResult: CcbResult
+---@field value? MapgenTransactionResult Present only when the transaction commits with `state = 'committed'`.
+---@field error? CcbMapgenTransactionError Present for rejected, rolled-back, or rollback-failed transactions.
+
+---@class CcbMapgenApplyOptions
+---Transforms are intentionally unavailable and fail closed until external NPC, zone,
+---and vehicle state can participate in the transaction.
+---@field cancel_on_collision? true Omitted or `{}` uses transactional collision cancellation; when supplied, this must be true.
+
+---@class CcbMapgenApi
+local CcbMapgenApi = {}
+
+---@param id GameId GameId<update_mapgen> Existing registered update-mapgen definition.
+---@return CcbResult result `value` is a value-only MapgenUpdateToken.
+function CcbMapgenApi.update_token(id) end
+
+---@param target OvermapTileToken Exact target absolute OMT token.
+---@param update MapgenUpdateToken Exact value-only update-mapgen token.
+---@param options? CcbMapgenApplyOptions Optional strict transactional mapgen options.
+---@return CcbMapgenTransactionResult result `ok=true` only when `value.state` is `'committed'`; `rejected`, `rolled_back`, and `rollback_failed` are reported in `error`.
+function CcbMapgenApi.apply(target, update, options) end
 
 ---Register a primary OMT generator invoked before native missing-mapgen fallback.
 ---@param handler_id string Registered Platform handler receiving `{ context = ScriptMapgenContext }`.
 ---@param options? CcbPlatformMapgenRegistrationOptions
-function CcbPlatformMapgenApi.on_generate(handler_id, options) end
+function CcbMapgenApi.on_generate(handler_id, options) end
 
 ---Register a generator invoked after the primary native or Platform mapgen finishes.
 ---@param handler_id string Registered Platform handler receiving `{ context = ScriptMapgenContext }`.
 ---@param options? CcbPlatformMapgenRegistrationOptions
-function CcbPlatformMapgenApi.on_postprocess(handler_id, options) end
+function CcbMapgenApi.on_postprocess(handler_id, options) end
+
+---@class CcbCampResourceEntry
+---@field id GameId GameId<item> fake resource id; it is unique within this camp.
+---@field ammo_id? GameId GameId<item> Native charge id when the resource has one.
+---@field available integer Current available native charges.
+---@field consumed integer Native consumption bookkeeping value.
+
+---@class CcbCampResourceChange
+---@field id GameId GameId<item> Existing camp resource fake id; vector indexes are not accepted.
+---@field delta integer Positive adds and negative consumes; the whole batch is preflighted.
+
+---@class CcbCampFoodSnapshot
+---@field kcal integer Current owner-faction food supply in kilocalories.
+---@field consumes_food boolean Whether the owner has a finite consumable food supply.
+
+---@class CcbCampResourcePage
+---@field camp GameHandle Exact camp handle used for the snapshot.
+---@field resources CcbCampResourceEntry[] Semantically unique camp resources.
+---@field food CcbCampFoodSnapshot Real food supply of the camp owner faction.
+---@field total integer Number of unique resource keys.
+---@field offset integer Explicit resource-page offset.
+---@field limit integer Effective bounded page limit.
+---@field returned integer Number of entries in this page.
+---@field complete boolean True when the unique resource list was exhausted.
+---@field truncated boolean True when the page limit capped the list.
+
+---@class CcbCampResourcesApi
+local CcbCampResourcesApi = {}
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param options? table<string, integer> Bounded `offset` and `limit`.
+---@return CcbResult result `value` is a CcbCampResourcePage.
+function CcbCampResourcesApi.snapshot(camp, manager, options) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param changes CcbCampResourceChange[] Dense typed resource changes; all are checked before commit.
+---@return CcbResult result
+function CcbCampResourcesApi.adjust(camp, manager, changes) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param resource_id GameId GameId<item> existing camp resource fake id.
+---@param amount integer Positive bounded native quantity.
+---@return CcbResult result
+function CcbCampResourcesApi.add(camp, manager, resource_id, amount) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param resource_id GameId GameId<item> existing camp resource fake id.
+---@param amount integer Positive bounded native quantity.
+---@return CcbResult result
+function CcbCampResourcesApi.consume(camp, manager, resource_id, amount) end
+
+---@class CcbCampFoodMutation
+---@field camp GameHandle Exact camp handle used for the mutation.
+---@field before_kcal integer Food supply before the operation.
+---@field after_kcal integer Food supply after the operation.
+---@field amount_kcal integer Applied bounded quantity.
+---@field added boolean True for an add operation.
+---@field consumed boolean True for a consume operation.
+---@field changed boolean Whether the native calorie value changed.
+
+---@class CcbCampFoodApi
+local CcbCampFoodApi = {}
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param kcal integer Positive bounded calorie quantity.
+---@return CcbResult result `value` is a CcbCampFoodMutation.
+function CcbCampFoodApi.add(camp, manager, kcal) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param kcal integer Positive bounded calorie quantity.
+---@return CcbResult result `value` is a CcbCampFoodMutation.
+function CcbCampFoodApi.consume(camp, manager, kcal) end
+
+---@class CampExpansionToken
+---@field expansion_id integer Stable Platform expansion identity; never reused.
+---@field identity_generation integer Retired when the expansion is removed, replaced, or its camp owner changes.
+---@field runtime_generation integer Runtime generation bound at issuance.
+---@field world_generation integer World generation bound at issuance.
+---@field camp_stable_id integer Stable owning camp identity.
+---@field camp_identity_generation integer Owning camp generation bound at issuance.
+---@field owner_faction string Stable faction id snapshot; owner changes stale the token.
+---@field is_valid fun(self: CampExpansionToken): boolean False after expansion/camp/owner/runtime/world retirement.
+
+---@alias CcbCampTaskKind 'worker_reservation'|'resource_work'|'recipe_work'|'upgrade_work'
+
+---@alias CcbCampTaskState 'pending'|'running'|'refund_pending'|'completed_unclaimed'|'completed'|'cancelled'
+
+---@class CcbCampResourceWorkChange
+---@field id GameId GameId<item> Existing camp resource fake id.
+---@field amount integer Positive bounded amount; duplicate keys are rejected.
+
+---@class CcbCampResourceWorkDescriptor
+---@field resource_inputs? CcbCampResourceWorkChange[] Explicit resource inputs reserved at start.
+---@field resource_outputs? CcbCampResourceWorkChange[] Explicit resource outputs applied at completion.
+---@field food_input_kcal? integer Optional owner-faction food input reserved at start.
+---@field food_output_kcal? integer Optional owner-faction food output applied at completion.
+---@field duration_turns integer Positive bounded task duration; persisted with the task.
+
+---@class CcbCampRecipeHolder
+---@field kind 'character' Exact holder kind accepted by recipe_work and upgrade_work.
+---@field character GameHandle Exact avatar or NPC Character handle owning the slot.
+---@field slot 'inventory'|'worn'|'wielded' Explicit Character slot; no current-item fallback.
+
+---@class CcbCampRecipeWorkDescriptor
+---@field recipe_id GameId GameId<recipe> concrete craftable recipe.
+---@field batch integer Positive bounded recipe batch.
+---@field duration_turns integer Positive bounded duration matching the authoritative recipe.
+---@field source_holders CcbCampRecipeHolder[] Dense explicit source-holder descriptors.
+---@field destination_holder CcbCampRecipeHolder Explicit Character inventory holder for outputs.
+
+---@class CcbCampUpgradeMapgenArgument
+---@field type 'int'|'bool'|'string' Detached primitive mapgen argument type.
+---@field value integer|boolean|string Detached primitive mapgen argument value.
+
+---@alias CcbCampUpgradeMapgenArguments table<string, CcbCampUpgradeMapgenArgument>
+
+---@class CcbCampUpgradeCoreTarget
+---@field kind 'camp_core' Exact camp-core target discriminator.
+---@field generation integer Exact camp-core upgrade generation captured before start.
+---@field position TripointCoord Exact absolute overmap-terrain target position.
+---@field terrain string Exact currently authoritative target terrain.
+---@field mapgen_args CcbCampUpgradeMapgenArguments Authoritative blueprint mapgen arguments.
+
+---@class CcbCampUpgradeExpansionTarget
+---@field kind 'expansion' Exact expansion target discriminator.
+---@field expansion CampExpansionToken Exact expansion token; no current/nearest lookup is performed.
+---@field position TripointCoord Exact absolute overmap-terrain target position.
+---@field terrain string Exact currently authoritative target terrain.
+---@field mapgen_args CcbCampUpgradeMapgenArguments Authoritative blueprint mapgen arguments.
+
+---@alias CcbCampUpgradeTarget CcbCampUpgradeCoreTarget|CcbCampUpgradeExpansionTarget
+
+---@class CcbCampUpgradeWorkDescriptor
+---@field upgrade_id GameId GameId<recipe> concrete blueprint result recipe.
+---@field blueprint_id string Exact update-mapgen blueprint id matching the recipe.
+---@field target CcbCampUpgradeTarget Exact camp-core or ExpansionToken target.
+---@field duration_turns integer Positive bounded duration matching the authoritative blueprint requirement.
+---@field source_holders CcbCampRecipeHolder[] Dense explicit source-holder descriptors.
+---@field destination_holder CcbCampRecipeHolder Explicit Character inventory destination for retained/refunded values.
+
+---@class CcbCampRecipeWorkSnapshot
+---@field recipe_id GameId GameId<recipe> recorded concrete recipe id.
+---@field batch integer Persisted recipe batch.
+---@field duration_turns integer Persisted authoritative duration.
+---@field source_holders CcbCampRecipeHolderSnapshot[] Detached source-holder identities.
+---@field destination_holder CcbCampRecipeHolderSnapshot Detached output-holder identity.
+
+---@class CcbCampUpgradeCoreTargetSnapshot
+---@field kind 'camp_core'
+---@field generation integer Exact camp-core generation recorded in the task.
+---@field position TripointCoord Exact absolute overmap-terrain target position.
+---@field terrain string Exact expected pre-upgrade terrain.
+---@field mapgen_args CcbCampUpgradeMapgenArguments Detached authoritative blueprint arguments.
+
+---@class CcbCampUpgradeExpansionTargetSnapshot
+---@field kind 'expansion'
+---@field expansion_id integer Stable expansion identity recorded in the task.
+---@field expansion_generation integer Expansion identity generation recorded in the task.
+---@field position TripointCoord Exact absolute overmap-terrain target position.
+---@field terrain string Exact expected pre-upgrade terrain.
+---@field mapgen_args CcbCampUpgradeMapgenArguments Detached authoritative blueprint arguments.
+
+---@alias CcbCampUpgradeTargetSnapshot CcbCampUpgradeCoreTargetSnapshot|CcbCampUpgradeExpansionTargetSnapshot
+
+---@class CcbCampUpgradeWorkSnapshot
+---@field upgrade_id GameId GameId<recipe> recorded blueprint result recipe.
+---@field blueprint_id string Recorded update-mapgen blueprint id.
+---@field target CcbCampUpgradeTargetSnapshot Detached exact target identity.
+---@field duration_turns integer Persisted authoritative duration.
+---@field source_holders CcbCampRecipeHolderSnapshot[] Detached source-holder identities.
+---@field destination_holder CcbCampRecipeHolderSnapshot Detached refund/output-holder identity.
+
+---@class CcbCampRecipeItemRequest
+---@field item GameHandle Exact generation-safe Item handle to escrow.
+---@field source_holder CcbCampRecipeHolder Exact holder containing `item` at start.
+---@field quantity integer Exact whole-item or charge quantity.
+---@field tool boolean True only for a complete owning tool Item; tools remain escrowed until claim.
+
+---@class CcbCampRecipeHolderSnapshot
+---@field kind 'character'
+---@field character_id integer Stable Character id recorded in the task descriptor.
+---@field identity_generation integer Character identity generation recorded at binding time.
+---@field slot 'inventory'|'worn'|'wielded'
+
+---@class CcbCampRecipeEscrowItemSnapshot
+---@field uid integer Stable Item UID; display-only and never a lookup key.
+---@field identity_generation integer Item identity generation captured at staging.
+---@field charges integer Exact detached charge count.
+---@field tool boolean Whether this value is retained as a non-consumable tool.
+---@field valid boolean Whether the serialized detached value passed snapshot decoding.
+---@field item? table<string, any> Bounded detached Item snapshot when valid.
+---@field error? string Diagnostic when the detached value is invalid.
+---@field source_holder CcbCampRecipeHolderSnapshot Original explicit holder identity.
+
+---@class CcbCampRecipeEscrowPage
+---@field items CcbCampRecipeEscrowItemSnapshot[] Dense bounded detached recipe/upgrade escrow values.
+---@field total integer Number of values in the task-owned escrow.
+---@field returned integer Number of values returned in this page.
+---@field limit integer Fixed bounded escrow page limit.
+---@field complete boolean Always true for the bounded task escrow snapshot.
+---@field truncated boolean Always false when the escrow bound is respected.
+
+---@class CcbCampTaskReservation
+---@field resources CcbCampResourceWorkChange[] Detached resource input liability currently held by the task.
+---@field food_kcal integer Detached owner-faction food liability currently held by the task.
+---@field active boolean True only while a reservation is held by a running task.
+---@field discarded boolean True when a terminal lifecycle boundary could not safely refund the liability.
+
+---@class CampTaskToken
+---@field task_id integer Stable persisted Platform task id.
+---@field identity_generation integer Task generation; terminal transitions retire the previous token.
+---@field runtime_generation integer Lua runtime generation bound to this token.
+---@field world_generation integer World generation bound to this token.
+---@field camp_stable_id integer Persisted camp identity bound to this token.
+---@field camp_identity_generation integer Camp identity generation bound to this token.
+---@field manager_stable_id integer Explicit manager Character identity.
+---@field worker_stable_id integer Explicit worker NPC identity.
+---@field manager_identity_generation integer Persisted manager identity generation, or zero for the avatar.
+---@field worker_identity_generation integer Persisted worker identity generation.
+---@field is_valid fun(self: CampTaskToken): boolean False after runtime/world/camp/actor/task retirement.
+
+---@class CcbCampTaskSnapshot
+---@field task_id integer Stable persisted Platform task id.
+---@field identity_generation integer Current task generation.
+---@field camp GameHandle Exact camp handle.
+---@field owner? GameId GameId<faction> owner recorded at task creation.
+---@field manager GameHandle Exact manager handle recorded by the task.
+---@field worker GameHandle Exact worker NPC handle recorded by the task.
+---@field kind CcbCampTaskKind Registered Platform task kind.
+---@field parameter_schema string Internal schema tag; no raw JSON or legacy object is accepted.
+---@field resource_work? CcbCampResourceWorkDescriptor Typed descriptor for the resource_work kind.
+---@field recipe_work? CcbCampRecipeWorkSnapshot Detached descriptor snapshot for the recipe_work kind.
+---@field upgrade_work? CcbCampUpgradeWorkSnapshot Detached descriptor snapshot for the upgrade_work kind.
+---@field recipe_escrow? CcbCampRecipeEscrowPage Detached task-owned recipe/upgrade Item escrow; present while running, refund_pending, or completed_unclaimed; no ItemHandle is exposed here.
+---@field recipe_commit_marker integer Non-zero after one committed authoritative settlement; zero before settlement/refund.
+---@field upgrade_commit_marker integer Non-zero after one committed upgrade mapgen/metadata settlement; zero before settlement/refund.
+---@field upgrade_applying_marker integer Non-zero only while an upgrade mapgen transaction is in flight; unknown recovery states are never replayed.
+---@field recipe_recovery_required boolean True only for an isolated recipe/upgrade save record requiring explicit refund recovery.
+---@field reservation CcbCampTaskReservation Detached task-owned reservation ledger.
+---@field state CcbCampTaskState `refund_pending` and `completed_unclaimed` retain escrow for explicit resolve/claim/retry.
+---@field started_at TimePoint before_time_starts while pending.
+---@field due_at TimePoint before_time_starts while pending.
+---@field finished_at? TimePoint Present for completed/cancelled records.
+---@field reservation_active boolean True only while the exact worker is reserved.
+---@field token? CampTaskToken Present for pending/running/recoverable escrow records; retired after claim.
+
+---@class CcbCampTaskPage
+---@field camp GameHandle Exact camp handle used for the query.
+---@field manager GameHandle Exact manager handle used for the query.
+---@field worker GameHandle Exact worker handle used for the query.
+---@field tasks CcbCampTaskSnapshot[] Bounded records for the exact worker.
+---@field total integer Number of matching persisted task records.
+---@field offset integer Explicit task-page offset.
+---@field limit integer Effective bounded page limit.
+---@field returned integer Number of records in this page.
+---@field complete boolean True when all matching records were returned.
+---@field truncated boolean True when the page limit capped the records.
+
+---@class CcbCampTasksApi
+local CcbCampTasksApi = {}
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param worker GameHandle Exact live NPC worker handle; no selected/current worker is used.
+---@param kind CcbCampTaskKind Registered task kind; unsupported kinds fail closed.
+---@param descriptor? CcbCampResourceWorkDescriptor|CcbCampRecipeWorkDescriptor|CcbCampUpgradeWorkDescriptor Required for typed task kinds; forbidden for `worker_reservation`.
+---@return CcbResult result `value` is a pending CcbCampTaskSnapshot with a CampTaskToken.
+function CcbCampTasksApi.create(camp, manager, worker, kind, descriptor) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param worker GameHandle Exact live NPC worker handle.
+---@param options? table<string, integer> Bounded `offset` and `limit`.
+---@return CcbResult result `value` is a CcbCampTaskPage.
+function CcbCampTasksApi.page(camp, manager, worker, options) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param worker GameHandle Exact live NPC worker handle.
+---@param token CampTaskToken Exact task token bound to all three handles.
+---@return CcbResult result `value` is a CcbCampTaskSnapshot.
+function CcbCampTasksApi.get(camp, manager, worker, token) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param worker GameHandle Exact live NPC worker handle.
+---@param token CampTaskToken Exact task token bound to all three handles.
+---@param destination_holder? CcbCampRecipeHolder Explicit Character destination for recipe/upgrade `refund_pending` or `completed_unclaimed` escrow; omitted means detached read only.
+---@return CcbResult result `value` is a CcbCampTaskSnapshot.
+function CcbCampTasksApi.resolve(camp, manager, worker, token, destination_holder) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param worker GameHandle Exact worker identity carried by the token; recoverable escrow may use a stale unloaded handle.
+---@param token CampTaskToken Exact refund_pending or completed_unclaimed token.
+---@param destination_holder CcbCampRecipeHolder Explicit Character destination for recipe/upgrade escrow; all values must fit atomically.
+---@return CcbResult result `value` is a retired CcbCampTaskSnapshot after successful claim.
+function CcbCampTasksApi.claim(camp, manager, worker, token, destination_holder) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param worker GameHandle Exact worker identity carried by the token; recoverable escrow may use a stale unloaded handle.
+---@param token CampTaskToken Exact retryable refund_pending or completed_unclaimed token.
+---@param destination_holder CcbCampRecipeHolder Explicit fallback holder for recipe/upgrade escrow; failure keeps escrow and token intact.
+---@return CcbResult result `value` is a retired CcbCampTaskSnapshot after successful retry.
+function CcbCampTasksApi.retry(camp, manager, worker, token, destination_holder) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param worker GameHandle Exact live NPC worker handle.
+---@param token CampTaskToken Exact pending task token.
+---@param requests_or_duration? CcbCampRecipeItemRequest[]|integer Typed recipe/upgrade Item requests, or the existing duration integer for worker/resource tasks.
+---@param duration_turns? integer Optional second duration; recipe/upgrade/resource descriptors must match it exactly.
+---@return CcbResult result `value` is a running CcbCampTaskSnapshot with task-owned escrow for recipe_work or upgrade_work.
+function CcbCampTasksApi.start(camp, manager, worker, token, requests_or_duration, duration_turns) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param worker GameHandle Exact live NPC worker handle.
+---@param token CampTaskToken Exact active task token.
+---@return CcbResult result `value` is a cancelled or `refund_pending` CcbCampTaskSnapshot; recipe/upgrade escrow is never silently dropped.
+function CcbCampTasksApi.cancel(camp, manager, worker, token) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param worker GameHandle Exact live NPC worker handle.
+---@param token CampTaskToken Exact active task token.
+---@return CcbResult result `value` is a cancelled or `refund_pending` CcbCampTaskSnapshot; recipe/upgrade escrow is never silently dropped.
+function CcbCampTasksApi.recall(camp, manager, worker, token) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param worker GameHandle Exact live NPC worker handle.
+---@param token CampTaskToken Exact due running task token.
+---@return CcbResult result `value` is a `completed_unclaimed` CcbCampTaskSnapshot for recipe_work or upgrade_work when escrow remains, or a completed snapshot otherwise.
+function CcbCampTasksApi.complete(camp, manager, worker, token) end
+
+---@class CcbCampExpansionDirection
+---@field x integer Relative OMT x direction in -1..1.
+---@field y integer Relative OMT y direction in -1..1.
+
+---@class CcbCampExpansionSnapshot
+---@field token CampExpansionToken Exact expansion token.
+---@field expansion_id integer Stable expansion identity.
+---@field identity_generation integer Current expansion generation.
+---@field camp GameHandle Exact owning camp handle.
+---@field camp_stable_id integer Stable owning camp identity.
+---@field direction CcbCampExpansionDirection Detached relative direction.
+---@field position TripointCoord Absolute OMT position.
+---@field type string Stable Platform expansion type.
+---@field name string Detached expansion name.
+---@field owner? GameId Faction owner snapshot.
+---@field work_in_progress boolean True when legacy/native expansion work occupies this identity.
+
+---@class CcbCampExpansionPageOptions
+---@field offset? integer Explicit page offset, from 0 through 1000000.
+---@field limit? integer Maximum returned expansions, from 0 through 256.
+
+---@class CcbCampExpansionPage
+---@field camp GameHandle Exact owning camp handle.
+---@field items CcbCampExpansionSnapshot[] Bounded expansion snapshots ordered by stable id.
+---@field total integer Total current expansions for this exact camp.
+---@field offset integer Explicit page offset.
+---@field limit integer Effective bounded page limit.
+---@field returned integer Number of snapshots in this page.
+---@field complete boolean True only when all expansions were returned.
+---@field truncated boolean True when the explicit page limit capped the result.
+
+---@class CcbCampExpansionsApi
+local CcbCampExpansionsApi = {}
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param position TripointCoord Explicit absolute OMT expansion position in the camp domain.
+---@param type string Valid Platform camp expansion type.
+---@param name string Bounded detached expansion name.
+---@return CcbResult result `value` is a CcbCampExpansionSnapshot with a stable token.
+function CcbCampExpansionsApi.create(camp, manager, position, type, name) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param options? CcbCampExpansionPageOptions
+---@return CcbResult result `value` is a bounded CcbCampExpansionPage.
+function CcbCampExpansionsApi.list(camp, manager, options) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param token CampExpansionToken Exact token for this camp and owner generation.
+---@return CcbResult result `value` is a detached CcbCampExpansionSnapshot.
+function CcbCampExpansionsApi.get(camp, manager, token) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param token CampExpansionToken Exact token for this camp and owner generation.
+---@return CcbResult result `value` contains the retired expansion identity.
+function CcbCampExpansionsApi.remove(camp, manager, token) end
+
+---@class CcbCampStorageTile
+---@field holder CcbItemHolder Explicit `map_tile` holder for services.items.page/transfer.
+
+---@class CcbCampStorageTilePage
+---@field camp GameHandle Exact camp handle used for the query.
+---@field items CcbCampStorageTile[] Bounded, sorted storage holders.
+---@field total integer Number of stored camp storage tiles.
+---@field offset integer Explicit page offset.
+---@field limit integer Effective bounded page limit.
+---@field returned integer Number of holders in this page.
+---@field complete boolean True when all stored holders were returned.
+---@field truncated boolean True when the page limit capped the holders.
+---@field page_api string Always `services.items.page` for exact item traversal.
+
+---@class CcbCampInventoryApi
+local CcbCampInventoryApi = {}
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param options? table<string, integer> Bounded `offset` and `limit`.
+---@return CcbResult result `value` is a CcbCampStorageTilePage; call services.items.page for live items.
+function CcbCampInventoryApi.storage_tiles(camp, manager, options) end
+
+---@class CcbCampListOptions
+---@field radius_omt? integer Explicit query radius around the supplied absolute OMT center, from 0 through 360.
+---@field limit? integer Maximum returned snapshots, from 0 through 256.
+
+---@class CcbCampSnapshot
+---@field handle GameHandle Exact generation-safe camp handle. Position is a detached snapshot, never an identity lookup key.
+---@field stable_id integer Persisted stable camp identity.
+---@field identity_generation integer Camp identity generation for this handle.
+---@field name string Detached camp name.
+---@field board_name string Detached bulletin-board name.
+---@field valid boolean False when the native camp is not usable.
+---@field position TripointCoord Absolute overmap-terrain position snapshot.
+---@field board_position TripointCoord Absolute map-square board position snapshot.
+---@field owner? GameId Camp owner faction, when present.
+---@field assigned_worker_count integer Current exact worker count snapshot.
+
+---@class CcbCampListPage
+---@field items CcbCampSnapshot[] Bounded explicit-center query results.
+---@field center TripointCoord Absolute overmap-terrain query center.
+---@field radius_omt integer Effective query radius.
+---@field returned integer Number of snapshots in this page.
+---@field limit integer Effective page limit.
+---@field complete boolean True only when the explicit query was not capped by limit.
+
+---@class CcbCampsApi
+---@field resources CcbCampResourcesApi
+---@field food CcbCampFoodApi
+---@field inventory CcbCampInventoryApi
+---@field tasks CcbCampTasksApi
+---@field expansions CcbCampExpansionsApi
+local CcbCampsApi = {}
+
+---@class CcbCampCreateOptions
+---@field type string Valid Platform camp type used to initialize the camp's base domain.
+
+---@param owner_faction GameId Explicit faction owner; no player/avatar owner is inferred.
+---@param manager GameHandle Exact live avatar or NPC Character belonging to owner_faction.
+---@param omt_position TripointCoord Explicit absolute OMT position.
+---@param name string Bounded camp name.
+---@param options CcbCampCreateOptions Explicit camp type options.
+---@return CcbResult result `value` is a detached CcbCampSnapshot with a new camp handle.
+function CcbCampsApi.create(owner_faction, manager, omt_position, name, options) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@return CcbResult result `value` contains the retired camp handle and stable id.
+function CcbCampsApi.remove(camp, manager) end
+
+---@param center TripointCoord Explicit absolute overmap-terrain query center; never inferred from the avatar.
+---@param options? CcbCampListOptions
+---@return CcbResult result `value` is a bounded CcbCampListPage.
+function CcbCampsApi.list(center, options) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@return CcbResult result `value` is a detached CcbCampSnapshot.
+function CcbCampsApi.get(camp, manager) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param name string New bounded camp name.
+---@return CcbResult result `value` contains the current camp handle and before/after names.
+function CcbCampsApi.rename(camp, manager, name) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param owner GameId Faction owner.
+---@return CcbResult result `value` contains the current camp handle and before/after owner.
+function CcbCampsApi.set_owner(camp, manager, owner) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param position TripointCoord Explicit absolute map-square board position inside this camp.
+---@return CcbResult result `value` contains the current camp handle and before/after positions.
+function CcbCampsApi.set_board_position(camp, manager, position) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param worker GameHandle Exact live NPC worker handle.
+---@return CcbResult result `value` contains current camp/worker handles and assignment state.
+function CcbCampsApi.assign_worker(camp, manager, worker) end
+
+---@param camp GameHandle Exact live camp handle.
+---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
+---@param worker GameHandle Exact live NPC worker handle.
+---@return CcbResult result `value` contains current camp/worker handles and assignment state.
+function CcbCampsApi.recall_worker(camp, manager, worker) end
 
 -- Shared character combat methods are installed under `ccb.services.characters`
 --- by the same generation-safe native layer used by `ccb.services.characters`.
 ---@class CcbCharactersApi
 local CcbCharactersApi = {}
+
+---@param character GameHandle Exact live Character handle; subtype and lifecycle are checked before access.
+---@param body_part_limit? integer
+---@return CcbResult result `value` is a detached Character snapshot.
+function CcbCharactersApi.snapshot(character, body_part_limit) end
+
+---@param observer GameHandle Exact live Character observer handle.
+---@param options? CcbCharacterNearbyOptions
+---@return CcbResult result
+function CcbCharactersApi.nearby(observer, options) end
 
 ---@param attacker GameHandle Character handle performing the attack.
 ---@param target GameHandle Any live Creature handle to attack.
@@ -5987,6 +7256,729 @@ function CcbCharactersApi.prevent_death(character) end
 ---@return CcbResult
 function CcbCharactersApi.recalculate_enchantments(character) end
 
+---@class CcbRelocationMoveOptions
+---@field strict? true Strict mode; when supplied it must be `true`. This is the only accepted option; force and fallback policies are unsupported.
+
+---@class CcbRelocationMoveValue
+---@field changed boolean True after a committed move; false for a same-tile no-op.
+---@field scope 'monster'|'avatar'|'npc'|'vehicle' Current result scope; only exact Monster, Avatar, NPC, or Vehicle subtypes are supported.
+---@field handle GameHandle Current exact Monster, Avatar, NPC, or Vehicle handle after the no-op or committed move. VehiclePart handles and their identity remain valid across this move.
+---@field position TripointCoord Current absolute map-square position.
+---@field overmap_terrain TripointCoord Absolute overmap-terrain position derived from the current map-square position.
+
+---@class CcbRelocationMoveResult: CcbResult
+---@field value? CcbRelocationMoveValue Present only when the typed relocation succeeds.
+---@field error? CcbPlatformResultError Present when the exact handle, target token, or strict relocation precondition is rejected.
+
+---@class CcbRelocationApi
+local CcbRelocationApi = {}
+
+---@param entity GameHandle Exact live Monster, Avatar, NPC, or Vehicle GameHandle; generic Character and other unsupported subtypes return `unsupported`.
+---@param target MapTileToken Exact token for the target map square; raw coordinates and implicit/fallback target lookup are unsupported.
+---@param options? CcbRelocationMoveOptions Optional strict-only policy; omitted means strict mode. No force or fallback policy is supported.
+---@return CcbRelocationMoveResult result `value` is a CcbRelocationMoveValue; failures return the typed error envelope.
+function CcbRelocationApi.move(entity, target, options) end
+
+---@param avatar GameHandle Exact live Avatar handle; generic Character and other GameHandle subtypes are unsupported.
+---@param target OvermapTileToken Exact absolute OMT target token; the operation is expected to shift/load the active map as needed.
+---@param options? CcbRelocationMoveOptions Optional strict-only policy; omitted means strict mode. No force or fallback policy is supported.
+---@return CcbRelocationMoveResult result `value` is a CcbRelocationMoveValue; failures return the typed error envelope.
+function CcbRelocationApi.travel_to_omt(avatar, target, options) end
+
+---@class CcbWeatherTypeIdPage
+---@field items GameId[] Bounded weather-type ids.
+---@field total integer Total nested weather-type ids.
+---@field returned integer Number of ids returned in the bounded page.
+---@field truncated boolean True when the native list exceeded the nested bound.
+
+---@class CcbWeatherSourceSnapshot
+---@field weather GameId GameId<weather_type> Source weather type.
+---@field mod string Mod id that supplied the source.
+
+---@class CcbWeatherSourcePage
+---@field items CcbWeatherSourceSnapshot[] Bounded weather-type sources.
+---@field total integer Total sources.
+---@field returned integer Number of sources returned in the bounded page.
+---@field truncated boolean True when the native source list exceeded the nested bound.
+
+---@class CcbWeatherTypeSnapshot
+---@field id GameId GameId<weather_type>
+---@field name string Detached translated weather name.
+---@field loaded boolean Whether the native definition was loaded.
+---@field symbol string Weather display symbol.
+---@field sun_symbol string Sun display symbol.
+---@field ranged_penalty integer
+---@field sight_penalty number
+---@field light_modifier integer
+---@field light_multiplier number
+---@field sun_multiplier number
+---@field sound_attenuation integer
+---@field dangerous boolean
+---@field precipitation 'none'|'very_light'|'light'|'heavy'
+---@field precipitation_mm_per_hour number
+---@field rains boolean
+---@field temperature_modifier_c number
+---@field priority integer
+---@field tiles_animation string
+---@field sound_category 'silent'|'drizzle'|'rainy'|'rainstorm'|'thunder'|'flurries'|'snowstorm'|'snow'|'portal_storm'|'clear'|'sunny'|'cloudy'
+---@field duration_min TimeDuration
+---@field duration_max TimeDuration
+---@field required_weathers CcbWeatherTypeIdPage
+---@field sources CcbWeatherSourcePage
+
+---@class CcbWeatherListOptions
+---@field offset? integer Non-negative offset, bounded to 0..1000000.
+---@field limit? integer Requested page size, bounded to 0..256.
+---@field query? string Case-insensitive id/name query, at most 128 bytes.
+---@field dangerous? boolean Filter by the dangerous flag.
+---@field rains? boolean Filter by the rains flag.
+
+---@class CcbWeatherListPage
+---@field items CcbWeatherTypeSnapshot[] Bounded weather-type snapshots ordered by id.
+---@field total integer Total matching weather types.
+---@field returned integer Number of snapshots returned.
+---@field offset integer Effective page offset.
+---@field limit integer Effective page limit.
+---@field truncated boolean True when the page limit capped the result.
+
+---@class CcbWeatherPointSnapshot
+---@field at TimePoint Sample time.
+---@field weather GameId GameId<weather_type> Weather condition at the sample.
+---@field temperature UnitValue Temperature UnitValue<temperature> in kelvins.
+---@field temperature_c number Temperature in Celsius.
+---@field humidity number
+---@field pressure number
+---@field wind_speed_mph number
+---@field wind_direction_degrees integer
+---@field wind_description string
+---@field position TripointCoord Absolute map-square sample position.
+---@field precipitation_mm_per_hour number
+---@field sunlight number
+---@field sun_irradiance number
+---@field moonlight number
+---@field is_day boolean
+---@field is_night boolean
+
+---@class CcbWeatherCurrentSnapshot
+---@field weather GameId GameId<weather_type> Current weather id.
+---@field type? CcbWeatherTypeSnapshot Current weather definition, when valid.
+---@field temperature UnitValue Current temperature UnitValue<temperature> in kelvins.
+---@field temperature_c number Current temperature in Celsius.
+---@field wind_speed_mph integer
+---@field wind_direction_degrees integer
+---@field next_update TimePoint
+---@field changed boolean
+---@field lightning_active boolean
+---@field weather_override? GameId GameId<weather_type> Active weather override, when present.
+---@field temperature_override? UnitValue Temperature override UnitValue<temperature>, when present.
+---@field wind_speed_override_mph? integer Wind-speed override, when present.
+---@field wind_direction_override_degrees? integer Wind-direction override, when present.
+---@field precise CcbWeatherPointSnapshot Precise current weather sample.
+
+---@class CcbWeatherStringPage
+---@field items string[] Bounded native strings.
+---@field total integer Total native strings.
+---@field returned integer Number of strings returned.
+---@field truncated boolean True when the native list exceeded the nested bound.
+
+---@class CcbWeatherSeasonModifiers
+---@field temperature_modifier integer
+---@field humidity_modifier integer
+
+---@class CcbWeatherSeasonalSnapshot
+---@field spring CcbWeatherSeasonModifiers
+---@field summer CcbWeatherSeasonModifiers
+---@field autumn CcbWeatherSeasonModifiers
+---@field winter CcbWeatherSeasonModifiers
+
+---@class CcbWeatherGeneratorSnapshot
+---@field id GameId GameId<weather_generator>
+---@field loaded boolean Whether the native generator was loaded.
+---@field base_temperature_c number
+---@field base_humidity number
+---@field base_pressure number
+---@field base_wind_mph number
+---@field wind_distribution_peaks integer
+---@field wind_season_variation integer
+---@field seasonal CcbWeatherSeasonalSnapshot
+---@field blacklist CcbWeatherStringPage
+---@field whitelist CcbWeatherStringPage
+---@field sorted_weather CcbWeatherTypeIdPage
+
+---@class CcbWeatherForecastOptions
+---@field start? TimePoint Forecast start; defaults to the current turn.
+---@field position? TripointCoord Absolute map-square position; defaults to the avatar position.
+---@field step? TimeDuration Forecast step, from 1 minute through 24 hours.
+---@field limit? integer Number of samples, bounded to 0..168.
+---@field respect_override? boolean Whether the weather override affects conditions.
+
+---@class CcbWeatherForecastPage
+---@field items CcbWeatherPointSnapshot[] Dense forecast samples.
+---@field returned integer Number of samples returned.
+---@field limit integer Effective sample limit.
+---@field start TimePoint Effective forecast start.
+---@field step TimeDuration Effective forecast step.
+---@field position TripointCoord Effective absolute map-square position.
+---@field respected_override boolean Whether an active weather override was applied.
+
+---@class CcbWeatherLimits
+---@field catalog_limit integer Maximum weather-type page size.
+---@field maximum_catalog_offset integer Maximum weather-type catalog offset.
+---@field maximum_nested_values integer Maximum nested values returned by the weather API.
+---@field forecast_limit integer Maximum forecast sample count.
+---@field forecast_minimum_step TimeDuration Minimum forecast step.
+---@field forecast_maximum_step TimeDuration Maximum forecast step.
+---@field forecast_maximum_horizon TimeDuration Maximum forecast horizon.
+---@field maximum_wind_speed_mph integer Maximum wind-speed override.
+---@field maximum_wind_direction_degrees integer Maximum wind-direction override.
+---@field maximum_temperature_kelvin number Maximum temperature override in kelvins.
+---@field maximum_custom_light_level integer Maximum custom-light level.
+---@field maximum_custom_light_duration TimeDuration Maximum custom-light duration.
+---@field maximum_custom_light_key_bytes integer Maximum custom-light key length in bytes.
+---@field maximum_pending_custom_light_events integer Maximum pending custom-light events.
+
+---@class CcbWeatherApi
+local CcbWeatherApi = {}
+
+---@param options? CcbWeatherListOptions
+---@return CcbWeatherListPage result Detached bounded weather-type page.
+function CcbWeatherApi.types(options) end
+
+---@param id GameId GameId<weather_type>
+---@return CcbWeatherTypeSnapshot result Detached weather-type snapshot.
+function CcbWeatherApi.type(id) end
+
+---@return CcbWeatherCurrentSnapshot result Detached current-weather snapshot.
+function CcbWeatherApi.current() end
+
+---@return CcbWeatherGeneratorSnapshot result Detached weather-generator snapshot.
+function CcbWeatherApi.generator() end
+
+---@param options? CcbWeatherForecastOptions
+---@return CcbWeatherForecastPage result Detached bounded forecast page.
+function CcbWeatherApi.forecast(options) end
+
+---@return CcbWeatherLimits result Detached weather API limits.
+function CcbWeatherApi.limits() end
+
+---@class CcbWeatherWindOptions
+---@field speed_mph? integer Wind-speed override in mph.
+---@field direction_degrees? integer Wind-direction override in degrees.
+---@field clear_speed? boolean Clear the wind-speed override.
+---@field clear_direction? boolean Clear the wind-direction override.
+
+---@class CcbWeatherLightOverrideResult
+---@field level integer Applied custom-light level.
+---@field duration TimeDuration Requested custom-light duration.
+---@field expires_at TimePoint Custom-light expiration time.
+---@field key string Custom-light coordination key, or an empty string.
+---@field accepted boolean Whether the custom-light override was accepted.
+---@field replaced boolean Whether an existing keyed custom-light event was replaced.
+
+---@param id GameId GameId<weather_type>
+---@return CcbResult result `value` is a CcbWeatherCurrentSnapshot.
+function CcbWeatherApi.set_override(id) end
+
+---@return CcbResult result `value` is a CcbWeatherCurrentSnapshot.
+function CcbWeatherApi.clear_override() end
+
+---@param temperature UnitValue UnitValue<temperature>
+---@return CcbResult result `value` is a CcbWeatherCurrentSnapshot.
+function CcbWeatherApi.set_temperature_override(temperature) end
+
+---@return CcbResult result `value` is a CcbWeatherCurrentSnapshot.
+function CcbWeatherApi.clear_temperature_override() end
+
+---@param options CcbWeatherWindOptions
+---@return CcbResult result `value` is a CcbWeatherCurrentSnapshot.
+function CcbWeatherApi.set_wind(options) end
+
+---@return CcbResult result `value` is a CcbWeatherCurrentSnapshot.
+function CcbWeatherApi.clear_overrides() end
+
+---@return CcbResult result `value` is a CcbWeatherCurrentSnapshot.
+function CcbWeatherApi.refresh() end
+
+---@return CcbResult result `value` is a CcbWeatherCurrentSnapshot.
+function CcbWeatherApi.activate_lightning() end
+
+---@param level integer
+---@param duration TimeDuration
+---@param key? string
+---@return CcbResult result `value` is a CcbWeatherLightOverrideResult.
+function CcbWeatherApi.override_light(level, duration, key) end
+
+---@class ZoneToken
+---@field faction GameId GameId<faction> Faction owning the zone.
+---@field type GameId GameId<zone> Zone type identity.
+---@field name string Zone name.
+---@field start TripointCoord Absolute map-square start; for personal zones this is the current absolute view.
+---@field end TripointCoord Absolute map-square end; for personal zones this is the current absolute view.
+---@field relative_start? TripointCoord Relative map-square start for personal zones; use this for `set_position` round-trips.
+---@field relative_end? TripointCoord Relative map-square end for personal zones; use this for `set_position` round-trips.
+---@field vehicle boolean Whether the zone is vehicle-bound; vehicle zones are read-only loaded-map views.
+---@field kind 'global'|'personal'|'vehicle' Zone storage and position kind.
+---@field is_valid fun(self: ZoneToken): boolean False after the native zone, runtime, or world identity becomes stale.
+---@field status fun(self: ZoneToken): CcbResult Typed status with a fail-closed error when the token is stale or no longer resolves.
+
+---@class CcbZoneTypeSnapshot
+---@field id GameId GameId<zone>
+---@field name string
+
+---@class CcbZoneTypeListOptions
+---@field offset? integer
+---@field limit? integer
+---@field query? string
+
+---@class CcbZoneTypePage
+---@field items CcbZoneTypeSnapshot[]
+---@field offset integer
+---@field limit integer
+---@field total integer
+---@field returned integer
+---@field has_more boolean
+
+---@class CcbZoneListOptions
+---@field offset? integer
+---@field limit? integer
+---@field query? string
+---@field faction? GameId GameId<faction>
+---@field type? GameId GameId<zone>
+---@field kind? 'global'|'personal'|'vehicle' Filter by zone storage and position kind.
+
+---@class CcbZoneOptionDescription
+---@field label string Human-readable option label.
+---@field value string Current option value.
+
+---@class CcbZoneOptionPage
+---@field items CcbZoneOptionDescription[] Bounded option descriptions.
+---@field total integer Total native option descriptions.
+---@field returned integer Number of option descriptions returned.
+---@field truncated boolean True when the nested option bound capped the page.
+
+---Personal-zone position round-trips through `set_position` use the optional
+---relative coordinates; absolute `start`/`end` are the current view. Vehicle-bound
+---zone views are read-only and describe the loaded map only.
+---@class CcbZoneSnapshot
+---@field token ZoneToken
+---@field name string
+---@field type GameId GameId<zone>
+---@field type_name string Player-facing zone type name.
+---@field faction GameId GameId<faction>
+---@field start TripointCoord
+---@field end TripointCoord
+---@field relative_start? TripointCoord Relative map-square start for personal zones.
+---@field relative_end? TripointCoord Relative map-square end for personal zones.
+---@field center TripointCoord Absolute map-square center.
+---@field invert boolean Whether the zone's inclusion rule is inverted.
+---@field temporarily_disabled boolean Whether the zone is temporarily disabled.
+---@field displayed boolean Whether the zone is currently displayed.
+---@field vehicle boolean Whether the zone is vehicle-bound; vehicle zones are read-only views limited to the loaded map.
+---@field kind 'global'|'personal'|'vehicle' Zone storage and position kind.
+---@field enabled boolean
+---@field has_options boolean Whether the zone has configurable options.
+---@field options CcbZoneOptionPage Basic bounded option-description page.
+
+---@class CcbZoneListPage
+---@field items CcbZoneSnapshot[]
+---@field faction GameId GameId<faction>
+---@field position? TripointCoord
+---@field offset integer
+---@field limit integer
+---@field total integer
+---@field returned integer
+---@field has_more boolean
+
+---@class CcbZoneCreateOptions
+---@field name string Bounded zone name.
+---@field type GameId GameId<zone> Zone type identity.
+---@field faction? GameId GameId<faction> Faction owning the zone; defaults to the native default faction.
+---@field start TripointCoord Zone start position; personal zones require relative coordinates, other kinds require absolute coordinates.
+---@field end TripointCoord Zone end position; personal zones require relative coordinates, other kinds require absolute coordinates.
+---@field invert? boolean Whether the zone's inclusion rule is inverted.
+---@field enabled? boolean Whether the zone is enabled.
+---@field kind 'global'|'personal' Zone storage and position kind; required.
+
+---@class CcbZoneMutationResult
+---@field changed boolean Whether the requested mutation changed the zone.
+---@field zone CcbZoneSnapshot Resulting detached zone snapshot.
+
+---@class CcbZoneRemoveResult
+---@field removed boolean Whether the zone was removed.
+---@field zone CcbZoneSnapshot Detached snapshot of the removed zone.
+
+---@class CcbZonesApi
+local CcbZonesApi = {}
+
+---@param options? CcbZoneTypeListOptions
+---@return CcbZoneTypePage
+function CcbZonesApi.types(options) end
+
+---@param id GameId GameId<zone>
+---@return CcbZoneTypeSnapshot
+function CcbZonesApi.type(id) end
+
+---@param options? CcbZoneListOptions
+---@return CcbResult result `value` is a CcbZoneListPage.
+function CcbZonesApi.list(options) end
+
+---@param position TripointCoord
+---@param options? CcbZoneListOptions
+---@return CcbResult result `value` is a CcbZoneListPage.
+function CcbZonesApi.at(position, options) end
+
+---@param token ZoneToken
+---@return CcbResult result `value` is a CcbZoneSnapshot.
+function CcbZonesApi.get(token) end
+
+---@param token ZoneToken
+---@param position TripointCoord
+---@return CcbResult result `value` is boolean.
+function CcbZonesApi.contains(token, position) end
+
+---Vehicle zones are read-only loaded-map views and cannot be created.
+---@param options CcbZoneCreateOptions
+---@return CcbResult result `value` is a CcbZoneSnapshot.
+function CcbZonesApi.create(options) end
+
+---@param token ZoneToken
+---@param name string New bounded zone name.
+---@return CcbResult result `value` is a CcbZoneMutationResult; vehicle tokens return error.code `unsupported_vehicle_mutation`.
+function CcbZonesApi.rename(token, name) end
+
+---@param token ZoneToken
+---@param enabled boolean
+---@return CcbResult result `value` is a CcbZoneMutationResult; vehicle tokens return error.code `unsupported_vehicle_mutation`.
+function CcbZonesApi.set_enabled(token, enabled) end
+
+---@param token ZoneToken
+---@param disabled boolean
+---@return CcbResult result `value` is a CcbZoneMutationResult; vehicle tokens return error.code `unsupported_vehicle_mutation`.
+function CcbZonesApi.set_temporary_disabled(token, disabled) end
+
+---Personal zones require relative map-square coordinates; all other kinds require absolute map-square coordinates.
+---@param token ZoneToken
+---@param start TripointCoord
+---@param finish TripointCoord
+---@return CcbResult result `value` is a CcbZoneMutationResult; vehicle tokens return error.code `unsupported_vehicle_mutation`.
+function CcbZonesApi.set_position(token, start, finish) end
+
+---@param token ZoneToken
+---@return CcbResult result `value` is a CcbZoneRemoveResult; vehicle tokens return error.code `unsupported_vehicle_mutation`.
+function CcbZonesApi.remove(token) end
+
+---@class CcbHordeLimits
+---@field maximum_radius integer Maximum supported horde query radius.
+---@field maximum_radius_z integer Maximum supported vertical horde query radius.
+---@field maximum_limit integer Maximum number of horde results per query.
+---@field maximum_offset integer Maximum horde query offset.
+---@field maximum_tracking_intensity integer Maximum supported horde tracking intensity.
+---@field maximum_legacy_population integer Maximum supported legacy horde population.
+---@field flavors string[] Supported horde flavors.
+---@field existing_only boolean Whether live horde entities/groups are restricted to existing overmaps.
+
+---@class HordeEntityToken
+---@field position TripointCoord Absolute map-square position captured by this token.
+---@field monster GameId GameId<monster> captured by this token.
+---@field runtime_generation integer Lua Platform runtime generation bound at issuance.
+---@field world_generation integer World generation bound at issuance.
+---@field owner_generation integer Horde-token owner generation; changes when Platform runtime/world ownership is reset.
+---@field identity_generation integer Process-local native identity generation of the referenced entity.
+---@field is_valid fun(self: HordeEntityToken): boolean False when the token no longer resolves to the same live entity.
+---@field __tostring fun(self: HordeEntityToken): string Stable token identity string.
+---@operator eq(HordeEntityToken): boolean Equality compares position, monster, runtime, world, and native identity.
+
+---@class LegacyHordeToken
+---@field position TripointCoord Absolute submap position captured by this token.
+---@field group GameId GameId<monster_group> captured by this token.
+---@field runtime_generation integer Lua Platform runtime generation bound at issuance.
+---@field world_generation integer World generation bound at issuance.
+---@field owner_generation integer Horde-token owner generation; changes when Platform runtime/world ownership is reset.
+---@field identity_generation integer Process-local native identity generation of the referenced group.
+---@field is_valid fun(self: LegacyHordeToken): boolean False when the token no longer resolves to the same live group.
+---@field __tostring fun(self: LegacyHordeToken): string Stable token identity string.
+---@operator eq(LegacyHordeToken): boolean Equality compares position, group, runtime, world, and native identity.
+
+---@class CcbHordePageOptions
+---@field offset? integer Non-negative bounded page offset.
+---@field limit? integer Page size, capped by CcbHordeLimits.maximum_limit.
+
+---@class CcbHordeEntityQueryOptions: CcbHordePageOptions
+---@field radius? integer Absolute OMT query radius from 0 through CcbHordeLimits.maximum_radius.
+---@field radius_z? integer Absolute vertical query radius from 0 through CcbHordeLimits.maximum_radius_z.
+---@field flavors? string[] Dense one-based flavor names.
+---@field monster? GameId GameId<monster> filter.
+
+---@class CcbHordeLegacyQueryOptions: CcbHordePageOptions
+---@field radius? integer Absolute OMT query radius from 0 through CcbHordeLimits.maximum_radius.
+---@field radius_z? integer Absolute vertical query radius from 0 through CcbHordeLimits.maximum_radius_z.
+---@field horde_only? boolean Restrict results to legacy groups marked as hordes.
+
+---@class CcbHordeLegacyGroupOptions
+---@field group GameId GameId<monster_group> to instantiate.
+---@field position TripointCoord Absolute submap insertion position.
+---@field population? integer Population from 0 through CcbHordeLimits.maximum_legacy_population.
+---@field interest? integer Interest from 15 through 100.
+---@field dying? boolean Whether native decay is enabled.
+---@field horde? boolean Whether this is a horde group.
+---@field behavior? "none"|"city"|"roam"|"nemesis" Native horde behavior.
+---@field target? TripointCoord Absolute submap target on the group's z-level.
+---@field nemesis_target? TripointCoord Absolute submap nemesis target on the group's z-level.
+
+---@class CcbHordeLegacyGroupUpdateOptions
+---@field population? integer Population from 0 through CcbHordeLimits.maximum_legacy_population.
+---@field interest? integer Interest from 15 through 100.
+---@field dying? boolean Whether native decay is enabled.
+---@field horde? boolean Whether this is a horde group.
+---@field behavior? "none"|"city"|"roam"|"nemesis" Native horde behavior.
+---@field target? TripointCoord Absolute submap target on the group's z-level.
+---@field nemesis_target? TripointCoord Absolute submap target on the group's z-level.
+
+---@class CcbHordeEntitySnapshot
+---@field token HordeEntityToken Generation-bound identity token.
+---@field position TripointCoord Absolute map-square position.
+---@field overmap_position TripointCoord Absolute OMT position.
+---@field monster GameId GameId<monster> identity.
+---@field name string Detached monster name.
+---@field flavor "active"|"idle"|"dormant"|"immobile" Native horde-map flavor.
+---@field active boolean Whether tracking is active.
+---@field heavy boolean Whether detailed monster state is retained.
+---@field destination TripointCoord Absolute map-square destination.
+---@field tracking_intensity integer Native tracking intensity.
+---@field moves integer Native movement counter.
+---@field last_processed TimePoint Native last-processed turn.
+
+---@class CcbHordeEntityPage
+---@field items CcbHordeEntitySnapshot[] Detached entity snapshots.
+---@field total integer
+---@field offset integer
+---@field limit integer
+---@field returned integer
+---@field has_more boolean
+---@field radius integer Effective query radius.
+---@field radius_z integer Effective vertical query radius.
+---@field existing_overmaps integer Number of existing overmaps inspected.
+---@field existing_only boolean Always true for this bounded API.
+---@field flavors integer Effective native flavor mask.
+
+---@class CcbHordeLegacyMonsterSnapshot
+---@field id GameId GameId<monster> identity.
+---@field name string Detached monster name.
+---@field position TripointCoord Absolute map-square position.
+
+---@class CcbHordeLegacyMonsterPage
+---@field items CcbHordeLegacyMonsterSnapshot[] Detached tracked-monster snapshots.
+---@field total integer Total tracked monsters.
+---@field limit integer Fixed native safety limit.
+---@field returned integer
+---@field truncated boolean True when the tracked-monster list exceeded the limit.
+
+---@class CcbHordeLegacyGroupSnapshot
+---@field token LegacyHordeToken Generation-bound identity token.
+---@field group GameId GameId<monster_group> identity.
+---@field position TripointCoord Absolute submap position.
+---@field overmap_position TripointCoord Absolute OMT position.
+---@field target TripointCoord Absolute submap target.
+---@field nemesis_target TripointCoord Absolute submap target.
+---@field population integer Native population when no individual monsters are tracked.
+---@field tracked_monsters integer Number of individually tracked monsters.
+---@field interest integer Native interest.
+---@field dying boolean Native decay flag.
+---@field horde boolean Native horde flag.
+---@field behavior "none"|"city"|"roam"|"nemesis" Native behavior.
+---@field empty boolean Whether the group is empty.
+---@field safe boolean Native safety classification.
+---@field average_speed number Native average speed.
+---@field monsters CcbHordeLegacyMonsterPage Bounded tracked-monster page.
+
+---@class CcbHordeLegacyGroupPage
+---@field items CcbHordeLegacyGroupSnapshot[] Detached legacy-group snapshots.
+---@field offset integer
+---@field limit integer
+---@field total integer
+---@field returned integer
+---@field has_more boolean
+---@field radius integer Effective query radius.
+---@field radius_z integer Effective vertical query radius.
+---@field horde_only boolean Effective horde-only filter.
+---@field existing_overmaps integer Number of existing overmaps inspected.
+---@field existing_only boolean Always true for this bounded API.
+
+---@class CcbHordeSummary
+---@field position TripointCoord Absolute OMT query center.
+---@field entities integer Number of horde entities.
+---@field active integer Active entity count.
+---@field idle integer Idle entity count.
+---@field dormant integer Dormant entity count.
+---@field immobile integer Immobile entity count.
+---@field legacy_hordes integer Number of legacy horde groups.
+---@field legacy_population integer Estimated legacy population.
+---@field estimated_size integer Combined bounded estimate.
+---@field has_horde boolean Whether any matching horde exists.
+---@field existing_only boolean Always true for this bounded API.
+
+---@class CcbHordeAlertResult
+---@field status "committed" Status of the single-entity commit.
+---@field before CcbHordeEntitySnapshot Detached pre-commit snapshot.
+---@field after CcbHordeEntitySnapshot Detached post-commit snapshot; the token remains valid.
+
+---@class CcbHordeEntityCreateResult: CcbHordeEntitySnapshot
+---@field status "committed" Status of the single-entity creation commit.
+
+---@class CcbHordeLegacyGroupUpdateResult
+---@field status "committed" Status of the single-group commit.
+---@field before CcbHordeLegacyGroupSnapshot Detached pre-commit snapshot.
+---@field after CcbHordeLegacyGroupSnapshot Detached post-commit snapshot; the token remains valid.
+
+---@class CcbHordeLegacyGroupCreateResult: CcbHordeLegacyGroupSnapshot
+---@field status "committed" Status of the single-group creation commit.
+
+---@class CcbHordeEntityRemoveResult: CcbHordeEntitySnapshot
+---@field status "committed" Status of the single removal commit.
+---@field removed boolean Always true when returned as a successful value; the token is stale afterward.
+
+---@class CcbHordeLegacyGroupRemoveResult: CcbHordeLegacyGroupSnapshot
+---@field status "committed" Status of the single removal commit.
+---@field removed boolean Always true when returned as a successful value; the token is stale afterward.
+
+---@class CcbHordeDefinitionSummary
+---@field id GameId GameId<monster_group> Horde definition identity.
+---@field default_monster GameId|nil GameId<monster>, if any.
+---@field entries integer Number of entries in the definition.
+---@field is_animal boolean Whether the definition is for animals.
+---@field safe boolean Whether the definition is safe.
+
+---@class CcbHordeStringPage
+---@field items string[] Detached strings.
+---@field total integer
+---@field limit integer
+---@field returned integer
+---@field truncated boolean
+
+---@class CcbHordeDefinitionEntry
+---@field kind "group"|"monster" Entry kind.
+---@field id GameId Monster or monster-group identity.
+---@field frequency integer Entry frequency.
+---@field cost_multiplier number Entry cost multiplier.
+---@field pack_minimum integer Minimum pack size.
+---@field pack_maximum integer Maximum pack size.
+---@field starts TimeDuration Entry start delay.
+---@field ends TimeDuration Entry end delay.
+---@field lasts_forever boolean Whether the entry lasts forever.
+---@field event string Holiday event name.
+---@field conditions CcbHordeStringPage Entry conditions.
+
+---@class CcbHordeDefinitionEntryPage
+---@field items CcbHordeDefinitionEntry[] Detached horde definition entries.
+---@field total integer
+---@field offset integer
+---@field limit integer
+---@field returned integer
+---@field has_more boolean
+
+---@class CcbHordeDefinitionPage
+---@field items CcbHordeDefinitionSummary[] Detached horde definitions.
+---@field offset integer
+---@field limit integer
+---@field total integer
+---@field returned integer
+---@field has_more boolean
+
+---@class CcbHordeDefinition
+---@field id GameId GameId<monster_group> Horde definition identity.
+---@field default_monster GameId|nil GameId<monster>, if any.
+---@field is_animal boolean Whether the definition is for animals.
+---@field replace_monster_group boolean Whether the definition replaces another group.
+---@field new_monster_group GameId|nil Replacement monster-group identity, if any.
+---@field replacement_time TimeDuration Replacement time.
+---@field safe boolean Whether the definition is safe.
+---@field frequency_total integer Total entry frequency.
+---@field entries CcbHordeDefinitionEntryPage Definition entries page.
+
+---@class CcbHordeMonsterPage
+---@field items GameId[] GameId<monster> identities.
+---@field group GameId GameId<monster_group> Horde definition identity.
+---@field recursive boolean Whether recursively referenced groups were included.
+---@field offset integer
+---@field limit integer
+---@field total integer
+---@field returned integer
+---@field has_more boolean
+
+---@class CcbHordesApi
+---@return CcbHordeLimits
+function CcbHordesApi.limits() end
+
+---@param options? CcbHordePageOptions
+---@return CcbHordeDefinitionPage
+function CcbHordesApi.definitions(options) end
+
+---@param id GameId GameId<monster_group> Horde definition identity.
+---@param options? CcbHordePageOptions
+---@return CcbHordeDefinition
+function CcbHordesApi.definition(id, options) end
+
+---@param id GameId GameId<monster_group> Horde definition identity.
+---@param recursive? boolean Include recursively referenced groups.
+---@param options? CcbHordePageOptions
+---@return CcbHordeMonsterPage
+function CcbHordesApi.monsters(id, recursive, options) end
+
+---@param group GameId GameId<monster_group> Horde definition identity.
+---@param monster GameId GameId<monster> Monster identity.
+---@return boolean
+function CcbHordesApi.contains(group, monster) end
+
+---@param center TripointCoord Absolute OMT query center.
+---@param options? CcbHordeEntityQueryOptions
+---@return CcbHordeEntityPage
+function CcbHordesApi.entities(center, options) end
+
+---@param token HordeEntityToken Exact generation-bound entity token.
+---@return CcbResult result `value` is a CcbHordeEntitySnapshot.
+function CcbHordesApi.entity(token) end
+
+---@param center TripointCoord Absolute OMT query center.
+---@param options? CcbHordeLegacyQueryOptions
+---@return CcbHordeLegacyGroupPage
+function CcbHordesApi.legacy_groups(center, options) end
+
+---@param token LegacyHordeToken Exact generation-bound legacy-group token.
+---@return CcbResult result `value` is a CcbHordeLegacyGroupSnapshot.
+function CcbHordesApi.legacy_group(token) end
+
+---@param position TripointCoord Absolute OMT query center.
+---@return CcbHordeSummary
+function CcbHordesApi.summary(position) end
+
+---@param position TripointCoord Absolute map-square insertion position.
+---@param monster GameId GameId<monster> to create.
+---@return CcbResult result `value` is a CcbHordeEntityCreateResult; the returned token is valid.
+function CcbHordesApi.spawn_entity(position, monster) end
+
+---@param token HordeEntityToken Exact generation-bound entity token.
+---@param destination TripointCoord Absolute map-square destination.
+---@param intensity integer Tracking intensity from 0 through CcbHordeLimits.maximum_tracking_intensity.
+---@return CcbResult result `value` is a CcbHordeAlertResult; the token remains valid after commit.
+function CcbHordesApi.alert_entity(token, destination, intensity) end
+
+---@param token HordeEntityToken Exact generation-bound entity token.
+---@return CcbResult result `value` is a CcbHordeEntityRemoveResult; the token is stale after commit.
+function CcbHordesApi.remove_entity(token) end
+
+---@param options CcbHordeLegacyGroupOptions
+---@return CcbResult result `value` is a CcbHordeLegacyGroupCreateResult; the returned token is valid.
+function CcbHordesApi.spawn_legacy_group(options) end
+
+---@param token LegacyHordeToken Exact generation-bound legacy-group token.
+---@param options CcbHordeLegacyGroupUpdateOptions
+---@return CcbResult result `value` is a CcbHordeLegacyGroupUpdateResult; the token remains valid after commit.
+function CcbHordesApi.update_legacy_group(token, options) end
+
+---@param token LegacyHordeToken Exact generation-bound legacy-group token.
+---@return CcbResult result `value` is a CcbHordeLegacyGroupRemoveResult; the token is stale after commit.
+function CcbHordesApi.remove_legacy_group(token) end
+
 ---@class CcbPlatformServices
 ---@field lore CcbPlatformLoreApi
 ---@field native_events CcbPlatformNativeEventsApi
@@ -6012,12 +8004,13 @@ function CcbCharactersApi.recalculate_enchantments(character) end
 ---@field hordes CcbHordesApi
 ---@field inventory CcbPlatformInventoryApi
 ---@field items CcbItemsApi
+---@field item_categories CcbItemCategoriesApi Runtime item-category spawn-rate service; distinct from content.ItemCategoryDefinition.
 ---@field martial_arts CcbPlatformMartialArtsApi
 ---@field messages CcbPlatformMessagesApi
----@field dialogue CcbPlatformDialogueServiceApi
 ---@field missions CcbMissionsApi
 ---@field morale CcbPlatformMoraleApi
----@field mapgen CcbPlatformMapgenApi
+---@field mapgen CcbMapgenApi
+---@field map CcbMapApi Token-gated loaded map tile snapshots and edits.
 ---@field mutations CcbMutationsApi
 ---@field needs CcbNeedsApi
 ---@field npcs CcbNpcsApi
@@ -6047,6 +8040,7 @@ function CcbCharactersApi.recalculate_enchantments(character) end
 ---@field world CcbWorldApi
 ---@field zones CcbZonesApi
 ---@field gameplay CcbPlatformGameplayApi
+---@field equipment CcbEquipmentApi
 local CcbPlatformServices = {}
 ---@param handle GameHandle
 ---@param job string
@@ -6058,15 +8052,12 @@ function CcbPlatformActivitiesApi.clear_backlog(character_handle) end
 ---@param npc_handle GameHandle
 ---@return any
 function CcbPlatformActivitiesApi.dismount(npc_handle) end
----@param npc_handle GameHandle
----@return any
-function CcbPlatformActivitiesApi.distribute_camp_food(npc_handle) end
 ---@param character_handle GameHandle
 ---@param item_handle GameHandle
 ---@param quantity integer
----@param placement? TripointCoord
+---@param placement TripointCoord Required explicit relative map-square placement.
 ---@param force_ground? boolean
----@return any
+---@return CcbResult result `value` is a CcbItemActivityResult; the input handle is retired before scheduling.
 function CcbPlatformActivitiesApi.drop_item(character_handle, item_handle, quantity, placement, force_ground) end
 ---@param npc_handle GameHandle
 ---@return any
@@ -6077,18 +8068,11 @@ function CcbPlatformActivitiesApi.offer_interruption(reason) end
 ---@param message string
 ---@return any
 function CcbPlatformActivitiesApi.offer_portal_storm_interruption(message) end
----@param character GameHandle
----@param position TripointCoord
----@param extra_moves_per_item? integer
----@param max_volume_ml? number
----@param max_mass_grams? number
----@return any
-function CcbPlatformActivitiesApi.pickup_from(character, position, extra_moves_per_item, max_volume_ml, max_mass_grams) end
 ---@param character_handle GameHandle
 ---@param item_handle GameHandle
 ---@param quantity integer
 ---@param autopickup? boolean
----@return any
+---@return CcbResult result `value` is a CcbItemActivityResult; the input handle is retired before scheduling.
 function CcbPlatformActivitiesApi.pickup_item(character_handle, item_handle, quantity, autopickup) end
 ---@param character_handle GameHandle
 ---@param book_handle GameHandle
@@ -6128,33 +8112,35 @@ function CcbPlatformActivitiesApi.target_practice(character_handle) end
 function CcbPlatformActivitiesApi.wait_for_npc(character_handle, npc_handle, duration) end
 ---@param descriptor table
 ---@return any
-function CcbPlatformMapgenApi.define(descriptor) end
+function CcbMapgenApi.define(descriptor) end
 ---@return any
-function CcbPlatformMapgenApi.limits() end
+function CcbMapgenApi.limits() end
 ---@param descriptor table
 ---@return any
-function CcbPlatformMapgenApi.register_palette(descriptor) end
+function CcbMapgenApi.register_palette(descriptor) end
 ---@param id string
 ---@return any
 function CcbPlatformModQueries.load_order(id) end
 ---@param interval_turns integer
 ---@param handler_id string
----@param payload? table
+---@param payload? table<string, boolean|integer|number|string> Persistent scalar payload; live GameHandle values are rejected and never stored.
 ---@param payload_version? integer
----@param scope? string
----@return any
-function CcbPlatformTasks.every(interval_turns, handler_id, payload, payload_version, scope) end
+---@param scope? 'character'|'world'
+---@param actor? GameHandle Exact live Character, Item, Monster, or Vehicle handle; only the stable actor identity is persisted and the live handle is callback-transient.
+---@param participants? table<string, GameHandle> Optional required participant handles keyed by unique role names; at most 4 participants. Role names must match ASCII `[A-Za-z_][A-Za-z0-9_]{0,31}`.
+---@return integer task_id
+function CcbPlatformTasks.every(interval_turns, handler_id, payload, payload_version, scope, actor, participants) end
 ---@param id integer
----@return any
+---@return CcbPlatformTaskSnapshot|nil
 function CcbPlatformTasks.get(id) end
 ---@param handler_id? string
 ---@param scope? string
 ---@param requested_limit? integer
----@return any
+---@return CcbPlatformTaskPage
 function CcbPlatformTasks.list(handler_id, scope, requested_limit) end
 ---@param handler_id string
 ---@param scope? string
----@return any
+---@return CcbPlatformTaskSnapshot|nil
 function CcbPlatformTasks.next(handler_id, scope) end
 ---@param message string
 ---@return any
@@ -6165,6 +8151,1352 @@ function CcbPlatformPresentation.notice_large(message) end
 ---@param message string
 ---@return any
 function CcbPlatformPresentation.notice_top(message) end
+
+---@class CcbVehiclePartSnapshot
+---@field handle? GameHandle Exact stable VehiclePart handle; absent for removed, fake, or unidentifiable parts.
+---@field vehicle GameHandle Exact owning Vehicle handle.
+---@field part_uid? integer Stable base-item UID; never a part-index lookup key.
+---@field index integer Current diagnostic ordering only; never an identity.
+---@field id GameId GameId<vehicle_part>
+---@field location GameId GameId<vehicle_part_location>
+---@field name string Detached bounded part name.
+---@field mount table<string, integer> Stable mount coordinates for diagnostics.
+---@field position TripointCoord Current absolute map-square position.
+---@field variant string
+---@field hp integer
+---@field durability integer
+---@field damage_percent number
+---@field broken boolean
+---@field available boolean
+---@field enabled boolean
+---@field removed boolean
+---@field fake boolean
+---@field features table<string, boolean>
+---@field ammo? table<string, any>
+
+---@class CcbVehiclePartsPage
+---@field items CcbVehiclePartSnapshot[] Dense bounded native-order snapshots.
+---@field offset integer Requested diagnostic offset, not an identity cursor.
+---@field limit integer Bounded page limit.
+---@field total integer Current count of matching parts at query time.
+---@field returned integer Number of returned parts.
+---@field has_more boolean Whether another bounded page existed at query time.
+---@field include_fake boolean
+---@field include_removed boolean
+
+---@class CcbVehicleSnapshot
+---@field name string
+---@field display_name string
+---@field prototype GameId GameId<vehicle_prototype>
+---@field position TripointCoord
+---@field parts integer Current part count; part identity is exposed only by `vehicles.parts`.
+---@field real_parts integer
+---@field state table<string, any> Detached vehicle state.
+---@field motion table<string, any> Detached motion state.
+---@field lift table<string, any> Detached lift state.
+
+---@class CcbVehicleSpawnOptions
+---@field rotation_degrees? integer
+---@field fuel_percent? integer
+---@field status? integer
+---@field merge_wrecks? boolean
+---@field owner? GameId GameId<faction>
+
+---@class CcbVehicleSpawnResult
+---@field handle GameHandle New exact Vehicle handle.
+---@field vehicle CcbVehicleSnapshot Detached vehicle snapshot.
+
+---@class CcbVehiclePartMutationResult
+---@field changed boolean
+---@field before? CcbVehiclePartSnapshot
+---@field after? CcbVehiclePartSnapshot
+---@field vehicle GameHandle Exact owning Vehicle handle.
+---@field part? GameHandle New/current exact VehiclePart handle when still live.
+---@field part_stale boolean True when the operation removed/replaced the part.
+---@field part_error? string Stable stale diagnostic when no part handle remains.
+
+---@class CcbVehiclesApi
+local CcbVehiclesApi = {}
+
+---@param options? CcbVehicleDefinitionQueryOptions
+---@return CcbResult result `value` is a bounded page of detached prototype snapshots.
+function CcbVehiclesApi.definitions(options) end
+---@param id GameId GameId<vehicle_prototype>
+---@return CcbResult result `value` is a detached prototype snapshot.
+function CcbVehiclesApi.definition(id) end
+---@param vehicle GameHandle Exact live Vehicle handle.
+---@return CcbResult result `value` is a detached CcbVehicleSnapshot.
+function CcbVehiclesApi.get(vehicle) end
+---@param vehicle GameHandle Exact live Vehicle handle.
+---@param options? CcbVehiclePartPageOptions `offset`/`limit` page diagnostics; returned part handles are stable and exact.
+---@return CcbResult result `value` is a CcbVehiclePartsPage.
+function CcbVehiclesApi.parts(vehicle, options) end
+---@param vehicle GameHandle Exact live Vehicle handle.
+---@return CcbResult result `value` is a bounded detached fuel page.
+function CcbVehiclesApi.fuels(vehicle) end
+---@param vehicle GameHandle Exact live Vehicle handle.
+---@param name string Bounded vehicle name.
+---@return CcbResult
+function CcbVehiclesApi.rename(vehicle, name) end
+---@param vehicle GameHandle Exact live Vehicle handle.
+---@param velocity integer
+---@return CcbResult
+function CcbVehiclesApi.set_cruise_velocity(vehicle, velocity) end
+---@param vehicle GameHandle Exact live Vehicle handle.
+---@param options? CcbVehicleStopOptions
+---@return CcbResult
+function CcbVehiclesApi.stop(vehicle, options) end
+---@param vehicle GameHandle Exact live Vehicle handle.
+---@param enabled boolean
+---@return CcbResult
+function CcbVehiclesApi.set_tracking(vehicle, enabled) end
+---@param vehicle GameHandle Exact live Vehicle handle.
+---@param part GameHandle Exact stable VehiclePart handle returned by `vehicles.parts` and owned by `vehicle`.
+---@param enabled boolean
+---@return CcbResult result `value` is a CcbVehiclePartMutationResult; stale/replaced parts return no writable handle.
+function CcbVehiclesApi.set_part_enabled(vehicle, part, enabled) end
+---@param id GameId GameId<vehicle_prototype>
+---@param post_cataclysm? boolean
+---@return integer
+function CcbVehiclesApi.prototype_value(id, post_cataclysm) end
+---@param vehicle GameHandle Exact live Vehicle handle.
+---@param options? CcbVehicleValueOptions
+---@return CcbResult
+function CcbVehiclesApi.value(vehicle, options) end
+---@param vehicle GameHandle Exact live Vehicle handle.
+---@return CcbResult
+function CcbVehiclesApi.is_player_controlling(vehicle) end
+---@param vehicle GameHandle Exact live Vehicle handle.
+---@param flag string
+---@param enabled? boolean
+---@return CcbResult
+function CcbVehiclesApi.has_part_flag(vehicle, flag, enabled) end
+---@param prototype GameId GameId<vehicle_prototype>
+---@param position TripointCoord Explicit absolute map-square spawn position.
+---@param options? CcbVehicleSpawnOptions
+---@return CcbResult result `value` is a CcbVehicleSpawnResult.
+function CcbVehiclesApi.spawn(prototype, position, options) end
+---@param vehicle GameHandle Exact live Vehicle handle.
+---@return CcbResult result `value.handle_stale` is always true after destruction.
+function CcbVehiclesApi.destroy(vehicle) end
+---@param vehicle GameHandle Exact live Vehicle handle.
+---@param owner GameId GameId<faction>
+---@return CcbResult
+function CcbVehiclesApi.set_owner(vehicle, owner) end
+---@param vehicle GameHandle Exact live Vehicle handle.
+---@param mechanic GameHandle Exact live NPC/Character mechanic handle.
+---@param repair_multiplier? number
+---@return CcbResult
+function CcbVehiclesApi.quote_full_repair(vehicle, mechanic, repair_multiplier) end
+---@param vehicle GameHandle Exact live Vehicle handle.
+---@param mechanic GameHandle Exact live NPC/Character mechanic handle.
+---@param repair_multiplier? number
+---@return CcbResult
+function CcbVehiclesApi.start_full_repair(vehicle, mechanic, repair_multiplier) end
+---@param vehicle GameHandle Exact live Vehicle handle.
+---@param mechanic GameHandle Exact live NPC/Character mechanic handle.
+---@param repair_multiplier? number
+---@param install_multiplier? number
+---@return CcbResult
+function CcbVehiclesApi.open_part_service(vehicle, mechanic, repair_multiplier, install_multiplier) end
+
+---@class MissionToken
+---@field uid integer Native mission instance id; not sufficient to resume after replacement.
+---@field identity_generation integer Native mission-instance generation.
+---@field runtime_generation integer Lua runtime generation bound to this token.
+---@field world_generation integer World generation bound to this token.
+---@field is_valid fun(self: MissionToken): boolean False after mission replacement, runtime replacement, or world reload.
+
+---@class CcbMissionSnapshot
+---@field token MissionToken Exact mission-instance token.
+---@field uid integer Display-only native mission uid.
+---@field id GameId GameId<mission> definition id.
+---@field name string
+---@field description string
+---@field status 'reserved'|'active'|'success'|'failure'
+---@field assigned boolean
+---@field in_progress boolean
+---@field failed boolean
+---@field selected boolean True only relative to the explicit owner supplied to the query.
+---@field has_deadline boolean
+---@field deadline? TimePoint
+---@field has_target boolean
+---@field target? TripointCoord
+---@field follow_up? GameId GameId<mission>
+---@field value integer
+---@field item? GameId GameId<item>
+---@field npc_id? integer
+---@field assigned_player_id? integer
+---@field likely_rewards table
+---@field has_generic_rewards boolean
+
+---@class CcbMissionPage
+---@field items CcbMissionSnapshot[] Missions assigned to the explicit owner.
+---@field total integer
+---@field offset integer
+---@field limit integer
+---@field returned integer
+---@field has_more boolean
+---@field owner GameHandle Exact avatar owner used for the query.
+---@field status 'all'|'reserved'|'active'|'success'|'failure'
+
+---@class CcbMissionMutation
+---@field before? CcbMissionSnapshot
+---@field after? CcbMissionSnapshot
+---@field cancelled? CcbMissionSnapshot
+---@field abandoned? CcbMissionSnapshot
+---@field removed? boolean
+---@field cleared? boolean
+---@field changed? boolean
+---@field step? integer
+---@field forced? boolean
+
+---@class CcbMissionsApi
+local CcbMissionsApi = {}
+
+---@param options? CcbMissionQueryOptions `offset`, `limit`, and `status`; definitions are detached and bounded.
+---@return table
+function CcbMissionsApi.definitions(options) end
+---@param id GameId GameId<mission>
+---@return table Detached mission definition.
+function CcbMissionsApi.definition(id) end
+---@param owner GameHandle Exact avatar owner; no ambient avatar is selected.
+---@param options? CcbMissionQueryOptions `offset`, `limit`, and `status`.
+---@return CcbMissionPage
+function CcbMissionsApi.list(owner, options) end
+---@param token MissionToken Exact mission-instance token.
+---@return CcbResult result `value` is a CcbMissionSnapshot.
+function CcbMissionsApi.get(token) end
+---@param owner GameHandle Exact avatar owner; no ambient current mission is selected.
+---@return CcbResult result `value` is the owner's selected mission snapshot.
+function CcbMissionsApi.selected(owner) end
+---@param owner GameHandle Exact avatar owner.
+---@param id GameId GameId<mission>
+---@return CcbResult result `value` is boolean.
+function CcbMissionsApi.has_active(owner, id) end
+---@param origin GameEnum GameEnum<MissionOrigin>
+---@param position TripointCoord Absolute overmap-terrain position.
+---@return CcbResult result `value` is GameId<mission>.
+function CcbMissionsApi.random_definition(origin, position) end
+---@param id GameId GameId<mission>
+---@param npc_id? integer Mission giver id, or nil when there is no giver.
+---@return CcbResult result `value` is a reserved CcbMissionSnapshot.
+function CcbMissionsApi.reserve(id, npc_id) end
+---@param origin GameEnum GameEnum<MissionOrigin>
+---@param position TripointCoord Absolute overmap-terrain position.
+---@param npc_id? integer Mission giver id, or nil when there is no giver.
+---@return CcbResult result `value` is a reserved CcbMissionSnapshot.
+function CcbMissionsApi.reserve_random(origin, position, npc_id) end
+---@param owner GameHandle Exact avatar owner.
+---@param token MissionToken Exact mission-instance token.
+---@return CcbResult result `value` is a CcbMissionSnapshot.
+function CcbMissionsApi.assign(owner, token) end
+---@param token MissionToken Exact mission-instance token.
+---@param deadline? TimePoint
+---@return CcbResult result `value` is a CcbMissionMutation.
+function CcbMissionsApi.set_deadline(token, deadline) end
+---@param owner GameHandle Exact avatar owner.
+---@param token MissionToken Exact mission-instance token.
+---@return CcbResult result `value` is a CcbMissionSnapshot.
+function CcbMissionsApi.select(owner, token) end
+---@param owner GameHandle Exact avatar owner.
+---@param token MissionToken Exact mission-instance token.
+---@param npc_id? integer Explicit mission-giver id used by the native goal check.
+---@return CcbResult result `value` is boolean.
+function CcbMissionsApi.is_complete(owner, token, npc_id) end
+---@param owner GameHandle Exact avatar owner.
+---@param token MissionToken Exact mission-instance token.
+---@param step integer Bounded native step.
+---@return CcbResult result `value` is a CcbMissionMutation.
+function CcbMissionsApi.step_complete(owner, token, step) end
+---@param owner GameHandle Exact avatar owner.
+---@param token MissionToken Exact mission-instance token.
+---@return CcbResult result `value` is a CcbMissionMutation.
+function CcbMissionsApi.fail(owner, token) end
+---@param owner GameHandle Exact avatar owner.
+---@param token MissionToken Exact mission-instance token.
+---@param force? boolean Explicit completion override.
+---@return CcbResult result `value` is a CcbMissionMutation.
+function CcbMissionsApi.complete(owner, token, force) end
+---@param token MissionToken Exact unassigned mission-instance token.
+---@return CcbResult result `value` is a CcbMissionMutation.
+function CcbMissionsApi.cancel(token) end
+---@param owner GameHandle Exact avatar owner.
+---@param token MissionToken Exact mission-instance token.
+---@return CcbResult result `value` is a CcbMissionMutation.
+function CcbMissionsApi.abandon(owner, token) end
+
+---@class CcbFactionReputation
+---@field likes integer
+---@field respects integer
+---@field trusts integer
+---@field ranking string
+---@field respect string
+
+---@class CcbFactionResources
+---@field size integer
+---@field power integer
+---@field wealth integer
+---@field food_kcal integer
+---@field wealth_description string
+---@field combat_ability string
+
+---@class CcbFactionPolicy
+---@field consumes_food boolean
+---@field lone_wolf boolean
+---@field limited_area_claim boolean
+---@field stealing 'ask'|'always'|'never'
+
+---@class CcbFactionSnapshot
+---@field id GameId GameId<faction>
+---@field name string
+---@field description string
+---@field summary string
+---@field known_by_player boolean
+---@field reputation CcbFactionReputation
+---@field resources CcbFactionResources
+---@field policy CcbFactionPolicy
+---@field currency? GameId GameId<item>
+---@field monster_faction? GameId GameId<monster_faction>
+---@field members integer
+---@field relationship_targets integer
+
+---@class CcbFactionPage
+---@field items CcbFactionSnapshot[]
+---@field offset integer
+---@field limit integer
+---@field total integer
+---@field returned integer
+---@field has_more boolean
+
+---@class CcbFactionsApi
+local CcbFactionsApi = {}
+
+---@param options? CcbFactionQueryOptions `offset`, `limit`, and bounded text `query`.
+---@return CcbResult result `value` is a CcbFactionPage.
+function CcbFactionsApi.list(options) end
+---@param id GameId GameId<faction>
+---@return CcbResult result `value` is a CcbFactionSnapshot.
+function CcbFactionsApi.get(id) end
+---@param character GameHandle Exact live Character handle; no global player fallback.
+---@return CcbResult result `value` is the Character's faction snapshot.
+function CcbFactionsApi.for_character(character) end
+---@param id GameId GameId<faction>
+---@param options? CcbFactionQueryOptions Bounded `offset` and `limit`.
+---@return CcbResult result `value` is a bounded member page.
+function CcbFactionsApi.members(id, options) end
+---@param id GameId GameId<faction>
+---@param options? CcbFactionQueryOptions Bounded `offset` and `limit`.
+---@return CcbResult result `value` is a bounded relationship page.
+function CcbFactionsApi.relationships(id, options) end
+---@param id GameId GameId<faction>
+---@param target GameId GameId<faction>
+---@return CcbResult result `value` is the typed relationship snapshot.
+function CcbFactionsApi.relationship(id, target) end
+---@param id GameId GameId<faction>
+---@param options? CcbFactionQueryOptions Bounded `offset` and `limit`.
+---@return CcbResult result `value` contains food and vitamin snapshots.
+function CcbFactionsApi.food(id, options) end
+---@param id GameId GameId<faction>
+---@param name string Non-empty bounded faction name.
+---@return CcbResult result
+function CcbFactionsApi.rename(id, name) end
+---@param id GameId GameId<faction>
+---@param known boolean
+---@return CcbResult result
+function CcbFactionsApi.set_known(id, known) end
+---@param id GameId GameId<faction>
+---@param deltas table<string, integer> Typed `likes`, `respects`, and/or `trusts` deltas.
+---@return CcbResult result
+function CcbFactionsApi.modify_reputation(id, deltas) end
+---@param id GameId GameId<faction>
+---@param deltas table<string, integer> Typed `size`, `power`, and/or `wealth` deltas.
+---@return CcbResult result
+function CcbFactionsApi.modify_resources(id, deltas) end
+---@param id GameId GameId<faction>
+---@param kcal integer Bounded food delta.
+---@return CcbResult result
+function CcbFactionsApi.modify_food(id, kcal) end
+---@param id GameId GameId<faction>
+---@param options CcbFactionPolicyOptions Typed `consumes_food` and/or `stealing` values.
+---@return CcbResult result
+function CcbFactionsApi.set_policy(id, options) end
+---@param id GameId GameId<faction>
+---@param target GameId GameId<faction>
+---@param options CcbFactionRelationshipOptions Typed relationship flags.
+---@return CcbResult result
+function CcbFactionsApi.set_relationship(id, target, options) end
+
+---@class CcbItemPageContinuation
+---@field continuation_id integer Opaque single-use cursor id; do not construct or reuse after consumption.
+---@field holder CcbItemHolder Root holder bound to this cursor.
+---@field page_size integer Bound page size.
+---@field max_depth integer Bound nested-container depth.
+---@field recursive boolean Whether nested contents are traversed.
+---@field same_runtime_world_holder boolean True; runtime, world, holder, options, and holder mutation must remain unchanged.
+---@field reason 'page'|'node_budget'
+
+---@class CcbItemHolder
+---@field kind 'character'|'map_tile'|'container_pocket'|'vehicle_cargo' Typed native holder kind; no item_location or string path is accepted.
+---@field character? GameHandle Exact Character owner when kind is character.
+---@field slot? 'inventory'|'worn'|'wielded' Explicit Character position when kind is character.
+---@field tile? MapTileToken Exact token when kind is map_tile; bare/local/OMT coordinates are rejected.
+---@field container? GameHandle Exact container Item handle when kind is container_pocket.
+---@field pocket_index? integer Zero-based native pocket index when kind is container_pocket.
+---@field vehicle? GameHandle Exact Vehicle handle when kind is vehicle_cargo.
+---@field part? GameHandle Exact stable VehiclePart handle owned by `vehicle`; no part-index lookup is accepted.
+
+---@class CcbItemPageEntry
+---@field handle GameHandle Exact generation-safe Item handle.
+---@field snapshot table<string, any> Detached bounded Item snapshot; no borrowed pointer.
+---@field holder CcbItemHolder Exact holder of this Item at query time.
+---@field depth integer Zero for a direct holder item.
+---@field uid integer Display-only UID; never used to resume a cursor.
+---@field parent_uid? integer Display-only immediate parent UID.
+
+---@class CcbItemPageResult
+---@field items CcbItemPageEntry[] Dense bounded page.
+---@field holder CcbItemHolder Explicit query root holder.
+---@field page_size integer Requested bounded page size.
+---@field returned integer Number of entries in this page.
+---@field complete boolean True only when traversal reached its natural end under the query bounds.
+---@field truncated boolean True when a page, node budget, max depth, cycle, repetition, or invalid pocket stopped traversal.
+---@field stop_reason 'empty'|'complete'|'page'|'node_budget'|'max_depth'|'cycle'|'repeated_item'|'invalid_pocket'|'stale_cursor'
+---@field max_depth integer Explicit maximum nested depth.
+---@field recursive boolean Whether nested contents were traversed.
+---@field continuation? CcbItemPageContinuation Single-use continuation when traversal can safely resume.
+---@field next? CcbItemPageContinuation Alias of continuation for callers that use next cursors.
+
+---@class CcbItemUpdateOptions
+---@field charges? integer
+---@field damage? integer
+---@field degradation? integer
+---@field burnt? integer
+---@field favorite? boolean
+---@field active? boolean
+---@field browsed? boolean
+---@field relative_rot? number
+---@field rot? TimeDuration
+
+---@class CcbItemTransformOptions
+---@field carrier? GameHandle Exact Character handle; if present the item must be owned by it.
+---@field active? boolean
+---@field browsed? boolean
+
+---@class CcbItemTransformResult
+---@field before table<string, any> Detached state before conversion.
+---@field after table<string, any> Detached state after conversion.
+---@field changed boolean
+---@field old_handle_stale boolean Always true; the input handle is retired.
+---@field handle GameHandle New generation-safe handle for the replacement identity.
+
+---@class CcbItemActivationOptions
+---@field target TripointCoord Required explicit absolute map-square target; no current-tile fallback.
+
+---@class CcbItemActivationResult
+---@field accepted boolean
+---@field destroyed boolean
+---@field stale boolean True when the input handle no longer resolves.
+---@field method string
+---@field item? table<string, any> Detached item snapshot when still live.
+---@field handle? GameHandle Replacement/current handle when still live.
+
+---@class CcbItemActivityResult
+---@field quantity integer
+---@field item_uid integer Display-only UID; never used to resolve a handle.
+---@field input_handle_retired boolean The scheduled operation retires the input handle before it runs.
+---@field activity table<string, any> Detached activity snapshot.
+
+---@class CcbItemTransferResult
+---@field accepted boolean True only after destination insertion and exact source removal/charge mutation commit.
+---@field changed boolean
+---@field quantity integer Exact transferred quantity or charge count.
+---@field source_handle_stale boolean True for a full transfer; partial charge transfers retain the source handle.
+---@field old_handle_stale boolean Alias for source_handle_stale; the source handle is never silently re-resolved.
+---@field handle GameHandle Exact generation-safe handle for the destination identity.
+---@field source_holder CcbItemHolder Holder proven before the transfer.
+---@field holder CcbItemHolder Current typed destination holder.
+---@field item table<string, any> Detached bounded snapshot of the destination item.
+
+---@class CcbItemFaultOptions
+---@field force? boolean
+---@field message? boolean
+---@field holder? GameHandle Exact Character handle owning the item; never inferred.
+
+-- Runtime item-category rate mutations are intentionally separate from the
+-- content.ItemCategoryDefinition constructor and its definition-time field.
+---@class CcbItemCategorySpawnRateOptions
+---@field id GameId GameId<item_category> Existing native item category.
+---@field spawn_rate number Finite multiplier in the inclusive range 0..1000000.
+
+---@class CcbItemCategorySpawnRateResult
+---@field id GameId GameId<item_category> Category whose runtime rate was changed.
+---@field before number Runtime spawn rate before the commit.
+---@field after number Runtime spawn rate after the commit.
+---@field changed boolean Whether the runtime spawn rate changed.
+
+---@class CcbItemCategorySpawnRateBatchResult
+---@field items CcbItemCategorySpawnRateResult[] Results in submitted order.
+---@field count integer Number of committed unique category updates.
+
+---@class CcbItemCategoriesApi
+local CcbItemCategoriesApi = {}
+
+---@param id GameId GameId<item_category> Existing native item category.
+---@return CcbResult result `value` is the current runtime spawn-rate number.
+function CcbItemCategoriesApi.spawn_rate(id) end
+
+---@param id GameId GameId<item_category> Existing native item category.
+---@param rate number Finite multiplier in the inclusive range 0..1000000.
+---@return CcbResult result `value` is a CcbItemCategorySpawnRateResult.
+function CcbItemCategoriesApi.set_spawn_rate(id, rate) end
+
+---@param updates CcbItemCategorySpawnRateOptions[] Dense one-based array of at most 256 unique category updates; all entries are validated before the commit.
+---@return CcbResult result `value` is a CcbItemCategorySpawnRateBatchResult.
+function CcbItemCategoriesApi.set_spawn_rates(updates) end
+
+---@class CcbItemsApi
+local CcbItemsApi = {}
+
+---@param item_handle GameHandle Exact live source Item handle; no same-id lookup.
+---@param source_holder CcbItemHolder Exact current holder descriptor for the source.
+---@param destination_holder CcbItemHolder Explicit destination holder descriptor.
+---@param quantity? integer Whole item count or bounded charge count; defaults to the complete source item.
+---@return CcbResult result `value` is a CcbItemTransferResult; destination rejection leaves the source unchanged.
+function CcbItemsApi.transfer(item_handle, source_holder, destination_holder, quantity) end
+---@param holder CcbItemHolder Explicit Character, map-tile, container-pocket, or vehicle-cargo root.
+---@param options? table<string, integer|boolean> `page_size` defaults to 64 (max 256); `max_depth` defaults to 8 (max 64); `recursive` defaults to true.
+---@param continuation? CcbItemPageContinuation Single-use cursor returned by the prior page; holder/options must match exactly.
+---@return CcbResult result `value` is a CcbItemPageResult; no total is claimed unless `complete` is true.
+function CcbItemsApi.page(holder, options, continuation) end
+---@param handle GameHandle Exact live item handle.
+---@param relation_limit? integer
+---@return CcbResult result `value` is a detached bounded item snapshot.
+function CcbItemsApi.snapshot(handle, relation_limit) end
+---@param id GameId GameId<item>
+---@return integer
+function CcbItemsApi.food_fun(id) end
+---@param group GameId GameId<item_group>
+---@return table
+function CcbItemsApi.possible_from_group(group) end
+---@param handle GameHandle Exact live item handle.
+---@param updates CcbItemUpdateOptions
+---@return CcbResult
+function CcbItemsApi.update(handle, updates) end
+---@param handle GameHandle Exact live item handle.
+---@param damage_type? GameId GameId<damage_type>
+---@return CcbResult
+function CcbItemsApi.melee_damage(handle, damage_type) end
+---@param handle GameHandle Exact live item handle.
+---@param damage_type? GameId GameId<damage_type>
+---@param with_ammo? boolean
+---@return CcbResult
+function CcbItemsApi.gun_damage(handle, damage_type, with_ammo) end
+---@param handle GameHandle Exact live item handle.
+---@param quality GameId GameId<quality>
+---@param strict? boolean
+---@return CcbResult
+function CcbItemsApi.quality(handle, quality, strict) end
+---@param handle GameHandle Exact live item handle.
+---@param target GameId GameId<item>
+---@param options? CcbItemTransformOptions
+---@return CcbResult result `value` is a CcbItemTransformResult; the old handle is always retired.
+function CcbItemsApi.transform(handle, target, options) end
+---@param handle GameHandle Exact live item handle.
+---@param key string
+---@return CcbResult
+function CcbItemsApi.get_var(handle, key) end
+---@param handle GameHandle Exact live item handle.
+---@param key string
+---@param value string|number|TripointCoord
+---@return CcbResult
+function CcbItemsApi.set_var(handle, key, value) end
+---@param handle GameHandle Exact live item handle.
+---@param key string
+---@return CcbResult
+function CcbItemsApi.erase_var(handle, key) end
+---@param handle GameHandle Exact live item handle.
+---@param flag GameId GameId<json_flag>
+---@return CcbResult
+function CcbItemsApi.has_flag(handle, flag) end
+---@param item_handle GameHandle Exact live item handle.
+---@param character GameHandle Exact live Character holder; no avatar fallback.
+---@param method? string
+---@param quantity? integer
+---@return CcbResult
+function CcbItemsApi.ammo_sufficient(item_handle, character, method, quantity) end
+---@param handle GameHandle Exact live item handle.
+---@param flag GameId GameId<json_flag>
+---@param enabled boolean
+---@return CcbResult
+function CcbItemsApi.set_flag(handle, flag, enabled) end
+---@param item_handle GameHandle Exact live item handle.
+---@param character_handle GameHandle Exact live Character holder.
+---@param method string
+---@param options CcbItemActivationOptions Required explicit target; no current-tile fallback.
+---@return CcbResult result `value` is a CcbItemActivationResult.
+function CcbItemsApi.activate(item_handle, character_handle, method, options) end
+---@param handle GameHandle Exact live item handle.
+---@param fault GameId GameId<fault>
+---@param options? CcbItemFaultOptions
+---@return CcbResult
+function CcbItemsApi.set_fault(handle, fault, options) end
+---@param handle GameHandle Exact live item handle.
+---@param fault_type string
+---@param options? CcbItemFaultOptions
+---@return CcbResult
+function CcbItemsApi.set_random_fault(handle, fault_type, options) end
+---@param handle GameHandle Exact live item handle.
+---@param technique GameId GameId<martial_art_technique>
+---@return CcbResult
+function CcbItemsApi.has_technique(handle, technique) end
+---@param handle GameHandle Exact live item handle.
+---@param technique GameId GameId<martial_art_technique>
+---@param enabled boolean
+---@return CcbResult
+function CcbItemsApi.set_technique(handle, technique, enabled) end
+---@param item_handle GameHandle Exact live item handle.
+---@param owner GameHandle Exact Character owner.
+---@param remember_previous? boolean
+---@return CcbResult
+function CcbItemsApi.set_owner(item_handle, owner, remember_previous) end
+---@param item_handle GameHandle Exact live item handle.
+---@param remember_previous? boolean
+---@return CcbResult
+function CcbItemsApi.clear_owner(item_handle, remember_previous) end
+---@param item_handle GameHandle Exact live item handle.
+---@return CcbResult
+function CcbItemsApi.clear_old_owner(item_handle) end
+
+---@class CcbInventoryApi
+local CcbInventoryApi = {}
+
+---@param character GameHandle Exact live Character handle.
+---@param candidates GameHandle[] Exact item handles belonging to character.
+---@param title? string
+---@return CcbResult
+function CcbInventoryApi.choose(character, candidates, title) end
+---@param character GameHandle Exact live Character handle.
+---@param candidates GameHandle[] Exact item handles belonging to character.
+---@param title? string
+---@return CcbResult
+function CcbInventoryApi.choose_many(character, candidates, title) end
+---@param character GameHandle Exact live Character handle.
+---@param candidates GameHandle[] Exact map item handles.
+---@param options? CcbInventoryChoiceOptions
+---@return CcbResult
+function CcbInventoryApi.choose_map(character, candidates, options) end
+---@param character GameHandle Exact live Character handle.
+---@param candidates GameHandle[] Exact map item handles.
+---@param options? CcbInventoryChoiceOptions
+---@return CcbResult
+function CcbInventoryApi.choose_many_map(character, candidates, options) end
+---@param character GameHandle Exact live Character handle.
+---@param item_type GameId GameId<item>
+---@param quantity integer
+---@return CcbResult
+function CcbInventoryApi.resources(character, item_type, quantity) end
+---@param character GameHandle Exact live Character handle.
+---@param entries table
+---@return CcbResult
+function CcbInventoryApi.has_items_sum(character, entries) end
+---@param character GameHandle Exact live Character handle.
+---@param software GameId GameId<item>
+---@param minimum_charges? integer
+---@param device? GameId GameId<item>
+---@return CcbResult
+function CcbInventoryApi.has_software(character, software, minimum_charges, device) end
+---@param character GameHandle Exact live Character handle.
+---@param flag GameId GameId<json_flag>
+---@param body_part? GameId GameId<body_part>
+---@return CcbResult
+function CcbInventoryApi.has_worn_flag(character, flag, body_part) end
+---@param character GameHandle Exact live Character handle.
+---@param item_type GameId GameId<item>
+---@return CcbResult
+function CcbInventoryApi.is_wearing(character, item_type) end
+---@param character GameHandle Exact live Character handle.
+---@param flag GameId GameId<json_flag>
+---@return CcbResult
+function CcbInventoryApi.has_item_flag(character, flag) end
+---@param character GameHandle Exact live Character handle.
+---@param category GameId GameId<item_category>
+---@return CcbResult
+function CcbInventoryApi.category_count(character, category) end
+---@param character GameHandle Exact live Character handle.
+---@param flag GameId GameId<json_flag>
+---@param aggregate? 'first'|'last'|'min'|'max'|'sum'|'average'
+---@return CcbResult
+function CcbInventoryApi.item_radiation(character, flag, aggregate) end
+---@param character GameHandle Exact live Character handle.
+---@param criterion GameId
+---@return CcbResult
+function CcbInventoryApi.wielded_matches(character, criterion) end
+---@param holder GameHandle Exact live Character handle.
+---@param owner GameHandle Exact live Character handle.
+---@return CcbResult
+function CcbInventoryApi.has_stolen_from(holder, owner) end
+---@param character GameHandle Exact live Character handle.
+---@return CcbResult
+function CcbInventoryApi.weapon_state(character) end
+---@param character GameHandle Exact live Character handle.
+---@param item_type GameId GameId<item>
+---@param quantity integer
+---@param options? CcbInventoryGiveOptions
+---@return CcbResult
+function CcbInventoryApi.give(character, item_type, quantity, options) end
+---@param character GameHandle Exact live Character handle.
+---@param group GameId GameId<item_group>
+---@param options? CcbInventoryGiveOptions
+---@return CcbResult
+function CcbInventoryApi.give_group(character, group, options) end
+---@param character GameHandle Exact live Character handle.
+---@param item_type GameId GameId<item>
+---@param count? integer
+---@param charges? integer
+---@return CcbResult
+function CcbInventoryApi.consume(character, item_type, count, charges) end
+---@param character GameHandle Exact live Character handle.
+---@param recipient GameHandle Exact live Character handle.
+---@param item_type GameId GameId<item>
+---@param count? integer
+---@param charges? integer
+---@return CcbResult
+function CcbInventoryApi.hand_in(character, recipient, item_type, count, charges) end
+---@param character GameHandle Exact live Character handle.
+---@param entries table
+---@return CcbResult
+function CcbInventoryApi.consume_sum(character, entries) end
+
+---@alias CcbEquipmentOperation 'wield'|'wear'|'unequip'
+
+---@alias CcbEquipmentErrorCode
+---| 'stale_runtime'
+---| 'stale_world'
+---| 'stale_identity'
+---| 'stale_item'
+---| 'stale_holder'
+---| 'destroyed'
+---| 'dead'
+---| 'invalid_item'
+---| 'invalid_identity'
+---| 'invalid_charges'
+---| 'wrong_kind'
+---| 'wrong_subtype'
+---| 'wrong_holder'
+---| 'not_owned'
+---| 'not_equipped'
+---| 'unsupported_holder'
+---| 'already_equipped'
+---| 'cannot_wield'
+---| 'cannot_wear'
+---| 'cannot_unwield'
+---| 'cannot_takeoff'
+---| 'destination_rejected'
+---| 'invalid_equipment'
+---| 'source_changed'
+---| 'operation_failed'
+---| 'rollback_failed'
+
+---@class CcbEquipmentError: CcbPlatformResultError
+---@field code CcbEquipmentErrorCode Stable preflight, operation, or rollback rejection.
+
+---@class CcbEquipmentDisplacedItem
+---@field source_uid integer Display-only UID of the displaced source Item.
+---@field source_handle_stale boolean Always true after a committed displacement.
+---@field handle GameHandle New exact handle after displacement into the destination holder.
+---@field item table<string, any> Detached bounded snapshot of the displaced Item.
+
+---@class CcbEquipmentValue
+---@field accepted true True only after the complete equipment transaction commits.
+---@field changed boolean Always true for a committed equipment operation.
+---@field operation CcbEquipmentOperation
+---@field source_uid integer Display-only UID of the requested source Item.
+---@field source_handle_stale boolean Always true after a committed operation.
+---@field old_handle_stale boolean Alias for source_handle_stale.
+---@field source_holder CcbItemHolder Exact source holder proven during preflight.
+---@field destination_holder CcbItemHolder Explicit Character inventory destination.
+---@field handle GameHandle New exact handle for the equipped or unequipped Item.
+---@field item table<string, any> Detached bounded snapshot of the resulting Item.
+---@field displaced CcbEquipmentDisplacedItem[] Dense displaced-item results; empty when no Item was displaced.
+---@field displaced_count integer Number of displaced Items returned.
+
+---@class CcbEquipmentResult: CcbResult
+---@field value? CcbEquipmentValue Present only after the atomic equipment transaction commits.
+---@field error? CcbEquipmentError Present when preflight, operation, or rollback rejects the request.
+
+---@class CcbEquipmentApi
+local CcbEquipmentApi = {}
+
+---@param actor GameHandle Exact live avatar, Character, or NPC actor handle; never inferred.
+---@param item GameHandle Exact live Item handle; never selected by type or current-item state.
+---@param source_holder CcbItemHolder Exact holder containing `item`; Character slot must be inventory, worn, or wielded.
+---@param displaced_destination CcbItemHolder Explicit Character inventory holder for displaced Items; capacity is preflighted atomically.
+---@return CcbEquipmentResult result `value` is published only after the complete wield transaction commits; `error` preserves source/equipment/destination on rejection.
+function CcbEquipmentApi.wield(actor, item, source_holder, displaced_destination) end
+
+---@param actor GameHandle Exact live avatar, Character, or NPC actor handle; never inferred.
+---@param item GameHandle Exact live Item handle; never selected by type or current-item state.
+---@param source_holder CcbItemHolder Exact holder containing `item`; Character slot must be inventory, worn, or wielded.
+---@param displaced_destination CcbItemHolder Explicit Character inventory holder for displaced Items; capacity is preflighted atomically.
+---@return CcbEquipmentResult result `value` is published only after the complete wear transaction commits; `error` preserves source/equipment/destination on rejection.
+function CcbEquipmentApi.wear(actor, item, source_holder, displaced_destination) end
+
+---@param actor GameHandle Exact live avatar, Character, or NPC actor handle; never inferred.
+---@param item GameHandle Exact currently wielded or worn Item handle owned by `actor`.
+---@param destination_holder CcbItemHolder Explicit Character inventory holder for the unequipped Item; capacity is preflighted atomically.
+---@return CcbEquipmentResult result `value` is published only after the complete unequip transaction commits; `error` preserves equipment/destination on rejection.
+function CcbEquipmentApi.unequip(actor, item, destination_holder) end
+
+---@class CcbNpcOpinion
+---@field trust integer
+---@field fear integer
+---@field value integer
+---@field anger integer
+---@field owed integer
+---@field sold integer
+
+---@class CcbNpcSnapshot
+---@field handle GameHandle Exact live NPC handle.
+---@field id integer Native character identity; display-only.
+---@field unique_id string Stable unique NPC identity when present.
+---@field name string
+---@field display_name string
+---@field position TripointCoord
+---@field class GameId GameId<npc_class>
+---@field template GameId|nil GameId<npc_template> when present.
+---@field faction GameId|nil GameId<faction> when present.
+---@field attitude GameId
+---@field attitude_name string
+---@field dead boolean
+---@field player_ally boolean
+---@field first_topic string
+---@field opinion CcbNpcOpinion Stored opinion; no avatar lookup is performed.
+---@field ai_rules table<string, any>
+
+---@alias CcbNpcMissionStatus 'available'|'active'|'success'|'failure'
+
+---@class CcbNpcMissionSnapshot
+---@field token MissionToken Exact mission-instance token bound to this runtime and world.
+---@field uid integer Display-only native mission instance id.
+---@field id GameId GameId<mission> definition id.
+---@field name string Native mission name.
+---@field status CcbNpcMissionStatus Native mission lifecycle status.
+---@field assigned boolean True when the mission is assigned to an avatar.
+---@field in_progress boolean True while the mission is active.
+---@field failed boolean True after native mission failure.
+---@field has_generic_rewards boolean Whether the mission has generic NPC rewards.
+---@field generic_reward_claimed boolean Whether Platform has committed this generic reward.
+---@field follow_up? GameId GameId<mission> follow-up definition, when present.
+
+---@class CcbNpcMissionPage
+---@field items CcbNpcMissionSnapshot[] Dense live mission snapshots in native order.
+---@field total integer Number of live entries belonging to the provider.
+---@field returned integer Number of live entries returned in `items`.
+---@field truncated boolean True when the bounded result omitted source entries.
+
+---@class CcbNpcMissionsState
+---@field provider_id integer Exact NPC provider id.
+---@field available CcbNpcMissionPage Missions currently offered by the provider.
+---@field assigned CcbNpcMissionPage Missions assigned through the provider.
+---@field selected? CcbNpcMissionSnapshot Provider-selected mission, when live.
+---@field selected_stale? boolean True when the provider's selected mission is no longer live.
+---@field selected_invalid? boolean True when a live selected mission is not uniquely owned by this provider.
+
+---@class CcbNpcProviderState
+---@field id integer Native provider character id.
+---@field name string Provider name.
+---@field avatar boolean Always false for an NPC provider.
+---@field hp integer Current summed main-body-part hit points.
+---@field maximum_hp integer Maximum summed main-body-part hit points.
+---@field bionics integer Number of bionics.
+---@field mutations integer Number of mutations.
+---@field mounted boolean Whether the provider is mounted.
+---@field bleeding boolean Whether the provider has the bleeding effect.
+---@field bitten boolean Whether the provider has the bite effect.
+---@field infected boolean Whether the provider has the infected effect.
+---@field inventory_stacks integer Number of inventory stacks.
+---@field activity? GameId GameId<activity> for the current activity, when present.
+---@field owed integer Provider debt/reward balance owed to the avatar.
+---@field attitude integer Native NPC attitude enum value.
+---@field busy_turns integer Remaining `currently_busy` duration in turns.
+---@field current_activity string Native current-activity description.
+
+---@class CcbNpcMissionsStateResult
+---@field before CcbNpcMissionsState State before selecting a mission.
+---@field after CcbNpcMissionsState State after selecting a mission.
+
+---@class CcbNpcMissionOfferResult
+---@field mission CcbNpcMissionSnapshot Newly offered mission.
+---@field before CcbNpcMissionsState State before offering the mission.
+---@field after CcbNpcMissionsState State after offering the mission.
+
+---@class CcbNpcMissionAssignmentResult
+---@field mission CcbNpcMissionSnapshot Newly assigned mission.
+---@field owner GameHandle Exact avatar owner used for assignment.
+---@field before CcbNpcMissionsState State before assignment.
+---@field after CcbNpcMissionsState State after assignment.
+
+---@class CcbNpcMissionActionResult
+---@field action 'assign'|'success'|'failure'|'clear'|'reward' Native action performed.
+---@field owner GameHandle Exact avatar owner used for the action.
+---@field forced boolean True only for an explicit incomplete-goal success override.
+---@field owed_delta integer Change to the provider's owed balance.
+---@field before CcbNpcMissionsState Provider mission state before the action.
+---@field after CcbNpcMissionsState Provider mission state after the action.
+---@field provider_before CcbNpcProviderState Provider state before the action.
+---@field provider_after CcbNpcProviderState Provider state after the action.
+
+---@class CcbNpcMissionsApi
+local CcbNpcMissionsApi = {}
+---@param provider GameHandle Exact live NPC provider handle; no ambient provider is selected.
+---@return CcbResult result `value` is a CcbNpcMissionsState.
+function CcbNpcMissionsApi.state(provider) end
+---@param provider GameHandle Exact live NPC provider handle.
+---@param token MissionToken Exact mission-instance token offered or assigned by this provider.
+---@return CcbResult result `value` is a CcbNpcMissionsStateResult.
+function CcbNpcMissionsApi.select(provider, token) end
+---@param provider GameHandle Exact live NPC provider handle.
+---@param mission GameId GameId<mission> definition to reserve and offer.
+---@return CcbResult result `value` is a CcbNpcMissionOfferResult.
+function CcbNpcMissionsApi.offer(provider, mission) end
+---@param provider GameHandle Exact live NPC provider handle.
+---@param owner GameHandle Exact avatar owner handle; no ambient avatar is selected.
+---@param mission GameId GameId<mission> definition to reserve and assign.
+---@return CcbResult result `value` is a CcbNpcMissionAssignmentResult.
+function CcbNpcMissionsApi.add_assigned(provider, owner, mission) end
+---@param provider GameHandle Exact live NPC provider handle.
+---@param owner GameHandle Exact avatar owner handle; no ambient avatar is selected.
+---@return CcbResult result `value` is a CcbNpcMissionActionResult.
+function CcbNpcMissionsApi.assign_selected(provider, owner) end
+---@param provider GameHandle Exact live NPC provider handle.
+---@param owner GameHandle Exact avatar owner handle; no ambient avatar is selected.
+---@param force? boolean Explicit incomplete-goal success override.
+---@return CcbResult result `value` is a CcbNpcMissionActionResult.
+function CcbNpcMissionsApi.succeed_selected(provider, owner, force) end
+---@param provider GameHandle Exact live NPC provider handle.
+---@param owner GameHandle Exact avatar owner handle; no ambient avatar is selected.
+---@return CcbResult result `value` is a CcbNpcMissionActionResult.
+function CcbNpcMissionsApi.fail_selected(provider, owner) end
+---@param provider GameHandle Exact live NPC provider handle.
+---@param owner GameHandle Exact avatar owner handle; no ambient avatar is selected.
+---@return CcbResult result `value` is a CcbNpcMissionActionResult.
+function CcbNpcMissionsApi.clear_selected(provider, owner) end
+---@param provider GameHandle Exact live NPC provider handle.
+---@param owner GameHandle Exact avatar owner handle; no ambient avatar is selected.
+---@return CcbResult result `value` is a CcbNpcMissionActionResult; `error.code` is `no_generic_reward`, `already_claimed`, `not_successful`, or `reward_overflow` when claim preflight rejects.
+function CcbNpcMissionsApi.claim_selected_reward(provider, owner) end
+
+---@class CcbNpcMedicalApi
+local CcbNpcMedicalApi = {}
+---@param provider GameHandle Exact NPC provider handle.
+---@param patient GameHandle Exact avatar handle; required, no avatar fallback.
+---@param level? 'basic'|'advanced'
+---@param include_allies? boolean
+---@return CcbResult
+function CcbNpcMedicalApi.provide_aid(provider, patient, level, include_allies) end
+---@param provider GameHandle Exact NPC provider handle.
+---@param operation 'install'|'remove'
+---@param patient GameHandle Exact Character handle; required, with no implicit avatar fallback.
+---@return CcbResult
+function CcbNpcMedicalApi.open_bionic_service(provider, operation, patient) end
+---@param provider GameHandle Exact NPC provider handle.
+---@param patient GameHandle Exact avatar handle; required, no fallback.
+---@return CcbResult
+function CcbNpcMedicalApi.repair_bionic_limbs(provider, patient) end
+
+---@class CcbNpcGroomingApi
+local CcbNpcGroomingApi = {}
+---@param provider GameHandle Exact NPC provider handle.
+---@param client GameHandle Exact avatar handle; required, no fallback.
+---@param area 'hair'|'beard'
+---@return CcbResult
+function CcbNpcGroomingApi.open_style(provider, client, area) end
+---@param provider GameHandle Exact NPC provider handle.
+---@param client GameHandle Exact avatar handle; required, no fallback.
+---@param service 'haircut'|'shave'
+---@return CcbResult
+function CcbNpcGroomingApi.provide(provider, client, service) end
+
+---@class CcbNpcTrainingApi
+local CcbNpcTrainingApi = {}
+---@param teacher GameHandle Exact Character/NPC teacher handle.
+---@param student GameHandle Exact Character student handle.
+---@return CcbResult
+function CcbNpcTrainingApi.offerings(teacher, student) end
+---@param teacher GameHandle Exact Character/NPC teacher handle.
+---@param students GameHandle[] Exact student handles.
+---@param subject GameId GameId<skill|proficiency|martial_art|spell>
+---@return CcbResult
+function CcbNpcTrainingApi.start(teacher, students, subject) end
+---@param provider GameHandle Exact NPC provider handle.
+---@param student GameHandle Exact avatar handle for player training.
+---@param mode 'player'
+---@return CcbResult
+function CcbNpcTrainingApi.start_selected(provider, student, mode) end
+
+---@class CcbNpcDialogueActionsApi
+local CcbNpcDialogueActionsApi = {}
+---@param handle GameHandle Exact NPC handle.
+---@return CcbResult
+function CcbNpcDialogueActionsApi.finish(handle) end
+---@param handle GameHandle Exact NPC handle.
+---@return CcbResult
+function CcbNpcDialogueActionsApi.provoke_combat(handle) end
+
+---@alias CcbNpcDialogueStatus 'not_started'|'rejected'|'completed'
+
+---@class CcbNpcDialogueResult
+---@field status CcbNpcDialogueStatus Native synchronous start/completion outcome.
+---@field started boolean True only when the native dialogue UI started.
+---@field completed boolean True only after a started dialogue synchronously ended.
+
+---@class CcbNpcsApi
+local CcbNpcsApi = {}
+---@param options? CcbNpcQueryOptions
+---@return CcbResult result `value` is a bounded NPC-class page.
+function CcbNpcsApi.classes(options) end
+---@param id GameId GameId<npc_class>
+---@return CcbResult
+function CcbNpcsApi.class(id) end
+---@param options? CcbNpcQueryOptions
+---@return CcbResult result `value` is a bounded list of exact NPC snapshots.
+function CcbNpcsApi.list(options) end
+---@param handle GameHandle Exact live NPC handle.
+---@return CcbResult result `value` is a detached CcbNpcSnapshot.
+function CcbNpcsApi.get(handle) end
+---@param unique_id string Explicit stable unique NPC id; no nearby/first lookup.
+---@return CcbResult result `value` is a detached CcbNpcSnapshot.
+function CcbNpcsApi.find_unique(unique_id) end
+---@param global? boolean
+---@return integer
+function CcbNpcsApi.count_allies(global) end
+---@param origin GameHandle Exact observer/Character/Creature handle.
+---@param role string
+---@param radius? integer
+---@return CcbResult
+function CcbNpcsApi.has_role_nearby(origin, role, radius) end
+---@param origin GameHandle Exact observer/Character/Creature handle.
+---@param class GameId GameId<npc_class>
+---@param radius? integer
+---@return CcbResult
+function CcbNpcsApi.has_follower_nearby(origin, class, radius) end
+---@param handle GameHandle Exact NPC handle.
+---@param name string
+---@return CcbResult
+function CcbNpcsApi.rename(handle, name) end
+---@param handle GameHandle Exact NPC handle.
+---@param attitude string
+---@return CcbResult
+function CcbNpcsApi.set_attitude(handle, attitude) end
+---@param handle GameHandle Exact NPC handle.
+---@param deltas CcbNpcOpinion
+---@return CcbResult
+function CcbNpcsApi.modify_opinion(handle, deltas) end
+---@param handle GameHandle Exact NPC handle.
+---@param amount integer
+---@return CcbResult
+function CcbNpcsApi.add_debt(handle, amount) end
+---@param handle GameHandle Exact NPC handle.
+---@param amount integer
+---@return CcbResult
+function CcbNpcsApi.add_faction_rep(handle, amount) end
+---@param handle GameHandle Exact NPC handle.
+---@param class GameId GameId<npc_class>
+---@return CcbResult
+function CcbNpcsApi.set_class(handle, class) end
+---@param handle GameHandle Exact NPC handle.
+---@param faction GameId GameId<faction>
+---@return CcbResult
+function CcbNpcsApi.set_faction(handle, faction) end
+---@param handle GameHandle Exact NPC handle.
+---@param topic string Explicit topic id.
+---@return CcbResult
+function CcbNpcsApi.set_first_topic(handle, topic) end
+---@param handle GameHandle Exact NPC handle.
+---@param avatar GameHandle Exact avatar owner handle; required, no global-player fallback.
+---@param enabled boolean
+---@return CcbResult
+function CcbNpcsApi.set_radio_representative(handle, avatar, enabled) end
+---@return table
+function CcbNpcsApi.ai_rule_catalog() end
+---@param handle GameHandle Exact NPC handle.
+---@param family string
+---@param rule string
+---@return CcbResult
+function CcbNpcsApi.set_ai_policy(handle, family, rule) end
+---@param handle GameHandle Exact NPC handle.
+---@param rule string
+---@param enabled? boolean
+---@return CcbResult
+function CcbNpcsApi.set_ally_rule(handle, rule, enabled) end
+---@param handle GameHandle Exact NPC handle.
+---@param rule string
+---@param state 'inherit'|'allow'|'deny'
+---@return CcbResult
+function CcbNpcsApi.set_ally_override(handle, rule, state) end
+---@param target GameHandle Exact target NPC handle.
+---@param source GameHandle Exact source NPC handle.
+---@return CcbResult
+function CcbNpcsApi.copy_ai_rules(target, source) end
+---@param handle GameHandle Exact NPC handle.
+---@return CcbResult
+function CcbNpcsApi.make_thankful(handle) end
+---@param handle GameHandle Exact NPC handle.
+---@param request string
+---@return CcbResult
+function CcbNpcsApi.record_refusal(handle, request) end
+---@param handle GameHandle Exact NPC handle.
+---@return CcbResult
+function CcbNpcsApi.follow_temporarily(handle) end
+function CcbNpcsApi.stop_temporary_following(handle) end
+function CcbNpcsApi.make_neutral(handle) end
+function CcbNpcsApi.start_fleeing(handle) end
+function CcbNpcsApi.start_mugging(handle) end
+---@param handle GameHandle Exact NPC handle.
+---@param avatar GameHandle Exact avatar owner handle; required, no global-player fallback.
+function CcbNpcsApi.join_player(handle, avatar) end
+---@param handle GameHandle Exact NPC handle.
+---@param avatar GameHandle Exact avatar owner handle; required, no global-player fallback.
+function CcbNpcsApi.leave_player(handle, avatar) end
+---@param handle GameHandle Exact NPC handle.
+---@param enabled boolean
+function CcbNpcsApi.set_guarding(handle, enabled) end
+function CcbNpcsApi.become_hostile(handle) end
+function CcbNpcsApi.warn_player_departure(handle) end
+function CcbNpcsApi.clear_stolen_item_claim(handle) end
+---@param handle GameHandle Exact NPC handle.
+function CcbNpcsApi.destinations(handle) end
+---@param handle GameHandle Exact NPC handle.
+---@param goal TripointCoord
+function CcbNpcsApi.plan_travel(handle, goal) end
+function CcbNpcsApi.set_goal(handle, goal) end
+function CcbNpcsApi.lead_to(handle, goal) end
+function CcbNpcsApi.set_guard_position(handle, position) end
+function CcbNpcsApi.companion_state(handle) end
+function CcbNpcsApi.set_companion_role(handle, role) end
+function CcbNpcsApi.open_companion_missions(handle, role) end
+---@param recipient GameHandle Exact NPC recipient handle.
+---@param giver GameHandle Exact Character giver handle; no avatar fallback.
+---@param item GameHandle Exact item owned by giver.
+---@param use_item? boolean
+function CcbNpcsApi.offer_item(recipient, giver, item, use_item) end
+---@param npc GameHandle Exact NPC interlocutor; no nearby/current fallback.
+---@param speaker GameHandle Exact avatar speaker; no global-avatar fallback.
+---@param topic string Required registered topic id; never inferred from either participant.
+---@return CcbResult result `value` is a detached CcbNpcDialogueResult after synchronous UI teardown; it never carries a persistent or live dialogue session token.
+function CcbNpcsApi.open_dialogue(npc, speaker, topic) end
+function CcbNpcsApi.open_rules(handle) end
+---@param avatar GameHandle Exact avatar handle; required.
+function CcbNpcsApi.open_control_menu(avatar) end
+---@param handle GameHandle Exact allied NPC handle.
+---@param avatar GameHandle Exact avatar owner handle; required, no global-player fallback.
+function CcbNpcsApi.take_control(handle, avatar) end
+---@param handle GameHandle Exact NPC handle.
+---@return CcbResult
+function CcbNpcsApi.ai_rules(handle) end
+---@field medical CcbNpcMedicalApi
+---@field grooming CcbNpcGroomingApi
+---@field training CcbNpcTrainingApi
+---@field missions CcbNpcMissionsApi
+---@field dialogue CcbNpcDialogueActionsApi
+
+---@class TradeQuoteToken
+---@field quote_id integer Opaque runtime-owned quote identity; never serialized or constructed by Lua.
+---@field runtime_generation integer Runtime owner generation captured at issuance.
+---@field world_generation integer World generation captured at issuance.
+---@field seller_stable_id integer Exact seller Character/NPC stable identity.
+---@field buyer_stable_id integer Exact buyer Character/NPC stable identity.
+---@field seller_identity_generation integer Exact seller identity generation.
+---@field buyer_identity_generation integer Exact buyer identity generation.
+---@field holder_mutation_generation integer Global authoritative Item-holder mutation epoch; any Item mutation invalidates all quotes.
+---@field pricing_generation integer Detached authoritative pricing-input generation.
+---@field faction_generation integer Detached faction pricing-input generation.
+---@field debt_generation integer Detached NPC debt-input generation.
+---@field opinion_generation integer Detached NPC opinion-input generation.
+---@field issued_turn integer Turn at which the quote was issued.
+---@field expires_turn integer Exclusive expiry turn; the quote is stale at or after this turn.
+---@field registered boolean True only while the token is in the active runtime registry.
+---@field is_valid fun(self: TradeQuoteToken): boolean False after any runtime, world, participant, Item, holder, pricing, settlement, expiry, save, or shutdown invalidation.
+
+---@alias CcbTradeQuoteSettlementStrategy 'cash'|'npc_debt'
+
+---@class CcbTradeQuoteSettlement
+---@field strategy CcbTradeQuoteSettlementStrategy Explicit quote settlement preflight strategy.
+---@field currency 'cash' Explicit supported currency; quote rejects other currencies.
+
+---@alias CcbTradeCommitSettlementStrategy 'npc_debt'
+
+---@class CcbTradeNpcDebtSettlement
+---@field strategy 'npc_debt' The only currently publishable commit settlement.
+---@field currency 'cash' Explicit cash-denominated NPC debt account.
+
+---Commit settlement is an intentionally one-member union.  A cash publish
+---settlement is not exposed until its atomic currency path is source-complete.
+---@alias CcbTradeSettlement CcbTradeNpcDebtSettlement
+
+---@class CcbTradeQuoteHolder
+---@field kind 'character' Exact Character holder kind; no map/container/vehicle or implicit selection.
+---@field character GameHandle Exact Character/NPC holder handle.
+---@field slot 'inventory'|'worn'|'wielded' Explicit Character slot.
+
+---@class CcbTradeQuoteHolderSnapshot: CcbTradeQuoteHolder
+---@field locator table<string, any> Detached canonical holder locator captured at quote time.
+---@field mutation_generation integer Global holder epoch captured at quote time.
+
+---@class CcbTradeQuoteLineInput
+---@field direction 'seller_to_buyer'|'buyer_to_seller' Explicit transfer direction.
+---@field item GameHandle Exact generation-safe Item handle.
+---@field quantity integer Exact whole-item quantity or charge quantity; charge Items must use 1..current charges and non-charge Items must use 1.
+---@field source_holder CcbTradeQuoteHolder Exact source holder matching direction.
+---@field destination_holder CcbTradeQuoteHolder Exact destination holder matching direction.
+
+---@class CcbTradeQuoteOptions
+---@field settlement CcbTradeQuoteSettlement Explicit settlement options with `strategy` and `currency`; no implicit participant or player-cash default.
+---@field expiry_turns? integer Positive bounded quote lifetime in turns.
+
+---@class CcbTradeQuoteLineSnapshot
+---@field direction 'seller_to_buyer'|'buyer_to_seller'
+---@field item GameHandle Exact quoted Item handle.
+---@field item_uid integer Exact Item UID captured at quote time.
+---@field item_identity_generation integer Exact Item identity generation captured at quote time.
+---@field quantity integer Exact requested quantity captured at quote time.
+---@field charges_at_quote integer Exact complete charge count captured at quote time.
+---@field source_holder CcbTradeQuoteHolderSnapshot Canonical source holder locator and generation snapshot.
+---@field destination_holder CcbTradeQuoteHolderSnapshot Canonical destination holder locator and generation snapshot.
+---@field source_holder_mutation_generation integer Global holder mutation epoch at quote time.
+---@field destination_holder_mutation_generation integer Global holder mutation epoch at quote time.
+---@field unit_price integer Authoritative detached per-unit price.
+---@field total integer Authoritative detached line total.
+---@field tax integer Detached line tax; currently zero when the native rule has no tax.
+---@field accepted boolean True for a line in a successful detached quote.
+---@field rejection_reason? string Present only when a line is rejected.
+
+---@class CcbTradeQuoteSnapshot
+---@field token TradeQuoteToken Runtime-owned nonpersistent QuoteToken.
+---@field seller GameHandle Exact seller Character/NPC handle.
+---@field buyer GameHandle Exact buyer Character/NPC handle.
+---@field seller_stable_id integer
+---@field buyer_stable_id integer
+---@field seller_identity_generation integer
+---@field buyer_identity_generation integer
+---@field holder_mutation_generation integer Any Item mutation invalidates this quote and all other quotes.
+---@field pricing_generation integer
+---@field faction_generation integer
+---@field debt_generation integer
+---@field opinion_generation integer
+---@field settlement_strategy CcbTradeQuoteSettlementStrategy Explicit selected settlement strategy.
+---@field currency 'cash' Explicit supported currency; unsupported currencies are rejected.
+---@field seller_to_buyer_total integer Total authoritative value moving from seller to buyer.
+---@field buyer_to_seller_total integer Total authoritative value moving from buyer to seller.
+---@field net integer Net settlement amount before the selected strategy is applied.
+---@field tax integer Detached aggregate tax.
+---@field settlement_amount integer Detached selected-strategy settlement amount.
+---@field debt_before integer|nil Detached NPC debt before settlement.
+---@field debt_after integer|nil Detached NPC debt after settlement.
+---@field sold_before integer|nil Detached NPC sold/opinion value before settlement.
+---@field sold_after integer|nil Detached NPC sold/opinion value after settlement.
+---@field buyer_cash_before integer
+---@field seller_cash_before integer
+---@field free_exchange boolean Whether the authoritative NPC rules permit free exchange.
+---@field issued_turn integer
+---@field expires_turn integer
+---@field available_settlement_modes string[] Modes explicitly accepted by the authoritative rules.
+---@field lines CcbTradeQuoteLineSnapshot[] Detached line snapshots.
+---@field rejection_reasons string[] Empty for a successful quote; rejected requests return CcbResult.error instead.
+
+---@alias CcbTradeCommitStaleErrorCode
+---| 'stale_quote'
+---| 'stale_runtime'
+---| 'stale_world'
+---| 'expired_quote'
+---| 'stale_holder'
+---| 'stale_participant'
+---| 'stale_identity'
+---| 'stale_item'
+---| 'wrong_holder'
+---| 'wrong_subtype'
+---| 'destroyed_creature'
+---| 'dead_creature'
+---| 'pricing_changed'
+---| 'price_changed'
+---| 'faction_changed'
+---| 'debt_changed'
+---| 'opinion_changed'
+
+---@alias CcbTradeCommitRollbackErrorCode 'source_changed'|'rollback_failed'
+
+---@alias CcbTradeCommitErrorCode
+---| CcbTradeCommitStaleErrorCode
+---| CcbTradeCommitRollbackErrorCode
+---| 'invalid_quote'
+---| 'consumed_quote'
+---| 'unsupported_settlement'
+---| 'unsupported_currency'
+---| 'settlement_changed'
+---| 'unsupported_participants'
+---| 'unsupported_holder'
+---| 'unsupported_item'
+---| 'invalid_transaction'
+---| 'invalid_quantity'
+---| 'invalid_identity'
+---| 'overlapping_holder'
+---| 'destination_capacity'
+---| 'destination_rejected'
+---| 'credit_limit'
+---| 'numeric_overflow'
+---| 'settlement_publish_failed'
+
+---@class CcbTradeCommitError: CcbPlatformResultError
+---@field code CcbTradeCommitErrorCode Stable commit rejection, stale, or rollback code.
+
+---@class CcbTradeCommitLineResult
+---@field direction 'seller_to_buyer'|'buyer_to_seller'
+---@field item_uid integer Source Item UID captured by the quote.
+---@field transferred_item_uid integer Destination Item UID after full or partial extraction.
+---@field quantity integer Exact quantity transferred.
+---@field total integer Detached authoritative quoted line total.
+
+---@class CcbTradeCommitValue
+---@field committed true True only after every Item and settlement publication succeeds.
+---@field consumed true The QuoteToken is permanently single-use after success.
+---@field quote_id integer Committed quote identity.
+---@field commit_generation integer Monotonic generation after consuming the token.
+---@field settlement_strategy CcbTradeCommitSettlementStrategy
+---@field currency 'cash'
+---@field settlement_amount integer Authoritative net amount applied to the NPC debt account.
+---@field debt_before integer NPC debt before publication.
+---@field debt_after integer NPC debt after publication.
+---@field sold_before integer NPC sold/opinion value before publication.
+---@field sold_after integer NPC sold/opinion value after publication.
+---@field buyer_cash_before integer Detached buyer cash snapshot.
+---@field seller_cash_before integer Detached seller cash snapshot.
+---@field buyer_cash_after integer Detached buyer cash after the selected settlement plan.
+---@field seller_cash_after integer Detached seller cash after the selected settlement plan.
+---@field lines CcbTradeCommitLineResult[] Detached per-line transfer results.
+
+---@class CcbTradeCommitResult: CcbResult
+---@field value? CcbTradeCommitValue Present only after atomic Item transfer and npc_debt publication.
+---@field error? CcbTradeCommitError Present for invalid, consumed, stale, rejected, or rollback-failed commits.
+
+---@class CcbTradeApi
+local CcbTradeApi = {}
+
+---@param seller GameHandle Exact seller Character/NPC handle; never inferred from avatar/current trader.
+---@param buyer GameHandle Exact buyer Character/NPC handle; never inferred from avatar/current trader.
+---@param lines CcbTradeQuoteLineInput[] Dense explicit direction, Item, quantity, source-holder, and destination-holder lines.
+---@param options CcbTradeQuoteOptions Required explicit settlement strategy and currency.
+---@return CcbResult result `value` is a detached CcbTradeQuoteSnapshot; quote performs no Item, currency, debt, or opinion mutation.
+function CcbTradeApi.quote(seller, buyer, lines, options) end
+
+---@param token TradeQuoteToken Runtime-owned nonpersistent quote token.
+---@return CcbResult result `value` is the still-valid detached CcbTradeQuoteSnapshot; stale tokens fail closed.
+function CcbTradeApi.get(token) end
+
+---@param token TradeQuoteToken Runtime-owned nonpersistent quote token.
+---@param settlement CcbTradeSettlement Explicit currently supported `npc_debt` settlement; no implicit avatar/current trader is used.
+---@return CcbTradeCommitResult result `value` is published only after atomic two-way Item transfer and NPC debt settlement; `error.code` reports consumed/stale/rejection/rollback failures.
+function CcbTradeApi.commit(token, settlement) end
 
 ---@class CcbPlatformInventoryApi: CcbInventoryApi
 local CcbPlatformInventoryApi = {}
@@ -6304,8 +9636,83 @@ function CcbPlatformBionicsApi.grant(character, id) end
 ---@return CcbResult result `value.changed` reports whether an instance was removed.
 function CcbPlatformBionicsApi.remove_type(character, id) end
 
+---@class CcbRecipeQueryOptions
+---@field offset? integer Non-negative bounded page offset.
+---@field limit? integer Positive bounded page size.
+---@field batch? integer Positive native crafting batch.
+---@field include_obsolete? boolean
+---@field known? boolean
+---@field craftable? boolean
+---@field skill? GameId GameId<skill>
+---@field result? GameId GameId<item>
+---@field flag? string
+
+---@class CcbRecipePage
+---@field items table
+---@field total integer
+---@field offset integer
+---@field limit integer
+---@field returned integer
+---@field has_more boolean
+---@field batch integer
+
+---@class CcbRequirementQueryOptions
+---@field offset? integer Non-negative bounded page offset.
+---@field limit? integer Positive bounded page size.
+---@field batch? integer Positive native crafting batch.
+
+---@class CcbRecipesApi
+local CcbRecipesApi = {}
+
+---@class CcbRequirementsApi
+local CcbRequirementsApi = {}
+
 ---@class CcbPlatformRecipesApi: CcbRecipesApi
 local CcbPlatformRecipesApi = {}
+
+---All recipe availability queries require an exact Character handle; no avatar fallback.
+---@param character GameHandle Exact live Character used for inventory/skill availability.
+---@param options? CcbRecipeQueryOptions
+---@return CcbResult result `value` is a CcbRecipePage.
+function CcbPlatformRecipesApi.list(character, options) end
+---@param character GameHandle Exact live Character used for inventory/skill availability.
+---@param options? CcbRecipeQueryOptions
+---@return CcbResult result `value` is a CcbRecipePage.
+function CcbPlatformRecipesApi.all(character, options) end
+---@param skill GameId GameId<skill>
+---@param character GameHandle Exact live Character used for availability.
+---@param options? CcbRecipeQueryOptions
+---@return CcbResult result `value` is a CcbRecipePage.
+function CcbPlatformRecipesApi.by_skill(skill, character, options) end
+---@param flag string Bounded native recipe flag.
+---@param character GameHandle Exact live Character used for availability.
+---@param options? CcbRecipeQueryOptions
+---@return CcbResult result `value` is a CcbRecipePage.
+function CcbPlatformRecipesApi.by_flag(flag, character, options) end
+---@param character GameHandle Exact live Character used for availability.
+---@param id GameId GameId<recipe>
+---@param batch? integer
+---@return CcbResult result `value` is a detached recipe snapshot.
+function CcbPlatformRecipesApi.get(character, id, batch) end
+---@param id GameId GameId<recipe>
+---@param flag string
+---@return boolean
+function CcbPlatformRecipesApi.has_flag(id, flag) end
+
+---@param character GameHandle Exact live Character used for inventory/skill availability.
+---@param options? CcbRequirementQueryOptions
+---@return CcbResult result `value` is a bounded requirement page.
+function CcbRequirementsApi.list(character, options) end
+---@param character GameHandle Exact live Character used for inventory/skill availability.
+---@param id string
+---@param batch? integer
+---@return CcbResult result `value` is a detached requirement snapshot or nil.
+function CcbRequirementsApi.get(character, id, batch) end
+---@param character GameHandle Exact live Character used for inventory/skill availability.
+---@param id GameId GameId<recipe>
+---@param batch? integer
+---@return CcbResult result `value` is a detached requirement snapshot.
+function CcbRequirementsApi.for_recipe(character, id, batch) end
 
 ---Query learned knowledge rather than temporary book/helper availability.
 ---@param character GameHandle Character handle.
@@ -6439,15 +9846,6 @@ local CcbPlatformEnvironmentQueries = {}
 ---@return string dimension_id Stable id of the currently active dimension.
 function CcbPlatformEnvironmentQueries.dimension() end
 
----Schedule a native custom-light override using the same timed-event boundary
----as the legacy world-light effect.  The override becomes active after the
----current turn and lasts for the requested duration.
----@param level integer Ambient level in 0..125.
----@param duration TimeDuration Non-negative duration, at most one year.
----@param key? string Optional bounded key for later timed-event coordination.
----@return CcbResult result `value` reports level, duration, key, and changed.
-function CcbPlatformEnvironmentQueries.set_light_override(level, duration, key) end
-
 ---@return boolean is_night True while the sun is at or below civil dawn (i.e. it is not
 --- the legacy EOC "is_day" state); ordinary Lua code may negate it directly.
 function CcbPlatformEnvironmentQueries.is_night() end
@@ -6529,19 +9927,87 @@ function CcbPlatformMathApi.evaluate(expression, actor, context) end
 function CcbPlatformMathApi.apply(expression, actor, context) end
 
 ---@param text string
+---@class CcbCharacterSnapshot
+---@field name string
+---@field x integer
+---@field y integer
+---@field z integer
+---@field moves integer
+---@field stamina integer
+---@field stamina_max integer
+---@field pain integer
+---@field focus integer
+---@field speed integer
+---@field hunger integer
+---@field thirst integer
+---@field sleepiness integer
+
+---@class CcbMovementModesSnapshot
+---@field items table
+---@field count integer
+---@field current_id string
+---@field desired_id string
+
+---@class CcbBoundedItemList
+---@field items table
+---@field total integer
+---@field returned integer
+---@field limit integer
+---@field truncated boolean
+
+---@class CcbCreatureSnapshot
+---@field kind 'avatar'|'npc'|'monster'|'creature'
+---@field name string
+---@field display_name string
+---@field position TripointCoord
+---@field visible? boolean Present only when a separate observer was supplied.
+---@field distance? integer Present only when a separate observer was supplied.
+---@field attitude? string Present only when a separate observer was supplied.
+---@field dead boolean
+---@field hp integer
+---@field hp_max integer
+
+---@class CcbCreaturesApi
+local CcbCreaturesApi = {}
+
+---@param handle GameHandle Exact live Creature handle.
+---@return CcbResult result `value` is a detached CcbCreatureSnapshot; stale or dead handles fail closed.
+function CcbCreaturesApi.snapshot(handle) end
+
+---@param observer GameHandle Exact live Character observer handle.
+---@param options? CcbCreatureNearbyOptions Query limits and filters; results contain generation-safe handles and detached values.
+---@return CcbResult result
+function CcbCreaturesApi.nearby(observer, options) end
+
+---@param observer GameHandle Exact live avatar handle; NPC/monster/other Character handles fail closed.
+---@param direction string One of N/NE/E/SE/S/SW/W/NW/L.
+---@return CcbResult result
+function CcbCreaturesApi.visible_monsters(observer, direction) end
+
+---@class CcbTimeSnapshot
+---@field turn integer
+---@field year integer
+---@field season_id string
+---@field season_name string
+
+---@class CcbWeatherSnapshot
+---@field id string
+---@field temperature_c number
+---@field wind_speed number
+---@field wind_direction number
+
 function CcbPlatformServices.message(text) end
 
 ---@return integer
 function CcbPlatformServices.turn() end
 
----@return CcbPlayerSnapshot
-function CcbPlatformServices.player_snapshot() end
+---@param character GameHandle Exact live Character handle; no implicit avatar is selected.
+---@return CcbResult result `value` is a detached CcbCharacterSnapshot.
+function CcbPlatformServices.character_snapshot(character) end
 
----@return CcbPlayerSnapshot
-function CcbPlatformServices.player_stats() end
-
----@return CcbMovementModesSnapshot
-function CcbPlatformServices.movement_modes_snapshot() end
+---@param character GameHandle Exact live Character handle.
+---@return CcbResult result `value` is a detached CcbMovementModesSnapshot.
+function CcbPlatformServices.movement_modes_snapshot(character) end
 
 ---@return CcbTimeSnapshot
 function CcbPlatformServices.time_snapshot() end
@@ -6550,49 +10016,63 @@ function CcbPlatformServices.time_snapshot() end
 function CcbPlatformServices.weather_snapshot() end
 
 ---@param limit? integer
----@return CcbBoundedItemList
-function CcbPlatformServices.inventory_snapshot(limit) end
-
+---@param character GameHandle Exact live Character handle.
 ---@param limit? integer
----@return table
-function CcbPlatformServices.effects_snapshot(limit) end
+---@return CcbResult result `value` is a detached CcbBoundedItemList.
+function CcbPlatformServices.inventory_snapshot(character, limit) end
 
+---@param character GameHandle Exact live Character handle.
 ---@param limit? integer
----@return table
-function CcbPlatformServices.skills_snapshot(limit) end
+---@return CcbResult result `value` is a detached bounded effect list.
+function CcbPlatformServices.effects_snapshot(character, limit) end
 
+---@param character GameHandle Exact live Character handle.
 ---@param limit? integer
----@return table
-function CcbPlatformServices.equipment_snapshot(limit) end
+---@return CcbResult result `value` is a detached bounded skill list.
+function CcbPlatformServices.skills_snapshot(character, limit) end
 
----@param uid integer
+---@param character GameHandle Exact live Character handle.
 ---@param limit? integer
----@return table
-function CcbPlatformServices.item_contents_snapshot(uid, limit) end
+---@return CcbResult result `value` is a detached bounded equipment snapshot.
+function CcbPlatformServices.equipment_snapshot(character, limit) end
 
+---@param character GameHandle Exact live Character handle owning the searched inventory.
+---@param item_handle GameHandle Exact item handle owned by `character`; no UID search is performed.
+---@param offset? integer Non-negative bounded page offset.
+---@param limit? integer Positive bounded page size.
+---@return CcbResult result `value` is a detached bounded contents snapshot.
+function CcbPlatformServices.item_contents_snapshot(character, item_handle, offset, limit) end
+
+---@param character GameHandle Exact live Character handle.
 ---@param field_limit? integer
----@return table
-function CcbPlatformServices.current_tile_snapshot(field_limit) end
+---@return CcbResult result `value` is a detached bounded tile snapshot.
+function CcbPlatformServices.current_tile_snapshot(character, field_limit) end
 
+---@param character GameHandle Exact live Character handle.
 ---@param limit? integer
----@return table
-function CcbPlatformServices.mutations_snapshot(limit) end
+---@return CcbResult result `value` is a detached bounded mutation list.
+function CcbPlatformServices.mutations_snapshot(character, limit) end
 
+---@param character GameHandle Exact live Character handle.
 ---@param limit? integer
----@return table
-function CcbPlatformServices.bionics_snapshot(limit) end
+---@return CcbResult result `value` is a detached bounded bionic list.
+function CcbPlatformServices.bionics_snapshot(character, limit) end
 
+---@param character GameHandle Exact live Character handle.
 ---@param limit? integer
----@return table
-function CcbPlatformServices.missions_snapshot(limit) end
+---@return CcbResult result `value` is a detached bounded mission list.
+function CcbPlatformServices.missions_snapshot(character, limit) end
 
----@return table
-function CcbPlatformServices.activity_snapshot() end
+---@param character GameHandle Exact live Character handle.
+---@param limit? integer
+---@return CcbResult result `value` is a detached bounded activity snapshot.
+function CcbPlatformServices.activity_snapshot(character, limit) end
 
+---@param character GameHandle Exact live Character handle used as the observer.
 ---@param radius? integer
 ---@param limit? integer
----@return table
-function CcbPlatformServices.nearby_creatures_snapshot(radius, limit) end
+---@return CcbResult result `value` is a detached bounded creature list.
+function CcbPlatformServices.nearby_creatures_snapshot(character, radius, limit) end
 
 ---@class CcbPlatformV1
 ---@field platform_version 1

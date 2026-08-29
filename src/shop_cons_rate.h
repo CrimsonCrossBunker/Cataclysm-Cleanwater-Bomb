@@ -16,12 +16,13 @@ class JsonObject;
 class JsonValue;
 class item;
 class npc;
+class Character;
 struct const_dialogue;
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
-} // namespace cata::lua
+} // namespace cata::lua_platform
 
 
 constexpr char const *SHOPKEEPER_CONSUMPTION_RATES = "shopkeeper_consumption_rates";
@@ -39,6 +40,10 @@ struct icg_entry {
 
     bool operator==( icg_entry const &rhs ) const;
     bool matches( item const &it, npc const &beta ) const;
+    // The legacy overload keeps its native player/avatar semantics.  Platform
+    // trade supplies the exact other Character through this overload.
+    bool matches( item const &it, npc const &beta,
+                  const Character &counterparty ) const;
 };
 
 class icg_entry_reader : public generic_typed_reader<icg_entry_reader>
@@ -59,7 +64,7 @@ struct shopkeeper_cons_rate_entry: public icg_entry {
 
 struct shopkeeper_cons_rates {
     shopkeeper_cons_rates_id id;
-    friend class cata::lua::content_transaction;
+    friend class cata::lua_platform::content_transaction;
     bool was_loaded = false;
 
     int default_rate = -1;
@@ -82,7 +87,7 @@ struct shopkeeper_cons_rates {
 
 struct shopkeeper_blacklist {
     shopkeeper_blacklist_id id;
-    friend class cata::lua::content_transaction;
+    friend class cata::lua_platform::content_transaction;
     bool was_loaded = false;
 
     std::vector<icg_entry> entries;
@@ -93,11 +98,13 @@ struct shopkeeper_blacklist {
     static void finalize_all();
     void load( const JsonObject &jo, std::string_view src );
     icg_entry const *matches( item const &it, npc const &beta ) const;
+    icg_entry const *matches( item const &it, npc const &beta,
+                              const Character &counterparty ) const;
 };
 
 struct shopkeeper_whitelist {
     shopkeeper_whitelist_id id;
-    friend class cata::lua::content_transaction;
+    friend class cata::lua_platform::content_transaction;
     bool was_loaded = false;
 
     std::vector<icg_entry> entries;
@@ -109,6 +116,8 @@ struct shopkeeper_whitelist {
     static void finalize_all();
     void load( const JsonObject &jo, std::string_view src );
     icg_entry const *matches( item const &it, npc const &beta ) const;
+    icg_entry const *matches( item const &it, npc const &beta,
+                              const Character &counterparty ) const;
 };
 
 #endif // CATA_SRC_SHOP_CONS_RATE_H

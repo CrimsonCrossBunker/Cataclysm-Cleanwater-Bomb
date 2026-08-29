@@ -12,8 +12,8 @@ on:
       - 'data/lua/**'
       - 'src/CMakeLists.txt'
       - 'src/lua/CMakeLists.txt'
-      - 'src/catalua*.cpp'
-      - 'src/catalua*.h'
+      - 'src/lua_platform*.cpp'
+      - 'src/lua_platform*.h'
       - 'src/event.h'
       - 'tools/lua_api/**'
   workflow_dispatch:
@@ -55,8 +55,8 @@ jobs:
             'src/CMakeLists.txt' \
             'src/lua/CMakeLists.txt' \
             'src/main.cpp' \
-            ':(glob)src/catalua*.cpp' \
-            ':(glob)src/catalua*.h' \
+            ':(glob)src/lua_platform*.cpp' \
+            ':(glob)src/lua_platform*.h' \
             'src/event.h' \
             ':(glob)tools/lua_api/**'; then
             echo "required=false" >> "$GITHUB_OUTPUT"
@@ -75,10 +75,12 @@ jobs:
           sudo apt-get install --no-install-recommends lua5.4
           python3 -m pip install --disable-pip-version-check -r tools/lua_api/requirements.txt
 
-      - name: Validate Lua-first Platform declarations and inventory
+      - name: Validate Lua-first Platform declarations and contracts
         if: steps.detect.outputs.required == 'true'
         run: |
           python3 tools/lua_api/check_luals_declarations.py
-          python3 tools/lua_api/check_ccb_inventory.py
+          python3 tools/lua_api/check_platform_native_inventory.py
+          python3 tools/lua_api/check_platform_contract.py
+          python3 tools/lua_api/check_platform_coverage.py
           python3 tools/lua_api/check_cmake_contract.py
           python3 -m unittest discover -s tools/lua_api -p 'test_*.py'

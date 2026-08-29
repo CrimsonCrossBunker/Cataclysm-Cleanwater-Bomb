@@ -13,7 +13,7 @@
 #include "android_ui_mode.h"
 #include "cached_options.h"
 #include "calendar.h"
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "color.h"
@@ -461,12 +461,12 @@ class options_imgui_page : public cataimgui::window
 
 } // namespace
 
-generic_factory<option_slider> &cata::lua::detail::option_slider_registry()
+generic_factory<option_slider> &cata::lua_platform::detail::option_slider_registry()
 {
     return option_slider_factory;
 }
 
-option_slider cata::lua::detail::make_option_slider_native(
+option_slider cata::lua_platform::detail::make_option_slider_native(
     const option_slider_native_definition &definition )
 {
     option_slider result;

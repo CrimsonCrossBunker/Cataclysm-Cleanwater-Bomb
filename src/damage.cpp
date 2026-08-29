@@ -9,8 +9,8 @@
 
 #include "bodypart.h"
 #include "cata_utility.h"
-#include "catalua_content.h"
-#include "catalua_runtime.h"
+#include "lua_platform_content.h"
+#include "lua_platform_runtime.h"
 #include "creature.h"
 #include "debug.h"
 #include "dialogue.h"
@@ -39,12 +39,12 @@ generic_factory<damage_info_order> damage_info_order_factory( "damage info order
 
 } // namespace
 
-generic_factory<damage_type> &cata::lua::detail::damage_type_registry()
+generic_factory<damage_type> &cata::lua_platform::detail::damage_type_registry()
 {
     return damage_type_factory;
 }
 
-generic_factory<damage_info_order> &cata::lua::detail::damage_info_order_registry()
+generic_factory<damage_info_order> &cata::lua_platform::detail::damage_info_order_registry()
 {
     return damage_info_order_factory;
 }
@@ -309,7 +309,7 @@ void damage_info_order::finalize_all()
     prepare_sorted_lists( sorted_order_lists[info_type::ABLATE], info_type::ABLATE );
 }
 
-void cata::lua::detail::refresh_damage_info_order_registry()
+void cata::lua_platform::detail::refresh_damage_info_order_registry()
 {
     damage_info_order::finalize_all();
 }
@@ -424,7 +424,7 @@ void damage_type::onhit_effects( Creature *source, Creature *target ) const
         eoc->activate_activation_only( d, "a damage type effect", "damage type effect being activated",
                                        "damage type" );
     }
-    cata::lua::invoke_damage_type_handler( id.str(), "on_hit", source, target );
+    cata::lua_platform::invoke_damage_type_handler( id.str(), "on_hit", source, target );
 }
 
 void damage_instance::ondamage_effects( Creature *source, Creature *target,
@@ -467,7 +467,7 @@ void damage_type::ondamage_effects( Creature *source, Creature *target, bodypart
         eoc->activate_activation_only( d, "a damage type effect", "damage type effect being activated",
                                        "damage type" );
     }
-    cata::lua::invoke_damage_type_handler(
+    cata::lua_platform::invoke_damage_type_handler(
         id.str(), "on_damage", source, target, bp.str(), total_damage, damage_taken );
 }
 

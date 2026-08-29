@@ -8,8 +8,8 @@
 #include <utility>
 
 #include "calendar.h"
-#include "catalua_content.h"
-#include "catalua_runtime.h"
+#include "lua_platform_content.h"
+#include "lua_platform_runtime.h"
 #include "character.h"
 #include "condition.h"
 #include "creature.h"
@@ -52,7 +52,7 @@ generic_factory<weakpoints> weakpoints_factory( "weakpoint sets" );
 
 } // namespace
 
-generic_factory<weakpoints> &cata::lua::detail::weakpoint_set_registry()
+generic_factory<weakpoints> &cata::lua_platform::detail::weakpoint_set_registry()
 {
     return weakpoints_factory;
 }
@@ -321,7 +321,7 @@ void weakpoint_effect::apply_to( Creature &target, int total_damage,
                     get_talker_for( target ) );
         eoc->activate( d );
     }
-    cata::lua::invoke_weakpoint_effect_handler(
+    cata::lua_platform::invoke_weakpoint_effect_handler(
         lua_platform_set_id, lua_platform_weakpoint_id,
         lua_platform_mod, lua_platform_handler,
         target, total_damage, attack );

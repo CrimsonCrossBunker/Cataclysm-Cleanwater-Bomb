@@ -21,7 +21,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "catalua_hook.h"
+#include "lua_platform_hooks.h"
 #include "character.h"
 #include "character_attire.h"
 #include "color.h"
@@ -328,9 +328,9 @@ void suffer::mutation_power( Character &you, const trait_id &mut_id )
             d.set_value( "this", mut_id.str() );
             eoc->activate_activation_only( d, "a mutation process", "mutation being activated", "mutation" );
         }
-        cata::lua::dispatch_native_hook( "on_mutation_processed", {
+        cata::lua_platform::dispatch_native_hook( "on_mutation_processed", {
             { "character", static_cast<const Character *>( &you ) },
-            { "mutation", cata::lua::native_callback_id{ "mutation", mut_id.str() } },
+            { "mutation", cata::lua_platform::native_callback_id{ "mutation", mut_id.str() } },
             { "activation_cost", static_cast<std::int64_t>( mut_id->cost ) },
             { "cooldown_turns", static_cast<std::int64_t>( to_turns<int>( mut_id->cooldown ) ) }
         } );

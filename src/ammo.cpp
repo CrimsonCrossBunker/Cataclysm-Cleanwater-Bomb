@@ -57,7 +57,7 @@ const ammunition_type &string_id<ammunition_type>::obj() const
 }
 
 std::vector<std::pair<ammotype, ammunition_type>>
-cata::lua::detail::ammunition_type_registry_snapshot()
+cata::lua_platform::detail::ammunition_type_registry_snapshot()
 {
     std::vector<std::pair<ammotype, ammunition_type>> result;
     const ammunition_type::registry_type &registry = ammunition_type::registry();

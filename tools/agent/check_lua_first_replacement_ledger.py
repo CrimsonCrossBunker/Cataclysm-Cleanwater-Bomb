@@ -91,17 +91,16 @@ def check() -> dict[str, int]:
         if entry["status"] in evidenced_statuses:
             evidence = entry["evidence"]
             required_kinds = (
-                "src/",
+                "src/lua_platform",
                 "data/lua/types/",
                 "tests/",
-                "data/lua/LUA_FIRST_PLATFORM.md",
+                "tools/migrate_lua_first.py",
             )
             if any(not any(value.startswith(kind) for value in evidence)
                    for kind in required_kinds):
                 raise RuntimeError(
-                    "implemented selector or primitive lacks source, "
-                    "declaration, test, or "
-                    "documentation evidence: "
+                    "implemented selector or primitive lacks Platform source, "
+                    "declaration, test, or migration evidence: "
                     f"{entry['inventory']}:{entry['selector']}"
                 )
             if (
@@ -118,7 +117,43 @@ def check() -> dict[str, int]:
                     "dependency: "
                     f"{entry['inventory']}:{entry['selector']}"
                 )
+        expected_verification = (
+            "final_semantic_gate"
+            if entry["status"] in {
+                "implemented_verified",
+                "bounded_implemented_verified",
+            }
+            else (
+                "source_only"
+                if entry["status"] in {
+                    "implemented_unverified",
+                    "bounded_implemented_unverified",
+                    "primitive_available_unverified",
+                }
+                else "not_run"
+            )
+        )
+        if entry["verification"] != expected_verification:
+            raise RuntimeError(
+                "replacement ledger verification state is inconsistent: "
+                f"{entry['inventory']}:{entry['selector']}"
+            )
         for evidence in entry["evidence"]:
+            if any(
+                marker in evidence.lower()
+                for marker in (
+                    "cata" + "lua",
+                    "ccb_" + "native_inventory",
+                    "generate_" + "ccb_inventory",
+                    "check_" + "ccb_inventory",
+                    "public_" + "api_" + "v" + "5",
+                    "c" + "b" + "n" + "_",
+                )
+            ):
+                raise RuntimeError(
+                    "replacement ledger contains retired evidence path: "
+                    f"{evidence}"
+                )
             if (
                 evidence.startswith(
                     ("src/", "data/", "tests/", "tools/", "ai/")

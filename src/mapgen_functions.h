@@ -3,8 +3,11 @@
 #define CATA_SRC_MAPGEN_FUNCTIONS_H
 
 #include <array>
+#include <cstddef>
 #include <functional>
 #include <map>
+#include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -52,6 +55,85 @@ ret_val<void> run_mapgen_update_func(
     const update_mapgen_id &, const tripoint_abs_omt &omt_pos, const mapgen_arguments &,
     mission *miss = nullptr, bool cancel_on_collision = true, bool mirror_horizontal = false,
     bool mirror_vertical = false, int rotation = 0 );
+
+/**
+ * The exact bounded footprint a Platform transaction is allowed to touch.
+ * The current update-mapgen implementation operates on a 2x2 submap OMT
+ * stack; keeping these extents in the predicate result makes the snapshot
+ * boundary explicit instead of duplicating an assumed range in the caller.
+ */
+struct platform_mapgen_transaction_footprint {
+    int min_submap_x = 0;
+    int max_submap_x = -1;
+    int min_submap_y = 0;
+    int max_submap_y = -1;
+    int min_z = 0;
+    int max_z = -1;
+    bool complete_omt_z_stack = false;
+};
+
+enum platform_mapgen_transaction_state {
+    rejected,
+    committed,
+    rolled_back,
+    rollback_failed
+};
+
+struct platform_mapgen_transaction_report {
+    platform_mapgen_transaction_state state = rejected;
+    platform_mapgen_transaction_footprint footprint;
+    std::string code;
+    std::string message;
+};
+
+class platform_mapgen_callback_transaction {
+    public:
+        platform_mapgen_callback_transaction( mapgendata &,
+                                               platform_mapgen_transaction_report * );
+        ~platform_mapgen_callback_transaction() noexcept;
+
+        platform_mapgen_callback_transaction( const platform_mapgen_callback_transaction & ) = delete;
+        platform_mapgen_callback_transaction &operator=(
+            const platform_mapgen_callback_transaction & ) = delete;
+        platform_mapgen_callback_transaction( platform_mapgen_callback_transaction && ) = delete;
+        platform_mapgen_callback_transaction &operator=(
+            platform_mapgen_callback_transaction && ) = delete;
+
+        bool ready() const noexcept;
+        void commit() noexcept;
+        bool rollback( const std::string &code, const std::string &message ) noexcept;
+
+    private:
+        struct impl;
+        std::unique_ptr<impl> pimpl_;
+};
+
+/**
+ * Prove that an update operator is safe for a Platform terminal transaction
+ * and report the complete already-loaded submap footprint it may touch.
+ * Unknown operator structure, non-map-only operations, or an incomplete
+ * target footprint fail closed.
+ */
+bool platform_transaction_safe(
+    const update_mapgen_id &, const tripoint_abs_omt &omt_pos,
+    platform_mapgen_transaction_footprint &, std::string &error );
+/**
+ * Apply one update-mapgen operation as a bounded world transaction.
+ *
+ * The operator predicate reports the footprint and requires every submap to
+ * be present in the map buffer.  A detached snapshot is taken for that exact
+ * footprint before invoking the platform-only update wrapper.  If the update
+ * reports failure or throws, every reported submap is restored before the
+ * failure is returned.  Callers that need to publish additional metadata can
+ * therefore commit it only after this map-only transaction succeeds.
+ */
+ret_val<void> run_mapgen_update_func_transactional(
+    const update_mapgen_id &, const tripoint_abs_omt &omt_pos, const mapgen_arguments &,
+    mission *miss = nullptr, bool cancel_on_collision = true, bool mirror_horizontal = false,
+    bool mirror_vertical = false, int rotation = 0,
+    const std::optional<oter_id> &expected_terrain = std::nullopt,
+    const std::optional<oter_id> &terrain_publication = std::nullopt,
+    platform_mapgen_transaction_report *report = nullptr );
 // Return contains the name of a colliding "vehicle" on failure.
 ret_val<void> run_mapgen_update_func( const update_mapgen_id &, mapgendata &dat,
                                       bool cancel_on_collision = true );

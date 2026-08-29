@@ -16,7 +16,7 @@
 class JsonObject;
 class item;
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
 namespace detail
@@ -37,7 +37,7 @@ struct item_category_snapshot_entry {
 };
 std::vector<item_category_snapshot_entry> item_category_snapshot();
 } // namespace detail
-} // namespace cata::lua
+} // namespace cata::lua_platform
 
 // this is a helper struct with rules for picking a zone
 struct zone_priority_data {
@@ -58,9 +58,9 @@ struct zone_priority_data {
  */
 class item_category
 {
-        friend class cata::lua::content_transaction;
-        friend std::vector<cata::lua::detail::item_category_snapshot_entry>
-        cata::lua::detail::item_category_snapshot();
+        friend class cata::lua_platform::content_transaction;
+        friend std::vector<cata::lua_platform::detail::item_category_snapshot_entry>
+        cata::lua_platform::detail::item_category_snapshot();
     private:
         /** Name of category for displaying to the user */
         translation name_header_; // in inventory UI headers etc
@@ -129,6 +129,11 @@ struct item_category_spawn_rates {
             return instance;
         }
         void set_spawn_rate( const item_category_id &id, const float &rate );
+        // Apply a prevalidated group of updates atomically.  The snapshot is
+        // captured before the first write so an allocation failure during the
+        // commit cannot leave the shared rate store partially updated.
+        void set_spawn_rates(
+            const std::vector<std::pair<item_category_id, float>> &updates );
         float get_spawn_rate( const item_category_id &id );
     private:
         std::map<item_category_id, float> spawn_rates;

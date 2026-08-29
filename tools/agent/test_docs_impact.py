@@ -41,7 +41,7 @@ class DocsImpactTest(unittest.TestCase):
             {
                 "id": "lua",
                 "enforcement": "required",
-                "patterns": ["data/lua/*", "src/catalua_*"],
+                "patterns": ["data/lua/*", "src/lua_platform_*"],
                 "documentation_ids": ["architecture.lua-first-platform"],
                 "generated_reference_impact": True,
                 "required_check_ids": ["agent-context", "lua-contract"],

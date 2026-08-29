@@ -1,4 +1,4 @@
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 
 #include "shop_cons_rate.h"
 
@@ -33,7 +33,14 @@ bool icg_entry::operator==( icg_entry const &rhs ) const
 
 bool icg_entry::matches( item const &it, npc const &beta ) const
 {
-    const_dialogue temp( get_const_talker_for( get_avatar() ), get_const_talker_for( beta ) );
+    return matches( it, beta, get_avatar() );
+}
+
+bool icg_entry::matches( item const &it, npc const &beta,
+                         const Character &counterparty ) const
+{
+    const_dialogue temp( get_const_talker_for( counterparty ),
+                         get_const_talker_for( beta ) );
     return ( !condition || condition( temp ) ) &&
            ( !platform_condition || platform_condition( it, beta ) ) &&
            ( itype.is_empty() || it.typeId() == itype ) &&
@@ -62,19 +69,19 @@ void shopkeeper_blacklist::reset()
 }
 
 generic_factory<shopkeeper_blacklist> &
-cata::lua::detail::shopkeeper_blacklist_registry()
+cata::lua_platform::detail::shopkeeper_blacklist_registry()
 {
     return shop_blacklist_factory;
 }
 
 generic_factory<shopkeeper_whitelist> &
-cata::lua::detail::shopkeeper_whitelist_registry()
+cata::lua_platform::detail::shopkeeper_whitelist_registry()
 {
     return shop_whitelist_factory;
 }
 
 generic_factory<shopkeeper_cons_rates> &
-cata::lua::detail::shopkeeper_cons_rates_registry()
+cata::lua_platform::detail::shopkeeper_cons_rates_registry()
 {
     return shop_cons_rate_factory;
 }
@@ -264,11 +271,39 @@ icg_entry const *shopkeeper_blacklist::matches( item const &it, npc const &beta 
     return nullptr;
 }
 
+icg_entry const *shopkeeper_blacklist::matches(
+    item const &it, npc const &beta, const Character &counterparty ) const
+{
+    auto const el = std::find_if( entries.begin(), entries.end(),
+    [&it, &beta, &counterparty]( icg_entry const & rit ) {
+        return rit.matches( it, beta, counterparty );
+    } );
+    if( el != entries.end() ) {
+        return &*el;
+    }
+
+    return nullptr;
+}
+
 icg_entry const *shopkeeper_whitelist::matches( item const &it, npc const &beta ) const
 {
     auto const el = std::find_if( entries.begin(), entries.end(),
     [&it, &beta]( icg_entry const & rit ) {
         return rit.matches( it, beta );
+    } );
+    if( el != entries.end() ) {
+        return &*el;
+    }
+
+    return nullptr;
+}
+
+icg_entry const *shopkeeper_whitelist::matches(
+    item const &it, npc const &beta, const Character &counterparty ) const
+{
+    auto const el = std::find_if( entries.begin(), entries.end(),
+    [&it, &beta, &counterparty]( icg_entry const & rit ) {
+        return rit.matches( it, beta, counterparty );
     } );
     if( el != entries.end() ) {
         return &*el;

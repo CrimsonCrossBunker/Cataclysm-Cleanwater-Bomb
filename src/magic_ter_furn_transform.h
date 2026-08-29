@@ -14,7 +14,7 @@ class Creature;
 class JsonObject;
 struct tripoint;
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
 }
@@ -41,7 +41,7 @@ class ter_furn_data
 class ter_furn_transform
 {
     private:
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
         std::map<ter_str_id, ter_furn_data<ter_str_id>> ter_transform;
         std::map<std::string, ter_furn_data<ter_str_id>> ter_flag_transform;
 

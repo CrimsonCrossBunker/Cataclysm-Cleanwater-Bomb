@@ -24,6 +24,7 @@
 #include "compatibility.h"
 #include "coordinates.h"
 #include "creature.h"
+#include "monster_uid.h"
 #include "type_id.h"
 #include "units_fwd.h"
 #include "value_ptr.h"
@@ -100,6 +101,11 @@ class monster : public Creature
         const monster *as_monster() const override {
             return this;
         }
+
+        const monster_uid &uid() const {
+            return uid_;
+        }
+        void ensure_uid();
 
         mfaction_id get_monster_faction() const override {
             return faction.id();
@@ -564,6 +570,7 @@ class monster : public Creature
         int morale = 2;
         uint32_t mp_net_id = 0; // MP: network ID for multiplayer monster tracking
     private:
+        monster_uid uid_;
         int amount_eaten = 0;
         void recheck_fed_status();
     public:

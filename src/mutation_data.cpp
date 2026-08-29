@@ -10,7 +10,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "color.h"
 #include "condition.h"
 #include "debug.h"
@@ -54,24 +54,24 @@ namespace
 generic_factory<mutation_branch> trait_factory( "trait" );
 } // namespace
 
-generic_factory<mutation_branch> &cata::lua::detail::mutation_registry()
+generic_factory<mutation_branch> &cata::lua_platform::detail::mutation_registry()
 {
     return trait_factory;
 }
 
 std::vector<dream> dreams;
 
-void cata::lua::detail::append_dream( const dream &value )
+void cata::lua_platform::detail::append_dream( const dream &value )
 {
     dreams.push_back( value );
 }
 
-std::size_t cata::lua::detail::dream_count()
+std::size_t cata::lua_platform::detail::dream_count()
 {
     return dreams.size();
 }
 
-void cata::lua::detail::truncate_dreams( const std::size_t count )
+void cata::lua_platform::detail::truncate_dreams( const std::size_t count )
 {
     if( count <= dreams.size() ) {
         dreams.resize( count );
@@ -81,19 +81,19 @@ std::map<mutation_category_id, std::vector<trait_id> > mutations_category;
 static std::map<mutation_category_id, mutation_category_trait> mutation_category_traits;
 
 const mutation_category_trait *
-cata::lua::detail::mutation_category_registry_find( const std::string &id )
+cata::lua_platform::detail::mutation_category_registry_find( const std::string &id )
 {
     const auto found = mutation_category_traits.find( mutation_category_id( id ) );
     return found == mutation_category_traits.end() ? nullptr : &found->second;
 }
 
-void cata::lua::detail::mutation_category_registry_set(
+void cata::lua_platform::detail::mutation_category_registry_set(
     const mutation_category_trait &value )
 {
     mutation_category_traits[value.id] = value;
 }
 
-void cata::lua::detail::mutation_category_registry_erase( const std::string &id )
+void cata::lua_platform::detail::mutation_category_registry_erase( const std::string &id )
 {
     mutation_category_traits.erase( mutation_category_id( id ) );
 }
@@ -992,7 +992,7 @@ void mutation_branch::load_trait_blacklist( const JsonObject &jsobj )
     }
 }
 
-void cata::lua::detail::insert_platform_trait_blacklist(
+void cata::lua_platform::detail::insert_platform_trait_blacklist(
     const std::vector<std::string> &entries )
 {
     for( const std::string &entry : entries ) {
@@ -1000,7 +1000,7 @@ void cata::lua::detail::insert_platform_trait_blacklist(
     }
 }
 
-void cata::lua::detail::erase_platform_trait_blacklist(
+void cata::lua_platform::detail::erase_platform_trait_blacklist(
     const std::vector<std::string> &entries )
 {
     for( const std::string &entry : entries ) {
@@ -1057,11 +1057,11 @@ void mutation_branch::finalize()
 void mutation_branch::finalize_all()
 {
     trait_factory.finalize();
-    cata::lua::detail::refresh_mutation_registry_cache();
+    cata::lua_platform::detail::refresh_mutation_registry_cache();
     finalize_trait_blacklist();
 }
 
-void cata::lua::detail::refresh_mutation_registry_cache()
+void cata::lua_platform::detail::refresh_mutation_registry_cache()
 {
     mutations_category.clear();
     for( const mutation_branch &branch : mutation_branch::get_all() ) {
@@ -1092,7 +1092,7 @@ void mutation_branch::load_trait_group( const JsonObject &jsobj )
     load_trait_group( jsobj, group_id, subtype );
 }
 
-void cata::lua::detail::insert_platform_trait_group(
+void cata::lua_platform::detail::insert_platform_trait_group(
     const std::string &id,
     const std::vector<platform_trait_group_entry> &entries )
 {
@@ -1109,7 +1109,7 @@ void cata::lua::detail::insert_platform_trait_group(
     trait_groups[trait_group::Trait_group_tag( id )] = std::move( group );
 }
 
-void cata::lua::detail::erase_platform_trait_group(
+void cata::lua_platform::detail::erase_platform_trait_group(
     const std::string &id )
 {
     trait_groups.erase( trait_group::Trait_group_tag( id ) );

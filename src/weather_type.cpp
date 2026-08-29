@@ -1,7 +1,7 @@
 #include "weather_type.h"
 
 #include "condition.h"
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
@@ -11,7 +11,7 @@ namespace
 generic_factory<weather_type> weather_type_factory( "weather_type" );
 } // namespace
 
-generic_factory<weather_type> &cata::lua::detail::weather_type_registry()
+generic_factory<weather_type> &cata::lua_platform::detail::weather_type_registry()
 {
     return weather_type_factory;
 }

@@ -6,7 +6,7 @@
 #include <unordered_set>
 
 #include "ballistics.h"
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "character.h"
 #include "creature.h"
 #include "debug.h"
@@ -36,7 +36,7 @@ generic_factory<anatomy> anatomy_factory( "anatomy" );
 
 } // namespace
 
-generic_factory<anatomy> &cata::lua::detail::anatomy_registry()
+generic_factory<anatomy> &cata::lua_platform::detail::anatomy_registry()
 {
     return anatomy_factory;
 }

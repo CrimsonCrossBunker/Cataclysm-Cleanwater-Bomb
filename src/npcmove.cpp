@@ -32,7 +32,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_algo.h"
-#include "catalua_hook.h"
+#include "lua_platform_hooks.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_id.h"
@@ -3678,21 +3678,21 @@ void npc::move_to( const tripoint_bub_ms &pt, bool no_bashing, std::set<tripoint
     const tripoint_bub_ms pos = pos_bub( here );
 
     const bool has_npc_try_move =
-        cata::lua::has_native_hook( "on_npc_try_move" );
+        cata::lua_platform::has_native_hook( "on_npc_try_move" );
     const bool has_character_try_move =
-        cata::lua::has_native_hook( "on_character_try_move" );
+        cata::lua_platform::has_native_hook( "on_character_try_move" );
     if( has_npc_try_move || has_character_try_move ) {
         const monster *const mount =
             is_mounted() ? mounted_creature.get() : nullptr;
-        cata::lua::native_callback_arguments payload = {
+        cata::lua_platform::native_callback_arguments payload = {
             { "npc", static_cast<const Character *>( this ) },
             {
-                "from", cata::lua::native_callback_point {
+                "from", cata::lua_platform::native_callback_point {
                     "bub_ms", tripoint_rel_ms( pos.x(), pos.y(), pos.z() )
                 }
             },
             {
-                "to", cata::lua::native_callback_point {
+                "to", cata::lua_platform::native_callback_point {
                     "bub_ms", tripoint_rel_ms( p.x(), p.y(), p.z() )
                 }
             },
@@ -3704,14 +3704,14 @@ void npc::move_to( const tripoint_bub_ms &pt, bool no_bashing, std::set<tripoint
         bool allowed = true;
         if( has_npc_try_move ) {
             const bool npc_allowed =
-                cata::lua::dispatch_native_hook(
+                cata::lua_platform::dispatch_native_hook(
                     "on_npc_try_move", payload );
             allowed = npc_allowed && allowed;
         }
         if( has_character_try_move ) {
             payload.front().name = "character";
             const bool character_allowed =
-                cata::lua::dispatch_native_hook(
+                cata::lua_platform::dispatch_native_hook(
                     "on_character_try_move", payload );
             allowed = character_allowed && allowed;
         }

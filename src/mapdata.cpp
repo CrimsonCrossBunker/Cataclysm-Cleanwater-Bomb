@@ -11,7 +11,7 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "character.h"
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "color.h"
 #include "debug.h"
 #include "effect_on_condition.h"
@@ -61,12 +61,12 @@ generic_factory<furn_t> furniture_data( "furniture" );
 
 } // namespace
 
-generic_factory<furn_t> &cata::lua::detail::furniture_registry()
+generic_factory<furn_t> &cata::lua_platform::detail::furniture_registry()
 {
     return furniture_data;
 }
 
-generic_factory<ter_t> &cata::lua::detail::terrain_registry()
+generic_factory<ter_t> &cata::lua_platform::detail::terrain_registry()
 {
     return terrain_data;
 }
@@ -362,19 +362,19 @@ std::string enum_to_string<ter_furn_flag>( ter_furn_flag data )
 
 static std::unordered_map<std::string, connect_group> ter_connects_map;
 
-const connect_group *cata::lua::detail::connect_group_registry_find(
+const connect_group *cata::lua_platform::detail::connect_group_registry_find(
     const std::string &id )
 {
     const auto found = ter_connects_map.find( id );
     return found == ter_connects_map.end() ? nullptr : &found->second;
 }
 
-std::size_t cata::lua::detail::connect_group_registry_size()
+std::size_t cata::lua_platform::detail::connect_group_registry_size()
 {
     return ter_connects_map.size();
 }
 
-void cata::lua::detail::connect_group_registry_set( const connect_group &value )
+void cata::lua_platform::detail::connect_group_registry_set( const connect_group &value )
 {
     connect_group replacement = value;
     const auto found = ter_connects_map.find( value.id.str() );
@@ -383,7 +383,7 @@ void cata::lua::detail::connect_group_registry_set( const connect_group &value )
     ter_connects_map[value.id.str()] = std::move( replacement );
 }
 
-void cata::lua::detail::connect_group_registry_erase( const std::string &id )
+void cata::lua_platform::detail::connect_group_registry_erase( const std::string &id )
 {
     ter_connects_map.erase( id );
 }

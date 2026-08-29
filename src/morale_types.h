@@ -13,14 +13,14 @@
 class JsonObject;
 struct itype;
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
-} // namespace cata::lua
+} // namespace cata::lua_platform
 
 class morale_type_data
 {
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
     private:
         bool permanent = false;
         // May contain '%s' format string

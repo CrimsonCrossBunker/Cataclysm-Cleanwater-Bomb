@@ -1,6 +1,6 @@
 #include "magic_type.h"
 
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "debug.h"
 #include "effect_on_condition.h"
 #include "flexbuffer_json.h"
@@ -16,7 +16,7 @@ namespace
 generic_factory<magic_type> magic_type_factory( "magic_type" );
 } // namespace
 
-generic_factory<magic_type> &cata::lua::detail::magic_type_registry()
+generic_factory<magic_type> &cata::lua_platform::detail::magic_type_registry()
 {
     return magic_type_factory;
 }

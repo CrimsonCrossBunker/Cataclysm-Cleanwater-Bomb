@@ -28,7 +28,7 @@
 #include "bodygraph.h"
 #include "bodypart.h"
 #include "calendar.h"
-#include "catalua_runtime.h"
+#include "lua_platform_runtime.h"
 #include "cata_utility.h"
 #include "character.h"
 #include "character_martial_arts.h"
@@ -304,7 +304,7 @@ void item::basic_info( std::vector<iteminfo> &info, const iteminfo_query *parts,
                 // Lua-first snippets dispatch their named policy directly and
                 // never store an EOC.  Legacy snippets retain their old path.
                 const bool lua_first_snippet =
-                    cata::lua::invoke_snippet_examine_handler(
+                    cata::lua_platform::invoke_snippet_examine_handler(
                         snip_id.str(), typeId().str(), get_avatar() );
                 if( !lua_first_snippet ) {
                     const std::optional<talk_effect_t> examine_effect =

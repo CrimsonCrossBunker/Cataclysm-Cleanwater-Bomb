@@ -14,10 +14,10 @@ class mood_face_value;
 template<typename T>
 class generic_factory;
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
-} // namespace cata::lua
+} // namespace cata::lua_platform
 
 class mood_face
 {
@@ -41,7 +41,7 @@ class mood_face
     private:
         friend class generic_factory<mood_face>;
         friend struct mod_tracker;
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
 
         mood_face_id id;
         std::vector<std::pair<mood_face_id, mod_id>> src;
@@ -67,7 +67,7 @@ class mood_face_value
         }
 
     private:
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
         int value_ = 0;
         std::string face_;
 };

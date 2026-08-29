@@ -14,7 +14,7 @@
 #include "bodygraph.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "catalua_hook.h"
+#include "lua_platform_hooks.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"

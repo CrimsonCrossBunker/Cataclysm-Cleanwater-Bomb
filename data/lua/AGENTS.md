@@ -12,18 +12,18 @@ tracked in `ai/lua-first-roadmap.yml`.
   domain-batch development cadence, and deferred acceptance gate.  Follow it
   for Lua-first EOC parity work.
 - Never hand-edit generated reference inventories; run their named generator.
-- Do not add or retain a second v5/CBN-compatibility Lua runtime, `game.*`
-  surface, capability sandbox, authored manifest, JSON loader, EOC runner, or
-  EOC-key-shaped API.  Useful native operations belong under the Platform
-  contract; compatibility-only operations are deleted.
+- Do not add a second Lua runtime, `game.*` surface, capability sandbox,
+  authored manifest, JSON loader, EOC runner, or EOC-key-shaped API. Useful
+  native operations belong under the Platform contract; compatibility-only
+  operations are deleted.
 - Keep examples runnable and synchronized with declarations.
 - `templates/minimal/` and `templates/complete/` contain no JSON/EOC and are
   copied by `tools/create_lua_mod.py`; never make their suggested directories
   loader requirements.  The complete template's Mod-id token is replaced only
   in the scaffold staging directory before atomic installation.
-- `ai/lua-first-replacement-ledger.yml` is generated.  Change its generator,
-  never the ledger by hand, and do not promote a planned selector without
-  source, declaration, test, and documentation evidence.
+- `ai/lua-first-replacement-ledger.yml` is generated. Change its generator,
+  never the ledger by hand. A bounded or primitive disposition is not
+  completeness; only the final semantic gate may produce a verified status.
 - `primitive_available_unverified` means only that composable native domain
   building blocks exist; it is not selector-level parity and must not be
   described as a completed migration.
@@ -40,10 +40,11 @@ Development and validation cadence:
 
 - Implement a coherent domain closure rather than one legacy selector at a
   time.  Add declarations, migration support, and test code in the same batch.
-- During implementation, do not compile C++, start Catch2, regenerate every
-  inventory, or run broad validation after each edit.  Defer execution to the
-  batch acceptance gate unless a check is needed to unblock an otherwise
-  unresolved native signature or safety boundary.
+- During implementation, do not compile C++, start Catch2, run Python
+  checkers, run generators, refresh the public contract/ledger/registry, or
+  audit the full corpus after each edit. Defer all of them to the final batch
+  gate unless a check is needed to unblock an otherwise unresolved native
+  signature or safety boundary.
 - At acceptance, compile once and run one broad matching Catch2 process.
   Focused filters are diagnostic follow-ups after a failure, not prerequisites
   for a broad suite that will exercise the same code.
@@ -54,7 +55,9 @@ contract commands include:
 
 ```sh
 python3 tools/lua_api/check_luals_declarations.py
-python3 tools/lua_api/check_ccb_inventory.py
+python3 tools/lua_api/check_platform_native_inventory.py
+python3 tools/lua_api/check_platform_contract.py
+python3 tools/lua_api/check_platform_coverage.py
 python3 -m unittest discover -s tools/lua_api -p 'test_*.py'
 python3 tools/agent/check_project_metadata.py
 ```

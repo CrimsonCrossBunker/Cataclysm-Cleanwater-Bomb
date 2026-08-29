@@ -63,6 +63,50 @@ static const ter_str_id ter_t_grass( "t_grass" );
 static const ter_str_id ter_t_palisade( "t_palisade" );
 static const ter_str_id ter_t_water_dp( "t_water_dp" );
 
+TEST_CASE( "monster_uid_copy_and_move", "[monster]" )
+{
+    monster original( mon_test_zombie );
+    original.ensure_uid();
+    REQUIRE( original.uid().is_valid() );
+    const auto original_uid = original.uid().get_value();
+
+    monster copy( original );
+    REQUIRE( copy.uid().is_valid() );
+    CHECK( copy.uid().get_value() != original_uid );
+
+    const auto copy_uid = copy.uid().get_value();
+    monster moved( std::move( copy ) );
+    CHECK( moved.uid().is_valid() );
+    CHECK( moved.uid().get_value() == copy_uid );
+    CHECK( !copy.uid().is_valid() );
+}
+
+TEST_CASE( "creature_tracker_find_monster_by_uid", "[monster][creature_tracker]" )
+{
+    creature_tracker tracker;
+    const auto live_monster = make_shared_fast<monster>( mon_test_zombie,
+                                 tripoint_bub_ms( 0, 0, 0 ) );
+    REQUIRE( tracker.add( live_monster ) );
+    REQUIRE( live_monster->uid().is_valid() );
+    const auto live_uid = live_monster->uid().get_value();
+
+    CHECK( tracker.find_by_uid( live_uid ) == live_monster );
+    CHECK( tracker.find_by_uid( 0 ) == nullptr );
+    CHECK( tracker.find_by_uid( -1 ) == nullptr );
+
+    tracker.remove( *live_monster );
+    CHECK( tracker.find_by_uid( live_uid ) == nullptr );
+
+    const auto dead_monster = make_shared_fast<monster>( mon_test_zombie,
+                                 tripoint_bub_ms( 1, 0, 0 ) );
+    REQUIRE( tracker.add( dead_monster ) );
+    REQUIRE( dead_monster->uid().is_valid() );
+    const auto dead_uid = dead_monster->uid().get_value();
+    dead_monster->set_hp( 0 );
+    REQUIRE( dead_monster->is_dead() );
+    CHECK( tracker.find_by_uid( dead_uid ) == nullptr );
+}
+
 
 static int moves_to_destination( const std::string &monster_type,
                                  const tripoint_bub_ms &start, const tripoint_bub_ms &end )

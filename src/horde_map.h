@@ -50,7 +50,13 @@ class horde_map
         point_abs_om location;
 
     public:
-        using node_type = std::unordered_map<tripoint_abs_ms, horde_entity>::node_type;
+        using entity_map = std::unordered_map<tripoint_abs_ms, horde_entity>;
+        using entity_iterator = entity_map::iterator;
+        using node_type = entity_map::node_type;
+        struct spawn_result {
+            bool inserted = false;
+            std::optional<entity_iterator> position;
+        };
         void set_location( point_abs_om loc ) {
             location = loc;
         }
@@ -64,13 +70,11 @@ class horde_map
         std::vector<std::unordered_map<tripoint_abs_ms, horde_entity>*> entity_group_at(
             const tripoint_om_sm &p, int filter = horde_map_flavors::active | horde_map_flavors::idle |
                     horde_map_flavors::dormant | horde_map_flavors::immobile );
-        std::optional<std::unordered_map<tripoint_abs_ms, horde_entity>::iterator>
-        spawn_entity( const tripoint_abs_ms &p, mtype_id id );
-        std::optional<std::unordered_map<tripoint_abs_ms, horde_entity>::iterator> spawn_entity(
+        spawn_result spawn_entity( const tripoint_abs_ms &p, mtype_id id );
+        spawn_result spawn_entity(
             const tripoint_abs_ms &p,
             const monster &mon );
         void signal_entities( const tripoint_abs_ms &origin, int volume );
-        void insert( node_type &&node );
         void clear();
         void clear_chunk( const tripoint_om_sm &p );
 
@@ -132,6 +136,16 @@ class horde_map
         iterator find( const tripoint_om_ms &loc );
         iterator erase( iterator iter );
         node_type extract( iterator iter );
+
+        struct insert_result {
+            bool inserted = false;
+            iterator position;
+            node_type node;
+        };
+
+        // Return the node on collision so a caller can restore its preimage.
+        insert_result insert_with_result( node_type &&node );
+        void insert( node_type &&node );
 
         class view_proxy
         {

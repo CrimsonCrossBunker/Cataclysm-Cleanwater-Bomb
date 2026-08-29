@@ -20,7 +20,7 @@
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "cata_variant.h"
-#include "catalua_hook.h"
+#include "lua_platform_hooks.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_id.h"
@@ -2002,12 +2002,12 @@ bool Creature::remove_effect( const efftype_id &eff_id, const bodypart_id &bp )
     const bool dispatch_character_hook =
         type.has_flag( flag_EFFECT_LUA_ON_REMOVED ) &&
         as_character() != nullptr &&
-        cata::lua::has_native_hook(
+        cata::lua_platform::has_native_hook(
             "on_character_effect_removed" );
     const bool dispatch_monster_hook =
         type.has_flag( flag_EFFECT_LUA_ON_REMOVED ) &&
         as_monster() != nullptr &&
-        cata::lua::has_native_hook( "on_mon_effect_removed" );
+        cata::lua_platform::has_native_hook( "on_mon_effect_removed" );
     std::vector<std::string> removed_body_parts;
     if( dispatch_character_hook || dispatch_monster_hook ) {
         if( bp == bodypart_str_id::NULL_ID() ) {
@@ -2044,14 +2044,14 @@ bool Creature::remove_effect( const efftype_id &eff_id, const bodypart_id &bp )
                             "on_character_effect_removed" :
                             "on_mon_effect_removed";
     for( const std::string &body_part : removed_body_parts ) {
-        cata::lua::native_callback_arguments payload = {
+        cata::lua_platform::native_callback_arguments payload = {
             {
-                "effect", cata::lua::native_callback_id {
+                "effect", cata::lua_platform::native_callback_id {
                     "effect", eff_id.str()
                 }
             },
             {
-                "body_part", cata::lua::native_callback_id {
+                "body_part", cata::lua_platform::native_callback_id {
                     "body_part", body_part
                 }
             }
@@ -2067,7 +2067,7 @@ bool Creature::remove_effect( const efftype_id &eff_id, const bodypart_id &bp )
                 static_cast<const Creature *>( this )
             } );
         }
-        cata::lua::dispatch_native_hook(
+        cata::lua_platform::dispatch_native_hook(
             hook_name, payload );
     }
 

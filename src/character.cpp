@@ -27,8 +27,8 @@
 #include "calendar.h"
 #include "cata_utility.h"
 #include "catacharset.h"
-#include "catalua_runtime.h"
-#include "catalua_hook.h"
+#include "lua_platform_runtime.h"
+#include "lua_platform_hooks.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
 #include "city.h"
@@ -1931,7 +1931,7 @@ void Character::on_dodge( Creature *source, float difficulty, float training_lev
             }
         }
     }
-    cata::lua::dispatch_native_hook(
+    cata::lua_platform::dispatch_native_hook(
     "on_creature_dodged", {
         { "creature", static_cast<const Character *>( this ) },
         { "source", static_cast<const Creature *>( source ) },
@@ -2445,7 +2445,7 @@ void Character::process_turn()
     }
     effect_on_conditions::process_effect_on_conditions( *this );
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-    cata::lua::runtime_process_character_recurring( *this );
+    cata::lua_platform::runtime_process_character_recurring( *this );
 #endif
 }
 
@@ -3144,9 +3144,9 @@ void Character::reset_stats()
         mod_dodge_bonus( 1 );   // Bonus if we're small
     }
 
-    if( cata::lua::has_native_hook(
+    if( cata::lua_platform::has_native_hook(
             "on_character_reset_stats" ) ) {
-        cata::lua::dispatch_native_hook(
+        cata::lua_platform::dispatch_native_hook(
         "on_character_reset_stats", {
             {
                 "character",
@@ -4648,11 +4648,11 @@ bool Character::invoke_item( item *used, const tripoint_bub_ms &pt,
                              int pre_obtain_moves )
 {
     if( used == nullptr ||
-        !cata::lua::has_platform_item_use_handler( used->typeId().str() ) ) {
+        !cata::lua_platform::has_platform_item_use_handler( used->typeId().str() ) ) {
         return false;
     }
     const std::optional<int> result =
-        cata::lua::invoke_platform_item_use_handler(
+        cata::lua_platform::invoke_platform_item_use_handler(
             this, *used, &get_map(), pt );
     if( !result ) {
         if( pre_obtain_moves >= 0 ) {
@@ -7093,15 +7093,15 @@ void Character::process_one_effect( effect &it, bool is_new )
     const std::string body_part =
         it.get_bp() == bodypart_str_id::NULL_ID() ?
         std::string() : it.get_bp().id().str();
-    const cata::lua::native_callback_arguments payload = {
+    const cata::lua_platform::native_callback_arguments payload = {
         { "character", static_cast<const Character *>( this ) },
         {
-            "effect", cata::lua::native_callback_id {
+            "effect", cata::lua_platform::native_callback_id {
                 "effect", it.get_id().str()
             }
         },
         {
-            "body_part", cata::lua::native_callback_id {
+            "body_part", cata::lua_platform::native_callback_id {
                 "body_part", body_part
             }
         },
@@ -7109,17 +7109,17 @@ void Character::process_one_effect( effect &it, bool is_new )
     };
     const bool dispatch_added =
         it.has_flag( flag_EFFECT_LUA_ON_ADDED ) &&
-        cata::lua::has_native_hook(
+        cata::lua_platform::has_native_hook(
             "on_character_effect_added" );
     const bool dispatch_tick =
         it.has_flag( flag_EFFECT_LUA_ON_TICK ) &&
-        cata::lua::has_native_hook( "on_character_effect" );
+        cata::lua_platform::has_native_hook( "on_character_effect" );
     if( dispatch_added ) {
-        cata::lua::dispatch_native_hook(
+        cata::lua_platform::dispatch_native_hook(
             "on_character_effect_added", payload );
     }
     if( dispatch_tick ) {
-        cata::lua::dispatch_native_hook(
+        cata::lua_platform::dispatch_native_hook(
             "on_character_effect", payload );
     }
 }
@@ -7183,7 +7183,7 @@ void Character::process_effects()
         int intensity;
     };
     const bool has_lua_effect_hook =
-        cata::lua::has_native_hook( "on_character_effect" );
+        cata::lua_platform::has_native_hook( "on_character_effect" );
     std::vector<lua_effect_tick> lua_effect_ticks;
     //Human only effects
     for( std::pair<const efftype_id, std::map<bodypart_id, effect>> &elem : *effects ) {
@@ -7204,19 +7204,19 @@ void Character::process_effects()
         }
     }
     for( const lua_effect_tick &tick : lua_effect_ticks ) {
-        cata::lua::dispatch_native_hook(
+        cata::lua_platform::dispatch_native_hook(
         "on_character_effect", {
             {
                 "character",
                 static_cast<const Character *>( this )
             },
             {
-                "effect", cata::lua::native_callback_id {
+                "effect", cata::lua_platform::native_callback_id {
                     "effect", tick.effect
                 }
             },
             {
-                "body_part", cata::lua::native_callback_id {
+                "body_part", cata::lua_platform::native_callback_id {
                     "body_part", tick.body_part
                 }
             },

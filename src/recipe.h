@@ -33,10 +33,10 @@ class read_only_visitable;
 class recipe;
 template <typename E> struct enum_traits;
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
-} // namespace cata::lua
+} // namespace cata::lua_platform
 
 enum class recipe_filter_flags : int {
     none = 0,
@@ -164,7 +164,7 @@ class recipe
 {
         friend class recipe_dictionary;
         friend struct mod_tracker;
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
 
     private:
         itype_id result_ = itype_id::NULL_ID();

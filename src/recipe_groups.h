@@ -34,7 +34,7 @@ std::map<recipe_id, translation> get_recipes_by_id( const std::string &id, const
 std::string get_building_of_recipe( const std::string &recipe );
 } // namespace recipe_group
 
-namespace cata::lua::detail
+namespace cata::lua_platform::detail
 {
 
 struct recipe_group_terrain_definition {
@@ -62,6 +62,6 @@ void recipe_group_set( const recipe_group_native_definition &definition );
 void recipe_group_erase( std::string_view id );
 std::vector<recipe_group_native_definition> recipe_group_snapshot();
 
-} // namespace cata::lua::detail
+} // namespace cata::lua_platform::detail
 
 #endif // CATA_SRC_RECIPE_GROUPS_H

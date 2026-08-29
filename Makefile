@@ -1155,13 +1155,13 @@ LUA_C_SOURCE_NAMES := \
   lzio.c
 LUA_C_SOURCES := $(addprefix $(SRC_DIR)/lua/,$(LUA_C_SOURCE_NAMES))
 LUA_PLATFORM_ENABLED_SOURCES := \
-  $(SRC_DIR)/catalua_dialogue_common.cpp \
-  $(SRC_DIR)/catalua_ui.cpp \
-  $(SRC_DIR)/catalua_ui_game.cpp \
-  $(SRC_DIR)/catalua_ui_registry.cpp \
-  $(SRC_DIR)/catalua_ui_services.cpp \
-  $(SRC_DIR)/catalua_ui_state.cpp \
-  $(SRC_DIR)/catalua_ui_values.cpp
+  $(SRC_DIR)/lua_platform_dialogue.cpp \
+  $(SRC_DIR)/lua_platform_mapgen_dispatch.cpp \
+  $(SRC_DIR)/lua_platform_snapshots.cpp \
+  $(SRC_DIR)/lua_platform_registry.cpp \
+  $(SRC_DIR)/lua_platform_services.cpp \
+  $(SRC_DIR)/lua_platform_state.cpp \
+  $(SRC_DIR)/lua_platform_values.cpp
 THIRD_PARTY_SOURCES := $(wildcard $(SRC_DIR)/third-party/flatbuffers/*.cpp $(SRC_DIR)/third-party/fmt/*.cc)
 THIRD_PARTY_C_SOURCES := $(wildcard $(SRC_DIR)/third-party/zstd/common/*.c $(SRC_DIR)/third-party/zstd/compress/*.c $(SRC_DIR)/third-party/zstd/decompress/*.c)
 HEADERS := $(wildcard $(SRC_DIR)/*.h)
@@ -1194,7 +1194,7 @@ ifeq ($(CATA_ENABLE_LUA_PLATFORM),0)
   SOURCES := $(filter-out $(LUA_PLATFORM_ENABLED_SOURCES),$(SOURCES))
   LUA_C_SOURCES :=
 else
-  SOURCES := $(filter-out $(SRC_DIR)/catalua_ui_disabled.cpp,$(SOURCES))
+  SOURCES := $(filter-out $(SRC_DIR)/lua_platform_disabled.cpp,$(SOURCES))
 endif
 SOURCES += $(THIRD_PARTY_SOURCES)
 C_SOURCES += $(THIRD_PARTY_C_SOURCES) $(LUA_C_SOURCES)

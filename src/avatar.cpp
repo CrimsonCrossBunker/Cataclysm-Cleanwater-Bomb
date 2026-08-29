@@ -26,8 +26,8 @@
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "catacharset.h"
-#include "catalua_hook.h"
-#include "catalua_runtime.h"
+#include "lua_platform_hooks.h"
+#include "lua_platform_runtime.h"
 #include "character.h"
 #include "character_id.h"
 #include "character_martial_arts.h"
@@ -163,12 +163,14 @@ void avatar::control_npc( npc &np, const bool debug )
         debugmsg( "control_npc() called on non-allied npc %s", np.name );
         return;
     }
-    character_id new_character = np.getID();
-    const std::function<void( npc & )> update_npc = [new_character]( npc & guy ) {
-        guy.update_missions_target( get_avatar().getID(), new_character );
+    const character_id new_character = np.getID();
+    const character_id previous_character = getID();
+    const std::function<void( npc & )> update_npc =
+        [previous_character, new_character]( npc &guy ) {
+        guy.update_missions_target( previous_character, new_character );
     };
     overmap_buffer.foreach_npc( update_npc );
-    mission().update_world_missions_character( get_avatar().getID(), new_character );
+    mission().update_world_missions_character( previous_character, new_character );
     // move avatar character data into shadow npc
     swap_character( get_shadow_npc() );
     // swap target npc with shadow npc
@@ -176,9 +178,9 @@ void avatar::control_npc( npc &np, const bool debug )
     // move shadow npc character data into avatar
     swap_character( get_shadow_npc() );
     // the avatar character is no longer a follower NPC
-    g->remove_npc_follower( getID() );
+    follower_ids.erase( getID() );
     // the previous avatar character is now a follower
-    g->add_npc_follower( np.getID() );
+    follower_ids.insert( np.getID() );
     np.set_fac( faction_your_followers );
     // perception and mutations may have changed, so reset light level caches
     g->reset_light_level();
@@ -193,7 +195,7 @@ void avatar::control_npc( npc &np, const bool debug )
     get_event_bus().send<event_type::game_avatar_new>( /*is_new_game=*/false, debug, getID(), name,
             custom_profession );
 
-    cata::lua::dispatch_native_hook(
+    cata::lua_platform::dispatch_native_hook(
     "on_control_npc", {
         { "avatar", static_cast<const Character *>( this ) },
         { "npc", static_cast<const Character *>( &np ) },
@@ -1454,7 +1456,7 @@ bool avatar::invoke_item( item *used, const tripoint_bub_ms &pt, int pre_obtain_
     const int num_methods = use_methods.size();
 
     const bool has_relic = used->has_relic_activation() && used->can_use_relic( *this );
-    const bool has_lua_use = cata::lua::has_platform_item_use_handler(
+    const bool has_lua_use = cata::lua_platform::has_platform_item_use_handler(
                                  used->typeId().str() );
     const bool lua_only = use_methods.empty() && has_lua_use;
     if( use_methods.empty() && !has_relic && !has_lua_use ) {

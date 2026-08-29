@@ -49,7 +49,7 @@ struct mutable_overmap_placement_rule_remainder;
 template <typename E> struct enum_traits;
 template <typename T> class generic_factory;
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
 class world_content_transaction;
@@ -255,7 +255,7 @@ class overmap_land_use_code
 };
 
 struct overmap_spawns {
-        friend class cata::lua::world_content_transaction;
+        friend class cata::lua_platform::world_content_transaction;
         overmap_spawns() : group( mongroup_id::NULL_ID() ) {}
 
         string_id<MonsterGroup> group;
@@ -411,7 +411,7 @@ class oter_vision
     private:
         friend class generic_factory<oter_vision>;
         friend struct mod_tracker;
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
         oter_vision_id id;
         std::vector<std::pair<oter_vision_id, mod_id>> src;
         bool was_loaded = false;
@@ -420,7 +420,7 @@ class oter_vision
 };
 
 struct oter_type_t {
-    friend class cata::lua::world_content_transaction;
+    friend class cata::lua_platform::world_content_transaction;
     public:
         static const oter_type_t null_type;
 
@@ -781,7 +781,7 @@ struct special_placement_result;
 
 class overmap_special
 {
-    friend class cata::lua::world_content_transaction;
+    friend class cata::lua_platform::world_content_transaction;
     public:
         overmap_special() = default;
         overmap_special( const overmap_special_id &, const overmap_special_terrain & );
@@ -867,9 +867,9 @@ class overmap_special
 
 struct overmap_special_migration {
     public:
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
         friend std::vector<std::pair<std::string, std::string>>
-        cata::lua::detail::overmap_special_migration_snapshot();
+        cata::lua_platform::detail::overmap_special_migration_snapshot();
         static void load_migrations( const JsonObject &jo, const std::string &src );
         static void finalize_all();
         static void reset();

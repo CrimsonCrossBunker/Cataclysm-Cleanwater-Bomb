@@ -1,6 +1,6 @@
 #include "construction_group.h"
 
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "generic_factory.h"
 
 namespace
@@ -11,7 +11,7 @@ generic_factory<construction_group> all_construction_groups( "construction group
 } // namespace
 
 generic_factory<construction_group> &
-cata::lua::detail::construction_group_registry()
+cata::lua_platform::detail::construction_group_registry()
 {
     return all_construction_groups;
 }

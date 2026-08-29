@@ -43,6 +43,18 @@ enum class cube_direction : int;
 enum class oter_travel_cost_type : int;
 struct pp_resolved_generator;
 
+enum class platform_npc_lookup_status {
+    found,
+    authoritative_not_found,
+    unknown,
+    ambiguous
+};
+
+struct platform_npc_lookup_result {
+    platform_npc_lookup_status status = platform_npc_lookup_status::unknown;
+    shared_ptr_fast<npc> value;
+};
+
 namespace om_direction
 {
 enum class type : int;
@@ -339,6 +351,15 @@ class overmapbuffer
         void add_camp( const basecamp &camp );
 
         std::optional<basecamp *> find_camp( const point_abs_omt &p );
+        /** Visit every camp in the loaded overmap set without selecting one. */
+        void foreach_loaded_camp( const std::function<void( basecamp & )> &callback );
+        /**
+         * Rebind durable Platform camp tasks to currently loaded actors.
+         * Missing actors remain awaiting reconciliation.  An explicit
+         * authoritative absence fact can be recorded only by a caller that
+         * has completed a world-wide NPC index.
+         */
+        void reconcile_platform_camp_tasks();
         // Remove all basecamps in the inbound overmap
         void clear_camps( const point_abs_omt &p );
         /**
@@ -374,8 +395,20 @@ class overmapbuffer
          * Find the npc with the given ID.
          * Returns NULL if the npc could not be found.
          * Searches all loaded overmaps.
-         */
+        */
         shared_ptr_fast<npc> find_npc( character_id id );
+        /** Stable-ID lookup without scanning the loaded overmap collection. */
+        platform_npc_lookup_result lookup_platform_npc( character_id id ) const;
+        /**
+         * Record an authoritative absence supplied by a complete world NPC
+         * index.  Ordinary unload/erase must never call this method.
+         */
+        bool confirm_platform_npc_absence( character_id id );
+        /** Maintain the bounded loaded-NPC identity index used by Platform. */
+        void platform_register_npc( const shared_ptr_fast<npc> &who );
+        void platform_register_npc( const npc &who );
+        void platform_unregister_npc( const shared_ptr_fast<npc> &who );
+        void platform_unregister_npc( const npc &who );
         /**
          * Clear and fill a vector with NPCs who are your followers.
          * Optionally only include is_following() or exclude is_hallucination()
@@ -680,6 +713,13 @@ class overmapbuffer
         bool is_findable_location( const tripoint_abs_omt &location, const omt_find_params &params );
 
         std::unordered_map< point_abs_om, std::unique_ptr< overmap > > overmaps;
+
+        // This index is maintained at NPC insert/erase boundaries.  Its
+        // absence is not proof that an NPC does not exist elsewhere in the
+        // world, so lookup returns unknown unless an authoritative caller has
+        // explicitly recorded absence.
+        std::unordered_map<int, std::vector<shared_ptr_fast<npc>>> platform_npc_index_;
+        std::unordered_set<int> platform_authoritative_missing_npcs_;
 
         /** shared_mutex for concurrent overmap reads from background workers.
          *  Workers doing pathfinding / horde scans can read overmaps concurrently

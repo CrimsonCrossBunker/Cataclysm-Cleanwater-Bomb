@@ -9,7 +9,7 @@
 
 #include "ammo_effect.h"
 #include "calendar.h"
-#include "catalua_hook.h"
+#include "lua_platform_hooks.h"
 #include "character.h"
 #include "coordinates.h"
 #include "condition.h"
@@ -418,27 +418,27 @@ void mortar_examine_actor::call( Character &you, const tripoint_bub_ms &examp ) 
         eoc->activate( d );
     }
     const tripoint_abs_ms source_abs_ms = here.get_abs( examp );
-    cata::lua::dispatch_native_hook( "on_mortar_fired", {
+    cata::lua_platform::dispatch_native_hook( "on_mortar_fired", {
         { "character", static_cast<const Character *>( &you ) },
         {
-            "source", cata::lua::native_callback_point {
+            "source", cata::lua_platform::native_callback_point {
                 "abs_ms", tripoint_rel_ms(
                     source_abs_ms.x(), source_abs_ms.y(), source_abs_ms.z() )
             }
         },
         {
-            "target", cata::lua::native_callback_point {
+            "target", cata::lua_platform::native_callback_point {
                 "abs_ms", tripoint_rel_ms(
                     target_abs_ms.x(), target_abs_ms.y(), target_abs_ms.z() )
             }
         },
         {
-            "furniture", cata::lua::native_callback_id {
+            "furniture", cata::lua_platform::native_callback_id {
                 "furniture", here.furn( examp ).id().str()
             }
         },
         {
-            "ammunition", cata::lua::native_callback_id {
+            "ammunition", cata::lua_platform::native_callback_id {
                 "item", ammunition_id
             }
         }

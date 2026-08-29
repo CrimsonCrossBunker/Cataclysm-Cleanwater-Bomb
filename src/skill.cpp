@@ -47,8 +47,8 @@ static const skill_id skill_unarmed( "unarmed" );
 std::vector<Skill> Skill::skills;
 std::map<skill_id, Skill> Skill::contextual_skills;
 
-std::vector<cata::lua::detail::skill_snapshot_entry>
-cata::lua::detail::skill_registry_snapshot()
+std::vector<cata::lua_platform::detail::skill_snapshot_entry>
+cata::lua_platform::detail::skill_registry_snapshot()
 {
     std::vector<skill_snapshot_entry> result;
     const auto collect = [&result]( const Skill &sk ) {

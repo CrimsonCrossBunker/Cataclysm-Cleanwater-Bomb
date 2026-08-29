@@ -12,7 +12,7 @@
 #include <unordered_set>
 #include <utility>
 
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 
 #include "avatar.h"
 #include "character.h"
@@ -251,7 +251,7 @@ const item_action &item_action_generator::get_action( const item_action_id &id )
     return nullaction;
 }
 
-const item_action *cata::lua::detail::item_action_registry_find(
+const item_action *cata::lua_platform::detail::item_action_registry_find(
     const item_action_id &id )
 {
     const auto iter = item_action_generator::generator().item_actions.find( id );
@@ -260,7 +260,7 @@ const item_action *cata::lua::detail::item_action_registry_find(
 }
 
 std::vector<std::pair<item_action_id, item_action>>
-cata::lua::detail::item_action_registry_snapshot()
+cata::lua_platform::detail::item_action_registry_snapshot()
 {
     std::vector<std::pair<item_action_id, item_action>> result;
     result.reserve( item_action_generator::generator().item_actions.size() );
@@ -270,12 +270,12 @@ cata::lua::detail::item_action_registry_snapshot()
     return result;
 }
 
-void cata::lua::detail::item_action_registry_set( const item_action &value )
+void cata::lua_platform::detail::item_action_registry_set( const item_action &value )
 {
     item_action_generator::generator().item_actions[value.id] = value;
 }
 
-void cata::lua::detail::item_action_registry_erase(
+void cata::lua_platform::detail::item_action_registry_erase(
     const item_action_id &id )
 {
     item_action_generator::generator().item_actions.erase( id );

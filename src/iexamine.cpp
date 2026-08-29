@@ -22,8 +22,8 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "catalua_runtime.h"
-#include "catalua_hook.h"
+#include "lua_platform_runtime.h"
+#include "lua_platform_hooks.h"
 #include "character.h"
 #include "color.h"
 #include "condition.h"
@@ -1396,13 +1396,13 @@ void iexamine::elevator( Character &you, const tripoint_bub_ms &examp )
     }
 
     tripoint_abs_omt const that_omt( this_omt.xy(), movez );
-    const cata::lua::native_callback_point elevator_position = {
+    const cata::lua_platform::native_callback_point elevator_position = {
         "bub_ms", tripoint_rel_ms( examp.x(), examp.y(), examp.z() )
     };
-    const cata::lua::native_callback_point elevator_destination = {
+    const cata::lua_platform::native_callback_point elevator_destination = {
         "abs_omt", tripoint_rel_ms( that_omt.x(), that_omt.y(), that_omt.z() )
     };
-    if( !cata::lua::allow_native_elevator_use(
+    if( !cata::lua_platform::allow_native_elevator_use(
             you, elevator_position, elevator_destination ) ) {
         return;
     }
@@ -3652,7 +3652,7 @@ void iexamine::run_plant_lifecycle_event(
     }
     run_plant_eocs( *seed_eocs, alpha, here, plant_pos, seed,
                     old_stage, new_stage, string_context, num_context );
-    cata::lua::invoke_plant_lifecycle_handlers(
+    cata::lua_platform::invoke_plant_lifecycle_handlers(
         phase, alpha, here, plant_pos, seed_id, old_stage, new_stage,
         effective_growth_turns, water, string_context, num_context );
 }

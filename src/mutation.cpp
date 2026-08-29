@@ -13,7 +13,7 @@
 #include "avatar_action.h"
 #include "bionics.h"
 #include "cata_utility.h"
-#include "catalua_hook.h"
+#include "lua_platform_hooks.h"
 #include "character.h"
 #include "color.h"
 #include "coordinates.h"
@@ -904,9 +904,9 @@ void Character::activate_cached_mutation( const trait_id &mut )
         // if the activation EOCs are not just setup for processing then turn the mutation off
         tdata.powered = mut->activated_is_setup;
     }
-    cata::lua::dispatch_native_hook( "on_mutation_activated", {
+    cata::lua_platform::dispatch_native_hook( "on_mutation_activated", {
         { "character", static_cast<const Character *>( this ) },
-        { "mutation", cata::lua::native_callback_id{ "mutation", mut.str() } }
+        { "mutation", cata::lua_platform::native_callback_id{ "mutation", mut.str() } }
     } );
 
     if( mdata.transform ) {
@@ -1057,9 +1057,9 @@ void Character::deactivate_mutation( const trait_id &mut )
     }
 
     if( was_powered ) {
-        cata::lua::dispatch_native_hook( "on_mutation_deactivated", {
+        cata::lua_platform::dispatch_native_hook( "on_mutation_deactivated", {
             { "character", static_cast<const Character *>( this ) },
-            { "mutation", cata::lua::native_callback_id{ "mutation", mut.str() } }
+            { "mutation", cata::lua_platform::native_callback_id{ "mutation", mut.str() } }
         } );
     }
 }

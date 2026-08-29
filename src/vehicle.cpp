@@ -243,7 +243,7 @@ units::volume vehicle_stack::stored_volume() const
 
 // Vehicle class methods.
 
-vehicle::vehicle( const vproto_id &proto_id )
+vehicle::vehicle( const vproto_id &proto_id ) : uid_()
 {
     face.init( 0_degrees );
     move.init( 0_degrees );
@@ -266,6 +266,14 @@ vehicle::vehicle( const vproto_id &proto_id )
         // restored via deserialize instead, so they are not re-rolled here.
         apply_color_palette( proto );
         refresh( );
+    }
+    ensure_uid();
+}
+
+void vehicle::ensure_uid()
+{
+    if( !uid_.is_valid() ) {
+        uid_.deserialize( generate_next_vehicle_uid() );
     }
 }
 
@@ -2033,13 +2041,15 @@ bool vehicle::merge_rackable_vehicle( map *here, vehicle *carry_veh,
             zones_on_point = carry_veh->loot_zones.equal_range( carry_map.old_mount );
             for( std::unordered_multimap<point_rel_ms, zone_data>::const_iterator it = zones_on_point.first;
                  it != zones_on_point.second; ++it ) {
-                new_zones.emplace( carry_map.carry_mount, it->second );
+                zone_data zone = it->second;
+                zone.set_vehicle_owner( *carry_veh );
+                new_zones.emplace( carry_map.carry_mount, zone );
             }
         }
 
         for( auto &new_zone : new_zones ) {
             zone_manager::get_manager().create_vehicle_loot_zone(
-                *this, new_zone.first, new_zone.second );
+                *this, new_zone.first, new_zone.second, here );
         }
 
         // Now that we've added zones to this vehicle, we need to make sure their positions
@@ -2758,7 +2768,9 @@ bool vehicle::split_vehicles( map &here,
             for( std::unordered_multimap<point_rel_ms, zone_data>::const_iterator lz_iter =
                      zones_on_point.first;
                  lz_iter != zones_on_point.second; ++lz_iter ) {
-                new_zones.emplace( new_mount.raw(), lz_iter->second );
+                zone_data zone = lz_iter->second;
+                zone.set_vehicle_owner( *this );
+                new_zones.emplace( new_mount.raw(), zone );
             }
 
             // Erasing on the key removes all the zones from the point at once
@@ -2780,7 +2792,7 @@ bool vehicle::split_vehicles( map &here,
         // because we need only to move the zone once per mount, not per part. If we move per
         // part, we will end up with duplicates of the zone per part on the same mount
         for( std::pair<point_rel_ms, zone_data> zone : new_zones ) {
-            zone_manager::get_manager().create_vehicle_loot_zone( *new_vehicle, zone.first, zone.second );
+            zone_manager::get_manager().create_vehicle_loot_zone( *new_vehicle, zone.first, zone.second, &here );
         }
 
         // create_vehicle_loot_zone marks the vehicle as not dirty but since we got these zones
@@ -6023,6 +6035,25 @@ vehicle *vehicle::find_vehicle( const map &here, const tripoint_abs_ms &where )
     return nullptr;
 }
 
+vehicle *vehicle::find_vehicle_by_uid( map &here, const int64_t uid )
+{
+    if( uid <= 0 ) {
+        return nullptr;
+    }
+
+    vehicle *found = nullptr;
+    for( const wrapped_vehicle &wrapped : here.get_vehicles() ) {
+        if( wrapped.v == nullptr || wrapped.v->uid().get_value() != uid ) {
+            continue;
+        }
+        if( found != nullptr && found != wrapped.v ) {
+            return nullptr;
+        }
+        found = wrapped.v;
+    }
+    return found;
+}
+
 vehicle *vehicle::find_vehicle_using_parts( const map &here,  const tripoint_abs_ms &where )
 {
     // Is it in the reality bubble?
@@ -8054,7 +8085,9 @@ void vehicle::shift_parts( map &here, const point_rel_ms &delta )
 
     decltype( loot_zones ) new_zones;
     for( auto const &z : loot_zones ) {
-        new_zones.emplace( z.first - delta.raw(), z.second );
+        zone_data zone = z.second;
+        zone.set_vehicle_owner( *this );
+        new_zones.emplace( z.first - delta.raw(), zone );
     }
     loot_zones = new_zones;
 
@@ -9418,6 +9451,7 @@ bool vehicle::refresh_zones()
         decltype( loot_zones ) new_zones;
         for( auto const &z : loot_zones ) {
             zone_data zone = z.second;
+            zone.set_vehicle_owner( *this );
             //Get the global position of the first cargo part at the relative coordinate
 
             const int part_idx = part_with_feature( z.first, "CARGO", false );

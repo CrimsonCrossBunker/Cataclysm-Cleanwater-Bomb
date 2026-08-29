@@ -15,10 +15,10 @@ class speed_description_value;
 template<typename T>
 class generic_factory;
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
-} // namespace cata::lua
+} // namespace cata::lua_platform
 
 class speed_description
 {
@@ -38,7 +38,7 @@ class speed_description
     private:
         friend class generic_factory<speed_description>;
         friend struct mod_tracker;
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
 
         speed_description_id id;
         std::vector<std::pair<speed_description_id, mod_id>> src;
@@ -65,7 +65,7 @@ class speed_description_value
         }
 
     private:
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
         double value_ = 0.00;
         std::vector<translation> descriptions_;
 };

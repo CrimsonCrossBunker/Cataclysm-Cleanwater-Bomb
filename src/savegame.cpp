@@ -1,4 +1,4 @@
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 
 #include "game.h" // IWYU pragma: associated
 
@@ -679,7 +679,7 @@ void overmap::unserialize( const JsonObject &jsobj )
             JsonArray monster_map_json = om_member;
             while( monster_map_json.has_more() ) {
                 tripoint_abs_ms monster_location;
-                std::optional<std::unordered_map<tripoint_abs_ms, horde_entity>::iterator> result;
+                horde_map::spawn_result result;
                 monster_location.deserialize( monster_map_json.next_value() );
                 point_abs_om omp;
                 tripoint_om_sm monster_submap;
@@ -694,11 +694,11 @@ void overmap::unserialize( const JsonObject &jsobj )
                     result = hordes.spawn_entity( monster_location, new_monster );
                 }
 
-                if( result.has_value() ) {
-                    ( *result )->second.destination.deserialize( monster_map_json.next_value() );
-                    ( *result )->second.tracking_intensity = monster_map_json.next_int();
-                    ( *result )->second.last_processed.deserialize( monster_map_json.next_value() );
-                    ( *result )->second.moves = monster_map_json.next_int();
+                if( result.position ) {
+                    ( *result.position )->second.destination.deserialize( monster_map_json.next_value() );
+                    ( *result.position )->second.tracking_intensity = monster_map_json.next_int();
+                    ( *result.position )->second.last_processed.deserialize( monster_map_json.next_value() );
+                    ( *result.position )->second.moves = monster_map_json.next_int();
                 } else {
                     // We deserialized something nasty, skip the rest of the stored values
                     monster_map_json.next_value();
@@ -1719,6 +1719,10 @@ void game::unserialize_master( const JsonValue &jv )
             next_npc_id.deserialize( jsin );
         } else if( name == "next_item_uid" ) {
             jsin.read( next_item_uid );
+        } else if( name == "next_monster_uid" ) {
+            jsin.read( next_monster_uid );
+        } else if( name == "next_vehicle_uid" ) {
+            jsin.read( next_vehicle_uid );
         } else if( name == "active_missions" ) {
             mission::unserialize_all( jsin );
         } else if( name == "factions" ) {
@@ -1924,6 +1928,8 @@ void game::serialize_master( std::ostream &fout )
         json.member( "next_mission_id", next_mission_id );
         json.member( "next_npc_id", next_npc_id );
         json.member( "next_item_uid", next_item_uid );
+        json.member( "next_monster_uid", next_monster_uid );
+        json.member( "next_vehicle_uid", next_vehicle_uid );
 
         json.member( "active_missions" );
         mission::serialize_all( json );
@@ -1989,21 +1995,21 @@ void global_variables::load_migrations( const JsonObject &jo, std::string_view )
     get_globals().migrations.emplace( from, to );
 }
 
-void cata::lua::detail::insert_platform_var_migration(
+void cata::lua_platform::detail::insert_platform_var_migration(
     const platform_migration_data &value )
 {
     get_globals().migrations.emplace(
         value.from_id, value.to_id.empty() ? "NULL_VALUE" : value.to_id );
 }
 
-void cata::lua::detail::erase_platform_var_migration(
+void cata::lua_platform::detail::erase_platform_var_migration(
     const platform_migration_data &value )
 {
     get_globals().migrations.erase( value.from_id );
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua::detail::var_migration_snapshot()
+cata::lua_platform::detail::var_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     const std::map<std::string, std::string> &migrations =
@@ -2262,4 +2268,3 @@ void npc::export_to( const cata_path &path ) const
         serialize( jsout );
     } );
 }
-

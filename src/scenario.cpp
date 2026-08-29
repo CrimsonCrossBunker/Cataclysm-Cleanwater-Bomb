@@ -1,4 +1,4 @@
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 
 #include "scenario.h"
 
@@ -28,7 +28,7 @@ namespace
 generic_factory<scenario> all_scenarios( "scenario" );
 } // namespace
 
-generic_factory<scenario> &cata::lua::detail::scenario_registry()
+generic_factory<scenario> &cata::lua_platform::detail::scenario_registry()
 {
     return all_scenarios;
 }
@@ -49,13 +49,13 @@ bool string_id<scenario>::is_valid() const
 
 static scen_blacklist sc_blacklist;
 
-scen_blacklist cata::lua::detail::scenario_blacklist_snapshot()
+scen_blacklist cata::lua_platform::detail::scenario_blacklist_snapshot()
 {
     return sc_blacklist;
 }
 
-std::vector<cata::lua::detail::scenario_snapshot_entry>
-cata::lua::detail::scenario_registry_snapshot()
+std::vector<cata::lua_platform::detail::scenario_snapshot_entry>
+cata::lua_platform::detail::scenario_registry_snapshot()
 {
     std::vector<scenario_snapshot_entry> result;
     for( const scenario &value : all_scenarios.get_all() ) {
@@ -438,7 +438,7 @@ void scen_blacklist::load( const JsonObject &jo, std::string_view )
     }
 }
 
-void cata::lua::detail::insert_platform_scenario_blacklist(
+void cata::lua_platform::detail::insert_platform_scenario_blacklist(
     const platform_blacklist_data &value )
 {
     sc_blacklist.whitelist = value.whitelist;
@@ -447,7 +447,7 @@ void cata::lua::detail::insert_platform_scenario_blacklist(
     }
 }
 
-void cata::lua::detail::erase_platform_scenario_blacklist(
+void cata::lua_platform::detail::erase_platform_scenario_blacklist(
     const platform_blacklist_data &value )
 {
     for( const std::string &entry : value.entries ) {

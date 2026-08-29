@@ -687,6 +687,9 @@ void zone_manager_ui::display_zone_manager()
                         }
                         break;
                     case 3:
+                        if( zone.get_is_vehicle() && !mgr.zone_edited( zone ) ) {
+                            break;
+                        }
                         if( zone.get_options().query() ) {
                             stuff_changed = true;
                         }

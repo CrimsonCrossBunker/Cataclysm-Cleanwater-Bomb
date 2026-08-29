@@ -7,7 +7,7 @@
 
 #include "ammo.h"
 #include "cata_utility.h"
-#include "catalua_hook.h"
+#include "lua_platform_hooks.h"
 #include "character.h"
 #include "debug.h"
 #include "generic_factory.h"

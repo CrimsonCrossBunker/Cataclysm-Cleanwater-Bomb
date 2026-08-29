@@ -6,7 +6,7 @@
 #include <string>
 
 #include "cata_utility.h"
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "creature.h"
 #include "debug.h"
 #include "enum_conversions.h"
@@ -22,7 +22,7 @@ generic_factory<butchery_requirements> butchery_req_factory( "butchery_requireme
 } // namespace
 
 generic_factory<butchery_requirements> &
-cata::lua::detail::butchery_requirements_registry()
+cata::lua_platform::detail::butchery_requirements_registry()
 {
     return butchery_req_factory;
 }

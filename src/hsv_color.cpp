@@ -13,7 +13,7 @@
 #include <sstream>
 #include <vector>
 
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "debug.h"
 #include "rng.h"
 #include "string_formatter.h"
@@ -26,8 +26,8 @@
 static std::unordered_map<RGBColor, std::string> named_colors = {};
 static std::unordered_map<RGBColor, std::string> similar_name_cache = {};
 
-std::vector<cata::lua::detail::named_color_native_definition>
-cata::lua::detail::named_color_registry_snapshot()
+std::vector<cata::lua_platform::detail::named_color_native_definition>
+cata::lua_platform::detail::named_color_registry_snapshot()
 {
     std::vector<named_color_native_definition> result;
     result.reserve( named_colors.size() );
@@ -37,7 +37,7 @@ cata::lua::detail::named_color_registry_snapshot()
     return result;
 }
 
-bool cata::lua::detail::named_color_registry_contains( const std::string &name )
+bool cata::lua_platform::detail::named_color_registry_contains( const std::string &name )
 {
     return std::any_of( named_colors.begin(), named_colors.end(),
     [&name]( const auto & entry ) {
@@ -45,7 +45,7 @@ bool cata::lua::detail::named_color_registry_contains( const std::string &name )
     } );
 }
 
-bool cata::lua::detail::named_color_registry_color_in_use(
+bool cata::lua_platform::detail::named_color_registry_color_in_use(
     const named_color_native_definition &value, const std::string &except_name )
 {
     const auto found = named_colors.find( RGBColor{
@@ -54,7 +54,7 @@ bool cata::lua::detail::named_color_registry_color_in_use(
     return found != named_colors.end() && found->second != except_name;
 }
 
-void cata::lua::detail::named_color_registry_set(
+void cata::lua_platform::detail::named_color_registry_set(
     const named_color_native_definition &value )
 {
     for( auto it = named_colors.begin(); it != named_colors.end(); ) {
@@ -69,7 +69,7 @@ void cata::lua::detail::named_color_registry_set(
     similar_name_cache.clear();
 }
 
-void cata::lua::detail::named_color_registry_restore(
+void cata::lua_platform::detail::named_color_registry_restore(
     const std::vector<named_color_native_definition> &snapshot )
 {
     named_colors.clear();

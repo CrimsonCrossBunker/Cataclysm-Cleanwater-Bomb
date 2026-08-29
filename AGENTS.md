@@ -58,11 +58,19 @@ batch acceptance gate instead of validating every selector or small edit.
 `ai/test-matrix.yml` selects commands for that gate; it does not require them
 to be rerun during the high-throughput implementation loop.
 
+Until the current source batches are closed, the same loop also defers Python
+checkers, generators, public-contract refreshes, ledger/registry refreshes,
+and full JSON/EOC audits. The final gate runs these once after implementation
+is complete.
+
 Lua-first 的 EOC 能力开发遵循 `data/lua/LUA_FIRST_EOC_WORKFLOW.md`。当前目标是先让
 Lua 以领域化、可组合的 API 覆盖 EOC 的全部能力，再迁移现有 JSON/EOC 语料。实现时按
 完整领域批量推进，测试随代码编写但集中到批次验收执行；不得为每个 selector 或小改动
 重复编译、加载游戏数据和运行测试。`ai/test-matrix.yml` 负责选择验收命令，不代表开发
 循环中必须反复执行这些命令。
+
+当前源码批次完成前也不得运行 Python checker、generator、完整契约刷新、ledger/registry
+刷新或全量 JSON/EOC 审计；这些检查统一留到实现完成后的总门禁。
 
 ## Modification boundaries / 修改边界
 
@@ -104,7 +112,9 @@ make -j2 json-check
 
 # Lua public-contract checks
 python3 tools/lua_api/check_luals_declarations.py
-python3 tools/lua_api/check_ccb_inventory.py
+python3 tools/lua_api/check_platform_native_inventory.py
+python3 tools/lua_api/check_platform_contract.py
+python3 tools/lua_api/check_platform_coverage.py
 python3 tools/lua_api/check_cmake_contract.py
 
 # CMake configuration (out-of-tree)

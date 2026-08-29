@@ -1,6 +1,6 @@
 #include "profession_group.h"
 
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "debug.h"
 #include "generic_factory.h"
 
@@ -11,7 +11,7 @@ namespace
 generic_factory<profession_group> profession_group_factory( "profession_group" );
 } // namespace
 
-generic_factory<profession_group> &cata::lua::detail::profession_group_registry()
+generic_factory<profession_group> &cata::lua_platform::detail::profession_group_registry()
 {
     return profession_group_factory;
 }

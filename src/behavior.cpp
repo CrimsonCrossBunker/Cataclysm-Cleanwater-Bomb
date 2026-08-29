@@ -6,7 +6,7 @@
 #include "behavior_oracle.h"
 #include "behavior_strategy.h"
 #include "cata_assert.h"
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
@@ -138,7 +138,7 @@ namespace
 generic_factory<behavior::node_t> behavior_factory( "behavior" );
 } // namespace
 
-generic_factory<behavior::node_t> &cata::lua::detail::behavior_registry()
+generic_factory<behavior::node_t> &cata::lua_platform::detail::behavior_registry()
 {
     return behavior_factory;
 }

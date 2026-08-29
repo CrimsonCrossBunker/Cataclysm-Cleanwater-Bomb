@@ -2,7 +2,7 @@
 // functions are serialization functions.  This allows IWYU to check the
 // includes in such headers.
 
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 
 #include "enums.h" // IWYU pragma: associated
 #include "npc_favor.h" // IWYU pragma: associated
@@ -82,6 +82,7 @@
 #include "item_pocket.h"
 #include "itype.h"
 #include "json.h"
+#include "json_loader.h"
 #include "kill_tracker.h"
 #include "lru_cache.h"
 #include "magic.h"
@@ -2388,6 +2389,12 @@ void npc::load( const JsonObject &data )
         complaints.emplace( member.name(), p );
     }
     data.read( "unique_id", unique_id );
+    std::uint64_t loaded_platform_identity_generation = 0;
+    if( data.read( "platform_identity_generation", loaded_platform_identity_generation ) &&
+        loaded_platform_identity_generation != 0 ) {
+        platform_identity_generation_ = loaded_platform_identity_generation;
+        reserve_platform_npc_identity_generation( platform_identity_generation_ );
+    }
     clear_personality_traits();
     generate_personality_traits();
     data.read( "may_activity_occupancy_after_end_items_loc",
@@ -2464,6 +2471,7 @@ void npc::store( JsonOut &json ) const
 
     json.member( "complaints", complaints );
     json.member( "unique_id", unique_id );
+    json.member( "platform_identity_generation", platform_identity_generation_ );
     json.member( "may_activity_occupancy_after_end_items_loc",
                  may_activity_occupancy_after_end_items_loc );
 }
@@ -2579,6 +2587,14 @@ void monster::load( const JsonObject &data, const tripoint_abs_sm &submap_loc )
 void monster::load( const JsonObject &data )
 {
     Creature::load( data );
+
+    int64_t loaded_uid = 0;
+    if( data.read( "uid", loaded_uid ) ) {
+        uid_.deserialize( loaded_uid );
+        if( g ) {
+            g->observe_monster_uid( uid_.get_value() );
+        }
+    }
 
     // TEMPORARY until 0.G
     if( !data.has_member( "location" ) ) {
@@ -2751,6 +2767,8 @@ void monster::load( const JsonObject &data )
     data.read( "path", path );
 
     data.read( "grabbed_limbs", grabbed_limbs );
+
+    ensure_uid();
 }
 
 /*
@@ -2768,6 +2786,7 @@ void monster::serialize( JsonOut &json ) const
 void monster::store( JsonOut &json ) const
 {
     Creature::store( json );
+    json.member( "uid", uid_ );
     json.member( "typeid", type->id );
     json.member( "unique_name", unique_name );
     json.member( "nickname", nickname );
@@ -3316,7 +3335,7 @@ void load_temperature_removal_blacklist( const JsonObject &jo, std::string_view/
     temperature_removal_blacklist.insert( new_blacklist.begin(), new_blacklist.end() );
 }
 
-void cata::lua::detail::insert_platform_savegame_blacklist(
+void cata::lua_platform::detail::insert_platform_savegame_blacklist(
     const platform_blacklist_data &value )
 {
     if( value.kind == "charge_removal" ) {
@@ -3330,7 +3349,7 @@ void cata::lua::detail::insert_platform_savegame_blacklist(
     }
 }
 
-void cata::lua::detail::erase_platform_savegame_blacklist(
+void cata::lua_platform::detail::erase_platform_savegame_blacklist(
     const platform_blacklist_data &value )
 {
     if( value.kind == "charge_removal" ) {
@@ -3966,6 +3985,14 @@ void vehicle::deserialize( const JsonObject &data )
     int fdir = 0;
     int mdir = 0;
 
+    int64_t loaded_uid = 0;
+    if( data.read( "uid", loaded_uid ) ) {
+        uid_.deserialize( loaded_uid );
+        if( g ) {
+            g->observe_vehicle_uid( uid_.get_value() );
+        }
+    }
+
     data.read( "type", type );
     data.read( "posx", pos.x() );
     data.read( "posy", pos.y() );
@@ -4050,6 +4077,7 @@ void vehicle::deserialize( const JsonObject &data )
         sdata.allow_omitted_members();
         sdata.read( "point", p );
         sdata.read( "zone", zd );
+        zd.set_vehicle_owner( *this );
         loot_zones.emplace( p, zd );
     }
     data.read( "other_tow_point", tow_data.other_towing_point );
@@ -4068,6 +4096,7 @@ void vehicle::deserialize( const JsonObject &data )
     // make it instantly fire all its turrets upon load.
     of_turn = 0;
     recalculate_enchantment_cache();
+    ensure_uid();
 }
 
 void vehicle::deserialize_parts( const JsonArray &data )
@@ -4089,6 +4118,7 @@ void vehicle::serialize( JsonOut &json ) const
 {
     map &here = get_map();
     json.start_object();
+    json.member( "uid", uid_ );
     json.member( "type", type );
     json.member( "posx", pos.x() );
     json.member( "posy", pos.y() );
@@ -4236,6 +4266,8 @@ void mission::deserialize( const JsonObject &jo )
     jo.read( "good_fac_id", good_fac_id );
     jo.read( "bad_fac_id", bad_fac_id );
     jo.read( "player_id", player_id );
+    generic_reward_claimed_ = false;
+    jo.read( "generic_reward_claimed", generic_reward_claimed_ );
 }
 
 void mission::serialize( JsonOut &json ) const
@@ -4272,6 +4304,7 @@ void mission::serialize( JsonOut &json ) const
     json.member( "step", step );
     json.member( "follow_up", follow_up );
     json.member( "player_id", player_id );
+    json.member( "generic_reward_claimed", generic_reward_claimed_ );
 
     json.end_object();
 }
@@ -4924,6 +4957,160 @@ void basecamp::serialize( JsonOut &json ) const
         json.member( "owner", owner );
         json.member( "name", name );
         json.member( "pos", omt_pos );
+        json.member( "platform_id", platform_id_ );
+        json.member( "platform_core_upgrade_generation", platform_core_upgrade_generation_ );
+        json.member( "platform_tasks_version", basecamp_platform_task_schema_version );
+        json.member( "platform_tasks" );
+        json.start_array();
+        const auto serialize_recipe_holder = [&json](
+            const basecamp_platform_recipe_holder &holder ) {
+            json.start_object();
+            json.member( "kind", "character" );
+            json.member( "character_id", holder.character );
+            json.member( "identity_generation", holder.identity_generation );
+            json.member( "slot", holder.slot );
+            json.end_object();
+        };
+        for( const basecamp_platform_task &task : platform_tasks ) {
+            json.start_object();
+            json.member( "task_id", task.task_id );
+            json.member( "generation", task.identity_generation );
+            json.member( "camp_id", task.camp_id );
+            json.member( "owner_faction", task.owner_faction );
+            json.member( "manager_id", task.manager );
+            json.member( "worker_id", task.worker );
+            json.member( "manager_identity_generation", task.manager_identity_generation );
+            json.member( "worker_identity_generation", task.worker_identity_generation );
+            json.member( "kind", task.kind );
+            json.member( "parameters", task.parameters );
+            json.member( "state", basecamp_platform_task_state_name( task.state ) );
+            json.member( "started_at", task.started_at );
+            json.member( "due_at", task.due_at );
+            if( task.finished_at ) {
+                json.member( "finished_at", *task.finished_at );
+            }
+            if( task.resource_work ) {
+                const basecamp_platform_resource_work &work = *task.resource_work;
+                json.member( "resource_work" );
+                json.start_object();
+                json.member( "resource_inputs" );
+                json.start_array();
+                for( const basecamp_platform_resource_change &change : work.resource_inputs ) {
+                    json.start_object();
+                    json.member( "id", change.resource_id.str() );
+                    json.member( "amount", change.delta );
+                    json.end_object();
+                }
+                json.end_array();
+                json.member( "resource_outputs" );
+                json.start_array();
+                for( const basecamp_platform_resource_change &change : work.resource_outputs ) {
+                    json.start_object();
+                    json.member( "id", change.resource_id.str() );
+                    json.member( "amount", change.delta );
+                    json.end_object();
+                }
+                json.end_array();
+                if( work.food_input_kcal ) {
+                    json.member( "food_input_kcal", *work.food_input_kcal );
+                }
+                if( work.food_output_kcal ) {
+                    json.member( "food_output_kcal", *work.food_output_kcal );
+                }
+                json.member( "duration_turns", work.duration_turns );
+                json.end_object();
+
+                json.member( "reserved_resources" );
+                json.start_array();
+                for( const basecamp_platform_resource_change &change :
+                     task.reserved_resources ) {
+                    json.start_object();
+                    json.member( "id", change.resource_id.str() );
+                    json.member( "amount", change.delta );
+                    json.end_object();
+                }
+                json.end_array();
+                json.member( "reserved_food_kcal", task.reserved_food_kcal );
+                json.member( "reservation_discarded", task.reservation_discarded );
+            } else if( task.recipe_work ) {
+                const basecamp_platform_recipe_work &work = *task.recipe_work;
+                json.member( "recipe_work" );
+                json.start_object();
+                json.member( "recipe_id", work.recipe_id );
+                json.member( "batch", work.batch );
+                json.member( "duration_turns", work.duration_turns );
+                json.member( "source_holders" );
+                json.start_array();
+                for( const basecamp_platform_recipe_holder &holder : work.source_holders ) {
+                    serialize_recipe_holder( holder );
+                }
+                json.end_array();
+                json.member( "destination_holder" );
+                serialize_recipe_holder( work.destination_holder );
+                json.end_object();
+                json.member( "recipe_escrow" );
+                json.start_array();
+                for( const basecamp_platform_recipe_escrow_item &entry : task.recipe_escrow ) {
+                    json.start_object();
+                    json.member( "stable_uid", entry.stable_uid );
+                    json.member( "identity_generation", entry.identity_generation );
+                    json.member( "charges", entry.charges );
+                    json.member( "tool", entry.tool );
+                    json.member( "serialized_item", entry.serialized_item );
+                    json.member( "source_holder" );
+                    serialize_recipe_holder( entry.source_holder );
+                    json.end_object();
+                }
+                json.end_array();
+                json.member( "recipe_commit_marker", task.recipe_commit_marker );
+                json.member( "recipe_recovery_required", task.recipe_recovery_required );
+            } else if( task.upgrade_work ) {
+                const basecamp_platform_upgrade_work &work = *task.upgrade_work;
+                json.member( "upgrade_work" );
+                json.start_object();
+                json.member( "upgrade_id", work.upgrade_id );
+                json.member( "blueprint_id", work.blueprint_id );
+                json.member( "target_kind", work.target_kind ==
+                             basecamp_platform_upgrade_target_kind::camp_core ?
+                             "camp_core" : "expansion" );
+                json.member( "target_core_generation", work.target_core_generation );
+                json.member( "target_expansion_id", work.target_expansion_id );
+                json.member( "target_expansion_generation", work.target_expansion_generation );
+                json.member( "target_position", work.target_position );
+                json.member( "target_terrain", work.target_terrain );
+                json.member( "mapgen_args" );
+                work.mapgen_args.serialize( json );
+                json.member( "duration_turns", work.duration_turns );
+                json.member( "source_holders" );
+                json.start_array();
+                for( const basecamp_platform_recipe_holder &holder : work.source_holders ) {
+                    serialize_recipe_holder( holder );
+                }
+                json.end_array();
+                json.member( "destination_holder" );
+                serialize_recipe_holder( work.destination_holder );
+                json.end_object();
+                json.member( "recipe_escrow" );
+                json.start_array();
+                for( const basecamp_platform_recipe_escrow_item &entry : task.recipe_escrow ) {
+                    json.start_object();
+                    json.member( "stable_uid", entry.stable_uid );
+                    json.member( "identity_generation", entry.identity_generation );
+                    json.member( "charges", entry.charges );
+                    json.member( "tool", entry.tool );
+                    json.member( "serialized_item", entry.serialized_item );
+                    json.member( "source_holder" );
+                    serialize_recipe_holder( entry.source_holder );
+                    json.end_object();
+                }
+                json.end_array();
+                json.member( "upgrade_commit_marker", task.upgrade_commit_marker );
+                json.member( "upgrade_applying_marker", task.upgrade_applying_marker );
+                json.member( "recipe_recovery_required", task.recipe_recovery_required );
+            }
+            json.end_object();
+        }
+        json.end_array();
         json.member( "bb_pos", bb_pos );
         json.member( "dumping_spot", dumping_spot );
         json.member( "liquid_dumping_spots", liquid_dumping_spots );
@@ -4970,6 +5157,22 @@ void basecamp::serialize( JsonOut &json ) const
             json.end_object();
         }
         json.end_array();
+        json.member( "platform_expansions_version", basecamp_platform_expansion_schema_version );
+        json.member( "platform_expansions" );
+        json.start_array();
+        for( const auto &[expansion_id, expansion] : platform_expansions_ ) {
+            json.start_object();
+            json.member( "expansion_id", expansion_id );
+            json.member( "generation", expansion.identity_generation );
+            json.member( "camp_id", expansion.camp_id );
+            json.member( "direction", expansion.direction );
+            json.member( "type", expansion.type );
+            json.member( "name", expansion.name );
+            json.member( "pos", expansion.position );
+            json.member( "work_in_progress", expansion.work_in_progress );
+            json.end_object();
+        }
+        json.end_array();
         json.member( "fortifications" );
         json.start_array();
         for( const auto &fortification : fortifications ) {
@@ -5007,6 +5210,170 @@ void basecamp::serialize( JsonOut &json ) const
 void basecamp::deserialize( const JsonObject &data )
 {
     data.allow_omitted_members();
+    std::uint64_t loaded_platform_id = 0;
+    data.read( "platform_id", loaded_platform_id );
+    set_platform_id( loaded_platform_id );
+    platform_core_upgrade_generation_ = 1;
+    if( data.has_member( "platform_core_upgrade_generation" ) ) {
+        if( !data.read( "platform_core_upgrade_generation", platform_core_upgrade_generation_ ) ||
+            platform_core_upgrade_generation_ == 0 ) {
+            // A present but malformed generation is not an old-save omission;
+            // it invalidates upgrade recovery rather than silently selecting a
+            // generation that could target the wrong camp core.
+            platform_core_upgrade_generation_ = 0;
+        }
+    }
+    platform_tasks.clear();
+    platform_expansions_.clear();
+    platform_retired_expansion_generations_.clear();
+    const auto read_platform_resource_changes = [](
+        JsonObject &source, const char *member,
+        std::vector<basecamp_platform_resource_change> &changes ) {
+        if( !source.has_array( member ) ) {
+            return false;
+        }
+        for( JsonObject change_data : source.get_array( member ) ) {
+            change_data.allow_omitted_members();
+            std::string resource_id;
+            std::int64_t amount = 0;
+            if( !change_data.read( "id", resource_id ) ||
+                !change_data.read( "amount", amount ) ) {
+                return false;
+            }
+            changes.push_back( { itype_id( resource_id ), amount } );
+        }
+        return true;
+    };
+    const auto resource_change_sets_match = [](
+        const std::vector<basecamp_platform_resource_change> &lhs,
+        const std::vector<basecamp_platform_resource_change> &rhs ) {
+        if( lhs.size() != rhs.size() ) {
+            return false;
+        }
+        std::vector<bool> matched( rhs.size(), false );
+        for( const basecamp_platform_resource_change &left : lhs ) {
+            const auto found = std::find_if( rhs.begin(), rhs.end(),
+            [&left, &rhs, &matched]( const basecamp_platform_resource_change &right ) {
+                const std::size_t index = static_cast<std::size_t>( &right - rhs.data() );
+                return !matched[index] && left.resource_id == right.resource_id &&
+                       left.delta == right.delta;
+            } );
+            if( found == rhs.end() ) {
+                return false;
+            }
+            matched[static_cast<std::size_t>( found - rhs.begin() )] = true;
+        }
+        return true;
+    };
+    const auto read_recipe_holder = []( JsonObject &source,
+                                        basecamp_platform_recipe_holder &holder ) {
+        source.allow_omitted_members();
+        std::string kind;
+        holder = {};
+        if( !source.read( "kind", kind ) || kind != "character" ||
+            !source.read( "character_id", holder.character ) ||
+            !source.read( "identity_generation", holder.identity_generation ) ||
+            !source.read( "slot", holder.slot ) ) {
+            return false;
+        }
+        holder.kind = basecamp_platform_recipe_holder_kind::character;
+        return true;
+    };
+    const auto read_recipe_holder_member = [&read_recipe_holder](
+        JsonObject &source, const char *member,
+        basecamp_platform_recipe_holder &holder ) {
+        if( !source.has_object( member ) ) {
+            return false;
+        }
+        JsonObject holder_data = source.get_object( member );
+        return read_recipe_holder( holder_data, holder );
+    };
+    const auto read_recipe_escrow = [&read_recipe_holder](
+        JsonObject &source, std::vector<basecamp_platform_recipe_escrow_item> &escrow,
+        bool &structurally_valid ) {
+        structurally_valid = source.has_array( "recipe_escrow" );
+        if( !structurally_valid ) {
+            return;
+        }
+        for( JsonObject entry_data : source.get_array( "recipe_escrow" ) ) {
+            entry_data.allow_omitted_members();
+            basecamp_platform_recipe_escrow_item entry;
+            bool entry_valid =
+                entry_data.read( "stable_uid", entry.stable_uid ) &&
+                entry_data.read( "identity_generation", entry.identity_generation ) &&
+                entry_data.read( "charges", entry.charges ) &&
+                entry_data.read( "tool", entry.tool ) &&
+                entry_data.read( "serialized_item", entry.serialized_item ) &&
+                entry_data.has_object( "source_holder" );
+            if( entry_data.has_object( "source_holder" ) ) {
+                JsonObject holder_data = entry_data.get_object( "source_holder" );
+                entry_valid = read_recipe_holder( holder_data, entry.source_holder ) && entry_valid;
+            }
+            // Keep even a malformed value in the isolated task record.  A
+            // later recovery boundary can report/repair it; dropping an item
+            // value here would make a save-format error destructive.
+            escrow.push_back( std::move( entry ) );
+            structurally_valid = structurally_valid && entry_valid;
+        }
+    };
+    const auto recipe_holder_equal = [](
+        const basecamp_platform_recipe_holder &lhs,
+        const basecamp_platform_recipe_holder &rhs ) {
+        return lhs.kind == rhs.kind && lhs.character == rhs.character &&
+               lhs.identity_generation == rhs.identity_generation && lhs.slot == rhs.slot;
+    };
+    const auto validate_saved_item_escrow = [&recipe_holder_equal](
+        const std::vector<basecamp_platform_recipe_holder> &source_holders,
+        const basecamp_platform_recipe_holder &destination_holder,
+        const std::vector<basecamp_platform_recipe_escrow_item> &escrow,
+        const std::string_view label,
+        std::string &error ) {
+        if( escrow.empty() || escrow.size() > 256 ) {
+            error = std::string( label ) + " escrow is empty or exceeds its bound";
+            return false;
+        }
+        std::set<std::int64_t> seen_uids;
+        for( const basecamp_platform_recipe_escrow_item &entry : escrow ) {
+            if( entry.stable_uid <= 0 || entry.identity_generation == 0 ||
+                entry.charges <= 0 || !seen_uids.insert( entry.stable_uid ).second ) {
+                error = std::string( label ) +
+                        " save contains a duplicate or invalid Item identity";
+                return false;
+            }
+            bool holder_known = std::any_of( source_holders.begin(),
+            source_holders.end(), [&entry, &recipe_holder_equal](
+                const basecamp_platform_recipe_holder &holder ) {
+                return recipe_holder_equal( entry.source_holder, holder );
+            } );
+            holder_known = holder_known || ( !entry.tool && recipe_holder_equal(
+                                                 entry.source_holder, destination_holder ) );
+            if( !holder_known ) {
+                error = std::string( label ) + " save contains an unknown escrow holder";
+                return false;
+            }
+            try {
+                const JsonValue parsed = json_loader::from_string( entry.serialized_item );
+                if( !parsed.test_object() ) {
+                    error = std::string( label ) +
+                            " save contains a non-object Item value";
+                    return false;
+                }
+                item restored;
+                restored.deserialize( parsed.get_object() );
+                if( restored.is_null() || restored.uid().get_value() != entry.stable_uid ||
+                    ( restored.count_by_charges() ? restored.charges : 1 ) != entry.charges ) {
+                    error = std::string( label ) +
+                            " save Item UID or charges do not match escrow";
+                    return false;
+                }
+            } catch( const std::exception &exception ) {
+                error = std::string( label ) + " save Item cannot be restored: " +
+                        exception.what();
+                return false;
+            }
+        }
+        return true;
+    };
     if( !data.read( "owner", owner ) ) {
         faction_id your_fac( "your_followers" );
         owner = your_fac;
@@ -5074,6 +5441,64 @@ void basecamp::deserialize( const JsonObject &data )
             directions.push_back( dir );
         }
     }
+    if( data.has_array( "platform_expansions" ) ) {
+        std::uint32_t platform_expansions_version = 0;
+        data.read( "platform_expansions_version", platform_expansions_version );
+        if( platform_expansions_version == basecamp_platform_expansion_schema_version ) {
+            std::set<std::uint64_t> expansion_ids;
+            std::set<point_rel_omt> expansion_directions;
+            std::set<tripoint_abs_omt> expansion_positions;
+            const auto valid_expansion_name = []( const std::string &value ) {
+                return !value.empty() && value.size() <= 64 &&
+                       std::all_of( value.begin(), value.end(), []( const unsigned char ch ) {
+                    return ch >= 0x20U && ch != 0x7fU;
+                } );
+            };
+            for( JsonObject expansion_data_json : data.get_array( "platform_expansions" ) ) {
+                expansion_data_json.allow_omitted_members();
+                basecamp_platform_expansion expansion;
+                bool valid =
+                    expansion_data_json.read( "expansion_id", expansion.expansion_id ) &&
+                    expansion_data_json.read( "generation", expansion.identity_generation ) &&
+                    expansion_data_json.read( "camp_id", expansion.camp_id ) &&
+                    expansion_data_json.read( "direction", expansion.direction ) &&
+                    expansion_data_json.read( "type", expansion.type ) &&
+                    expansion_data_json.read( "name", expansion.name ) &&
+                    expansion_data_json.read( "pos", expansion.position );
+                if( valid && expansion_data_json.has_member( "work_in_progress" ) ) {
+                    valid = expansion_data_json.read( "work_in_progress",
+                                                       expansion.work_in_progress );
+                }
+                const auto legacy = expansions.find( expansion.direction );
+                valid = valid && expansion.expansion_id != 0 &&
+                        expansion.identity_generation != 0 &&
+                        expansion.camp_id == platform_id_ &&
+                        expansion.type.rfind( base_camps::prefix, 0 ) == 0 &&
+                        oter_type_str_id( expansion.type ).is_valid() &&
+                        valid_expansion_name( expansion.name ) &&
+                        platform_id_ != 0 &&
+                        expansion.position.z() == omt_pos.z() &&
+                        expansion.position != omt_pos &&
+                        expansion.position.x() >= omt_pos.x() - 1 &&
+                        expansion.position.x() <= omt_pos.x() + 1 &&
+                        expansion.position.y() >= omt_pos.y() - 1 &&
+                        expansion.position.y() <= omt_pos.y() + 1 &&
+                        expansion_ids.insert( expansion.expansion_id ).second &&
+                        expansion_directions.insert( expansion.direction ).second &&
+                        expansion_positions.insert( expansion.position ).second &&
+                        legacy != expansions.end() &&
+                        legacy->second.pos == expansion.position;
+                if( valid ) {
+                    platform_expansions_.emplace( expansion.expansion_id, expansion );
+                    reserve_platform_expansion_id( expansion.expansion_id );
+                }
+            }
+        }
+    } else {
+        for( const auto &[direction, expansion] : expansions ) {
+            platform_register_expansion_identity( direction, expansion, expansion.type );
+        }
+    }
     for( JsonObject edata : data.get_array( "fortifications" ) ) {
         edata.allow_omitted_members();
         tripoint_abs_omt restore_pos;
@@ -5095,6 +5520,548 @@ void basecamp::deserialize( const JsonObject &data )
             pipe->segments.push_back( segment );
         }
         salt_water_pipes.push_back( pipe );
+    }
+
+    std::uint32_t platform_tasks_version = 0;
+    if( data.has_array( "platform_tasks" ) ) {
+        data.read( "platform_tasks_version", platform_tasks_version );
+        if( platform_tasks_version == basecamp_platform_task_schema_version ||
+            platform_tasks_version == basecamp_platform_task_schema_version_legacy ||
+            platform_tasks_version == basecamp_platform_task_schema_version_legacy_v1 ) {
+            std::set<std::uint64_t> loaded_task_ids;
+            for( JsonObject task_data : data.get_array( "platform_tasks" ) ) {
+                task_data.allow_omitted_members();
+                basecamp_platform_task task;
+                std::string state_name;
+                std::string persisted_kind;
+                const bool has_upgrade_kind =
+                    task_data.has_string( "kind" ) &&
+                    task_data.read( "kind", persisted_kind ) &&
+                    persisted_kind == basecamp_platform_upgrade_work_kind;
+                const bool upgrade_payload_present =
+                    has_upgrade_kind || task_data.has_object( "upgrade_work" ) ||
+                    task_data.has_member( "upgrade_commit_marker" ) ||
+                    task_data.has_member( "upgrade_applying_marker" );
+                std::vector<basecamp_platform_recipe_escrow_item> preserved_upgrade_escrow;
+                bool preserved_upgrade_escrow_structurally_valid = !upgrade_payload_present;
+                if( upgrade_payload_present ) {
+                    // Read escrow before any common-field/descriptor rejection.  A
+                    // malformed descriptor must not make serialized Item values
+                    // disappear from the recovery boundary.
+                    read_recipe_escrow( task_data, preserved_upgrade_escrow,
+                                       preserved_upgrade_escrow_structurally_valid );
+                    // These reads are deliberately independent of the common
+                    // validity chain below, whose short-circuiting is not a
+                    // safe way to identify a recoverable record.
+                    task_data.read( "task_id", task.task_id );
+                    task_data.read( "generation", task.identity_generation );
+                    task_data.read( "camp_id", task.camp_id );
+                    task_data.read( "owner_faction", task.owner_faction );
+                    task_data.read( "manager_id", task.manager );
+                    task_data.read( "worker_id", task.worker );
+                    task_data.read( "kind", task.kind );
+                    task_data.read( "state", state_name );
+                    task_data.read( "started_at", task.started_at );
+                    task_data.read( "due_at", task.due_at );
+                }
+                bool valid =
+                    task_data.read( "task_id", task.task_id ) &&
+                    task_data.read( "generation", task.identity_generation ) &&
+                    task_data.read( "camp_id", task.camp_id ) &&
+                    task_data.read( "owner_faction", task.owner_faction ) &&
+                    task_data.read( "manager_id", task.manager ) &&
+                    task_data.read( "worker_id", task.worker ) &&
+                    task_data.read( "kind", task.kind ) &&
+                    task_data.read( "state", state_name ) &&
+                    task_data.read( "started_at", task.started_at ) &&
+                    task_data.read( "due_at", task.due_at );
+                if( valid && task_data.has_member( "parameters" ) ) {
+                    valid = task_data.read( "parameters", task.parameters );
+                } else if( valid ) {
+                    // v1/v2 records predate the explicit schema member.  The
+                    // kind determines the only safe default; unknown kinds
+                    // remain rejected below.
+                    if( task.kind == basecamp_platform_worker_reservation_kind ) {
+                        task.parameters.clear();
+                    } else if( task.kind == basecamp_platform_resource_work_kind ) {
+                        task.parameters = std::string(
+                                      basecamp_platform_resource_work_parameter_schema );
+                    } else if( task.kind == basecamp_platform_recipe_work_kind ) {
+                        task.parameters = std::string(
+                                      basecamp_platform_recipe_work_parameter_schema );
+                    } else if( task.kind == basecamp_platform_upgrade_work_kind ) {
+                        // v1/v2 never had a safe upgrade descriptor.  Do not
+                        // invent a parameter schema; the item-bearing path
+                        // below quarantines the record for explicit recovery.
+                        valid = false;
+                    } else {
+                        valid = false;
+                    }
+                }
+                if( valid && task_data.has_member( "manager_identity_generation" ) ) {
+                    valid = task_data.read( "manager_identity_generation",
+                                            task.manager_identity_generation );
+                } else if( valid ) {
+                    task.manager_identity_generation =
+                        g != nullptr && get_avatar().getID() == task.manager ? 0 : 1;
+                }
+                if( valid && task_data.has_member( "worker_identity_generation" ) ) {
+                    valid = task_data.read( "worker_identity_generation",
+                                            task.worker_identity_generation );
+                } else if( valid ) {
+                    task.worker_identity_generation = 1;
+                }
+                if( valid && task_data.has_member( "finished_at" ) ) {
+                    time_point finished_at = calendar::before_time_starts;
+                    valid = task_data.read( "finished_at", finished_at );
+                    if( valid ) {
+                        task.finished_at = finished_at;
+                    }
+                }
+                if( valid && task.kind == basecamp_platform_resource_work_kind ) {
+                    if( !task_data.has_object( "resource_work" ) ) {
+                        valid = false;
+                    } else {
+                        JsonObject work_data = task_data.get_object( "resource_work" );
+                        work_data.allow_omitted_members();
+                        basecamp_platform_resource_work work;
+                        valid = read_platform_resource_changes(
+                                    work_data, "resource_inputs", work.resource_inputs ) &&
+                                read_platform_resource_changes(
+                                    work_data, "resource_outputs", work.resource_outputs ) &&
+                                work_data.read( "duration_turns", work.duration_turns );
+                        if( valid && work_data.has_member( "food_input_kcal" ) ) {
+                            std::int64_t calories = 0;
+                            valid = work_data.read( "food_input_kcal", calories );
+                            if( valid ) {
+                                work.food_input_kcal = calories;
+                            }
+                        }
+                        if( valid && work_data.has_member( "food_output_kcal" ) ) {
+                            std::int64_t calories = 0;
+                            valid = work_data.read( "food_output_kcal", calories );
+                            if( valid ) {
+                                work.food_output_kcal = calories;
+                            }
+                        }
+                        if( valid ) {
+                            task.resource_work = work;
+                            valid = task_data.has_array( "reserved_resources" ) &&
+                                    read_platform_resource_changes(
+                                        task_data, "reserved_resources",
+                                        task.reserved_resources ) &&
+                                    task_data.read( "reserved_food_kcal",
+                                                    task.reserved_food_kcal );
+                            if( valid && task_data.has_member( "reservation_discarded" ) ) {
+                                valid = task_data.read( "reservation_discarded",
+                                                         task.reservation_discarded );
+                            }
+                            if( valid ) {
+                                std::string resource_error;
+                                valid = validate_basecamp_platform_resource_work(
+                                            work, resource_error );
+                            }
+                        }
+                    }
+                } else if( valid && task.kind == basecamp_platform_recipe_work_kind ) {
+                    bool recipe_structurally_valid = task_data.has_object( "recipe_work" );
+                    if( recipe_structurally_valid ) {
+                        JsonObject work_data = task_data.get_object( "recipe_work" );
+                        work_data.allow_omitted_members();
+                        basecamp_platform_recipe_work work;
+                        recipe_structurally_valid =
+                            work_data.read( "recipe_id", work.recipe_id ) &&
+                            work_data.read( "batch", work.batch ) &&
+                            work_data.read( "duration_turns", work.duration_turns ) &&
+                            work_data.has_array( "source_holders" ) &&
+                            read_recipe_holder_member( work_data, "destination_holder",
+                                                       work.destination_holder );
+                        if( work_data.has_array( "source_holders" ) ) {
+                            for( JsonObject holder_data : work_data.get_array( "source_holders" ) ) {
+                                basecamp_platform_recipe_holder holder;
+                                const bool holder_valid = read_recipe_holder( holder_data, holder );
+                                work.source_holders.push_back( std::move( holder ) );
+                                recipe_structurally_valid = recipe_structurally_valid && holder_valid;
+                            }
+                        }
+                        task.recipe_work = work;
+                        std::string recipe_error;
+                        recipe_structurally_valid = recipe_structurally_valid &&
+                            validate_basecamp_platform_recipe_work( work, recipe_error );
+                    }
+                    bool escrow_structurally_valid = false;
+                    read_recipe_escrow( task_data, task.recipe_escrow,
+                                       escrow_structurally_valid );
+                    if( recipe_structurally_valid && escrow_structurally_valid ) {
+                        if( task_data.has_member( "recipe_commit_marker" ) ) {
+                            recipe_structurally_valid = task_data.read(
+                                "recipe_commit_marker", task.recipe_commit_marker );
+                        }
+                        if( task_data.has_member( "recipe_recovery_required" ) ) {
+                            recipe_structurally_valid = task_data.read(
+                                "recipe_recovery_required", task.recipe_recovery_required );
+                        }
+                        valid = recipe_structurally_valid;
+                    } else {
+                        valid = false;
+                    }
+                } else if( valid && task.kind == basecamp_platform_upgrade_work_kind ) {
+                    bool upgrade_structurally_valid = task_data.has_object( "upgrade_work" );
+                    if( upgrade_structurally_valid ) {
+                        JsonObject work_data = task_data.get_object( "upgrade_work" );
+                        work_data.allow_omitted_members();
+                        basecamp_platform_upgrade_work work;
+                        std::string target_kind;
+                        upgrade_structurally_valid =
+                            work_data.read( "upgrade_id", work.upgrade_id ) &&
+                            work_data.read( "blueprint_id", work.blueprint_id ) &&
+                            work_data.read( "target_kind", target_kind ) &&
+                            work_data.read( "target_core_generation",
+                                            work.target_core_generation ) &&
+                            work_data.read( "target_expansion_id", work.target_expansion_id ) &&
+                            work_data.read( "target_expansion_generation",
+                                            work.target_expansion_generation ) &&
+                            work_data.read( "target_position", work.target_position ) &&
+                            work_data.read( "target_terrain", work.target_terrain ) &&
+                            work_data.has_member( "mapgen_args" ) &&
+                            work_data.read( "duration_turns", work.duration_turns ) &&
+                            work_data.has_array( "source_holders" ) &&
+                            read_recipe_holder_member( work_data, "destination_holder",
+                                                       work.destination_holder );
+                        if( upgrade_structurally_valid ) {
+                            if( target_kind == "camp_core" ) {
+                                work.target_kind = basecamp_platform_upgrade_target_kind::camp_core;
+                            } else if( target_kind == "expansion" ) {
+                                work.target_kind = basecamp_platform_upgrade_target_kind::expansion;
+                            } else {
+                                upgrade_structurally_valid = false;
+                            }
+                        }
+                        if( upgrade_structurally_valid ) {
+                            try {
+                                work.mapgen_args.deserialize( work_data.get_member( "mapgen_args" ) );
+                            } catch( const std::exception &exception ) {
+                                upgrade_structurally_valid = false;
+                                debugmsg( "Invalid upgrade_work mapgen arguments in camp save: %s",
+                                          exception.what() );
+                            }
+                        }
+                        if( work_data.has_array( "source_holders" ) ) {
+                            for( JsonObject holder_data : work_data.get_array( "source_holders" ) ) {
+                                basecamp_platform_recipe_holder holder;
+                                const bool holder_valid = read_recipe_holder( holder_data, holder );
+                                work.source_holders.push_back( std::move( holder ) );
+                                upgrade_structurally_valid =
+                                    upgrade_structurally_valid && holder_valid;
+                            }
+                        }
+                        task.upgrade_work = work;
+                        std::string upgrade_error;
+                        upgrade_structurally_valid = upgrade_structurally_valid &&
+                            validate_basecamp_platform_upgrade_work( work, upgrade_error );
+                    }
+                    bool escrow_structurally_valid = false;
+                    if( upgrade_payload_present ) {
+                        task.recipe_escrow = preserved_upgrade_escrow;
+                        escrow_structurally_valid =
+                            preserved_upgrade_escrow_structurally_valid;
+                    } else {
+                        read_recipe_escrow( task_data, task.recipe_escrow,
+                                           escrow_structurally_valid );
+                    }
+                    if( upgrade_structurally_valid && escrow_structurally_valid ) {
+                        if( task_data.has_member( "upgrade_commit_marker" ) ) {
+                            upgrade_structurally_valid = task_data.read(
+                                "upgrade_commit_marker", task.upgrade_commit_marker );
+                        }
+                        if( task_data.has_member( "upgrade_applying_marker" ) ) {
+                            upgrade_structurally_valid = task_data.read(
+                                "upgrade_applying_marker", task.upgrade_applying_marker );
+                        }
+                        if( task_data.has_member( "recipe_recovery_required" ) ) {
+                            upgrade_structurally_valid = task_data.read(
+                                "recipe_recovery_required", task.recipe_recovery_required );
+                        }
+                        valid = upgrade_structurally_valid;
+                    } else {
+                        valid = false;
+                    }
+                } else if( valid && ( task_data.has_member( "resource_work" ) ||
+                                     task_data.has_member( "reserved_resources" ) ||
+                                     task_data.has_member( "reserved_food_kcal" ) ||
+                                     task_data.has_member( "recipe_work" ) ||
+                                     task_data.has_member( "recipe_escrow" ) ||
+                                     task_data.has_member( "upgrade_work" ) ||
+                                     task_data.has_member( "upgrade_commit_marker" ) ||
+                                     task_data.has_member( "upgrade_applying_marker" ) ) ) {
+                    valid = false;
+                }
+                if( upgrade_payload_present && !valid &&
+                    !preserved_upgrade_escrow.empty() && task.task_id != 0 &&
+                    task.identity_generation != 0 && task.camp_id == platform_id_ &&
+                    !task.owner_faction.is_null() && task.owner_faction == owner ) {
+                    // Keep the exact serialized escrow in a non-executable
+                    // recovery record.  No descriptor, parameter default, or
+                    // recipe/upgrade operation is inferred from the legacy
+                    // shape; only an explicit refund/recovery claim may retire
+                    // these Items.
+                    task.kind = basecamp_platform_upgrade_work_kind;
+                    task.parameters.clear();
+                    task.upgrade_work.reset();
+                    task.recipe_escrow = std::move( preserved_upgrade_escrow );
+                    task.recipe_recovery_required = true;
+                    task.recipe_commit_marker = 0;
+                    task.upgrade_commit_marker = 0;
+                    task.upgrade_applying_marker = 0;
+                    task.state = basecamp_platform_task_state::refund_pending;
+                    task.finished_at.reset();
+                    task.awaiting_reconciliation = false;
+                    if( loaded_task_ids.insert( task.task_id ).second ) {
+                        platform_tasks.push_back( task );
+                        reserve_platform_task_id( task.task_id );
+                    }
+                    continue;
+                }
+                const std::optional<basecamp_platform_task_state> state =
+                    basecamp_platform_task_state_from_name( state_name );
+                valid = valid && state.has_value();
+                if( valid ) {
+                    task.state = *state;
+                }
+                bool upgrade_marker_requires_authoritative_recovery = false;
+                if( valid && task.kind == basecamp_platform_upgrade_work_kind &&
+                    task.upgrade_work && task.upgrade_applying_marker != 0 ) {
+                    if( task.state != basecamp_platform_task_state::running ||
+                        task.upgrade_commit_marker != 0 ||
+                        task.upgrade_applying_marker != task.identity_generation ) {
+                        valid = false;
+                    } else {
+                        std::string recovery_error;
+                        const basecamp_platform_upgrade_commit_state commit_state =
+                            platform_upgrade_commit_state(
+                                *task.upgrade_work, task.identity_generation,
+                                task.upgrade_applying_marker, task.upgrade_commit_marker,
+                                recovery_error );
+                        if( commit_state == basecamp_platform_upgrade_commit_state::committed ) {
+                            if( task.identity_generation ==
+                                std::numeric_limits<std::uint64_t>::max() ) {
+                                valid = false;
+                            } else {
+                                task.upgrade_commit_marker = task.upgrade_applying_marker;
+                                task.upgrade_applying_marker = 0;
+                                task.state = basecamp_platform_task_state::completed_unclaimed;
+                                task.finished_at = task.due_at;
+                                ++task.identity_generation;
+                            }
+                        } else if( commit_state ==
+                                   basecamp_platform_upgrade_commit_state::not_committed ) {
+                            task.upgrade_applying_marker = 0;
+                            task.upgrade_commit_marker = 0;
+                            task.state = basecamp_platform_task_state::running;
+                        } else {
+                            // The target OMT or its metadata is not
+                            // authoritative yet.  Keep the record and marker
+                            // intact until the world-load boundary can decide;
+                            // never replay mapgen from an unknown state.
+                            upgrade_marker_requires_authoritative_recovery = true;
+                        }
+                    }
+                }
+                std::string kind_error;
+                const bool valid_kind = upgrade_marker_requires_authoritative_recovery ?
+                                         true : validate_basecamp_platform_task_kind(
+                                             task.kind, task.parameters,
+                                             basecamp_platform_task_operation::resolve,
+                                             kind_error );
+                const bool escrow_terminal =
+                    task.state == basecamp_platform_task_state::completed_unclaimed ||
+                    task.state == basecamp_platform_task_state::refund_pending;
+                const bool terminal =
+                    task.state == basecamp_platform_task_state::completed ||
+                    task.state == basecamp_platform_task_state::cancelled;
+                const bool active =
+                    task.state == basecamp_platform_task_state::pending ||
+                    task.state == basecamp_platform_task_state::running;
+                valid = valid && task.task_id != 0 && task.identity_generation != 0 &&
+                        task.camp_id == platform_id_ && !task.owner_faction.is_null() &&
+                        task.owner_faction == owner && task.manager.is_valid() &&
+                        task.worker.is_valid() && task.worker_identity_generation != 0 &&
+                        valid_kind;
+                if( valid && task.kind == basecamp_platform_resource_work_kind &&
+                    task.resource_work ) {
+                    if( task.state == basecamp_platform_task_state::running ) {
+                        valid = resource_change_sets_match(
+                                    task.reserved_resources,
+                                    task.resource_work->resource_inputs ) &&
+                                task.reserved_food_kcal ==
+                                task.resource_work->food_input_kcal.value_or( 0 ) &&
+                                !task.reservation_discarded;
+                    } else {
+                        valid = task.reserved_resources.empty() &&
+                                task.reserved_food_kcal == 0;
+                    }
+                } else if( valid && task.kind == basecamp_platform_recipe_work_kind &&
+                           task.recipe_work ) {
+                    const bool has_escrow = !task.recipe_escrow.empty();
+                    const bool commit_marker_valid =
+                        task.state == basecamp_platform_task_state::completed_unclaimed ?
+                        task.recipe_commit_marker != 0 :
+                        ( task.state == basecamp_platform_task_state::pending ||
+                          task.state == basecamp_platform_task_state::running ||
+                          task.state == basecamp_platform_task_state::refund_pending ||
+                          task.state == basecamp_platform_task_state::cancelled ) ?
+                        task.recipe_commit_marker == 0 : true;
+                    valid = valid && commit_marker_valid;
+                    if( task.state == basecamp_platform_task_state::pending ||
+                        task.state == basecamp_platform_task_state::completed ||
+                        task.state == basecamp_platform_task_state::cancelled ) {
+                        valid = !has_escrow;
+                    } else if( task.state == basecamp_platform_task_state::running ||
+                               escrow_terminal ) {
+                        std::string escrow_error;
+                        valid = has_escrow && !task.recipe_recovery_required;
+                        if( valid ) {
+                            // A save must not resurrect a value under a
+                            // different UID or duplicate it in the ledger.
+                            std::set<std::int64_t> escrow_uids;
+                            for( const basecamp_platform_recipe_escrow_item &entry :
+                                 task.recipe_escrow ) {
+                                item restored;
+                                valid = entry.stable_uid > 0 &&
+                                        entry.identity_generation > 0 && entry.charges > 0 &&
+                                        escrow_uids.insert( entry.stable_uid ).second &&
+                                        [&entry, &restored, &escrow_error]() {
+                                            try {
+                                                const JsonValue parsed = json_loader::from_string(
+                                                    entry.serialized_item );
+                                                if( !parsed.test_object() ) {
+                                                    return false;
+                                                }
+                                                restored.deserialize( parsed.get_object() );
+                                                return true;
+                                            } catch( const std::exception &exception ) {
+                                                escrow_error = exception.what();
+                                                return false;
+                                            }
+                                        }() &&
+                                        restored.uid().get_value() == entry.stable_uid &&
+                                        ( restored.count_by_charges() ? restored.charges : 1 ) ==
+                                        entry.charges;
+                                if( !valid ) {
+                                    break;
+                                }
+                            }
+                            if( valid ) {
+                                valid = validate_saved_item_escrow(
+                                            task.recipe_work->source_holders,
+                                            task.recipe_work->destination_holder,
+                                            task.recipe_escrow, "recipe_work", escrow_error );
+                            }
+                        }
+                    } else {
+                        valid = false;
+                    }
+                } else if( valid && task.kind == basecamp_platform_upgrade_work_kind &&
+                           task.upgrade_work ) {
+                    const bool has_escrow = !task.recipe_escrow.empty();
+                    const bool applying_marker_valid =
+                        task.upgrade_applying_marker == 0 ||
+                        ( task.state == basecamp_platform_task_state::running &&
+                          task.upgrade_commit_marker == 0 &&
+                          task.upgrade_applying_marker == task.identity_generation );
+                    bool commit_marker_valid = false;
+                    if( task.state == basecamp_platform_task_state::completed_unclaimed ||
+                        task.state == basecamp_platform_task_state::completed ) {
+                        commit_marker_valid =
+                            task.upgrade_applying_marker == 0 &&
+                            task.upgrade_commit_marker != 0 &&
+                            task.identity_generation > 0 &&
+                            task.upgrade_commit_marker == task.identity_generation - 1;
+                    } else {
+                        commit_marker_valid = task.upgrade_commit_marker == 0;
+                    }
+                    valid = valid && applying_marker_valid && commit_marker_valid;
+                    if( task.state == basecamp_platform_task_state::pending ) {
+                        valid = valid && !has_escrow &&
+                                task.upgrade_applying_marker == 0;
+                    } else if( task.state == basecamp_platform_task_state::running ||
+                               task.state == basecamp_platform_task_state::refund_pending ||
+                               task.state == basecamp_platform_task_state::completed_unclaimed ) {
+                        std::string escrow_error;
+                        valid = valid && has_escrow &&
+                                ( task.recipe_recovery_required ||
+                                  validate_saved_item_escrow(
+                                      task.upgrade_work->source_holders,
+                                      task.upgrade_work->destination_holder,
+                                      task.recipe_escrow, "upgrade_work", escrow_error ) );
+                    } else if( task.state == basecamp_platform_task_state::completed ||
+                               task.state == basecamp_platform_task_state::cancelled ) {
+                        valid = valid && !has_escrow;
+                    } else {
+                        valid = false;
+                    }
+                }
+                if( active ) {
+                    valid = valid && task.finished_at == std::nullopt;
+                }
+                if( task.state == basecamp_platform_task_state::pending ) {
+                    valid = valid && task.started_at == calendar::before_time_starts &&
+                            task.due_at == calendar::before_time_starts;
+                } else if( task.state == basecamp_platform_task_state::cancelled &&
+                           task.started_at == calendar::before_time_starts &&
+                           task.due_at == calendar::before_time_starts ) {
+                    // A pending task may be retired before it ever starts.
+                } else {
+                    valid = valid && task.started_at != calendar::before_time_starts &&
+                            task.due_at >= task.started_at;
+                }
+                if( terminal ) {
+                    valid = valid && task.finished_at.has_value() &&
+                            *task.finished_at >= task.started_at;
+                }
+                if( task.state == basecamp_platform_task_state::completed_unclaimed ) {
+                    valid = valid && task.finished_at.has_value() &&
+                            *task.finished_at >= task.started_at;
+                }
+                if( !valid && ( task.kind == basecamp_platform_recipe_work_kind ||
+                                task.kind == basecamp_platform_upgrade_work_kind ) &&
+                    !task.recipe_escrow.empty() && task.task_id != 0 &&
+                    task.camp_id == platform_id_ ) {
+                    // Isolate invalid item-escrow records instead of dropping the
+                    // serialized Item values.  The task is intentionally not
+                    // executable until an explicit recovery boundary repairs
+                    // the descriptor/escrow; camp removal will refuse it.
+                    task.recipe_recovery_required = true;
+                    task.state = basecamp_platform_task_state::refund_pending;
+                    task.recipe_commit_marker = 0;
+                    task.upgrade_commit_marker = 0;
+                    task.upgrade_applying_marker = 0;
+                    task.awaiting_reconciliation = false;
+                    if( loaded_task_ids.insert( task.task_id ).second ) {
+                        platform_tasks.push_back( task );
+                        reserve_platform_task_id( task.task_id );
+                    }
+                    continue;
+                }
+                if( !valid ) {
+                    debugmsg( "Discarding invalid persisted Platform camp task" );
+                    continue;
+                }
+                // Deserialization is deliberately structural only.  The
+                // referenced NPC may belong to an overmap that has not been
+                // loaded yet, so active records wait for the explicit NPC /
+                // world reconciliation boundary instead of being retired.
+                task.awaiting_reconciliation = active;
+                if( loaded_task_ids.insert( task.task_id ).second ) {
+                    platform_tasks.push_back( task );
+                    reserve_platform_task_id( task.task_id );
+                } else {
+                    debugmsg( "Discarding duplicate persisted Platform camp task" );
+                }
+            }
+        } else {
+            debugmsg( "Discarding Platform camp tasks with an unsupported schema version" );
+        }
     }
 }
 
@@ -5339,7 +6306,7 @@ void trap_migrations::check()
 
 static std::unordered_map<field_type_str_id, field_type_str_id> field_migrations;
 
-void cata::lua::detail::insert_platform_savegame_migration(
+void cata::lua_platform::detail::insert_platform_savegame_migration(
     const platform_migration_data &value )
 {
     if( value.kind == "trap" ) {
@@ -5356,7 +6323,7 @@ void cata::lua::detail::insert_platform_savegame_migration(
     }
 }
 
-void cata::lua::detail::erase_platform_savegame_migration(
+void cata::lua_platform::detail::erase_platform_savegame_migration(
     const platform_migration_data &value )
 {
     if( value.kind == "trap" ) {
@@ -5371,7 +6338,7 @@ void cata::lua::detail::erase_platform_savegame_migration(
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua::detail::terrain_migration_snapshot()
+cata::lua_platform::detail::terrain_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( ter_migrations.size() );
@@ -5383,7 +6350,7 @@ cata::lua::detail::terrain_migration_snapshot()
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua::detail::furniture_migration_snapshot()
+cata::lua_platform::detail::furniture_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( furn_migrations.size() );
@@ -5395,7 +6362,7 @@ cata::lua::detail::furniture_migration_snapshot()
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua::detail::trap_migration_snapshot()
+cata::lua_platform::detail::trap_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( tr_migrations.size() );
@@ -5407,7 +6374,7 @@ cata::lua::detail::trap_migration_snapshot()
 }
 
 std::vector<std::string>
-cata::lua::detail::charge_removal_blacklist_snapshot()
+cata::lua_platform::detail::charge_removal_blacklist_snapshot()
 {
     std::vector<std::string> result;
     result.reserve( charge_removal_blacklist.size() );
@@ -5419,7 +6386,7 @@ cata::lua::detail::charge_removal_blacklist_snapshot()
 }
 
 std::vector<std::string>
-cata::lua::detail::temperature_removal_blacklist_snapshot()
+cata::lua_platform::detail::temperature_removal_blacklist_snapshot()
 {
     std::vector<std::string> result;
     result.reserve( temperature_removal_blacklist.size() );

@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "debug.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
@@ -27,12 +27,12 @@ generic_factory<proficiency> proficiency_factory( "proficiency" );
 generic_factory<proficiency_category> proficiency_category_factory( "proficiency category" );
 } // namespace
 
-generic_factory<proficiency_category> &cata::lua::detail::proficiency_category_registry()
+generic_factory<proficiency_category> &cata::lua_platform::detail::proficiency_category_registry()
 {
     return proficiency_category_factory;
 }
 
-generic_factory<proficiency> &cata::lua::detail::proficiency_registry()
+generic_factory<proficiency> &cata::lua_platform::detail::proficiency_registry()
 {
     return proficiency_factory;
 }
@@ -687,7 +687,7 @@ void proficiency_migration::load( const JsonObject &jo )
     prof_migrations.emplace( migration.id_old, migration );
 }
 
-void cata::lua::detail::insert_platform_proficiency_migration(
+void cata::lua_platform::detail::insert_platform_proficiency_migration(
     const platform_migration_data &value )
 {
     proficiency_migration migration;
@@ -698,14 +698,14 @@ void cata::lua::detail::insert_platform_proficiency_migration(
     prof_migrations.emplace( migration.id_old, migration );
 }
 
-void cata::lua::detail::erase_platform_proficiency_migration(
+void cata::lua_platform::detail::erase_platform_proficiency_migration(
     const platform_migration_data &value )
 {
     prof_migrations.erase( proficiency_id( value.from_id ) );
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua::detail::proficiency_migration_snapshot()
+cata::lua_platform::detail::proficiency_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( prof_migrations.size() );

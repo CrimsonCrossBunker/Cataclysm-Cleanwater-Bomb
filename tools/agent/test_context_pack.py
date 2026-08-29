@@ -23,7 +23,7 @@ class ContextPackTests(unittest.TestCase):
         self.assertIn("lua-api", pack["selected_routes"])
         self.assertIn("architecture.lua-first-platform", pack["documentation_ids"])
         self.assertIn("lua-contract", {entry["id"] for entry in pack["tests"]})
-        self.assertIn("src/catalua_loader.cpp", pack["source_paths"])
+        self.assertIn("src/lua_platform_loader.cpp", pack["source_paths"])
         self.assertIn("src/game_io.cpp", pack["source_paths"])
         self.assertLessEqual(pack["estimated_tokens"], 4000)
 

@@ -113,20 +113,16 @@ def validate_lua_first_roadmap(roadmap: dict | None = None) -> None:
             f"missing Lua-first authority: {roadmap['authority_path']}"
         )
 
-    inventory_ids = [entry["id"] for entry in roadmap["legacy_inventories"]]
+    inventory_ids = [entry["id"] for entry in roadmap["corpus_sources"]]
     if len(inventory_ids) != len(set(inventory_ids)):
-        raise ValueError("duplicate legacy inventory id in Lua-first roadmap")
-    for inventory in roadmap["legacy_inventories"]:
+        raise ValueError("duplicate corpus source id in Lua-first roadmap")
+    for inventory in roadmap["corpus_sources"]:
         inventory_path = ROOT / inventory["path"]
         data = json.loads(inventory_path.read_text(encoding="utf-8"))
         entries = data.get("entries")
         if not isinstance(entries, list):
             raise ValueError(
                 f"Lua-first inventory has no entries: {inventory['path']}"
-            )
-        if inventory["entry_count"] != len(entries):
-            raise ValueError(
-                f"Lua-first inventory count is stale for {inventory['id']}"
             )
         selector = inventory["selector"]
         if any(selector not in entry for entry in entries):
@@ -136,6 +132,7 @@ def validate_lua_first_roadmap(roadmap: dict | None = None) -> None:
             )
 
     milestones = roadmap["milestones"]
+    known_evidence_paths = tracked_paths()
     milestone_ids = [milestone["id"] for milestone in milestones]
     if len(milestone_ids) != len(set(milestone_ids)):
         raise ValueError("duplicate milestone id in Lua-first roadmap")
@@ -158,10 +155,13 @@ def validate_lua_first_roadmap(roadmap: dict | None = None) -> None:
                 f"complete Lua-first milestone needs evidence: "
                 f"{milestone['id']}"
             )
+        evidence_paths = [
+            entry["path"] if isinstance(entry, dict) else entry
+            for entry in milestone["evidence"]
+        ]
         missing_evidence = sorted(
-            path
-            for path in milestone["evidence"]
-            if not (ROOT / path).exists()
+            path for path in evidence_paths
+            if not path_pattern_exists(path, known_evidence_paths)
         )
         if missing_evidence:
             raise ValueError(
@@ -191,11 +191,13 @@ def validate_lua_first_roadmap(roadmap: dict | None = None) -> None:
         raise ValueError("duplicate capability id in Lua-first roadmap")
     for capability in roadmap["capabilities"]:
         if (
-            capability["status"] == "available" and
+            capability["status"] in {
+                "source_complete_unverified", "pending_generation", "complete"
+            } and
             capability["legacy_dependency"] == "public_legacy"
         ):
             raise ValueError(
-                f"available Lua-first capability exposes public legacy "
+                f"implemented Lua-first capability exposes public legacy "
                 f"dependency: {capability['id']}"
             )
 

@@ -16,7 +16,7 @@
 
 #include "cata_assert.h"
 #include "cata_utility.h"
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "character.h"
 #include "color.h"
 #include "coordinates.h"
@@ -109,7 +109,7 @@ namespace
 generic_factory<quality> quality_factory( "tool quality" );
 } // namespace
 
-generic_factory<quality> &cata::lua::detail::tool_quality_registry()
+generic_factory<quality> &cata::lua_platform::detail::tool_quality_registry()
 {
     return quality_factory;
 }

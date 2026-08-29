@@ -80,6 +80,12 @@ struct point_of_interest {
     std::string text;
 };
 
+enum class avatar_talk_to_result {
+    not_started,
+    rejected,
+    completed
+};
+
 class avatar : public Character
 {
     public:
@@ -225,11 +231,15 @@ class avatar : public Character
         //return avatar diary
         diary *get_avatar_diary();
 
-        // Dialogue and bartering--see npctalk.cpp
-        void talk_to( std::unique_ptr<talker> talk_with, bool radio_contact = false,
-                      bool is_computer = false, bool is_not_conversation = false,
-                      const std::string &debug_topic = "",
-                      const std::string &remote_name = "" );
+        // Dialogue and bartering--see npctalk.cpp.  A completed result is
+        // returned only after the synchronous native dialogue session ends.
+        avatar_talk_to_result talk_to( std::unique_ptr<talker> talk_with,
+                                       bool radio_contact = false,
+                                       bool is_computer = false,
+                                       bool is_not_conversation = false,
+                                       const std::string &debug_topic = "",
+                                       const std::string &remote_name = "",
+                                       bool force_debug_topic = true );
 
         /**
          * Try to disarm the NPC. May result in fail attempt, you receiving the weapon and instantly wielding it,

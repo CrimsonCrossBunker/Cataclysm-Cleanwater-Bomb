@@ -14,7 +14,7 @@
 #include "ammo.h"
 #include "cata_assert.h"
 #include "catacharset.h"
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "character.h"
 #include "clzones.h"
 #include "color.h"
@@ -60,12 +60,12 @@ generic_factory<vehicle_prototype> vehicle_prototype_factory( "vehicle", "id" );
 generic_factory<vpart_info> vpart_info_factory( "vehicle_part", "id" );
 } // namespace
 
-generic_factory<vpart_info> &cata::lua::detail::vehicle_part_registry()
+generic_factory<vpart_info> &cata::lua_platform::detail::vehicle_part_registry()
 {
     return vpart_info_factory;
 }
 
-generic_factory<vehicle_prototype> &cata::lua::detail::vehicle_prototype_registry()
+generic_factory<vehicle_prototype> &cata::lua_platform::detail::vehicle_prototype_registry()
 {
     return vehicle_prototype_factory;
 }
@@ -1762,7 +1762,7 @@ const std::vector<vpart_category> &vpart_category::all()
     return vpart_categories_all;
 }
 
-const vpart_category *cata::lua::detail::vehicle_part_category_registry_find(
+const vpart_category *cata::lua_platform::detail::vehicle_part_category_registry_find(
     const std::string &id )
 {
     const auto found = std::find_if( vpart_categories_all.begin(), vpart_categories_all.end(),
@@ -1772,13 +1772,13 @@ const vpart_category *cata::lua::detail::vehicle_part_category_registry_find(
     return found == vpart_categories_all.end() ? nullptr : &*found;
 }
 
-int cata::lua::detail::vehicle_part_category_priority(
+int cata::lua_platform::detail::vehicle_part_category_priority(
     const vpart_category &category )
 {
     return category.priority_;
 }
 
-void cata::lua::detail::vehicle_part_category_registry_set(
+void cata::lua_platform::detail::vehicle_part_category_registry_set(
     const vpart_category &value )
 {
     const auto found = std::find_if( vpart_categories_all.begin(), vpart_categories_all.end(),
@@ -1792,7 +1792,7 @@ void cata::lua::detail::vehicle_part_category_registry_set(
     }
 }
 
-void cata::lua::detail::vehicle_part_category_registry_erase(
+void cata::lua_platform::detail::vehicle_part_category_registry_erase(
     const std::string &id )
 {
     vpart_categories_all.erase(
@@ -1802,7 +1802,7 @@ void cata::lua::detail::vehicle_part_category_registry_erase(
     } ), vpart_categories_all.end() );
 }
 
-void cata::lua::detail::vehicle_part_category_registry_finalize()
+void cata::lua_platform::detail::vehicle_part_category_registry_finalize()
 {
     vpart_category::finalize_all();
 }
@@ -1842,7 +1842,7 @@ void vpart_migration::load( const JsonObject &jo )
     vpart_migrations.emplace( migration.part_id_old, migration );
 }
 
-void cata::lua::detail::insert_platform_vpart_migration(
+void cata::lua_platform::detail::insert_platform_vpart_migration(
     const platform_migration_data &value )
 {
     vpart_migration migration;
@@ -1851,14 +1851,14 @@ void cata::lua::detail::insert_platform_vpart_migration(
     vpart_migrations.emplace( migration.part_id_old, migration );
 }
 
-void cata::lua::detail::erase_platform_vpart_migration(
+void cata::lua_platform::detail::erase_platform_vpart_migration(
     const platform_migration_data &value )
 {
     vpart_migrations.erase( vpart_id( value.from_id ) );
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua::detail::vehicle_part_migration_snapshot()
+cata::lua_platform::detail::vehicle_part_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( vpart_migrations.size() );

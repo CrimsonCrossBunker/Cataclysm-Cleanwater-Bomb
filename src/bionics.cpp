@@ -1,4 +1,4 @@
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 
 #include "bionics.h"
 
@@ -26,7 +26,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "catalua_hook.h"
+#include "lua_platform_hooks.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
@@ -195,12 +195,12 @@ generic_factory<bionic_data> bionic_factory( "bionic" );
 std::vector<bionic_id> faulty_bionics;
 } //namespace
 
-generic_factory<bionic_data> &cata::lua::detail::bionic_registry()
+generic_factory<bionic_data> &cata::lua_platform::detail::bionic_registry()
 {
     return bionic_factory;
 }
 
-void cata::lua::detail::refresh_bionic_registry_cache()
+void cata::lua_platform::detail::refresh_bionic_registry_cache()
 {
     static const json_character_flag faulty( "BIONIC_FAULTY" );
     faulty_bionics.clear();
@@ -487,14 +487,14 @@ void bionic_data::load_bionic_migration( const JsonObject &jo, std::string_view 
     }
 }
 
-void cata::lua::detail::insert_platform_bionic_migration(
+void cata::lua_platform::detail::insert_platform_bionic_migration(
     const platform_migration_data &value )
 {
     bionic_data::migrations[bionic_id( value.from_id )] =
         bionic_id( value.to_id );
 }
 
-void cata::lua::detail::erase_platform_bionic_migration(
+void cata::lua_platform::detail::erase_platform_bionic_migration(
     const platform_migration_data &value )
 {
     bionic_data::migrations.erase( bionic_id( value.from_id ) );
@@ -847,9 +847,9 @@ bool Character::activate_bionic( bionic &bio, bool eff_only, bool *close_bionics
                          units::to_millijoule( bio.info().power_activate ) );
         eoc->activate_activation_only( d, "a bionic activation", "bionic being activated", "bionic" );
     }
-    cata::lua::dispatch_native_hook( "on_bionic_activated", {
+    cata::lua_platform::dispatch_native_hook( "on_bionic_activated", {
         { "character", this },
-        { "bionic", cata::lua::native_callback_id{ "bionic", bio.id.str() } },
+        { "bionic", cata::lua_platform::native_callback_id{ "bionic", bio.id.str() } },
         { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) },
         { "activation_cost_millijoules",
           units::to_millijoule( bio.info().power_activate ) }
@@ -1313,9 +1313,9 @@ bool Character::deactivate_bionic( bionic &bio, bool eff_only )
         dialogue d( get_talker_for( *this ), nullptr );
         eoc->activate_activation_only( d, "a bionic deactivation", "bionic being activated", "bionic" );
     }
-    cata::lua::dispatch_native_hook( "on_bionic_deactivated", {
+    cata::lua_platform::dispatch_native_hook( "on_bionic_deactivated", {
         { "character", this },
-        { "bionic", cata::lua::native_callback_id{ "bionic", bio.id.str() } },
+        { "bionic", cata::lua_platform::native_callback_id{ "bionic", bio.id.str() } },
         { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) },
         { "deactivation_cost_millijoules",
           units::to_millijoule( bio.info().power_deactivate ) }
@@ -1711,9 +1711,9 @@ void Character::process_bionic( bionic &bio )
         dialogue d( get_talker_for( *this ), nullptr );
         eoc->activate_activation_only( d, "a bionic process", "bionic being activated", "bionic" );
     }
-    cata::lua::dispatch_native_hook( "on_bionic_processed", {
+    cata::lua_platform::dispatch_native_hook( "on_bionic_processed", {
         { "character", this },
-        { "bionic", cata::lua::native_callback_id{ "bionic", bio.id.str() } },
+        { "bionic", cata::lua_platform::native_callback_id{ "bionic", bio.id.str() } },
         { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) },
         { "over_time_energy_millijoules",
           units::to_millijoule( bio.info().power_over_time ) }

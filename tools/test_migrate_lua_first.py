@@ -9,6 +9,9 @@ from unittest.mock import patch
 import migrate_lua_first
 
 
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+
+
 class LuaFirstMigrationTest(unittest.TestCase):
     def test_game_start_avatar_proof_tracks_the_canonical_sender_set(self) -> None:
         self.assertEqual(
@@ -323,7 +326,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 main,
             )
             self.assertIn("not (services.gameplay.mods.is_loaded", main)
-            self.assertNotIn("condition needs a native Lua predicate", report)
+            self.assertNotIn("condition TODO: translate the legacy condition into a Lua predicate", report)
 
     def test_translates_proven_actor_effect_predicates(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -406,11 +409,11 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 main,
             )
             self.assertNotIn(
-                "EOC dynamic_effect condition needs a native Lua predicate",
+                "EOC dynamic_effect condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertIn(
-                "EOC unproven_npc_effect condition needs a native Lua predicate",
+                "EOC unproven_npc_effect condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertNotIn("run_eoc", main)
@@ -439,10 +442,11 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertEqual(len(result.converted), 1)
             self.assertEqual(result.partial, [])
             self.assertIn(
-                "service_value(services.factions.player()).reputation.trusts >= 12",
+                "service_value(services.factions.for_character(actor)).reputation.trusts >= 12",
                 main,
             )
-            self.assertNotIn("condition needs a native Lua predicate", report)
+            self.assertNotIn("services.factions.player()", main)
+            self.assertNotIn("condition TODO: translate the legacy condition into a Lua predicate", report)
             self.assertNotIn("run_eoc", main)
 
     def test_translates_dialogue_predicate_services_for_proven_avatars(self) -> None:
@@ -492,7 +496,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn("services.npcs.ai_rules(character)", main)
             self.assertIn("services.creatures.can_see", main)
             self.assertIn("services.creatures.avatar()", main)
-            self.assertNotIn("condition needs a native Lua predicate", report)
+            self.assertNotIn("condition TODO: translate the legacy condition into a Lua predicate", report)
 
     def test_dialogue_predicates_without_actor_proof_stay_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -531,7 +535,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertEqual(result.converted, [])
             self.assertEqual(len(result.partial), len(predicates))
             self.assertIn(
-                "condition needs a native Lua predicate", report
+                "condition TODO: translate the legacy condition into a Lua predicate", report
             )
 
     def test_translates_bounded_weapon_predicates_for_proven_u_actors(self) -> None:
@@ -660,7 +664,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertNotIn("local function character_wields_with_flag", main)
             self.assertIn("services.inventory.wielded_matches", main)
             self.assertEqual(
-                report.count("condition needs a native Lua predicate"),
+                report.count("condition TODO: translate the legacy condition into a Lua predicate"),
                 5,
             )
 
@@ -1205,7 +1209,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertEqual(len(result.todos), 1)
             self.assertNotIn("context.data[", main)
             self.assertIn("u_score", main)
-            self.assertIn("condition needs a native Lua predicate", report)
+            self.assertIn("condition TODO: translate the legacy condition into a Lua predicate", report)
 
     def test_bounded_plain_activity_assignment_uses_typed_service(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -1301,7 +1305,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn("services.random.probability", main)
             self.assertIn("services.random.contested", main)
             self.assertEqual(
-                report.count("condition needs a native Lua predicate"),
+                report.count("condition TODO: translate the legacy condition into a Lua predicate"),
                 2,
             )
 
@@ -1395,12 +1399,17 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 3)
-            self.assertEqual(result.partial, [])
-            self.assertIn("services.bionics.summary", main)
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(len(result.partial), 1)
+            self.assertNotIn("services.bionics.summary", main)
             self.assertIn("services.bionics.has", main)
             self.assertIn("services.recipes.knows", main)
-            self.assertNotIn("condition needs a native Lua predicate", report)
+            self.assertEqual(
+                report.count(
+                    "condition TODO: translate the legacy condition into a Lua predicate"
+                ),
+                1,
+            )
 
     def test_dynamic_or_unproven_is_day_shapes_stay_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -1429,7 +1438,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertEqual(len(result.partial), 1)
             self.assertNotIn("services.gameplay.environment.is_night", main)
             self.assertEqual(
-                report.count("condition needs a native Lua predicate"),
+                report.count("condition TODO: translate the legacy condition into a Lua predicate"),
                 1,
             )
 
@@ -1469,11 +1478,40 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertEqual(len(result.partial), 2)
             self.assertNotIn("services.time_snapshot", main)
             self.assertEqual(
-                report.count("condition needs a native Lua predicate"),
+                report.count("condition TODO: translate the legacy condition into a Lua predicate"),
                 2,
             )
 
-    def test_dynamic_or_unproven_is_weather_shapes_stay_partial(self) -> None:
+    def test_translates_literal_is_weather_through_current_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "literal_is_weather",
+                        "required_event": "game_start",
+                        "condition": {"is_weather": "rain"},
+                        "effect": {"message": "literal weather"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "weather_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
+            self.assertEqual(result.todos, [])
+            self.assertIn(
+                'services.weather.current().weather.value == "rain"',
+                main,
+            )
+            self.assertNotIn('services.types.id("weather_type"', main)
+
+    def test_translates_dynamic_string_is_weather_and_rejects_invalid_ids(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -1481,26 +1519,53 @@ class LuaFirstMigrationTest(unittest.TestCase):
                     [
                         {
                             "type": "effect_on_condition",
-                            "id": "unproven_is_weather",
+                            "id": "context_is_weather",
+                            "required_event": "game_start",
+                            "condition": {
+                                "is_weather": {"context_val": "context_weather"}
+                            },
+                            "effect": {"message": "context weather"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "u_is_weather",
                             "required_event": "game_start",
                             "condition": {
                                 "is_weather": {"u_val": "remembered_weather"}
                             },
-                            "effect": {"message": "bounded only"},
+                            "effect": {"message": "u weather"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "global_is_weather",
+                            "required_event": "game_start",
+                            "condition": {
+                                "is_weather": {"global_val": "global_weather"}
+                            },
+                            "effect": {"message": "global weather"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "unexpressed_is_weather",
+                            "required_event": "game_start",
+                            "condition": {
+                                "is_weather": {"math": ["weather('rain')"]}
+                            },
+                            "effect": {"message": "unexpressed weather"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "nonstring_is_weather",
                             "required_event": "game_start",
                             "condition": {"is_weather": 5},
-                            "effect": {"message": "bounded only"},
+                            "effect": {"message": "numeric weather"},
                         },
                         {
                             "type": "effect_on_condition",
                             "id": "empty_is_weather",
                             "required_event": "game_start",
                             "condition": {"is_weather": ""},
-                            "effect": {"message": "bounded only"},
+                            "effect": {"message": "empty weather"},
                         },
                     ]
                 ),
@@ -1512,11 +1577,29 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.converted), 3)
             self.assertEqual(len(result.partial), 3)
-            self.assertNotIn("services.weather.current", main)
+            self.assertIn(
+                'services.weather.current().weather.value == '
+                'tostring((context.data["context_weather"]) or "")',
+                main,
+            )
+            self.assertIn(
+                'services.weather.current().weather.value == '
+                'tostring(((service_value(services.variables.resolve('
+                'context.data, actor, "u", "remembered_weather")).value or "")) or "")',
+                main,
+            )
+            self.assertIn(
+                'services.weather.current().weather.value == '
+                'tostring(((service_value(services.variables.get_global('
+                '"global_weather")).value or "")) or "")',
+                main,
+            )
+            self.assertNotIn('weather.value == 5', main)
+            self.assertNotIn('weather.value == ""', main)
             self.assertEqual(
-                report.count("condition needs a native Lua predicate"),
+                report.count("condition TODO: translate the legacy condition into a Lua predicate"),
                 3,
             )
 
@@ -2512,11 +2595,11 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 main,
             )
             self.assertIn(
-                "EOC unproven_npc_stat condition needs a native Lua predicate",
+                "EOC unproven_npc_stat condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertIn(
-                "EOC variable_stat condition needs a native Lua predicate",
+                "EOC variable_stat condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertNotIn("run_eoc", main)
@@ -2592,7 +2675,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 main,
             )
             self.assertIn(
-                "EOC unproven_warm condition needs a native Lua predicate",
+                "EOC unproven_warm condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertIn(
@@ -2656,15 +2739,15 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertEqual(len(result.partial), 1)
             self.assertIn('runtime.on("game:game_start"', main)
             self.assertIn(
-                "EOC npc_alive condition needs a native Lua predicate",
+                "EOC npc_alive condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertIn(
                 "service_value(services.characters.is_alive(actor))",
                 main,
             )
-            self.assertNotIn("EOC hostile_alive condition needs a native Lua predicate", report)
-            self.assertNotIn("EOC item_alive condition needs a native Lua predicate", report)
+            self.assertNotIn("EOC hostile_alive condition TODO: translate the legacy condition into a Lua predicate", report)
+            self.assertNotIn("EOC item_alive condition TODO: translate the legacy condition into a Lua predicate", report)
             self.assertNotIn("run_eoc", main)
 
     def test_translates_proven_character_status_and_temperature_predicates(self) -> None:
@@ -2736,7 +2819,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 main,
             )
             self.assertIn(
-                "EOC missing_bodypart condition needs a native Lua predicate",
+                "EOC missing_bodypart condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertNotIn("run_eoc", main)
@@ -2808,7 +2891,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 main,
             )
             self.assertIn(
-                "EOC npc_gender condition needs a native Lua predicate",
+                "EOC npc_gender condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertIn(
@@ -2884,7 +2967,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn(
                 'services.gameplay.environment.field_exists(', main
             )
-            self.assertNotIn("condition needs a native Lua predicate", report)
+            self.assertNotIn("condition TODO: translate the legacy condition into a Lua predicate", report)
             self.assertNotIn("run_eoc", main)
 
     def test_translates_context_val_map_flag_and_city_queries(self) -> None:
@@ -2972,7 +3055,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn(
                 "services.gameplay.environment.is_outside(", main
             )
-            self.assertNotIn("condition needs a native Lua predicate", report)
+            self.assertNotIn("condition TODO: translate the legacy condition into a Lua predicate", report)
             self.assertNotIn("run_eoc", main)
 
     def test_translates_map_location_predicates_at_actor_position(self) -> None:
@@ -3026,8 +3109,8 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 11)
-            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.converted), 10)
+            self.assertEqual(len(result.partial), 2)
             self.assertIn(
                 "services.gameplay.environment.terrain_id(", main
             )
@@ -3047,7 +3130,10 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 ".creature.position", main
             )
             self.assertIn(
-                "EOC loc_10 condition needs a native Lua predicate", report
+                "EOC loc_10 condition TODO: translate the legacy condition into a Lua predicate", report
+            )
+            self.assertIn(
+                "EOC loc_11 condition TODO: translate the legacy condition into a Lua predicate", report
             )
             self.assertNotIn("run_eoc", main)
 
@@ -3141,8 +3227,8 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 41)
-            self.assertEqual(len(result.partial), 7)
+            self.assertEqual(len(result.converted), 40)
+            self.assertEqual(len(result.partial), 8)
             self.assertIn(
                 ".needs.hunger > 100", main
             )
@@ -3161,10 +3247,10 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn(
                 "services.gameplay.environment.safe_mode_dangerous(", main
             )
-            for partial_index in ("34", "36", "37", "38", "42", "45", "47"):
+            for partial_index in ("34", "35", "36", "37", "38", "42", "45", "47"):
                 self.assertIn(
-                    f"EOC cnst_{partial_index} condition needs a native "
-                    "Lua predicate",
+                    f"EOC cnst_{partial_index} condition TODO: translate the "
+                    "legacy condition into a Lua predicate",
                     report,
                 )
             self.assertNotIn("run_eoc", main)
@@ -3342,7 +3428,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 '.movement.id == "crouch"', main
             )
             self.assertNotIn(
-                "EOC dynamic_trait condition needs a native Lua predicate",
+                "EOC dynamic_trait condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertNotIn("run_eoc", main)
@@ -3640,7 +3726,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 main,
             )
             self.assertIn(
-                "EOC invalid_aim_eoc condition needs a native Lua predicate",
+                "EOC invalid_aim_eoc condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertNotIn("run_eoc", main)
@@ -3737,7 +3823,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn("services.morale.add(", main)
             self.assertIn("services.morale.remove(", main)
             self.assertIn(
-                "EOC unproven_presence condition needs a native Lua predicate",
+                "EOC unproven_presence condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertNotIn("needs a native Lua effect", report)
@@ -3855,12 +3941,12 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 3)
-            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 3)
             self.assertIn("character_has_profession", main)
             self.assertEqual(
-                report.count("condition needs a native Lua predicate"),
-                1,
+                report.count("condition TODO: translate the legacy condition into a Lua predicate"),
+                3,
             )
             self.assertNotIn("run_eoc", main)
 
@@ -3946,12 +4032,12 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 3)
-            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(len(result.partial), 2)
             self.assertIn("services.characters.has_flag", main)
             self.assertEqual(
-                report.count("condition needs a native Lua predicate"),
-                1,
+                report.count("condition TODO: translate the legacy condition into a Lua predicate"),
+                2,
             )
             self.assertNotIn("run_eoc", main)
 
@@ -4031,12 +4117,12 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 3)
-            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(len(result.partial), 2)
             self.assertIn("character_is_wearing", main)
             self.assertEqual(
-                report.count("condition needs a native Lua predicate"),
-                1,
+                report.count("condition TODO: translate the legacy condition into a Lua predicate"),
+                2,
             )
             self.assertNotIn("run_eoc", main)
 
@@ -4087,11 +4173,11 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 main,
             )
             self.assertIn(
-                "EOC npc_outside condition needs a native Lua predicate",
+                "EOC npc_outside condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertNotIn(
-                "EOC item_outside condition needs a native Lua predicate",
+                "EOC item_outside condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertNotIn("run_eoc", main)
@@ -4152,11 +4238,11 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 main,
             )
             self.assertIn(
-                "EOC dynamic_flag condition needs a native Lua predicate",
+                "EOC dynamic_flag condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertNotIn(
-                "EOC non_context_loc condition needs a native Lua predicate",
+                "EOC non_context_loc condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertNotIn("run_eoc", main)
@@ -4166,7 +4252,6 @@ class LuaFirstMigrationTest(unittest.TestCase):
             source = Path(temporary) / "source.json"
             cases = [
                 ("game_start", {"u_has_mission": "MISSION_MAIN_QUEST"}),
-                ("character_wields_item", {"u_has_mission": "MISSION_MAIN_QUEST"}),
             ]
             source.write_text(
                 json.dumps(
@@ -4192,7 +4277,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertEqual(len(result.converted), len(cases))
             self.assertEqual(result.partial, [])
             self.assertIn(
-                'service_value(services.missions.avatar_has_active('
+                'service_value(services.missions.has_active(actor, '
                 'services.types.id("mission", "MISSION_MAIN_QUEST")))',
                 main,
             )
@@ -4232,7 +4317,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertEqual(len(result.partial), len(cases))
             self.assertNotIn("services.missions.avatar_has_active", main)
             self.assertEqual(
-                report.count("condition needs a native Lua predicate"),
+                report.count("condition TODO: translate the legacy condition into a Lua predicate"),
                 len(cases),
             )
             self.assertNotIn("run_eoc", main)
@@ -4265,13 +4350,16 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), len(cases))
-            self.assertEqual(result.partial, [])
-            self.assertIn(
-                "service_value(services.camps.player_has_camp())",
-                main,
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), len(cases))
+            self.assertNotIn("services.camps.", main)
+            self.assertEqual(
+                report.count(
+                    "condition TODO: translate u_has_camp only with an explicit "
+                    "camp handle and authorized manager handle"
+                ),
+                len(cases),
             )
-            self.assertNotIn("needs a native Lua predicate", report)
             self.assertNotIn("run_eoc", main)
 
     def test_dynamic_or_unproven_u_has_camp_shapes_stay_partial(self) -> None:
@@ -4299,9 +4387,9 @@ class LuaFirstMigrationTest(unittest.TestCase):
 
             self.assertEqual(result.converted, [])
             self.assertEqual(len(result.partial), 1)
-            self.assertNotIn("services.camps.player_has_camp", main)
+            self.assertNotIn("services.camps.", main)
             self.assertEqual(
-                report.count("condition needs a native Lua predicate"),
+                report.count("condition TODO: translate the legacy condition into a Lua predicate"),
                 1,
             )
             self.assertNotIn("run_eoc", main)
@@ -4663,7 +4751,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertEqual(result.partial, [])
             self.assertIn("services.mutations.has", main)
             self.assertIn("services.effects.add", main)
-            self.assertNotIn("EOC ambiguous_alpha condition needs a native Lua predicate", report)
+            self.assertNotIn("EOC ambiguous_alpha condition TODO: translate the legacy condition into a Lua predicate", report)
             self.assertNotIn("EOC ambiguous_alpha effect #0 needs domain-service conversion", report)
             self.assertNotIn("run_eoc", main)
 
@@ -7739,7 +7827,10 @@ class LuaFirstMigrationTest(unittest.TestCase):
                                 {"set_trap": "tr_beartrap", "loc": {"context_val": "loc"}},
                                 {"set_trap": "tr_rollmat"},
                                 {"signal_hordes": 50, "loc": {"context_val": "loc"}},
-                                {"signal_hordes": 20},
+                                {
+                                    "signal_hordes": {"context_val": "loc"},
+                                    "signal_power": 61,
+                                },
                                 {
                                     "reveal_route": {"context_val": "loc"},
                                     "target_var": {"context_val": "destination"},
@@ -7768,32 +7859,49 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(len(result.partial), 0)
-            self.assertIn('services.inventory.give(\n        actor, services.types.id("item", "aspirin"), 2, { allow_wield = false })', main)
-            self.assertIn('services.inventory.give(\n        actor, services.types.id("item", "water_clean"), 1, { allow_wield = false })', main)
+            self.assertEqual(len(result.converted), 1)
+            self.assertTrue(result.partial)
+            self.assertIn('services.inventory.give(\n        actor, services.types.id("item", "aspirin"), 2))', main)
+            self.assertIn('services.inventory.give(\n        actor, services.types.id("item", "water_clean"), 1))', main)
             self.assertIn('services.world.spawn_item(context.data["loc"], services.types.id("item", "flashlight"), 1)', main)
             self.assertIn(
                 'services.world.spawn_item(service_value(services.characters.snapshot(actor)).creature.position, '
                 'services.types.id("item", "radio"), 1)',
                 main,
             )
-            self.assertIn('services.inventory.stash_wielded(actor)', main)
-            self.assertIn('services.world.set_trap(context.data["loc"], services.types.id("trap", "tr_beartrap"))', main)
             self.assertIn(
-                'services.world.set_trap(service_value(services.characters.snapshot(actor)).creature.position, '
-                'services.types.id("trap", "tr_rollmat"))',
+                "player_weapon_away needs the exact wielded Item handle",
                 main,
             )
-            self.assertIn('services.hordes.signal(context.data["loc"], 50)', main)
+            self.assertNotIn("services.items.transfer", main)
+            for legacy_map_write in (
+                "services.world.tile(",
+                "services.world.set_terrain(",
+                "services.world.set_furniture(",
+                "services.world.set_trap(",
+                "services.world.put_field(",
+                "services.world.remove_field(",
+            ):
+                self.assertNotIn(legacy_map_write, main)
+            self.assertIn("explicitly typed abs_ms coordinate", main)
+            self.assertNotIn("services.hordes.signal", main)
+            self.assertEqual(
+                main.count("signal_hordes has no transactional Platform API"),
+                2,
+            )
+            self.assertEqual(
+                report.count("signal_hordes has no transactional Platform API"),
+                2,
+            )
+            self.assertNotIn("services.hordes.advance", main)
+            self.assertNotIn("services.overmap.reveal_route", main)
             self.assertIn(
-                'services.hordes.signal(service_value(services.characters.snapshot(actor)).creature.position, 20)',
+                "reveal_route has no transactional Platform API",
                 main,
             )
             self.assertIn(
-                'services.overmap.reveal_route(\n'
-                '        context.data["loc"], context.data["destination"], 3, false)',
-                main,
+                "reveal_route has no transactional Platform API",
+                report,
             )
             self.assertIn('services.npcs.set_attitude(actor, "follow")', main)
             self.assertIn('services.npcs.set_attitude(actor, "null")', main)
@@ -8172,12 +8280,17 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(len(result.partial), 0)
+            self.assertEqual(len(result.converted), 0)
+            self.assertTrue(result.partial)
             self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_FIND_MOUNT"), services.time.duration(600, "turn"))', main)
             self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_TRAIN"), services.time.duration(3600, "turn"))', main)
-            self.assertIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_DISTRIBUTE_FOOD"), services.time.duration(1800, "turn"))', main)
-            self.assertNotIn("needs review", report)
+            self.assertNotIn('services.activities.assign_timed(actor, services.types.id("activity", "ACT_DISTRIBUTE_FOOD")', main)
+            self.assertIn(
+                "needs explicit camp, manager, and storage holder handles",
+                report,
+            )
+            self.assertNotIn("services.npcs.open_dialogue", main)
+            self.assertIn("explicit dialogue participant conversion", report)
 
     def test_translates_teleport_navigation_damage_and_events(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -8253,7 +8366,10 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 main,
             )
             self.assertIn('runtime.trigger("game:custom_event")', main)
-            self.assertIn('services.camps.return_to_duties(actor)', main)
+            self.assertNotIn("services.camps.", main)
+            self.assertIn(
+                "explicit camp, manager, and worker handles", main
+            )
             self.assertNotIn("needs review", report)
 
     def test_translates_bounded_npc_goal_and_guard_variable_shapes(self) -> None:
@@ -8294,7 +8410,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn('special = "special_road"', main)
             self.assertIn("minimum_radius = 1", main)
             self.assertIn("services.npcs.set_goal(", main)
-            self.assertIn('services.variables.get(\n        services.characters.avatar(), "guard_position")', main)
+            self.assertIn('services.variables.get(\n        actor, "guard_position")', main)
             self.assertIn("services.npcs.set_guard_position(", main)
             self.assertNotIn("TODO: translate the NPC goal", main)
             self.assertNotIn("TODO: translate the NPC guard position", main)
@@ -8341,7 +8457,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertEqual(len(result.converted), 2)
             self.assertEqual(result.partial, [])
             self.assertIn(
-                'services.creatures.visible_monsters("NE").present', main
+                'services.creatures.visible_monsters(actor, "NE").present', main
             )
             self.assertIn(
                 "services.creatures.has_line_of_sight(services.characters.avatar(), actor)",
@@ -8430,9 +8546,9 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn('services.missions.reserve(\n        services.types.id("mission", "MISSION_TEST"))', main)
             self.assertIn("services.missions.set_deadline(", main)
             self.assertIn("services.time.point(500)", main)
-            self.assertIn("services.missions.assign(token)", main)
+            self.assertIn("services.missions.assign(actor, token)", main)
             self.assertIn("services.missions.complete(", main)
-            self.assertIn("services.missions.abandon(entry.token)", main)
+            self.assertIn("services.missions.abandon(actor, entry.token)", main)
             self.assertNotIn("mission lifecycle shape", main)
             self.assertNotIn("domain-service conversion", report)
 
@@ -8484,7 +8600,12 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn('services.types.id("mission", tostring((context.data["mission_id"])', main)
             self.assertIn('services.variables.get_global("mission_deadline")', main)
             self.assertIn('services.variables.resolve(context.data, actor, "u", "mission_id")', main)
-            self.assertIn('services.missions.step_complete(', main)
+            self.assertIn(
+                'services.missions.step_complete(\n                    actor, entry.token,',
+                main,
+            )
+            self.assertIn('services.missions.assign(actor, token)', main)
+            self.assertIn('services.missions.abandon(actor, entry.token)', main)
             self.assertNotIn("mission lifecycle shape", report)
 
     def test_translates_bounded_npc_mission_provider_shapes(self) -> None:
@@ -8514,17 +8635,122 @@ class LuaFirstMigrationTest(unittest.TestCase):
             )
             main = result.files[Path("main.lua")]
 
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(main.count("services.npcs.missions.offer("), 2)
+            self.assertNotIn("services.npcs.missions.assign_selected", main)
+            self.assertNotIn("services.npcs.missions.succeed_selected", main)
+            self.assertNotIn("services.npcs.missions.fail_selected", main)
+            self.assertNotIn("services.npcs.missions.clear_selected", main)
+            self.assertNotIn("services.npcs.missions.claim_selected_reward", main)
+            self.assertIn("typed provider service", main)
+            self.assertNotIn("services.characters.avatar()", main)
+
+    def test_translates_proven_npc_mission_provider_shape_without_ambient_avatar(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "proven_npc_mission_provider",
+                        "required_event": "character_takes_damage",
+                        "effect": [
+                            {"offer_mission": "MISSION_OFFER"},
+                            {"add_mission": "MISSION_ASSIGNED"},
+                            "assign_mission",
+                            "mission_success",
+                            "mission_failure",
+                            "clear_mission",
+                            "mission_reward",
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with patch.object(
+                migrate_lua_first,
+                "PROVEN_NPC_ACTOR_EVENTS",
+                migrate_lua_first.PROVEN_NPC_ACTOR_EVENTS
+                | {"character_takes_damage"},
+            ), patch.object(
+                migrate_lua_first,
+                "AVATAR_ACTOR_EVENTS",
+                migrate_lua_first.AVATAR_ACTOR_EVENTS
+                | {"character_takes_damage"},
+            ):
+                result = migrate_lua_first.migrate(
+                    migrate_lua_first.load_objects([source]),
+                    "proven_npc_mission_mod",
+                )
+            main = result.files[Path("main.lua")]
+
             self.assertEqual(len(result.converted), 1)
             self.assertEqual(result.partial, [])
-            self.assertEqual(main.count("services.npcs.missions.offer("), 2)
-            self.assertIn("services.npcs.missions.assign_selected(actor)", main)
-            self.assertIn("services.npcs.missions.succeed_selected(actor, false)", main)
-            self.assertIn("services.npcs.missions.fail_selected(actor)", main)
-            self.assertIn("services.npcs.missions.clear_selected(actor)", main)
-            self.assertEqual(
-                main.count("services.npcs.missions.clear_selected(actor)"), 2
+            self.assertEqual(result.todos, [])
+            self.assertIn(
+                'services.npcs.missions.offer(\n'
+                '        context.actors.beta, '
+                'services.types.id("mission", "MISSION_OFFER"))',
+                main,
             )
-            self.assertIn("services.npcs.missions.claim_selected_reward(actor)", main)
+            self.assertIn(
+                'services.npcs.missions.add_assigned(\n'
+                '        context.actors.beta, actor, '
+                'services.types.id("mission", "MISSION_ASSIGNED"))',
+                main,
+            )
+            self.assertIn(
+                "services.npcs.missions.assign_selected(context.actors.beta, actor)",
+                main,
+            )
+            self.assertIn(
+                "services.npcs.missions.succeed_selected(context.actors.beta, actor, false)",
+                main,
+            )
+            self.assertIn(
+                "services.npcs.missions.fail_selected(context.actors.beta, actor)",
+                main,
+            )
+            self.assertIn(
+                "services.npcs.missions.clear_selected(context.actors.beta, actor)",
+                main,
+            )
+            self.assertIn(
+                "services.npcs.missions.claim_selected_reward(context.actors.beta, actor)",
+                main,
+            )
+            self.assertNotIn("services.characters.avatar()", main)
+
+    def test_npc_mission_contract_declarations_cover_native_surface(self) -> None:
+        declarations = (
+            REPOSITORY_ROOT / "data" / "lua" / "types" /
+            "ccb_platform_v1.d.lua"
+        ).read_text(encoding="utf-8")
+        for declaration in (
+            "---@class CcbNpcMissionSnapshot",
+            "---@class CcbNpcMissionPage",
+            "---@class CcbNpcMissionsState",
+            "---@class CcbNpcProviderState",
+            "---@class CcbNpcMissionsStateResult",
+            "---@class CcbNpcMissionOfferResult",
+            "---@class CcbNpcMissionAssignmentResult",
+            "---@class CcbNpcMissionActionResult",
+            "---@class CcbNpcMissionsApi",
+            "---@field missions CcbNpcMissionsApi",
+        ):
+            self.assertIn(declaration, declarations)
+        for method in (
+            "state", "select", "offer", "add_assigned",
+            "assign_selected", "succeed_selected", "fail_selected",
+            "clear_selected", "claim_selected_reward",
+        ):
+            self.assertIn(
+                f"function CcbNpcMissionsApi.{method}", declarations
+            )
+        self.assertNotIn(
+            "function CcbNpcMissionsApi.avatar", declarations
+        )
 
     def test_translates_bounded_camp_worker_actions(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -8549,13 +8775,400 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 migrate_lua_first.load_objects([source]), "camp_worker_mod"
             )
             main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
-            self.assertIn("services.camps.start_with(actor)", main)
-            self.assertIn("services.camps.assign_resident(actor)", main)
-            self.assertIn("services.camps.return_to_duties(actor)", main)
-            self.assertIn("services.camps.abandon_at_worker(actor)", main)
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertNotIn("services.camps.", main)
+            self.assertIn(
+                "explicit camp, manager, and worker handles", main
+            )
+            self.assertIn(
+                "needs proven camp, manager, and worker handles", report
+            )
+
+    def test_camp_task_infrastructure_never_invents_task_participants(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "legacy_camp_task_actions",
+                            "required_event": "npc_becomes_hostile",
+                            "effect": [
+                                "start_camp",
+                                "assign_camp",
+                                "return_to_camp_duties",
+                                "abandon_camp",
+                                "basecamp_mission",
+                            ],
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "legacy_camp_task_object",
+                            "required_event": "game_start",
+                            "effect": {"basecamp_mission": "old_task"},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "camp_task_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 2)
+            self.assertNotIn("services.camps.tasks", main)
+            self.assertNotIn("worker_reservation", main)
+            self.assertNotIn("services.characters.avatar()", main)
+            self.assertGreaterEqual(
+                report.count("needs proven camp, manager, and worker handles"), 2
+            )
+
+    def test_camp_task_renderer_requires_explicit_identity_proof(self) -> None:
+        for effect in (
+            "start_camp",
+            "assign_camp",
+            "return_to_camp_duties",
+            "abandon_camp",
+        ):
+            self.assertIsNone(
+                migrate_lua_first.render_static_camp_npc_effect(effect, True)
+            )
+
+    def test_platform_camp_create_renderer_requires_explicit_identity_and_type(self) -> None:
+        proven = {
+            "owner_faction": "your_followers",
+            "manager_handle": {"context_handle": "manager"},
+            "omt_position": {"context_handle": "camp_position"},
+            "name": "Explicit Camp",
+            "type": "faction_base_bare_bones_basecamp_0",
+        }
+        rendered = migrate_lua_first.render_static_camp_create_effect(proven)
+        self.assertIsNotNone(rendered)
+        main = "\n".join(rendered or [])
+        self.assertIn("services.camps.create", main)
+        self.assertIn('services.types.id("faction", "your_followers")', main)
+        self.assertIn('context.data["manager"]', main)
+        self.assertIn('context.data["camp_position"]', main)
+        self.assertIn('type = "faction_base_bare_bones_basecamp_0"', main)
+        self.assertNotIn("services.characters.avatar()", main)
+        self.assertNotIn("nearest", main)
+        self.assertIsNone(
+            migrate_lua_first.render_static_camp_create_effect(
+                {**proven, "manager_handle": None}
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_camp_create_effect(
+                {**proven, "type": "dynamic_camp_type"}
+            )
+        )
+
+    def test_platform_camp_expansion_renderer_requires_explicit_handles(self) -> None:
+        proven = {
+            "camp_handle": {"context_handle": "camp"},
+            "manager_handle": {"context_handle": "manager"},
+            "omt_position": {"context_handle": "expansion_position"},
+            "type": "faction_base_camp_1",
+            "name": "North Store",
+        }
+        rendered = migrate_lua_first.render_static_camp_expansion_create_effect(proven)
+        self.assertIsNotNone(rendered)
+        main = "\n".join(rendered or [])
+        self.assertIn("services.camps.expansions.create", main)
+        self.assertIn('context.data["camp"]', main)
+        self.assertIn('context.data["manager"]', main)
+        self.assertIn('context.data["expansion_position"]', main)
+        self.assertNotIn("services.characters.avatar()", main)
+        dynamic_position = dict(proven)
+        dynamic_position["omt_position"] = {"nearest": "camp"}
+        self.assertIsNone(
+            migrate_lua_first.render_static_camp_expansion_create_effect(dynamic_position)
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_camp_expansion_create_effect(
+                {**proven, "name": {"variable": "name"}}
+            )
+        )
+
+    def test_legacy_camp_start_and_expansion_shapes_stay_precise_todos(self) -> None:
+        self.assertIsNone(
+            migrate_lua_first.render_static_camp_npc_effect("start_camp", True)
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_camp_create_effect(
+                {"owner_faction": "your_followers", "name": "Camp"}
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_camp_expansion_create_effect(
+                {"type": "faction_base_camp_1", "name": "North"}
+            )
+        )
+
+    def test_resource_work_renderer_requires_typed_handles_and_static_deltas(self) -> None:
+        proven = {
+            "camp_handle": {"context_handle": "camp"},
+            "manager_handle": {"context_handle": "manager"},
+            "worker_handle": {"context_handle": "worker"},
+            "resource_inputs": [{"id": "water", "amount": 2}],
+            "resource_outputs": [{"id": "wood", "amount": 1}],
+            "food_input_kcal": 10,
+            "duration_turns": 120,
+        }
+        rendered = migrate_lua_first.render_static_resource_work_effect(proven)
+        self.assertIsNotNone(rendered)
+        main = "\n".join(rendered or [])
+        self.assertIn("services.camps.tasks.create", main)
+        self.assertIn('"resource_work"', main)
+        self.assertIn("resource_inputs", main)
+        self.assertIn("resource_outputs", main)
+        self.assertNotIn("services.characters.avatar()", main)
+        self.assertNotIn("current", main)
+
+        dynamic = dict(proven)
+        dynamic["resource_inputs"] = [{"id": "water", "amount": {"math": "x"}}]
+        self.assertIsNone(
+            migrate_lua_first.render_static_resource_work_effect(dynamic)
+        )
+        missing_worker = dict(proven)
+        missing_worker.pop("worker_handle")
+        self.assertIsNone(
+            migrate_lua_first.render_static_resource_work_effect(missing_worker)
+        )
+
+    def test_legacy_camp_resource_shapes_remain_explicit_todos(self) -> None:
+        for effect in (
+            "basecamp_mission",
+            "distribute_food_auto",
+            {"platform_resource_work": {"duration_turns": 10}},
+        ):
+            if isinstance(effect, str):
+                rendered = migrate_lua_first.render_static_camp_npc_effect(effect, True)
+            else:
+                rendered = migrate_lua_first.render_static_resource_work_effect(
+                    effect["platform_resource_work"]
+                )
+            self.assertIsNone(rendered)
+
+    def test_recipe_work_renderer_requires_explicit_holders_and_items(self) -> None:
+        proven = {
+            "camp_handle": {"context_handle": "camp"},
+            "manager_handle": {"context_handle": "manager"},
+            "worker_handle": {"context_handle": "worker"},
+            "recipe_id": "bread",
+            "batch": 2,
+            "duration_turns": 120,
+            "source_holders": [
+                {
+                    "character_handle": {"context_handle": "worker"},
+                    "slot": "inventory",
+                }
+            ],
+            "destination_holder": {
+                "character_handle": {"context_handle": "worker"},
+                "slot": "inventory",
+            },
+            "item_requests": [
+                {
+                    "item_handle": {"context_handle": "flour"},
+                    "source_holder": {
+                        "character_handle": {"context_handle": "worker"},
+                        "slot": "inventory",
+                    },
+                    "quantity": 2,
+                    "tool": False,
+                }
+            ],
+        }
+        rendered = migrate_lua_first.render_static_recipe_work_effect(proven)
+        self.assertIsNotNone(rendered)
+        main = "\n".join(rendered or [])
+        self.assertIn("services.camps.tasks.create", main)
+        self.assertIn('"recipe_work"', main)
+        self.assertIn("recipe_task.token", main)
+        self.assertIn("item = context.data[\"flour\"]", main)
+        self.assertIn("character = context.data[\"worker\"]", main)
+        self.assertNotIn("services.characters.avatar()", main)
+        self.assertNotIn("current", main)
+        self.assertNotIn("same-id", main)
+        self.assertNotIn("JsonObject", main)
+
+        missing_holder = dict(proven)
+        missing_holder.pop("destination_holder")
+        self.assertIsNone(
+            migrate_lua_first.render_static_recipe_work_effect(missing_holder)
+        )
+        dynamic_item = dict(proven)
+        dynamic_item["item_requests"] = [
+            {
+                **proven["item_requests"][0],
+                "item_handle": {"context_handle": {"variable": "item"}},
+            }
+        ]
+        self.assertIsNone(
+            migrate_lua_first.render_static_recipe_work_effect(dynamic_item)
+        )
+
+    def test_recipe_work_legacy_camp_crafting_shape_is_a_precise_todo(self) -> None:
+        self.assertIsNone(
+            migrate_lua_first.render_static_recipe_work_effect(
+                {"recipe_id": "bread", "batch": 1, "duration_turns": 10}
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_camp_npc_effect("basecamp_mission", True)
+        )
+
+    def test_upgrade_work_renderer_requires_explicit_target_and_holders(self) -> None:
+        proven = {
+            "camp_handle": {"context_handle": "camp"},
+            "manager_handle": {"context_handle": "manager"},
+            "worker_handle": {"context_handle": "worker"},
+            "upgrade_id": "faction_base_shelter_1_0",
+            "blueprint_id": "fbmc_shelter_1_0",
+            "target": {
+                "kind": "camp_core",
+                "generation": 2,
+                "position": {"context_handle": "target_position"},
+                "terrain": "field",
+                "mapgen_args": {
+                    "count": {"type": "int", "value": 1},
+                    "material": {"type": "string", "value": "stone"},
+                },
+            },
+            "duration_turns": 120,
+            "source_holders": [
+                {
+                    "character_handle": {"context_handle": "worker"},
+                    "slot": "inventory",
+                }
+            ],
+            "destination_holder": {
+                "character_handle": {"context_handle": "worker"},
+                "slot": "inventory",
+            },
+            "item_requests": [
+                {
+                    "item_handle": {"context_handle": "materials"},
+                    "source_holder": {
+                        "character_handle": {"context_handle": "worker"},
+                        "slot": "inventory",
+                    },
+                    "quantity": 1,
+                    "tool": False,
+                }
+            ],
+        }
+        rendered = migrate_lua_first.render_static_upgrade_work_effect(proven)
+        self.assertIsNotNone(rendered)
+        main = "\n".join(rendered or [])
+        self.assertIn("services.camps.tasks.create", main)
+        self.assertIn('"upgrade_work"', main)
+        self.assertIn(
+            'services.types.id("recipe", "faction_base_shelter_1_0")', main
+        )
+        self.assertIn('blueprint_id = "fbmc_shelter_1_0"', main)
+        self.assertIn('kind = "camp_core"', main)
+        self.assertIn("generation = 2", main)
+        self.assertIn('position = context.data["target_position"]', main)
+        self.assertIn('["count"] = { type = "int", value = 1 }', main)
+        self.assertIn("upgrade_task.token", main)
+        self.assertIn('item = context.data["materials"]', main)
+        self.assertNotIn("services.characters.avatar()", main)
+        self.assertNotIn("current", main)
+        self.assertNotIn("nearest", main)
+
+        expansion = dict(proven)
+        expansion["target"] = {
+            **proven["target"],
+            "kind": "expansion",
+            "expansion_handle": {"context_handle": "expansion"},
+        }
+        expansion["target"].pop("generation")
+        expansion_rendered = migrate_lua_first.render_static_upgrade_work_effect(
+            expansion
+        )
+        self.assertIsNotNone(expansion_rendered)
+        self.assertIn(
+            'expansion = context.data["expansion"]',
+            "\n".join(expansion_rendered or []),
+        )
+
+        missing_target = dict(proven)
+        missing_target.pop("target")
+        self.assertIsNone(
+            migrate_lua_first.render_static_upgrade_work_effect(missing_target)
+        )
+        implicit_target = dict(proven)
+        implicit_target["target"] = {
+            **proven["target"],
+            "position": {"nearest": "camp"},
+        }
+        self.assertIsNone(
+            migrate_lua_first.render_static_upgrade_work_effect(implicit_target)
+        )
+        dynamic_blueprint = dict(proven)
+        dynamic_blueprint["blueprint_id"] = {"context_handle": "blueprint"}
+        self.assertIsNone(
+            migrate_lua_first.render_static_upgrade_work_effect(dynamic_blueprint)
+        )
+        missing_holder = dict(proven)
+        missing_holder.pop("destination_holder")
+        self.assertIsNone(
+            migrate_lua_first.render_static_upgrade_work_effect(missing_holder)
+        )
+
+    def test_legacy_camp_upgrade_ui_and_implicit_shapes_stay_precise_todos(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "legacy_camp_upgrade_shapes",
+                        "required_event": "game_start",
+                        "effect": [
+                            "Camp_Upgrade",
+                            {"Camp_Upgrade": "faction_base_shelter_1_0"},
+                            {"platform_upgrade_work": {"upgrade_id": "dynamic"}},
+                            "basecamp_mission",
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "camp_upgrade_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(result.converted, [])
+            self.assertTrue(result.partial)
+            self.assertNotIn("services.camps.tasks", main)
+            self.assertIn(
+                "legacy Camp_Upgrade/UI upgrade shapes need explicit camp, manager, "
+                "worker, target, blueprint, source holders, destination holder, and Item requests",
+                main,
+            )
+            self.assertIn(
+                "upgrade_work requires explicit camp, manager, worker, target, blueprint, "
+                "source holders, destination holder, and Item requests",
+                main,
+            )
+            self.assertIn(
+                "upgrade-shaped Camp_Upgrade/UI inputs also need explicit target, blueprint, and holders",
+                report,
+            )
+            self.assertNotIn("services.characters.avatar()", main)
+            self.assertNotIn("nearest", main)
 
     def test_translates_bounded_npc_service_menu_actions(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -8581,16 +9194,186 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
+            self.assertEqual(len(result.converted), 0)
+            self.assertTrue(result.partial)
             self.assertIn("services.npcs.open_rules(actor)", main)
             self.assertIn(
                 "services.npcs.orders.open_pickup_rules(actor)", main
             )
-            self.assertIn(
-                'services.npcs.training.start_selected(actor, "npc")', main
+            self.assertNotIn("services.npcs.training.start_selected", main)
+            self.assertIn("needs domain-service conversion", report)
+
+    def test_keeps_implicit_npc_dialogue_and_training_as_todos(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "implicit_npc_dialogue",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": [
+                            {"open_dialogue": {"topic": "TALK_TEST"}},
+                            "open_dialogue",
+                            "start_training_npc",
+                        ],
+                    }
+                ),
+                encoding="utf-8",
             )
-            self.assertNotIn("needs domain-service conversion", report)
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "implicit_npc_dialogue_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 3)
+            self.assertNotIn("services.dialogue.open_topic", main)
+            self.assertNotIn("services.npcs.open_dialogue", main)
+            self.assertNotIn("services.characters.avatar()", main)
+            self.assertNotIn("services.npcs.training.start_selected", main)
+            self.assertIn(
+                "exact NPC and avatar handles plus an explicit topic", main
+            )
+            self.assertIn("explicit dialogue participant conversion", report)
+            self.assertIn("exact NPC/avatar handles and topic", report)
+            self.assertIn("needs domain-service conversion", report)
+
+    def test_npc_radio_representation_requires_an_explicit_avatar_handle(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "npc_radio_without_avatar_handle",
+                        "required_event": "npc_becomes_hostile",
+                        "effect": "npc_make_radio_representative",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "npc_radio_mod"
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertTrue(result.partial)
+            self.assertNotIn("services.npcs.set_radio_representative(", main)
+            self.assertNotIn("services.characters.avatar()", main)
+            self.assertIn("explicit avatar participant handle", main)
+            self.assertIn(
+                "requires an explicit avatar participant handle for NPC radio representation",
+                report,
+            )
+
+    def test_character_event_does_not_prove_an_avatar_participant(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "character_event_not_avatar",
+                        "required_event": "character_takes_damage",
+                        "effect": {"u_message": "character event"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "character_event_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertTrue(result.partial)
+            self.assertNotIn("services.characters.avatar()", main)
+
+    def test_character_event_does_not_unlock_avatar_only_predicates(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "character_event_mission",
+                            "required_event": "character_takes_damage",
+                            "condition": {"u_has_mission": "MISSION_MAIN_QUEST"},
+                            "effect": {"message": "mission"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "character_event_faction",
+                            "required_event": "character_takes_damage",
+                            "condition": {"u_has_faction_trust": 1},
+                            "effect": {"message": "faction"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "character_event_query",
+                            "required_event": "character_takes_damage",
+                            "condition": {"u_query": "Continue?"},
+                            "effect": {"message": "query"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "npc_event_query",
+                            "required_event": "npc_becomes_hostile",
+                            "condition": {"u_query": "Continue?"},
+                            "effect": {"message": "npc query"},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "character_event_avatar_only_mod",
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(len(result.partial), 4)
+            self.assertNotIn("services.missions.has_active", main)
+            self.assertNotIn("services.factions.for_character", main)
+            self.assertNotIn("ccb.presentation.confirm", main)
+            self.assertNotIn("services.characters.avatar()", main)
+
+    def test_run_eocs_avatar_talker_requires_proven_handle(self) -> None:
+        names = {"child": "migrated_child"}
+        literal = {
+            "run_eocs": "child",
+            "alpha_talker": "avatar",
+        }
+        self.assertIsNone(
+            migrate_lua_first.render_static_run_eocs(
+                literal, names, actor_expression="actor",
+                avatar_actor_proven=False,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_run_eocs(
+                {
+                    "run_eocs": "child",
+                    "alpha_talker": {"context_val": "talker"},
+                },
+                names,
+                actor_expression="actor",
+                avatar_actor_proven=False,
+            )
+        )
+        rendered = migrate_lua_first.render_static_run_eocs(
+            literal,
+            names,
+            actor_expression="actor",
+            avatar_actor_proven=True,
+        )
+        self.assertIsNotNone(rendered)
+        self.assertNotIn(
+            "services.characters.avatar()", "\n".join(rendered or [])
+        )
 
     def test_translates_bounded_context_pickup_actions(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -8627,20 +9410,16 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(result.partial, [])
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 2)
+            self.assertNotIn("services.activities.pickup_from", main)
+            self.assertNotIn("services.items.transfer", main)
             self.assertIn(
-                'services.activities.pickup_from(\n        actor, '
-                'context.data["loot_pos"], 5, 1000, nil)',
+                "map holder requires one explicitly typed abs_ms coordinate; "
+                "current/u/alpha/local/omt/mixed-frame pickup locations remain TODO",
                 main,
             )
-            self.assertIn(
-                'services.activities.pickup_from(\n        actor, context.data["npc_pos"], '
-                '0, nil, 2500)',
-                main,
-            )
-            self.assertNotIn("pickup location and limits", main)
-            self.assertNotIn("needs domain-service conversion", report)
+            self.assertEqual(report.count("map holder requires"), 2)
 
     def test_translates_bounded_follower_and_item_selection_actions(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -8668,8 +9447,8 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
+            self.assertEqual(len(result.converted), 0)
+            self.assertTrue(result.partial)
             self.assertEqual(main.count("services.followers.list()"), 3)
             self.assertIn(
                 'services.npcs.medical.open_bionic_service(\n'
@@ -8686,18 +9465,9 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 "                    actor, selected_handle)",
                 main,
             )
-            self.assertEqual(main.count("services.inventory.choose("), 2)
-            self.assertIn(
-                "services.npcs.offer_item(\n"
-                "                actor, selected.item, false)",
-                main,
-            )
-            self.assertIn(
-                "services.npcs.offer_item(\n"
-                "                actor, selected.item, true)",
-                main,
-            )
-            self.assertNotIn("needs domain-service conversion", report)
+            self.assertEqual(main.count("services.inventory.choose("), 0)
+            self.assertNotIn("services.npcs.offer_item(", main)
+            self.assertTrue(result.todos or result.partial)
 
     def test_translates_bounded_npc_equipment_trade_shapes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -8748,71 +9518,55 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
-            self.assertIn(
-                "services.npcs.equipment.return_stolen_items(actor)", main
-            )
-            self.assertIn(
-                "services.npcs.equipment.request_gift(\n        actor, 500)",
-                main,
-            )
-            self.assertIn(
-                'services.trade.buy_monsters(\n        actor, services.types.id("monster", "mon_dog"), 500',
-                main,
-            )
-            self.assertIn("name = \"Buddy\"", main)
-            self.assertIn("services.trade.settle(\n        actor, spend_amount)", main)
-            self.assertEqual(main.count("services.inventory.remove(actor, matching_items[index])"), 2)
-            self.assertIn(
-                "services.inventory.remove(actor, matching_items[index])",
-                main,
-            )
-            self.assertIn(
+            self.assertEqual(result.converted, [])
+            self.assertTrue(result.partial)
+            self.assertNotIn("services.npcs.equipment", main)
+            self.assertNotIn("request_gift", main)
+            self.assertNotIn("return_stolen_items", main)
+            self.assertIn("drop_stolen_item needs explicit Item handles", main)
+            self.assertIn("equipment allowance through", main)
+            self.assertNotIn("services.trade.", main)
+            self.assertIn("monster-purchase conversion", report)
+            self.assertIn("cash-payment conversion", report)
+            self.assertNotIn("services.inventory.remove(actor, matching_items[index])", main)
+            self.assertNotIn("services.trade.transfer_matching(", main)
+            self.assertNotIn(
                 'services.inventory.give(\n        services.characters.avatar(), services.types.id("item", "apple"), 2',
                 main,
             )
-            self.assertIn(
-                'services.trade.transfer_matching(\n        services.characters.avatar(), actor, services.types.id("item", "rock"), { limit = 1 })',
-                main,
-            )
+            self.assertIn("item-purchase conversion", report)
+            self.assertIn("item-sale conversion", report)
             self.assertIn("services.spells.gain_levels(", main)
-            self.assertIn("actor, spell.id, 2", main)
+            self.assertNotIn("actor, spell.id, 2", main)
             self.assertIn("actor, spell.id, 1", main)
-            self.assertIn("services.mutations.grant(actor, remainder)", main)
+            self.assertNotIn("services.mutations.grant(actor, remainder)", main)
             self.assertIn("services.spells.learn(actor, remainder, { force = true })", main)
-            self.assertIn("services.recipes.learn(actor, remainder, true)", main)
+            self.assertNotIn("services.recipes.learn(actor, remainder, true)", main)
+            self.assertNotIn("services.npcs.missions.add_assigned(", main)
             self.assertIn(
-                'services.npcs.missions.add_assigned(\n        actor, services.types.id("mission", "MISSION_A"))',
+                "NPC mission assignment through the typed mission provider service",
                 main,
             )
-            self.assertIn(
-                'services.npcs.medical.provide_aid(actor, "advanced", false)',
-                main,
-            )
+            self.assertNotIn("services.npcs.medical.provide_aid(", main)
             self.assertIn(
                 "services.npcs.add_faction_rep(\n        actor, 2)",
                 main,
             )
             self.assertIn("local npc_state = service_value(services.npcs.get(actor))", main)
             self.assertIn("debt = debt + (npc_state.opinion.anger) * 1", main)
-            self.assertIn("services.camps.open_missions(actor)", main)
+            self.assertNotIn("services.camps.", main)
+            self.assertIn(
+                "basecamp_mission only with explicit camp, manager, and worker handles",
+                main,
+            )
             self.assertIn(
                 'services.npcs.open_companion_missions(actor, "SCAVENGER")',
                 main,
             )
-            self.assertIn(
-                'services.npcs.medical.open_bionic_service(actor, "install")',
-                main,
-            )
-            self.assertIn(
-                'services.npcs.medical.open_bionic_service(actor, "remove")',
-                main,
-            )
-            self.assertIn(
-                "services.npcs.medical.repair_bionic_limbs(actor)", main
-            )
-            self.assertNotIn("domain-service conversion", report)
+            self.assertNotIn("services.npcs.medical.open_bionic_service(", main)
+            self.assertNotIn("services.npcs.medical.repair_bionic_limbs(", main)
+            self.assertNotIn("services.characters.avatar()", main)
+            self.assertIn("domain-service conversion", report)
 
     def test_roll_remainder_runs_true_and_false_callbacks(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -8868,53 +9622,330 @@ class LuaFirstMigrationTest(unittest.TestCase):
             )
             self.assertNotIn("remainder-roll conversion", report)
 
-    def test_translates_proven_character_teleport_targets(self) -> None:
+    def _migrate_teleport_source(self, objects: list[dict[str, object]]):
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
-            source.write_text(
-                json.dumps(
-                    [
-                        {
-                            "type": "effect_on_condition",
-                            "id": "bounded_character_teleport",
-                            "required_event": "game_start",
-                            "effect": [
-                                {"u_teleport": {"u_val": "return_pos"}},
-                                {
-                                    "u_teleport": {"context_val": "safe_pos"},
-                                    "force": True,
-                                },
-                            ],
-                        },
-                        {
-                            "type": "effect_on_condition",
-                            "id": "bounded_npc_teleport",
-                            "required_event": "npc_becomes_hostile",
-                            "effect": [
-                                {"npc_teleport": {"npc_val": "npc_pos"}},
-                            ],
-                        },
-                    ]
-                ),
-                encoding="utf-8",
-            )
-            result = migrate_lua_first.migrate(
+            source.write_text(json.dumps(objects), encoding="utf-8")
+            return migrate_lua_first.migrate(
                 migrate_lua_first.load_objects([source]), "teleport_mod"
             )
-            main = result.files[Path("main.lua")]
-            report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(main.count("services.relocation.creature_at("), 3)
-            self.assertIn(
-                'services.variables.get(\n        actor, "return_pos")',
-                main,
-            )
-            self.assertIn('context.data["safe_pos"]', main)
-            self.assertIn("{ force = true }", main)
-            self.assertNotIn("services.relocation.local_at", main)
-            self.assertNotIn("needs domain-service conversion", report)
+    def test_translates_proven_character_teleport_targets(self) -> None:
+        result = self._migrate_teleport_source(
+            [
+                {
+                    "type": "effect_on_condition",
+                    "id": "bounded_character_teleport",
+                    "required_event": "game_start",
+                    "effect": [
+                        {"u_teleport": {"u_val": "return_pos"}},
+                        {
+                            "u_teleport": {"context_val": "safe_pos"},
+                            "force": True,
+                        },
+                    ],
+                },
+                {
+                    "type": "effect_on_condition",
+                    "id": "bounded_npc_teleport",
+                    "required_event": "npc_becomes_hostile",
+                    "effect": [
+                        {"npc_teleport": {"npc_val": "npc_pos"}},
+                    ],
+                },
+            ]
+        )
+        main = result.files[Path("main.lua")]
+        report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertEqual(len(result.converted), 0)
+        self.assertEqual(len(result.partial), 2)
+        self.assertIn("TODO: translate teleport", main)
+        self.assertNotIn("services.map.tile(", main)
+        self.assertNotIn("services.relocation.move(", main)
+        self.assertNotIn("services.relocation.creature_at(", main)
+        self.assertIn("needs domain-service conversion", report)
+
+    def test_translates_exact_monster_abs_ms_teleport(self) -> None:
+        result = self._migrate_teleport_source(
+            [
+                {
+                    "type": "effect_on_condition",
+                    "id": "monster_abs_ms_teleport",
+                    "required_event": "monster_takes_damage",
+                    "effect": {"u_teleport": {"abs_ms": [10, 20, 30]}},
+                }
+            ]
+        )
+        main = result.files[Path("main.lua")]
+        report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertEqual(len(result.converted), 1)
+        self.assertEqual(result.partial, [])
+        self.assertIn("services.coords.tripoint_abs_ms(10, 20, 30)", main)
+        self.assertEqual(main.count("services.map.tile("), 1)
+        self.assertEqual(main.count("services.relocation.move("), 1)
+        self.assertIn(
+            "services.relocation.move(\n        actor, token, { strict = true }))",
+            main,
+        )
+        self.assertNotIn("services.relocation.creature_at(", main)
+        self.assertNotIn("TODO: translate teleport", main)
+        self.assertNotIn("TODO: translate teleport", report)
+
+    def test_translates_exact_avatar_abs_ms_teleport(self) -> None:
+        result = self._migrate_teleport_source(
+            [
+                {
+                    "type": "effect_on_condition",
+                    "id": "avatar_abs_ms_teleport",
+                    "required_event": "avatar_moves",
+                    "effect": {"u_teleport": {"abs_ms": [11, 21, 0]}},
+                }
+            ]
+        )
+        main = result.files[Path("main.lua")]
+        report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertEqual(len(result.converted), 1)
+        self.assertEqual(result.partial, [])
+        self.assertIn("services.coords.tripoint_abs_ms(11, 21, 0)", main)
+        self.assertEqual(main.count("services.map.tile("), 1)
+        self.assertEqual(main.count("services.relocation.move("), 1)
+        self.assertIn(
+            "services.relocation.move(\n        actor, token, { strict = true }))",
+            main,
+        )
+        self.assertNotIn("services.relocation.creature_at(", main)
+        self.assertNotIn("TODO: translate teleport", main)
+        self.assertNotIn("TODO: translate teleport", report)
+
+    def test_translates_exact_avatar_abs_omt_travel(self) -> None:
+        result = self._migrate_teleport_source(
+            [
+                {
+                    "type": "effect_on_condition",
+                    "id": "avatar_abs_omt_teleport",
+                    "required_event": "avatar_moves",
+                    "effect": {"u_teleport": {"abs_omt": [14, 24, 0]}},
+                }
+            ]
+        )
+        main = result.files[Path("main.lua")]
+        report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertEqual(len(result.converted), 1)
+        self.assertEqual(result.partial, [])
+        self.assertIn("services.coords.tripoint_abs_omt(14, 24, 0)", main)
+        self.assertIn("services.overmap.tile_token(", main)
+        self.assertIn(
+            "services.relocation.travel_to_omt(\n"
+            "        actor, token, { strict = true }))",
+            main,
+        )
+        self.assertNotIn("overmap_at", main)
+        self.assertNotIn("services.relocation.move(", main)
+        self.assertNotIn("TODO: translate teleport", main)
+        self.assertNotIn("TODO: translate teleport", report)
+
+    def test_translates_exact_npc_abs_ms_teleport(self) -> None:
+        result = self._migrate_teleport_source(
+            [
+                {
+                    "type": "effect_on_condition",
+                    "id": "npc_abs_ms_teleport",
+                    "required_event": "npc_becomes_hostile",
+                    "effect": {"npc_teleport": {"abs_ms": [12, 22, 0]}},
+                }
+            ]
+        )
+        main = result.files[Path("main.lua")]
+        report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertEqual(len(result.converted), 1)
+        self.assertEqual(result.partial, [])
+        self.assertIn("services.coords.tripoint_abs_ms(12, 22, 0)", main)
+        self.assertEqual(main.count("services.map.tile("), 1)
+        self.assertEqual(main.count("services.relocation.move("), 1)
+        self.assertIn(
+            "local actor = actor_override or context.actors.npc",
+            main,
+        )
+        self.assertIn(
+            "services.relocation.move(\n        actor, token, { strict = true }))",
+            main,
+        )
+        self.assertNotIn("services.relocation.creature_at(", main)
+        self.assertNotIn("TODO: translate teleport", main)
+        self.assertNotIn("TODO: translate teleport", report)
+
+    def test_translates_exact_vehicle_abs_ms_teleport(self) -> None:
+        result = self._migrate_teleport_source(
+            [
+                {
+                    "type": "effect_on_condition",
+                    "id": "vehicle_abs_ms_teleport",
+                    "required_event": "character_takes_damage",
+                    "effect": {"u_teleport": {"abs_ms": [13, 23, 0]}},
+                    "__inline_actor_kind": "vehicle",
+                }
+            ]
+        )
+        main = result.files[Path("main.lua")]
+        report = result.files[Path("MIGRATION_REPORT.md")]
+
+        self.assertEqual(len(result.converted), 1)
+        self.assertEqual(result.partial, [])
+        self.assertIn("services.coords.tripoint_abs_ms(13, 23, 0)", main)
+        self.assertEqual(main.count("services.map.tile("), 1)
+        self.assertEqual(main.count("services.relocation.move("), 1)
+        self.assertIn(
+            "services.relocation.move(\n        actor, token, { strict = true }))",
+            main,
+        )
+        self.assertNotIn("services.relocation.vehicle_at(", main)
+        self.assertNotIn("services.relocation.creature_at(", main)
+        self.assertNotIn("TODO: translate teleport", main)
+        self.assertNotIn("TODO: translate teleport", report)
+
+    def test_marks_non_monster_teleport_shapes_for_migration(self) -> None:
+        explicit_effect = {"u_teleport": {"abs_ms": [10, 20, 30]}}
+        cases = [
+            (
+                "force",
+                "monster_takes_damage",
+                {"u_teleport": {"abs_ms": [10, 20, 30]}, "force": True},
+            ),
+            (
+                "force_safe",
+                "monster_takes_damage",
+                {"u_teleport": {"abs_ms": [10, 20, 30]}, "force_safe": True},
+            ),
+            (
+                "safe",
+                "monster_takes_damage",
+                {"u_teleport": {"abs_ms": [10, 20, 30]}, "safe": True},
+            ),
+            (
+                "message",
+                "monster_takes_damage",
+                {
+                    "u_teleport": {"abs_ms": [10, 20, 30]},
+                    "message": "teleported",
+                },
+            ),
+            (
+                "context_coordinate",
+                "monster_takes_damage",
+                {"u_teleport": {"context_val": "destination"}},
+            ),
+            (
+                "global_coordinate",
+                "monster_takes_damage",
+                {"u_teleport": {"global_val": "destination"}},
+            ),
+            (
+                "monster_abs_omt",
+                "monster_takes_damage",
+                {"u_teleport": {"abs_omt": [14, 24, 0]}},
+            ),
+            (
+                "npc_abs_omt",
+                "npc_becomes_hostile",
+                {"npc_teleport": {"abs_omt": [15, 25, 0]}},
+            ),
+            (
+                "vehicle_abs_omt",
+                "character_takes_damage",
+                {"u_teleport": {"abs_omt": [16, 26, 0]}},
+                {"__inline_actor_kind": "vehicle"},
+            ),
+            (
+                "avatar_abs_omt_force",
+                "avatar_moves",
+                {"u_teleport": {"abs_omt": [17, 27, 0]}, "force": True},
+            ),
+            (
+                "avatar_global_omt_variable",
+                "avatar_moves",
+                {"u_teleport": {"global_val": "destination"}},
+            ),
+            (
+                "avatar_context_omt_variable",
+                "avatar_moves",
+                {"u_teleport": {"context_val": "destination"}},
+            ),
+            (
+                "u_coordinate",
+                "monster_takes_damage",
+                {"u_teleport": {"u_val": "destination"}},
+            ),
+            (
+                "generic_vehicle_talker",
+                "character_takes_damage",
+                explicit_effect,
+                {"condition": "u_is_vehicle"},
+            ),
+            (
+                "npc_coordinate",
+                "monster_takes_damage",
+                {"u_teleport": {"npc_val": "destination"}},
+            ),
+            (
+                "var_coordinate",
+                "monster_takes_damage",
+                {"u_teleport": {"var_val": "destination"}},
+            ),
+            ("shape_only_character", None, explicit_effect),
+            (
+                "shape_only_npc_without_direct_event",
+                "character_takes_damage",
+                {"npc_teleport": {"abs_ms": [10, 20, 30]}},
+            ),
+            ("generic_creature_proof", "character_takes_damage", explicit_effect),
+            ("npc_actor", "npc_becomes_hostile", explicit_effect),
+            (
+                "inline_creature",
+                "character_takes_damage",
+                explicit_effect,
+                {"__inline_actor_kind": "creature"},
+            ),
+            (
+                "inline_character",
+                "character_takes_damage",
+                explicit_effect,
+                {"__inline_actor_kind": "character"},
+            ),
+            (
+                "force_vehicle",
+                "character_takes_damage",
+                {"u_teleport": {"abs_ms": [10, 20, 30]}, "force": True},
+                {"__inline_actor_kind": "vehicle"},
+            ),
+        ]
+
+        for case in cases:
+            name, required_event, effect = case[:3]
+            extra_fields = case[3] if len(case) > 3 else {}
+            with self.subTest(name=name):
+                source = {
+                    "type": "effect_on_condition",
+                    "id": f"unsupported_teleport_{name}",
+                    "effect": effect,
+                    **extra_fields,
+                }
+                if required_event is not None:
+                    source["required_event"] = required_event
+                result = self._migrate_teleport_source(
+                    [source]
+                )
+                main = result.files[Path("main.lua")]
+
+                self.assertIn("TODO: translate teleport", main)
+                self.assertNotIn("services.relocation.travel_to_omt(", main)
+                self.assertNotIn("services.map.tile(", main)
+                self.assertNotIn("services.relocation.move(", main)
+                self.assertNotIn("services.relocation.creature_at(", main)
 
     def test_translates_literal_and_variable_avatar_dimension_travel(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -9010,7 +10041,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn("TODO: translate random item-fault mutation", main)
             self.assertNotIn("services.items.transform", main)
             self.assertIn("TODO: translate transform_line", main)
-            self.assertNotIn("TODO: translate u_travel_to_dimension", main)
+            self.assertIn("TODO: translate u_travel_to_dimension", main)
             self.assertNotIn("services.world.transform_line", main)
             self.assertNotIn("services.gameplay.environment.set_light_level", main)
             self.assertIn("services.items.activate", main)
@@ -9069,13 +10100,13 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertEqual(len(result.converted), 0)
             self.assertEqual(len(result.partial), 1)
             self.assertIn(
-                'services.gameplay.environment.set_light_override(\n'
-                '        50, services.time.duration(2, "turn"), "ccb_light")',
+                'service_value(services.weather.override_light(\n'
+                '        50, services.time.duration(2, "turn"), "ccb_light"))',
                 main,
             )
             self.assertIn(
-                'services.gameplay.environment.set_light_override(\n'
-                '        0, services.time.duration(1, "turn"))',
+                'service_value(services.weather.override_light(\n'
+                '        0, services.time.duration(1, "turn")))',
                 main,
             )
             self.assertEqual(main.count("TODO: translate custom_light_level"), 1)
@@ -9257,12 +10288,12 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(len(result.partial), 3)
-            self.assertIn("services.items.set_fault", main)
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 5)
+            self.assertNotIn("services.items.set_fault", main)
             self.assertNotIn("services.items.set_random_fault", main)
             self.assertEqual(
-                report.count("needs domain-service conversion"), 3
+                report.count("needs domain-service conversion"), 5
             )
             self.assertNotIn("run_eoc", main)
 
@@ -9374,8 +10405,12 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertEqual(result.partial, [])
             self.assertEqual(main.count("services.items.activate("), 2)
             self.assertEqual(main.count("context.actors.item ~= nil and actor ~= nil"), 2)
-            self.assertIn('context.actors.item, actor, "reveal_map")', main)
-            self.assertIn('context.actors.item, actor, "transform")', main)
+            self.assertIn('context.actors.item, actor, "reveal_map", {', main)
+            self.assertIn('context.actors.item, actor, "transform", {', main)
+            self.assertIn(
+                "target = service_value(services.characters.snapshot(actor)).creature.position",
+                main,
+            )
             self.assertNotIn("item activation through", report)
 
     def test_item_activation_fails_closed_for_dynamic_or_interactive_shapes(self) -> None:
@@ -9848,13 +10883,18 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn("ccb.dialogue.register_topic", main)
             self.assertIn('dynamic_line = "Hello world"', main)
             self.assertIn('topic = "TALK_DONE"', main)
-            self.assertIn("speaker_effects = { function(context)", main)
-            self.assertIn("on_select = function(context)", main)
-            self.assertIn("services.trade.transfer_matching", main)
-            self.assertIn("context:topic_item()", main)
-            self.assertIn("services.vehicles.marked_service_vehicle", main)
+            self.assertNotIn("speaker_effects = { function(context)", main)
+            self.assertNotIn("on_select = function(context)", main)
+            self.assertNotIn("services.trade.transfer_matching", main)
+            self.assertNotIn("services.trade.transfer", main)
+            self.assertNotIn("context:topic_item()", main)
+            self.assertNotIn("services.vehicles.marked_service_vehicle", main)
             self.assertNotIn("has no native Platform registrar", result.files[Path("MIGRATION_REPORT.md")])
-            self.assertEqual(result.todos, [])
+            self.assertTrue(result.todos)
+            self.assertIn(
+                "response effect needs a native callback",
+                result.files[Path("MIGRATION_REPORT.md")],
+            )
 
     def test_translates_bounded_inventory_conditions_to_typed_services(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -9904,7 +10944,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn("services.inventory.wielded_matches(actor", main)
             self.assertIn("services.items.ammo_sufficient(context.actors.item, actor)", main)
             self.assertIn("relative_rot > 1", main)
-            self.assertNotIn("condition needs a native Lua predicate", report)
+            self.assertNotIn("condition TODO: translate the legacy condition into a Lua predicate", report)
 
     def test_inventory_and_world_effects_lower_only_bounded_shapes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -10002,19 +11042,151 @@ class LuaFirstMigrationTest(unittest.TestCase):
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn("services.inventory.consume(", main)
-            self.assertIn("services.inventory.consume_sum(", main)
-            self.assertIn("services.world.put_field(", main)
-            self.assertIn("services.world.apply_mapgen_update(", main)
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 2)
+            self.assertTrue(result.todos)
+            self.assertNotIn("services.inventory.consume(", main)
+            self.assertNotIn("services.inventory.consume_sum(", main)
+            self.assertIn("TODO: translate the inventory consumption", main)
+            self.assertNotIn("services.world.put_field(", main)
+            self.assertIn("explicitly typed abs_ms coordinate", main)
+            self.assertNotIn("services.mapgen.apply(", main)
+            self.assertIn(
+                "TODO: Platform-only mapgen_update lowering requires static absolute OMT -> "
+                "OvermapTileToken, static update_mapgen ID -> MapgenUpdateToken, and "
+                "immediate transaction apply; dynamic IDs/coordinates, delay/mission/key, "
+                "or collision=false must be rewritten by the author; unsupported "
+                "mirror/rotation transforms must also be "
+                "rewritten by the author.",
+                main,
+            )
             self.assertIn("services.overmap.reveal(", main)
             self.assertIn("services.world.schedule_location_revert(", main)
             self.assertIn("services.world.schedule_location_copy(", main)
             self.assertIn("services.world.transform_radius(", main)
-            self.assertIn("services.inventory.drop_wielded(", main)
+            self.assertNotIn("services.inventory.drop_wielded", main)
+            self.assertNotIn("services.items.transfer", main)
             self.assertIn("services.item_categories.set_spawn_rates(", main)
+
+    def test_item_category_spawn_rates_lower_only_bounded_unique_literals(self) -> None:
+        valid_effect = {
+            "set_item_category_spawn_rates": [
+                {"id": "food", "spawn_rate": 0},
+                {"id": "tools", "spawn_rate": 1_000_000},
+            ]
+        }
+        invalid_effects = {
+            "dynamic": {"set_item_category_spawn_rates": "rate"},
+            "duplicate": {
+                "set_item_category_spawn_rates": [
+                    {"id": "food", "spawn_rate": 1},
+                    {"id": "food", "spawn_rate": 2},
+                ]
+            },
+            "invalid_category": {
+                "set_item_category_spawn_rates": [
+                    {"id": "", "spawn_rate": 1}
+                ]
+            },
+            "invalid_rate_type": {
+                "set_item_category_spawn_rates": [
+                    {"id": "food", "spawn_rate": "1"}
+                ]
+            },
+            "boolean_rate": {
+                "set_item_category_spawn_rates": [
+                    {"id": "food", "spawn_rate": True}
+                ]
+            },
+            "nan_rate": {
+                "set_item_category_spawn_rates": [
+                    {"id": "food", "spawn_rate": float("nan")}
+                ]
+            },
+            "positive_infinity": {
+                "set_item_category_spawn_rates": [
+                    {"id": "food", "spawn_rate": float("inf")}
+                ]
+            },
+            "negative_infinity": {
+                "set_item_category_spawn_rates": [
+                    {"id": "food", "spawn_rate": float("-inf")}
+                ]
+            },
+            "negative_rate": {
+                "set_item_category_spawn_rates": [
+                    {"id": "food", "spawn_rate": -1}
+                ]
+            },
+            "excessive_rate": {
+                "set_item_category_spawn_rates": [
+                    {"id": "food", "spawn_rate": 1_000_001}
+                ]
+            },
+            "overflow_rate": {
+                "set_item_category_spawn_rates": [
+                    {"id": "food", "spawn_rate": 10 ** 1000}
+                ]
+            },
+            "missing_rate": {
+                "set_item_category_spawn_rates": [{"id": "food"}]
+            },
+            "extra_field": {
+                "set_item_category_spawn_rates": [
+                    {"id": "food", "spawn_rate": 1, "extra": True}
+                ]
+            },
+            "non_update": {
+                "set_item_category_spawn_rates": ["food"]
+            },
+            "empty_batch": {"set_item_category_spawn_rates": []},
+            "too_many": {
+                "set_item_category_spawn_rates": [
+                    {"id": f"category_{index}", "spawn_rate": 1}
+                    for index in range(257)
+                ]
+            },
+        }
+
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+
+            def migrate_effect(effect: dict, identifier: str):
+                source.write_text(
+                    json.dumps(
+                        {
+                            "type": "effect_on_condition",
+                            "id": f"item_category_spawn_{identifier}",
+                            "required_event": "game_start",
+                            "effect": effect,
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                result = migrate_lua_first.migrate(
+                    migrate_lua_first.load_objects([source]),
+                    "item_category_spawn_mod",
+                )
+                return result, result.files[Path("main.lua")]
+
+            result, main = migrate_effect(valid_effect, "valid")
+            self.assertIn("services.item_categories.set_spawn_rates(", main)
+            self.assertNotIn(
+                "TODO: translate item-category spawn rates", main
+            )
+            self.assertFalse(result.partial)
+
+            for identifier, effect in invalid_effects.items():
+                with self.subTest(identifier=identifier):
+                    result, main = migrate_effect(effect, identifier)
+                    self.assertNotIn(
+                        "services.item_categories.set_spawn_rates(", main
+                    )
+                    self.assertIn(
+                        "TODO: translate item-category spawn rates", main
+                    )
+                    self.assertTrue(result.partial)
+                    self.assertTrue(result.todos)
 
     def test_set_field_preserves_native_hit_player_default(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -10037,13 +11209,13 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 migrate_lua_first.load_objects([source]), "set_field_default_mod"
             )
             main = result.files[Path("main.lua")]
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn("services.world.put_field(", main)
-            self.assertIn(", true)", main)
+            self.assertEqual(result.converted, [])
+            self.assertTrue(result.partial)
+            self.assertTrue(result.todos)
+            self.assertNotIn("services.world.put_field(", main)
+            self.assertIn("explicitly typed abs_ms coordinate", main)
 
-    def test_mapgen_update_preserves_multiple_ids_and_native_options(self) -> None:
+    def test_mapgen_update_rejects_unsupported_transforms_as_todos(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -10055,13 +11227,12 @@ class LuaFirstMigrationTest(unittest.TestCase):
                         "effect": {
                             "mapgen_update": [
                                 "update_one",
-                                {"context_val": "update_two"},
+                                "update_two",
                             ],
-                            "target_var": {"context_val": "location"},
-                            "time_in_future": {"global_val": "delay"},
-                            "key": {"context_val": "event_key"},
-                            "cancel_on_collision": False,
+                            "target_var": {"abs_omt": [10, 20, 0]},
+                            "cancel_on_collision": True,
                             "mirror_horizontal": True,
+                            "mirror_vertical": True,
                             "rotation": 2,
                         },
                     }
@@ -10074,20 +11245,24 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertEqual(main.count("services.world.apply_mapgen_update("), 2)
-            self.assertIn('services.types.id("update_mapgen", "update_one")', main)
-            self.assertIn('tostring((context.data["update_two"])', main)
-            self.assertIn('services.variables.get_global("delay")', main)
-            self.assertIn('tostring((context.data["event_key"])', main)
-            self.assertIn("cancel_on_collision = false", main)
-            self.assertIn("mirror_horizontal = true", main)
-            self.assertIn("rotation = 2", main)
+            todo = (
+                "TODO: Platform-only mapgen_update lowering requires static absolute OMT -> "
+                "OvermapTileToken, static update_mapgen ID -> MapgenUpdateToken, and "
+                "immediate transaction apply; dynamic IDs/coordinates, delay/mission/key, "
+                "or collision=false must be rewritten by the author; unsupported "
+                "mirror/rotation transforms must also be "
+                "rewritten by the author."
+            )
+
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 1)
+            self.assertIn(todo, main)
+            self.assertNotIn("services.mapgen.apply(", main)
+            self.assertNotIn("services.world.", main)
             self.assertNotIn("mapgen update target", report)
 
-    def test_mapgen_update_searches_terrain_and_applies_omt_offsets(self) -> None:
+    def test_mapgen_update_uses_explicit_omt_token_and_applies_offsets(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -10097,7 +11272,12 @@ class LuaFirstMigrationTest(unittest.TestCase):
                     "required_event": "game_start",
                     "effect": {
                         "mapgen_update": "update_pond",
-                        "om_terrain": "island_core",
+                        "target_var": {
+                            "coordinate_space": "abs_omt",
+                            "x": 14,
+                            "y": 24,
+                            "z": 0,
+                        },
                         "offset_x": -1,
                         "offset_y": 1,
                     },
@@ -10111,12 +11291,114 @@ class LuaFirstMigrationTest(unittest.TestCase):
 
             self.assertEqual(len(result.converted), 1)
             self.assertEqual(result.partial, [])
-            self.assertIn("services.overmap.closest(", main)
-            self.assertIn("radius = 540", main)
+            self.assertIn("services.overmap.tile_token(", main)
+            self.assertIn("services.mapgen.update_token(", main)
+            self.assertIn("services.mapgen.apply(", main)
+            self.assertIn("services.coords.tripoint_abs_omt(14, 24, 0)", main)
             self.assertIn(
                 "services.coords.tripoint_rel_omt(-1, 1, 0)", main
             )
-            self.assertIn("services.world.apply_mapgen_update(", main)
+
+    def test_mapgen_update_rejects_unsafe_shapes_as_todos(self) -> None:
+        def make_effect(**overrides: object) -> dict[str, object]:
+            effect: dict[str, object] = {
+                "mapgen_update": "update_static",
+                "target_var": {"abs_omt": [10, 20, 0]},
+                "cancel_on_collision": True,
+            }
+            effect.update(overrides)
+            return effect
+
+        unsafe_effects = [
+            make_effect(mapgen_update={"context_val": "update_id"}),
+            make_effect(mapgen_update=42),
+            make_effect(target_var={"context_val": "target"}),
+            make_effect(target_var={"u_val": "target"}),
+            make_effect(
+                target_var={
+                    "coordinate_space": "local",
+                    "x": 10,
+                    "y": 20,
+                    "z": 0,
+                }
+            ),
+            make_effect(time_in_future="1 turn"),
+            make_effect(delay="1 turn"),
+            make_effect(mission="mission_id"),
+            make_effect(key="event_key"),
+            make_effect(cancel_on_collision=False),
+            make_effect(mirror_horizontal=True),
+            make_effect(mirror_vertical=True),
+            make_effect(rotation=1),
+        ]
+        for effect in unsafe_effects:
+            self.assertIsNone(migrate_lua_first.render_static_mapgen_update(effect))
+
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "unsafe_mapgen_updates",
+                        "required_event": "game_start",
+                        "effect": unsafe_effects,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "unsafe_mapgen_mod"
+            )
+            main = result.files[Path("main.lua")]
+            todo = (
+                "TODO: Platform-only mapgen_update lowering requires static absolute OMT -> "
+                "OvermapTileToken, static update_mapgen ID -> MapgenUpdateToken, and "
+                "immediate transaction apply; dynamic IDs/coordinates, delay/mission/key, "
+                "or collision=false must be rewritten by the author; unsupported "
+                "mirror/rotation transforms must also be rewritten by the author."
+            )
+
+            self.assertEqual(main.count(todo), len(unsafe_effects))
+            self.assertEqual(len(result.todos), len(unsafe_effects))
+            self.assertTrue(result.partial)
+            self.assertNotIn("services.mapgen.apply(", main)
+            self.assertNotIn("services.world.", main)
+
+    def test_mapgen_update_static_collision_cancel_true_lowers(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "effect_on_condition",
+                        "id": "static_mapgen_update",
+                        "required_event": "game_start",
+                        "effect": {
+                            "mapgen_update": "update_static",
+                            "target_var": {"abs_omt": [10, 20, 0]},
+                            "cancel_on_collision": True,
+                            "mirror_horizontal": False,
+                            "mirror_vertical": False,
+                            "rotation": 0,
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "static_mapgen_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(result.partial, [])
+            self.assertEqual(result.todos, [])
+            self.assertIn("services.mapgen.apply(", main)
+            self.assertIn("cancel_on_collision = true", main)
+            self.assertNotIn("mirror_horizontal", main)
+            self.assertNotIn("mirror_vertical", main)
+            self.assertNotIn("rotation", main)
+            self.assertNotIn("services.world.", main)
 
     def test_inventory_lowering_rejects_dynamic_or_out_of_contract_shapes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -10161,7 +11443,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
 
             self.assertEqual(result.converted, [])
             self.assertEqual(len(result.partial), 1)
-            self.assertIn("condition needs a native Lua predicate", result.files[Path("MIGRATION_REPORT.md")])
+            self.assertIn("condition TODO: translate the legacy condition into a Lua predicate", result.files[Path("MIGRATION_REPORT.md")])
 
     def test_lowers_variable_backed_inventory_consumption(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -10197,15 +11479,13 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn('services.types.id("item", tostring((context.data["item_id"])', main)
-            self.assertIn('services.variables.get_global("count")', main)
-            self.assertIn('services.variables.resolve(context.data, actor, "u", "charges")', main)
-            self.assertIn("services.inventory.consume_sum(actor", main)
-            self.assertIn('tostring((context.data["sum_item"])', main)
-            self.assertNotIn("inventory consumption through", report)
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertTrue(result.todos)
+            self.assertNotIn("services.inventory.consume(", main)
+            self.assertNotIn("services.inventory.consume_sum(", main)
+            self.assertNotIn('tostring((context.data["item_id"])', main)
+            self.assertIn("inventory consumption through", report)
 
     def test_lowers_variable_backed_pickup_limits_and_positions(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -10232,15 +11512,17 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn("services.activities.pickup_from(", main)
-            self.assertIn('services.variables.get(actor, "pickup_position")', main)
-            self.assertIn('services.variables.get_global("extra_moves")', main)
-            self.assertIn('context.data["volume"]', main)
-            self.assertIn('services.variables.resolve(context.data, actor, "u", "mass")', main)
-            self.assertNotIn("pickup location and limits", report)
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertTrue(result.todos)
+            self.assertNotIn("services.activities.pickup_from", main)
+            self.assertNotIn("services.items.transfer", main)
+            self.assertIn(
+                "map holder requires one explicitly typed abs_ms coordinate; "
+                "current/u/alpha/local/omt/mixed-frame pickup locations remain TODO",
+                main,
+            )
+            self.assertIn("map holder requires", report)
 
     def test_character_action_effects_lower_for_proven_avatar_and_npc_actors(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -10310,20 +11592,24 @@ class LuaFirstMigrationTest(unittest.TestCase):
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn("services.characters.attack(", main)
+            self.assertEqual(len(result.converted), 1)
+            self.assertTrue(result.partial)
+            self.assertTrue(result.todos)
+            self.assertNotIn("services.characters.attack(", main)
             self.assertIn("services.characters.cast_spell(", main)
             self.assertIn("services.characters.die(actor, { remove_corpse = true", main)
             self.assertIn("services.characters.explosion(", main)
             self.assertIn("services.characters.knockback(", main)
-            self.assertIn("services.characters.ranged_attack(", main)
+            self.assertNotIn("services.characters.ranged_attack(", main)
             self.assertIn("services.mutations.remove_category(", main)
             self.assertIn("services.effects.remove(", main)
             self.assertIn("services.npcs.set_class(", main)
             self.assertIn("services.npcs.set_faction(", main)
-            self.assertIn("services.npcs.set_radio_representative(", main)
+            self.assertNotIn("services.npcs.set_radio_representative(", main)
+            self.assertIn(
+                "needs domain-service conversion",
+                result.files[Path("MIGRATION_REPORT.md")],
+            )
             self.assertIn("services.npcs.make_thankful(", main)
             self.assertIn("services.sound.emit(", main)
             self.assertIn("services.variables.set(", main)
@@ -10362,16 +11648,16 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn('tostring((context.data["technique"])', main)
-            self.assertIn('services.variables.get_global("move_cost")', main)
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 1)
+            self.assertNotIn('tostring((context.data["technique"])', main)
+            self.assertNotIn('services.variables.get_global("move_cost")', main)
             self.assertIn('context.data["force"]', main)
             self.assertIn('services.variables.resolve(context.data, actor, "npc", "stun")', main)
             self.assertIn('services.variables.get_global("damage")', main)
-            self.assertIn("allow_special = false", main)
-            self.assertNotIn("combat effect", report)
+            self.assertNotIn("allow_special = false", main)
+            self.assertIn("needs domain-service conversion", report)
 
     def test_lowers_dynamic_combat_damage_options(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -10527,13 +11813,23 @@ class LuaFirstMigrationTest(unittest.TestCase):
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertGreaterEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn("services.dialogue.open_topic(\"TALK_TEST\")", main)
+            self.assertTrue(result.partial)
+            self.assertTrue(result.todos)
+            self.assertNotIn("services.dialogue.open_topic", main)
+            self.assertNotIn("services.npcs.open_dialogue", main)
+            self.assertEqual(main.count("services.characters.avatar()"), 1)
+            self.assertIn(
+                "local actor = actor_override or services.characters.avatar()",
+                main,
+            )
+            self.assertIn(
+                "translate open_dialogue only when exact NPC and avatar handles "
+                "plus an explicit topic are available", main
+            )
+            self.assertIn("exact NPC/avatar handles and topic", report)
             self.assertIn("services.achievements.complete(", main)
             self.assertIn('context.data["branch_value"]', main)
             self.assertIn('services.characters.damage(\n        actor', main)
-            self.assertNotIn("conditional-control-flow conversion", report)
 
     def test_lowers_variable_backed_explosion_parameters(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -10609,7 +11905,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn('services.variables.get_global("avatar_message")', main)
             self.assertNotIn("message presentation options", report)
 
-    def test_u_message_without_event_reacquires_avatar(self) -> None:
+    def test_u_message_without_event_stays_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -10635,10 +11931,9 @@ class LuaFirstMigrationTest(unittest.TestCase):
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(result.partial, [])
-            self.assertIn('services.messages.add("avatar message", "info")', main)
-            self.assertNotIn("message presentation options", main)
+            self.assertNotIn('services.messages.add("avatar message", "info")', main)
+            self.assertNotIn("services.characters.avatar()", main)
+            self.assertTrue(result.partial or result.todos)
 
     def test_native_popup_flag_aliases_use_typed_presentation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -10701,7 +11996,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertEqual(len(result.partial), 1)
             self.assertIn("services.creatures.can_see(actor", main)
             self.assertIn("services.characters.avatar(), actor", main)
-            self.assertIn("EOC visibility_unproven condition needs a native Lua predicate", report)
+            self.assertIn("EOC visibility_unproven condition TODO: translate the legacy condition into a Lua predicate", report)
 
     def test_overmap_location_conditions_use_typed_overmap_matching(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -10893,7 +12188,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
 
             self.assertEqual(len(result.converted), 0)
             self.assertEqual(len(result.partial), 1)
-            self.assertEqual(len(result.todos), 13)
+            self.assertEqual(len(result.todos), 12)
             self.assertNotIn("services.activities.assign(actor)", main)
             self.assertIn("plain typed activity service", main)
             self.assertNotIn("services.state.", main)
@@ -10909,8 +12204,10 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn("set_string_var into typed variable services", main)
             self.assertNotIn("alter_timed_events into a persistent-task operation", main)
             self.assertIn("typed city query and writable location variable", main)
-            self.assertIn("services.weather.activate_lightning()", main)
-            self.assertIn("services.weather.refresh()", main)
+            self.assertIn(
+                "service_value(services.weather.activate_lightning())", main
+            )
+            self.assertIn("service_value(services.weather.refresh())", main)
             self.assertNotIn("services.coords.mirror", main)
             self.assertNotIn("services.random.sample()", main)
             self.assertNotIn("services.gameplay.environment.dimension_name", main)
@@ -10919,7 +12216,6 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertNotIn("services.overmap.closest_city", main)
             self.assertNotIn('context.data["test_var"] ~= nil', main)
             self.assertNotIn("1 == 1", main)
-            self.assertIn("condition needs a native Lua predicate", report)
             self.assertNotIn("needs review", report)
 
     def test_renders_bounded_closest_city_for_actor_location_var(self) -> None:
@@ -11141,7 +12437,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 "context.data[\"origin\"], context.data[\"target\"], 12, false)",
                 main,
             )
-            self.assertIn("EOC dynamic_line_of_sight condition needs a native Lua predicate", report)
+            self.assertIn("EOC dynamic_line_of_sight condition TODO: translate the legacy condition into a Lua predicate", report)
             self.assertNotIn("run_eoc", main)
 
     def test_translates_batch_29_primitive_to_bounded_selectors(self) -> None:
@@ -11210,7 +12506,8 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertEqual(len(result.converted), 0)
             self.assertEqual(len(result.partial), 1)
             self.assertIn("services.missions.reserve", main)
-            self.assertIn("services.missions.assign", main)
+            self.assertIn("services.missions.assign(actor, token)", main)
+            self.assertNotIn("services.missions.assign(token)", main)
             self.assertNotIn("services.camps.", main)
             self.assertNotIn("services.bionics.adjust", main)
             self.assertNotIn("services.vehicles.", main)
@@ -11218,7 +12515,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn("no placeholder call is emitted", main)
             self.assertIn("needs domain-service conversion", report)
 
-    def test_bounded_npc_faction_effects_use_typed_character_services(self) -> None:
+    def test_unproven_npc_faction_effects_require_explicit_character_services(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -11249,21 +12546,18 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(result.partial, [])
-            self.assertIn(
-                "services.characters.add_faction_trust(\n        actor, 5)",
-                main,
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(len(result.todos), 2)
+            self.assertNotIn("services.characters.add_faction_trust(", main)
+            self.assertNotIn(
+                "services.characters.set_faction_relationship(", main
             )
-            self.assertIn(
-                "services.characters.set_faction_relationship(\n"
-                "        actor, services.characters.avatar(),\n"
-                '        "knows your voice", false)',
-                main,
-            )
-            self.assertNotIn("needs domain-service conversion", report)
+            self.assertNotIn("services.characters.avatar()", main)
+            self.assertIn("typed character-faction service", main)
+            self.assertIn("needs domain-service conversion", report)
 
-    def test_dynamic_npc_faction_trust_is_bounded_and_relation_stays_partial(self) -> None:
+    def test_unproven_npc_faction_effects_stay_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -11293,15 +12587,16 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(len(result.partial), 1)
-            self.assertEqual(len(result.todos), 1)
-            self.assertIn("services.characters.add_faction_trust(", main)
-            self.assertNotIn("set_faction_relationship(\n        actor", main)
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(len(result.todos), 2)
+            self.assertNotIn("services.characters.add_faction_trust(", main)
+            self.assertNotIn("set_faction_relationship(", main)
+            self.assertNotIn("services.characters.avatar()", main)
             self.assertIn("typed character-faction service", main)
             self.assertIn("needs domain-service conversion", report)
 
-    def test_bounded_u_faction_relation_uses_avatar_and_npc_handles(self) -> None:
+    def test_unproven_u_faction_relation_requires_an_explicit_avatar_handle(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -11324,14 +12619,16 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 migrate_lua_first.load_objects([source]), "u_faction_mod"
             )
             main = result.files[Path("main.lua")]
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
-            self.assertIn(
-                "services.characters.set_faction_relationship(\n"
-                "        services.characters.avatar(), actor,\n"
-                '        "knows your voice", true)',
-                main,
+            report = result.files[Path("MIGRATION_REPORT.md")]
+            self.assertEqual(result.converted, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 1)
+            self.assertNotIn(
+                "services.characters.set_faction_relationship(", main
             )
+            self.assertNotIn("services.characters.avatar()", main)
+            self.assertIn("typed character-faction service", main)
+            self.assertIn("needs domain-service conversion", report)
 
     def test_static_sample_range_uses_bounded_random_and_variable_services(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -13456,7 +14753,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(result.partial, [])
+            self.assertEqual(result.partial, [], result.todos)
             self.assertEqual(result.todos, [])
             self.assertIn("services.creatures.nearby", main)
             self.assertIn("local npc_offset = 0", main)
@@ -13469,9 +14766,11 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn("services.zones.list", main)
             self.assertIn("local zone_offset = 0", main)
             self.assertIn("zone_page.has_more", main)
-            self.assertIn("services.inventory.filter", main)
-            self.assertIn("local inventory_offset = 0", main)
-            self.assertIn("inventory_page.has_more", main)
+            self.assertIn("services.items.page", main)
+            self.assertIn("local inventory_holder =", main)
+            self.assertIn("inventory_page.complete", main)
+            self.assertIn("inventory_cursor = inventory_page.continuation", main)
+            self.assertNotIn("services.inventory.filter", main)
             self.assertIn("services.world.points_nearby", main)
             self.assertIn("local point_offset = 0", main)
             self.assertIn("point_page.has_more", main)
@@ -13485,6 +14784,74 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn("item_page.has_more", main)
             self.assertIn("local migrated_eoc_", main)
             self.assertNotIn("run_eoc(", main)
+
+    def test_fixed_zone_traversals_match_zones_list_contract(self) -> None:
+        callback_names = {"zone_callback": "migrated_eoc_zone_callback"}
+        for key in ("u_run_fixed_zone_eocs", "npc_run_fixed_zone_eocs"):
+            with self.subTest(key=key):
+                rendered = migrate_lua_first.render_static_traversal(
+                    {
+                        key: ["zone_callback"],
+                        "zone_range": 6,
+                        "z_min": -2,
+                        "z_max": 3,
+                    },
+                    key,
+                    "actor",
+                    callback_names,
+                )
+                self.assertIsNotNone(rendered)
+                main = "\n".join(rendered or [])
+
+                self.assertIn(
+                    "service_value(services.zones.list({ kind = \"global\", offset = zone_offset, limit = 256 }))",
+                    main,
+                )
+                self.assertIn("local zone_offset = 0", main)
+                self.assertIn("local target = entry.token", main)
+                self.assertIn("local target_z = entry.start.z", main)
+                self.assertIn(
+                    "local distance = zone_origin:square_distance(entry.start)",
+                    main,
+                )
+                self.assertIn(
+                    "if distance <= 6 and (",
+                    main,
+                )
+                self.assertNotIn("not entry.personal", main)
+                self.assertNotIn("not entry.vehicle", main)
+                self.assertIn("-2 <= target_z", main)
+                self.assertIn("target_z <= 3", main)
+                self.assertIn(
+                    "if not zone_page.has_more or zone_page.returned == 0 then",
+                    main,
+                )
+                self.assertIn(
+                    "zone_offset = zone_offset + zone_page.returned", main
+                )
+                self.assertIn(
+                    "migrated_eoc_zone_callback(context, target)", main
+                )
+                self.assertNotIn("limit = 512", main)
+
+                unbounded = migrate_lua_first.render_static_traversal(
+                    {key: ["zone_callback"]},
+                    key,
+                    "actor",
+                    callback_names,
+                )
+                self.assertIsNotNone(unbounded)
+                unbounded_main = "\n".join(unbounded or [])
+                self.assertIn(
+                    "if (",
+                    unbounded_main,
+                )
+                self.assertNotIn("not entry.personal", unbounded_main)
+                self.assertNotIn("not entry.vehicle", unbounded_main)
+                self.assertNotIn(
+                    "local distance = zone_origin:square_distance(entry.start)",
+                    unbounded_main,
+                )
 
     def test_local_npc_traversal_without_range_pages_all_loaded_npcs(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -13532,7 +14899,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 'runtime.handler("migrated.deactivated_owner"', main
             )
 
-    def test_unbounded_monster_and_false_only_inventory_traversals_are_paged(
+    def test_filtered_inventory_traversal_stays_explicit_todo(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -13580,12 +14947,12 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertNotIn("complete named-NPC traversal conversion", report)
             self.assertIn("radius = 1000", main)
             self.assertIn("monster_page.has_more", main)
-            self.assertIn("if not inventory_seen then", main)
-            self.assertIn(
-                "migrated_eoc_inventory_missing(context, nil)", main
-            )
+            self.assertTrue(result.partial)
+            self.assertTrue(result.todos)
+            self.assertNotIn("services.inventory.filter", main)
+            self.assertNotIn("services.items.page", main)
 
-    def test_lowers_inventory_item_conditions_with_shared_context_options(self) -> None:
+    def test_filtered_inventory_item_conditions_stay_explicit_todo(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -13629,17 +14996,10 @@ class LuaFirstMigrationTest(unittest.TestCase):
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn('condition = "has_ammo"', main)
-            self.assertIn('condition = { math = "n_volume() > 0" }', main)
-            self.assertIn(
-                'condition = { all = { { math = "n_volume() > 0" }, { math = "_cost < u_val(\'power\')" } } }',
-                main,
-            )
-            self.assertIn("local inventory_options =", main)
-            self.assertIn("context = (context and context.data) or {}", main)
-            self.assertIn("inventory_options.offset = inventory_offset", main)
+            self.assertTrue(result.partial)
+            self.assertTrue(result.todos)
+            self.assertNotIn("services.inventory.filter", main)
+            self.assertNotIn("services.items.page", main)
 
     def test_uses_event_contract_actor_and_typed_relocation_services(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -13716,14 +15076,34 @@ class LuaFirstMigrationTest(unittest.TestCase):
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
+            self.assertTrue(result.partial)
+            self.assertTrue(
+                any(
+                    "event_character_mutation effect #2 "
+                    "needs domain-service conversion" in todo
+                    for todo in result.todos
+                )
+            )
             self.assertIn('context.actors["character"]', main)
             self.assertIn("services.effects.add", main)
             self.assertIn("services.effects.remove", main)
-            self.assertIn("services.relocation.creature_at", main)
+            self.assertIn(
+                "TODO: translate teleport through a typed "
+                "creature-relocation service.",
+                main,
+            )
+            self.assertNotIn("services.relocation.creature_at", main)
+            self.assertNotIn("services.relocation.move", main)
             self.assertNotIn("services.overmap.matches", main)
-            self.assertIn("services.world.apply_mapgen_update", main)
+            self.assertNotIn("services.mapgen.apply(", main)
+            self.assertIn(
+                "TODO: Platform-only mapgen_update lowering requires static absolute OMT -> "
+                "OvermapTileToken, static update_mapgen ID -> MapgenUpdateToken, and "
+                "immediate transaction apply; dynamic IDs/coordinates, delay/mission/key, "
+                "or collision=false must be rewritten by the author; unsupported "
+                "mirror/rotation transforms must also be rewritten by the author.",
+                main,
+            )
             self.assertIn("context.actors.beta", main)
             self.assertIn("context.actors.character or context.actors.alpha", main)
             self.assertIn(
@@ -13762,13 +15142,9 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertEqual(len(result.partial), 1)
             self.assertIn("if not (services.npcs.count_allies(false) >= 1) then", main)
             self.assertNotIn("invalid empty math condition", report)
-            self.assertNotIn("needs a native Lua predicate", report)
-            self.assertEqual(len(result.todos), 1)
-            self.assertIn(
-                'services.characters.cast_spell(actor, services.types.id("spell", "telepathic_network_real")',
-                main,
-            )
-            self.assertNotIn("combat effect through a proven actor", main)
+            self.assertEqual(len(result.todos), 2)
+            self.assertNotIn("services.characters.cast_spell", main)
+            self.assertIn("combat effect through a proven actor", main)
             self.assertIn("needs an explicit Platform trigger", report)
 
     def test_run_eocs_talker_overrides_preserve_alpha_beta_context(self) -> None:
@@ -13808,23 +15184,19 @@ class LuaFirstMigrationTest(unittest.TestCase):
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertEqual(len(result.partial), 1)
-            self.assertEqual(len(result.todos), 1)
-            self.assertIn("talker_parent needs an explicit Platform trigger", result.todos[0])
-            self.assertIn(
-                "local selected_alpha = ((context.actors and "
-                "context.actors.alpha) or actor)",
-                main,
-            )
-            self.assertIn(
-                "local selected_beta = services.characters.avatar()", main
-            )
-            self.assertIn("context.actors.alpha = selected_alpha", main)
-            self.assertIn("context.actors.beta = selected_beta", main)
-            self.assertIn(
-                "services.creatures.snapshot((context.actors and context.actors.beta) or actor)",
-                main,
-            )
-            self.assertNotIn("needs a typed callback/task conversion", report)
+            self.assertEqual(len(result.todos), 2)
+            self.assertTrue(any(
+                "talker_parent needs an explicit Platform trigger" in todo
+                for todo in result.todos
+            ))
+            self.assertTrue(any(
+                "explicit avatar participant handle" in todo
+                for todo in result.todos
+            ))
+            self.assertNotIn("local selected_alpha", main)
+            self.assertNotIn("local selected_beta", main)
+            self.assertNotIn("services.characters.avatar()", main)
+            self.assertIn("explicit avatar participant handle", report)
 
     def test_lowers_world_content_types_through_registered_platform_builders(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -13888,15 +15260,20 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn('id = "child_part"', main)
-            self.assertIn('"BASE", "CHILD"', main)
-            self.assertIn('"welder", "soldering_iron"', main)
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 1)
+            self.assertEqual(len(result.todos), 1)
+            self.assertIn('id = "base_part"', main)
+            self.assertNotIn('id = "child_part"', main)
+            self.assertNotIn('"BASE", "CHILD"', main)
+            self.assertNotIn('"welder", "soldering_iron"', main)
             self.assertNotIn("copy-from", main)
             self.assertNotIn("extend", main)
             self.assertNotIn("delete", main)
+            self.assertIn(
+                "extend.allowed_tools is not supported by the Platform patch",
+                report,
+            )
             self.assertNotIn("needs review", report)
 
     def test_normalizes_legacy_generic_aliases_before_typed_registration(self) -> None:
@@ -14129,10 +15506,10 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn("services.world.put_field(", main)
-            self.assertIn('services.types.id("field", "fd_hot_air3")', main)
+            self.assertTrue(result.partial)
+            self.assertTrue(result.todos)
+            self.assertNotIn("services.world.put_field(", main)
+            self.assertIn("explicitly typed abs_ms coordinate", main)
             self.assertNotIn("typed Lua services", report)
 
     def test_lowers_dynamic_character_predicates_and_effects(self) -> None:
@@ -14219,7 +15596,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn("services.effects.add", main)
             self.assertIn("services.morale.add", main)
             self.assertIn("services.wounds.add", main)
-            self.assertIn("set_light_override", main)
+            self.assertIn("service_value(services.weather.override_light(", main)
 
     def test_dynamic_item_callbacks_remain_item_scoped(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -14245,12 +15622,18 @@ class LuaFirstMigrationTest(unittest.TestCase):
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
+            self.assertTrue(result.partial)
+            self.assertTrue(result.todos)
             self.assertIn("services.items.activate", main)
-            self.assertIn("services.items.set_fault", main)
-            self.assertIn("services.items.set_random_fault", main)
+            self.assertNotIn("services.items.set_fault", main)
+            self.assertNotIn("services.items.set_random_fault", main)
             self.assertIn("services.items.transform", main)
+            self.assertIn('context.data["target"]', main)
+            self.assertIn("carrier = actor", main)
+            self.assertIn(
+                "target = service_value(services.characters.snapshot(actor)).creature.position",
+                main,
+            )
 
     def test_delayed_run_eocs_use_persistent_platform_tasks(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -14328,16 +15711,18 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertEqual(len(result.converted), 2)
             self.assertEqual(result.partial, [])
             self.assertEqual(result.todos, [])
-            self.assertIn("services.characters.snapshot(delayed_task_actor)", main)
             self.assertIn(
-                "actor_character_id = delayed_task_actor_result.value.id",
+                'ccb.tasks.after(2, "migrated.npc_delayed_target", '
+                '{ __ccb_task = true, data = context.data }, 1, '
+                '"character", delayed_task_actor)',
                 main,
             )
-            self.assertIn(', 1, "character")', main)
             self.assertIn(
-                "services.characters.by_id(task_payload.actor_character_id)",
+                "local task_actor = context.actor or task_context.actors.alpha",
                 main,
             )
+            self.assertNotIn("actor_character_id =", main)
+            self.assertNotIn("services.characters.by_id(task_payload", main)
             self.assertNotIn("typed callback/task conversion", report)
 
     def test_delayed_run_eocs_reacquire_alpha_beta_character_talkers(
@@ -14374,30 +15759,74 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
+            self.assertEqual(len(result.converted), 2)
             self.assertEqual(result.partial, [])
             self.assertEqual(result.todos, [])
             self.assertIn(
-                "services.characters.snapshot(selected_alpha)", main
-            )
-            self.assertIn(
-                "services.characters.snapshot(selected_beta)", main
-            )
-            self.assertIn(
-                "alpha_character_id = delayed_task_alpha_id", main
-            )
-            self.assertIn(
-                "beta_character_id = delayed_task_beta_id", main
-            )
-            self.assertIn(
-                "services.characters.by_id(task_payload.alpha_character_id)",
+                'ccb.tasks.after(10, "migrated.delayed_talker_target", '
+                '{ __ccb_task = true, data = context.data }, 1, "world", '
+                'nil, { alpha = selected_alpha, beta = selected_beta })',
                 main,
             )
             self.assertIn(
-                "services.characters.by_id(task_payload.beta_character_id)",
+                "local task_context = { data = task_payload.data or {} }",
                 main,
             )
-            self.assertIn(', 1, "character")', main)
+            self.assertIn(
+                "task_context.actors = context.participants or {}",
+                main,
+            )
+            self.assertIn(
+                "local task_actor = context.actor or task_context.actors.alpha",
+                main,
+            )
+            self.assertIn(
+                "context.actors.alpha = previous_alpha",
+                main,
+            )
+            self.assertIn("context.actors.beta = previous_beta", main)
+            self.assertNotIn("delayed_task_actor", main)
             self.assertNotIn("typed callback/task conversion", report)
+
+    def test_delayed_run_eocs_unproven_avatar_talker_remains_todo(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "unproven_delayed_talker_target",
+                            "effect": {"message": "later"},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "unproven_delayed_talker_owner",
+                            "required_event": "character_takes_damage",
+                            "effect": {
+                                "run_eocs": "unproven_delayed_talker_target",
+                                "alpha_talker": "avatar",
+                                "time_in_future": 10,
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "unproven_delayed_talker_mod",
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertTrue(result.partial)
+            self.assertTrue(result.todos)
+            self.assertNotIn(
+                'ccb.tasks.after(10, "migrated.unproven_delayed_talker_target"',
+                main,
+            )
+            self.assertIn("explicit avatar participant handle", report)
 
     def test_delayed_run_eocs_preserve_native_nonpersistent_actor_noop(self) -> None:
         cases = {
@@ -14454,6 +15883,45 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 self.assertNotIn("delayed or context-bound run_eocs", main)
                 self.assertNotIn("typed callback/task conversion", report)
 
+    def test_delayed_run_eocs_reject_creature_actor_as_character(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "character_delayed_target",
+                            "effect": {"npc_add_wet": 5},
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "creature_delayed_owner",
+                            "required_event": "monster_takes_damage",
+                            "effect": {
+                                "run_eocs": "character_delayed_target",
+                                "time_in_future": "2 turns",
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]),
+                "delayed_creature_actor_mod",
+            )
+            main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertTrue(result.partial)
+            self.assertTrue(result.todos)
+            self.assertNotIn(
+                'ccb.tasks.after(2, "migrated.character_delayed_target"',
+                main,
+            )
+            self.assertIn("typed callback/task conversion", report)
+
     def test_delayed_global_eoc_from_item_context_reacquires_avatar(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -14492,15 +15960,13 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn(
-                "local delayed_task_actor = services.characters.avatar()",
-                main,
+            self.assertTrue(result.partial)
+            self.assertTrue(result.todos)
+            self.assertNotIn("services.characters.avatar()", main)
+            self.assertNotIn(
+                'ccb.tasks.after(2, "migrated.global_delayed_target"', main
             )
-            self.assertIn("services.characters.snapshot(delayed_task_actor)", main)
-            self.assertIn(', 1, "character")', main)
-            self.assertNotIn("typed callback/task conversion", report)
+            self.assertIn("typed callback/task conversion", report)
 
     def test_recipe_result_eocs_join_the_private_callback_registry(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -14971,11 +16437,11 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn("services.mutations.has(", main)
             self.assertIn("services.world.tile_has_flag(", main)
             self.assertNotIn(
-                "damage_callback condition needs a native Lua predicate",
+                "damage_callback condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertNotIn(
-                "technique_callback condition needs a native Lua predicate",
+                "technique_callback condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
 
@@ -15226,23 +16692,33 @@ class LuaFirstMigrationTest(unittest.TestCase):
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertNotIn(
-                "global_recurrence_owner condition needs a native Lua predicate",
+                "global_recurrence_owner condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertNotIn(
-                "character_recurrence_owner condition needs a native Lua predicate",
+                "character_recurrence_owner condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertNotIn(
-                "recurrence_predicate_wrapper condition needs a native Lua predicate",
+                "recurrence_predicate_wrapper condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertGreaterEqual(
                 main.count("services.gameplay.environment.is_outside("), 4
             )
+            self.assertGreaterEqual(
+                main.count(
+                    "local actor = actor_override\n"
+                    "    if actor == nil then\n"
+                    "        return false"
+                ),
+                4,
+            )
+            self.assertEqual(main.count("services.characters.avatar()"), 2)
             self.assertIn(
-                "local actor = actor_override or services.characters.avatar()",
-                main,
+                "character_recurrence_owner effect #0 requires an exact "
+                "avatar participant for u_message",
+                report,
             )
 
     def test_content_callbacks_propagate_creature_talker_provenance(self) -> None:
@@ -15325,15 +16801,15 @@ class LuaFirstMigrationTest(unittest.TestCase):
             report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertNotIn(
-                "spell_talker_root condition needs a native Lua predicate",
+                "spell_talker_root condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertNotIn(
-                "spell_visibility_leaf condition needs a native Lua predicate",
+                "spell_visibility_leaf condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertNotIn(
-                "attack_talker_root condition needs a native Lua predicate",
+                "attack_talker_root condition TODO: translate the legacy condition into a Lua predicate",
                 report,
             )
             self.assertNotIn(
@@ -15371,11 +16847,15 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 migrate_lua_first.load_objects([source]), "camp_proximity_mod"
             )
             main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn("services.camps.near(", main)
-            self.assertIn("{ radius_omt = 2, limit = 1 }", main)
+            self.assertEqual(len(result.partial), 1)
+            self.assertNotIn("services.camps.near(", main)
+            self.assertIn(
+                "condition TODO: translate FACTION_CAMP_ANY only with an explicit "
+                "camp handle; nearest/location scanning is not supported",
+                report,
+            )
 
     def test_empty_math_condition_is_rejected_as_invalid_source_data(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -15691,15 +17171,16 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
+            self.assertTrue(result.partial)
+            self.assertTrue(result.todos)
             self.assertNotIn("domain-service conversion", report)
             self.assertIn("services.inventory.give", main)
-            self.assertIn("services.inventory.remove", main)
+            self.assertNotIn("services.inventory.remove", main)
             self.assertIn("services.activities.cancel", main)
             self.assertIn("services.mutations.grant", main)
             self.assertIn("services.spawns.monster_configured", main)
-            self.assertIn("services.inventory.consume", main)
+            self.assertNotIn("services.inventory.consume", main)
+            self.assertIn("TODO: translate the inventory consumption", main)
             self.assertIn("services.recipes.forget", main)
             self.assertIn("services.time.reschedule", main)
             self.assertIn("remainder_candidates", main)
@@ -15831,11 +17312,12 @@ class LuaFirstMigrationTest(unittest.TestCase):
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn(
+            self.assertTrue(result.partial)
+            self.assertTrue(result.todos)
+            self.assertNotIn(
                 'services.variables.get(\n        actor, "destination")', main
             )
+            self.assertIn("TODO: translate teleport", main)
             self.assertIn('target = context.data["target"]', main)
             self.assertIn('direction = context.data["direction"]', main)
 
@@ -16026,7 +17508,7 @@ class LuaFirstMigrationTest(unittest.TestCase):
             )
             main = result.files[Path("main.lua")]
 
-            self.assertNotIn("predicate_owner condition needs a native Lua predicate", main)
+            self.assertNotIn("predicate_owner condition TODO: translate the legacy condition into a Lua predicate", main)
             self.assertIn('services.mutations.has(actor, services.types.id("mutation", "TOUGH"))', main)
 
     def test_referenced_character_eoc_inherits_callback_actor_without_standalone_handler(self) -> None:
@@ -16055,19 +17537,16 @@ class LuaFirstMigrationTest(unittest.TestCase):
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertNotIn(
-                'runtime.handler("migrated.nested_character_target"', main
-            )
+            self.assertEqual(len(result.partial), 2)
+            self.assertTrue(result.todos)
+            self.assertNotIn("local actor =", main)
+            self.assertNotIn("services.message(\"callback actor\")", main)
+            self.assertNotIn("services.characters.avatar()", main)
             self.assertIn(
-                "local actor = actor_override\n    if not ((service_value(services.characters.is_alive(actor)))",
-                main,
+                "condition TODO: translate the legacy condition into a Lua predicate",
+                report,
             )
-            self.assertIn(
-                "migrated_eoc_nested_character_target(context, actor)", main
-            )
-            self.assertNotIn("needs an explicit Platform trigger", report)
+            self.assertIn("requires an exact avatar participant", report)
 
     def test_lowers_bounded_run_eoc_iterations_to_one_lua_loop(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -16097,11 +17576,11 @@ class LuaFirstMigrationTest(unittest.TestCase):
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn("for _ = 1, 3 do", main)
-            self.assertIn("then break end", main)
-            self.assertEqual(main.count("migrated_eoc_iteration_target(context, actor)"), 1)
+            self.assertEqual(len(result.partial), 2)
+            self.assertTrue(result.todos)
+            self.assertNotIn("for _ = 1, 3 do", main)
+            self.assertNotIn("services.message(\"iteration\")", main)
+            self.assertNotIn("services.characters.avatar()", main)
 
     def test_dynamic_location_search_and_global_teleport_targets_are_lowered(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -16133,13 +17612,72 @@ class LuaFirstMigrationTest(unittest.TestCase):
                 migrate_lua_first.load_objects([source]), "world_target_mod"
             )
             main = result.files[Path("main.lua")]
+            report = result.files[Path("MIGRATION_REPORT.md")]
 
             self.assertNotIn("location-variable search through", main)
             self.assertIn("services.overmap.closest", main)
             self.assertIn("radius = 1200", main)
             self.assertIn("services.overmap.reveal(", main)
-            self.assertIn("services.variables.get_global(\"target\")", main)
-            self.assertIn("services.relocation.creature_at", main)
+            self.assertNotIn("services.variables.get_global(\"target\")", main)
+            self.assertIn(
+                "TODO: translate teleport through a typed "
+                "creature-relocation service.",
+                main,
+            )
+            self.assertNotIn("services.relocation.creature_at", main)
+            self.assertNotIn("services.relocation.move", main)
+            self.assertTrue(
+                any(
+                    "dynamic_world_targets effect #1 "
+                    "needs domain-service conversion" in todo
+                    for todo in result.todos
+                )
+            )
+            self.assertIn(
+                "dynamic_world_targets effect #1 needs domain-service conversion",
+                report,
+            )
+
+    def test_dynamic_location_replacement_uses_overmap_token_edit(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps({
+                    "type": "effect_on_condition",
+                    "id": "dynamic_world_replacement",
+                    "required_event": "game_start",
+                    "effect": {
+                        "u_location_variable": {"global_val": "target"},
+                        "target_params": {
+                            "om_terrain": "forest",
+                            "om_terrain_replace": "field",
+                            "min_distance": 1,
+                            "search_range": 1200,
+                        },
+                    },
+                }),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "world_replacement_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertEqual(result.partial, [])
+            self.assertEqual(result.todos, [])
+            self.assertEqual(main.count("services.overmap.closest("), 2)
+            self.assertIn("radius = 1200", main)
+            self.assertIn("services.overmap.tile_token(", main)
+            self.assertIn("services.overmap.snapshot(", main)
+            self.assertIn("services.overmap.edit(", main)
+            self.assertIn("replacement_snapshot.revision", main)
+            self.assertIn("set_terrain =", main)
+            self.assertIn(
+                'services.variables.set_global(\n            "target", location)',
+                main,
+            )
+            self.assertNotIn("services.overmap.set_terrain", main)
+            self.assertNotIn("services.overmap.tile(", main)
 
     def test_location_search_offsets_and_callbacks_use_typed_world_services(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -16515,6 +18053,472 @@ class LuaFirstMigrationTest(unittest.TestCase):
             self.assertIn("services.targeting.choose_adjacent_where_at", main)
             self.assertIn('local center = context.data["center"]', main)
             self.assertIn('context.data["direction"] = selected', main)
+
+    def test_vehicle_inheritance_lowers_only_typed_collection_patches(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "vehicle_part",
+                            "id": "base_part",
+                            "categories": ["BASE"],
+                            "flags": ["OLD"],
+                        },
+                        {
+                            "type": "vehicle_part",
+                            "id": "child_part",
+                            "copy-from": "base_part",
+                            "extend": {"flags": ["NEW"]},
+                            "delete": {"categories": ["BASE"]},
+                        },
+                        {
+                            "type": "vehicle",
+                            "id": "base_vehicle",
+                            "parts": [{"x": 0, "y": 0, "part": "base_part"}],
+                        },
+                        {
+                            "type": "vehicle",
+                            "id": "child_vehicle",
+                            "copy-from": "base_vehicle",
+                            "extend": {
+                                "parts": [{"x": 1, "y": 0, "part": "child_part"}]
+                            },
+                            "delete": {
+                                "parts": [{"x": 0, "y": 0, "part": "base_part"}]
+                            },
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "typed_patch_mod"
+            )
+            main = result.files[Path("main.lua")]
+
+            self.assertIn('copy_from = "base_part"', main)
+            self.assertIn('extend_flags = { "NEW" }', main)
+            self.assertIn('delete_categories = { "BASE" }', main)
+            self.assertIn('copy_from = "base_vehicle"', main)
+            self.assertIn("extend_parts = {", main)
+            self.assertIn("delete_parts = {", main)
+            self.assertNotIn("extend = ", main)
+            self.assertNotIn("delete = ", main)
+
+    def test_vehicle_inheritance_rejects_unsupported_typed_patch_members(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {"type": "vehicle_part", "id": "base_part"},
+                        {
+                            "type": "vehicle_part",
+                            "id": "unsafe_part",
+                            "copy-from": "base_part",
+                            "extend": {"name": ["not-a-field-patch"]},
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "typed_patch_mod"
+            )
+            report = result.files[Path("MIGRATION_REPORT.md")]
+
+            self.assertIn("extend.name is not supported", report)
+            self.assertIn("unsafe_part", report)
+            self.assertNotIn('id = "unsafe_part"', result.files[Path("main.lua")])
+
+    def test_actor_resolution_never_invents_avatar_for_unproven_u_scope(self) -> None:
+        self.assertIsNone(
+            migrate_lua_first._eoc_actor_expression(
+                "u_has_effect", False, True
+            )
+        )
+        self.assertEqual(
+            migrate_lua_first._eoc_actor_expression(
+                "u_has_effect", True, False
+            ),
+            "actor",
+        )
+        self.assertIsNone(
+            migrate_lua_first._coordinate_variable_handle("u", False, True)
+        )
+
+    def test_map_migration_uses_typed_tokens_and_one_atomic_edit(self) -> None:
+        coordinate = {"abs_ms": [12, -7, 0]}
+        mutation = {
+            "set_terrain": "t_floor",
+            "set_furniture": "f_null",
+            "set_trap": "tr_beartrap",
+            "u_set_field": "fd_fire",
+            "location": coordinate,
+            "target_var": coordinate,
+            "radius": 0,
+            "hit_player": False,
+            "intensity": 3,
+        }
+        rendered = migrate_lua_first.render_static_set_field(
+            mutation, "u_set_field", True, False
+        )
+        self.assertIsNotNone(rendered)
+        main = "\n".join(rendered or [])
+        self.assertEqual(main.count("services.map.tile("), 1)
+        self.assertEqual(main.count("services.map.snapshot("), 1)
+        self.assertEqual(main.count("services.map.edit("), 1)
+        self.assertIn("map_tile_snapshot.revision", main)
+        self.assertIn('services.types.id("terrain", "t_floor")', main)
+        self.assertIn('services.types.id("furniture", "f_null")', main)
+        self.assertIn('services.types.id("trap", "tr_beartrap")', main)
+        self.assertIn('services.types.id("field", "fd_fire")', main)
+
+        terrain = migrate_lua_first.render_static_set_terrain_or_furniture(
+            {"set_terrain": "t_floor", "location": coordinate, "radius": 0},
+            "set_terrain",
+        )
+        self.assertIsNotNone(terrain)
+        terrain_main = "\n".join(terrain or [])
+        self.assertIn("services.map.edit(", terrain_main)
+        self.assertNotIn("services.world.set_", terrain_main)
+
+        holder = migrate_lua_first.render_explicit_map_tile_holder(coordinate)
+        self.assertIsNotNone(holder)
+        holder_main = "\n".join(holder or [])
+        self.assertIn("services.map.tile(", holder_main)
+        self.assertIn('kind = "map_tile"', holder_main)
+        self.assertIn("tile = map_tile_token", holder_main)
+        self.assertNotIn("position", holder_main)
+
+        pickup = migrate_lua_first.render_static_pickup_items(
+            {"u_pickup_items": coordinate},
+            "u_pickup_items",
+            True,
+            False,
+        )
+        self.assertIsNotNone(pickup)
+        pickup_main = "\n".join(pickup or [])
+        self.assertIn("services.items.page(map_holder", pickup_main)
+        self.assertIn(
+            "services.items.transfer(\n                map_entry.handle, map_holder",
+            pickup_main,
+        )
+        self.assertEqual(pickup_main.count("services.map.tile("), 1)
+        self.assertNotIn("position", pickup_main)
+        for legacy_map_write in (
+            "services.world.tile(",
+            "services.world.set_terrain(",
+            "services.world.set_furniture(",
+            "services.world.set_trap(",
+            "services.world.put_field(",
+            "services.world.remove_field(",
+        ):
+            self.assertNotIn(legacy_map_write, main + holder_main + pickup_main)
+
+    def test_map_migration_rejects_unproven_frames_with_precise_todos(self) -> None:
+        bad_coordinates = (
+            {"u_val": "u_location"},
+            {"alpha_val": "alpha_location"},
+            {"current_position": True},
+            {"local_ms": [1, 2, 0]},
+            {"omt": [1, 2, 0]},
+            {"coordinate_space": "mixed", "x": 1, "y": 2, "z": 0},
+        )
+        for bad_coordinate in bad_coordinates:
+            self.assertIsNone(
+                migrate_lua_first.render_explicit_map_tile_holder(bad_coordinate)
+            )
+            self.assertIsNone(
+                migrate_lua_first.render_static_set_field(
+                    {
+                        "u_set_field": "fd_fire",
+                        "target_var": bad_coordinate,
+                        "radius": 0,
+                        "hit_player": False,
+                    },
+                    "u_set_field",
+                    True,
+                    False,
+                )
+            )
+            self.assertIsNone(
+                migrate_lua_first.render_static_pickup_items(
+                    {"u_pickup_items": bad_coordinate},
+                    "u_pickup_items",
+                    True,
+                    False,
+                )
+            )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(
+                json.dumps(
+                    [
+                        {
+                            "type": "effect_on_condition",
+                            "id": "map_frame_rejections",
+                            "required_event": "game_start",
+                            "effect": [
+                                {
+                                    "set_terrain": "t_floor",
+                                    "location": bad_coordinates[0],
+                                    "radius": 0,
+                                },
+                                {
+                                    "set_furniture": "f_null",
+                                    "location": bad_coordinates[1],
+                                    "radius": 0,
+                                },
+                                {
+                                    "set_trap": "tr_beartrap",
+                                    "loc": bad_coordinates[2],
+                                    "radius": 0,
+                                },
+                                {
+                                    "u_set_field": "fd_fire",
+                                    "target_var": bad_coordinates[3],
+                                    "radius": 0,
+                                    "hit_player": False,
+                                },
+                                {
+                                    "set_terrain": "t_floor",
+                                    "location": bad_coordinates[4],
+                                    "radius": 0,
+                                },
+                                {
+                                    "set_furniture": "f_null",
+                                    "location": bad_coordinates[5],
+                                    "radius": 0,
+                                },
+                            ],
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "map_frame_rejections_mod"
+            )
+            main = result.files[Path("main.lua")]
+            todo = (
+                "map mutation requires one explicitly typed abs_ms coordinate; "
+                "u/alpha/current/local/omt or mixed-frame coordinates remain TODO"
+            )
+            self.assertEqual(main.count(todo), len(bad_coordinates))
+            self.assertNotIn("services.map.tile(", main)
+            self.assertNotIn("services.map.edit(", main)
+            self.assertTrue(result.partial)
+            self.assertTrue(result.todos)
+            for legacy_map_write in (
+                "services.world.tile(",
+                "services.world.set_terrain(",
+                "services.world.set_furniture(",
+                "services.world.set_trap(",
+                "services.world.put_field(",
+                "services.world.remove_field(",
+            ):
+                self.assertNotIn(legacy_map_write, main)
+
+    def test_item_migration_rejects_ambiguous_instance_selection(self) -> None:
+        self.assertIsNone(
+            migrate_lua_first.render_static_remove_item_with_effect(
+                {"u_remove_item_with": "sample_item"},
+                "u_remove_item_with",
+                True,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_sell_item_effect(
+                {"u_sell_item": "sample_item"},
+                True,
+                avatar_actor_proven=True,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_npc_item_selection(
+                "npc_gets_item", True, True
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_inventory_consume(
+                {"u_consume_item": "sample_item"},
+                "u_consume_item",
+                True,
+                False,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_inventory_consume_sum(
+                {
+                    "u_consume_item_sum": [
+                        {"item": "sample_item", "amount": 1}
+                    ]
+                },
+                "u_consume_item_sum",
+                True,
+                False,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_quote_trade_effect(
+                {"quote_npc_trade_item": "sample_item"},
+                "quote_npc_trade_item",
+                True,
+                True,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_pickup_items(
+                {"u_pickup_items": {"context_val": "loot_pos"}},
+                "u_pickup_items",
+                True,
+                False,
+            )
+        )
+
+    def test_trade_commit_migration_requires_one_explicit_same_event_shape(self) -> None:
+        descriptor = {
+            "seller_handle": {"context_handle": "seller"},
+            "buyer_handle": {"context_handle": "buyer"},
+            "lines": [
+                {
+                    "direction": "seller_to_buyer",
+                    "item_handle": {"context_handle": "item"},
+                    "source_holder": {
+                        "character_handle": {"context_handle": "seller"},
+                        "slot": "inventory",
+                    },
+                    "destination_holder": {
+                        "character_handle": {"context_handle": "buyer"},
+                        "slot": "inventory",
+                    },
+                    "quantity": 3,
+                }
+            ],
+            "settlement": {"strategy": "npc_debt", "currency": "cash"},
+        }
+        rendered = migrate_lua_first.render_static_bulk_trade_effect(
+            {"u_bulk_trade_accept": descriptor},
+            "u_bulk_trade_accept",
+            True,
+            True,
+            True,
+        )
+        self.assertIsNotNone(rendered)
+        main = "\n".join(rendered or [])
+        self.assertIn("services.trade.quote", main)
+        self.assertIn("services.trade.commit", main)
+        self.assertIn('context.data["seller"]', main)
+        self.assertIn('context.data["item"]', main)
+        self.assertIn('strategy = "npc_debt"', main)
+        self.assertEqual(main.count("local trade_quote ="), 1)
+        self.assertNotIn("services.characters.avatar()", main)
+        self.assertNotIn("actor", main)
+
+        missing_settlement = dict(descriptor)
+        missing_settlement.pop("settlement")
+        self.assertIsNone(
+            migrate_lua_first.render_static_bulk_trade_effect(
+                {"u_bulk_trade_accept": missing_settlement},
+                "u_bulk_trade_accept",
+                True,
+                True,
+                True,
+            )
+        )
+        dynamic_quantity = dict(descriptor)
+        dynamic_quantity["lines"] = [
+            {
+                **descriptor["lines"][0],
+                "quantity": {"context_handle": "quantity"},
+            }
+        ]
+        self.assertIsNone(
+            migrate_lua_first.render_static_bulk_trade_effect(
+                {"u_bulk_trade_accept": dynamic_quantity},
+                "u_bulk_trade_accept",
+                True,
+                True,
+                True,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_quote_trade_effect(
+                {"quote_npc_trade_item": "legacy_item_id"},
+                "quote_npc_trade_item",
+                True,
+                True,
+            )
+        )
+
+    def test_equipment_migration_requires_explicit_item_and_holder_transaction(self) -> None:
+        wield_descriptor = {
+            "item_handle": {"context_handle": "item"},
+            "source_holder": {
+                "character_handle": {"context_handle": "actor"},
+                "slot": "inventory",
+            },
+            "displaced_destination": {
+                "character_handle": {"context_handle": "actor"},
+                "slot": "inventory",
+            },
+        }
+        rendered = migrate_lua_first.render_static_equipment_effect(
+            {"u_wield": wield_descriptor}, True, False
+        )
+        self.assertIsNotNone(rendered)
+        main = "\n".join(rendered or [])
+        self.assertIn("services.equipment.wield", main)
+        self.assertIn('context.data["item"]', main)
+        self.assertIn('context.data["actor"]', main)
+        self.assertNotIn("services.characters.avatar()", main)
+
+        wear_descriptor = dict(wield_descriptor)
+        rendered_wear = migrate_lua_first.render_static_equipment_effect(
+            {"u_wear": wear_descriptor}, True, False
+        )
+        self.assertIsNotNone(rendered_wear)
+        self.assertIn("services.equipment.wear", "\n".join(rendered_wear or []))
+
+        unequip_descriptor = {
+            "item_handle": {"context_handle": "item"},
+            "destination_holder": {
+                "character_handle": {"context_handle": "actor"},
+                "slot": "inventory",
+            },
+        }
+        rendered_unequip = migrate_lua_first.render_static_equipment_effect(
+            {"u_unequip": unequip_descriptor}, True, False
+        )
+        self.assertIsNotNone(rendered_unequip)
+        self.assertIn(
+            "services.equipment.unequip",
+            "\n".join(rendered_unequip or []),
+        )
+
+        for missing in (
+            {"item_handle": wield_descriptor["item_handle"],
+             "source_holder": wield_descriptor["source_holder"]},
+            {"item_handle": wield_descriptor["item_handle"],
+             "displaced_destination": wield_descriptor["displaced_destination"]},
+            {"item_handle": wield_descriptor["item_handle"],
+             "destination_holder": {"character_handle": {"context_handle": "actor"},
+                                    "slot": "worn"}},
+        ):
+            self.assertIsNone(
+                migrate_lua_first.render_static_equipment_effect(
+                    {"u_wield": missing}, True, False
+                )
+            )
+        self.assertIsNone(
+            migrate_lua_first.render_static_spawn_item_effect(
+                {"u_spawn_item": "rock", "force_equip": True}, True
+            )
+        )
 
 
 if __name__ == "__main__":

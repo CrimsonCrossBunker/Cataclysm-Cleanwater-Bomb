@@ -4,7 +4,7 @@
 #include <utility>
 #include <vector>
 
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 #include "debug.h"
 #include "generic_factory.h"
 #include "type_id.h"
@@ -408,13 +408,13 @@ namespace
 generic_factory<json_flag> json_flags_all( "json_flags" );
 } // namespace
 
-generic_factory<json_flag> &cata::lua::detail::json_flag_registry()
+generic_factory<json_flag> &cata::lua_platform::detail::json_flag_registry()
 {
     return json_flags_all;
 }
 
-std::vector<cata::lua::detail::json_flag_snapshot_entry>
-cata::lua::detail::json_flag_snapshot()
+std::vector<cata::lua_platform::detail::json_flag_snapshot_entry>
+cata::lua_platform::detail::json_flag_snapshot()
 {
     std::vector<json_flag_snapshot_entry> result;
     for( const json_flag &value : json_flags_all.get_all() ) {

@@ -32,9 +32,9 @@ cases:
     expected_validation_ids: [json-load]
   - id: lua-api
     task: Extend the Lua-first Platform contract and keep headless Mod validation working.
-    files: [data/lua/types/ccb_platform_v1.d.lua, src/catalua_loader.cpp]
+    files: [data/lua/types/ccb_platform_v1.d.lua, src/lua_platform_loader.cpp]
     expected_routes: [lua-api]
-    expected_paths: [data/lua/, src/catalua_loader.cpp, src/catalua_runtime.cpp]
+    expected_paths: [data/lua/, src/lua_platform_loader.cpp, src/lua_platform_runtime.cpp]
     expected_documentation_ids: [architecture.lua-first-platform]
     expected_validation_ids: [lua-contract]
   - id: upstream-port

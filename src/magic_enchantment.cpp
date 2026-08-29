@@ -1,6 +1,6 @@
 #include "magic_enchantment.h"
 
-#include "catalua_content.h"
+#include "lua_platform_content.h"
 
 #include <memory>
 #include <set>
@@ -195,7 +195,7 @@ namespace
 generic_factory<enchantment> spell_factory( "enchantment" );
 } // namespace
 
-generic_factory<enchantment> &cata::lua::detail::enchantment_registry()
+generic_factory<enchantment> &cata::lua_platform::detail::enchantment_registry()
 {
     return spell_factory;
 }

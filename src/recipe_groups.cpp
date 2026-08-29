@@ -51,7 +51,7 @@ generic_factory<recipe_group_data> recipe_groups_data( "recipe group type" );
 
 } // namespace
 
-bool cata::lua::detail::recipe_group_exists( const std::string_view id )
+bool cata::lua_platform::detail::recipe_group_exists( const std::string_view id )
 {
     return recipe_groups_data.is_valid( group_id( std::string( id ) ) );
 }
@@ -59,23 +59,23 @@ bool cata::lua::detail::recipe_group_exists( const std::string_view id )
 namespace
 {
 
-cata::lua::detail::recipe_group_native_definition convert_recipe_group(
+cata::lua_platform::detail::recipe_group_native_definition convert_recipe_group(
     const recipe_group_data &source )
 {
-    cata::lua::detail::recipe_group_native_definition result;
+    cata::lua_platform::detail::recipe_group_native_definition result;
     result.id = source.id.str();
     result.building_type = source.building_type;
     for( const auto &[source_id, source_mod] : source.src ) {
         result.sources.emplace_back( source_id.str(), source_mod );
     }
     for( const auto &[recipe_key, description] : source.recipes ) {
-        cata::lua::detail::recipe_group_recipe_definition recipe_entry;
+        cata::lua_platform::detail::recipe_group_recipe_definition recipe_entry;
         recipe_entry.id = recipe_key.str();
         recipe_entry.description = description;
         const auto terrain_entries = source.om_terrains.find( recipe_key );
         if( terrain_entries != source.om_terrains.end() ) {
             for( const omt_types_parameters &terrain : terrain_entries->second ) {
-                cata::lua::detail::recipe_group_terrain_definition terrain_entry;
+                cata::lua_platform::detail::recipe_group_terrain_definition terrain_entry;
                 terrain_entry.overmap_terrain = terrain.omt;
                 terrain_entry.match_type = io::enum_to_string( terrain.omt_type );
                 for( const auto &[parameter, values] : terrain.parameters ) {
@@ -91,8 +91,8 @@ cata::lua::detail::recipe_group_native_definition convert_recipe_group(
 
 } // namespace
 
-std::optional<cata::lua::detail::recipe_group_native_definition>
-cata::lua::detail::recipe_group_get( const std::string_view id )
+std::optional<cata::lua_platform::detail::recipe_group_native_definition>
+cata::lua_platform::detail::recipe_group_get( const std::string_view id )
 {
     const group_id key{ std::string( id ) };
     if( !recipe_groups_data.is_valid( key ) ) {
@@ -101,22 +101,22 @@ cata::lua::detail::recipe_group_get( const std::string_view id )
     return convert_recipe_group( recipe_groups_data.obj( key ) );
 }
 
-std::vector<cata::lua::detail::recipe_group_native_definition>
-cata::lua::detail::recipe_group_snapshot()
+std::vector<cata::lua_platform::detail::recipe_group_native_definition>
+cata::lua_platform::detail::recipe_group_snapshot()
 {
-    std::vector<cata::lua::detail::recipe_group_native_definition> result;
+    std::vector<cata::lua_platform::detail::recipe_group_native_definition> result;
     for( const recipe_group_data &value : recipe_groups_data.get_all() ) {
         result.emplace_back( convert_recipe_group( value ) );
     }
     std::sort( result.begin(), result.end(),
-    []( const cata::lua::detail::recipe_group_native_definition &left,
-        const cata::lua::detail::recipe_group_native_definition &right ) {
+    []( const cata::lua_platform::detail::recipe_group_native_definition &left,
+        const cata::lua_platform::detail::recipe_group_native_definition &right ) {
         return left.id < right.id;
     } );
     return result;
 }
 
-void cata::lua::detail::recipe_group_set(
+void cata::lua_platform::detail::recipe_group_set(
     const recipe_group_native_definition &definition )
 {
     const auto match_type = []( std::string value ) {
@@ -162,7 +162,7 @@ void cata::lua::detail::recipe_group_set(
     recipe_groups_data.insert( native );
 }
 
-void cata::lua::detail::recipe_group_erase( const std::string_view id )
+void cata::lua_platform::detail::recipe_group_erase( const std::string_view id )
 {
     recipe_groups_data.erase( group_id( std::string( id ) ) );
 }

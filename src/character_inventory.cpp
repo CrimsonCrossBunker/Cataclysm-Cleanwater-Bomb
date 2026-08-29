@@ -24,7 +24,7 @@
 #include "cached_options.h"
 #include "calendar.h"
 #include "catacharset.h"
-#include "catalua_hook.h"
+#include "lua_platform_hooks.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
@@ -567,7 +567,7 @@ item Character::i_rem( const item *it )
         return item();
     }
     invalidate_leak_level_cache();
-    return tmp.front();
+    return std::move( tmp.front() );
 }
 
 void Character::i_rem_keep_contents( const item *const it )

@@ -21,10 +21,10 @@ class JsonObject;
 class material_type;
 template <typename T> struct enum_traits;
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
-} // namespace cata::lua
+} // namespace cata::lua_platform
 
 using mat_burn_products = std::vector<std::pair<itype_id, float>>;
 using material_list = std::vector<material_type>;
@@ -75,7 +75,7 @@ struct fuel_data {
 
 class material_type
 {
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
 
     public:
         material_id id;

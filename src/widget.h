@@ -204,7 +204,7 @@ class window_panel;
 template<typename T>
 class generic_factory;
 
-namespace cata::lua
+namespace cata::lua_platform
 {
 class content_transaction;
 }
@@ -212,7 +212,7 @@ class content_transaction;
 struct widget_clause {
     private:
         friend class widget;
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
         std::string id;
         std::string sym;
         translation text;
@@ -279,7 +279,7 @@ class widget
 {
     private:
         friend class generic_factory<widget>;
-        friend class cata::lua::content_transaction;
+        friend class cata::lua_platform::content_transaction;
         friend struct mod_tracker;
 
         struct label_layout_override {

@@ -46,19 +46,19 @@ file(GLOB CATACLYSM_DDA_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cata_allocator_c.c)
 
-set(CATALUA_PLATFORM_ENABLED_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_dialogue_common.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_game.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_registry.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_services.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_state.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_values.cpp)
+set(LUA_PLATFORM_ENABLED_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/lua_platform_dialogue.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/lua_platform_mapgen_dispatch.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/lua_platform_snapshots.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/lua_platform_registry.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/lua_platform_services.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/lua_platform_state.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/lua_platform_values.cpp)
 if (CATA_ENABLE_LUA_PLATFORM)
     list(REMOVE_ITEM CATACLYSM_DDA_SOURCES
-        ${CMAKE_CURRENT_SOURCE_DIR}/catalua_ui_disabled.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/lua_platform_disabled.cpp)
 else()
-    list(REMOVE_ITEM CATACLYSM_DDA_SOURCES ${CATALUA_PLATFORM_ENABLED_SOURCES})
+    list(REMOVE_ITEM CATACLYSM_DDA_SOURCES ${LUA_PLATFORM_ENABLED_SOURCES})
 endif()
 
 if (MSVC)
