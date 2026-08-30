@@ -5468,11 +5468,14 @@ static void android_request_repaint()
 
 static void android_force_full_redraw()
 {
-    if( g != nullptr && android_has_active_world() ) {
-        g->invalidate_main_ui_adaptor();
-    } else {
-        ui_manager::invalidate_all_ui_adaptors();
-    }
+    // This path services lifecycle, visible-frame and input-context changes.
+    // The display buffer may have been cleared or replaced, so invalidating
+    // only the gameplay adaptor is insufficient while a menu is on top: a
+    // fully covering menu can suppress the lower invalidation and remain
+    // "clean", leaving the cleared frame visible until the next keypress.
+    // Rebuild the complete active stack so the current menu is present in the
+    // first frame after the transition as well.
+    ui_manager::invalidate_all_ui_adaptors();
     ui_manager::redraw_invalidated();
     needupdate = true;
 }
