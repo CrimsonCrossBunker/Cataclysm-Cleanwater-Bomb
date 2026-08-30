@@ -2,12 +2,16 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
 #include <limits>
 #include <memory>
 #include <set>
 #include <string>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
+#include <system_error>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -208,6 +212,142 @@ TEST_CASE( "lua_platform_registrar_applies_typed_extend_delete_atomically",
 
 namespace
 {
+
+struct platform_lua_test_directory {
+    platform_lua_test_directory() {
+        const std::filesystem::path temporary_root = std::filesystem::temp_directory_path();
+        for( std::size_t attempt = 0; attempt < 100; ++attempt ) {
+            const std::filesystem::path candidate = temporary_root /
+                                                    ( "cata-lua-platform-loader-" + std::to_string( attempt ) );
+            std::error_code filesystem_error;
+            if( std::filesystem::create_directory( candidate, filesystem_error ) ) {
+                root = candidate;
+                return;
+            }
+            if( filesystem_error && filesystem_error != std::errc::file_exists ) {
+                throw std::runtime_error( "Cannot create Lua Platform test directory: " +
+                                          filesystem_error.message() );
+            }
+        }
+        throw std::runtime_error( "Cannot reserve a Lua Platform test directory" );
+    }
+
+    ~platform_lua_test_directory() {
+        if( root.empty() ) {
+            return;
+        }
+        std::error_code filesystem_error;
+        std::filesystem::remove_all( root, filesystem_error );
+    }
+
+    void write( const std::filesystem::path &relative, const std::string &contents ) const {
+        const std::filesystem::path destination = root / relative;
+        std::error_code filesystem_error;
+        if( !destination.parent_path().empty() &&
+            !std::filesystem::create_directories( destination.parent_path(), filesystem_error ) &&
+            filesystem_error ) {
+            throw std::runtime_error( "Cannot create Lua Platform test file directory: " +
+                                      filesystem_error.message() );
+        }
+        std::ofstream output( destination, std::ios::binary );
+        if( !output ) {
+            throw std::runtime_error( "Cannot write Lua Platform test file '" +
+                                      destination.generic_u8string() + "'" );
+        }
+        output << contents;
+    }
+
+    std::filesystem::path root;
+};
+
+const char *const platform_loader_policy_probe = R"lua(
+local ccb = require("ccb")
+
+for _, name in ipairs({ "assert", "error", "pcall", "pairs", "require" }) do
+    if type(_G[name]) ~= "function" then
+        error("missing allowed base function " .. name)
+    end
+end
+for _, name in ipairs({ "math", "string", "table", "utf8", "coroutine" }) do
+    if type(_G[name]) ~= "table" then
+        error("missing allowed library " .. name)
+    end
+end
+for _, name in ipairs({ "io", "os", "debug", "dofile", "loadfile", "load", "loadstring", "collectgarbage" }) do
+    if _G[name] ~= nil then
+        error("forbidden global is exposed: " .. name)
+    end
+end
+
+if type(package) ~= "table" or type(package.loaded) ~= "table" then
+    error("controlled package.loaded state is missing")
+end
+if package.loaded["ccb"] ~= ccb then
+    error("package.loaded[ccb] does not contain the Platform root")
+end
+package.loaded["../outside"] = { value = "spoofed" }
+local unsafe_ok = pcall(require, "../outside")
+if unsafe_ok then
+    error("unsafe module name bypassed validation through package.loaded")
+end
+package.loaded["../outside"] = nil
+package.loaded["ccb"] = { value = "spoofed" }
+if require("ccb") ~= ccb then
+    error("require[ccb] did not return the original Platform root")
+end
+package.loaded["ccb"] = ccb
+for _, name in ipairs({ "config", "cpath", "loadlib", "path", "preload", "searchers", "searchpath" }) do
+    if package[name] ~= nil then
+        error("forbidden package field is exposed: " .. name)
+    end
+end
+for name in pairs(package) do
+    if name ~= "loaded" then
+        error("unexpected package field is exposed: " .. name)
+    end
+end
+
+local foo = require("foo")
+if foo.value ~= "foo" or require("foo") ~= foo then
+    error("root-local foo.lua require was not cached")
+end
+local nested = require("nested")
+if nested.value ~= "nested" then
+    error("root-local nested/init.lua require failed")
+end
+local first_ok = pcall(require, "broken")
+if first_ok or package.loaded["broken"] ~= nil then
+    error("failed module was not rolled back")
+end
+local second_ok = pcall(require, "broken")
+if second_ok or package.loaded["broken"] ~= nil then
+    error("failed module was not retryable after rollback")
+end
+)lua";
+
+TEST_CASE( "lua_platform_loader_uses_restricted_environment_for_metadata_and_runtime",
+           "[lua][platform][loader]" )
+{
+    platform_lua_test_directory files;
+    files.write( "foo.lua", "return { value = \"foo\" }\n" );
+    files.write( "nested/init.lua", "return { value = \"nested\" }\n" );
+    files.write( "broken.lua", "error(\"broken module\")\n" );
+    files.write( "mod.lua", std::string( platform_loader_policy_probe ) +
+                 "\nreturn ccb.ModDefinition { id = \"platform-loader-policy-test\" }\n" );
+    files.write( "main.lua", platform_loader_policy_probe );
+
+    cata::lua_platform::mod_definition metadata;
+    std::string error;
+    REQUIRE( cata::lua_platform::read_mod_definition( files.root, metadata, error ) );
+    CHECK( error.empty() );
+    CHECK( metadata.id == "platform-loader-policy-test" );
+
+    const cata::lua_platform::mod_source source = {
+        metadata.id, files.root, files.root / "main.lua"
+    };
+    REQUIRE( cata::lua_platform::validate_mods( { source }, error ) );
+    CHECK( error.empty() );
+}
 
 struct platform_test_camp_scope {
     explicit platform_test_camp_scope( const std::string &name,

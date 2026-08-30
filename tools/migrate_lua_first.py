@@ -24,9 +24,26 @@ import unicodedata
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 
 from generate_builtin_mods import strip_jsonc_comments, strip_trailing_commas
+
+try:
+    from agent.migration_todo import (
+        MigrationBoundary,
+        MigrationTodo,
+        TODO_CATEGORIES,
+        TodoCategory,
+        validate_todo_category,
+    )
+except ModuleNotFoundError:
+    from tools.agent.migration_todo import (
+        MigrationBoundary,
+        MigrationTodo,
+        TODO_CATEGORIES,
+        TodoCategory,
+        validate_todo_category,
+    )
 
 
 ITEM_TYPES = {
@@ -1703,8 +1720,30 @@ class MigrationResult:
     files: dict[Path, str] = field(default_factory=dict)
     converted: list[str] = field(default_factory=list)
     partial: list[str] = field(default_factory=list)
-    todos: list[str] = field(default_factory=list)
-    boundaries: list[str] = field(default_factory=list)
+    todos: list[MigrationTodo] = field(default_factory=list)
+    boundaries: list[MigrationBoundary] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if any(not isinstance(todo, MigrationTodo) for todo in self.todos):
+            raise TypeError("migration result TODOs must be MigrationTodo records")
+        if any(
+            not isinstance(boundary, MigrationBoundary)
+            for boundary in self.boundaries
+        ):
+            raise TypeError(
+                "migration result boundaries must be MigrationBoundary records"
+            )
+
+    def add_todo(self, category: TodoCategory, rendered: str) -> None:
+        """Append one explicitly classified TODO from legacy report text.
+
+        ``rendered`` remains accepted at the producer boundary so the large
+        family of existing renderers can keep their precise source wording.
+        Classification is required by the caller and is never inferred from
+        that wording.
+        """
+        validate_todo_category(category)
+        self.todos.append(MigrationTodo.from_rendered(category, rendered))
 
 
 def render_mod_definition(
@@ -1719,7 +1758,8 @@ def render_mod_definition(
         raw_id != mod_id
     ):
         complete = False
-        result.todos.append(
+        result.add_todo(
+            "semantic_choice",
             f"{source.location}: MOD_INFO id {raw_id!r} does not match the resolved Platform id {mod_id!r}"
         )
 
@@ -1740,12 +1780,14 @@ def render_mod_definition(
             lines.append(f"    name = {lua_quote(name)},")
         else:
             complete = False
-            result.todos.append(
+            result.add_todo(
+                "semantic_choice",
                 f"{source.location}: MOD_INFO name needs a bounded plain-string conversion"
             )
     else:
         complete = False
-        result.todos.append(
+        result.add_todo(
+            "semantic_choice",
             f"{source.location}: MOD_INFO without a plain name has different legacy fallback presentation"
         )
 
@@ -1759,7 +1801,8 @@ def render_mod_definition(
             lines.append(f"    version = {lua_quote(version)},")
         else:
             complete = False
-            result.todos.append(
+            result.add_todo(
+                "semantic_choice",
                 f"{source.location}: MOD_INFO version needs a bounded string conversion"
             )
 
@@ -1781,7 +1824,8 @@ def render_mod_definition(
             lines.append(f"    dependencies = {{ {rendered} }},")
         else:
             complete = False
-            result.todos.append(
+            result.add_todo(
+                "semantic_choice",
                 f"{source.location}: MOD_INFO dependencies need a unique bounded string-array conversion"
             )
 
@@ -1791,7 +1835,8 @@ def render_mod_definition(
             lines.append(f"    core = {'true' if core else 'false'},")
         else:
             complete = False
-            result.todos.append(
+            result.add_todo(
+                "semantic_choice",
                 f"{source.location}: MOD_INFO core must be a boolean"
             )
 
@@ -1800,7 +1845,8 @@ def render_mod_definition(
     )
     if unresolved:
         complete = False
-        result.todos.append(
+        result.add_todo(
+            "semantic_choice",
             f"{source.location}: MOD_INFO unresolved fields: {', '.join(unresolved)}"
         )
 
@@ -1855,7 +1901,11 @@ def load_objects(inputs: Iterable[Path]) -> list[SourceObject]:
     return objects
 
 
-def render_materials(lines: list[str], raw: Any, todos: list[str], location: str) -> None:
+def render_materials(
+    lines: list[str], raw: Any,
+    add_todo: Callable[[TodoCategory, str], None],
+    location: str,
+) -> None:
     values = raw if isinstance(raw, list) else [raw]
     for entry in values:
         if isinstance(entry, str) and entry:
@@ -1872,14 +1922,21 @@ def render_materials(lines: list[str], raw: Any, todos: list[str], location: str
         ):
             lines.append(f"definition:material({lua_quote(entry[0])}, {entry[1]})")
         else:
-            todos.append(f"{location}: item material entry needs manual conversion")
+            add_todo(
+                "manual_rewrite",
+                f"{location}: item material entry needs manual conversion",
+            )
 
 
 def render_pairs(
-    lines: list[str], raw: Any, method: str, todos: list[str], location: str
+    lines: list[str], raw: Any, method: str,
+    add_todo: Callable[[TodoCategory, str], None],
+    location: str,
 ) -> None:
     if not isinstance(raw, list):
-        todos.append(f"{location}: {method} must be reviewed manually")
+        add_todo(
+            "manual_rewrite", f"{location}: {method} must be reviewed manually"
+        )
         return
     for entry in raw:
         if (
@@ -1893,7 +1950,10 @@ def render_pairs(
         ):
             lines.append(f"definition:{method}({lua_quote(entry[0])}, {entry[1]})")
         else:
-            todos.append(f"{location}: malformed {method} entry needs manual conversion")
+            add_todo(
+                "manual_rewrite",
+                f"{location}: malformed {method} entry needs manual conversion",
+            )
 
 
 def render_item(source: SourceObject, result: MigrationResult) -> str | None:
@@ -1901,17 +1961,20 @@ def render_item(source: SourceObject, result: MigrationResult) -> str | None:
     item_id = stable_id(value, f"todo_item_{source.index}")
     if not isinstance(value.get("id"), str) or not value["id"]:
         result.partial.append(f"{source.location}: item {item_id}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: item {item_id} has no concrete stable id"
         )
         if "copy-from" in value or "abstract" in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: item {item_id} inheritance must become a Lua constructor/composition function"
             )
         return None
     if not safe_platform_id(value["id"]):
         result.partial.append(f"{source.location}: item {item_id}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: item {item_id} is not a safe native Platform id"
         )
         return None
@@ -1919,13 +1982,18 @@ def render_item(source: SourceObject, result: MigrationResult) -> str | None:
     item_kind = value.get("type")
     forced_partial = False
     if item_kind not in {"ITEM", "GENERIC"}:
-        result.todos.append(
+        # The typed Item builder exists, but this subtype needs an explicit
+        # content-owner decision about whether a new authoring registrar is
+        # warranted; it is not a Platform backlog input by itself.
+        result.add_todo(
+            "semantic_choice",
             f"{source.location}: item {item_id} keeps only shared fields; "
             f"the {item_kind} subtype needs a native Platform registrar"
         )
         forced_partial = True
     if "copy-from" in value or "abstract" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: item {item_id} inheritance must become a Lua constructor/composition function"
         )
         forced_partial = True
@@ -1936,12 +2004,14 @@ def render_item(source: SourceObject, result: MigrationResult) -> str | None:
     symbol = value.get("symbol") if isinstance(value.get("symbol"), str) else "?"
     if not name:
         name = item_id
-        result.todos.append(
+        result.add_todo(
+            "semantic_choice",
             f"{source.location}: item {item_id} name cannot be empty"
         )
     if not symbol:
         symbol = "?"
-        result.todos.append(
+        result.add_todo(
+            "semantic_choice",
             f"{source.location}: item {item_id} symbol cannot be empty"
         )
     for field_name in ("name", "description"):
@@ -1949,15 +2019,18 @@ def render_item(source: SourceObject, result: MigrationResult) -> str | None:
         if isinstance(raw_text, dict) and (
             set(raw_text) != {"str"} or not isinstance(raw_text.get("str"), str)
         ):
-            result.todos.append(
+            result.add_todo(
+                "semantic_choice",
                 f"{source.location}: item {item_id} {field_name} translation metadata needs review"
             )
         elif field_name in value and not isinstance(raw_text, (str, dict)):
-            result.todos.append(
+            result.add_todo(
+                "semantic_choice",
                 f"{source.location}: item {item_id} {field_name} needs review"
             )
     if "symbol" in value and not isinstance(value["symbol"], str):
-        result.todos.append(
+        result.add_todo(
+            "semantic_choice",
             f"{source.location}: item {item_id} symbol needs review"
         )
     lines = [
@@ -1971,13 +2044,13 @@ def render_item(source: SourceObject, result: MigrationResult) -> str | None:
     weight = parse_integral_unit(value.get("weight"), {"mg": 0.001, "g": 1, "kg": 1000})
     if "weight" in value:
         if weight is None or not 0 <= weight <= NATIVE_MASS_GRAMS_MAX:
-            result.todos.append(f"{source.location}: item {item_id} weight needs unit review")
+            result.add_todo("semantic_choice", f"{source.location}: item {item_id} weight needs unit review")
         else:
             lines.append(f"definition:mass_grams({weight})")
     volume = parse_integral_unit(value.get("volume"), {"ml": 1, "l": 1000})
     if "volume" in value:
         if volume is None or not 0 <= volume <= NATIVE_INT_MAX:
-            result.todos.append(f"{source.location}: item {item_id} volume needs unit review")
+            result.add_todo("semantic_choice", f"{source.location}: item {item_id} volume needs unit review")
         else:
             lines.append(f"definition:volume_ml({volume})")
     price = value.get("price")
@@ -1988,11 +2061,11 @@ def render_item(source: SourceObject, result: MigrationResult) -> str | None:
     ):
         lines.append(f"definition:price_cents({price})")
     elif "price" in value:
-        result.todos.append(f"{source.location}: item {item_id} price needs unit review")
+        result.add_todo("semantic_choice", f"{source.location}: item {item_id} price needs unit review")
     if "material" in value:
-        render_materials(lines, value["material"], result.todos, source.location)
+        render_materials(lines, value["material"], result.add_todo, source.location)
     if "qualities" in value:
-        render_pairs(lines, value["qualities"], "quality", result.todos, source.location)
+        render_pairs(lines, value["qualities"], "quality", result.add_todo, source.location)
     flags = value.get("flags", [])
     if isinstance(flags, list) and all(
         isinstance(entry, str) and bool(entry) for entry in flags
@@ -2000,12 +2073,13 @@ def render_item(source: SourceObject, result: MigrationResult) -> str | None:
         for flag_name in flags:
             lines.append(f"definition:flag({lua_quote(flag_name)})")
     elif "flags" in value:
-        result.todos.append(f"{source.location}: item {item_id} flags need manual conversion")
+        result.add_todo("manual_rewrite", f"{source.location}: item {item_id} flags need manual conversion")
     unresolved = sorted(set(value) - COMMON_ITEM_FIELDS)
     if unresolved or forced_partial or len(result.todos) != todo_count:
         result.partial.append(f"{source.location}: item {item_id}")
         if unresolved:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: item {item_id} unresolved fields: {', '.join(unresolved)}"
             )
     else:
@@ -2037,15 +2111,22 @@ def requirement_choices(raw: Any, *, tools: bool = False) -> list[tuple[str, int
 
 def render_requirement_groups(
     lines: list[str], raw: Any, singular: str, alternatives: str,
-    todos: list[str], location: str, *, tools: bool = False, owner: str = "recipe"
+    add_todo: Callable[[TodoCategory, str], None], location: str,
+    *, tools: bool = False, owner: str = "recipe"
 ) -> None:
     if not isinstance(raw, list):
-        todos.append(f"{location}: {owner} {singular} requirements need manual conversion")
+        add_todo(
+            "manual_rewrite",
+            f"{location}: {owner} {singular} requirements need manual conversion",
+        )
         return
     for group in raw:
         choices = requirement_choices(group, tools=tools)
         if choices is None:
-            todos.append(f"{location}: {owner} {singular} group needs manual conversion")
+            add_todo(
+                "manual_rewrite",
+                f"{location}: {owner} {singular} group needs manual conversion",
+            )
         elif len(choices) == 1:
             item_id, count = choices[0]
             if tools and count > 0:
@@ -2072,23 +2153,28 @@ def render_recipe(source: SourceObject, result: MigrationResult) -> str | None:
     todo_count = len(result.todos)
     forced_partial = False
     if "copy-from" in value or "abstract" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: recipe {recipe_id} inheritance must become a Lua constructor/composition function"
         )
         forced_partial = True
     product = value.get("result")
     if not safe_platform_id(product):
-        result.todos.append(f"{source.location}: recipe {recipe_id} has no stable result")
+        result.add_todo("manual_rewrite", f"{source.location}: recipe {recipe_id} has no stable result")
         result.partial.append(f"{source.location}: recipe {recipe_id}")
         return None
     if not safe_platform_id(recipe_id):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: recipe {recipe_id} is not a safe native Platform id"
         )
         result.partial.append(f"{source.location}: recipe {recipe_id}")
         return None
     if value.get("type") == "uncraft":
-        result.todos.append(
+        # The native disassembly path is bounded; whether this recipe should
+        # use that interpretation remains a content-owner choice.
+        result.add_todo(
+            "semantic_choice",
             f"{source.location}: uncraft {recipe_id} native disassembly registration is bounded"
         )
     category = value.get("category", "CC_MISC")
@@ -2099,7 +2185,8 @@ def render_recipe(source: SourceObject, result: MigrationResult) -> str | None:
         not isinstance(subcategory, str) or
         not subcategory
     ):
-        result.todos.append(
+        result.add_todo(
+            "semantic_choice",
             f"{source.location}: recipe {recipe_id} category ids need review"
         )
         category = "CC_MISC"
@@ -2115,7 +2202,8 @@ def render_recipe(source: SourceObject, result: MigrationResult) -> str | None:
         lines.append("    practice = true,")
         for member in ("practice_data", "book_learn", "proficiencies"):
             if member in value:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: practice {recipe_id} {member} needs review"
                 )
     elif value.get("type") == "uncraft":
@@ -2124,7 +2212,8 @@ def render_recipe(source: SourceObject, result: MigrationResult) -> str | None:
     if isinstance(skill, str) and skill:
         lines.append(f"    skill = {lua_quote(skill)},")
     elif "skill_used" in value and skill not in (None, ""):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: recipe {recipe_id} primary skill needs review"
         )
     difficulty = value.get("difficulty", 0)
@@ -2136,32 +2225,33 @@ def render_recipe(source: SourceObject, result: MigrationResult) -> str | None:
         lines.append(f"    difficulty = {difficulty},")
     else:
         lines.append("    difficulty = 0,")
-        result.todos.append(f"{source.location}: recipe {recipe_id} difficulty needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: recipe {recipe_id} difficulty needs review")
     duration = parse_moves(value.get("time", 100))
     if duration is None or not 0 < duration <= NATIVE_INT64_MAX:
         duration = 100
-        result.todos.append(f"{source.location}: recipe {recipe_id} time needs unit review")
+        result.add_todo("manual_rewrite", f"{source.location}: recipe {recipe_id} time needs unit review")
     lines.append(f"    duration_moves = {duration},")
     autolearn = value.get("autolearn", True)
     if isinstance(autolearn, bool):
         lines.append(f"    autolearn = {'true' if autolearn else 'false'},")
     else:
         lines.append("    autolearn = false,")
-        result.todos.append(f"{source.location}: recipe {recipe_id} conditional autolearn needs Lua logic")
+        result.add_todo("manual_rewrite", f"{source.location}: recipe {recipe_id} conditional autolearn needs Lua logic")
     reversible = value.get("reversible", False)
     if not isinstance(reversible, bool):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: recipe {recipe_id} reversible flag needs review"
         )
         reversible = False
     lines.extend((f"    reversible = {'true' if reversible else 'false'},", "}"))
     render_requirement_groups(
         lines, value.get("components", []), "component", "component_any",
-        result.todos, source.location
+        result.add_todo, source.location
     )
     render_requirement_groups(
         lines, value.get("tools", []), "tool", "tool_any",
-        result.todos, source.location, tools=True
+        result.add_todo, source.location, tools=True
     )
     skills = value.get("skills_required", [])
     if isinstance(skills, list):
@@ -2177,9 +2267,10 @@ def render_recipe(source: SourceObject, result: MigrationResult) -> str | None:
             ):
                 lines.append(f"definition:requires_skill({lua_quote(entry[0])}, {entry[1]})")
             else:
-                result.todos.append(f"{source.location}: recipe {recipe_id} required skill needs review")
+                result.add_todo("manual_rewrite", f"{source.location}: recipe {recipe_id} required skill needs review")
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: recipe {recipe_id} required skills need review"
         )
     external = value.get("using", [])
@@ -2197,18 +2288,21 @@ def render_recipe(source: SourceObject, result: MigrationResult) -> str | None:
                     f"definition:requirement({lua_quote(entry[0])}, {entry[1]})"
                 )
             else:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: recipe {recipe_id} external requirement needs review"
                 )
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: recipe {recipe_id} external requirements need review"
         )
     unresolved = sorted(set(value) - COMMON_RECIPE_FIELDS)
     if unresolved or forced_partial or len(result.todos) != todo_count:
         result.partial.append(f"{source.location}: recipe {recipe_id}")
         if unresolved:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: recipe {recipe_id} unresolved fields: {', '.join(unresolved)}"
             )
     else:
@@ -2234,7 +2328,8 @@ def finish_catalog(
 ) -> str:
     unresolved = unresolved_fields(source.value, supported)
     if unresolved:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: {label} {object_id} unresolved fields: " +
             ", ".join(unresolved)
         )
@@ -2245,11 +2340,14 @@ def finish_catalog(
 
 
 def render_requirement(source: SourceObject, result: MigrationResult) -> str | None:
+    # This catalog family already has typed builders.  A source shape that
+    # cannot be lowered by the bounded renderer therefore needs an ordinary
+    # Lua rewrite, rather than expanding the Platform contract implicitly.
     value = source.value
     requirement_id = value.get("id")
     if not safe_platform_id(requirement_id):
         result.partial.append(f"{source.location}: requirement <invalid id>")
-        result.todos.append(f"{source.location}: requirement needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: requirement needs a stable native id")
         return None
     todo_count = len(result.todos)
     lines = ["local definition = content.Requirement {", f"    id = {lua_quote(requirement_id)},"]
@@ -2259,14 +2357,14 @@ def render_requirement(source: SourceObject, result: MigrationResult) -> str | N
         if text:
             lines.append(f"    name = {lua_quote(text)},")
         else:
-            result.todos.append(f"{source.location}: requirement {requirement_id} name needs review")
+            result.add_todo("manual_rewrite", f"{source.location}: requirement {requirement_id} name needs review")
     lines.append("}")
     render_requirement_groups(
         lines,
         value.get("components", []),
         "component",
         "component_any",
-        result.todos,
+        result.add_todo,
         source.location,
         owner=f"requirement {requirement_id}",
     )
@@ -2275,7 +2373,7 @@ def render_requirement(source: SourceObject, result: MigrationResult) -> str | N
         value.get("tools", []),
         "tool",
         "tool_any",
-        result.todos,
+        result.add_todo,
         source.location,
         tools=True,
         owner=f"requirement {requirement_id}",
@@ -2284,7 +2382,8 @@ def render_requirement(source: SourceObject, result: MigrationResult) -> str | N
     if isinstance(qualities, list):
         for group in qualities:
             if not isinstance(group, list) or not group:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: requirement {requirement_id} quality group needs review"
                 )
                 continue
@@ -2308,7 +2407,8 @@ def render_requirement(source: SourceObject, result: MigrationResult) -> str | N
                     converted = []
                     break
             if not converted:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: requirement {requirement_id} quality group needs review"
                 )
             elif len(converted) == 1:
@@ -2323,7 +2423,8 @@ def render_requirement(source: SourceObject, result: MigrationResult) -> str | N
                 )
                 lines.append(f"definition:quality_any {{ {rendered} }}")
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: requirement {requirement_id} qualities need review"
         )
     return finish_catalog(
@@ -2342,13 +2443,13 @@ def render_recipe_group(source: SourceObject, result: MigrationResult) -> str | 
     group_id = value.get("id")
     if not safe_platform_id(group_id):
         result.partial.append(f"{source.location}: recipe group <invalid id>")
-        result.todos.append(f"{source.location}: recipe group needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: recipe group needs a stable native id")
         return None
     todo_count = len(result.todos)
     building_type = value.get("building_type", "NONE")
     if not isinstance(building_type, str) or not building_type:
         building_type = "NONE"
-        result.todos.append(f"{source.location}: recipe group {group_id} building type needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: recipe group {group_id} building type needs review")
     lines = [
         "local definition = content.RecipeGroup {",
         f"    id = {lua_quote(group_id)},",
@@ -2359,7 +2460,8 @@ def render_recipe_group(source: SourceObject, result: MigrationResult) -> str | 
     if isinstance(recipes, list):
         for recipe in recipes:
             if not isinstance(recipe, dict) or not safe_platform_id(recipe.get("id")):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: recipe group {group_id} recipe entry needs review"
                 )
                 continue
@@ -2370,7 +2472,8 @@ def render_recipe_group(source: SourceObject, result: MigrationResult) -> str | 
             )
             terrains = recipe.get("om_terrains", [])
             if not isinstance(terrains, list):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: recipe group {group_id} recipe {recipe_id} terrains need review"
                 )
                 continue
@@ -2387,7 +2490,8 @@ def render_recipe_group(source: SourceObject, result: MigrationResult) -> str | 
                 else:
                     terrain_id = None
                 if not isinstance(terrain_id, str) or not terrain_id or not isinstance(match_type, str) or match_type.upper() not in {"EXACT", "TYPE", "SUBTYPE", "PREFIX", "CONTAINS"}:
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: recipe group {group_id} recipe {recipe_id} terrain needs review"
                     )
                     continue
@@ -2395,7 +2499,8 @@ def render_recipe_group(source: SourceObject, result: MigrationResult) -> str | 
                     f"definition:terrain({lua_quote(recipe_id)}, {lua_quote(terrain_id)}, {lua_quote(match_type.upper())})"
                 )
                 if not isinstance(parameters, dict):
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: recipe group {group_id} recipe {recipe_id} terrain parameters need review"
                     )
                     continue
@@ -2406,11 +2511,12 @@ def render_recipe_group(source: SourceObject, result: MigrationResult) -> str | 
                             f"definition:terrain_parameter({lua_quote(recipe_id)}, {lua_quote(parameter)}, {rendered_values})"
                         )
                     else:
-                        result.todos.append(
+                        result.add_todo(
+                            "manual_rewrite",
                             f"{source.location}: recipe group {group_id} recipe {recipe_id} terrain parameter needs review"
                         )
     else:
-        result.todos.append(f"{source.location}: recipe group {group_id} recipes need review")
+        result.add_todo("manual_rewrite", f"{source.location}: recipe group {group_id} recipes need review")
     return finish_catalog(
         source,
         result,
@@ -2427,7 +2533,7 @@ def render_scenario(source: SourceObject, result: MigrationResult) -> str | None
     scenario_id = value.get("id")
     if not safe_platform_id(scenario_id):
         result.partial.append(f"{source.location}: scenario <invalid id>")
-        result.todos.append(f"{source.location}: scenario needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: scenario needs a stable native id")
         return None
     todo_count = len(result.todos)
     name = display_text(value.get("name"), scenario_id)
@@ -2442,7 +2548,8 @@ def render_scenario(source: SourceObject, result: MigrationResult) -> str | None
             NATIVE_INT_MIN <= raw <= NATIVE_INT_MAX
         ):
             return raw
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: scenario {scenario_id} {field} needs review"
         )
         return default
@@ -2451,7 +2558,8 @@ def render_scenario(source: SourceObject, result: MigrationResult) -> str | None
         raw = value.get(field, default)
         if isinstance(raw, bool):
             return raw
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: scenario {scenario_id} {field} needs review"
         )
         return default
@@ -2477,7 +2585,8 @@ def render_scenario(source: SourceObject, result: MigrationResult) -> str | None
         if not isinstance(raw, list) or any(
             not isinstance(entry, str) or not entry for entry in raw
         ):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: scenario {scenario_id} {field} needs review"
             )
             return
@@ -2496,7 +2605,8 @@ def render_scenario(source: SourceObject, result: MigrationResult) -> str | None
     elif isinstance(requirement, str) and requirement:
         lines.append(f"definition:requirement({lua_quote(requirement)})")
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: scenario {scenario_id} requirement needs review"
         )
     return finish_catalog(
@@ -2523,7 +2633,8 @@ def render_vehicle_color_palette(
     palette_id = value.get("id")
     if not safe_platform_id(palette_id):
         result.partial.append(f"{source.location}: vehicle color palette <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: vehicle color palette needs a stable native id"
         )
         return None
@@ -2537,7 +2648,8 @@ def render_vehicle_color_palette(
     if isinstance(raw_groups, list) and raw_groups:
         for raw_group in raw_groups:
             if not isinstance(raw_group, dict):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: vehicle color palette {palette_id} "
                     "group needs review"
                 )
@@ -2555,7 +2667,8 @@ def render_vehicle_color_palette(
                 entry.get("weight", 0) <= 0
                 for entry in raw_colors
             ):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: vehicle color palette {palette_id} "
                     "group needs review"
                 )
@@ -2574,7 +2687,8 @@ def render_vehicle_color_palette(
             lines[-1] = lines[-1][:-1]
             lines.append("})")
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: vehicle color palette {palette_id} "
             "palette needs review"
         )
@@ -5677,12 +5791,12 @@ def _mapgen_item_descriptor(value: Any, location: str, result: MigrationResult) 
     if isinstance(value, str) and value:
         return {"item": value}
     if not isinstance(value, dict):
-        result.todos.append(f"{location}: mapgen item entry needs review")
+        result.add_todo("manual_rewrite", f"{location}: mapgen item entry needs review")
         return None
     item = value.get("item")
     group = value.get("group", value.get("item_group"))
     if not isinstance(item, str) and not isinstance(group, str):
-        result.todos.append(f"{location}: mapgen item entry needs an item or group")
+        result.add_todo("manual_rewrite", f"{location}: mapgen item entry needs an item or group")
         return None
     descriptor: dict[str, Any] = {}
     if isinstance(item, str) and item:
@@ -5701,14 +5815,15 @@ def _mapgen_item_descriptor(value: Any, location: str, result: MigrationResult) 
             if isinstance(raw, (int, float)) and not isinstance(raw, bool):
                 descriptor[target_key] = raw
             else:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{location}: mapgen item {source_key} needs a numeric/string literal"
                 )
     repeat = value.get("repeat")
     if isinstance(repeat, int) and not isinstance(repeat, bool) and repeat > 0:
         descriptor["repeat"] = repeat
     elif repeat is not None:
-        result.todos.append(f"{location}: mapgen item repeat range needs review")
+        result.add_todo("manual_rewrite", f"{location}: mapgen item repeat range needs review")
     return descriptor
 
 
@@ -5722,15 +5837,15 @@ def _mapgen_symbol_descriptors(
         if raw is None:
             return
         if not isinstance(raw, dict):
-            result.todos.append(f"{location}: mapgen {field} map needs review")
+            result.add_todo("manual_rewrite", f"{location}: mapgen {field} map needs review")
             return
         for glyph, value in raw.items():
             if not isinstance(glyph, str) or not glyph:
-                result.todos.append(f"{location}: mapgen {field} glyph needs review")
+                result.add_todo("manual_rewrite", f"{location}: mapgen {field} glyph needs review")
                 continue
             choice = _lua_choice(value)
             if choice is None:
-                result.todos.append(f"{location}: mapgen {field} {glyph!r} needs review")
+                result.add_todo("manual_rewrite", f"{location}: mapgen {field} {glyph!r} needs review")
                 continue
             symbols.setdefault(glyph, {})[target] = value
 
@@ -5765,7 +5880,7 @@ def _mapgen_symbol_descriptors(
                     "field_age_turns": value.get("age", 0),
                 })
             else:
-                result.todos.append(f"{location}: mapgen field {glyph!r} needs review")
+                result.add_todo("manual_rewrite", f"{location}: mapgen field {glyph!r} needs review")
     raw_vending = source.get("vendingmachines", source.get("vending_machines"))
     if isinstance(raw_vending, dict):
         for glyph, value in raw_vending.items():
@@ -5778,7 +5893,7 @@ def _mapgen_symbol_descriptors(
                     "vending_lootable": bool(value.get("lootable", False)),
                 })
             else:
-                result.todos.append(f"{location}: mapgen vending machine {glyph!r} needs review")
+                result.add_todo("manual_rewrite", f"{location}: mapgen vending machine {glyph!r} needs review")
     raw_liquids = source.get("liquids", source.get("liquid"))
     if isinstance(raw_liquids, dict):
         for glyph, value in raw_liquids.items():
@@ -5786,7 +5901,8 @@ def _mapgen_symbol_descriptors(
                 amount = value.get("amount", value.get("charges", 1))
                 if isinstance(amount, list) and amount:
                     amount = amount[-1]
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{location}: mapgen liquid {glyph!r} amount range bounded to its maximum"
                     )
                 if isinstance(amount, int) and not isinstance(amount, bool):
@@ -5794,9 +5910,9 @@ def _mapgen_symbol_descriptors(
                         "liquid": value["liquid"], "liquid_charges": amount
                     })
                 else:
-                    result.todos.append(f"{location}: mapgen liquid {glyph!r} amount needs review")
+                    result.add_todo("manual_rewrite", f"{location}: mapgen liquid {glyph!r} amount needs review")
             else:
-                result.todos.append(f"{location}: mapgen liquid {glyph!r} needs review")
+                result.add_todo("manual_rewrite", f"{location}: mapgen liquid {glyph!r} needs review")
     return symbols
 
 
@@ -5826,7 +5942,7 @@ def render_mapgen(source: SourceObject, result: MigrationResult) -> str | None:
         mapgen_id = terrain_ids[0] if terrain_ids else None
     if not safe_platform_id(mapgen_id):
         result.partial.append(f"{source.location}: mapgen <invalid id>")
-        result.todos.append(f"{source.location}: mapgen needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: mapgen needs a stable native id")
         return None
     todo_count = len(result.todos)
     rows = object_value.get("rows")
@@ -5836,17 +5952,18 @@ def render_mapgen(source: SourceObject, result: MigrationResult) -> str | None:
         len(rows) > 24 or
         any(len(row) > 24 for row in rows)
     ):
-        result.todos.append(f"{source.location}: mapgen {mapgen_id} rows exceed the 24x24 Platform shape")
+        result.add_todo("manual_rewrite", f"{source.location}: mapgen {mapgen_id} rows exceed the 24x24 Platform shape")
         rows = []
     fill = object_value.get("fill_ter")
     if fill is not None and not isinstance(fill, str):
-        result.todos.append(f"{source.location}: mapgen {mapgen_id} fill_ter needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: mapgen {mapgen_id} fill_ter needs review")
         fill = None
     symbols = _mapgen_symbol_descriptors(object_value, source.location, result)
     terrain_ids = _mapgen_terrain_ids(value.get("om_terrain"))
     primary = "false" if value.get("update_mapgen_id") else "true"
     if not rows and not fill:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: mapgen {mapgen_id} requires rows/fill_ter for a declarative definition"
         )
         result.partial.append(f"{source.location}: mapgen {mapgen_id}")
@@ -5866,7 +5983,7 @@ def render_mapgen(source: SourceObject, result: MigrationResult) -> str | None:
     if isinstance(palettes, list) and all(isinstance(entry, str) for entry in palettes):
         lines.append(f"    palettes = {_lua_literal(palettes)},")
     elif palettes is not None:
-        result.todos.append(f"{source.location}: mapgen {mapgen_id} palettes need review")
+        result.add_todo("manual_rewrite", f"{source.location}: mapgen {mapgen_id} palettes need review")
     if symbols:
         lines.append("    symbols = {")
         for glyph in sorted(symbols):
@@ -5878,7 +5995,8 @@ def render_mapgen(source: SourceObject, result: MigrationResult) -> str | None:
     }
     unresolved = unresolved_fields(value, supported)
     if unresolved:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: mapgen {mapgen_id} unresolved fields: {', '.join(unresolved)}"
         )
     for key in set(object_value) - {
@@ -5886,7 +6004,7 @@ def render_mapgen(source: SourceObject, result: MigrationResult) -> str | None:
         "items", "item", "fields", "vendingmachines", "vending_machines", "liquids", "liquid",
     }:
         if not key.startswith("//"):
-            result.todos.append(f"{source.location}: mapgen {mapgen_id} object field {key} needs a typed conversion")
+            result.add_todo("manual_rewrite", f"{source.location}: mapgen {mapgen_id} object field {key} needs a typed conversion")
     (result.partial if len(result.todos) != todo_count else result.converted).append(
         f"{source.location}: mapgen {mapgen_id}"
     )
@@ -5899,12 +6017,12 @@ def render_palette(source: SourceObject, result: MigrationResult) -> str | None:
     palette_id = value.get("id")
     if not safe_platform_id(palette_id):
         result.partial.append(f"{source.location}: palette <invalid id>")
-        result.todos.append(f"{source.location}: palette needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: palette needs a stable native id")
         return None
     todo_count = len(result.todos)
     symbols = _mapgen_symbol_descriptors(value, source.location, result)
     if not symbols:
-        result.todos.append(f"{source.location}: palette {palette_id} requires at least one symbol mapping")
+        result.add_todo("manual_rewrite", f"{source.location}: palette {palette_id} requires at least one symbol mapping")
     lines = [
         "services.mapgen.register_palette {",
         f"    id = {lua_quote(palette_id)},",
@@ -5924,12 +6042,13 @@ def render_palette(source: SourceObject, result: MigrationResult) -> str | None:
     }
     unresolved = unresolved_fields(value, supported)
     if unresolved:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: palette {palette_id} unresolved fields: {', '.join(unresolved)}"
         )
     for key in set(value) - supported:
         if not key.startswith("//"):
-            result.todos.append(f"{source.location}: palette {palette_id} field {key} needs review")
+            result.add_todo("manual_rewrite", f"{source.location}: palette {palette_id} field {key} needs review")
     (result.partial if len(result.todos) != todo_count else result.converted).append(
         f"{source.location}: palette {palette_id}"
     )
@@ -5943,22 +6062,22 @@ def render_mod_tileset(source: SourceObject, result: MigrationResult) -> str | N
         not isinstance(entry, str) or not entry for entry in compatibility
     ):
         result.partial.append(f"{source.location}: mod tileset <invalid compatibility>")
-        result.todos.append(f"{source.location}: mod tileset compatibility needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: mod tileset compatibility needs review")
         return None
     todo_count = len(result.todos)
     atlases: list[dict[str, Any]] = []
     raw_atlases = value.get("tiles-new", value.get("tiles"))
     if not isinstance(raw_atlases, list):
-        result.todos.append(f"{source.location}: mod tileset tiles-new needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: mod tileset tiles-new needs review")
         raw_atlases = []
     for atlas in raw_atlases:
         if not isinstance(atlas, dict) or not isinstance(atlas.get("file"), str):
-            result.todos.append(f"{source.location}: mod tileset atlas needs a relative file")
+            result.add_todo("manual_rewrite", f"{source.location}: mod tileset atlas needs a relative file")
             continue
         converted = {key: copy.deepcopy(raw) for key, raw in atlas.items() if key != "//"}
         converted["tiles"] = converted.get("tiles", [])
         if not isinstance(converted["tiles"], list):
-            result.todos.append(f"{source.location}: mod tileset atlas tiles need review")
+            result.add_todo("manual_rewrite", f"{source.location}: mod tileset atlas tiles need review")
             converted["tiles"] = []
         atlases.append(converted)
     lines = [
@@ -5971,14 +6090,15 @@ def render_mod_tileset(source: SourceObject, result: MigrationResult) -> str | N
     supported = {"type", "compatibility", "tiles-new", "tiles", "id", "//"}
     unresolved = unresolved_fields(value, supported)
     if unresolved:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: mod tileset unresolved fields: {', '.join(unresolved)}"
         )
     # A legacy mod_tileset has no stable id; derive one from its source path.
     if not safe_platform_id(value.get("id")):
         derived = re.sub(r"[^A-Za-z0-9_]+", "_", source.path.stem).strip("_") or "tileset"
         lines[1] = f"    id = {lua_quote(derived)},"
-        result.todos.append(f"{source.location}: mod tileset id derived as {derived!r}")
+        result.add_todo("manual_rewrite", f"{source.location}: mod tileset id derived as {derived!r}")
     (result.partial if len(result.todos) != todo_count else result.converted).append(
         f"{source.location}: mod tileset {source.path.stem}"
     )
@@ -6000,21 +6120,21 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
     topic_id = value.get("id")
     if not safe_platform_id(topic_id):
         result.partial.append(f"{source.location}: talk topic <invalid id>")
-        result.todos.append(f"{source.location}: talk topic needs a stable id")
+        result.add_todo("manual_rewrite", f"{source.location}: talk topic needs a stable id")
         return None
     todo_count = len(result.todos)
     dynamic_line = _talk_text(value.get("dynamic_line"))
     if dynamic_line is None:
-        result.todos.append(f"{source.location}: talk topic {topic_id} dynamic_line needs a static string")
+        result.add_todo("manual_rewrite", f"{source.location}: talk topic {topic_id} dynamic_line needs a static string")
         dynamic_line = "[Lua-first dialogue line requires manual conversion]"
     responses: list[dict[str, Any]] = []
     raw_responses = value.get("responses", [])
     if not isinstance(raw_responses, list):
-        result.todos.append(f"{source.location}: talk topic {topic_id} responses need review")
+        result.add_todo("manual_rewrite", f"{source.location}: talk topic {topic_id} responses need review")
         raw_responses = []
     for entry in raw_responses:
         if not isinstance(entry, dict) or not isinstance(entry.get("text"), str):
-            result.todos.append(f"{source.location}: talk topic {topic_id} response needs a static text")
+            result.add_todo("manual_rewrite", f"{source.location}: talk topic {topic_id} response needs a static text")
             continue
         response: dict[str, Any] = {"text": entry["text"]}
         if isinstance(entry.get("topic"), str) and entry["topic"]:
@@ -6025,7 +6145,8 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
                 f"topic {topic_id} response",
             )
             if callback is None:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: talk topic {topic_id} response effect needs a native callback"
                 )
             else:
@@ -6033,7 +6154,8 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
         responses.append(response)
         unsupported = set(entry) - {"text", "topic", "effect"}
         if unsupported:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: talk topic {topic_id} response fields need Lua conversion: " +
                 ", ".join(sorted(unsupported))
             )
@@ -6061,7 +6183,7 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
                         },
                     })
                     continue
-            result.todos.append(f"{source.location}: talk topic {topic_id} repeat response needs review")
+            result.add_todo("manual_rewrite", f"{source.location}: talk topic {topic_id} repeat response needs review")
         if repeats:
             descriptor["repeat_responses"] = repeats
     if "speaker_effect" in value:
@@ -6075,7 +6197,8 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
                 f"talk topic {topic_id} speaker_effect",
             )
             if callback is None:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: talk topic {topic_id} speaker_effect needs a native callback"
                 )
             else:
@@ -6089,7 +6212,8 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
     }
     unresolved = unresolved_fields(value, supported)
     if unresolved:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: talk topic {topic_id} unresolved fields: {', '.join(unresolved)}"
         )
     (result.partial if len(result.todos) != todo_count else result.converted).append(
@@ -6105,7 +6229,8 @@ def render_overmap_connection(
     connection_id = value.get("id")
     if not safe_platform_id(connection_id):
         result.partial.append(f"{source.location}: overmap connection <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: overmap connection needs a stable native id"
         )
         return None
@@ -6119,7 +6244,8 @@ def render_overmap_connection(
     if isinstance(raw_subtypes, list) and raw_subtypes:
         for raw_subtype in raw_subtypes:
             if not isinstance(raw_subtype, dict):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: overmap connection {connection_id} "
                     "subtype needs review"
                 )
@@ -6154,7 +6280,8 @@ def render_overmap_connection(
                     }
                 )
             ):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: overmap connection {connection_id} "
                     "subtype needs review"
                 )
@@ -6168,7 +6295,8 @@ def render_overmap_connection(
                 f"{'true' if 'PERPENDICULAR_CROSSING' in raw_flags else 'false'})"
             )
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: overmap connection {connection_id} "
             "subtypes need review"
         )
@@ -6188,7 +6316,7 @@ def render_monster_group(source: SourceObject, result: MigrationResult) -> str |
     group_id = value.get("id")
     if not safe_platform_id(group_id):
         result.partial.append(f"{source.location}: monster group <invalid id>")
-        result.todos.append(f"{source.location}: monster group needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: monster group needs a stable native id")
         return None
     todo_count = len(result.todos)
     lines = [
@@ -6201,7 +6329,8 @@ def render_monster_group(source: SourceObject, result: MigrationResult) -> str |
     elif isinstance(default_monster, str) and default_monster:
         lines.append(f"    default_monster = {lua_quote(default_monster)},")
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: monster group {group_id} default needs review"
         )
     is_animal = value.get("is_animal")
@@ -6210,7 +6339,8 @@ def render_monster_group(source: SourceObject, result: MigrationResult) -> str |
     elif isinstance(is_animal, bool):
         lines.append(f"    is_animal = {'true' if is_animal else 'false'},")
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: monster group {group_id} is_animal needs review"
         )
     lines.append("}")
@@ -6218,13 +6348,15 @@ def render_monster_group(source: SourceObject, result: MigrationResult) -> str |
     if isinstance(raw_monsters, list) and raw_monsters:
         for raw_entry in raw_monsters:
             if not isinstance(raw_entry, dict):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: monster group {group_id} entry needs review"
                 )
                 continue
             entry_id = raw_entry.get("monster", raw_entry.get("group"))
             if not isinstance(entry_id, str) or not entry_id:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: monster group {group_id} entry needs review"
                 )
                 continue
@@ -6249,7 +6381,8 @@ def render_monster_group(source: SourceObject, result: MigrationResult) -> str |
                 isinstance(cost, int) and not isinstance(cost, bool) and
                 cost >= 0
             ) or not pack_valid:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: monster group {group_id} entry "
                     f"{entry_id} needs review"
                 )
@@ -6260,7 +6393,8 @@ def render_monster_group(source: SourceObject, result: MigrationResult) -> str |
                 f"{weight}, {cost}, {raw_pack[0]}, {raw_pack[1]})"
             )
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: monster group {group_id} monsters need review"
         )
     return finish_catalog(
@@ -6281,7 +6415,7 @@ def render_item_action(source: SourceObject, result: MigrationResult) -> str | N
     action_id = value.get("id")
     if not safe_platform_id(action_id):
         result.partial.append(f"{source.location}: item action <invalid id>")
-        result.todos.append(f"{source.location}: item action needs a stable id")
+        result.add_todo("manual_rewrite", f"{source.location}: item action needs a stable id")
         return None
     todo_count = len(result.todos)
     name = display_text(value.get("name"), action_id)
@@ -6309,7 +6443,8 @@ def render_butchery_requirement(
     requirement_id = value.get("id")
     if not safe_platform_id(requirement_id):
         result.partial.append(f"{source.location}: butchery requirement <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: butchery requirement needs a stable native id"
         )
         return None
@@ -6334,7 +6469,8 @@ def render_butchery_requirement(
             if not math.isfinite(speed) or speed < 0 or \
                     not isinstance(raw_sizes, list) or \
                     len(raw_sizes) != len(size_names):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: butchery requirement {requirement_id} "
                     f"speed row {raw_speed!r} needs review"
                 )
@@ -6346,7 +6482,8 @@ def render_butchery_requirement(
                     not raw_size[name]
                     for name in butcher_names
                 ):
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: butchery requirement {requirement_id} "
                         f"size row {size_names[size_index]} needs review"
                     )
@@ -6358,7 +6495,8 @@ def render_butchery_requirement(
                         f"{lua_quote(name)}, {lua_quote(raw_size[name])})"
                     )
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: butchery requirement {requirement_id} "
             "requirements need review"
         )
@@ -6378,7 +6516,7 @@ def render_scent_type(source: SourceObject, result: MigrationResult) -> str | No
     scent_id = value.get("id")
     if not safe_platform_id(scent_id):
         result.partial.append(f"{source.location}: scent type <invalid id>")
-        result.todos.append(f"{source.location}: scent type needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: scent type needs a stable native id")
         return None
     todo_count = len(result.todos)
     lines = [
@@ -6392,7 +6530,8 @@ def render_scent_type(source: SourceObject, result: MigrationResult) -> str | No
             f"definition:receptive_species({lua_quote(entry)})" for entry in species
         )
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: scent type {scent_id} receptive species need review"
         )
     return finish_catalog(
@@ -6411,18 +6550,21 @@ def render_technique(source: SourceObject, result: MigrationResult) -> str | Non
     technique_id = value.get("id")
     if not safe_platform_id(technique_id):
         result.partial.append(f"{source.location}: technique <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: technique needs a stable native id"
         )
         return None
     todo_count = len(result.todos)
     if "copy-from" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: technique {technique_id} inheritance must become a Lua constructor/composition function"
         )
     name = value.get("name")
     if not isinstance(name, str) or not name:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: technique {technique_id} name needs review"
         )
         name = technique_id
@@ -6441,7 +6583,8 @@ def render_technique(source: SourceObject, result: MigrationResult) -> str | Non
         lines.append(f"    avatar_message = {lua_quote(messages[0])},")
         lines.append(f"    npc_message = {lua_quote(messages[1])},")
     elif "messages" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: technique {technique_id} messages need review"
         )
     bool_fields = (
@@ -6457,7 +6600,8 @@ def render_technique(source: SourceObject, result: MigrationResult) -> str | Non
                 f"    {field_name} = {lua_boolean(entry)},"
             )
         elif field_name in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: technique {technique_id} {field_name} needs review"
             )
     int_fields = (
@@ -6475,7 +6619,8 @@ def render_technique(source: SourceObject, result: MigrationResult) -> str | Non
             lines.append(f"    {field_name} = {entry},")
         else:
             lines.append(f"    {field_name} = {default},")
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: technique {technique_id} {field_name} needs review"
             )
     spread = value.get("knockback_spread", 0)
@@ -6484,7 +6629,8 @@ def render_technique(source: SourceObject, result: MigrationResult) -> str | Non
         lines.append(f"    knockback_spread = {spread},")
     else:
         lines.append("    knockback_spread = 0,")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: technique {technique_id} knockback_spread needs review"
         )
     aoe = value.get("aoe")
@@ -6495,7 +6641,8 @@ def render_technique(source: SourceObject, result: MigrationResult) -> str | Non
         if isinstance(entry, bool):
             lines.append(f"    {field_name} = {lua_boolean(entry)},")
         elif field_name in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: technique {technique_id} {field_name} needs review"
             )
     lines.append("}")
@@ -6506,7 +6653,8 @@ def render_technique(source: SourceObject, result: MigrationResult) -> str | Non
         for flag in flags:
             lines.append(f"definition:flag({lua_quote(flag)})")
     elif "flags" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: technique {technique_id} flags need review"
         )
     vectors = value.get("attack_vectors")
@@ -6516,7 +6664,8 @@ def render_technique(source: SourceObject, result: MigrationResult) -> str | Non
         for vector in vectors:
             lines.append(f"definition:attack_vector({lua_quote(vector)})")
     elif "attack_vectors" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: technique {technique_id} attack vectors need review"
         )
     skills = value.get("skill_requirements")
@@ -6532,13 +6681,15 @@ def render_technique(source: SourceObject, result: MigrationResult) -> str | Non
                 f"{entry['level']})"
             )
     elif "skill_requirements" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: technique {technique_id} skill requirements need review"
         )
     for member in ("tech_effects", "eocs", "condition", "bonuses",
                    "weighting_skill", "req_buffs", "forbidden_buffs"):
         if member in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: technique {technique_id} {member} needs review"
             )
     status = (
@@ -6554,20 +6705,23 @@ def render_martial_art(source: SourceObject, result: MigrationResult) -> str | N
     art_id = value.get("id")
     if not safe_platform_id(art_id):
         result.partial.append(f"{source.location}: martial art <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: martial art needs a stable native id"
         )
         return None
     todo_count = len(result.todos)
     if "copy-from" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: martial art {art_id} inheritance must become a Lua constructor/composition function"
         )
     name = value.get("name")
     if isinstance(name, dict):
         name = name.get("str")
     if not isinstance(name, str) or not name:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: martial art {art_id} name needs review"
         )
         name = art_id
@@ -6586,7 +6740,8 @@ def render_martial_art(source: SourceObject, result: MigrationResult) -> str | N
         lines.append(f"    initiate_avatar = {lua_quote(initiate[0])},")
         lines.append(f"    initiate_npc = {lua_quote(initiate[1])},")
     elif "initiate" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: martial art {art_id} initiate messages need review"
         )
     int_fields = (
@@ -6600,7 +6755,8 @@ def render_martial_art(source: SourceObject, result: MigrationResult) -> str | N
             lines.append(f"    {field_name} = {entry},")
         else:
             lines.append(f"    {field_name} = {default},")
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: martial art {art_id} {field_name} needs review"
             )
     primary = value.get("primary_skill")
@@ -6616,7 +6772,8 @@ def render_martial_art(source: SourceObject, result: MigrationResult) -> str | N
         if isinstance(entry, bool):
             lines.append(f"    {field_name} = {lua_boolean(entry)},")
         elif field_name in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: martial art {art_id} {field_name} needs review"
             )
     lines.append("}")
@@ -6632,7 +6789,8 @@ def render_martial_art(source: SourceObject, result: MigrationResult) -> str | N
                 f"definition:autolearn({lua_quote(entry[0])}, {entry[1]})"
             )
     elif "autolearn" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: martial art {art_id} autolearn needs review"
         )
     techniques = value.get("techniques")
@@ -6642,7 +6800,8 @@ def render_martial_art(source: SourceObject, result: MigrationResult) -> str | N
         for entry in techniques:
             lines.append(f"definition:technique({lua_quote(entry)})")
     elif "techniques" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: martial art {art_id} techniques need review"
         )
     weapons = value.get("weapons")
@@ -6652,7 +6811,8 @@ def render_martial_art(source: SourceObject, result: MigrationResult) -> str | N
         for entry in weapons:
             lines.append(f"definition:weapon({lua_quote(entry)})")
     elif "weapons" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: martial art {art_id} weapons need review"
         )
     categories = value.get("weapon_categories")
@@ -6662,7 +6822,8 @@ def render_martial_art(source: SourceObject, result: MigrationResult) -> str | N
         for entry in categories:
             lines.append(f"definition:weapon_category({lua_quote(entry)})")
     elif "weapon_categories" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: martial art {art_id} weapon categories need review"
         )
     for member in (
@@ -6674,7 +6835,8 @@ def render_martial_art(source: SourceObject, result: MigrationResult) -> str | N
         "oncrit_eocs", "onkill_eocs", "weapon_damage",
     ):
         if member in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: martial art {art_id} {member} needs review"
             )
     status = (
@@ -6690,7 +6852,8 @@ def render_trap(source: SourceObject, result: MigrationResult) -> str | None:
     trap_id = value.get("id")
     if not safe_platform_id(trap_id):
         result.partial.append(f"{source.location}: trap <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: trap needs a stable native id"
         )
         return None
@@ -6699,19 +6862,19 @@ def render_trap(source: SourceObject, result: MigrationResult) -> str | None:
     if isinstance(name, dict):
         name = name.get("str")
     if not isinstance(name, str) or not name:
-        result.todos.append(f"{source.location}: trap {trap_id} name needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: trap {trap_id} name needs review")
         name = trap_id
     color = value.get("color")
     if not isinstance(color, str) or not color:
-        result.todos.append(f"{source.location}: trap {trap_id} color needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: trap {trap_id} color needs review")
         color = "white"
     symbol = value.get("symbol")
     if not isinstance(symbol, str) or len(symbol) != 1:
-        result.todos.append(f"{source.location}: trap {trap_id} symbol needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: trap {trap_id} symbol needs review")
         symbol = "^"
     action = value.get("action")
     if not isinstance(action, str) or not action:
-        result.todos.append(f"{source.location}: trap {trap_id} action needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: trap {trap_id} action needs review")
         action = "none"
     lines = [
         "local definition = content.Trap {",
@@ -6734,7 +6897,8 @@ def render_trap(source: SourceObject, result: MigrationResult) -> str | None:
             lines.append(f"    {field_name} = {entry},")
         else:
             lines.append(f"    {field_name} = {default},")
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: trap {trap_id} {field_name} needs review"
             )
     for field_name in ("benign", "always_invisible"):
@@ -6742,7 +6906,8 @@ def render_trap(source: SourceObject, result: MigrationResult) -> str | None:
         if isinstance(entry, bool):
             lines.append(f"    {field_name} = {lua_boolean(entry)},")
         elif field_name in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: trap {trap_id} {field_name} needs review"
             )
     memorials = [value.get("memorial_male"), value.get("memorial_female")]
@@ -6750,7 +6915,8 @@ def render_trap(source: SourceObject, result: MigrationResult) -> str | None:
         lines.append(f"    memorial_male = {lua_quote(memorials[0])},")
         lines.append(f"    memorial_female = {lua_quote(memorials[1])},")
     elif any(entry is not None for entry in memorials):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: trap {trap_id} memorial messages need review"
         )
     if isinstance(value.get("trigger_message_u"), str):
@@ -6769,7 +6935,7 @@ def render_trap(source: SourceObject, result: MigrationResult) -> str | None:
         for flag in flags:
             lines.append(f"definition:flag({lua_quote(flag)})")
     elif "flags" in value:
-        result.todos.append(f"{source.location}: trap {trap_id} flags need review")
+        result.add_todo("manual_rewrite", f"{source.location}: trap {trap_id} flags need review")
     drops = value.get("drops")
     if isinstance(drops, list):
         for drop in drops:
@@ -6784,15 +6950,17 @@ def render_trap(source: SourceObject, result: MigrationResult) -> str | None:
                         f"{quantity}, {charges})"
                     )
                     continue
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: trap {trap_id} drops need review"
             )
     elif "drops" in value:
-        result.todos.append(f"{source.location}: trap {trap_id} drops need review")
+        result.add_todo("manual_rewrite", f"{source.location}: trap {trap_id} drops need review")
     for member in ("spell_data", "eocs", "vehicle_data", "map_regen",
                    "floor_bedding_warmth"):
         if member in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: trap {trap_id} {member} needs review"
             )
     status = (
@@ -6808,24 +6976,28 @@ def render_construction(source: SourceObject, result: MigrationResult) -> str | 
     construction_id = value.get("id")
     if not safe_platform_id(construction_id):
         result.partial.append(f"{source.location}: construction <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: construction needs a stable native id"
         )
         return None
     todo_count = len(result.todos)
     if "copy-from" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: construction {construction_id} inheritance must become a Lua constructor/composition function"
         )
     group = value.get("group")
     if not isinstance(group, str) or not group:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: construction {construction_id} group needs review"
         )
         group = "dig_channel"
     category = value.get("category", "OTHER")
     if not isinstance(category, str) or not category:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: construction {construction_id} category needs review"
         )
         category = "OTHER"
@@ -6838,14 +7010,16 @@ def render_construction(source: SourceObject, result: MigrationResult) -> str | 
     duration = parse_moves(value.get("time", 0))
     if duration is None or duration < 0:
         duration = 0
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: construction {construction_id} time needs unit review"
         )
     lines.append(f"    duration_moves = {duration},")
     activity = value.get("activity_level")
     if isinstance(activity, str):
         # legacy activity level names map to native multipliers; keep partial
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: construction {construction_id} activity_level needs review"
         )
         activity = 1.0
@@ -6858,7 +7032,8 @@ def render_construction(source: SourceObject, result: MigrationResult) -> str | 
     if isinstance(post_terrain, str) and post_terrain:
         lines.append(f"    post_terrain = {lua_quote(post_terrain)},")
     elif "post_terrain" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: construction {construction_id} post_terrain needs review"
         )
     lines.append("}")
@@ -6871,12 +7046,14 @@ def render_construction(source: SourceObject, result: MigrationResult) -> str | 
                     f"definition:requires_skill({lua_quote(skill)}, {level})"
                 )
             else:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: construction {construction_id} required skills need review"
                 )
                 break
     elif "required_skills" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: construction {construction_id} required skills need review"
         )
     legacy_skill = value.get("skill")
@@ -6888,7 +7065,8 @@ def render_construction(source: SourceObject, result: MigrationResult) -> str | 
             f"definition:requires_skill({lua_quote(legacy_skill)}, {legacy_difficulty})"
         )
     elif "required_skills" not in value and ("skill" in value or "difficulty" in value):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: construction {construction_id} legacy skill needs review"
         )
     using = value.get("using")
@@ -6905,7 +7083,8 @@ def render_construction(source: SourceObject, result: MigrationResult) -> str | 
                 f"definition:using_requirement({lua_quote(entry[0])}, {entry[1]})"
             )
     elif "using" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: construction {construction_id} using requirements need review"
         )
     pre_terrain = value.get("pre_terrain")
@@ -6917,7 +7096,8 @@ def render_construction(source: SourceObject, result: MigrationResult) -> str | 
         for entry in pre_terrain:
             lines.append(f"definition:pre_terrain({lua_quote(entry)})")
     elif "pre_terrain" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: construction {construction_id} pre_terrain needs review"
         )
     pre_flags = value.get("pre_flags")
@@ -6933,12 +7113,14 @@ def render_construction(source: SourceObject, result: MigrationResult) -> str | 
                     f"{lua_boolean(flag['force_terrain'])})"
                 )
                 continue
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: construction {construction_id} pre_flags need review"
             )
             break
     elif "pre_flags" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: construction {construction_id} pre_flags need review"
         )
     post_flags = value.get("post_flags")
@@ -6948,14 +7130,16 @@ def render_construction(source: SourceObject, result: MigrationResult) -> str | 
         for entry in post_flags:
             lines.append(f"definition:post_flag({lua_quote(entry)})")
     elif "post_flags" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: construction {construction_id} post_flags need review"
         )
     for member in ("components", "tools", "qualities", "byproducts",
                    "pre_special", "post_special", "dark_craftable",
                    "vehicle_start", "on_display", "deconstruct_recipe"):
         if member in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: construction {construction_id} {member} needs review"
             )
     status = (
@@ -6971,35 +7155,38 @@ def render_furniture(source: SourceObject, result: MigrationResult) -> str | Non
     furniture_id = value.get("id")
     if not safe_platform_id(furniture_id):
         result.partial.append(f"{source.location}: furniture <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: furniture needs a stable native id"
         )
         return None
     todo_count = len(result.todos)
     if "copy-from" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: furniture {furniture_id} inheritance must become a Lua constructor/composition function"
         )
     name = value.get("name")
     if isinstance(name, dict):
         name = name.get("str")
     if not isinstance(name, str) or not name:
-        result.todos.append(f"{source.location}: furniture {furniture_id} name needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: furniture {furniture_id} name needs review")
         name = furniture_id
     description = value.get("description")
     if not isinstance(description, str):
         description = ""
         if "description" in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: furniture {furniture_id} description needs review"
             )
     color = value.get("color")
     if not isinstance(color, str) or not color:
-        result.todos.append(f"{source.location}: furniture {furniture_id} color needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: furniture {furniture_id} color needs review")
         color = "white"
     symbol = value.get("symbol")
     if not isinstance(symbol, str) or len(symbol) != 1:
-        result.todos.append(f"{source.location}: furniture {furniture_id} symbol needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: furniture {furniture_id} symbol needs review")
         symbol = "#"
     lines = [
         "local definition = content.Furniture {",
@@ -7022,14 +7209,16 @@ def render_furniture(source: SourceObject, result: MigrationResult) -> str | Non
             lines.append(f"    {field_name} = {entry},")
         else:
             lines.append(f"    {field_name} = {default},")
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: furniture {furniture_id} {field_name} needs review"
             )
     transparent = value.get("transparent")
     if isinstance(transparent, bool):
         lines.append(f"    transparent = {lua_boolean(transparent)},")
     elif "transparent" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: furniture {furniture_id} transparent needs review"
         )
     for field_name in ("open", "close", "lockpick_result", "crafting_pseudo_item",
@@ -7038,7 +7227,8 @@ def render_furniture(source: SourceObject, result: MigrationResult) -> str | Non
         if isinstance(entry, str) and entry:
             lines.append(f"    {field_name} = {lua_quote(entry)},")
         elif field_name in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: furniture {furniture_id} {field_name} needs review"
             )
     lines.append("}")
@@ -7049,7 +7239,8 @@ def render_furniture(source: SourceObject, result: MigrationResult) -> str | Non
         for flag in flags:
             lines.append(f"definition:flag({lua_quote(flag)})")
     elif "flags" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: furniture {furniture_id} flags need review"
         )
     for member in ("bash", "deconstruct", "workbench", "examine_action",
@@ -7058,7 +7249,8 @@ def render_furniture(source: SourceObject, result: MigrationResult) -> str | Non
                    "coverage", "curtain_transform", "looks_like",
                    "surgery_skill_multiplier"):
         if member in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: furniture {furniture_id} {member} needs review"
             )
     status = (
@@ -7074,35 +7266,38 @@ def render_terrain(source: SourceObject, result: MigrationResult) -> str | None:
     terrain_id = value.get("id")
     if not safe_platform_id(terrain_id):
         result.partial.append(f"{source.location}: terrain <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: terrain needs a stable native id"
         )
         return None
     todo_count = len(result.todos)
     if "copy-from" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: terrain {terrain_id} inheritance must become a Lua constructor/composition function"
         )
     name = value.get("name")
     if isinstance(name, dict):
         name = name.get("str")
     if not isinstance(name, str) or not name:
-        result.todos.append(f"{source.location}: terrain {terrain_id} name needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: terrain {terrain_id} name needs review")
         name = terrain_id
     description = value.get("description")
     if not isinstance(description, str):
         description = ""
         if "description" in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: terrain {terrain_id} description needs review"
             )
     color = value.get("color")
     if not isinstance(color, str) or not color:
-        result.todos.append(f"{source.location}: terrain {terrain_id} color needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: terrain {terrain_id} color needs review")
         color = "white"
     symbol = value.get("symbol")
     if not isinstance(symbol, str) or len(symbol) != 1:
-        result.todos.append(f"{source.location}: terrain {terrain_id} symbol needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: terrain {terrain_id} symbol needs review")
         symbol = "."
     lines = [
         "local definition = content.Terrain {",
@@ -7124,14 +7319,16 @@ def render_terrain(source: SourceObject, result: MigrationResult) -> str | None:
             lines.append(f"    {field_name} = {entry},")
         else:
             lines.append(f"    {field_name} = {default},")
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: terrain {terrain_id} {field_name} needs review"
             )
     transparent = value.get("transparent")
     if isinstance(transparent, bool):
         lines.append(f"    transparent = {lua_boolean(transparent)},")
     elif "transparent" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: terrain {terrain_id} transparent needs review"
         )
     for field_name in ("open", "close", "transforms_into", "roof",
@@ -7140,7 +7337,8 @@ def render_terrain(source: SourceObject, result: MigrationResult) -> str | None:
         if isinstance(entry, str) and entry:
             lines.append(f"    {field_name} = {lua_quote(entry)},")
         elif field_name in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: terrain {terrain_id} {field_name} needs review"
             )
     lines.append("}")
@@ -7151,7 +7349,8 @@ def render_terrain(source: SourceObject, result: MigrationResult) -> str | None:
         for flag in flags:
             lines.append(f"definition:flag({lua_quote(flag)})")
     elif "flags" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: terrain {terrain_id} flags need review"
         )
     for member in ("bash", "deconstruct", "examine_action", "emissions",
@@ -7160,7 +7359,8 @@ def render_terrain(source: SourceObject, result: MigrationResult) -> str | None:
                    "rotate_to", "phase_targets", "road_cost_multiplier",
                    "signpost_items", "smoke_field_intensity"):
         if member in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: terrain {terrain_id} {member} needs review"
             )
     status = (
@@ -7183,7 +7383,8 @@ def render_gate(
             result.partial.append(
                 f"{source.location}: gate {value.get('id') or '<invalid id>'}"
             )
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: gate inheritance needs the migration corpus"
             )
             return None
@@ -7193,8 +7394,7 @@ def render_gate(
             label=f"gate {value.get('id') or '<invalid id>'}",
             location=source.location,
         )
-        for todo in todos:
-            result.todos.append(todo)
+        result.todos.extend(todos)
         if todos:
             result.partial.append(
                 f"{source.location}: gate {value.get('id') or '<invalid id>'}"
@@ -7205,7 +7405,8 @@ def render_gate(
     gate_id = value.get("id")
     if not safe_platform_id(gate_id):
         result.partial.append(f"{source.location}: gate <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: gate needs a stable native id"
         )
         return None
@@ -7214,7 +7415,8 @@ def render_gate(
     floor = value.get("floor")
     if not isinstance(door, str) or not door or not isinstance(floor, str) \
             or not floor:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: gate {gate_id} door/floor need review"
         )
         door = door if isinstance(door, str) and door else "t_door_o"
@@ -7232,7 +7434,8 @@ def render_gate(
             lines.append(f"    {field_name} = {entry},")
         else:
             lines.append(f"    {field_name} = 0,")
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: gate {gate_id} {field_name} needs review"
             )
     messages = value.get("messages")
@@ -7243,11 +7446,13 @@ def render_gate(
             if isinstance(entry, str) and entry:
                 lines.append(f"    {field_name} = {lua_quote(entry)},")
             elif key in messages:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: gate {gate_id} {key} message needs review"
                 )
     elif "messages" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: gate {gate_id} messages need review"
         )
     lines.append("}")
@@ -7258,7 +7463,8 @@ def render_gate(
         for wall in walls:
             lines.append(f"definition:wall({lua_quote(wall)})")
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: gate {gate_id} walls need review"
         )
     status = (
@@ -7274,7 +7480,8 @@ def render_fault(source: SourceObject, result: MigrationResult) -> str | None:
     fault_id = value.get("id")
     if not safe_platform_id(fault_id):
         result.partial.append(f"{source.location}: fault <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: fault needs a stable native id"
         )
         return None
@@ -7283,12 +7490,12 @@ def render_fault(source: SourceObject, result: MigrationResult) -> str | None:
     if isinstance(name, dict):
         name = name.get("str")
     if not isinstance(name, str) or not name:
-        result.todos.append(f"{source.location}: fault {fault_id} name needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: fault {fault_id} name needs review")
         name = fault_id
     # Legacy faults default to an empty fault_type, never "generic".
     fault_type = value.get("fault_type", "")
     if not isinstance(fault_type, str):
-        result.todos.append(f"{source.location}: fault {fault_id} fault_type needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: fault {fault_id} fault_type needs review")
         fault_type = ""
     lines = [
         "local definition = content.Fault {",
@@ -7302,7 +7509,8 @@ def render_fault(source: SourceObject, result: MigrationResult) -> str | None:
         if isinstance(entry, str) and entry:
             lines.append(f"    {field_name} = {lua_quote(entry)},")
         elif field_name in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: fault {fault_id} {field_name} needs review"
             )
     for source_field, field_name, default in (
@@ -7318,7 +7526,8 @@ def render_fault(source: SourceObject, result: MigrationResult) -> str | None:
             lines.append(f"    {field_name} = {entry},")
         else:
             lines.append(f"    {field_name} = {default},")
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: fault {fault_id} {source_field} needs review"
             )
     for source_field, field_name, default in (
@@ -7333,14 +7542,16 @@ def render_fault(source: SourceObject, result: MigrationResult) -> str | None:
             lines.append(f"    {field_name} = {entry},")
         else:
             lines.append(f"    {field_name} = {default},")
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: fault {fault_id} {source_field} needs review"
             )
     degradation = value.get("affected_by_degradation")
     if isinstance(degradation, bool):
         lines.append(f"    affected_by_degradation = {lua_boolean(degradation)},")
     elif "affected_by_degradation" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: fault {fault_id} affected_by_degradation needs review"
         )
     lines.append("}")
@@ -7351,7 +7562,7 @@ def render_fault(source: SourceObject, result: MigrationResult) -> str | None:
         for flag in flags:
             lines.append(f"definition:flag({lua_quote(flag)})")
     elif "flags" in value:
-        result.todos.append(f"{source.location}: fault {fault_id} flags need review")
+        result.add_todo("manual_rewrite", f"{source.location}: fault {fault_id} flags need review")
     for member, method in (("block_faults", "block_fault"), ("fixes", "fix")):
         entries = value.get(member)
         if isinstance(entries, list) and all(
@@ -7360,12 +7571,14 @@ def render_fault(source: SourceObject, result: MigrationResult) -> str | None:
             for entry in entries:
                 lines.append(f"definition:{method}({lua_quote(entry)})")
         elif member in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: fault {fault_id} {member} needs review"
             )
     for member in ("melee_damage_mod", "armor_mod"):
         if member in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: fault {fault_id} {member} needs review"
             )
     status = (
@@ -7381,7 +7594,8 @@ def render_fault_fix(source: SourceObject, result: MigrationResult) -> str | Non
     fix_id = value.get("id")
     if not safe_platform_id(fix_id):
         result.partial.append(f"{source.location}: fault fix <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: fault fix needs a stable native id"
         )
         return None
@@ -7390,7 +7604,7 @@ def render_fault_fix(source: SourceObject, result: MigrationResult) -> str | Non
     if isinstance(name, dict):
         name = name.get("str")
     if not isinstance(name, str) or not name:
-        result.todos.append(f"{source.location}: fault fix {fix_id} name needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: fault fix {fix_id} name needs review")
         name = fix_id
     lines = [
         "local definition = content.FaultFix {",
@@ -7400,7 +7614,8 @@ def render_fault_fix(source: SourceObject, result: MigrationResult) -> str | Non
     if isinstance(value.get("success_msg"), str) and value["success_msg"]:
         lines.append(f"    success_msg = {lua_quote(value['success_msg'])},")
     elif "success_msg" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: fault fix {fix_id} success message needs review"
         )
     time_entry = value.get("time")
@@ -7408,13 +7623,15 @@ def render_fault_fix(source: SourceObject, result: MigrationResult) -> str | Non
         seconds = parse_seconds(time_entry)
         if seconds is None:
             seconds = 0
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: fault fix {fix_id} time needs unit review"
             )
     else:
         seconds = 0
         if "time" in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: fault fix {fix_id} time needs unit review"
             )
     lines.append(f"    time_seconds = {seconds},")
@@ -7424,7 +7641,8 @@ def render_fault_fix(source: SourceObject, result: MigrationResult) -> str | Non
             lines.append(f"    {field_name} = {entry},")
         else:
             lines.append(f"    {field_name} = {default},")
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: fault fix {fix_id} {field_name} needs review"
             )
     lines.append("}")
@@ -7442,7 +7660,8 @@ def render_fault_fix(source: SourceObject, result: MigrationResult) -> str | Non
                     f"definition:requires_skill({lua_quote(skill)}, {level})"
                 )
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: fault fix {fix_id} skills need review"
             )
     elif isinstance(skills, list) and all(
@@ -7456,7 +7675,8 @@ def render_fault_fix(source: SourceObject, result: MigrationResult) -> str | Non
                 f"definition:requires_skill({lua_quote(entry[0])}, {entry[1]})"
             )
     elif "skills" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: fault fix {fix_id} skills need review"
         )
     for member, method in (("faults_removed", "removes_fault"),
@@ -7468,14 +7688,16 @@ def render_fault_fix(source: SourceObject, result: MigrationResult) -> str | Non
             for entry in entries:
                 lines.append(f"definition:{method}({lua_quote(entry)})")
         elif member in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: fault fix {fix_id} {member} needs review"
             )
     for member in ("set_variables", "adjust_variables_multiply",
                    "requirements", "using", "time_save_profs",
                    "time_save_flags"):
         if member in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: fault fix {fix_id} {member} needs review"
             )
     status = (
@@ -7491,7 +7713,8 @@ def render_dream(source: SourceObject, result: MigrationResult) -> str | None:
     todo_count = len(result.todos)
     category = value.get("category")
     if not isinstance(category, str) or not category:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: dream category needs review"
         )
         category = "NONE"
@@ -7499,7 +7722,8 @@ def render_dream(source: SourceObject, result: MigrationResult) -> str | None:
     if not isinstance(strength, int) or isinstance(strength, bool) or \
             strength < 0:
         strength = 0
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: dream strength needs review"
         )
     lines = [
@@ -7515,7 +7739,8 @@ def render_dream(source: SourceObject, result: MigrationResult) -> str | None:
         for message in messages:
             lines.append(f"definition:message({lua_quote(message)})")
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: dream messages need review"
         )
     status = (
@@ -7531,7 +7756,8 @@ def render_achievement(source: SourceObject, result: MigrationResult) -> str | N
     achievement_id = value.get("id")
     if not safe_platform_id(achievement_id):
         result.partial.append(f"{source.location}: achievement <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: achievement needs a stable native id"
         )
         return None
@@ -7540,7 +7766,8 @@ def render_achievement(source: SourceObject, result: MigrationResult) -> str | N
     if isinstance(name, dict):
         name = name.get("str")
     if not isinstance(name, str) or not name:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: achievement {achievement_id} name needs review"
         )
         name = achievement_id
@@ -7555,7 +7782,8 @@ def render_achievement(source: SourceObject, result: MigrationResult) -> str | N
     if isinstance(description, str) and description:
         lines.append(f"    description = {lua_quote(description)},")
     elif "description" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: achievement {achievement_id} description needs review"
         )
     lines.append("}")
@@ -7566,13 +7794,15 @@ def render_achievement(source: SourceObject, result: MigrationResult) -> str | N
         for entry in hidden_by:
             lines.append(f"definition:hidden_by({lua_quote(entry)})")
     elif "hidden_by" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: achievement {achievement_id} hidden_by needs review"
         )
     for member in ("requirements", "time_constraint", "conduct_group",
                    "completion", "event_statistic"):
         if member in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: achievement {achievement_id} {member} needs review"
             )
     status = (
@@ -7588,26 +7818,30 @@ def render_option_slider(source: SourceObject, result: MigrationResult) -> str |
     slider_id = value.get("id")
     if not bounded_platform_id(slider_id):
         result.partial.append(f"{source.location}: option slider <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: option slider needs a stable native id"
         )
         return None
     todo_count = len(result.todos)
     name = display_text(value.get("name"))
     if not name:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: option slider {slider_id} name needs review"
         )
         name = slider_id
     context = value.get("context", "")
     if not isinstance(context, str) or "\0" in context:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: option slider {slider_id} context needs review"
         )
         context = ""
     default_level = native_integer(value.get("default", 0), 0)
     if default_level is None:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: option slider {slider_id} default needs review"
         )
         default_level = 0
@@ -7624,20 +7858,23 @@ def render_option_slider(source: SourceObject, result: MigrationResult) -> str |
 
     levels = value.get("levels")
     if not isinstance(levels, list) or not levels:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: option slider {slider_id} levels need review"
         )
         levels = []
     for level_index, raw_level in enumerate(levels):
         if not isinstance(raw_level, dict):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: option slider {slider_id} level #{level_index} needs review"
             )
             continue
         level = native_integer(raw_level.get("level"), 0)
         level_name = display_text(raw_level.get("name"))
         if level is None or not level_name:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: option slider {slider_id} level #{level_index} needs review"
             )
             continue
@@ -7645,7 +7882,8 @@ def render_option_slider(source: SourceObject, result: MigrationResult) -> str |
             raw_level, {"level", "name", "description", "options"}
         )
         if unknown_level:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: option slider {slider_id} level {level} unresolved fields: " +
                 ", ".join(unknown_level)
             )
@@ -7658,20 +7896,23 @@ def render_option_slider(source: SourceObject, result: MigrationResult) -> str |
         if description:
             lines.append(f"            description = {lua_quote(description)},")
         elif "description" in raw_level:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: option slider {slider_id} level {level} description needs review"
             )
 
         raw_options = raw_level.get("options", [])
         if not isinstance(raw_options, list):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: option slider {slider_id} level {level} options need review"
             )
             raw_options = []
         lines.append("            options = {")
         for option_index, raw_option in enumerate(raw_options):
             if not isinstance(raw_option, dict):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: option slider {slider_id} level {level} option #{option_index} needs review"
                 )
                 continue
@@ -7694,7 +7935,8 @@ def render_option_slider(source: SourceObject, result: MigrationResult) -> str |
                 option_type not in {"int", "float", "bool", "string"} or
                 not valid_value
             ):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: option slider {slider_id} level {level} option #{option_index} needs review"
                 )
                 continue
@@ -7702,7 +7944,8 @@ def render_option_slider(source: SourceObject, result: MigrationResult) -> str |
                 raw_option, {"option", "type", "val"}
             )
             if unknown_option:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: option slider {slider_id} level {level} option {option_id} unresolved fields: " +
                     ", ".join(unknown_option)
                 )
@@ -7736,7 +7979,8 @@ def render_dimension_region_layout(
         result.partial.append(
             f"{source.location}: dimension region layout <invalid id>"
         )
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: dimension region layout needs a stable native id"
         )
         return None
@@ -7744,12 +7988,14 @@ def render_dimension_region_layout(
     generation_mode = value.get("generation_mode")
     uniform_region = value.get("uniform_region")
     if generation_mode != "UNIFORM":
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: dimension region layout {layout_id} generation_mode needs review"
         )
         generation_mode = "UNIFORM"
     if not bounded_platform_id(uniform_region):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: dimension region layout {layout_id} uniform_region needs review"
         )
         uniform_region = "default"
@@ -7776,14 +8022,16 @@ def render_dimension(source: SourceObject, result: MigrationResult) -> str | Non
     dimension_id = value.get("id")
     if not bounded_platform_id(dimension_id):
         result.partial.append(f"{source.location}: dimension <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: dimension needs a stable native id"
         )
         return None
     todo_count = len(result.todos)
     region_layout = value.get("region_layout")
     if not bounded_platform_id(region_layout):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: dimension {dimension_id} region_layout needs review"
         )
         region_layout = "default"
@@ -7813,7 +8061,8 @@ def render_omt_placeholder(
         result.partial.append(
             f"{source.location}: overmap terrain placeholder <invalid id>"
         )
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: overmap terrain placeholder needs a stable native id"
         )
         return None
@@ -7827,7 +8076,8 @@ def render_omt_placeholder(
             for row in grid
         )
     ):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: overmap terrain placeholder {placeholder_id} grid needs review"
         )
         grid = []
@@ -7865,7 +8115,8 @@ def _event_source_options(
         event_type is None
     ):
         return "event_transformation", event_transformation
-    result.todos.append(
+    result.add_todo(
+        "manual_rewrite",
         f"{source.location}: {label} requires exactly one event source"
     )
     return None
@@ -7879,14 +8130,15 @@ def _render_event_constraints(
 ) -> None:
     constraints = source.value.get("value_constraints", {})
     if not isinstance(constraints, dict):
-        result.todos.append(f"{source.location}: {owner} value_constraints need review")
+        result.add_todo("manual_rewrite", f"{source.location}: {owner} value_constraints need review")
         return
     for field_name, raw_constraint in constraints.items():
         if not isinstance(field_name, str) or not safe_platform_id(field_name):
-            result.todos.append(f"{source.location}: {owner} constraint field needs review")
+            result.add_todo("manual_rewrite", f"{source.location}: {owner} constraint field needs review")
             continue
         if not isinstance(raw_constraint, dict) or len(raw_constraint) != 1:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: {owner} {field_name} constraint needs review"
             )
             continue
@@ -7897,7 +8149,8 @@ def _render_event_constraints(
                     f"definition:where_statistic({lua_quote(field_name)}, {lua_quote(raw_value)})"
                 )
             else:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: {owner} {field_name} statistic constraint needs review"
                 )
             continue
@@ -7919,7 +8172,8 @@ def _render_event_constraints(
                             f"{lua_quote(field_name)}, {value_literal})"
                         )
                     continue
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: {owner} {field_name} {kind} constraint needs review"
             )
             continue
@@ -7937,11 +8191,13 @@ def _render_event_constraints(
                         "{ " + ", ".join(literals) + " })"
                     )
                     continue
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: {owner} {field_name} equals_any constraint needs review"
             )
             continue
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: {owner} {field_name} constraint kind needs review"
         )
 
@@ -7951,7 +8207,8 @@ def render_event_transformation(source: SourceObject, result: MigrationResult) -
     transformation_id = value.get("id")
     if not safe_platform_id(transformation_id):
         result.partial.append(f"{source.location}: event transformation <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: event transformation needs a stable native id"
         )
         return None
@@ -7968,7 +8225,8 @@ def render_event_transformation(source: SourceObject, result: MigrationResult) -
     ]
     new_fields = value.get("new_fields", {})
     if not isinstance(new_fields, dict):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: event transformation {transformation_id} new_fields need review"
         )
     else:
@@ -7977,7 +8235,8 @@ def render_event_transformation(source: SourceObject, result: MigrationResult) -
                 not isinstance(field_name, str) or not safe_platform_id(field_name) or
                 not isinstance(raw_definition, dict) or len(raw_definition) != 1
             ):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: event transformation {transformation_id} derived field needs review"
                 )
                 continue
@@ -7986,7 +8245,8 @@ def render_event_transformation(source: SourceObject, result: MigrationResult) -
                 not isinstance(transformation, str) or not safe_platform_id(transformation) or
                 not isinstance(input_field, str) or not safe_platform_id(input_field)
             ):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: event transformation {transformation_id} derived field {field_name} needs review"
                 )
                 continue
@@ -8001,11 +8261,13 @@ def render_event_transformation(source: SourceObject, result: MigrationResult) -
             if isinstance(field_name, str) and safe_platform_id(field_name):
                 lines.append(f"definition:drop({lua_quote(field_name)})")
             else:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: event transformation {transformation_id} drop field needs review"
                 )
     elif "drop_fields" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: event transformation {transformation_id} drop_fields need review"
         )
     return finish_catalog(
@@ -8025,7 +8287,7 @@ def render_event_statistic(source: SourceObject, result: MigrationResult) -> str
     statistic_id = value.get("id")
     if not safe_platform_id(statistic_id):
         result.partial.append(f"{source.location}: event statistic <invalid id>")
-        result.todos.append(f"{source.location}: event statistic needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: event statistic needs a stable native id")
         return None
     todo_count = len(result.todos)
     source_options = _event_source_options(source, result, "event statistic")
@@ -8037,7 +8299,8 @@ def render_event_statistic(source: SourceObject, result: MigrationResult) -> str
         "count", "total", "minimum", "maximum", "unique_value",
         "first_value", "last_value",
     }:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: event statistic {statistic_id} statistic type needs review"
         )
         statistic_type = "count"
@@ -8052,11 +8315,13 @@ def render_event_statistic(source: SourceObject, result: MigrationResult) -> str
         if isinstance(field, str) and safe_platform_id(field):
             lines.append(f"    field = {lua_quote(field)},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: event statistic {statistic_id} field needs review"
             )
     elif field is not None:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: event statistic {statistic_id} count field needs review"
         )
     description = value.get("description")
@@ -8066,7 +8331,8 @@ def render_event_statistic(source: SourceObject, result: MigrationResult) -> str
         if singular:
             lines.append(f"    description = {lua_quote(singular)},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: event statistic {statistic_id} description needs review"
             )
         if isinstance(plural, str) and plural:
@@ -8245,7 +8511,8 @@ def typed_inheritance_payload(
     parent = value.get("copy-from")
     if not isinstance(parent, str) or not safe_platform_id(parent):
         result.partial.append(f"{location}: {label} {object_id}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{location}: {label} copy-from must name one safe concrete parent"
         )
         return True, None
@@ -8256,7 +8523,8 @@ def typed_inheritance_payload(
         parent_value.get("id"), str
     ):
         result.partial.append(f"{location}: {label} {object_id}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{location}: {label} copy-from parent '{parent}' needs a concrete "
             "Platform definition in the migration corpus"
         )
@@ -8278,20 +8546,23 @@ def typed_inheritance_payload(
             continue
         if not isinstance(raw_patch, dict):
             result.partial.append(f"{location}: {label} {object_id}")
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{location}: {label} {operation} must be an object with typed members"
             )
             return True, None
         for member, raw_entries in raw_patch.items():
             if member not in allowed:
                 result.partial.append(f"{location}: {label} {object_id}")
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{location}: {label} {operation}.{member} is not supported by the Platform patch"
                 )
                 return True, None
             if member in value:
                 result.partial.append(f"{location}: {label} {object_id}")
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{location}: {label} {member} cannot combine a direct replacement with "
                     f"{operation}"
                 )
@@ -8299,7 +8570,8 @@ def typed_inheritance_payload(
             entries = raw_entries if isinstance(raw_entries, list) else None
             if not entries or not all(_bounded_content_value(entry) for entry in entries):
                 result.partial.append(f"{location}: {label} {object_id}")
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{location}: {label} {operation}.{member} must be a non-empty literal array"
                 )
                 return True, None
@@ -8307,7 +8579,8 @@ def typed_inheritance_payload(
                 if not all(isinstance(entry, str) and safe_platform_id(entry)
                            for entry in entries):
                     result.partial.append(f"{location}: {label} {object_id}")
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{location}: {label} {operation}.{member} needs safe literal ids"
                     )
                     return True, None
@@ -8326,7 +8599,8 @@ def typed_inheritance_payload(
                             not isinstance(entry.get("y", 0), int) or \
                             isinstance(entry.get("y", 0), bool):
                         result.partial.append(f"{location}: {label} {object_id}")
-                        result.todos.append(
+                        result.add_todo(
+                            "manual_rewrite",
                             f"{location}: {label} {operation}.{member} contains an unsupported "
                             "or non-literal vehicle placement"
                         )
@@ -8340,13 +8614,15 @@ def typed_inheritance_payload(
         if label == "vehicle_part":
             if set(extended).intersection(deleted):
                 result.partial.append(f"{location}: {label} {object_id}")
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{location}: {label} has conflicting extend/delete entries for {member}"
                 )
                 return True, None
         elif any(entry in deleted for entry in extended):
             result.partial.append(f"{location}: {label} {object_id}")
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{location}: {label} has conflicting extend/delete placements"
             )
             return True, None
@@ -8391,7 +8667,8 @@ def render_generic_platform_content(
         if inheritance_corpus is None:
             object_id = stable_id(value, "<invalid id>")
             result.partial.append(f"{source.location}: {label} {object_id}")
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: {label} inheritance requires the migration corpus"
             )
             return None
@@ -8428,7 +8705,8 @@ def render_generic_platform_content(
         all(isinstance(entry, str) and safe_platform_id(entry) for entry in raw_id)
     ):
         result.partial.append(f"{source.location}: {label} {object_id}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: {label} {object_id} requires a stable string id"
         )
         return None
@@ -8441,7 +8719,8 @@ def render_generic_platform_content(
     payload = normalize_generic_platform_payload(label, payload)
     if not _bounded_content_value(payload):
         result.partial.append(f"{source.location}: {label} {object_id}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: {label} {object_id} descriptor exceeds the bounded Lua tree contract"
         )
         return None
@@ -8467,7 +8746,10 @@ def report_missing_content_registrar(
         "has no native Platform registrar"
     )
     result.partial.append(label)
-    result.todos.append(label)
+    # A missing one-to-one JSON registrar is not by itself a reusable Platform
+    # gap: passive JSON may remain, and a content owner must choose whether a
+    # Lua authoring workflow is worth adding.
+    result.add_todo("semantic_choice", label)
 
 
 def render_blacklist(source: SourceObject, result: MigrationResult) -> str | None:
@@ -8483,7 +8765,8 @@ def render_blacklist(source: SourceObject, result: MigrationResult) -> str | Non
         "temperature_removal_blacklist": "temperature_removal",
     }.get(value.get("type", ""))
     if kind is None:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: blacklist type needs review"
         )
         return None
@@ -8492,7 +8775,10 @@ def render_blacklist(source: SourceObject, result: MigrationResult) -> str | Non
         result.partial.append(
             f"{source.location}: blacklist kind '{kind}' needs a native registrar"
         )
-        result.todos.append(
+        # This is a content-owner decision, not evidence that a generic
+        # Platform service is missing.
+        result.add_todo(
+            "semantic_choice",
             f"{source.location}: blacklist kind '{kind}' needs a native registrar"
         )
         return None
@@ -8521,7 +8807,8 @@ def render_blacklist(source: SourceObject, result: MigrationResult) -> str | Non
     # MONSTER_BLACKLIST starts with no entries) and must render as a
     # zero-entry definition, not as a review TODO.
     if not isinstance(entries, list):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: blacklist entries need review"
         )
         return None
@@ -8535,7 +8822,8 @@ def render_blacklist(source: SourceObject, result: MigrationResult) -> str | Non
         if isinstance(entry, str) and entry:
             lines.append(f"definition:entry({lua_quote(entry)})")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: blacklist entry needs review"
             )
             break
@@ -8552,7 +8840,8 @@ def render_map_extra(source: SourceObject, result: MigrationResult) -> str | Non
     extra_id = value.get("id")
     if not safe_platform_id(extra_id):
         result.partial.append(f"{source.location}: map extra <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: map extra needs a stable native id"
         )
         return None
@@ -8561,7 +8850,8 @@ def render_map_extra(source: SourceObject, result: MigrationResult) -> str | Non
     if isinstance(name, dict):
         name = name.get("str")
     if not isinstance(name, str) or not name:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: map extra {extra_id} name needs review"
         )
         name = extra_id
@@ -8579,25 +8869,29 @@ def render_map_extra(source: SourceObject, result: MigrationResult) -> str | Non
         if isinstance(generator_id, str) and generator_id:
             lines.append(f"    generator_id = {lua_quote(generator_id)},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: map extra {extra_id} generator needs review"
             )
     elif "generator" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: map extra {extra_id} generator needs review"
         )
     symbol = value.get("sym")
     if isinstance(symbol, str) and symbol:
         lines.append(f"    symbol = {lua_quote(symbol)},")
     elif "sym" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: map extra {extra_id} symbol needs review"
         )
     color = value.get("color")
     if isinstance(color, str) and color:
         lines.append(f"    color = {lua_quote(color)},")
     elif "color" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: map extra {extra_id} color needs review"
         )
     lines.append("}")
@@ -8608,12 +8902,14 @@ def render_map_extra(source: SourceObject, result: MigrationResult) -> str | Non
         for flag in flags:
             lines.append(f"definition:flag({lua_quote(flag)})")
     elif "flags" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: map extra {extra_id} flags need review"
         )
     for member in ("min_max_zlevel", "autonote_visibility"):
         if member in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: map extra {extra_id} {member} needs review"
             )
     status = (
@@ -8631,7 +8927,8 @@ def render_weather_generator(source: SourceObject, result: MigrationResult) -> s
         result.partial.append(
             f"{source.location}: weather generator <invalid id>"
         )
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: weather generator needs a stable native id"
         )
         return None
@@ -8649,7 +8946,8 @@ def render_weather_generator(source: SourceObject, result: MigrationResult) -> s
             lines.append(f"    {field_name} = {entry},")
         else:
             lines.append(f"    {field_name} = {default},")
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: weather generator {generator_id} {field_name} needs review"
             )
     for field_name in (
@@ -8663,7 +8961,8 @@ def render_weather_generator(source: SourceObject, result: MigrationResult) -> s
         if isinstance(entry, int) and not isinstance(entry, bool):
             lines.append(f"    {field_name} = {entry},")
         elif field_name in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: weather generator {generator_id} {field_name} needs review"
             )
     lines.append("}")
@@ -8676,12 +8975,14 @@ def render_weather_generator(source: SourceObject, result: MigrationResult) -> s
             for entry in entries:
                 lines.append(f"definition:{method}({lua_quote(entry)})")
         elif member in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: weather generator {generator_id} {member} needs review"
             )
     for member in ("weather_types", "initial_weather"):
         if member in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: weather generator {generator_id} {member} needs review"
             )
     status = (
@@ -8716,7 +9017,10 @@ def render_migration(source: SourceObject, result: MigrationResult) -> str | Non
     kind = kind_map.get(value.get("type", ""))
     if kind is None:
         result.partial.append(f"{source.location}: migration type needs review")
-        result.todos.append(
+        # Passive JSON remains a valid input; no generic Platform capability is
+        # demonstrated missing by an unregistered legacy migration kind.
+        result.add_todo(
+            "semantic_choice",
             f"{source.location}: migration type needs a native registrar"
         )
         return None
@@ -8735,12 +9039,14 @@ def render_migration(source: SourceObject, result: MigrationResult) -> str | Non
             from_id = value.get(from_field)
             to_id = value.get("to_furn")
         if not isinstance(from_id, str) or not from_id:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: migration from id needs review"
             )
             from_id = ""
         if not isinstance(to_id, str) or not to_id:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: migration to id needs review"
             )
             to_id = ""
@@ -8750,7 +9056,8 @@ def render_migration(source: SourceObject, result: MigrationResult) -> str | Non
             lines = []
             for from_id, to_id in pairs.items():
                 if not isinstance(from_id, str) or not isinstance(to_id, str):
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: migration oter_ids entry needs review"
                     )
                     continue
@@ -8779,7 +9086,8 @@ def render_migration(source: SourceObject, result: MigrationResult) -> str | Non
         result.partial.append(
             f"{source.location}: migration oter_ids needs review"
         )
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: migration oter_ids needs review"
         )
         return None
@@ -8799,10 +9107,10 @@ def render_migration(source: SourceObject, result: MigrationResult) -> str | Non
         from_id = value.get("from")
         to_id = value.get("to", "")
     if not isinstance(from_id, str) or not from_id:
-        result.todos.append(f"{source.location}: migration from id needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: migration from id needs review")
         from_id = ""
     if not isinstance(to_id, str):
-        result.todos.append(f"{source.location}: migration to id needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: migration to id needs review")
         to_id = ""
     # do/end wrapper keeps every definition from counting against the
     # 200-local limit in a file with hundreds of migration pairs.
@@ -8829,7 +9137,8 @@ def render_shopkeeper(source: SourceObject, result: MigrationResult) -> str | No
     rule_id = value.get("id")
     if not safe_platform_id(rule_id):
         result.partial.append(f"{source.location}: shopkeeper rule <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: shopkeeper rule needs a stable native id"
         )
         return None
@@ -8850,7 +9159,8 @@ def render_shopkeeper(source: SourceObject, result: MigrationResult) -> str | No
             lines.append(f"    default_rate = {default_rate},")
         else:
             lines.append("    default_rate = 0,")
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: shopkeeper rule {rule_id} default_rate needs review"
             )
     elif kind == "shopkeeper_whitelist" and isinstance(value.get("message"), str):
@@ -8860,16 +9170,19 @@ def render_shopkeeper(source: SourceObject, result: MigrationResult) -> str | No
     if isinstance(entries, list) and entries:
         for entry in entries:
             if not isinstance(entry, dict):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: shopkeeper rule {rule_id} entry needs review"
                 )
                 continue
             if "condition" in entry:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: shopkeeper rule {rule_id} entry condition needs review"
                 )
             if "rate" in entry:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: shopkeeper rule {rule_id} entry rate needs review"
                 )
             item = entry.get("item", "")
@@ -8878,7 +9191,8 @@ def render_shopkeeper(source: SourceObject, result: MigrationResult) -> str | No
             message = entry.get("message", "")
             fields = (item, category, item_group, message)
             if not all(isinstance(field, str) for field in fields):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: shopkeeper rule {rule_id} entry fields need review"
                 )
                 continue
@@ -8887,7 +9201,8 @@ def render_shopkeeper(source: SourceObject, result: MigrationResult) -> str | No
                 f"{lua_quote(item_group)}, {lua_quote(message)})"
             )
     elif "entries" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: shopkeeper rule {rule_id} entries need review"
         )
     status = (
@@ -8906,7 +9221,8 @@ def render_monster_adjustment(source: SourceObject, result: MigrationResult) -> 
         result.partial.append(
             f"{source.location}: monster adjustment species needs review"
         )
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: monster adjustment species needs review"
         )
         return None
@@ -8923,11 +9239,13 @@ def render_monster_adjustment(source: SourceObject, result: MigrationResult) -> 
             lines.append(f"    stat = {lua_quote(stat_name)},")
             lines.append(f"    stat_adjust = {stat_adjust},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: monster adjustment stat needs review"
             )
     elif "stat" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: monster adjustment stat needs review"
         )
     flag_entry = value.get("flag")
@@ -8938,18 +9256,21 @@ def render_monster_adjustment(source: SourceObject, result: MigrationResult) -> 
             lines.append(f"    flag = {lua_quote(flag_name)},")
             lines.append(f"    flag_val = {lua_boolean(flag_val)},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: monster adjustment flag needs review"
             )
     elif "flag" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: monster adjustment flag needs review"
         )
     special = value.get("special")
     if isinstance(special, str) and special:
         lines.append(f"    special = {lua_quote(special)},")
     elif "special" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: monster adjustment special needs review"
         )
     lines.append("}")
@@ -8966,7 +9287,8 @@ def render_sound_effect(source: SourceObject, result: MigrationResult) -> str | 
     sound_id = value.get("id")
     if not safe_platform_id(sound_id):
         result.partial.append(f"{source.location}: sound effect <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: sound effect needs a stable native id"
         )
         return None
@@ -8977,7 +9299,8 @@ def render_sound_effect(source: SourceObject, result: MigrationResult) -> str | 
     if not isinstance(variants, list) or not variants or not all(
         safe_platform_id(entry) for entry in variants
     ):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: sound effect {sound_id} variants need review"
         )
         variants = ["default"]
@@ -8985,31 +9308,36 @@ def render_sound_effect(source: SourceObject, result: MigrationResult) -> str | 
     if not isinstance(files, list) or not all(
         isinstance(entry, str) and entry for entry in files
     ):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: sound effect {sound_id} files need review"
         )
         files = []
     volume = value.get("volume", 100)
     if not isinstance(volume, int) or isinstance(volume, bool):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: sound effect {sound_id} volume needs review"
         )
         volume = 100
     season = value.get("season", "")
     if not isinstance(season, str):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: sound effect {sound_id} season needs review"
         )
         season = ""
     indoors = value.get("is_indoors")
     night = value.get("is_night")
     if indoors is not None and not isinstance(indoors, bool):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: sound effect {sound_id} is_indoors needs review"
         )
         indoors = None
     if night is not None and not isinstance(night, bool):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: sound effect {sound_id} is_night needs review"
         )
         night = None
@@ -9049,7 +9377,8 @@ def render_sound_effect_preload(
         result.partial.append(
             f"{source.location}: sound effect preload list needs review"
         )
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: sound effect preload list needs review"
         )
         return None
@@ -9057,13 +9386,15 @@ def render_sound_effect_preload(
     lines: list[str] = []
     for entry in entries:
         if not isinstance(entry, dict):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: sound effect preload entry needs review"
             )
             continue
         preload_id = entry.get("id")
         if not safe_platform_id(preload_id):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: sound effect preload needs a stable native id"
             )
             continue
@@ -9073,7 +9404,8 @@ def render_sound_effect_preload(
         if not isinstance(variants, list) or not variants or not all(
             safe_platform_id(variant) for variant in variants
         ):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: sound effect preload {preload_id} variants need review"
             )
             variants = ["default"]
@@ -9113,7 +9445,8 @@ def render_speed_description(source: SourceObject, result: MigrationResult) -> s
     description_id = value.get("id")
     if not safe_platform_id(description_id):
         result.partial.append(f"{source.location}: speed description <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: speed description needs a stable native id"
         )
         return None
@@ -9125,13 +9458,15 @@ def render_speed_description(source: SourceObject, result: MigrationResult) -> s
     ]
     values = value.get("values")
     if not isinstance(values, list) or not values:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: speed description {description_id} values need review"
         )
     else:
         for entry in values:
             if not isinstance(entry, dict):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: speed description {description_id} value needs review"
                 )
                 continue
@@ -9149,7 +9484,8 @@ def render_speed_description(source: SourceObject, result: MigrationResult) -> s
                 not descriptions or
                 any(not text for text in descriptions)
             ):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: speed description {description_id} value needs review"
                 )
                 continue
@@ -9171,7 +9507,8 @@ def render_harvest_drop_type(source: SourceObject, result: MigrationResult) -> s
     drop_id = value.get("id")
     if not safe_platform_id(drop_id):
         result.partial.append(f"{source.location}: harvest drop type <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: harvest drop type needs a stable native id"
         )
         return None
@@ -9195,7 +9532,8 @@ def render_harvest_drop_type(source: SourceObject, result: MigrationResult) -> s
         if isinstance(raw, str):
             lines.append(f"    {target_name} = {lua_quote(raw)},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: harvest drop type {drop_id} {source_name} needs review"
             )
     for source_name, target_name in (("group", "item_group"), ("dissect_only", "dissect_only")):
@@ -9203,7 +9541,8 @@ def render_harvest_drop_type(source: SourceObject, result: MigrationResult) -> s
         if isinstance(raw, bool):
             lines.append(f"    {target_name} = {'true' if raw else 'false'},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: harvest drop type {drop_id} {source_name} needs review"
             )
     lines.append("}")
@@ -9213,7 +9552,8 @@ def render_harvest_drop_type(source: SourceObject, result: MigrationResult) -> s
     elif isinstance(skills, list) and skills and all(safe_platform_id(skill) for skill in skills):
         lines.extend(f"definition:skill({lua_quote(skill)})" for skill in skills)
     elif skills is not None:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: harvest drop type {drop_id} harvest skills need review"
         )
     return finish_catalog(
@@ -9232,7 +9572,7 @@ def render_harvest(source: SourceObject, result: MigrationResult) -> str | None:
     harvest_id = value.get("id")
     if not safe_platform_id(harvest_id):
         result.partial.append(f"{source.location}: harvest <invalid id>")
-        result.todos.append(f"{source.location}: harvest needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: harvest needs a stable native id")
         return None
     todo_count = len(result.todos)
     lines = [
@@ -9244,7 +9584,8 @@ def render_harvest(source: SourceObject, result: MigrationResult) -> str | None:
         if message:
             lines.append(f"    message = {lua_quote(message)},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: harvest {harvest_id} message needs review"
             )
     for source_name, target_name, default in (
@@ -9256,7 +9597,8 @@ def render_harvest(source: SourceObject, result: MigrationResult) -> str | None:
             lines.append(f"    {target_name} = {lua_quote(raw)},")
         else:
             lines.append(f"    {target_name} = {lua_quote(default)},")
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: harvest {harvest_id} {source_name} needs review"
             )
     lines.append("}")
@@ -9278,21 +9620,24 @@ def render_harvest(source: SourceObject, result: MigrationResult) -> str | None:
             raw[0] <= raw[1]
         ):
             return raw[0], raw[1]
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: harvest {harvest_id} {field_name} needs review"
         )
         return default
 
     entries = value.get("entries", [])
     if not isinstance(entries, list):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: harvest {harvest_id} entries need review"
         )
         entries = []
     outputs: set[str] = set()
     for index, raw_entry in enumerate(entries):
         if not isinstance(raw_entry, dict):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: harvest {harvest_id} drop {index} needs review"
             )
             continue
@@ -9313,13 +9658,15 @@ def render_harvest(source: SourceObject, result: MigrationResult) -> str | None:
             not key.startswith("//")
         )
         if unresolved_entry:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: harvest {harvest_id} drop {index} unresolved fields: " +
                 ", ".join(unresolved_entry)
             )
         output = raw_entry.get("drop")
         if not safe_platform_id(output) or output in outputs:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: harvest {harvest_id} drop {index} needs a unique native output id"
             )
             continue
@@ -9336,13 +9683,15 @@ def render_harvest(source: SourceObject, result: MigrationResult) -> str | None:
             isinstance(maximum, bool) or
             not 0 < maximum <= NATIVE_INT_MAX
         ):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: harvest {harvest_id} drop {output} max needs review"
             )
             maximum = 1000
         mass_ratio = raw_entry.get("mass_ratio", 0)
         if not finite_number(mass_ratio) or not 0 <= mass_ratio <= 1:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: harvest {harvest_id} drop {output} mass_ratio needs review"
             )
             mass_ratio = 0
@@ -9357,7 +9706,8 @@ def render_harvest(source: SourceObject, result: MigrationResult) -> str | None:
             if safe_platform_id(category):
                 lines.append(f"    category = {lua_quote(category)},")
             else:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: harvest {harvest_id} drop {output} type needs review"
                 )
         lines.extend(
@@ -9374,7 +9724,8 @@ def render_harvest(source: SourceObject, result: MigrationResult) -> str | None:
         for source_name, method in (("flags", "item_flag"), ("faults", "item_fault")):
             raw_values = raw_entry.get(source_name, [])
             if not isinstance(raw_values, list):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: harvest {harvest_id} drop {output} {source_name} need review"
                 )
                 continue
@@ -9384,7 +9735,8 @@ def render_harvest(source: SourceObject, result: MigrationResult) -> str | None:
                         f"definition:{method}({lua_quote(output)}, {lua_quote(raw_value)})"
                     )
                 else:
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: harvest {harvest_id} drop {output} {source_name} need review"
                     )
     return finish_catalog(
@@ -9403,7 +9755,7 @@ def render_behavior(source: SourceObject, result: MigrationResult) -> str | None
     behavior_id = value.get("id")
     if not safe_platform_id(behavior_id):
         result.partial.append(f"{source.location}: behavior <invalid id>")
-        result.todos.append(f"{source.location}: behavior needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: behavior needs a stable native id")
         return None
     todo_count = len(result.todos)
     lines = [
@@ -9422,7 +9774,8 @@ def render_behavior(source: SourceObject, result: MigrationResult) -> str | None
         ):
             children = raw_children
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: behavior {behavior_id} children need review"
             )
 
@@ -9433,17 +9786,20 @@ def render_behavior(source: SourceObject, result: MigrationResult) -> str | None
         else None
     )
     if raw_goal is not None and goal is None:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: behavior {behavior_id} goal needs review"
         )
     if children and goal is not None:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: behavior {behavior_id} has both children and goal; goal was preserved as a TODO"
         )
         goal = None
     if not children and goal is None:
         goal = f"TODO_{behavior_id}_goal"
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: behavior {behavior_id} needs exactly one goal or child graph"
         )
 
@@ -9453,14 +9809,16 @@ def render_behavior(source: SourceObject, result: MigrationResult) -> str | None
             lines.append(f"    strategy = {lua_quote(raw_strategy)},")
         else:
             lines.append('    strategy = "fallback",')
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: behavior {behavior_id} branch strategy needs review"
             )
     elif raw_strategy is not None:
         if safe_platform_id(raw_strategy):
             lines.append(f"    strategy = {lua_quote(raw_strategy)},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: behavior {behavior_id} strategy needs review"
             )
     if goal is not None:
@@ -9470,13 +9828,15 @@ def render_behavior(source: SourceObject, result: MigrationResult) -> str | None
 
     raw_conditions = value.get("conditions", [])
     if not isinstance(raw_conditions, list):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: behavior {behavior_id} conditions need review"
         )
         raw_conditions = []
     for index, raw_condition in enumerate(raw_conditions):
         if not isinstance(raw_condition, dict):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: behavior {behavior_id} condition {index} needs review"
             )
             continue
@@ -9484,7 +9844,8 @@ def render_behavior(source: SourceObject, result: MigrationResult) -> str | None
             raw_condition, {"predicate", "argument", "invert_result"}
         )
         if unknown:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: behavior {behavior_id} condition {index} unresolved fields: " +
                 ", ".join(unknown)
             )
@@ -9497,7 +9858,8 @@ def render_behavior(source: SourceObject, result: MigrationResult) -> str | None
             "\0" in argument or
             not isinstance(inverted, bool)
         ):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: behavior {behavior_id} condition {index} needs review"
             )
             continue
@@ -9515,11 +9877,13 @@ def render_behavior(source: SourceObject, result: MigrationResult) -> str | None
                 f"definition:score_native({lua_quote(raw_score)}, {lua_quote(argument)})"
             )
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: behavior {behavior_id} score needs review"
             )
     elif "score_argument" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: behavior {behavior_id} score_argument has no score"
         )
 
@@ -9604,12 +9968,12 @@ def append_numeric_map(
     source: SourceObject, label: str, *, non_negative: bool = True,
 ) -> None:
     if not isinstance(raw, dict):
-        result.todos.append(f"{source.location}: {label} needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: {label} needs review")
         return
     for raw_id, raw_value in raw.items():
         value = finite_number(raw_value, 0.0 if non_negative else None)
         if not safe_platform_id(raw_id) or value is None:
-            result.todos.append(f"{source.location}: {label} entry needs review")
+            result.add_todo("manual_rewrite", f"{source.location}: {label} entry needs review")
             continue
         lines.append(
             f"definition:{method}({lua_quote(raw_id)}, {lua_number(value)})"
@@ -9621,13 +9985,14 @@ def render_monster_attack(source: SourceObject, result: MigrationResult) -> str 
     attack_id = value.get("id")
     if not safe_platform_id(attack_id):
         result.partial.append(f"{source.location}: monster attack <invalid id>")
-        result.todos.append(f"{source.location}: monster attack needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: monster attack needs a stable native id")
         return None
     todo_count = len(result.todos)
     cooldown = finite_number(value.get("cooldown", 1), 0.0, NATIVE_INT_MAX)
     if cooldown is None:
         cooldown = 1
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: monster attack {attack_id} cooldown needs review"
         )
     handler_id = f"migrated.monster_attack.{attack_id}"
@@ -9642,7 +10007,8 @@ def render_monster_attack(source: SourceObject, result: MigrationResult) -> str 
         "}",
         f"definition:policy({lua_quote(handler_id)})",
     ]
-    result.todos.append(
+    result.add_todo(
+        "manual_rewrite",
         f"{source.location}: monster attack {attack_id} needs its legacy actor rewritten as a named Lua handler"
     )
     return finish_catalog(
@@ -9661,17 +10027,18 @@ def render_effect_type(source: SourceObject, result: MigrationResult) -> str | N
     effect_id = value.get("id")
     if not safe_platform_id(effect_id):
         result.partial.append(f"{source.location}: effect type <invalid id>")
-        result.todos.append(f"{source.location}: effect type needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: effect type needs a stable native id")
         return None
     todo_count = len(result.todos)
     names = display_texts(value.get("name"))
     descriptions = display_texts(value.get("desc"))
     if names is None:
         names = [effect_id]
-        result.todos.append(f"{source.location}: effect type {effect_id} names need review")
+        result.add_todo("manual_rewrite", f"{source.location}: effect type {effect_id} names need review")
     if descriptions is None:
         descriptions = [effect_id]
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: effect type {effect_id} descriptions need review"
         )
     lines = ["local definition = content.EffectType {", f"    id = {lua_quote(effect_id)},"]
@@ -9687,7 +10054,8 @@ def render_effect_type(source: SourceObject, result: MigrationResult) -> str | N
             continue
         number = native_integer(value[source_name], -1 if source_name == "int_decay_step" else NATIVE_INT_MIN)
         if number is None:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: effect type {effect_id} {source_name} needs review"
             )
         else:
@@ -9700,7 +10068,8 @@ def render_effect_type(source: SourceObject, result: MigrationResult) -> str | N
             continue
         turns = parse_turns(value[source_name])
         if turns is None or not 0 <= turns <= NATIVE_INT_MAX:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: effect type {effect_id} {source_name} needs unit review"
             )
         else:
@@ -9716,7 +10085,8 @@ def render_effect_type(source: SourceObject, result: MigrationResult) -> str | N
             continue
         text = display_text(value[source_name])
         if not text:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: effect type {effect_id} {source_name} needs review"
             )
         else:
@@ -9733,7 +10103,8 @@ def render_effect_type(source: SourceObject, result: MigrationResult) -> str | N
             continue
         state = value[source_name]
         if not isinstance(state, bool):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: effect type {effect_id} {source_name} needs review"
             )
         else:
@@ -9745,7 +10116,8 @@ def render_effect_type(source: SourceObject, result: MigrationResult) -> str | N
     if reduced is not None:
         reduced_texts = display_texts(reduced)
         if reduced_texts is None:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: effect type {effect_id} reduced descriptions need review"
             )
         else:
@@ -9767,7 +10139,8 @@ def render_effect_type(source: SourceObject, result: MigrationResult) -> str | N
             continue
         ids = string_ids(value[source_name])
         if ids is None:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: effect type {effect_id} {source_name} needs review"
             )
         else:
@@ -9793,24 +10166,26 @@ def render_weakpoint_set(source: SourceObject, result: MigrationResult) -> str |
     set_id = value.get("id")
     if not safe_platform_id(set_id):
         result.partial.append(f"{source.location}: weakpoint set <invalid id>")
-        result.todos.append(f"{source.location}: weakpoint set needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: weakpoint set needs a stable native id")
         return None
     todo_count = len(result.todos)
     lines = ["local definition = content.WeakpointSet {", f"    id = {lua_quote(set_id)},", "}"]
     points = value.get("weakpoints")
     if not isinstance(points, list) or not points:
         points = []
-        result.todos.append(f"{source.location}: weakpoint set {set_id} points need review")
+        result.add_todo("manual_rewrite", f"{source.location}: weakpoint set {set_id} points need review")
     rendered_points = 0
     for index, point in enumerate(points):
         if not isinstance(point, dict):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: weakpoint set {set_id} point {index} needs review"
             )
             continue
         point_id = point.get("id", point.get("name"))
         if not safe_platform_id(point_id):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: weakpoint set {set_id} point {index} needs a stable id"
             )
             continue
@@ -9819,7 +10194,8 @@ def render_weakpoint_set(source: SourceObject, result: MigrationResult) -> str |
         good = point.get("is_good", True)
         head = point.get("is_head", False)
         if coverage is None or not isinstance(good, bool) or not isinstance(head, bool):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: weakpoint set {set_id} point {point_id} metadata needs review"
             )
             coverage, good, head = 100, True, False
@@ -9843,14 +10219,16 @@ def render_weakpoint_set(source: SourceObject, result: MigrationResult) -> str |
                 continue
             raw_map = point[source_name]
             if not isinstance(raw_map, dict):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: weakpoint set {set_id} point {point_id} {source_name} needs review"
                 )
                 continue
             for damage_id, raw_amount in raw_map.items():
                 amount = finite_number(raw_amount, 0.0 if non_negative else None)
                 if not safe_platform_id(damage_id) or amount is None:
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: weakpoint set {set_id} point {point_id} {source_name} entry needs review"
                     )
                     continue
@@ -9860,13 +10238,15 @@ def render_weakpoint_set(source: SourceObject, result: MigrationResult) -> str |
                 )
         effects = point.get("effects", [])
         if not isinstance(effects, list):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: weakpoint set {set_id} point {point_id} effects need review"
             )
             effects = []
         for effect_index, effect in enumerate(effects):
             if not isinstance(effect, dict) or not safe_platform_id(effect.get("effect")):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: weakpoint set {set_id} point {point_id} effect {effect_index} needs review"
                 )
                 continue
@@ -9874,7 +10254,8 @@ def render_weakpoint_set(source: SourceObject, result: MigrationResult) -> str |
             chance = finite_number(effect.get("chance", 100), 0.0, 100.0)
             permanent = effect.get("permanent", False)
             if chance is None or not isinstance(permanent, bool):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: weakpoint set {set_id} point {point_id} effect {effect_index} bounds need review"
                 )
                 chance, permanent = 100, False
@@ -9889,7 +10270,8 @@ def render_weakpoint_set(source: SourceObject, result: MigrationResult) -> str |
                     continue
                 bounds = pair_range(effect[field_name], parser)
                 if bounds is None:
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: weakpoint set {set_id} point {point_id} {field_name} needs review"
                     )
                 else:
@@ -9900,7 +10282,8 @@ def render_weakpoint_set(source: SourceObject, result: MigrationResult) -> str |
                 if message:
                     options.append(f"    message = {lua_quote(message)},")
                 else:
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: weakpoint set {set_id} point {point_id} effect message needs review"
                     )
             unknown_effect = unresolved_fields(
@@ -9908,7 +10291,8 @@ def render_weakpoint_set(source: SourceObject, result: MigrationResult) -> str |
                 {"effect", "chance", "permanent", "duration", "intensity", "damage_required", "message"},
             )
             if unknown_effect:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: weakpoint set {set_id} point {point_id} effect unresolved fields: " +
                     ", ".join(unknown_effect)
                 )
@@ -9925,7 +10309,8 @@ def render_weakpoint_set(source: SourceObject, result: MigrationResult) -> str |
             },
         )
         if unknown_point:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: weakpoint set {set_id} point {point_id} unresolved fields: " +
                 ", ".join(unknown_point)
             )
@@ -9939,7 +10324,8 @@ def render_weakpoint_set(source: SourceObject, result: MigrationResult) -> str |
             "    head = false,",
             "}",
         ))
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: weakpoint set {set_id} emitted a safe placeholder because no legacy weakpoint was usable"
         )
     return finish_catalog(
@@ -9953,7 +10339,7 @@ def render_field_type(source: SourceObject, result: MigrationResult) -> str | No
     field_id = value.get("id")
     if not safe_platform_id(field_id):
         result.partial.append(f"{source.location}: field type <invalid id>")
-        result.todos.append(f"{source.location}: field type needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: field type needs a stable native id")
         return None
     todo_count = len(result.todos)
     lines = ["local definition = content.FieldType {", f"    id = {lua_quote(field_id)},"]
@@ -9969,7 +10355,8 @@ def render_field_type(source: SourceObject, result: MigrationResult) -> str | No
         turns = parse_turns(value[source_name])
         minimum_turns = 0 if source_name in {"gas_absorption_factor", "half_life"} else NATIVE_INT_MIN
         if turns is None or not minimum_turns <= turns <= NATIVE_INT_MAX:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: field type {field_id} {source_name} needs unit review"
             )
         else:
@@ -9984,7 +10371,8 @@ def render_field_type(source: SourceObject, result: MigrationResult) -> str | No
             continue
         number = native_integer(value[source_name])
         if number is None:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: field type {field_id} {source_name} needs review"
             )
         else:
@@ -10000,7 +10388,8 @@ def render_field_type(source: SourceObject, result: MigrationResult) -> str | No
             continue
         raw = value[source_name]
         if not isinstance(raw, str) or "\0" in raw:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: field type {field_id} {source_name} needs review"
             )
         else:
@@ -10025,7 +10414,8 @@ def render_field_type(source: SourceObject, result: MigrationResult) -> str | No
             continue
         state = value[source_name]
         if not isinstance(state, bool):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: field type {field_id} {source_name} needs review"
             )
         else:
@@ -10035,7 +10425,7 @@ def render_field_type(source: SourceObject, result: MigrationResult) -> str | No
     levels = value.get("intensity_levels")
     if not isinstance(levels, list) or not levels:
         levels = [{"name": f"TODO {field_id}"}]
-        result.todos.append(f"{source.location}: field type {field_id} intensities need review")
+        result.add_todo("manual_rewrite", f"{source.location}: field type {field_id} intensities need review")
     intensity_supported = {
         "name", "sym", "color", "dangerous", "transparent", "move_cost",
         "intensity_upgrade_chance", "intensity_upgrade_duration", "light_emitted",
@@ -10045,7 +10435,8 @@ def render_field_type(source: SourceObject, result: MigrationResult) -> str | No
     rendered_intensities = 0
     for index, level in enumerate(levels, start=1):
         if not isinstance(level, dict):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: field type {field_id} intensity {index} needs review"
             )
             continue
@@ -10054,7 +10445,8 @@ def render_field_type(source: SourceObject, result: MigrationResult) -> str | No
         color = level.get("color", "white")
         if not name or not isinstance(symbol, str) or not symbol or not isinstance(color, str):
             name, symbol, color = f"TODO {field_id} {index}", "%", "white"
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: field type {field_id} intensity {index} presentation needs review"
             )
         options = [
@@ -10071,7 +10463,8 @@ def render_field_type(source: SourceObject, result: MigrationResult) -> str | No
                 if isinstance(state, bool):
                     options.append(f"    {target_name} = {'true' if state else 'false'},")
                 else:
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: field type {field_id} intensity {index} {source_name} needs review"
                     )
         for source_name, target_name in (
@@ -10084,7 +10477,8 @@ def render_field_type(source: SourceObject, result: MigrationResult) -> str | No
             if source_name in level:
                 number = native_integer(level[source_name])
                 if number is None:
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: field type {field_id} intensity {index} {source_name} needs review"
                     )
                 else:
@@ -10092,7 +10486,8 @@ def render_field_type(source: SourceObject, result: MigrationResult) -> str | No
         if "intensity_upgrade_duration" in level:
             turns = parse_turns(level["intensity_upgrade_duration"])
             if turns is None or not 0 <= turns <= NATIVE_INT_MAX:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: field type {field_id} intensity {index} upgrade duration needs review"
                 )
             else:
@@ -10105,7 +10500,8 @@ def render_field_type(source: SourceObject, result: MigrationResult) -> str | No
             if source_name in level:
                 number = finite_number(level[source_name])
                 if number is None:
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: field type {field_id} intensity {index} {source_name} needs review"
                     )
                 else:
@@ -10117,13 +10513,15 @@ def render_field_type(source: SourceObject, result: MigrationResult) -> str | No
         effects = level.get("effects", [])
         if not isinstance(effects, list):
             effects = []
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: field type {field_id} intensity {index} effects need review"
             )
         for effect_index, effect in enumerate(effects):
             effect_id = effect.get("effect_id") if isinstance(effect, dict) else None
             if not isinstance(effect, dict) or not safe_platform_id(effect_id):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: field type {field_id} intensity {index} effect {effect_index} needs review"
                 )
                 continue
@@ -10132,7 +10530,8 @@ def render_field_type(source: SourceObject, result: MigrationResult) -> str | No
             maximum = parse_turns(effect.get("max_duration", effect.get("min_duration", 0)))
             intensity = native_integer(effect.get("intensity", 1), 1)
             if minimum is None or maximum is None or maximum < minimum or intensity is None:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: field type {field_id} intensity {index} effect {effect_index} bounds need review"
                 )
             else:
@@ -10152,7 +10551,8 @@ def render_field_type(source: SourceObject, result: MigrationResult) -> str | No
                 if text:
                     effect_options.append(f"    {target_name} = {lua_quote(text)},")
                 else:
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: field type {field_id} intensity {index} effect {source_name} needs review"
                     )
             if "is_environmental" in effect:
@@ -10162,7 +10562,8 @@ def render_field_type(source: SourceObject, result: MigrationResult) -> str | No
                         f"    environmental = {'true' if state else 'false'},"
                     )
                 else:
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: field type {field_id} intensity {index} environmental flag needs review"
                     )
             unknown_effect = unresolved_fields(
@@ -10173,14 +10574,16 @@ def render_field_type(source: SourceObject, result: MigrationResult) -> str | No
                 },
             )
             if unknown_effect:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: field type {field_id} intensity {index} effect unresolved fields: " +
                     ", ".join(unknown_effect)
                 )
             lines.extend((f"definition:effect({native_index}, {{", *effect_options, "})"))
         unknown_level = unresolved_fields(level, intensity_supported)
         if unknown_level:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: field type {field_id} intensity {index} unresolved fields: " +
                 ", ".join(unknown_level)
             )
@@ -10192,7 +10595,8 @@ def render_field_type(source: SourceObject, result: MigrationResult) -> str | No
             '    color = "white",',
             "}",
         ))
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: field type {field_id} emitted a safe placeholder because no legacy intensity was usable"
         )
     for source_name, method in (
@@ -10203,7 +10607,8 @@ def render_field_type(source: SourceObject, result: MigrationResult) -> str | No
             continue
         ids = string_ids(value[source_name])
         if ids is None:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: field type {field_id} {source_name} needs review"
             )
         else:
@@ -10228,19 +10633,19 @@ def render_item_group(source: SourceObject, result: MigrationResult) -> str | No
     group_id = value.get("id")
     if not safe_platform_id(group_id):
         result.partial.append(f"{source.location}: item group <invalid id>")
-        result.todos.append(f"{source.location}: item group needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: item group needs a stable native id")
         return None
     todo_count = len(result.todos)
     subtype = value.get("subtype", "distribution")
     kind = "distribution" if subtype == "old" else subtype
     if kind not in {"distribution", "collection"}:
         kind = "distribution"
-        result.todos.append(f"{source.location}: item group {group_id} subtype needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: item group {group_id} subtype needs review")
     ammo = native_integer(value.get("ammo", 0), 0, 100)
     magazine = native_integer(value.get("magazine", 0), 0, 100)
     if ammo is None or magazine is None:
         ammo, magazine = 0, 0
-        result.todos.append(f"{source.location}: item group {group_id} ammo chances need review")
+        result.add_todo("manual_rewrite", f"{source.location}: item group {group_id} ammo chances need review")
     lines = [
         "local definition = content.ItemGroup {",
         f"    id = {lua_quote(group_id)},",
@@ -10279,10 +10684,11 @@ def render_item_group(source: SourceObject, result: MigrationResult) -> str | No
             not isinstance(variant, str) or
             (group and variant)
         ):
-            result.todos.append(f"{source.location}: item group {group_id} entry needs review")
+            result.add_todo("manual_rewrite", f"{source.location}: item group {group_id} entry needs review")
             return
         if unknown:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: item group {group_id} entry unresolved fields: " +
                 ", ".join(unknown)
             )
@@ -10296,15 +10702,15 @@ def render_item_group(source: SourceObject, result: MigrationResult) -> str | No
     for entry in value.get("items", []) if isinstance(value.get("items", []), list) else []:
         add_entry(entry)
     if "items" in value and not isinstance(value["items"], list):
-        result.todos.append(f"{source.location}: item group {group_id} items need review")
+        result.add_todo("manual_rewrite", f"{source.location}: item group {group_id} items need review")
     for entry in value.get("groups", []) if isinstance(value.get("groups", []), list) else []:
         add_entry(entry, True)
     if "groups" in value and not isinstance(value["groups"], list):
-        result.todos.append(f"{source.location}: item group {group_id} groups need review")
+        result.add_todo("manual_rewrite", f"{source.location}: item group {group_id} groups need review")
     for entry in value.get("entries", []) if isinstance(value.get("entries", []), list) else []:
         add_entry(entry)
     if "entries" in value and not isinstance(value["entries"], list):
-        result.todos.append(f"{source.location}: item group {group_id} entries need review")
+        result.add_todo("manual_rewrite", f"{source.location}: item group {group_id} entries need review")
     return finish_catalog(
         source,
         result,
@@ -10404,7 +10810,7 @@ def resolve_regional_inheritance(
     effective_objects: dict[str, dict[str, Any]],
     *,
     defer_missing_parent: bool = False,
-) -> tuple[SourceObject | None, list[str]]:
+) -> tuple[SourceObject | None, list[MigrationTodo]]:
     """Flatten one regional generic-factory object in source load order.
 
     The native factory resolves ``copy-from`` against the object state that
@@ -10434,20 +10840,30 @@ def resolve_regional_inheritance(
 
     if not has_copy_from and has_patch:
         return None, [
-            f"{prefix} extend/delete requires a resolved copy-from parent"
+            MigrationTodo.from_rendered(
+                "manual_rewrite",
+                f"{prefix} extend/delete requires a resolved copy-from parent",
+            )
         ]
 
     if has_copy_from:
         parent_id = value.get("copy-from")
         if not isinstance(parent_id, str) or not parent_id:
-            return None, [f"{prefix} copy-from id needs review"]
+            return None, [
+                MigrationTodo.from_rendered(
+                    "manual_rewrite", f"{prefix} copy-from id needs review"
+                )
+            ]
         parent = effective_objects.get(parent_id)
         if parent is None:
             if defer_missing_parent:
                 return None, []
             return None, [
-                f"{prefix} copy-from parent '{parent_id}' is not available "
-                "in the migration corpus after deferred resolution"
+                MigrationTodo.from_rendered(
+                    "manual_rewrite",
+                    f"{prefix} copy-from parent '{parent_id}' is not available "
+                    "in the migration corpus after deferred resolution",
+                )
             ]
         resolved = copy.deepcopy(parent)
         resolved.pop("id", None)
@@ -10478,7 +10894,11 @@ def resolve_regional_inheritance(
                     resolved[key] = copy.deepcopy(item)
 
     allowed_fields = REGIONAL_INHERITANCE_CONTAINER_FIELDS[kind]
-    todos: list[str] = []
+    todos: list[MigrationTodo] = []
+
+    def add_inheritance_todo(category: TodoCategory, rendered: str) -> None:
+        todos.append(MigrationTodo.from_rendered(category, rendered))
+
     if kind == "region_settings":
         feature_settings = resolved.get("feature_flag_settings")
         direct_feature_settings = value.get("feature_flag_settings")
@@ -10488,13 +10908,15 @@ def resolve_regional_inheritance(
                 if patch is None:
                     continue
                 if not isinstance(patch, dict):
-                    todos.append(
+                    add_inheritance_todo(
+                        "manual_rewrite",
                         f"{prefix} feature_flag_settings.{operation} must be an object"
                     )
                     continue
                 for member, raw_entries in patch.items():
                     if member not in {"blacklist", "whitelist"}:
-                        todos.append(
+                        add_inheritance_todo(
+                            "manual_rewrite",
                             f"{prefix} feature_flag_settings.{operation}.{member} is not supported"
                         )
                         continue
@@ -10508,7 +10930,8 @@ def resolve_regional_inheritance(
                         not all(isinstance(entry, str) and entry for entry in current) or
                         not all(isinstance(entry, str) and entry for entry in entries)
                     ):
-                        todos.append(
+                        add_inheritance_todo(
+                            "manual_rewrite",
                             f"{prefix} feature_flag_settings.{operation}.{member} has malformed flags"
                         )
                         continue
@@ -10520,7 +10943,8 @@ def resolve_regional_inheritance(
                     else:
                         missing = [entry for entry in entries if entry not in updated]
                         if missing:
-                            todos.append(
+                            add_inheritance_todo(
+                                "manual_rewrite",
                                 f"{prefix} feature_flag_settings.delete.{member} references absent flags"
                             )
                             continue
@@ -10533,11 +10957,14 @@ def resolve_regional_inheritance(
         if patch is None:
             continue
         if not isinstance(patch, dict):
-            todos.append(f"{prefix} {operation} must be an object")
+            add_inheritance_todo(
+                "manual_rewrite", f"{prefix} {operation} must be an object"
+            )
             continue
         for member, raw_entries in patch.items():
             if member not in allowed_fields:
-                todos.append(
+                add_inheritance_todo(
+                    "manual_rewrite",
                     f"{prefix} {operation}.{member} is not supported by the native regional reader"
                 )
                 continue
@@ -10549,7 +10976,8 @@ def resolve_regional_inheritance(
                 current = canonical_weighted_entries(resolved.get(member, []))
                 entries = canonical_weighted_entries(raw_entries)
                 if current is None or entries is None:
-                    todos.append(
+                    add_inheritance_todo(
+                        "manual_rewrite",
                         f"{prefix} {operation}.{member} has malformed weighted entries"
                     )
                     continue
@@ -10568,7 +10996,8 @@ def resolve_regional_inheritance(
                         if all(existing_id != entry_id for existing_id, _ in updated)
                     ]
                     if missing:
-                        todos.append(
+                        add_inheritance_todo(
+                            "manual_rewrite",
                             f"{prefix} delete.{member} references ids absent from the inherited container"
                         )
                         continue
@@ -10581,7 +11010,8 @@ def resolve_regional_inheritance(
 
             current = resolved.get(member, [])
             if not isinstance(current, list):
-                todos.append(
+                add_inheritance_todo(
+                    "manual_rewrite",
                     f"{prefix} {operation}.{member} cannot patch a non-array inherited value"
                 )
                 continue
@@ -10594,7 +11024,8 @@ def resolve_regional_inheritance(
             else:
                 missing = [entry for entry in entries if entry not in updated]
                 if missing:
-                    todos.append(
+                    add_inheritance_todo(
+                        "manual_rewrite",
                         f"{prefix} delete.{member} references values absent from the inherited container"
                     )
                     continue
@@ -10620,7 +11051,7 @@ def resolve_regional_inheritance_corpus(
     exclude_types: frozenset[str],
 ) -> tuple[
     dict[tuple[Path, int], SourceObject],
-    dict[tuple[Path, int], list[str]],
+    dict[tuple[Path, int], list[MigrationTodo]],
 ]:
     """Flatten regional inheritance with generic_factory-style deferral.
 
@@ -10633,7 +11064,7 @@ def resolve_regional_inheritance_corpus(
     """
     effective_objects: dict[str, dict[str, dict[str, Any]]] = {}
     resolved_sources: dict[tuple[Path, int], SourceObject] = {}
-    failures: dict[tuple[Path, int], list[str]] = {}
+    failures: dict[tuple[Path, int], list[MigrationTodo]] = {}
     deferred: list[SourceObject] = []
 
     def source_key(source: SourceObject) -> tuple[Path, int]:
@@ -10693,7 +11124,7 @@ def resolve_copy_from(
     label: str,
     location: str,
     locations_self_default: bool = False,
-) -> tuple[dict[str, Any], list[str]]:
+) -> tuple[dict[str, Any], list[MigrationTodo]]:
     """Resolve a shallow copy-from chain against a same-type corpus.
 
     Mirrors the legacy generic-factory inheritance semantics: the child starts
@@ -10707,21 +11138,29 @@ def resolve_copy_from(
     chain: list[dict[str, Any]] = []
     current = value
     seen: set[str] = set()
-    todos: list[str] = []
+    todos: list[MigrationTodo] = []
+
+    def add_copy_todo(category: TodoCategory, rendered: str) -> None:
+        todos.append(MigrationTodo.from_rendered(category, rendered))
+
     while isinstance(current, dict) and "copy-from" in current:
         parent_id = current.get("copy-from")
         if not isinstance(parent_id, str) or not parent_id:
-            todos.append(f"{location}: {label} copy-from id needs review")
+            add_copy_todo(
+                "manual_rewrite", f"{location}: {label} copy-from id needs review"
+            )
             break
         if parent_id in seen:
-            todos.append(
+            add_copy_todo(
+                "manual_rewrite",
                 f"{location}: {label} copy-from chain is cyclic at '{parent_id}'"
             )
             break
         seen.add(parent_id)
         parent = corpus.get(parent_id)
         if parent is None:
-            todos.append(
+            add_copy_todo(
+                "manual_rewrite",
                 f"{location}: {label} copy-from parent '{parent_id}' is not in the migration corpus"
             )
             break
@@ -10772,7 +11211,7 @@ def resolve_generic_copy_from(
     *,
     label: str,
     location: str,
-) -> tuple[dict[str, Any], list[str]]:
+) -> tuple[dict[str, Any], list[MigrationTodo]]:
     """Resolve inheritance for generic Platform content descriptors.
 
     The typed generic builders intentionally receive the *effective* object,
@@ -10791,22 +11230,35 @@ def resolve_generic_copy_from(
     if raw_delete is None:
         return merged, []
     if not isinstance(raw_delete, dict):
-        return merged, [f"{location}: {label} delete must be an object"]
+        return merged, [
+            MigrationTodo.from_rendered(
+                "manual_rewrite", f"{location}: {label} delete must be an object"
+            )
+        ]
     for member, raw_entries in raw_delete.items():
         current = merged.get(member)
         if not isinstance(current, list):
             return merged, [
-                f"{location}: {label} delete.{member} requires an inherited array"
+                MigrationTodo.from_rendered(
+                    "manual_rewrite",
+                    f"{location}: {label} delete.{member} requires an inherited array",
+                )
             ]
         entries = raw_entries if isinstance(raw_entries, list) else [raw_entries]
         if not entries or any(not _bounded_content_value(entry) for entry in entries):
             return merged, [
-                f"{location}: {label} delete.{member} contains an invalid entry"
+                MigrationTodo.from_rendered(
+                    "manual_rewrite",
+                    f"{location}: {label} delete.{member} contains an invalid entry",
+                )
             ]
         missing = [entry for entry in entries if entry not in current]
         if missing:
             return merged, [
-                f"{location}: {label} delete.{member} references an absent inherited entry"
+                MigrationTodo.from_rendered(
+                    "manual_rewrite",
+                    f"{location}: {label} delete.{member} references an absent inherited entry",
+                )
             ]
         updated = list(current)
         for entry in entries:
@@ -10828,7 +11280,8 @@ def render_sub_body_part(
             result.partial.append(
                 f"{source.location}: sub body part {value.get('id') or '<invalid id>'}"
             )
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: sub body part inheritance needs the migration corpus"
             )
             return None
@@ -10839,8 +11292,7 @@ def render_sub_body_part(
             location=source.location,
             locations_self_default=True,
         )
-        for todo in todos:
-            result.todos.append(todo)
+        result.todos.extend(todos)
         if todos:
             result.partial.append(
                 f"{source.location}: sub body part {value.get('id') or '<invalid id>'}"
@@ -10856,7 +11308,8 @@ def render_sub_body_part(
     name = display_text(value.get("name"))
     if not safe_platform_id(part_id) or not safe_platform_id(parent) or not name:
         result.partial.append(f"{source.location}: sub body part {part_id or '<invalid id>'}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: sub body part needs a stable id, name, and parent"
         )
         return None
@@ -10894,7 +11347,8 @@ def render_sub_body_part(
         not isinstance(secondary, bool)
     ):
         plural, opposite, side, coverage, secondary = "", part_id, "both", 0, False
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: sub body part {part_id} presentation or links need review"
         )
     lines = [
@@ -10913,14 +11367,16 @@ def render_sub_body_part(
         if safe_platform_id(similar):
             lines.append(f"    similar_body_part = {lua_quote(similar)},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: sub body part {part_id} similar body part needs review"
             )
     lines.append("}")
     if "locations_under" in value:
         locations = string_ids(value["locations_under"])
         if locations is None or len(set(locations)) != len(locations):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: sub body part {part_id} lower locations need review"
             )
         else:
@@ -10930,13 +11386,15 @@ def render_sub_body_part(
     if "unarmed_damage" in value:
         entries = damage_entries(value["unarmed_damage"])
         if entries is None:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: sub body part {part_id} unarmed damage needs review"
             )
         else:
             for damage_id, amount, armor_penetration in entries:
                 if armor_penetration != 0:
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: sub body part {part_id} unarmed armor penetration is not in the native registrar"
                     )
                 lines.append(
@@ -10984,7 +11442,8 @@ def render_wound(source: SourceObject, result: MigrationResult) -> str | None:
         result.partial.append(
             f"{source.location}: wound {wound_label}"
         )
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: wound needs a stable id, text, distinct damage types, and a two-value damage range within Platform byte bounds"
         )
         return None
@@ -10992,7 +11451,8 @@ def render_wound(source: SourceObject, result: MigrationResult) -> str | None:
     damage_max = native_integer(damage_required[1], 0)
     if damage_min is None or damage_max is None or damage_max < damage_min:
         result.partial.append(f"{source.location}: wound {wound_id}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: wound {wound_id} damage range needs review"
         )
         return None
@@ -11005,7 +11465,8 @@ def render_wound(source: SourceObject, result: MigrationResult) -> str | None:
         if bounded_utf8_string(raw_plural, WOUND_NAME_MAX_BYTES):
             plural_name = raw_plural
         elif "str_pl" in raw_name:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: wound {wound_id} plural name needs a bounded text conversion"
             )
         if (
@@ -11013,11 +11474,13 @@ def render_wound(source: SourceObject, result: MigrationResult) -> str | None:
             not raw_name.get("str") or
             unresolved_fields(raw_name, {"str", "str_pl"})
         ):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: wound {wound_id} name translation metadata needs review"
             )
     elif not isinstance(raw_name, str):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: wound {wound_id} name needs review"
         )
     raw_description = value.get("description")
@@ -11026,7 +11489,8 @@ def render_wound(source: SourceObject, result: MigrationResult) -> str | None:
             not isinstance(raw_description.get("str"), str) or
             unresolved_fields(raw_description, {"str"})
         ):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: wound {wound_id} description translation metadata needs review"
             )
 
@@ -11038,7 +11502,8 @@ def render_wound(source: SourceObject, result: MigrationResult) -> str | None:
         pain_max = native_integer(pain[1], 0)
     if pain_min is None or pain_max is None or pain_max < pain_min:
         pain_min, pain_max = 0, 0
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: wound {wound_id} pain range needs review"
         )
 
@@ -11054,7 +11519,8 @@ def render_wound(source: SourceObject, result: MigrationResult) -> str | None:
         healing_max > NATIVE_INT_MAX
     ):
         healing_min, healing_max = 1, 1
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: wound {wound_id} healing range needs an explicit finite duration review"
         )
 
@@ -11062,12 +11528,14 @@ def render_wound(source: SourceObject, result: MigrationResult) -> str | None:
     limit = native_integer(value.get("limit", 0), 0)
     if weight is None:
         weight = 1
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: wound {wound_id} weight needs review"
         )
     if limit is None:
         limit = 0
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: wound {wound_id} per-part limit needs review"
         )
 
@@ -11097,7 +11565,8 @@ def render_wound(source: SourceObject, result: MigrationResult) -> str | None:
         if bounded_platform_id(flag):
             body_part_flags[target_name] = flag
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: wound {wound_id} {source_name} needs review"
             )
     if (
@@ -11106,7 +11575,8 @@ def render_wound(source: SourceObject, result: MigrationResult) -> str | None:
         "required_body_part_flag" in body_part_flags
     ):
         body_part_flags.clear()
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: wound {wound_id} cannot require and forbid the same body-part flag"
         )
     for target_name in ("required_body_part_flag", "forbidden_body_part_flag"):
@@ -11123,7 +11593,8 @@ def render_wound(source: SourceObject, result: MigrationResult) -> str | None:
     limb_scores = value.get("limb_scores", [])
     if not isinstance(limb_scores, list):
         limb_scores = []
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: wound {wound_id} limb scores need review"
         )
     seen_scores: set[str] = set()
@@ -11135,7 +11606,8 @@ def render_wound(source: SourceObject, result: MigrationResult) -> str | None:
             penalty is None or
             unresolved_fields(entry, {"score", "value"})
         ):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: wound {wound_id} limb-score entry needs review"
             )
             continue
@@ -11147,7 +11619,8 @@ def render_wound(source: SourceObject, result: MigrationResult) -> str | None:
     progressions = value.get("wound_progression", [])
     if not isinstance(progressions, list):
         progressions = []
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: wound {wound_id} progression list needs review"
         )
     seen_progressions: set[str] = set()
@@ -11159,7 +11632,8 @@ def render_wound(source: SourceObject, result: MigrationResult) -> str | None:
             target in seen_progressions or chance is None or
             unresolved_fields(entry, {"id", "chance"})
         ):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: wound {wound_id} progression entry needs review"
             )
             continue
@@ -11179,7 +11653,8 @@ def render_wound(source: SourceObject, result: MigrationResult) -> str | None:
         set(required_types) & set(forbidden_types)
     ):
         required_types, forbidden_types = [], []
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: wound {wound_id} body-part type filters need review"
         )
     lines.extend(
@@ -11225,7 +11700,8 @@ def render_wound_fix(source: SourceObject, result: MigrationResult) -> str | Non
         result.partial.append(
             f"{source.location}: wound fix {fix_label}"
         )
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: wound fix needs a stable id, text, and distinct removed wounds within Platform byte bounds"
         )
         return None
@@ -11238,20 +11714,23 @@ def render_wound_fix(source: SourceObject, result: MigrationResult) -> str | Non
         set(removed) & set(added)
     ):
         added = []
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: wound fix {fix_id} added wounds need review"
         )
 
     duration = parse_turns(value.get("time", 0))
     if duration is None or duration < 0 or duration > NATIVE_INT_MAX // 100:
         duration = 0
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: wound fix {fix_id} duration needs review"
         )
     health_delta = native_integer(value.get("mod_hp", 0))
     if health_delta is None:
         health_delta = 0
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: wound fix {fix_id} health delta needs review"
         )
     success_message = display_text(value.get("success_msg"), "")
@@ -11259,7 +11738,8 @@ def render_wound_fix(source: SourceObject, result: MigrationResult) -> str | Non
         success_message, WOUND_DESCRIPTION_MAX_BYTES, allow_empty=True
     ):
         success_message = ""
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: wound fix {fix_id} success message needs a bounded text conversion"
         )
     for field_name in ("name", "description", "success_msg"):
@@ -11268,7 +11748,8 @@ def render_wound_fix(source: SourceObject, result: MigrationResult) -> str | Non
             not isinstance(raw.get("str"), str) or
             unresolved_fields(raw, {"str"})
         ):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: wound fix {fix_id} {field_name} translation metadata needs review"
             )
 
@@ -11286,13 +11767,15 @@ def render_wound_fix(source: SourceObject, result: MigrationResult) -> str | Non
     skills = value.get("skills", {})
     if not isinstance(skills, dict):
         skills = {}
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: wound fix {fix_id} skills need review"
         )
     for skill, raw_level in sorted(skills.items(), key=lambda entry: str(entry[0])):
         level = native_integer(raw_level, 0, NATIVE_MAX_SKILL)
         if not bounded_platform_id(skill) or level is None:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: wound fix {fix_id} skill entry needs review"
             )
             continue
@@ -11301,7 +11784,8 @@ def render_wound_fix(source: SourceObject, result: MigrationResult) -> str | Non
     proficiencies = value.get("proficiencies", [])
     if not isinstance(proficiencies, list):
         proficiencies = []
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: wound fix {fix_id} proficiencies need review"
         )
     seen_proficiencies: set[str] = set()
@@ -11319,7 +11803,8 @@ def render_wound_fix(source: SourceObject, result: MigrationResult) -> str | Non
                 entry, {"proficiency", "time_save", "is_mandatory"}
             )
         ):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: wound fix {fix_id} proficiency entry needs review"
             )
             continue
@@ -11335,7 +11820,8 @@ def render_wound_fix(source: SourceObject, result: MigrationResult) -> str | Non
     requirements = value.get("requirements", [])
     if not isinstance(requirements, list):
         requirements = []
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: wound fix {fix_id} requirements need review"
         )
     seen_requirements: set[str] = set()
@@ -11345,13 +11831,15 @@ def render_wound_fix(source: SourceObject, result: MigrationResult) -> str | Non
             not bounded_platform_id(entry[0]) or
             entry[0] in seen_requirements
         ):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: wound fix {fix_id} inline, duplicate, or malformed requirement needs a standalone Requirement"
             )
             continue
         count = native_integer(entry[1], 1)
         if count is None:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: wound fix {fix_id} requirement multiplier needs review"
             )
             continue
@@ -11380,7 +11868,7 @@ def render_body_part(source: SourceObject, result: MigrationResult) -> str | Non
     name = display_text(value.get("name"))
     if not safe_platform_id(part_id) or not name:
         result.partial.append(f"{source.location}: body part {part_id or '<invalid id>'}")
-        result.todos.append(f"{source.location}: body part needs a stable id and name")
+        result.add_todo("manual_rewrite", f"{source.location}: body part needs a stable id and name")
         return None
     todo_count = len(result.todos)
     text_fields = {
@@ -11397,26 +11885,30 @@ def render_body_part(source: SourceObject, result: MigrationResult) -> str | Non
         text = display_text(value.get(source_name), fallback)
         if not text:
             text = fallback
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: body part {part_id} {source_name} needs review"
             )
         lines.append(f"    {target_name} = {lua_quote(text)},")
     main_part = value.get("main_part", part_id)
     if not safe_platform_id(main_part):
         main_part = part_id
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: body part {part_id} main_part needs review"
         )
     connected_to = value.get("connected_to", main_part)
     if not safe_platform_id(connected_to):
         connected_to = main_part
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: body part {part_id} connected_to needs review"
         )
     opposite = value.get("opposite_part", part_id)
     if not safe_platform_id(opposite):
         opposite = part_id
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: body part {part_id} opposite_part needs review"
         )
     lines.extend((
@@ -11427,7 +11919,7 @@ def render_body_part(source: SourceObject, result: MigrationResult) -> str | Non
     side = value.get("side", "both")
     if side not in {"left", "right", "both"}:
         side = "both"
-        result.todos.append(f"{source.location}: body part {part_id} side needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: body part {part_id} side needs review")
     lines.append(f"    side = {lua_quote(side)},")
     for source_name, target_name, fallback, minimum in (
         ("hit_size", "hit_size", 1, 0.0000001),
@@ -11436,7 +11928,8 @@ def render_body_part(source: SourceObject, result: MigrationResult) -> str | Non
         number = finite_number(value.get(source_name, fallback), minimum)
         if number is None:
             number = fallback
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: body part {part_id} {source_name} needs review"
             )
         lines.append(f"    {target_name} = {lua_number(number)},")
@@ -11447,7 +11940,8 @@ def render_body_part(source: SourceObject, result: MigrationResult) -> str | Non
         number = native_integer(value.get(source_name, fallback), minimum)
         if number is None:
             number = fallback
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: body part {part_id} {source_name} needs review"
             )
         lines.append(f"    {target_name} = {number},")
@@ -11458,7 +11952,8 @@ def render_body_part(source: SourceObject, result: MigrationResult) -> str | Non
         state = value.get(source_name, fallback)
         if not isinstance(state, bool):
             state = fallback
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: body part {part_id} {source_name} needs review"
             )
         lines.append(f"    {target_name} = {'true' if state else 'false'},")
@@ -11467,7 +11962,7 @@ def render_body_part(source: SourceObject, result: MigrationResult) -> str | Non
     sub_parts = value.get("sub_parts", [])
     ids = string_ids(sub_parts)
     if ids is None or len(set(ids)) != len(ids):
-        result.todos.append(f"{source.location}: body part {part_id} sub-parts need review")
+        result.add_todo("manual_rewrite", f"{source.location}: body part {part_id} sub-parts need review")
     else:
         lines.extend(f"definition:sub_part({lua_quote(entry)})" for entry in ids)
 
@@ -11481,7 +11976,8 @@ def render_body_part(source: SourceObject, result: MigrationResult) -> str | Non
             kind, weight = raw
         numeric_weight = finite_number(weight, 0.0000001)
         if kind not in {"head", "torso", "sensor", "mouth", "arm", "hand", "leg", "foot", "wing", "tail", "other"} or numeric_weight is None:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: body part {part_id} limb type needs review"
             )
             continue
@@ -11491,20 +11987,22 @@ def render_body_part(source: SourceObject, result: MigrationResult) -> str | Non
         )
     if not rendered_limb_type:
         lines.append('definition:limb_type("other", 1)')
-        result.todos.append(f"{source.location}: body part {part_id} needs a native limb type")
+        result.add_todo("manual_rewrite", f"{source.location}: body part {part_id} needs a native limb type")
 
     for source_name, method in (("armor", "armor"), ("unarmed_damage", "unarmed_damage")):
         if source_name not in value:
             continue
         entries = damage_entries(value[source_name])
         if entries is None:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: body part {part_id} {source_name} needs review"
             )
             continue
         for damage_id, amount, armor_penetration in entries:
             if armor_penetration != 0:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: body part {part_id} {source_name} armor penetration needs review"
                 )
             lines.append(
@@ -11513,22 +12011,22 @@ def render_body_part(source: SourceObject, result: MigrationResult) -> str | Non
     if "flags" in value:
         flags = string_ids(value["flags"])
         if flags is None:
-            result.todos.append(f"{source.location}: body part {part_id} flags need review")
+            result.add_todo("manual_rewrite", f"{source.location}: body part {part_id} flags need review")
         else:
             lines.extend(f"definition:flag({lua_quote(flag)})" for flag in flags)
     if "limb_scores" in value:
         scores = value["limb_scores"]
         if not isinstance(scores, list):
             scores = []
-            result.todos.append(f"{source.location}: body part {part_id} limb scores need review")
+            result.add_todo("manual_rewrite", f"{source.location}: body part {part_id} limb scores need review")
         for raw in scores:
             if not isinstance(raw, list) or len(raw) not in {2, 3} or not safe_platform_id(raw[0]):
-                result.todos.append(f"{source.location}: body part {part_id} limb score needs review")
+                result.add_todo("manual_rewrite", f"{source.location}: body part {part_id} limb score needs review")
                 continue
             score = finite_number(raw[1], 0.0)
             maximum = finite_number(raw[2] if len(raw) == 3 else raw[1], 0.0)
             if score is None or maximum is None or maximum < score:
-                result.todos.append(f"{source.location}: body part {part_id} limb score needs review")
+                result.add_todo("manual_rewrite", f"{source.location}: body part {part_id} limb score needs review")
                 continue
             lines.append(
                 f"definition:limb_score({lua_quote(raw[0])}, {lua_number(score)}, {lua_number(maximum)})"
@@ -11537,17 +12035,18 @@ def render_body_part(source: SourceObject, result: MigrationResult) -> str | Non
         qualities = value["qualities"]
         if not isinstance(qualities, list):
             qualities = []
-            result.todos.append(f"{source.location}: body part {part_id} qualities need review")
+            result.add_todo("manual_rewrite", f"{source.location}: body part {part_id} qualities need review")
         for raw in qualities:
             quality_id = raw.get("quality") if isinstance(raw, dict) else None
             level = native_integer(raw.get("level")) if isinstance(raw, dict) else None
             disable = finite_number(raw.get("disable_percent", 0), 0.0, 1.0) if isinstance(raw, dict) else None
             if not safe_platform_id(quality_id) or level is None or disable is None:
-                result.todos.append(f"{source.location}: body part {part_id} quality needs review")
+                result.add_todo("manual_rewrite", f"{source.location}: body part {part_id} quality needs review")
                 continue
             unknown = unresolved_fields(raw, {"quality", "level", "disable_percent"})
             if unknown:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: body part {part_id} quality unresolved fields: " +
                     ", ".join(unknown)
                 )
@@ -11576,7 +12075,8 @@ def render_anatomy(source: SourceObject, result: MigrationResult) -> str | None:
     parts = string_ids(value.get("parts"))
     if not safe_platform_id(anatomy_id) or not parts or len(set(parts)) != len(parts):
         result.partial.append(f"{source.location}: anatomy {anatomy_id or '<invalid id>'}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: anatomy needs a stable id and distinct body parts"
         )
         return None
@@ -11594,7 +12094,7 @@ def render_body_graph(source: SourceObject, result: MigrationResult) -> str | No
     graph_id = value.get("id")
     if not safe_platform_id(graph_id):
         result.partial.append(f"{source.location}: body graph <invalid id>")
-        result.todos.append(f"{source.location}: body graph needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: body graph needs a stable native id")
         return None
     todo_count = len(result.todos)
     lines = ["local definition = content.BodyGraph {", f"    id = {lua_quote(graph_id)},"]
@@ -11610,7 +12110,8 @@ def render_body_graph(source: SourceObject, result: MigrationResult) -> str | No
             continue
         raw = value[source_name]
         if not isinstance(raw, str) or not raw:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: body graph {graph_id} {source_name} needs review"
             )
         else:
@@ -11622,22 +12123,23 @@ def render_body_graph(source: SourceObject, result: MigrationResult) -> str | No
     fill_rows = value.get("fill_rows")
     if not isinstance(rows, list) or not all(isinstance(row, str) and row for row in rows):
         rows = []
-        result.todos.append(f"{source.location}: body graph {graph_id} rows need review")
+        result.add_todo("manual_rewrite", f"{source.location}: body graph {graph_id} rows need review")
     if fill_rows is not None and (
         not isinstance(fill_rows, list) or
         len(fill_rows) != len(rows) or
         not all(isinstance(row, str) and row for row in fill_rows)
     ):
         fill_rows = None
-        result.todos.append(f"{source.location}: body graph {graph_id} fill rows need review")
+        result.add_todo("manual_rewrite", f"{source.location}: body graph {graph_id} fill rows need review")
     if mirror_is_valid and rows:
         rows = []
         fill_rows = None
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: body graph {graph_id} has both mirror and rows; rows were omitted because mirrored graphs cannot own rows"
         )
     if not rows and not mirror_is_valid:
-        result.todos.append(f"{source.location}: body graph {graph_id} needs rows or a mirror")
+        result.add_todo("manual_rewrite", f"{source.location}: body graph {graph_id} needs rows or a mirror")
     for index, row in enumerate(rows):
         if fill_rows is None:
             lines.append(f"definition:row({lua_quote(row)})")
@@ -11648,10 +12150,10 @@ def render_body_graph(source: SourceObject, result: MigrationResult) -> str | No
     parts = value.get("parts", {})
     if not isinstance(parts, dict):
         parts = {}
-        result.todos.append(f"{source.location}: body graph {graph_id} parts need review")
+        result.add_todo("manual_rewrite", f"{source.location}: body graph {graph_id} parts need review")
     for symbol, raw in parts.items():
         if not isinstance(symbol, str) or not symbol or not isinstance(raw, dict):
-            result.todos.append(f"{source.location}: body graph {graph_id} part needs review")
+            result.add_todo("manual_rewrite", f"{source.location}: body graph {graph_id} part needs review")
             continue
         options: list[str] = []
         has_target = False
@@ -11663,7 +12165,8 @@ def render_body_graph(source: SourceObject, result: MigrationResult) -> str | No
                 continue
             ids = string_ids(raw[source_name])
             if not ids:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: body graph {graph_id} part {symbol} {source_name} needs review"
                 )
             else:
@@ -11682,19 +12185,22 @@ def render_body_graph(source: SourceObject, result: MigrationResult) -> str | No
                 if source_name == "nested_graph":
                     has_target = True
             else:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: body graph {graph_id} part {symbol} {source_name} needs review"
                 )
         unknown = unresolved_fields(
             raw, {"body_parts", "sub_body_parts", "nested_graph", "select_color", "sym"}
         )
         if unknown:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: body graph {graph_id} part {symbol} unresolved fields: " +
                 ", ".join(unknown)
             )
         if not has_target:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: body graph {graph_id} part {symbol} has no usable body, sub-body, or nested-graph target and was omitted"
             )
             continue
@@ -11720,7 +12226,8 @@ def render_monster(source: SourceObject, result: MigrationResult) -> str | None:
     faction = value.get("default_faction")
     if not safe_platform_id(monster_id) or not name or not safe_platform_id(faction):
         result.partial.append(f"{source.location}: monster {monster_id or '<invalid id>'}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: monster needs a stable id, name, and default faction"
         )
         return None
@@ -11754,7 +12261,8 @@ def render_monster(source: SourceObject, result: MigrationResult) -> str | None:
             continue
         text = display_text(value[source_name])
         if not text:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: monster {monster_id} {source_name} needs review"
             )
         else:
@@ -11764,7 +12272,8 @@ def render_monster(source: SourceObject, result: MigrationResult) -> str | None:
         if safe_platform_id(death_drops):
             lines.append(f"    death_drops = {lua_quote(death_drops)},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: monster {monster_id} inline death drops need a native ItemGroup"
             )
     for source_name, target_name, parser in (
@@ -11775,7 +12284,8 @@ def render_monster(source: SourceObject, result: MigrationResult) -> str | None:
             continue
         amount = parser(value[source_name])
         if amount is None or amount <= 0 or amount > NATIVE_INT64_MAX:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: monster {monster_id} {source_name} needs unit review"
             )
         else:
@@ -11785,7 +12295,7 @@ def render_monster(source: SourceObject, result: MigrationResult) -> str | None:
         if phase in {"null", "solid", "liquid", "gas", "plasma"}:
             lines.append(f"    phase = {lua_quote(phase)},")
         else:
-            result.todos.append(f"{source.location}: monster {monster_id} phase needs review")
+            result.add_todo("manual_rewrite", f"{source.location}: monster {monster_id} phase needs review")
     integer_options = {
         "diff": "difficulty_adjustment",
         "hp": "hp",
@@ -11809,7 +12319,8 @@ def render_monster(source: SourceObject, result: MigrationResult) -> str | None:
             continue
         number = native_integer(value[source_name])
         if number is None:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: monster {monster_id} {source_name} needs review"
             )
         else:
@@ -11822,7 +12333,8 @@ def render_monster(source: SourceObject, result: MigrationResult) -> str | None:
             continue
         number = finite_number(value[source_name], minimum, maximum)
         if number is None:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: monster {monster_id} {source_name} needs review"
             )
         else:
@@ -11839,7 +12351,8 @@ def render_monster(source: SourceObject, result: MigrationResult) -> str | None:
         if isinstance(state, bool):
             lines.append(f"    {target_name} = {'true' if state else 'false'},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: monster {monster_id} {source_name} needs review"
             )
     lines.append("}")
@@ -11854,7 +12367,8 @@ def render_monster(source: SourceObject, result: MigrationResult) -> str | None:
                 material_id, portions = raw
             portions_int = native_integer(portions, 1)
             if not safe_platform_id(material_id) or portions_int is None:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: monster {monster_id} material entry needs review"
                 )
                 continue
@@ -11870,7 +12384,8 @@ def render_monster(source: SourceObject, result: MigrationResult) -> str | None:
         raw_ids = value[source_name]
         ids = [raw_ids] if isinstance(raw_ids, str) else string_ids(raw_ids)
         if ids is None or not all(safe_platform_id(entry) for entry in ids):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: monster {monster_id} {source_name} needs review"
             )
         else:
@@ -11878,11 +12393,12 @@ def render_monster(source: SourceObject, result: MigrationResult) -> str | None:
     if "flags" in value:
         flags = string_ids(value["flags"])
         if flags is None:
-            result.todos.append(f"{source.location}: monster {monster_id} flags need review")
+            result.add_todo("manual_rewrite", f"{source.location}: monster {monster_id} flags need review")
         else:
             for flag in flags:
                 if flag == "GEN_DORMANT":
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: monster {monster_id} GEN_DORMANT needs an explicit derived-monster transaction design"
                     )
                     continue
@@ -11895,7 +12411,8 @@ def render_monster(source: SourceObject, result: MigrationResult) -> str | None:
     if "melee_damage" in value:
         entries = damage_entries(value["melee_damage"])
         if entries is None:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: monster {monster_id} melee damage needs review"
             )
         else:
@@ -11907,7 +12424,8 @@ def render_monster(source: SourceObject, result: MigrationResult) -> str | None:
         attacks = value["special_attacks"]
         if not isinstance(attacks, list):
             attacks = []
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: monster {monster_id} special attacks need review"
             )
         for raw in attacks:
@@ -11916,7 +12434,8 @@ def render_monster(source: SourceObject, result: MigrationResult) -> str | None:
             if isinstance(raw, list) and len(raw) == 2:
                 attack_id, cooldown = raw
             if not safe_platform_id(attack_id):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: monster {monster_id} special attack needs review"
                 )
                 continue
@@ -11925,7 +12444,8 @@ def render_monster(source: SourceObject, result: MigrationResult) -> str | None:
                 continue
             cooldown_number = finite_number(cooldown, 0.0, NATIVE_INT_MAX)
             if cooldown_number is None:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: monster {monster_id} special attack {attack_id} cooldown needs review"
                 )
                 continue
@@ -11945,7 +12465,8 @@ def render_monster(source: SourceObject, result: MigrationResult) -> str | None:
             continue
         ids = string_ids(value[source_name])
         if ids is None:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: monster {monster_id} {source_name} needs review"
             )
         else:
@@ -11954,18 +12475,21 @@ def render_monster(source: SourceObject, result: MigrationResult) -> str | None:
         emissions = value["emit_fields"]
         if not isinstance(emissions, list):
             emissions = []
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: monster {monster_id} emissions need review"
             )
         for raw in emissions:
             if not isinstance(raw, list) or len(raw) != 2 or not safe_platform_id(raw[0]):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: monster {monster_id} emission needs review"
                 )
                 continue
             turns = parse_turns(raw[1])
             if turns is None or not 0 < turns <= NATIVE_INT_MAX:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: monster {monster_id} emission {raw[0]} delay needs review"
                 )
                 continue
@@ -11976,15 +12500,15 @@ def render_monster(source: SourceObject, result: MigrationResult) -> str | None:
     ) -> None:
         entries = list(raw.items()) if isinstance(raw, dict) else raw
         if not isinstance(entries, list):
-            result.todos.append(f"{source.location}: monster {monster_id} {label} need review")
+            result.add_todo("manual_rewrite", f"{source.location}: monster {monster_id} {label} need review")
             return
         for entry in entries:
             if not isinstance(entry, (list, tuple)) or len(entry) != 2:
-                result.todos.append(f"{source.location}: monster {monster_id} {label} entry needs review")
+                result.add_todo("manual_rewrite", f"{source.location}: monster {monster_id} {label} entry needs review")
                 continue
             amount = native_integer(entry[1], minimum)
             if not safe_platform_id(entry[0]) or amount is None:
-                result.todos.append(f"{source.location}: monster {monster_id} {label} entry needs review")
+                result.add_todo("manual_rewrite", f"{source.location}: monster {monster_id} {label} entry needs review")
                 continue
             lines.append(f"definition:{method}({lua_quote(entry[0])}, {amount})")
 
@@ -12021,16 +12545,17 @@ def render_morale_type(source: SourceObject, result: MigrationResult) -> str | N
     morale_id = value.get("id")
     if not safe_platform_id(morale_id):
         result.partial.append(f"{source.location}: morale type <invalid id>")
-        result.todos.append(f"{source.location}: morale type needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: morale type needs a stable native id")
         return None
     todo_count = len(result.todos)
     text = display_text(value.get("text"))
     if not text:
-        result.todos.append(f"{source.location}: morale type {morale_id} text needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: morale type {morale_id} text needs review")
     permanent = value.get("permanent", False)
     if not isinstance(permanent, bool):
         permanent = False
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: morale type {morale_id} permanence needs review"
         )
     lines = [
@@ -12056,7 +12581,7 @@ def render_disease_type(source: SourceObject, result: MigrationResult) -> str | 
     disease_id = value.get("id")
     if not safe_platform_id(disease_id):
         result.partial.append(f"{source.location}: disease type <invalid id>")
-        result.todos.append(f"{source.location}: disease type needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: disease type needs a stable native id")
         return None
     todo_count = len(result.todos)
     minimum_duration = parse_turns(value.get("min_duration", 1))
@@ -12066,7 +12591,8 @@ def render_disease_type(source: SourceObject, result: MigrationResult) -> str | 
     symptoms = value.get("symptoms")
     if minimum_duration is None or not 0 < minimum_duration <= NATIVE_INT_MAX:
         minimum_duration = 1
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: disease type {disease_id} minimum duration needs review"
         )
     if (
@@ -12074,7 +12600,8 @@ def render_disease_type(source: SourceObject, result: MigrationResult) -> str | 
         not minimum_duration <= maximum_duration <= NATIVE_INT_MAX
     ):
         maximum_duration = minimum_duration
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: disease type {disease_id} maximum duration needs review"
         )
     if (
@@ -12083,7 +12610,8 @@ def render_disease_type(source: SourceObject, result: MigrationResult) -> str | 
         not 0 < minimum_intensity <= NATIVE_INT_MAX
     ):
         minimum_intensity = 1
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: disease type {disease_id} minimum intensity needs review"
         )
     if (
@@ -12092,12 +12620,14 @@ def render_disease_type(source: SourceObject, result: MigrationResult) -> str | 
         not minimum_intensity <= maximum_intensity <= NATIVE_INT_MAX
     ):
         maximum_intensity = minimum_intensity
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: disease type {disease_id} maximum intensity needs review"
         )
     if not safe_platform_id(symptoms):
         symptoms = ""
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: disease type {disease_id} symptom effect needs review"
         )
     lines = [
@@ -12117,7 +12647,8 @@ def render_disease_type(source: SourceObject, result: MigrationResult) -> str | 
     ):
         lines.append(f"    health_threshold = {threshold},")
     elif threshold is not None:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: disease type {disease_id} health threshold needs review"
         )
     lines.append("}")
@@ -12127,7 +12658,8 @@ def render_disease_type(source: SourceObject, result: MigrationResult) -> str | 
             f"definition:affected_body_part({lua_quote(part)})" for part in body_parts
         )
     elif "affected_bodyparts" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: disease type {disease_id} body parts need review"
         )
     return finish_catalog(
@@ -12155,7 +12687,7 @@ def render_marker_catalog(
     object_id = value.get("id")
     if not safe_platform_id(object_id):
         result.partial.append(f"{source.location}: {label} <invalid id>")
-        result.todos.append(f"{source.location}: {label} needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: {label} needs a stable native id")
         return None
     todo_count = len(result.todos)
     lines = [
@@ -12179,7 +12711,7 @@ def render_species(source: SourceObject, result: MigrationResult) -> str | None:
     species_id = value.get("id")
     if not safe_platform_id(species_id):
         result.partial.append(f"{source.location}: species <invalid id>")
-        result.todos.append(f"{source.location}: species needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: species needs a stable native id")
         return None
     todo_count = len(result.todos)
     lines = [
@@ -12197,7 +12729,8 @@ def render_species(source: SourceObject, result: MigrationResult) -> str | None:
         if text:
             lines.append(f"    {target_name} = {lua_quote(text)},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: species {species_id} {source_name} needs review"
             )
     lines.append("}")
@@ -12205,7 +12738,7 @@ def render_species(source: SourceObject, result: MigrationResult) -> str | None:
     if isinstance(flags, list) and all(safe_platform_id(flag) for flag in flags):
         lines.extend(f"definition:flag({lua_quote(flag)})" for flag in flags)
     elif "flags" in value:
-        result.todos.append(f"{source.location}: species {species_id} flags need review")
+        result.add_todo("manual_rewrite", f"{source.location}: species {species_id} flags need review")
     for source_name, method in (
         ("anger_triggers", "anger"),
         ("fear_triggers", "fear"),
@@ -12219,7 +12752,8 @@ def render_species(source: SourceObject, result: MigrationResult) -> str | None:
                 f"definition:{method}({lua_quote(trigger)})" for trigger in triggers
             )
         elif source_name in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: species {species_id} {source_name} need review"
             )
     return finish_catalog(
@@ -12242,11 +12776,12 @@ def render_emission(source: SourceObject, result: MigrationResult) -> str | None
     field = value.get("field")
     if not safe_platform_id(emission_id):
         result.partial.append(f"{source.location}: emission <invalid id>")
-        result.todos.append(f"{source.location}: emission needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: emission needs a stable native id")
         return None
     if not safe_platform_id(field) or field == "fd_null":
         result.partial.append(f"{source.location}: emission {emission_id}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: emission {emission_id} needs a static native field fallback"
         )
         return None
@@ -12271,7 +12806,8 @@ def render_emission(source: SourceObject, result: MigrationResult) -> str | None
         ):
             lines.append(f"    {target_name} = {number},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: emission {emission_id} {source_name} needs a bounded integer rewrite"
             )
     lines.append("}")
@@ -12293,7 +12829,8 @@ def render_monster_faction(
     faction_id = value.get("name")
     if not safe_platform_id(faction_id):
         result.partial.append(f"{source.location}: monster faction <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: monster faction needs a stable native name"
         )
         return None
@@ -12307,7 +12844,8 @@ def render_monster_faction(
         if isinstance(base, str):
             lines.append(f"    base = {lua_quote(base)},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: monster faction {faction_id} base needs review"
             )
     lines.append("}")
@@ -12321,7 +12859,8 @@ def render_monster_faction(
                 for target in targets
             )
         elif relation in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: monster faction {faction_id} {relation} relations need review"
             )
     return finish_catalog(
@@ -12342,7 +12881,8 @@ def render_mutation_category(
     category_id = value.get("id")
     if not safe_platform_id(category_id):
         result.partial.append(f"{source.location}: mutation category <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: mutation category needs a stable native id"
         )
         return None
@@ -12363,7 +12903,8 @@ def render_mutation_category(
         )
     )
     if presentation_incomplete:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: mutation category {category_id} presentation needs review"
         )
     lines = [
@@ -12384,7 +12925,8 @@ def render_mutation_category(
         if isinstance(value[source_name], str):
             lines.append(f"    {target_name} = {lua_quote(text)},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: mutation category {category_id} {source_name} needs review"
             )
     integer_fields = {
@@ -12404,7 +12946,8 @@ def render_mutation_category(
         if valid:
             lines.append(f"    {target_name} = {number},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: mutation category {category_id} {source_name} needs review"
             )
     multiplier = value.get("base_removal_cost_mul")
@@ -12419,7 +12962,8 @@ def render_mutation_category(
                 f"    base_removal_cost_multiplier = {lua_number(multiplier)},"
             )
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: mutation category {category_id} base removal multiplier needs review"
             )
     for source_name, target_name in (
@@ -12432,7 +12976,8 @@ def render_mutation_category(
         if isinstance(state, bool):
             lines.append(f"    {target_name} = {'true' if state else 'false'},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: mutation category {category_id} {source_name} needs review"
             )
     lines.append("}")
@@ -12462,13 +13007,13 @@ def render_named_catalog(
     object_id = value.get("id")
     if not safe_platform_id(object_id):
         result.partial.append(f"{source.location}: {label} <invalid id>")
-        result.todos.append(f"{source.location}: {label} needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: {label} needs a stable native id")
         return None
     todo_count = len(result.todos)
     name = display_text(value.get("name"), object_id)
     if not name:
         name = object_id
-        result.todos.append(f"{source.location}: {label} {object_id} name needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: {label} {object_id} name needs review")
     lines = [
         f"local definition = content.{builder} {{",
         f"    id = {lua_quote(object_id)},",
@@ -12493,7 +13038,8 @@ def render_vehicle_part_location(
     location_id = value.get("id")
     if not safe_platform_id(location_id):
         result.partial.append(f"{source.location}: vehicle part location <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: vehicle part location needs a stable native id"
         )
         return None
@@ -12504,7 +13050,8 @@ def render_vehicle_part_location(
     list_order = value.get("list_order", 5)
     if not name:
         name = location_id
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: vehicle part location {location_id} name needs review"
         )
     for field_name, raw, default in (
@@ -12516,7 +13063,8 @@ def render_vehicle_part_location(
             isinstance(raw, bool) or
             not -NATIVE_INT_MAX - 1 <= raw <= NATIVE_INT_MAX
         ):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: vehicle part location {location_id} {field_name} needs review"
             )
             if field_name == "z_order":
@@ -12555,7 +13103,8 @@ def render_mood_face(
             result.partial.append(
                 f"{source.location}: mood face {value.get('id') or '<invalid id>'}"
             )
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: mood face inheritance needs the migration corpus"
             )
             return None
@@ -12565,8 +13114,7 @@ def render_mood_face(
             label=f"mood face {value.get('id') or '<invalid id>'}",
             location=source.location,
         )
-        for todo in todos:
-            result.todos.append(todo)
+        result.todos.extend(todos)
         if todos:
             result.partial.append(
                 f"{source.location}: mood face {value.get('id') or '<invalid id>'}"
@@ -12577,7 +13125,7 @@ def render_mood_face(
     face_id = value.get("id")
     if not safe_platform_id(face_id):
         result.partial.append(f"{source.location}: mood face <invalid id>")
-        result.todos.append(f"{source.location}: mood face needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: mood face needs a stable native id")
         return None
     todo_count = len(result.todos)
     lines = [
@@ -12587,7 +13135,7 @@ def render_mood_face(
     ]
     values = value.get("values")
     if not isinstance(values, list) or not values:
-        result.todos.append(f"{source.location}: mood face {face_id} values need review")
+        result.add_todo("manual_rewrite", f"{source.location}: mood face {face_id} values need review")
     else:
         seen_scores: set[int] = set()
         for entry in values:
@@ -12601,7 +13149,8 @@ def render_mood_face(
                 not isinstance(face, str) or
                 not face
             ):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: mood face {face_id} value needs review"
                 )
                 continue
@@ -12625,7 +13174,8 @@ def render_damage_info_order(
     order_id = value.get("id")
     if not safe_platform_id(order_id):
         result.partial.append(f"{source.location}: damage info order <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: damage info order needs a stable native id"
         )
         return None
@@ -12633,7 +13183,8 @@ def render_damage_info_order(
     display = value.get("info_display", "detailed")
     if display not in {"none", "basic", "detailed"}:
         display = "detailed"
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: damage info order {order_id} display mode needs review"
         )
     lines = [
@@ -12645,7 +13196,8 @@ def render_damage_info_order(
     if verb:
         lines.append(f"    verb = {lua_quote(verb)},")
     elif "verb" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: damage info order {order_id} verb needs review"
         )
     lines.append("}")
@@ -12674,7 +13226,8 @@ def render_damage_info_order(
             not -NATIVE_INT_MAX - 1 <= order <= NATIVE_INT_MAX or
             not isinstance(show_type, bool)
         ):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: damage info order {order_id} {source_name} needs review"
             )
             continue
@@ -12684,7 +13237,8 @@ def render_damage_info_order(
         )
         rendered_sections += 1
     if rendered_sections == 0:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: damage info order {order_id} needs a display section"
         )
     return finish_catalog(
@@ -12705,7 +13259,8 @@ def render_vehicle_part_category(
     category_id = value.get("id")
     if not safe_platform_id(category_id):
         result.partial.append(f"{source.location}: vehicle part category <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: vehicle part category needs a stable native id"
         )
         return None
@@ -12714,7 +13269,8 @@ def render_vehicle_part_category(
     short_name = display_text(value.get("short_name"), name)
     priority = value.get("priority", 0)
     if not name or not short_name:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: vehicle part category {category_id} labels need review"
         )
     if (
@@ -12723,7 +13279,8 @@ def render_vehicle_part_category(
         not -NATIVE_INT_MAX - 1 <= priority <= NATIVE_INT_MAX
     ):
         priority = 0
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: vehicle part category {category_id} priority needs review"
         )
     lines = [
@@ -12773,13 +13330,13 @@ def render_named_color(source: SourceObject, result: MigrationResult) -> str | N
     name = value.get("name")
     if not isinstance(name, str) or not name:
         result.partial.append(f"{source.location}: named color <invalid name>")
-        result.todos.append(f"{source.location}: named color needs a stable name")
+        result.add_todo("manual_rewrite", f"{source.location}: named color needs a stable name")
         return None
     todo_count = len(result.todos)
     channels = parse_named_color(value.get("value"))
     if channels is None:
         channels = (0, 0, 0, 255)
-        result.todos.append(f"{source.location}: named color {name} value needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: named color {name} value needs review")
     red, green, blue, alpha = channels
     lines = [
         "local definition = content.NamedColor {",
@@ -12813,7 +13370,8 @@ def render_rotatable_symbol(
         len(set(symbols)) != len(symbols)
     ):
         result.partial.append(f"{source.location}: rotatable symbol <invalid tuple>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: rotatable symbol needs two or four distinct glyphs"
         )
         return None
@@ -12850,7 +13408,7 @@ def render_ascii_art(source: SourceObject, result: MigrationResult) -> str | Non
     art_id = value.get("id")
     if not safe_platform_id(art_id):
         result.partial.append(f"{source.location}: ASCII art <invalid id>")
-        result.todos.append(f"{source.location}: ASCII art needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: ASCII art needs a stable native id")
         return None
     todo_count = len(result.todos)
     lines = [
@@ -12860,11 +13418,12 @@ def render_ascii_art(source: SourceObject, result: MigrationResult) -> str | Non
     ]
     picture = value.get("picture")
     if not isinstance(picture, list) or not picture:
-        result.todos.append(f"{source.location}: ASCII art {art_id} picture needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: ASCII art {art_id} picture needs review")
     else:
         for line in picture:
             if not isinstance(line, str) or terminal_cell_width(line) > 41:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: ASCII art {art_id} line needs width review"
                 )
                 continue
@@ -12885,7 +13444,7 @@ def render_limb_score(source: SourceObject, result: MigrationResult) -> str | No
     score_id = value.get("id")
     if not safe_platform_id(score_id):
         result.partial.append(f"{source.location}: limb score <invalid id>")
-        result.todos.append(f"{source.location}: limb score needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: limb score needs a stable native id")
         return None
     todo_count = len(result.todos)
     name = display_text(value.get("name"), score_id)
@@ -12893,12 +13452,14 @@ def render_limb_score(source: SourceObject, result: MigrationResult) -> str | No
     encumbrance = value.get("affected_by_encumb", True)
     if not isinstance(wounds, bool):
         wounds = True
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: limb score {score_id} wound behavior needs review"
         )
     if not isinstance(encumbrance, bool):
         encumbrance = True
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: limb score {score_id} encumbrance behavior needs review"
         )
     lines = [
@@ -12936,7 +13497,7 @@ def render_hit_range(source: SourceObject, result: MigrationResult) -> str | Non
     )
     values = raw_values if valid else []
     if not valid:
-        result.todos.append(f"{source.location}: hit range values need review")
+        result.add_todo("manual_rewrite", f"{source.location}: hit range values need review")
     rendered_values = ", ".join(str(entry) for entry in values)
     lines = [
         "local definition = content.HitRange {",
@@ -12947,7 +13508,8 @@ def render_hit_range(source: SourceObject, result: MigrationResult) -> str | Non
     ]
     unresolved = unresolved_fields(value, {"type", "even_good"})
     if unresolved:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: hit range unresolved fields: {', '.join(unresolved)}"
         )
     status = result.partial if unresolved or len(result.todos) != todo_count else result.converted
@@ -12962,7 +13524,8 @@ def render_bash_damage_profile(
     profile_id = value.get("id")
     if not safe_platform_id(profile_id):
         result.partial.append(f"{source.location}: bash damage profile <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: bash damage profile needs a stable native id"
         )
         return None
@@ -12974,7 +13537,8 @@ def render_bash_damage_profile(
     ]
     profile = value.get("profile")
     if not isinstance(profile, dict):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: bash damage profile {profile_id} factors need review"
         )
     else:
@@ -12987,7 +13551,8 @@ def render_bash_damage_profile(
                 not math.isfinite(factor) or
                 factor < 0
             ):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: bash damage profile {profile_id} factor needs review"
                 )
                 continue
@@ -13010,7 +13575,8 @@ def render_clothing_mod(source: SourceObject, result: MigrationResult) -> str | 
     mod_id = value.get("id")
     if not safe_platform_id(mod_id):
         result.partial.append(f"{source.location}: clothing modification <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: clothing modification needs a stable native id"
         )
         return None
@@ -13021,7 +13587,8 @@ def render_clothing_mod(source: SourceObject, result: MigrationResult) -> str | 
     remove_prompt = display_text(value.get("destroy_prompt"), "")
     required_values = (flag, material_item, apply_prompt, remove_prompt)
     if not all(isinstance(entry, str) and entry for entry in required_values):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: clothing modification {mod_id} identity or prompts need review"
         )
     lines = [
@@ -13046,13 +13613,15 @@ def render_clothing_mod(source: SourceObject, result: MigrationResult) -> str | 
         "warmth",
     }
     if not isinstance(modifiers, list) or not modifiers:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: clothing modification {mod_id} modifiers need review"
         )
     else:
         for modifier in modifiers:
             if not isinstance(modifier, dict):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: clothing modification {mod_id} modifier needs review"
                 )
                 continue
@@ -13074,7 +13643,8 @@ def render_clothing_mod(source: SourceObject, result: MigrationResult) -> str | 
                 isinstance(round_up, bool)
             )
             if not valid:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: clothing modification {mod_id} modifier needs review"
                 )
                 continue
@@ -13119,7 +13689,8 @@ def render_overmap_land_use_code(
     legacy_null_id = code_id == ""
     if not safe_platform_id(code_id) and not legacy_null_id:
         result.partial.append(f"{source.location}: overmap land-use code <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: overmap land-use code needs a stable non-null id"
         )
         return None
@@ -13138,7 +13709,8 @@ def render_overmap_land_use_code(
         not isinstance(color, str) or
         not color
     ):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: overmap land-use code {code_id} display values need review"
         )
     safe_code = (
@@ -13176,7 +13748,8 @@ def render_overmap_vision(source: SourceObject, result: MigrationResult) -> str 
     vision_id = value.get("id")
     if not safe_platform_id(vision_id) or "$" in str(vision_id):
         result.partial.append(f"{source.location}: overmap vision <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: overmap vision needs a stable native id without '$'"
         )
         return None
@@ -13188,13 +13761,15 @@ def render_overmap_vision(source: SourceObject, result: MigrationResult) -> str 
     ]
     raw_levels = value.get("levels", [])
     if not isinstance(raw_levels, list) or len(raw_levels) > 3:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: overmap vision {vision_id} levels need review"
         )
         raw_levels = []
     for index, raw_level in enumerate(raw_levels, start=1):
         if not isinstance(raw_level, dict):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: overmap vision {vision_id} level {index} needs review"
             )
             continue
@@ -13202,7 +13777,8 @@ def render_overmap_vision(source: SourceObject, result: MigrationResult) -> str 
             lines.append("definition:blend_adjacent()")
             unknown = set(raw_level) - {"blends_adjacent"}
             if unknown:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: overmap vision {vision_id} blended level {index} has extra fields"
                 )
             continue
@@ -13221,7 +13797,8 @@ def render_overmap_vision(source: SourceObject, result: MigrationResult) -> str 
                 not isinstance(looks_like, str) or not looks_like
             ))
         ):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: overmap vision {vision_id} appearance level {index} needs review"
             )
             continue
@@ -13238,7 +13815,8 @@ def render_overmap_vision(source: SourceObject, result: MigrationResult) -> str 
             "name", "sym", "color", "looks_like", "blends_adjacent"
         }
         if unknown:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: overmap vision {vision_id} level {index} has unsupported fields"
             )
     return finish_catalog(
@@ -13257,7 +13835,7 @@ def render_overmap_location(source: SourceObject, result: MigrationResult) -> st
     location_id = value.get("id")
     if not safe_platform_id(location_id):
         result.partial.append(f"{source.location}: overmap location <invalid id>")
-        result.todos.append(f"{source.location}: overmap location needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: overmap location needs a stable native id")
         return None
     todo_count = len(result.todos)
     lines = [
@@ -13269,14 +13847,16 @@ def render_overmap_location(source: SourceObject, result: MigrationResult) -> st
     for field_name, method in (("terrains", "terrain"), ("flags", "terrain_flag")):
         raw_values = value.get(field_name, [])
         if not isinstance(raw_values, list):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: overmap location {location_id} {field_name} need review"
             )
             continue
         seen: set[str] = set()
         for raw in raw_values:
             if not isinstance(raw, str) or not raw or raw in seen:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: overmap location {location_id} {field_name} entry needs review"
                 )
                 continue
@@ -13285,7 +13865,8 @@ def render_overmap_location(source: SourceObject, result: MigrationResult) -> st
             lines.append(f"definition:{method}({lua_quote(raw)})")
     if selectors == 0:
         result.partial.append(f"{source.location}: overmap location {location_id}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: overmap location {location_id} needs at least one terrain selector"
         )
         return None
@@ -13305,7 +13886,7 @@ def render_profession_group(source: SourceObject, result: MigrationResult) -> st
     group_id = value.get("id")
     if not safe_platform_id(group_id):
         result.partial.append(f"{source.location}: profession group <invalid id>")
-        result.todos.append(f"{source.location}: profession group needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: profession group needs a stable native id")
         return None
     professions = value.get("professions")
     if (
@@ -13315,7 +13896,8 @@ def render_profession_group(source: SourceObject, result: MigrationResult) -> st
         len(set(professions)) != len(professions)
     ):
         result.partial.append(f"{source.location}: profession group {group_id}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: profession group {group_id} professions need review"
         )
         return None
@@ -13355,7 +13937,7 @@ def render_weighted_catalog(
     group_id = value.get("id")
     if not safe_platform_id(group_id):
         result.partial.append(f"{source.location}: {label} <invalid id>")
-        result.todos.append(f"{source.location}: {label} needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: {label} needs a stable native id")
         return None
     todo_count = len(result.todos)
     lines = [f"local definition = content.{builder} {{", f"    id = {lua_quote(group_id)},"]
@@ -13368,7 +13950,7 @@ def render_weighted_catalog(
             not 0 <= raw_chance <= 4_294_967_295
         ):
             result.partial.append(f"{source.location}: {label} {group_id}")
-            result.todos.append(f"{source.location}: {label} {group_id} chance needs review")
+            result.add_todo("manual_rewrite", f"{source.location}: {label} {group_id} chance needs review")
             return None
         lines.append(f"    chance = {raw_chance},")
         supported.add("chance")
@@ -13376,7 +13958,7 @@ def render_weighted_catalog(
     raw_entries = value.get(source_field)
     if not isinstance(raw_entries, list) or not raw_entries:
         result.partial.append(f"{source.location}: {label} {group_id}")
-        result.todos.append(f"{source.location}: {label} {group_id} entries need review")
+        result.add_todo("manual_rewrite", f"{source.location}: {label} {group_id} entries need review")
         return None
     seen: set[str] = set()
     converted = 0
@@ -13387,7 +13969,8 @@ def render_weighted_catalog(
             entry_id = raw_entry.get("fault")
             weight = raw_entry.get("weight", 100)
             if set(raw_entry) - {"fault", "weight"}:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: {label} {group_id} entry has unsupported fields"
                 )
         elif (
@@ -13404,7 +13987,8 @@ def render_weighted_catalog(
             isinstance(weight, bool) or
             not 1 <= weight <= NATIVE_INT_MAX
         ):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: {label} {group_id} weighted entry needs review"
             )
             continue
@@ -13424,7 +14008,7 @@ def render_explosion_light(source: SourceObject, result: MigrationResult) -> str
     light_id = value.get("id")
     if not safe_platform_id(light_id):
         result.partial.append(f"{source.location}: explosion light <invalid id>")
-        result.todos.append(f"{source.location}: explosion light needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: explosion light needs a stable native id")
         return None
     todo_count = len(result.todos)
 
@@ -13437,7 +14021,8 @@ def render_explosion_light(source: SourceObject, result: MigrationResult) -> str
             (raw > 0 if positive else raw >= 0)
         ):
             return float(raw)
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: explosion light {light_id} {name} needs review"
         )
         return default
@@ -13470,13 +14055,15 @@ def render_explosion_light(source: SourceObject, result: MigrationResult) -> str
                     else None
                 )
                 if stop is None or (isinstance(raw_stop, dict) and set(raw_stop) - {"color", "alpha"}):
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: explosion light {light_id} color stop needs review"
                     )
                     continue
                 stops.append(stop)
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: explosion light {light_id} stops need review"
             )
     else:
@@ -13485,7 +14072,8 @@ def render_explosion_light(source: SourceObject, result: MigrationResult) -> str
         if first is not None and second is not None:
             stops.extend((first, second))
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: explosion light {light_id} legacy color stops need review"
             )
     if not stops:
@@ -13494,7 +14082,8 @@ def render_explosion_light(source: SourceObject, result: MigrationResult) -> str
 
     easing = value.get("easing", "linear")
     if easing not in {"linear", "ease_in", "ease_out", "smoothstep"}:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: explosion light {light_id} easing needs review"
         )
         easing = "linear"
@@ -13515,7 +14104,8 @@ def render_explosion_light(source: SourceObject, result: MigrationResult) -> str
         "maximum_ms": finite("duration_max_ms", 900.0, positive=True),
     }
     if duration_values["maximum_ms"] < duration_values["minimum_ms"]:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: explosion light {light_id} duration bounds need review"
         )
         duration_values["maximum_ms"] = duration_values["minimum_ms"]
@@ -13547,7 +14137,8 @@ def render_explosion_light(source: SourceObject, result: MigrationResult) -> str
         )
     shock_enabled = value.get("shockwave", False)
     if not isinstance(shock_enabled, bool):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: explosion light {light_id} shockwave switch needs review"
         )
         shock_enabled = False
@@ -13582,7 +14173,7 @@ def render_ammo_effect(source: SourceObject, result: MigrationResult) -> str | N
     effect_id = value.get("id")
     if not safe_platform_id(effect_id):
         result.partial.append(f"{source.location}: ammo effect <invalid id>")
-        result.todos.append(f"{source.location}: ammo effect needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: ammo effect needs a stable native id")
         return None
     todo_count = len(result.todos)
 
@@ -13597,7 +14188,8 @@ def render_ammo_effect(source: SourceObject, result: MigrationResult) -> str | N
 
     trigger = native_integer(value.get("trigger_chance", 100), maximum=100)
     if trigger is None:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: ammo effect {effect_id} trigger chance needs review"
         )
         trigger = 100
@@ -13612,13 +14204,15 @@ def render_ammo_effect(source: SourceObject, result: MigrationResult) -> str | N
         if raw is None:
             return
         if not isinstance(raw, list):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: ammo effect {effect_id} {method} entries need review"
             )
             return
         for entry in raw:
             if not isinstance(entry, dict) or not safe_platform_id(entry.get("field_type")):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: ammo effect {effect_id} {method} entry needs review"
                 )
                 continue
@@ -13643,7 +14237,8 @@ def render_ammo_effect(source: SourceObject, result: MigrationResult) -> str | N
                 not isinstance(passable, bool) or
                 set(entry) - allowed
             ):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: ammo effect {effect_id} {method} entry needs review"
                 )
                 continue
@@ -13662,7 +14257,8 @@ def render_ammo_effect(source: SourceObject, result: MigrationResult) -> str | N
     raw_on_hit = value.get("on_hit_effects")
     if raw_on_hit is not None:
         if not isinstance(raw_on_hit, list):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: ammo effect {effect_id} on-hit entries need review"
             )
         else:
@@ -13677,7 +14273,8 @@ def render_ammo_effect(source: SourceObject, result: MigrationResult) -> str | N
                     not isinstance(entry.get("need_touch_skin", False), bool) or
                     set(entry) - {"effect", "duration", "intensity", "need_touch_skin"}
                 ):
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: ammo effect {effect_id} on-hit entry needs a turn-based duration review"
                     )
                     continue
@@ -13693,13 +14290,15 @@ def render_ammo_effect(source: SourceObject, result: MigrationResult) -> str | N
     raw_area = value.get("aoe_effects")
     if raw_area is not None:
         if not isinstance(raw_area, list):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: ammo effect {effect_id} area-effect entries need review"
             )
         else:
             for entry in raw_area:
                 if not isinstance(entry, dict):
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: ammo effect {effect_id} area-effect entry needs review"
                     )
                     continue
@@ -13727,7 +14326,8 @@ def render_ammo_effect(source: SourceObject, result: MigrationResult) -> str | N
                     not isinstance(entry.get("all_bp", False), bool) or
                     set(entry) - {"effect", "duration", "intensity_min", "intensity_max", "chance", "radius", "hits_amount", "all_bp"}
                 ):
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: ammo effect {effect_id} area-effect entry needs a turn-based duration review"
                     )
                     continue
@@ -13748,7 +14348,8 @@ def render_ammo_effect(source: SourceObject, result: MigrationResult) -> str | N
     raw_explosion = value.get("explosion")
     if raw_explosion is not None:
         if not isinstance(raw_explosion, dict):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: ammo effect {effect_id} explosion needs review"
             )
         else:
@@ -13770,7 +14371,8 @@ def render_ammo_effect(source: SourceObject, result: MigrationResult) -> str | N
                 noise is None or not isinstance(fire, bool) or
                 not isinstance(light, str)
             ):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: ammo effect {effect_id} explosion values need review"
                 )
             else:
@@ -13803,15 +14405,18 @@ def render_ammo_effect(source: SourceObject, result: MigrationResult) -> str | N
                             "}",
                         ))
                     else:
-                        result.todos.append(
+                        result.add_todo(
+                            "manual_rewrite",
                             f"{source.location}: ammo effect {effect_id} shrapnel needs review"
                         )
                 elif shrapnel is not None:
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: ammo effect {effect_id} legacy numeric shrapnel needs review"
                     )
                 if set(raw_explosion) - {"power", "distance_factor", "max_noise", "fire", "light_effect", "shrapnel"}:
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: ammo effect {effect_id} explosion has unsupported fields"
                     )
 
@@ -13824,14 +14429,16 @@ def render_ammo_effect(source: SourceObject, result: MigrationResult) -> str | N
         if enabled is True:
             lines.append(f"definition:{method}()")
         elif not isinstance(enabled, bool):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: ammo effect {effect_id} {legacy_name} needs review"
             )
 
     raw_spells = value.get("spell_data")
     if raw_spells is not None:
         if not isinstance(raw_spells, list):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: ammo effect {effect_id} spells need review"
             )
         else:
@@ -13845,7 +14452,8 @@ def render_ammo_effect(source: SourceObject, result: MigrationResult) -> str | N
                     not isinstance(self_target, bool) or
                     set(entry) - {"id", "level", "self"}
                 ):
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: ammo effect {effect_id} spell entry needs review"
                     )
                     continue
@@ -13859,12 +14467,14 @@ def render_ammo_effect(source: SourceObject, result: MigrationResult) -> str | N
     if always is True:
         lines.append("definition:cast_spells_on_miss()")
     elif not isinstance(always, bool):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: ammo effect {effect_id} spell trigger needs review"
         )
 
     if value.get("eoc"):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: ammo effect {effect_id} EOC must be rewritten as a named Lua impact_policy handler"
         )
     supported = {
@@ -13882,7 +14492,7 @@ def render_addiction_type(source: SourceObject, result: MigrationResult) -> str 
     addiction_id = value.get("id")
     if not safe_platform_id(addiction_id):
         result.partial.append(f"{source.location}: addiction type <invalid id>")
-        result.todos.append(f"{source.location}: addiction type needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: addiction type needs a stable native id")
         return None
     todo_count = len(result.todos)
     fields = {
@@ -13892,13 +14502,15 @@ def render_addiction_type(source: SourceObject, result: MigrationResult) -> str 
     }
     if any(not text for text in fields.values()):
         result.partial.append(f"{source.location}: addiction type {addiction_id}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: addiction type {addiction_id} text needs review"
         )
         return None
     craving = value.get("craving_morale", "")
     if not isinstance(craving, str):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: addiction type {addiction_id} craving morale needs review"
         )
         craving = ""
@@ -13914,7 +14526,8 @@ def render_addiction_type(source: SourceObject, result: MigrationResult) -> str 
         f"definition:tick_policy({lua_quote(handler_id)})",
     ]
     legacy_behaviour = "builtin" if value.get("builtin") else "effect_on_condition"
-    result.todos.append(
+    result.add_todo(
+        "manual_rewrite",
         f"{source.location}: addiction type {addiction_id} {legacy_behaviour} must be rewritten as named Lua handler {handler_id}"
     )
     supported = {
@@ -13931,13 +14544,14 @@ def render_character_modifier(source: SourceObject, result: MigrationResult) -> 
     modifier_id = value.get("id")
     if not safe_platform_id(modifier_id):
         result.partial.append(f"{source.location}: character modifier <invalid id>")
-        result.todos.append(f"{source.location}: character modifier needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: character modifier needs a stable native id")
         return None
     todo_count = len(result.todos)
     description = display_text(value.get("description"))
     if not description:
         result.partial.append(f"{source.location}: character modifier {modifier_id}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: character modifier {modifier_id} description needs review"
         )
         return None
@@ -13945,7 +14559,8 @@ def render_character_modifier(source: SourceObject, result: MigrationResult) -> 
     raw_operation = value.get("mod_type", "")
     operation = operation_map.get(raw_operation) if isinstance(raw_operation, str) else None
     if operation is None:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: character modifier {modifier_id} operation needs review"
         )
         operation = "none"
@@ -13958,7 +14573,8 @@ def render_character_modifier(source: SourceObject, result: MigrationResult) -> 
         "}",
         f"definition:evaluate_with({lua_quote(handler_id)})",
     ]
-    result.todos.append(
+    result.add_todo(
+        "manual_rewrite",
         f"{source.location}: character modifier {modifier_id} value/builtin must be rewritten as named Lua evaluator {handler_id}"
     )
     return finish_catalog(
@@ -13984,7 +14600,8 @@ def render_start_location(
             result.partial.append(
                 f"{source.location}: start location {value.get('id') or '<invalid id>'}"
             )
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: start location inheritance needs the migration corpus"
             )
             return None
@@ -13994,8 +14611,7 @@ def render_start_location(
             label=f"start location {value.get('id') or '<invalid id>'}",
             location=source.location,
         )
-        for todo in todos:
-            result.todos.append(todo)
+        result.todos.extend(todos)
         if todos:
             result.partial.append(
                 f"{source.location}: start location {value.get('id') or '<invalid id>'}"
@@ -14006,13 +14622,13 @@ def render_start_location(
     location_id = value.get("id")
     if not safe_platform_id(location_id):
         result.partial.append(f"{source.location}: start location <invalid id>")
-        result.todos.append(f"{source.location}: start location needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: start location needs a stable native id")
         return None
     todo_count = len(result.todos)
     name = display_text(value.get("name"))
     if not name:
         result.partial.append(f"{source.location}: start location {location_id}")
-        result.todos.append(f"{source.location}: start location {location_id} name needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: start location {location_id} name needs review")
         return None
     lines = [
         "local definition = content.StartLocation {",
@@ -14047,7 +14663,8 @@ def render_start_location(
                 if set(raw) - {"om_terrain", "om_terrain_match_type", "parameters"}:
                     match = None
             if not safe_platform_id(terrain_id) or match is None:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: start location {location_id} terrain selector needs review"
                 )
                 continue
@@ -14067,7 +14684,7 @@ def render_start_location(
     elif "terrain" in value:
         # A present but malformed terrain member is a review item; an absent
         # member is a deliberate legacy value (an empty target set).
-        result.todos.append(f"{source.location}: start location {location_id} terrain list needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: start location {location_id} terrain list needs review")
     if "terrain" in value and converted_targets == 0:
         result.partial.append(f"{source.location}: start location {location_id}")
         return None
@@ -14075,7 +14692,7 @@ def render_start_location(
     if isinstance(flags, list) and all(isinstance(flag, str) and flag for flag in flags):
         lines.extend(f"definition:flag({lua_quote(flag)})" for flag in flags)
     else:
-        result.todos.append(f"{source.location}: start location {location_id} flags need review")
+        result.add_todo("manual_rewrite", f"{source.location}: start location {location_id} flags need review")
 
     def interval(field: str, method: str) -> None:
         raw = value.get(field)
@@ -14093,7 +14710,7 @@ def render_start_location(
                 maximum = NATIVE_INT_MAX
             lines.append(f"definition:{method}({minimum}, {maximum})")
         else:
-            result.todos.append(f"{source.location}: start location {location_id} {field} needs review")
+            result.add_todo("manual_rewrite", f"{source.location}: start location {location_id} {field} needs review")
 
     interval("city_sizes", "city_size")
     interval("city_distance", "city_distance")
@@ -14110,12 +14727,12 @@ def render_climbing_aid(source: SourceObject, result: MigrationResult) -> str | 
     aid_id = value.get("id")
     if not safe_platform_id(aid_id):
         result.partial.append(f"{source.location}: climbing aid <invalid id>")
-        result.todos.append(f"{source.location}: climbing aid needs a concrete stable id")
+        result.add_todo("manual_rewrite", f"{source.location}: climbing aid needs a concrete stable id")
         return None
     todo_count = len(result.todos)
     slip = value.get("slip_chance_mod", 0)
     if not isinstance(slip, int) or isinstance(slip, bool) or not NATIVE_INT_MIN <= slip <= NATIVE_INT_MAX:
-        result.todos.append(f"{source.location}: climbing aid {aid_id} slip modifier needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: climbing aid {aid_id} slip modifier needs review")
         slip = 0
     lines = [
         "local definition = content.ClimbingAid {",
@@ -14130,7 +14747,7 @@ def render_climbing_aid(source: SourceObject, result: MigrationResult) -> str | 
     }
     if not isinstance(condition, dict) or condition.get("type") not in category_map or not isinstance(condition.get("flag"), str):
         result.partial.append(f"{source.location}: climbing aid {aid_id}")
-        result.todos.append(f"{source.location}: climbing aid {aid_id} availability needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: climbing aid {aid_id} availability needs review")
         return None
     uses = condition.get("uses", 0)
     range_value = condition.get("range", 1)
@@ -14140,7 +14757,7 @@ def render_climbing_aid(source: SourceObject, result: MigrationResult) -> str | 
         set(condition) - {"type", "flag", "uses", "range"}
     ):
         result.partial.append(f"{source.location}: climbing aid {aid_id}")
-        result.todos.append(f"{source.location}: climbing aid {aid_id} availability limits need review")
+        result.add_todo("manual_rewrite", f"{source.location}: climbing aid {aid_id} availability limits need review")
         return None
     lines.extend((
         "definition:available_when {",
@@ -14153,7 +14770,7 @@ def render_climbing_aid(source: SourceObject, result: MigrationResult) -> str | 
     down = value.get("down")
     if not isinstance(down, dict):
         result.partial.append(f"{source.location}: climbing aid {aid_id}")
-        result.todos.append(f"{source.location}: climbing aid {aid_id} descent needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: climbing aid {aid_id} descent needs review")
         return None
     scalar_fields = {
         "max_height": ("max_height", 1),
@@ -14163,7 +14780,7 @@ def render_climbing_aid(source: SourceObject, result: MigrationResult) -> str | 
     for old_name, (new_name, default) in scalar_fields.items():
         raw = down.get(old_name, default)
         if not isinstance(raw, int) or isinstance(raw, bool) or not -1 <= raw <= NATIVE_INT_MAX:
-            result.todos.append(f"{source.location}: climbing aid {aid_id} {old_name} needs review")
+            result.add_todo("manual_rewrite", f"{source.location}: climbing aid {aid_id} {old_name} needs review")
             raw = default
         descent_values[new_name] = raw
     remaining = down.get("allow_remaining_height", True)
@@ -14171,7 +14788,7 @@ def render_climbing_aid(source: SourceObject, result: MigrationResult) -> str | 
     confirm = display_text(down.get("confirm_text"))
     if not isinstance(remaining, bool) or not menu or not confirm:
         result.partial.append(f"{source.location}: climbing aid {aid_id}")
-        result.todos.append(f"{source.location}: climbing aid {aid_id} descent text needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: climbing aid {aid_id} descent text needs review")
         return None
     lines.extend((
         "definition:descent {",
@@ -14192,7 +14809,7 @@ def render_climbing_aid(source: SourceObject, result: MigrationResult) -> str | 
         for old_name, new_name in (("pain", "pain"), ("damage", "damage"), ("kcal", "kilocalories"), ("thirst", "thirst")):
             raw = cost.get(old_name, 0)
             if not isinstance(raw, int) or isinstance(raw, bool) or not 0 <= raw <= NATIVE_INT_MAX:
-                result.todos.append(f"{source.location}: climbing aid {aid_id} cost needs review")
+                result.add_todo("manual_rewrite", f"{source.location}: climbing aid {aid_id} cost needs review")
                 converted_cost = {}
                 break
             converted_cost[new_name] = raw
@@ -14201,18 +14818,18 @@ def render_climbing_aid(source: SourceObject, result: MigrationResult) -> str | 
             lines.extend(f"    {key} = {item}," for key, item in converted_cost.items())
             lines.append("}")
     elif cost is not None:
-        result.todos.append(f"{source.location}: climbing aid {aid_id} cost needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: climbing aid {aid_id} cost needs review")
     deploy = down.get("deploy_furn")
     if isinstance(deploy, str) and deploy:
         lines.append(f"definition:deploy({lua_quote(deploy)})")
     elif deploy is not None and not isinstance(deploy, str):
-        result.todos.append(f"{source.location}: climbing aid {aid_id} deployment needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: climbing aid {aid_id} deployment needs review")
     supported_down = {
         "max_height", "easy_climb_back_up", "allow_remaining_height", "menu_text",
         "menu_cant", "menu_hotkey", "confirm_text", "msg_before", "msg_after", "cost", "deploy_furn",
     }
     if set(down) - supported_down:
-        result.todos.append(f"{source.location}: climbing aid {aid_id} descent has unsupported fields")
+        result.add_todo("manual_rewrite", f"{source.location}: climbing aid {aid_id} descent has unsupported fields")
     return finish_catalog(
         source, result, "climbing aid", aid_id, lines,
         {"type", "id", "slip_chance_mod", "condition", "down"}, todo_count,
@@ -14224,7 +14841,7 @@ def render_weather_type(source: SourceObject, result: MigrationResult) -> str | 
     weather_id = value.get("id")
     if not safe_platform_id(weather_id):
         result.partial.append(f"{source.location}: weather type <invalid id>")
-        result.todos.append(f"{source.location}: weather type needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: weather type needs a stable native id")
         return None
     todo_count = len(result.todos)
 
@@ -14232,7 +14849,8 @@ def render_weather_type(source: SourceObject, result: MigrationResult) -> str | 
         raw = value.get(name, default)
         if isinstance(raw, str) and raw:
             return raw
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: weather type {weather_id} {name} needs review"
         )
         return default
@@ -14241,7 +14859,8 @@ def render_weather_type(source: SourceObject, result: MigrationResult) -> str | 
         raw = value.get(name, default)
         if isinstance(raw, str) and len(raw) == 1:
             return raw
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: weather type {weather_id} {name} needs one Unicode codepoint"
         )
         return default
@@ -14254,7 +14873,8 @@ def render_weather_type(source: SourceObject, result: MigrationResult) -> str | 
             NATIVE_INT_MIN <= raw <= NATIVE_INT_MAX
         ):
             return raw
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: weather type {weather_id} {name} needs review"
         )
         return default
@@ -14268,7 +14888,8 @@ def render_weather_type(source: SourceObject, result: MigrationResult) -> str | 
             (not non_negative or raw >= 0)
         ):
             return float(raw)
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: weather type {weather_id} {name} needs review"
         )
         return default
@@ -14277,7 +14898,8 @@ def render_weather_type(source: SourceObject, result: MigrationResult) -> str | 
         raw = value.get(name, default)
         if isinstance(raw, bool):
             return raw
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: weather type {weather_id} {name} needs review"
         )
         return default
@@ -14300,13 +14922,15 @@ def render_weather_type(source: SourceObject, result: MigrationResult) -> str | 
     name = display_text(value.get("name"))
     if not name:
         result.partial.append(f"{source.location}: weather type {weather_id}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: weather type {weather_id} name needs review"
         )
         return None
     precipitation = value.get("precip", "none")
     if precipitation not in {"none", "very_light", "light", "heavy"}:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: weather type {weather_id} precipitation needs review"
         )
         precipitation = "none"
@@ -14315,14 +14939,16 @@ def render_weather_type(source: SourceObject, result: MigrationResult) -> str | 
         "silent", "drizzle", "rainy", "rainstorm", "thunder", "flurries",
         "snowstorm", "snow", "portal_storm", "clear", "sunny", "cloudy",
     }:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: weather type {weather_id} sound category needs review"
         )
         sound_category = "silent"
     raw_delta = value.get("temperature_modifier", 0)
     delta = temperature_delta(raw_delta)
     if delta is None or not math.isfinite(delta):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: weather type {weather_id} temperature modifier needs review"
         )
         delta = 0.0
@@ -14351,14 +14977,16 @@ def render_weather_type(source: SourceObject, result: MigrationResult) -> str | 
         "}",
     ]
     if not isinstance(value.get("tiles_animation", ""), str):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: weather type {weather_id} tiles animation needs review"
         )
 
     minimum_duration = parse_turns(value.get("duration_min", 300))
     maximum_duration = parse_turns(value.get("duration_max", 300))
     if minimum_duration is None or not 0 < minimum_duration <= NATIVE_INT_MAX:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: weather type {weather_id} minimum duration needs review"
         )
         minimum_duration = 300
@@ -14366,7 +14994,8 @@ def render_weather_type(source: SourceObject, result: MigrationResult) -> str | 
         maximum_duration is None or
         not minimum_duration <= maximum_duration <= NATIVE_INT_MAX
     ):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: weather type {weather_id} maximum duration needs review"
         )
         maximum_duration = minimum_duration
@@ -14393,11 +15022,13 @@ def render_weather_type(source: SourceObject, result: MigrationResult) -> str | 
                 "}",
             ))
             if set(animation) - {"factor", "color", "sym"}:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: weather type {weather_id} animation has unsupported fields"
                 )
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: weather type {weather_id} animation needs review"
             )
 
@@ -14407,7 +15038,8 @@ def render_weather_type(source: SourceObject, result: MigrationResult) -> str | 
             f"definition:requires({lua_quote(item)})" for item in prerequisites
         )
     elif "required_weathers" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: weather type {weather_id} prerequisites need review"
         )
 
@@ -14415,7 +15047,8 @@ def render_weather_type(source: SourceObject, result: MigrationResult) -> str | 
     if isinstance(passive_effects, list):
         for index, effect in enumerate(passive_effects):
             if not isinstance(effect, dict) or not safe_platform_id(effect.get("effect_id")):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: weather type {weather_id} passive effect #{index} needs review"
                 )
                 continue
@@ -14454,7 +15087,8 @@ def render_weather_type(source: SourceObject, result: MigrationResult) -> str | 
                 )
             )
             if not valid:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: weather type {weather_id} passive effect #{index} needs review"
                 )
                 continue
@@ -14485,22 +15119,26 @@ def render_weather_type(source: SourceObject, result: MigrationResult) -> str | 
                 "immune_outside_vehicle", "chance_in_vehicle", "chance_inside_vehicle",
                 "chance_outside_vehicle", "message", "message_npc",
             }:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: weather type {weather_id} passive effect #{index} has unsupported fields"
                 )
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: weather type {weather_id} passive effects need review"
         )
 
     handler_id = f"TODO_{weather_id}_condition"
     lines.append(f"definition:condition({lua_quote(handler_id)})")
-    result.todos.append(
+    result.add_todo(
+        "manual_rewrite",
         f"{source.location}: weather type {weather_id} legacy condition tree/jmath must be rewritten as named Lua handler {handler_id}"
     )
     for field_name in ("debug_cause_eoc", "debug_leave_eoc"):
         if value.get(field_name):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: weather type {weather_id} {field_name} must be rewritten as explicit Lua debug behaviour"
             )
     supported = {
@@ -14522,11 +15160,12 @@ def render_score(source: SourceObject, result: MigrationResult) -> str | None:
     statistic = value.get("statistic")
     if not safe_platform_id(score_id):
         result.partial.append(f"{source.location}: score <invalid id>")
-        result.todos.append(f"{source.location}: score needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: score needs a stable native id")
         return None
     if not safe_platform_id(statistic):
         result.partial.append(f"{source.location}: score {score_id}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: score {score_id} statistic needs review"
         )
         return None
@@ -14541,7 +15180,8 @@ def render_score(source: SourceObject, result: MigrationResult) -> str | None:
         if description:
             lines.append(f"    description = {lua_quote(description)},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: score {score_id} description needs review"
             )
     lines.append("}")
@@ -14563,7 +15203,8 @@ def render_end_screen(source: SourceObject, result: MigrationResult) -> str | No
     priority = value.get("priority", 0)
     if not safe_platform_id(screen_id) or not safe_platform_id(picture):
         result.partial.append(f"{source.location}: end screen <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: end screen needs stable screen and ASCII-art ids"
         )
         return None
@@ -14573,7 +15214,8 @@ def render_end_screen(source: SourceObject, result: MigrationResult) -> str | No
         not NATIVE_INT_MIN <= priority <= NATIVE_INT_MAX
     ):
         result.partial.append(f"{source.location}: end screen {screen_id}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: end screen {screen_id} priority needs review"
         )
         return None
@@ -14589,7 +15231,8 @@ def render_end_screen(source: SourceObject, result: MigrationResult) -> str | No
         if label:
             lines.append(f"    last_words_label = {lua_quote(label)},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: end screen {screen_id} last-words label needs review"
             )
     lines.append("}")
@@ -14610,7 +15253,8 @@ def render_end_screen(source: SourceObject, result: MigrationResult) -> str | No
                 bool(display_text(entry[1]))
             )
             if not valid:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: end screen {screen_id} information #{index} needs review"
                 )
                 continue
@@ -14619,12 +15263,14 @@ def render_end_screen(source: SourceObject, result: MigrationResult) -> str | No
                 f"{lua_quote(display_text(entry[1]))})"
             )
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: end screen {screen_id} positioned information needs review"
         )
     handler_id = f"TODO_{screen_id}_condition"
     lines.append(f"definition:condition({lua_quote(handler_id)})")
-    result.todos.append(
+    result.add_todo(
+        "manual_rewrite",
         f"{source.location}: end screen {screen_id} legacy condition tree must be rewritten as named Lua handler {handler_id}"
     )
     return finish_catalog(
@@ -14647,7 +15293,8 @@ def render_activity_type(source: SourceObject, result: MigrationResult) -> str |
     verb = display_text(value.get("verb"))
     if not safe_platform_id(activity_id) or not verb:
         result.partial.append(f"{source.location}: activity type <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: activity type needs a stable id and display verb"
         )
         return None
@@ -14655,7 +15302,8 @@ def render_activity_type(source: SourceObject, result: MigrationResult) -> str |
     based_on = value.get("based_on", "speed")
     if based_on not in {"time", "speed", "neither"}:
         result.partial.append(f"{source.location}: activity type {activity_id}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: activity type {activity_id} progress model needs review"
         )
         return None
@@ -14679,7 +15327,8 @@ def render_activity_type(source: SourceObject, result: MigrationResult) -> str |
         activity_level <= 0
     ):
         result.partial.append(f"{source.location}: activity type {activity_id}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: activity type {activity_id} activity level needs review"
         )
         return None
@@ -14711,7 +15360,8 @@ def render_activity_type(source: SourceObject, result: MigrationResult) -> str |
                 f"    {target_field} = {'true' if field_value else 'false'},"
             )
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: activity type {activity_id} {source_field} needs review"
             )
     lines.append("}")
@@ -14723,20 +15373,23 @@ def render_activity_type(source: SourceObject, result: MigrationResult) -> str |
         for distraction in distractions:
             lines.append(f"definition:ignore({lua_quote(distraction)})")
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: activity type {activity_id} ignored distractions need review"
         )
 
     if "do_turn_eoc" in value or based_on == "neither":
         handler_id = f"TODO_{activity_id}_turn"
         lines.append(f"definition:on_turn({lua_quote(handler_id)})")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: activity type {activity_id} turn behaviour must be rewritten as named Lua handler {handler_id}"
         )
     if "completion_eoc" in value:
         handler_id = f"TODO_{activity_id}_finish"
         lines.append(f"definition:on_finish({lua_quote(handler_id)})")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: activity type {activity_id} completion behaviour must be rewritten as named Lua handler {handler_id}"
         )
 
@@ -14779,7 +15432,8 @@ def render_help_topic(
         not messages
     ):
         result.partial.append(f"{source.location}: help topic <invalid>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: help topic needs a title, integer source order, and paragraphs"
         )
         return None
@@ -14796,7 +15450,8 @@ def render_help_topic(
         if paragraph:
             lines.append(f"definition:paragraph({lua_quote(paragraph)})")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: help topic {topic_id} paragraph #{index} needs translation review"
             )
     return finish_catalog(
@@ -14820,7 +15475,8 @@ def collect_snippet_category(
     raw_entries = value.get("text")
     if not isinstance(category_id, str) or not category_id or raw_entries is None:
         result.partial.append(f"{source.location}: snippet category <invalid>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: snippet category needs a stable category and text"
         )
         return
@@ -14831,7 +15487,8 @@ def collect_snippet_category(
     override = value.get("override", False)
     if not isinstance(override, bool):
         result.partial.append(f"{source.location}: snippet category {category_id}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: snippet category {category_id} override needs review"
         )
         override = False
@@ -14848,12 +15505,14 @@ def collect_snippet_category(
                 category["entries"].append(("text", raw, 1, None, None, None))
                 valid_count += 1
             else:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: snippet category {category_id} entry #{index} is empty"
                 )
             continue
         if not isinstance(raw, dict):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: snippet category {category_id} entry #{index} needs review"
             )
             continue
@@ -14868,7 +15527,8 @@ def collect_snippet_category(
             weight <= 0 or
             (snippet_id is not None and not safe_platform_id(snippet_id))
         ):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: snippet category {category_id} entry #{index} needs text, id, or weight review"
             )
             continue
@@ -14876,18 +15536,21 @@ def collect_snippet_category(
         if "effect_on_examine" in raw:
             if safe_platform_id(snippet_id):
                 handler_id = f"TODO_{snippet_id}_examine"
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: snippet {snippet_id} effect_on_examine must be rewritten as named Lua handler {handler_id}"
                 )
             else:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: anonymous snippet examine effect cannot be preserved and needs a named id"
                 )
         unresolved = unresolved_fields(
             raw, {"id", "text", "name", "weight", "effect_on_examine"}
         )
         if unresolved:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: snippet entry unresolved fields: " +
                 ", ".join(unresolved)
             )
@@ -14899,7 +15562,8 @@ def collect_snippet_category(
 
     unresolved = unresolved_fields(value, {"type", "category", "text", "override"})
     if unresolved:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: snippet category {category_id} unresolved fields: " +
             ", ".join(unresolved)
         )
@@ -14945,7 +15609,8 @@ def render_playlists(source: SourceObject, result: MigrationResult) -> str | Non
     playlists = value.get("playlists")
     if not isinstance(playlists, list):
         result.partial.append(f"{source.location}: playlist collection")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: playlist collection needs a playlists array"
         )
         return None
@@ -14953,7 +15618,8 @@ def render_playlists(source: SourceObject, result: MigrationResult) -> str | Non
     chunks: list[str] = []
     for index, raw in enumerate(playlists):
         if not isinstance(raw, dict) or not safe_platform_id(raw.get("id")):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: playlist #{index} needs a stable id"
             )
             continue
@@ -14961,7 +15627,8 @@ def render_playlists(source: SourceObject, result: MigrationResult) -> str | Non
         shuffle = raw.get("shuffle", False)
         files = raw.get("files")
         if not isinstance(shuffle, bool) or not isinstance(files, list) or not files:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: playlist {playlist_id} shuffle or tracks need review"
             )
             continue
@@ -14981,7 +15648,8 @@ def render_playlists(source: SourceObject, result: MigrationResult) -> str | Non
                 isinstance(track.get("volume"), bool) or
                 not 0 <= track["volume"] <= 128
             ):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: playlist {playlist_id} track #{track_index} needs review"
                 )
                 valid = False
@@ -14991,7 +15659,8 @@ def render_playlists(source: SourceObject, result: MigrationResult) -> str | Non
             )
         unresolved = unresolved_fields(raw, {"id", "shuffle", "files"})
         if unresolved:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: playlist {playlist_id} unresolved fields: " +
                 ", ".join(unresolved)
             )
@@ -15001,7 +15670,8 @@ def render_playlists(source: SourceObject, result: MigrationResult) -> str | Non
             chunks.append("\n".join(lines))
     unresolved = unresolved_fields(value, {"type", "playlists"})
     if unresolved:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: playlist collection unresolved fields: " +
             ", ".join(unresolved)
         )
@@ -15021,7 +15691,8 @@ def render_nested_recipe_category(
     members = value.get("nested_category_data")
     if not safe_platform_id(category_id):
         result.partial.append(f"{source.location}: nested recipe category <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: nested recipe category needs a stable id"
         )
         return None
@@ -15036,7 +15707,8 @@ def render_nested_recipe_category(
         result.partial.append(
             f"{source.location}: nested recipe category {category_id}"
         )
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: nested recipe category {category_id} presentation or members need review"
         )
         return None
@@ -15059,7 +15731,8 @@ def render_nested_recipe_category(
         not math.isfinite(activity) or
         activity <= 0
     ):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: nested recipe category {category_id} activity level needs review"
         )
         activity = 1.0
@@ -15097,7 +15770,8 @@ def render_overlay_order(source: SourceObject, result: MigrationResult) -> str |
     raw_entries = value.get("overlay_ordering")
     if not isinstance(raw_entries, list):
         result.partial.append(f"{source.location}: overlay order global")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: overlay order needs an overlay_ordering list"
         )
         return None
@@ -15105,7 +15779,8 @@ def render_overlay_order(source: SourceObject, result: MigrationResult) -> str |
     converted_ids: set[str] = set()
     for index, entry in enumerate(raw_entries):
         if not isinstance(entry, dict):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: overlay order entry #{index} needs review"
             )
             continue
@@ -15121,13 +15796,15 @@ def render_overlay_order(source: SourceObject, result: MigrationResult) -> str |
             not all(safe_platform_id(item) for item in ids) or
             set(entry) - {"id", "order"}
         ):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: overlay order entry #{index} needs review"
             )
             continue
         for mutation_id in ids:
             if mutation_id in converted_ids:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: overlay order mutation {mutation_id} is duplicated"
                 )
                 continue
@@ -15138,7 +15815,8 @@ def render_overlay_order(source: SourceObject, result: MigrationResult) -> str |
 
     if not converted_ids:
         result.partial.append(f"{source.location}: overlay order global")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: overlay order has no safely convertible mutations"
         )
         return None
@@ -15160,11 +15838,12 @@ def render_zone_type(source: SourceObject, result: MigrationResult) -> str | Non
     display_field = value.get("display_field")
     if not safe_platform_id(zone_id):
         result.partial.append(f"{source.location}: zone type <invalid id>")
-        result.todos.append(f"{source.location}: zone type needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: zone type needs a stable native id")
         return None
     if not name or not safe_platform_id(display_field):
         result.partial.append(f"{source.location}: zone type {zone_id}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: zone type {zone_id} presentation needs review"
         )
         return None
@@ -15181,7 +15860,8 @@ def render_zone_type(source: SourceObject, result: MigrationResult) -> str | Non
         if isinstance(raw, bool):
             lines.append(f"    {field_name} = {'true' if raw else 'false'},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: zone type {zone_id} {field_name} needs review"
             )
     lines.append("}")
@@ -15204,7 +15884,7 @@ def render_attack_vector(source: SourceObject, result: MigrationResult) -> str |
     vector_id = value.get("id")
     if not safe_platform_id(vector_id):
         result.partial.append(f"{source.location}: attack vector <invalid id>")
-        result.todos.append(f"{source.location}: attack vector needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: attack vector needs a stable native id")
         return None
     todo_count = len(result.todos)
 
@@ -15212,7 +15892,8 @@ def render_attack_vector(source: SourceObject, result: MigrationResult) -> str |
         raw = value.get(name, default)
         if isinstance(raw, bool):
             return raw
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: attack vector {vector_id} {name} needs review"
         )
         return default
@@ -15225,7 +15906,8 @@ def render_attack_vector(source: SourceObject, result: MigrationResult) -> str |
             minimum <= raw <= maximum
         ):
             return raw
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: attack vector {vector_id} {name} needs review"
         )
         return default
@@ -15251,7 +15933,8 @@ def render_attack_vector(source: SourceObject, result: MigrationResult) -> str |
         if not isinstance(raw, list) or any(
             not isinstance(entry, str) or not entry for entry in raw
         ):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: attack vector {vector_id} {field} needs review"
             )
             return
@@ -15265,7 +15948,8 @@ def render_attack_vector(source: SourceObject, result: MigrationResult) -> str |
 
     limb_requirements = value.get("limb_req", [])
     if not isinstance(limb_requirements, list):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: attack vector {vector_id} limb requirements need review"
         )
     else:
@@ -15280,7 +15964,8 @@ def render_attack_vector(source: SourceObject, result: MigrationResult) -> str |
                 0 < requirement[1] <= NATIVE_INT_MAX
             )
             if not valid:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: attack vector {vector_id} limb requirement needs review"
                 )
                 continue
@@ -15317,7 +16002,7 @@ def render_magic_type(source: SourceObject, result: MigrationResult) -> str | No
     magic_id = value.get("id")
     if not safe_platform_id(magic_id):
         result.partial.append(f"{source.location}: magic type <invalid id>")
-        result.todos.append(f"{source.location}: magic type needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: magic type needs a stable native id")
         return None
     todo_count = len(result.todos)
 
@@ -15330,7 +16015,8 @@ def render_magic_type(source: SourceObject, result: MigrationResult) -> str | No
         if candidate in {"hp", "mana", "stamina", "bionic", "vitamin", "none"}:
             energy = candidate
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: magic type {magic_id} energy source needs review"
             )
     elif isinstance(raw_energy, dict):
@@ -15340,25 +16026,29 @@ def render_magic_type(source: SourceObject, result: MigrationResult) -> str | No
         }:
             energy = candidate.lower()
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: magic type {magic_id} energy source needs review"
             )
         raw_vitamin = raw_energy.get("vitamin")
         if isinstance(raw_vitamin, str) and raw_vitamin:
             vitamin = raw_vitamin
         elif energy == "vitamin":
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: magic type {magic_id} vitamin energy needs review"
             )
         raw_color = raw_energy.get("color", "cyan")
         if isinstance(raw_color, str) and raw_color:
             color = raw_color
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: magic type {magic_id} energy color needs review"
             )
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: magic type {magic_id} energy source needs review"
         )
 
@@ -15371,7 +16061,8 @@ def render_magic_type(source: SourceObject, result: MigrationResult) -> str | No
             raw >= 0
         ):
             return float(raw)
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: magic type {magic_id} {name} needs review"
         )
         return default
@@ -15392,7 +16083,8 @@ def render_magic_type(source: SourceObject, result: MigrationResult) -> str | No
     if isinstance(raw_message, str):
         lines.append(f"    cannot_cast_message = {lua_quote(raw_message)},")
     elif raw_message is not None:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: magic type {magic_id} casting message needs review"
         )
     raw_maximum = value.get("max_book_level")
@@ -15404,7 +16096,8 @@ def render_magic_type(source: SourceObject, result: MigrationResult) -> str | No
         ):
             lines.append(f"    max_book_level = {raw_maximum},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: magic type {magic_id} max book level needs review"
             )
     lines.append("}")
@@ -15418,7 +16111,8 @@ def render_magic_type(source: SourceObject, result: MigrationResult) -> str | No
         for flag in raw_flags:
             lines.append(f"definition:cannot_cast_when({lua_quote(flag)})")
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: magic type {magic_id} casting restrictions need review"
         )
 
@@ -15430,12 +16124,14 @@ def render_magic_type(source: SourceObject, result: MigrationResult) -> str | No
     }
     for field_name, replacement in formula_migrations.items():
         if field_name in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: magic type {magic_id} {field_name} must be rewritten as {replacement}"
             )
             lines.append(f"-- TODO: rewrite {field_name} as {replacement}.")
     if "failure_eocs" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: magic type {magic_id} failure_eocs must be rewritten as a named Lua on_failure handler"
         )
         lines.append("-- TODO: rewrite failure_eocs as definition:on_failure(handler_id).")
@@ -15471,7 +16167,7 @@ def render_movement_mode(source: SourceObject, result: MigrationResult) -> str |
     mode_id = value.get("id")
     if not safe_platform_id(mode_id):
         result.partial.append(f"{source.location}: movement mode <invalid id>")
-        result.todos.append(f"{source.location}: movement mode needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: movement mode needs a stable native id")
         return None
     todo_count = len(result.todos)
     activity_levels = {
@@ -15495,7 +16191,8 @@ def render_movement_mode(source: SourceObject, result: MigrationResult) -> str |
             (raw > 0 if positive else raw >= 0)
         ):
             return float(raw)
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: movement mode {mode_id} {name} needs review"
         )
         return default
@@ -15508,7 +16205,8 @@ def render_movement_mode(source: SourceObject, result: MigrationResult) -> str |
             minimum <= raw <= NATIVE_INT_MAX
         ):
             return raw
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: movement mode {mode_id} {name} needs review"
         )
         return default
@@ -15533,7 +16231,8 @@ def render_movement_mode(source: SourceObject, result: MigrationResult) -> str |
         not symbol_color
     ):
         result.partial.append(f"{source.location}: movement mode {mode_id}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: movement mode {mode_id} identity, symbols, or colors need review"
         )
         return None
@@ -15547,7 +16246,8 @@ def render_movement_mode(source: SourceObject, result: MigrationResult) -> str |
     swim_speed = native_integer("swim_speed_mod", 0, -NATIVE_INT_MAX - 1)
     stop_hauling = value.get("stop_hauling", False)
     if not isinstance(stop_hauling, bool):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: movement mode {mode_id} stop_hauling needs review"
         )
         stop_hauling = False
@@ -15577,7 +16277,8 @@ def render_movement_mode(source: SourceObject, result: MigrationResult) -> str |
         success = value.get(f"change_good_{steed}")
         failure = value.get(f"change_bad_{steed}", legacy_default_failure)
         if not all(isinstance(text, str) and text for text in (prepare, success, failure)):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: movement mode {mode_id} {steed} messages need review"
             )
             continue
@@ -15613,7 +16314,7 @@ def render_region_settings_ravine(source: SourceObject, result: MigrationResult)
     ravine_id = value.get("id")
     if not safe_platform_id(ravine_id):
         result.partial.append(f"{source.location}: region settings ravine <invalid id>")
-        result.todos.append(f"{source.location}: region settings ravine needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings ravine needs a stable native id")
         return None
     todo_count = len(result.todos)
 
@@ -15621,7 +16322,8 @@ def render_region_settings_ravine(source: SourceObject, result: MigrationResult)
         parsed = native_integer(value.get(name, default))
         if parsed is not None:
             return parsed
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: region settings ravine {ravine_id} {name} needs review"
         )
         return default
@@ -15656,35 +16358,36 @@ def render_region_settings_lake(source: SourceObject, result: MigrationResult) -
     lake_id = value.get("id")
     if not safe_platform_id(lake_id):
         result.partial.append(f"{source.location}: region settings lake <invalid id>")
-        result.todos.append(f"{source.location}: region settings lake needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings lake needs a stable native id")
         return None
     todo_count = len(result.todos)
 
     noise_threshold = value.get("noise_threshold_lake", 0.25)
     if not (isinstance(noise_threshold, (int, float)) and not isinstance(noise_threshold, bool) and math.isfinite(noise_threshold)):
-        result.todos.append(f"{source.location}: region settings lake {lake_id} noise_threshold_lake needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings lake {lake_id} noise_threshold_lake needs review")
         noise_threshold = 0.25
 
     lake_size_min = native_integer(value.get("lake_size_min", 20))
     if lake_size_min is None:
-        result.todos.append(f"{source.location}: region settings lake {lake_id} lake_size_min needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings lake {lake_id} lake_size_min needs review")
         lake_size_min = 20
 
     lake_depth = native_integer(value.get("lake_depth", -5))
     if lake_depth is None:
-        result.todos.append(f"{source.location}: region settings lake {lake_id} lake_depth needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings lake {lake_id} lake_depth needs review")
         lake_depth = -5
 
     invert_lakes = value.get("invert_lakes", False)
     if not isinstance(invert_lakes, bool):
-        result.todos.append(f"{source.location}: region settings lake {lake_id} invert_lakes needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings lake {lake_id} invert_lakes needs review")
         invert_lakes = False
 
     def terrain_field(name: str, alias: str, default: str) -> str:
         raw = value.get(name, value.get(alias, default))
         if safe_platform_id(raw):
             return raw
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: region settings lake {lake_id} {name} needs review"
         )
         return default
@@ -15714,10 +16417,10 @@ def render_region_settings_lake(source: SourceObject, result: MigrationResult) -
             if safe_platform_id(elem):
                 lines.append(f"        {lua_quote(elem)},")
             else:
-                result.todos.append(f"{source.location}: region settings lake {lake_id} shore_extendable_overmap_terrain element needs review")
+                result.add_todo("manual_rewrite", f"{source.location}: region settings lake {lake_id} shore_extendable_overmap_terrain element needs review")
         lines.append("    },")
     elif shore_terrains is not None:
-        result.todos.append(f"{source.location}: region settings lake {lake_id} shore_extendable_overmap_terrain needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings lake {lake_id} shore_extendable_overmap_terrain needs review")
 
     aliases = value.get("shore_extendable_overmap_terrain_aliases")
     if isinstance(aliases, list):
@@ -15735,7 +16438,8 @@ def render_region_settings_lake(source: SourceObject, result: MigrationResult) -
                         "exact", "type", "subtype", "prefix", "contains"
                     }
                 ):
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: region settings lake {lake_id} "
                         "shore_extendable_overmap_terrain_aliases element needs review"
                     )
@@ -15746,10 +16450,10 @@ def render_region_settings_lake(source: SourceObject, result: MigrationResult) -
                 lines.append(f"            om_terrain_match_type = {lua_quote(match_type)},")
                 lines.append("        },")
             else:
-                result.todos.append(f"{source.location}: region settings lake {lake_id} shore_extendable_overmap_terrain_aliases element needs review")
+                result.add_todo("manual_rewrite", f"{source.location}: region settings lake {lake_id} shore_extendable_overmap_terrain_aliases element needs review")
         lines.append("    },")
     elif aliases is not None:
-        result.todos.append(f"{source.location}: region settings lake {lake_id} shore_extendable_overmap_terrain_aliases needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings lake {lake_id} shore_extendable_overmap_terrain_aliases needs review")
 
     lines.append("}")
 
@@ -15774,28 +16478,28 @@ def render_region_settings_ocean(source: SourceObject, result: MigrationResult) 
     ocean_id = value.get("id")
     if not safe_platform_id(ocean_id):
         result.partial.append(f"{source.location}: region settings ocean <invalid id>")
-        result.todos.append(f"{source.location}: region settings ocean needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings ocean needs a stable native id")
         return None
     todo_count = len(result.todos)
 
     noise_threshold = value.get("noise_threshold_ocean", 0.25)
     if not (isinstance(noise_threshold, (int, float)) and not isinstance(noise_threshold, bool) and math.isfinite(noise_threshold)):
-        result.todos.append(f"{source.location}: region settings ocean {ocean_id} noise_threshold_ocean needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings ocean {ocean_id} noise_threshold_ocean needs review")
         noise_threshold = 0.25
 
     ocean_size_min = native_integer(value.get("ocean_size_min", 100))
     if ocean_size_min is None:
-        result.todos.append(f"{source.location}: region settings ocean {ocean_id} ocean_size_min needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings ocean {ocean_id} ocean_size_min needs review")
         ocean_size_min = 100
 
     ocean_depth = native_integer(value.get("ocean_depth", -9))
     if ocean_depth is None:
-        result.todos.append(f"{source.location}: region settings ocean {ocean_id} ocean_depth needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings ocean {ocean_id} ocean_depth needs review")
         ocean_depth = -9
 
     sandy_beach_width = native_integer(value.get("sandy_beach_width", 2))
     if sandy_beach_width is None:
-        result.todos.append(f"{source.location}: region settings ocean {ocean_id} sandy_beach_width needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings ocean {ocean_id} sandy_beach_width needs review")
         sandy_beach_width = 2
 
     lines = [
@@ -15813,7 +16517,7 @@ def render_region_settings_ocean(source: SourceObject, result: MigrationResult) 
         if parsed is not None:
             lines.append(f"    {dir_key} = {parsed},")
         elif dir_val is not None:
-            result.todos.append(f"{source.location}: region settings ocean {ocean_id} {dir_key} needs review")
+            result.add_todo("manual_rewrite", f"{source.location}: region settings ocean {ocean_id} {dir_key} needs review")
 
     lines.append("}")
 
@@ -15837,7 +16541,7 @@ def render_region_settings_forest(source: SourceObject, result: MigrationResult)
     forest_id = value.get("id")
     if not safe_platform_id(forest_id):
         result.partial.append(f"{source.location}: region settings forest <invalid id>")
-        result.todos.append(f"{source.location}: region settings forest needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings forest needs a stable native id")
         return None
     todo_count = len(result.todos)
 
@@ -15845,7 +16549,7 @@ def render_region_settings_forest(source: SourceObject, result: MigrationResult)
         raw = value.get(name, default)
         if isinstance(raw, (int, float)) and not isinstance(raw, bool) and math.isfinite(raw):
             return float(raw)
-        result.todos.append(f"{source.location}: region settings forest {forest_id} {name} needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings forest {forest_id} {name} needs review")
         return default
 
     noise_threshold_forest = forest_finite_number("noise_threshold_forest", 0.25)
@@ -15862,19 +16566,19 @@ def render_region_settings_forest(source: SourceObject, result: MigrationResult)
         NATIVE_FLOAT_MAX,
     )
     if forest_threshold_limit is None:
-        result.todos.append(f"{source.location}: region settings forest {forest_id} forest_threshold_limit needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings forest {forest_id} forest_threshold_limit needs review")
         forest_threshold_limit = 0.395
     else:
         forest_threshold_limit = float(forest_threshold_limit)
 
     dist_min = native_integer(value.get("river_floodplain_buffer_distance_min", 3))
     if dist_min is None:
-        result.todos.append(f"{source.location}: region settings forest {forest_id} river_floodplain_buffer_distance_min needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings forest {forest_id} river_floodplain_buffer_distance_min needs review")
         dist_min = 3
 
     dist_max = native_integer(value.get("river_floodplain_buffer_distance_max", 15))
     if dist_max is None:
-        result.todos.append(f"{source.location}: region settings forest {forest_id} river_floodplain_buffer_distance_max needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings forest {forest_id} river_floodplain_buffer_distance_max needs review")
         dist_max = 15
 
     lines = [
@@ -15896,12 +16600,12 @@ def render_region_settings_forest(source: SourceObject, result: MigrationResult)
             parsed = finite_number(elem, -NATIVE_FLOAT_MAX, NATIVE_FLOAT_MAX)
             if parsed is None:
                 inc_vals.append("0.0")
-                result.todos.append(f"{source.location}: region settings forest {forest_id} forest_threshold_increase element needs review")
+                result.add_todo("manual_rewrite", f"{source.location}: region settings forest {forest_id} forest_threshold_increase element needs review")
             else:
                 inc_vals.append(lua_number(float(parsed)))
         lines.append(f"    forest_threshold_increase = {{{', '.join(inc_vals)}}},")
     elif forest_increase is not None:
-        result.todos.append(f"{source.location}: region settings forest {forest_id} forest_threshold_increase needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings forest {forest_id} forest_threshold_increase needs review")
 
     lines.append("}")
 
@@ -15926,20 +16630,20 @@ def render_region_settings_river(source: SourceObject, result: MigrationResult) 
     river_id = value.get("id")
     if not bounded_platform_id(river_id):
         result.partial.append(f"{source.location}: region settings river <invalid id>")
-        result.todos.append(f"{source.location}: region settings river needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings river needs a stable native id")
         return None
     todo_count = len(result.todos)
 
     river_scale = native_integer(value.get("river_scale", 1))
     if river_scale is None:
-        result.todos.append(f"{source.location}: region settings river {river_id} river_scale needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings river {river_id} river_scale needs review")
         river_scale = 1
 
     def river_finite_number(name: str, default: float) -> float:
         raw = value.get(name, default)
         if isinstance(raw, (int, float)) and not isinstance(raw, bool) and math.isfinite(raw):
             return float(raw)
-        result.todos.append(f"{source.location}: region settings river {river_id} {name} needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings river {river_id} {name} needs review")
         return default
 
     river_frequency = river_finite_number("river_frequency", 1.5)
@@ -15977,7 +16681,7 @@ def render_region_settings_forest_mapgen(source: SourceObject, result: Migration
     forest_mapgen_id = value.get("id")
     if not bounded_platform_id(forest_mapgen_id):
         result.partial.append(f"{source.location}: region settings forest mapgen <invalid id>")
-        result.todos.append(f"{source.location}: region settings forest mapgen needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings forest mapgen needs a stable native id")
         return None
     todo_count = len(result.todos)
 
@@ -15990,9 +16694,9 @@ def render_region_settings_forest_mapgen(source: SourceObject, result: Migration
                 biomes.append(entry)
                 seen_biomes.add(entry)
             else:
-                result.todos.append(f"{source.location}: region settings forest mapgen {forest_mapgen_id} biomes entry needs review")
+                result.add_todo("manual_rewrite", f"{source.location}: region settings forest mapgen {forest_mapgen_id} biomes entry needs review")
     else:
-        result.todos.append(f"{source.location}: region settings forest mapgen {forest_mapgen_id} biomes must be a list")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings forest mapgen {forest_mapgen_id} biomes must be a list")
 
     lines = [
         "local definition = content.RegionSettingsForestMapgen {",
@@ -16018,7 +16722,7 @@ def render_region_settings_map_extras(source: SourceObject, result: MigrationRes
     map_extras_id = value.get("id")
     if not bounded_platform_id(map_extras_id):
         result.partial.append(f"{source.location}: region settings map extras <invalid id>")
-        result.todos.append(f"{source.location}: region settings map extras needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings map extras needs a stable native id")
         return None
     todo_count = len(result.todos)
 
@@ -16031,9 +16735,9 @@ def render_region_settings_map_extras(source: SourceObject, result: MigrationRes
                 extras.append(entry)
                 seen_extras.add(entry)
             else:
-                result.todos.append(f"{source.location}: region settings map extras {map_extras_id} extras entry needs review")
+                result.add_todo("manual_rewrite", f"{source.location}: region settings map extras {map_extras_id} extras entry needs review")
     else:
-        result.todos.append(f"{source.location}: region settings map extras {map_extras_id} extras must be a list")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings map extras {map_extras_id} extras must be a list")
 
     lines = [
         "local definition = content.RegionSettingsMapExtras {",
@@ -16059,7 +16763,7 @@ def render_region_settings_terrain_furniture(source: SourceObject, result: Migra
     tf_id = value.get("id")
     if not bounded_platform_id(tf_id):
         result.partial.append(f"{source.location}: region settings terrain furniture <invalid id>")
-        result.todos.append(f"{source.location}: region settings terrain furniture needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings terrain furniture needs a stable native id")
         return None
     todo_count = len(result.todos)
 
@@ -16072,9 +16776,9 @@ def render_region_settings_terrain_furniture(source: SourceObject, result: Migra
                 ter_furn.append(entry)
                 seen_ter_furn.add(entry)
             else:
-                result.todos.append(f"{source.location}: region settings terrain furniture {tf_id} ter_furn entry needs review")
+                result.add_todo("manual_rewrite", f"{source.location}: region settings terrain furniture {tf_id} ter_furn entry needs review")
     else:
-        result.todos.append(f"{source.location}: region settings terrain furniture {tf_id} ter_furn must be a list")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings terrain furniture {tf_id} ter_furn must be a list")
 
     lines = [
         "local definition = content.RegionSettingsTerrainFurniture {",
@@ -16100,48 +16804,48 @@ def render_region_settings_forest_trail(source: SourceObject, result: MigrationR
     trail_id = value.get("id")
     if not bounded_platform_id(trail_id):
         result.partial.append(f"{source.location}: region settings forest trail <invalid id>")
-        result.todos.append(f"{source.location}: region settings forest trail needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings forest trail needs a stable native id")
         return None
     todo_count = len(result.todos)
 
     chance = native_integer(value.get("chance", 1))
     if chance is None:
-        result.todos.append(f"{source.location}: region settings forest trail {trail_id} chance needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings forest trail {trail_id} chance needs review")
         chance = 1
 
     border_point_chance = native_integer(value.get("border_point_chance", 2))
     if border_point_chance is None:
-        result.todos.append(f"{source.location}: region settings forest trail {trail_id} border_point_chance needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings forest trail {trail_id} border_point_chance needs review")
         border_point_chance = 2
 
     minimum_forest_size = native_integer(value.get("minimum_forest_size", 50))
     if minimum_forest_size is None:
-        result.todos.append(f"{source.location}: region settings forest trail {trail_id} minimum_forest_size needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings forest trail {trail_id} minimum_forest_size needs review")
         minimum_forest_size = 50
 
     random_point_min = native_integer(value.get("random_point_min", 4))
     if random_point_min is None:
-        result.todos.append(f"{source.location}: region settings forest trail {trail_id} random_point_min needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings forest trail {trail_id} random_point_min needs review")
         random_point_min = 4
 
     random_point_max = native_integer(value.get("random_point_max", 50))
     if random_point_max is None:
-        result.todos.append(f"{source.location}: region settings forest trail {trail_id} random_point_max needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings forest trail {trail_id} random_point_max needs review")
         random_point_max = 50
 
     random_point_size_scalar = native_integer(value.get("random_point_size_scalar", 100))
     if random_point_size_scalar is None:
-        result.todos.append(f"{source.location}: region settings forest trail {trail_id} random_point_size_scalar needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings forest trail {trail_id} random_point_size_scalar needs review")
         random_point_size_scalar = 100
 
     trailhead_chance = native_integer(value.get("trailhead_chance", 1))
     if trailhead_chance is None:
-        result.todos.append(f"{source.location}: region settings forest trail {trail_id} trailhead_chance needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings forest trail {trail_id} trailhead_chance needs review")
         trailhead_chance = 1
 
     trailhead_road_distance = native_integer(value.get("trailhead_road_distance", 6))
     if trailhead_road_distance is None:
-        result.todos.append(f"{source.location}: region settings forest trail {trail_id} trailhead_road_distance needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings forest trail {trail_id} trailhead_road_distance needs review")
         trailhead_road_distance = 6
 
     lines = [
@@ -16160,7 +16864,7 @@ def render_region_settings_forest_trail(source: SourceObject, result: MigrationR
 
     trailheads = canonical_weighted_entries(value.get("trailheads", []))
     if trailheads is None:
-        result.todos.append(f"{source.location}: region settings forest trail {trail_id} trailheads need review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings forest trail {trail_id} trailheads need review")
     else:
         for special_id, weight in trailheads:
             lines.append(f"definition:trailhead({lua_quote(special_id)}, {weight})")
@@ -16185,20 +16889,20 @@ def render_region_settings_highway(source: SourceObject, result: MigrationResult
     highway_id = value.get("id")
     if not bounded_platform_id(highway_id):
         result.partial.append(f"{source.location}: region settings highway <invalid id>")
-        result.todos.append(f"{source.location}: region settings highway needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings highway needs a stable native id")
         return None
     todo_count = len(result.todos)
 
     width_of_segments = native_integer(value.get("width_of_segments", 2))
     if width_of_segments is None:
-        result.todos.append(f"{source.location}: region settings highway {highway_id} width_of_segments needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings highway {highway_id} width_of_segments needs review")
         width_of_segments = 2
 
     raw_straightness = value.get("straightness_chance", 0.6)
     if isinstance(raw_straightness, (int, float)) and not isinstance(raw_straightness, bool) and math.isfinite(raw_straightness):
         straightness_chance = float(raw_straightness)
     else:
-        result.todos.append(f"{source.location}: region settings highway {highway_id} straightness_chance needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings highway {highway_id} straightness_chance needs review")
         straightness_chance = 0.6
 
     lines = [
@@ -16222,7 +16926,8 @@ def render_region_settings_highway(source: SourceObject, result: MigrationResult
         if bounded_platform_id(val):
             lines.append(f"    {field_name} = {lua_quote(val)},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: region settings highway {highway_id} {field_name} needs a bounded native id"
             )
 
@@ -16230,7 +16935,8 @@ def render_region_settings_highway(source: SourceObject, result: MigrationResult
         "clockwise_slant_special", "counterclockwise_slant_special"
     ):
         if not bounded_platform_id(value.get(required_slant)):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: region settings highway {highway_id} {required_slant} is required for safe finalization"
             )
 
@@ -16239,7 +16945,7 @@ def render_region_settings_highway(source: SourceObject, result: MigrationResult
     def render_highway_bin(field_name: str, method_name: str) -> None:
         entries = canonical_weighted_entries(value.get(field_name, []))
         if entries is None:
-            result.todos.append(f"{source.location}: region settings highway {highway_id} {field_name} needs review")
+            result.add_todo("manual_rewrite", f"{source.location}: region settings highway {highway_id} {field_name} needs review")
             return
         for special_id, weight in entries:
             lines.append(f"definition:{method_name}({lua_quote(special_id)}, {weight})")
@@ -16275,14 +16981,16 @@ def render_region_settings(source: SourceObject, result: MigrationResult) -> str
     settings_id = value.get("id")
     if not bounded_platform_id(settings_id):
         result.partial.append(f"{source.location}: region settings <invalid id>")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: region settings needs a stable native id"
         )
         return None
     city_settings = value.get("cities")
     if not bounded_platform_id(city_settings):
         result.partial.append(f"{source.location}: region settings {settings_id}")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: region settings {settings_id} cities needs a bounded native id"
         )
         return None
@@ -16305,14 +17013,16 @@ def render_region_settings(source: SourceObject, result: MigrationResult) -> str
                 f"definition:default_oter({lua_string_table(default_oter)})"
             )
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: region settings {settings_id} default_oter needs exactly 21 bounded native ids"
             )
 
     if "default_groundcover" in value:
         groundcover = canonical_weighted_entries(value.get("default_groundcover"))
         if groundcover is None:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: region settings {settings_id} default_groundcover needs review"
             )
         elif not groundcover:
@@ -16335,14 +17045,16 @@ def render_region_settings(source: SourceObject, result: MigrationResult) -> str
         if bounded_platform_id(entry):
             lines.append(f"definition:{field_name}({lua_quote(entry)})")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: region settings {settings_id} {field_name} needs a bounded native id or null"
             )
 
     feature_settings = value.get("feature_flag_settings")
     if feature_settings is not None:
         if not isinstance(feature_settings, dict):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: region settings {settings_id} feature_flag_settings needs review"
             )
         else:
@@ -16358,14 +17070,16 @@ def render_region_settings(source: SourceObject, result: MigrationResult) -> str
                     for flag in dict.fromkeys(raw_flags):
                         lines.append(f"definition:{method}({lua_quote(flag)})")
                 else:
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: region settings {settings_id} feature_flag_settings.{member} needs review"
                     )
             unresolved = unresolved_fields(
                 feature_settings, {"blacklist", "whitelist"}
             )
             if unresolved:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: region settings {settings_id} feature_flag_settings unresolved fields: " +
                     ", ".join(unresolved)
                 )
@@ -16378,7 +17092,8 @@ def render_region_settings(source: SourceObject, result: MigrationResult) -> str
     connections = value.get("connections")
     if connections is not None:
         if not isinstance(connections, dict):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: region settings {settings_id} connections needs review"
             )
         else:
@@ -16389,12 +17104,14 @@ def render_region_settings(source: SourceObject, result: MigrationResult) -> str
                 if bounded_platform_id(entry):
                     lines.append(f"definition:{field_name}({lua_quote(entry)})")
                 else:
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: region settings {settings_id} connections.{field_name} needs a bounded native id or null"
                     )
             unresolved = unresolved_fields(connections, set(connection_fields))
             if unresolved:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: region settings {settings_id} connections unresolved fields: " +
                     ", ".join(unresolved)
                 )
@@ -16411,14 +17128,16 @@ def render_region_settings(source: SourceObject, result: MigrationResult) -> str
         if isinstance(entry, bool):
             lines.append(f"definition:{field_name}({lua_boolean(entry)})")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: region settings {settings_id} {field_name} needs a boolean"
             )
 
     if "max_urbanity" in value:
         maximum = finite_number(value["max_urbanity"], -NATIVE_FLOAT_MAX, NATIVE_FLOAT_MAX)
         if maximum is None:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: region settings {settings_id} max_urbanity needs a native float"
             )
         else:
@@ -16439,7 +17158,8 @@ def render_region_settings(source: SourceObject, result: MigrationResult) -> str
                 " })"
             )
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: region settings {settings_id} urbanity_increase needs exactly four native floats"
             )
 
@@ -16467,7 +17187,7 @@ def render_region_terrain_furniture(source: SourceObject, result: MigrationResul
     rtf_id = value.get("id")
     if not bounded_platform_id(rtf_id):
         result.partial.append(f"{source.location}: region terrain furniture <invalid id>")
-        result.todos.append(f"{source.location}: region terrain furniture needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: region terrain furniture needs a stable native id")
         return None
     todo_count = len(result.todos)
 
@@ -16480,7 +17200,8 @@ def render_region_terrain_furniture(source: SourceObject, result: MigrationResul
     if bounded_platform_id(ter_id):
         lines.append(f"    ter_id = {lua_quote(ter_id)},")
     elif "ter_id" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: region terrain furniture {rtf_id} ter_id needs a bounded native id"
         )
 
@@ -16488,7 +17209,8 @@ def render_region_terrain_furniture(source: SourceObject, result: MigrationResul
     if bounded_platform_id(furn_id):
         lines.append(f"    furn_id = {lua_quote(furn_id)},")
     elif "furn_id" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: region terrain furniture {rtf_id} furn_id needs a bounded native id"
         )
 
@@ -16497,7 +17219,7 @@ def render_region_terrain_furniture(source: SourceObject, result: MigrationResul
     def render_rtf_pairs(field_name: str, method_name: str) -> None:
         entries = canonical_weighted_entries(value.get(field_name, []))
         if entries is None:
-            result.todos.append(f"{source.location}: region terrain furniture {rtf_id} {field_name} needs review")
+            result.add_todo("manual_rewrite", f"{source.location}: region terrain furniture {rtf_id} {field_name} needs review")
             return
         for replacement_id, weight in entries:
             lines.append(f"definition:{method_name}({lua_quote(replacement_id)}, {weight})")
@@ -16521,18 +17243,18 @@ def render_forest_biome_component(source: SourceObject, result: MigrationResult)
     comp_id = value.get("id")
     if not bounded_platform_id(comp_id):
         result.partial.append(f"{source.location}: forest biome component <invalid id>")
-        result.todos.append(f"{source.location}: forest biome component needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: forest biome component needs a stable native id")
         return None
     todo_count = len(result.todos)
 
     chance = native_integer(value.get("chance", 0))
     if chance is None:
-        result.todos.append(f"{source.location}: forest biome component {comp_id} chance needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: forest biome component {comp_id} chance needs review")
         chance = 0
 
     sequence = native_integer(value.get("sequence", 0))
     if sequence is None:
-        result.todos.append(f"{source.location}: forest biome component {comp_id} sequence needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: forest biome component {comp_id} sequence needs review")
         sequence = 0
 
     lines = [
@@ -16545,7 +17267,7 @@ def render_forest_biome_component(source: SourceObject, result: MigrationResult)
 
     types = canonical_weighted_entries(value.get("types", []))
     if types is None:
-        result.todos.append(f"{source.location}: forest biome component {comp_id} types need review")
+        result.add_todo("manual_rewrite", f"{source.location}: forest biome component {comp_id} types need review")
     else:
         for type_id, weight in types:
             lines.append(f"definition:type({lua_quote(type_id)}, {weight})")
@@ -16566,28 +17288,28 @@ def render_city(source: SourceObject, result: MigrationResult) -> str | None:
     city_id = value.get("id")
     if not safe_platform_id(city_id):
         result.partial.append(f"{source.location}: city <invalid id>")
-        result.todos.append(f"{source.location}: city needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: city needs a stable native id")
         return None
     todo_count = len(result.todos)
 
     database_id = native_integer(value.get("database_id"))
     if database_id is None:
-        result.todos.append(f"{source.location}: city {city_id} database_id needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: city {city_id} database_id needs review")
         database_id = 0
 
     name = value.get("name", "")
     if not isinstance(name, str):
-        result.todos.append(f"{source.location}: city {city_id} name needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: city {city_id} name needs review")
         name = ""
 
     population = native_integer(value.get("population", 0))
     if population is None or population < 0:
-        result.todos.append(f"{source.location}: city {city_id} population needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: city {city_id} population needs review")
         population = 0
 
     size = native_integer(value.get("size", -1))
     if size is None or size < -1:
-        result.todos.append(f"{source.location}: city {city_id} size needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: city {city_id} size needs review")
         size = -1
 
     pos_om = value.get("pos_om")
@@ -16598,9 +17320,9 @@ def render_city(source: SourceObject, result: MigrationResult) -> str | None:
         if x is not None and y is not None:
             pos_om_x, pos_om_y = x, y
         else:
-            result.todos.append(f"{source.location}: city {city_id} pos_om coordinates need review")
+            result.add_todo("manual_rewrite", f"{source.location}: city {city_id} pos_om coordinates need review")
     else:
-        result.todos.append(f"{source.location}: city {city_id} pos_om needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: city {city_id} pos_om needs review")
 
     pos = value.get("pos")
     pos_x, pos_y = 0, 0
@@ -16610,9 +17332,9 @@ def render_city(source: SourceObject, result: MigrationResult) -> str | None:
         if x is not None and y is not None:
             pos_x, pos_y = x, y
         else:
-            result.todos.append(f"{source.location}: city {city_id} pos coordinates need review")
+            result.add_todo("manual_rewrite", f"{source.location}: city {city_id} pos coordinates need review")
     else:
-        result.todos.append(f"{source.location}: city {city_id} pos needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: city {city_id} pos needs review")
 
     lines = [
         "local definition = content.City {",
@@ -16642,23 +17364,25 @@ def render_faction_mission(source: SourceObject, result: MigrationResult) -> str
     mission_id = value.get("id")
     if not safe_platform_id(mission_id):
         result.partial.append(f"{source.location}: faction mission <invalid id>")
-        result.todos.append(f"{source.location}: faction mission needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: faction mission needs a stable native id")
         return None
     todo_count = len(result.todos)
 
     name = display_text(value.get("name"), "")
     if not name:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: faction mission {mission_id} name needs review"
         )
     desc = display_text(value.get("desc", value.get("description")), "")
     if not desc:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: faction mission {mission_id} description needs review"
         )
     skill = value.get("skill", "")
     if not isinstance(skill, str):
-        result.todos.append(f"{source.location}: faction mission {mission_id} skill needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: faction mission {mission_id} skill needs review")
         skill = ""
 
     difficulty = value.get("difficulty", "")
@@ -16666,12 +17390,12 @@ def render_faction_mission(source: SourceObject, result: MigrationResult) -> str
     if not isinstance(difficulty, str) or (
         difficulty and difficulty not in risk_levels
     ):
-        result.todos.append(f"{source.location}: faction mission {mission_id} difficulty needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: faction mission {mission_id} difficulty needs review")
         difficulty = ""
 
     risk = value.get("risk", "")
     if not isinstance(risk, str) or (risk and risk not in risk_levels):
-        result.todos.append(f"{source.location}: faction mission {mission_id} risk needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: faction mission {mission_id} risk needs review")
         risk = ""
 
     activity = value.get("activity", "")
@@ -16683,13 +17407,13 @@ def render_faction_mission(source: SourceObject, result: MigrationResult) -> str
     if not isinstance(activity, str) or (
         activity and activity not in activity_levels
     ):
-        result.todos.append(f"{source.location}: faction mission {mission_id} activity needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: faction mission {mission_id} activity needs review")
         activity = ""
 
     time_str = display_text(value.get("time", ""), "")
     positions = native_integer(value.get("positions", 0))
     if positions is None or not 0 <= positions <= 65535:
-        result.todos.append(f"{source.location}: faction mission {mission_id} positions needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: faction mission {mission_id} positions needs review")
         positions = 0
 
     items_label = display_text(value.get("items_label", ""), "")
@@ -16723,9 +17447,10 @@ def render_faction_mission(source: SourceObject, result: MigrationResult) -> str
             ):
                 lines.append(f"definition:add_items_possibility({lua_quote(item['str'])})")
             else:
-                result.todos.append(f"{source.location}: faction mission {mission_id} item possibility needs review")
+                result.add_todo("manual_rewrite", f"{source.location}: faction mission {mission_id} item possibility needs review")
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: faction mission {mission_id} items_possibilities need review"
         )
 
@@ -16741,9 +17466,10 @@ def render_faction_mission(source: SourceObject, result: MigrationResult) -> str
             ):
                 lines.append(f"definition:add_effect({lua_quote(eff['str'])})")
             else:
-                result.todos.append(f"{source.location}: faction mission {mission_id} effect needs review")
+                result.add_todo("manual_rewrite", f"{source.location}: faction mission {mission_id} effect needs review")
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: faction mission {mission_id} effects need review"
         )
 
@@ -16763,49 +17489,50 @@ def render_region_settings_city(source: SourceObject, result: MigrationResult) -
     rsc_id = value.get("id")
     if not bounded_platform_id(rsc_id):
         result.partial.append(f"{source.location}: region settings city <invalid id>")
-        result.todos.append(f"{source.location}: region settings city needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings city needs a stable native id")
         return None
     todo_count = len(result.todos)
 
     is_megacity = value.get("is_megacity", False)
     if not isinstance(is_megacity, bool):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: region settings city {rsc_id} is_megacity needs review"
         )
         is_megacity = False
     city_size = native_integer(value.get("city_size"))
     if city_size is None or not 0 <= city_size <= 16:
-        result.todos.append(f"{source.location}: region settings city {rsc_id} city_size needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings city {rsc_id} city_size needs review")
         city_size = 8
 
     city_spacing = native_integer(value.get("city_spacing", 4))
     if city_spacing is None or not 0 <= city_spacing <= 8:
-        result.todos.append(f"{source.location}: region settings city {rsc_id} city_spacing needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings city {rsc_id} city_spacing needs review")
         city_spacing = 4
 
     shop_radius = native_integer(value.get("shop_radius", 30))
     if shop_radius is None or shop_radius < 0:
-        result.todos.append(f"{source.location}: region settings city {rsc_id} shop_radius needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings city {rsc_id} shop_radius needs review")
         shop_radius = 30
 
     shop_sigma = native_integer(value.get("shop_sigma", 20))
     if shop_sigma is None or shop_sigma < 0:
-        result.todos.append(f"{source.location}: region settings city {rsc_id} shop_sigma needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings city {rsc_id} shop_sigma needs review")
         shop_sigma = 20
 
     park_radius = native_integer(value.get("park_radius", 30))
     if park_radius is None or park_radius < 0:
-        result.todos.append(f"{source.location}: region settings city {rsc_id} park_radius needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings city {rsc_id} park_radius needs review")
         park_radius = 30
 
     park_sigma = native_integer(value.get("park_sigma", 70))
     if park_sigma is None or park_sigma < 0:
-        result.todos.append(f"{source.location}: region settings city {rsc_id} park_sigma needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings city {rsc_id} park_sigma needs review")
         park_sigma = 70
 
     name_snippet = value.get("name_snippet", "<city_name>")
     if not isinstance(name_snippet, str):
-        result.todos.append(f"{source.location}: region settings city {rsc_id} name_snippet needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: region settings city {rsc_id} name_snippet needs review")
         name_snippet = "<city_name>"
 
     lines = [
@@ -16825,7 +17552,7 @@ def render_region_settings_city(source: SourceObject, result: MigrationResult) -
     def render_weighted_bin(field_name: str, method_name: str) -> None:
         entries = canonical_weighted_entries(value.get(field_name, []))
         if entries is None:
-            result.todos.append(f"{source.location}: region settings city {rsc_id} {field_name} needs review")
+            result.add_todo("manual_rewrite", f"{source.location}: region settings city {rsc_id} {field_name} needs review")
             return
         for special_id, weight in entries:
             lines.append(f"definition:{method_name}({lua_quote(special_id)}, {weight})")
@@ -16850,30 +17577,30 @@ def render_forest_biome_mapgen(source: SourceObject, result: MigrationResult) ->
     fbm_id = value.get("id")
     if not bounded_platform_id(fbm_id):
         result.partial.append(f"{source.location}: forest biome mapgen <invalid id>")
-        result.todos.append(f"{source.location}: forest biome mapgen needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: forest biome mapgen needs a stable native id")
         return None
     todo_count = len(result.todos)
 
     sparseness_adjacency_factor = native_integer(value.get("sparseness_adjacency_factor", 0))
     if sparseness_adjacency_factor is None:
-        result.todos.append(f"{source.location}: forest biome mapgen {fbm_id} sparseness_adjacency_factor needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: forest biome mapgen {fbm_id} sparseness_adjacency_factor needs review")
         sparseness_adjacency_factor = 0
 
     item_group = value.get("item_group", "")
     if not isinstance(item_group, str) or (
         item_group and not bounded_platform_id(item_group)
     ):
-        result.todos.append(f"{source.location}: forest biome mapgen {fbm_id} item_group needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: forest biome mapgen {fbm_id} item_group needs review")
         item_group = ""
 
     item_group_chance = native_integer(value.get("item_group_chance", 0))
     if item_group_chance is None or item_group_chance < 0:
-        result.todos.append(f"{source.location}: forest biome mapgen {fbm_id} item_group_chance needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: forest biome mapgen {fbm_id} item_group_chance needs review")
         item_group_chance = 0
 
     item_spawn_iterations = native_integer(value.get("item_spawn_iterations", 0))
     if item_spawn_iterations is None or item_spawn_iterations < 0:
-        result.todos.append(f"{source.location}: forest biome mapgen {fbm_id} item_spawn_iterations needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: forest biome mapgen {fbm_id} item_spawn_iterations needs review")
         item_spawn_iterations = 0
 
     lines = [
@@ -16892,11 +17619,12 @@ def render_forest_biome_mapgen(source: SourceObject, result: MigrationResult) ->
             if isinstance(ter, str) and bounded_platform_id(ter):
                 lines.append(f"definition:add_terrain({lua_quote(ter)})")
             else:
-                result.todos.append(f"{source.location}: forest biome mapgen {fbm_id} terrain needs review")
+                result.add_todo("manual_rewrite", f"{source.location}: forest biome mapgen {fbm_id} terrain needs review")
     elif isinstance(terrains, str) and bounded_platform_id(terrains):
         lines.append(f"definition:add_terrain({lua_quote(terrains)})")
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: forest biome mapgen {fbm_id} terrains need review"
         )
 
@@ -16906,17 +17634,18 @@ def render_forest_biome_mapgen(source: SourceObject, result: MigrationResult) ->
             if isinstance(comp, str) and bounded_platform_id(comp):
                 lines.append(f"definition:add_component({lua_quote(comp)})")
             else:
-                result.todos.append(f"{source.location}: forest biome mapgen {fbm_id} component needs review")
+                result.add_todo("manual_rewrite", f"{source.location}: forest biome mapgen {fbm_id} component needs review")
     elif isinstance(components, str) and bounded_platform_id(components):
         lines.append(f"definition:add_component({lua_quote(components)})")
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: forest biome mapgen {fbm_id} components need review"
         )
 
     groundcover = canonical_weighted_entries(value.get("groundcover", []))
     if groundcover is None:
-        result.todos.append(f"{source.location}: forest biome mapgen {fbm_id} groundcover needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: forest biome mapgen {fbm_id} groundcover needs review")
     else:
         for ter_id, weight in groundcover:
             lines.append(f"definition:add_groundcover({lua_quote(ter_id)}, {weight})")
@@ -16927,18 +17656,18 @@ def render_forest_biome_mapgen(source: SourceObject, result: MigrationResult) ->
             if bounded_platform_id(ter_id) and isinstance(tdata, dict):
                 chance = native_integer(tdata.get("chance", 0))
                 if chance is None or chance < 0:
-                    result.todos.append(f"{source.location}: forest biome mapgen {fbm_id} terrain_furniture chance needs review")
+                    result.add_todo("manual_rewrite", f"{source.location}: forest biome mapgen {fbm_id} terrain_furniture chance needs review")
                     chance = 0
                 furniture_entries = canonical_weighted_entries(tdata.get("furniture", []))
                 if furniture_entries is None:
-                    result.todos.append(f"{source.location}: forest biome mapgen {fbm_id} terrain_furniture entries need review")
+                    result.add_todo("manual_rewrite", f"{source.location}: forest biome mapgen {fbm_id} terrain_furniture entries need review")
                 else:
                     lua_furn = ", ".join(f"{{ {lua_quote(furn_id)}, {weight} }}" for furn_id, weight in furniture_entries)
                     lines.append(f"definition:add_terrain_furniture({lua_quote(ter_id)}, {chance}, {{ {lua_furn} }})")
             else:
-                result.todos.append(f"{source.location}: forest biome mapgen {fbm_id} terrain_furniture needs review")
+                result.add_todo("manual_rewrite", f"{source.location}: forest biome mapgen {fbm_id} terrain_furniture needs review")
     else:
-        result.todos.append(f"{source.location}: forest biome mapgen {fbm_id} terrain_furniture must be an object")
+        result.add_todo("manual_rewrite", f"{source.location}: forest biome mapgen {fbm_id} terrain_furniture must be an object")
 
     return finish_catalog(
         source,
@@ -16956,7 +17685,7 @@ def render_tool_quality(source: SourceObject, result: MigrationResult) -> str | 
     quality_id = value.get("id")
     if not safe_platform_id(quality_id):
         result.partial.append(f"{source.location}: tool quality <invalid id>")
-        result.todos.append(f"{source.location}: tool quality needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: tool quality needs a stable native id")
         return None
     todo_count = len(result.todos)
     name = display_text(value.get("name"), quality_id)
@@ -16983,11 +17712,13 @@ def render_tool_quality(source: SourceObject, result: MigrationResult) -> str | 
                     for text in usage[1]
                 )
             else:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: tool quality {quality_id} usage needs review"
                 )
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: tool quality {quality_id} usages need review"
         )
     return finish_catalog(
@@ -17006,7 +17737,7 @@ def render_skill_display(source: SourceObject, result: MigrationResult) -> str |
     display_id = value.get("id")
     if not safe_platform_id(display_id):
         result.partial.append(f"{source.location}: skill display <invalid id>")
-        result.todos.append(f"{source.location}: skill display needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: skill display needs a stable native id")
         return None
     todo_count = len(result.todos)
     label = display_text(value.get("display_string"), display_id)
@@ -17032,7 +17763,7 @@ def render_skill(source: SourceObject, result: MigrationResult) -> str | None:
     skill_id = value.get("id")
     if not safe_platform_id(skill_id):
         result.partial.append(f"{source.location}: skill <invalid id>")
-        result.todos.append(f"{source.location}: skill needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: skill needs a stable native id")
         return None
     todo_count = len(result.todos)
     name = display_text(value.get("name"), skill_id)
@@ -17041,12 +17772,13 @@ def render_skill(source: SourceObject, result: MigrationResult) -> str | None:
     sort_rank = value.get("sort_rank", 1000000)
     if not safe_platform_id(display_category):
         display_category = "none"
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: skill {skill_id} display category needs review"
         )
     if not isinstance(sort_rank, int) or isinstance(sort_rank, bool) or not -NATIVE_INT_MAX <= sort_rank <= NATIVE_INT_MAX:
         sort_rank = 1000000
-        result.todos.append(f"{source.location}: skill {skill_id} sort rank needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: skill {skill_id} sort rank needs review")
     lines = [
         "local definition = content.Skill {",
         f"    id = {lua_quote(skill_id)},",
@@ -17060,7 +17792,8 @@ def render_skill(source: SourceObject, result: MigrationResult) -> str | None:
         if isinstance(raw, bool):
             lines.append(f"    {field_name} = {'true' if raw else 'false'},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: skill {skill_id} {field_name} needs review"
             )
     lines.append("}")
@@ -17068,7 +17801,7 @@ def render_skill(source: SourceObject, result: MigrationResult) -> str | None:
     if isinstance(tags, list) and all(isinstance(tag, str) and tag for tag in tags):
         lines.extend(f"definition:tag({lua_quote(tag)})" for tag in tags)
     elif "tags" in value:
-        result.todos.append(f"{source.location}: skill {skill_id} tags need review")
+        result.add_todo("manual_rewrite", f"{source.location}: skill {skill_id} tags need review")
     companion = value.get("companion_skill_practice", [])
     if isinstance(companion, list):
         # Legacy load uses unordered_map::emplace, so a duplicate practice
@@ -17087,7 +17820,8 @@ def render_skill(source: SourceObject, result: MigrationResult) -> str | None:
                 not isinstance(entry["weight"], bool) and
                 -NATIVE_INT_MAX <= entry["weight"] <= NATIVE_INT_MAX
             ):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: skill {skill_id} companion practice needs review"
                 )
                 continue
@@ -17104,7 +17838,8 @@ def render_skill(source: SourceObject, result: MigrationResult) -> str | None:
     ):
         entries = value.get(field_name, [])
         if not isinstance(entries, list):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: skill {skill_id} {field_name} needs review"
             )
             continue
@@ -17119,7 +17854,8 @@ def render_skill(source: SourceObject, result: MigrationResult) -> str | None:
                 description_text = display_text(entry["description"])
                 level_descriptions.setdefault(entry["level"], {})[variant] = description_text
             else:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: skill {skill_id} level description needs review"
                 )
     for level, descriptions in sorted(level_descriptions.items()):
@@ -17147,7 +17883,7 @@ def render_skill(source: SourceObject, result: MigrationResult) -> str | None:
         if all(isinstance(entry, int) and not isinstance(entry, bool) and 0 <= entry <= NATIVE_INT_MAX for entry in (minimum, base, reduction)):
             lines.append(f"definition:attack_time({minimum}, {base}, {reduction})")
         else:
-            result.todos.append(f"{source.location}: skill {skill_id} attack timing needs review")
+            result.add_todo("manual_rewrite", f"{source.location}: skill {skill_id} attack timing needs review")
     rank_fields = (
         value.get("companion_combat_rank_factor", 0),
         value.get("companion_survival_rank_factor", 0),
@@ -17158,7 +17894,7 @@ def render_skill(source: SourceObject, result: MigrationResult) -> str | None:
             "definition:companion_rank_factors(" + ", ".join(str(entry) for entry in rank_fields) + ")"
         )
     else:
-        result.todos.append(f"{source.location}: skill {skill_id} companion rank factors need review")
+        result.add_todo("manual_rewrite", f"{source.location}: skill {skill_id} companion rank factors need review")
     for field_name, method in (
         ("requires_all_traits", "requires_all_trait"),
         ("requires_any_traits", "requires_any_trait"),
@@ -17167,7 +17903,7 @@ def render_skill(source: SourceObject, result: MigrationResult) -> str | None:
         if isinstance(traits, list) and all(isinstance(trait, str) and trait for trait in traits):
             lines.extend(f"definition:{method}({lua_quote(trait)})" for trait in traits)
         elif field_name in value:
-            result.todos.append(f"{source.location}: skill {skill_id} {field_name} needs review")
+            result.add_todo("manual_rewrite", f"{source.location}: skill {skill_id} {field_name} needs review")
     return finish_catalog(
         source,
         result,
@@ -17190,7 +17926,7 @@ def render_vitamin(source: SourceObject, result: MigrationResult) -> str | None:
     vitamin_id = value.get("id")
     if not safe_platform_id(vitamin_id):
         result.partial.append(f"{source.location}: vitamin <invalid id>")
-        result.todos.append(f"{source.location}: vitamin needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: vitamin needs a stable native id")
         return None
     todo_count = len(result.todos)
     kind = value.get("vit_type", "vitamin")
@@ -17199,16 +17935,16 @@ def render_vitamin(source: SourceObject, result: MigrationResult) -> str | None:
     rate = parse_turns(value.get("rate", 1))
     if kind not in {"vitamin", "toxin", "drug", "counter"}:
         kind = "vitamin"
-        result.todos.append(f"{source.location}: vitamin {vitamin_id} kind needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: vitamin {vitamin_id} kind needs review")
     if not isinstance(minimum, int) or isinstance(minimum, bool) or not -NATIVE_INT_MAX <= minimum <= NATIVE_INT_MAX:
         minimum = 0
-        result.todos.append(f"{source.location}: vitamin {vitamin_id} minimum needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: vitamin {vitamin_id} minimum needs review")
     if not isinstance(maximum, int) or isinstance(maximum, bool) or not -NATIVE_INT_MAX <= maximum <= NATIVE_INT_MAX:
         maximum = 0
-        result.todos.append(f"{source.location}: vitamin {vitamin_id} maximum needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: vitamin {vitamin_id} maximum needs review")
     if rate is None or not 0 < rate <= NATIVE_INT_MAX:
         rate = 1
-        result.todos.append(f"{source.location}: vitamin {vitamin_id} rate needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: vitamin {vitamin_id} rate needs review")
     lines = [
         "local definition = content.Vitamin {",
         f"    id = {lua_quote(vitamin_id)},",
@@ -17223,14 +17959,16 @@ def render_vitamin(source: SourceObject, result: MigrationResult) -> str | None:
         if isinstance(effect, str) and effect:
             lines.append(f"    {field_name} = {lua_quote(effect)},")
         elif field_name in value and effect not in (None, ""):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: vitamin {vitamin_id} {field_name} needs review"
             )
     lines.append("}")
     if "weight_per_unit" in value:
         micrograms = parse_vitamin_micrograms(value["weight_per_unit"])
         if micrograms is None or not 0 < micrograms <= NATIVE_INT_MAX:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: vitamin {vitamin_id} unit weight needs review"
             )
         else:
@@ -17249,11 +17987,13 @@ def render_vitamin(source: SourceObject, result: MigrationResult) -> str | None:
                 ):
                     lines.append(f"definition:{method}({entry[0]}, {entry[1]})")
                 else:
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: vitamin {vitamin_id} {field_name} entry needs review"
                     )
         elif field_name in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: vitamin {vitamin_id} {field_name} needs review"
             )
     decays = value.get("decays_into", [])
@@ -17269,14 +18009,15 @@ def render_vitamin(source: SourceObject, result: MigrationResult) -> str | None:
             ):
                 lines.append(f"definition:decays_into({lua_quote(entry[0])}, {entry[1]})")
             else:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: vitamin {vitamin_id} decay entry needs review"
                 )
     flags = value.get("flags", [])
     if isinstance(flags, list) and all(isinstance(flag, str) and flag for flag in flags):
         lines.extend(f"definition:flag({lua_quote(flag)})" for flag in flags)
     elif "flags" in value:
-        result.todos.append(f"{source.location}: vitamin {vitamin_id} flags need review")
+        result.add_todo("manual_rewrite", f"{source.location}: vitamin {vitamin_id} flags need review")
     return finish_catalog(
         source,
         result,
@@ -17296,7 +18037,7 @@ def render_json_flag(source: SourceObject, result: MigrationResult) -> str | Non
     flag_id = value.get("id")
     if not safe_platform_id(flag_id):
         result.partial.append(f"{source.location}: JSON flag <invalid id>")
-        result.todos.append(f"{source.location}: JSON flag needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: JSON flag needs a stable native id")
         return None
     todo_count = len(result.todos)
     lines = ["local definition = content.JsonFlag {", f"    id = {lua_quote(flag_id)},"]
@@ -17308,11 +18049,13 @@ def render_json_flag(source: SourceObject, result: MigrationResult) -> str | Non
         elif isinstance(raw, dict) and display_text(raw):
             lines.append(f"    {field_name} = {lua_quote(display_text(raw))},")
             if set(raw) != {"str"}:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: JSON flag {flag_id} {field_name} translation metadata needs review"
                 )
         elif field_name in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: JSON flag {flag_id} {field_name} needs review"
             )
     for field_name, default in (("inherit", True), ("craft_inherit", False)):
@@ -17320,20 +18063,21 @@ def render_json_flag(source: SourceObject, result: MigrationResult) -> str | Non
         if isinstance(raw, bool):
             lines.append(f"    {field_name} = {'true' if raw else 'false'},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: JSON flag {flag_id} {field_name} needs review"
             )
     taste = value.get("taste_mod", 0)
     if isinstance(taste, int) and not isinstance(taste, bool) and -NATIVE_INT_MAX <= taste <= NATIVE_INT_MAX:
         lines.append(f"    taste_modifier = {taste},")
     else:
-        result.todos.append(f"{source.location}: JSON flag {flag_id} taste modifier needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: JSON flag {flag_id} taste modifier needs review")
     lines.append("}")
     conflicts = value.get("conflicts", [])
     if isinstance(conflicts, list) and all(isinstance(flag, str) and flag for flag in conflicts):
         lines.extend(f"definition:conflicts_with({lua_quote(flag)})" for flag in conflicts)
     elif "conflicts" in value:
-        result.todos.append(f"{source.location}: JSON flag {flag_id} conflicts need review")
+        result.add_todo("manual_rewrite", f"{source.location}: JSON flag {flag_id} conflicts need review")
     return finish_catalog(
         source,
         result,
@@ -17350,7 +18094,7 @@ def render_damage_type(source: SourceObject, result: MigrationResult) -> str | N
     damage_id = value.get("id")
     if not safe_platform_id(damage_id):
         result.partial.append(f"{source.location}: damage type <invalid id>")
-        result.todos.append(f"{source.location}: damage type needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: damage type needs a stable native id")
         return None
     todo_count = len(result.todos)
     lines = [
@@ -17363,14 +18107,16 @@ def render_damage_type(source: SourceObject, result: MigrationResult) -> str | N
         if isinstance(raw, str) and raw:
             lines.append(f"    {field_name} = {lua_quote(raw)},")
         elif field_name in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: damage type {damage_id} {field_name} needs review"
             )
     factor = value.get("bash_conversion_factor")
     if isinstance(factor, (int, float)) and not isinstance(factor, bool) and factor >= 0:
         lines.append(f"    bash_conversion_factor = {factor!r},")
     elif "bash_conversion_factor" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: damage type {damage_id} bash conversion needs review"
         )
     boolean_fields = {
@@ -17387,7 +18133,8 @@ def render_damage_type(source: SourceObject, result: MigrationResult) -> str | N
         if isinstance(raw, bool):
             lines.append(f"    {target_name} = {'true' if raw else 'false'},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: damage type {damage_id} {source_name} needs review"
             )
     lines.append("}")
@@ -17395,7 +18142,7 @@ def render_damage_type(source: SourceObject, result: MigrationResult) -> str | N
     if isinstance(derived, list) and len(derived) == 2 and safe_platform_id(derived[0]) and isinstance(derived[1], (int, float)) and not isinstance(derived[1], bool):
         lines.append(f"definition:derived({lua_quote(derived[0])}, {derived[1]!r})")
     elif "derived_from" in value:
-        result.todos.append(f"{source.location}: damage type {damage_id} derivation needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: damage type {damage_id} derivation needs review")
     immune = value.get("immune_flags", {})
     if isinstance(immune, dict):
         for group, method in (("character", "immune_character_flag"), ("monster", "immune_monster_flag")):
@@ -17403,14 +18150,16 @@ def render_damage_type(source: SourceObject, result: MigrationResult) -> str | N
             if isinstance(flags, list) and all(isinstance(flag, str) and flag for flag in flags):
                 lines.extend(f"definition:{method}({lua_quote(flag)})" for flag in flags)
             elif group in immune:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: damage type {damage_id} {group} immunity needs review"
                 )
     elif "immune_flags" in value:
-        result.todos.append(f"{source.location}: damage type {damage_id} immunities need review")
+        result.add_todo("manual_rewrite", f"{source.location}: damage type {damage_id} immunities need review")
     for source_name, method in (("onhit_eocs", "on_hit"), ("ondamage_eocs", "on_damage")):
         if source_name in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: damage type {damage_id} {source_name} must become a named {method} handler"
             )
     return finish_catalog(
@@ -17432,7 +18181,7 @@ def render_material(source: SourceObject, result: MigrationResult) -> str | None
     material_id = value.get("id")
     if not safe_platform_id(material_id):
         result.partial.append(f"{source.location}: material <invalid id>")
-        result.todos.append(f"{source.location}: material needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: material needs a stable native id")
         return None
     todo_count = len(result.todos)
     lines = [
@@ -17452,7 +18201,8 @@ def render_material(source: SourceObject, result: MigrationResult) -> str | None
         if text:
             lines.append(f"    {target_name} = {lua_quote(text)},")
         elif source_name in value and raw not in (None, ""):
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: material {material_id} {source_name} needs review"
             )
     numeric_map = {
@@ -17471,7 +18221,8 @@ def render_material(source: SourceObject, result: MigrationResult) -> str | None
         if isinstance(raw, (int, float)) and not isinstance(raw, bool):
             lines.append(f"    {target_name} = {raw!r},")
         elif source_name in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: material {material_id} {source_name} needs review"
             )
     breathability = value.get("breathability")
@@ -17482,7 +18233,8 @@ def render_material(source: SourceObject, result: MigrationResult) -> str | None
     if isinstance(breathability, str) and breathability in breathability_values:
         lines.append(f"    breathability = {breathability_values[breathability]},")
     elif "breathability" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: material {material_id} breathability needs review"
         )
     for field_name in ("rotting", "soft", "uncomfortable", "conductive"):
@@ -17490,7 +18242,8 @@ def render_material(source: SourceObject, result: MigrationResult) -> str | None
         if isinstance(raw, bool):
             lines.append(f"    {field_name} = {'true' if raw else 'false'},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: material {material_id} {field_name} needs review"
             )
     lines.append("}")
@@ -17501,7 +18254,8 @@ def render_material(source: SourceObject, result: MigrationResult) -> str | None
             if text:
                 lines.append(f"definition:damage_adjective({index}, {lua_quote(text)})")
             else:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: material {material_id} damage adjective #{index} needs review"
                 )
     resistances = value.get("resist", {})
@@ -17510,7 +18264,8 @@ def render_material(source: SourceObject, result: MigrationResult) -> str | None
             if safe_platform_id(damage_id) and isinstance(amount, (int, float)) and not isinstance(amount, bool):
                 lines.append(f"definition:resistance({lua_quote(damage_id)}, {amount!r})")
             else:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: material {material_id} resistance {damage_id} needs review"
                 )
     vitamins = value.get("vitamins", [])
@@ -17519,7 +18274,8 @@ def render_material(source: SourceObject, result: MigrationResult) -> str | None
             if isinstance(entry, list) and len(entry) == 2 and safe_platform_id(entry[0]) and isinstance(entry[1], (int, float)) and not isinstance(entry[1], bool):
                 lines.append(f"definition:vitamin({lua_quote(entry[0])}, {entry[1]!r})")
             else:
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: material {material_id} vitamin entry needs review"
                 )
     burn_data = value.get("burn_data", [])
@@ -17536,12 +18292,14 @@ def render_material(source: SourceObject, result: MigrationResult) -> str | None
                         f"definition:burn({intensity}, {'true' if immune else 'false'}, {volume}, {fuel!r}, {smoke!r}, {burned!r})"
                     )
                     continue
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: material {material_id} burn intensity {intensity} needs review"
             )
     for field_name in ("fuel_data", "burn_products"):
         if field_name in value:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: material {material_id} {field_name} needs unit-aware review"
             )
     return finish_catalog(
@@ -17564,7 +18322,7 @@ def render_ammunition_type(source: SourceObject, result: MigrationResult) -> str
     ammo_id = value.get("id")
     if not safe_platform_id(ammo_id):
         result.partial.append(f"{source.location}: ammunition type <invalid id>")
-        result.todos.append(f"{source.location}: ammunition type needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: ammunition type needs a stable native id")
         return None
     todo_count = len(result.todos)
     lines = [
@@ -17576,7 +18334,8 @@ def render_ammunition_type(source: SourceObject, result: MigrationResult) -> str
     if isinstance(default_item, str):
         lines.append(f"    default_item = {lua_quote(default_item)},")
     elif "default" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: ammunition type {ammo_id} default item needs review"
         )
     lines.append("}")
@@ -17596,17 +18355,17 @@ def render_item_category(source: SourceObject, result: MigrationResult) -> str |
     category_id = value.get("id")
     if not safe_platform_id(category_id):
         result.partial.append(f"{source.location}: item category <invalid id>")
-        result.todos.append(f"{source.location}: item category needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: item category needs a stable native id")
         return None
     todo_count = len(result.todos)
     sort_rank = value.get("sort_rank", 0)
     spawn_rate = value.get("spawn_rate", 1.0)
     if not isinstance(sort_rank, int) or isinstance(sort_rank, bool) or not -NATIVE_INT_MAX <= sort_rank <= NATIVE_INT_MAX:
         sort_rank = 0
-        result.todos.append(f"{source.location}: item category {category_id} sort rank needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: item category {category_id} sort rank needs review")
     if not isinstance(spawn_rate, (int, float)) or isinstance(spawn_rate, bool) or spawn_rate < 0:
         spawn_rate = 1.0
-        result.todos.append(f"{source.location}: item category {category_id} spawn rate needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: item category {category_id} spawn rate needs review")
     raw_header = value.get("name_header")
     if isinstance(raw_header, dict):
         header = raw_header.get("str", raw_header.get("str_sp", ""))
@@ -17634,20 +18393,22 @@ def render_item_category(source: SourceObject, result: MigrationResult) -> str |
     if isinstance(zone, str) and zone:
         lines.append(f"    zone = {lua_quote(zone)},")
     elif "zone" in value:
-        result.todos.append(f"{source.location}: item category {category_id} zone needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: item category {category_id} zone needs review")
     lines.append("}")
     priorities = value.get("priority_zones", [])
     if isinstance(priorities, list):
         for priority in priorities:
             if not isinstance(priority, dict) or not safe_platform_id(priority.get("id")):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: item category {category_id} priority zone needs review"
                 )
                 continue
             flags = priority.get("flags", [])
             filthy = priority.get("filthy", False)
             if not isinstance(flags, list) or not all(isinstance(flag, str) and flag for flag in flags) or not isinstance(filthy, bool):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: item category {category_id} priority-zone matcher needs review"
                 )
                 continue
@@ -17656,7 +18417,8 @@ def render_item_category(source: SourceObject, result: MigrationResult) -> str |
                 f"definition:priority_zone({lua_quote(priority['id'])}, {rendered_flags}, {'true' if filthy else 'false'})"
             )
     elif "priority_zones" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: item category {category_id} priority zones need review"
         )
     return finish_catalog(
@@ -17675,7 +18437,7 @@ def render_recipe_category(source: SourceObject, result: MigrationResult) -> str
     category_id = value.get("id")
     if not safe_platform_id(category_id):
         result.partial.append(f"{source.location}: recipe category <invalid id>")
-        result.todos.append(f"{source.location}: recipe category needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: recipe category needs a stable native id")
         return None
     todo_count = len(result.todos)
     lines = ["local definition = content.RecipeCategory {", f"    id = {lua_quote(category_id)},"]
@@ -17689,7 +18451,8 @@ def render_recipe_category(source: SourceObject, result: MigrationResult) -> str
         if isinstance(raw, bool):
             lines.append(f"    {target_name} = {'true' if raw else 'false'},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: recipe category {category_id} {source_name} needs review"
             )
     lines.append("}")
@@ -17697,7 +18460,8 @@ def render_recipe_category(source: SourceObject, result: MigrationResult) -> str
     if isinstance(subcategories, list) and all(isinstance(entry, str) and entry for entry in subcategories):
         lines.extend(f"definition:subcategory({lua_quote(entry)})" for entry in subcategories)
     else:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: recipe category {category_id} subcategories need review"
         )
     return finish_catalog(
@@ -17716,7 +18480,7 @@ def render_proficiency_category(source: SourceObject, result: MigrationResult) -
     category_id = value.get("id")
     if not safe_platform_id(category_id):
         result.partial.append(f"{source.location}: proficiency category <invalid id>")
-        result.todos.append(f"{source.location}: proficiency category needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: proficiency category needs a stable native id")
         return None
     todo_count = len(result.todos)
     lines = [
@@ -17742,17 +18506,17 @@ def render_proficiency(source: SourceObject, result: MigrationResult) -> str | N
     proficiency_id = value.get("id")
     if not safe_platform_id(proficiency_id):
         result.partial.append(f"{source.location}: proficiency <invalid id>")
-        result.todos.append(f"{source.location}: proficiency needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: proficiency needs a stable native id")
         return None
     todo_count = len(result.todos)
     category = value.get("category")
     if not safe_platform_id(category):
         category = ""
-        result.todos.append(f"{source.location}: proficiency {proficiency_id} category needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: proficiency {proficiency_id} category needs review")
     learn_turns = parse_turns(value.get("time_to_learn", "9999 h"))
     if learn_turns is None or not 0 < learn_turns <= NATIVE_INT_MAX:
         learn_turns = 35996400
-        result.todos.append(f"{source.location}: proficiency {proficiency_id} training time needs review")
+        result.add_todo("manual_rewrite", f"{source.location}: proficiency {proficiency_id} training time needs review")
     lines = [
         "local definition = content.Proficiency {",
         f"    id = {lua_quote(proficiency_id)},",
@@ -17771,7 +18535,8 @@ def render_proficiency(source: SourceObject, result: MigrationResult) -> str | N
         if isinstance(raw, (int, float)) and not isinstance(raw, bool):
             lines.append(f"    {target_name} = {raw!r},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: proficiency {proficiency_id} {source_name} needs review"
             )
     for field_name, default in (("can_learn", False), ("ignore_focus", False), ("teachable", True)):
@@ -17779,7 +18544,8 @@ def render_proficiency(source: SourceObject, result: MigrationResult) -> str | N
         if isinstance(raw, bool):
             lines.append(f"    {field_name} = {'true' if raw else 'false'},")
         else:
-            result.todos.append(
+            result.add_todo(
+                "manual_rewrite",
                 f"{source.location}: proficiency {proficiency_id} {field_name} needs review"
             )
     lines.append("}")
@@ -17787,14 +18553,16 @@ def render_proficiency(source: SourceObject, result: MigrationResult) -> str | N
     if isinstance(required, list) and all(safe_platform_id(entry) for entry in required):
         lines.extend(f"definition:requires({lua_quote(entry)})" for entry in required)
     elif "required_proficiencies" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: proficiency {proficiency_id} prerequisites need review"
         )
     bonuses = value.get("bonuses", {})
     if isinstance(bonuses, dict):
         for bonus_category, entries in bonuses.items():
             if not isinstance(bonus_category, str) or not isinstance(entries, list):
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: proficiency {proficiency_id} bonuses need review"
                 )
                 continue
@@ -17804,11 +18572,12 @@ def render_proficiency(source: SourceObject, result: MigrationResult) -> str | N
                         f"definition:bonus({lua_quote(bonus_category)}, {lua_quote(entry['type'])}, {entry['value']!r})"
                     )
                 else:
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: proficiency {proficiency_id} bonus entry needs review"
                     )
     elif "bonuses" in value:
-        result.todos.append(f"{source.location}: proficiency {proficiency_id} bonuses need review")
+        result.add_todo("manual_rewrite", f"{source.location}: proficiency {proficiency_id} bonuses need review")
     return finish_catalog(
         source,
         result,
@@ -17830,7 +18599,7 @@ def render_weapon_category(source: SourceObject, result: MigrationResult) -> str
     category_id = value.get("id")
     if not safe_platform_id(category_id):
         result.partial.append(f"{source.location}: weapon category <invalid id>")
-        result.todos.append(f"{source.location}: weapon category needs a stable native id")
+        result.add_todo("manual_rewrite", f"{source.location}: weapon category needs a stable native id")
         return None
     todo_count = len(result.todos)
     lines = [
@@ -17843,7 +18612,8 @@ def render_weapon_category(source: SourceObject, result: MigrationResult) -> str
     if isinstance(proficiencies, list) and all(safe_platform_id(entry) for entry in proficiencies):
         lines.extend(f"definition:proficiency({lua_quote(entry)})" for entry in proficiencies)
     elif "proficiencies" in value:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: weapon category {category_id} proficiencies need review"
         )
     return finish_catalog(
@@ -26729,6 +27499,10 @@ def render_eoc(
     talker_pair_ids: frozenset[str] = frozenset(),
     content_primary_actor_ids: frozenset[str] = frozenset(),
 ) -> str:
+    # Unlowered EOC effects and predicates are manual rewrites unless the
+    # branch explicitly presents a content-owner choice (for example an
+    # avatar/talker or trigger selection).  No unsupported branch is promoted
+    # to a Platform gap without independent typed-service evidence.
     value = source.value
     eoc_id = stable_id(value, f"anonymous_{source.index}")
     function_name = (eoc_function_names or {}).get(
@@ -27114,7 +27888,8 @@ def render_eoc(
         # guard while retaining a specific manual-decision TODO.
         condition_expression = "false"
         condition_converted = False
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: EOC {eoc_id} has an invalid empty math condition and was rejected"
         )
     else:
@@ -27145,7 +27920,8 @@ def render_eoc(
                 "nearest/location scanning is not supported"
             )
         lines.append(f"    -- TODO: {condition_todo}.")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: EOC {eoc_id} condition TODO: {condition_todo}"
         )
     elif condition_expression != "true":
@@ -27197,7 +27973,8 @@ def render_eoc(
                     lines.append(
                         f"        -- TODO: {false_todo}."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} false_effect "
                         f"#{false_index} TODO: {false_todo}"
                     )
@@ -27210,7 +27987,8 @@ def render_eoc(
         # A false branch is unreachable when the condition is literal true;
         # flag it rather than silently changing content semantics.
         false_effect_converted = False
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: EOC {eoc_id} false_effect is unreachable under a literal true condition"
         )
     effects = value.get("effect", [])
@@ -27240,7 +28018,8 @@ def render_eoc(
                         "    -- TODO: translate weighted EOC selection into "
                         "ordinary Lua random control flow."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs weighted-callback conversion"
                     )
@@ -27263,7 +28042,8 @@ def render_eoc(
                     lines.append(
                         "    -- TODO: translate switch branches into ordinary Lua control flow."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs switch-control-flow conversion"
                     )
@@ -27300,19 +28080,22 @@ def render_eoc(
                         effect.get("if"), eoc_conditions
                     )
                     if retains_open_dialogue:
-                        result.todos.append(
+                        result.add_todo(
+                            "semantic_choice",
                             f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                             "needs an explicit dialogue participant conversion with "
                             "exact NPC/avatar handles and topic"
                         )
                     elif missing_predicates:
-                        result.todos.append(
+                        result.add_todo(
+                            "manual_rewrite",
                             f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                             "references missing test_eoc definitions: " +
                             ", ".join(missing_predicates)
                         )
                     else:
-                        result.todos.append(
+                        result.add_todo(
+                            "manual_rewrite",
                             f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                             "needs conditional-control-flow conversion"
                         )
@@ -27336,7 +28119,8 @@ def render_eoc(
                         "    -- TODO: translate the named condition through "
                         "the callback-local condition registry."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs named-condition conversion"
                     )
@@ -27377,7 +28161,8 @@ def render_eoc(
                             "    -- TODO: translate run_eocs only with an "
                             "explicit avatar participant handle."
                         )
-                        result.todos.append(
+                        result.add_todo(
+                            "semantic_choice",
                             f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                             "requires an explicit avatar participant handle for "
                             "run_eocs talker selection"
@@ -27387,7 +28172,8 @@ def render_eoc(
                             "    -- TODO: non-finite legacy dialogue values are "
                             "outside the Platform finite context contract."
                         )
-                        result.todos.append(
+                        result.add_todo(
+                            "manual_rewrite",
                             f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                             "run_eocs variables " +
                             ", ".join(sorted(nonfinite_variables)) +
@@ -27398,7 +28184,8 @@ def render_eoc(
                             "    -- TODO: translate delayed or context-bound run_eocs "
                             "through Platform callbacks."
                         )
-                        result.todos.append(
+                        result.add_todo(
+                            "manual_rewrite",
                             f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                             "needs a typed callback/task conversion"
                         )
@@ -27416,7 +28203,8 @@ def render_eoc(
                         "    -- TODO: translate run_eoc_selector through the "
                         "typed presentation service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs typed selector presentation conversion"
                     )
@@ -27435,7 +28223,8 @@ def render_eoc(
                     lines.append(
                         "    -- TODO: translate foreach through a bounded registry/array traversal."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs bounded foreach traversal conversion"
                     )
@@ -27472,7 +28261,8 @@ def render_eoc(
                         "    -- TODO: translate the variable name/value into "
                         "bounded Lua values."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -27494,7 +28284,8 @@ def render_eoc(
                         "typed mutation services."
                     )
                     all_effects_converted = False
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -27545,7 +28336,8 @@ def render_eoc(
                         "    -- TODO: translate the wound target or id into "
                         "bounded Lua values."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -27575,7 +28367,8 @@ def render_eoc(
                         "    -- TODO: translate the wound target or ids into "
                         "bounded Lua values."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -27600,7 +28393,8 @@ def render_eoc(
                     lines.append(
                         "    -- TODO: translate message presentation options through a typed service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -27624,7 +28418,8 @@ def render_eoc(
                         "    -- TODO: translate u_message only with an exact "
                         "avatar participant supplied by the Platform trigger."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "requires an exact avatar participant for u_message"
                     )
@@ -27641,7 +28436,8 @@ def render_eoc(
                             "    -- TODO: translate message presentation options "
                             "through a typed service."
                         )
-                        result.todos.append(
+                        result.add_todo(
+                            "manual_rewrite",
                             f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                             "needs domain-service conversion"
                         )
@@ -27886,7 +28682,8 @@ def render_eoc(
                     lines.append(
                         "    -- TODO: translate dynamic character id through typed services."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -27930,7 +28727,8 @@ def render_eoc(
                         "    -- TODO: translate the mutation target, category, "
                         "chance, or options into bounded Lua values."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -27966,7 +28764,8 @@ def render_eoc(
                         "    -- TODO: translate the effect amount, target, or "
                         "options into bounded Lua values."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -28001,7 +28800,8 @@ def render_eoc(
                         "    -- TODO: translate the effect id/body-part target "
                         "through typed effect removal."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -28266,7 +29066,8 @@ def render_eoc(
                         "    -- TODO: translate mutation-category removal through "
                         "the typed mutation service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -28327,7 +29128,8 @@ def render_eoc(
                     lines.append(
                         "    -- TODO: translate wetness amount through typed character services."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -28357,7 +29159,8 @@ def render_eoc(
                         "    -- TODO: translate the morale amount, target, or "
                         "options into bounded Lua values."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -28475,7 +29278,8 @@ def render_eoc(
                     lines.append(
                         "    -- TODO: translate the dynamic item transform target."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} transform_item "
                         "target needs a bounded Lua expression"
                     )
@@ -28502,7 +29306,8 @@ def render_eoc(
                         "    -- TODO: translate the item fault id and options "
                         "into bounded Lua values."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -28531,7 +29336,8 @@ def render_eoc(
                         "    -- TODO: translate the random item fault type "
                         "and options into bounded Lua values."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -28586,7 +29392,8 @@ def render_eoc(
                         "    -- TODO: translate the NPC class/faction update "
                         "through the typed NPC service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -28608,7 +29415,8 @@ def render_eoc(
                         "    -- TODO: translate the character sound through "
                         "the typed sound service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -28623,7 +29431,8 @@ def render_eoc(
                         "    -- TODO: translate item-category spawn rates through "
                         "the typed item-category service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -28645,7 +29454,8 @@ def render_eoc(
                         "    -- TODO: translate the talker variable target through "
                         "the typed variable service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -28681,7 +29491,8 @@ def render_eoc(
                         "    -- TODO: translate mutation purifiability through "
                         "the typed mutation service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -28714,7 +29525,8 @@ def render_eoc(
                         "    -- TODO: translate the bounded spawn request through "
                         "the typed spawn service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -28731,7 +29543,8 @@ def render_eoc(
                     "    -- TODO: translate NPC radio representation only with "
                     "an explicit avatar participant handle."
                 )
-                result.todos.append(
+                result.add_todo(
+                    "semantic_choice",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                     "requires an explicit avatar participant handle for NPC "
                     "radio representation"
@@ -28785,7 +29598,8 @@ def render_eoc(
                     "    -- TODO: translate NPC radio representation only with "
                     "an explicit avatar participant handle."
                 )
-                result.todos.append(
+                result.add_todo(
+                    "semantic_choice",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                     "requires an explicit avatar participant handle for NPC "
                     "radio representation"
@@ -28880,7 +29694,8 @@ def render_eoc(
                         "    -- TODO: equipment requires a proven actor, exact "
                         "Item handle, source holder, and displacement/destination holder."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs proven equipment actor/Item/source/destination boundaries"
                     )
@@ -28894,7 +29709,8 @@ def render_eoc(
                     "    -- TODO: equipment requires a proven actor, exact Item "
                     "handle, source holder, and displacement/destination holder."
                 )
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                     "needs a complete equipment transaction descriptor"
                 )
@@ -28914,7 +29730,8 @@ def render_eoc(
                         "    -- TODO: translate the bounded item spawn through "
                         "the typed inventory service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -29072,7 +29889,8 @@ def render_eoc(
                     "    -- TODO: player_weapon_away needs the exact wielded Item "
                     "handle plus explicit source and destination holders."
                 )
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                     "player_weapon_away needs a complete equipment transaction descriptor"
                 )
@@ -29091,7 +29909,8 @@ def render_eoc(
                     lines.append(
                         "    -- TODO: " + _map_mutation_todo() + "."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
                         _map_mutation_todo()
                     )
@@ -29101,7 +29920,8 @@ def render_eoc(
                     "    -- TODO: signal_hordes has no transactional Platform API; "
                     "preserve this legacy effect for manual conversion."
                 )
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                     "signal_hordes has no transactional Platform API"
                 )
@@ -29111,7 +29931,8 @@ def render_eoc(
                     "    -- TODO: reveal_route has no transactional Platform API; "
                     "preserve this legacy effect for manual conversion."
                 )
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                     "reveal_route has no transactional Platform API"
                 )
@@ -29134,7 +29955,8 @@ def render_eoc(
                         "    -- TODO: translate the inventory consumption "
                         "through the typed inventory service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs inventory consumption through the typed "
                         "inventory service"
@@ -29161,7 +29983,8 @@ def render_eoc(
                         "    -- TODO: translate the weighted inventory "
                         "consumption through the typed inventory service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs weighted inventory consumption through the "
                         "typed inventory service"
@@ -29189,7 +30012,8 @@ def render_eoc(
                         "abs_ms coordinate; current/u/alpha/local/omt/mixed-frame "
                         "pickup locations remain TODO."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "map holder requires an explicitly typed abs_ms coordinate; "
                         "current/u/alpha/local/omt/mixed-frame pickup locations remain TODO"
@@ -29211,7 +30035,8 @@ def render_eoc(
                     lines.append(
                         "    -- TODO: " + _map_mutation_todo() + "."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
                         _map_mutation_todo()
                     )
@@ -29232,7 +30057,8 @@ def render_eoc(
                         "    -- TODO: translate location-variable arithmetic "
                         "through typed coordinate variables."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -29264,7 +30090,8 @@ def render_eoc(
                         "    -- TODO: translate location-variable search "
                         "through a typed coordinate service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -29295,7 +30122,8 @@ def render_eoc(
                         "    -- TODO: translate the tile query through the "
                         "typed targeting service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -29325,7 +30153,8 @@ def render_eoc(
                         "    -- TODO: translate the overmap query through "
                         "the typed targeting service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -29360,7 +30189,8 @@ def render_eoc(
                         "    -- TODO: translate adjacent highlighting through "
                         "the typed targeting service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -29378,7 +30208,8 @@ def render_eoc(
                     lines.append(
                         "    -- TODO: " + _map_mutation_todo() + "."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
                         _map_mutation_todo()
                     )
@@ -29400,7 +30231,8 @@ def render_eoc(
                         "by the author; unsupported mirror/rotation transforms "
                         "must also be rewritten by the author."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -29417,7 +30249,8 @@ def render_eoc(
                         "    -- TODO: translate the reveal-map target "
                         "through the typed overmap service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -29436,7 +30269,8 @@ def render_eoc(
                         "    -- TODO: translate the scheduled location "
                         "change through the typed world service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -29462,7 +30296,8 @@ def render_eoc(
                         "    -- TODO: translate the radius transformation "
                         "through the typed world service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -29506,7 +30341,8 @@ def render_eoc(
                     )
                     if turn_cost is None:
                         all_effects_converted = False
-                        result.todos.append(
+                        result.add_todo(
+                            "manual_rewrite",
                             f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                             "needs domain-service conversion"
                         )
@@ -29630,7 +30466,8 @@ def render_eoc(
                         "    -- TODO: translate the trade operation through typed "
                         "actor and item services."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs trade actor/item conversion"
                     )
@@ -29667,7 +30504,8 @@ def render_eoc(
                         "    -- TODO: translate the vehicle service through typed "
                         "vehicle and mechanic handles."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs vehicle service conversion"
                     )
@@ -29753,7 +30591,8 @@ def render_eoc(
                     "    -- TODO: distribute_food_auto requires explicit camp, "
                     "manager, and storage holder handles."
                 )
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                     "needs explicit camp, manager, and storage holder handles"
                 )
@@ -29789,7 +30628,8 @@ def render_eoc(
                         "    -- TODO: translate body-part picking through an "
                         "explicit non-interactive character service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -29820,7 +30660,8 @@ def render_eoc(
                         "    -- TODO: translate the camp-worker action only with "
                         "explicit camp, manager, and worker handles."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs proven camp, manager, and worker handles"
                     )
@@ -29939,7 +30780,8 @@ def render_eoc(
                         damage_converted = True
                         converted_effect = True
                 if not damage_converted:
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "damage amount/options need a finite static Lua-native conversion"
                     )
@@ -29961,7 +30803,8 @@ def render_eoc(
                         "    -- TODO: translate teleport through a typed "
                         "creature-relocation service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -29980,7 +30823,8 @@ def render_eoc(
                         "    -- TODO: translate the NPC goal through a typed "
                         "navigation service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs a bounded mission-target conversion"
                     )
@@ -29990,7 +30834,8 @@ def render_eoc(
                     "    -- TODO: drop_stolen_item needs explicit Item handles, "
                     "source holders, and a destination transaction."
                 )
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                     "drop_stolen_item needs explicit equipment/trade holders"
                 )
@@ -30021,7 +30866,8 @@ def render_eoc(
                         "    -- TODO: resource_work requires explicit camp, manager, "
                         "worker, literal deltas, and positive duration."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs proven resource_work camp/manager/worker handles and static deltas"
                     )
@@ -30037,7 +30883,8 @@ def render_eoc(
                         "    -- TODO: recipe_work requires explicit camp, manager, "
                         "worker, recipe, holders, and literal Item requests."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs proven recipe_work camp/manager/worker/holders and static Item requests"
                     )
@@ -30054,7 +30901,8 @@ def render_eoc(
                         "worker, target, blueprint, source holders, destination holder, "
                         "and Item requests."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs proven upgrade_work camp/manager/worker/target/blueprint/holders "
                         "and static Item requests"
@@ -30072,7 +30920,8 @@ def render_eoc(
                         "    -- TODO: camp creation requires explicit faction, manager, "
                         "OMT position, type, and name."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs proven camp faction/manager/OMT/type/name"
                     )
@@ -30089,7 +30938,8 @@ def render_eoc(
                         "    -- TODO: camp expansion creation requires explicit camp, "
                         "manager, OMT position, type, and name."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs proven camp/manager/OMT/type/name"
                     )
@@ -30102,7 +30952,8 @@ def render_eoc(
                     "camp, manager, worker, target, blueprint, source holders, "
                     "destination holder, and Item requests."
                 )
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                     "legacy Camp_Upgrade/UI shape needs proven camp/manager/worker/target/"
                     "blueprint/holders and static Item requests"
@@ -30116,7 +30967,8 @@ def render_eoc(
                     "camp, manager, worker, target, blueprint, source holders, "
                     "destination holder, and Item requests."
                 )
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                     "legacy Camp_Upgrade/UI shape needs proven camp/manager/worker/target/"
                     "blueprint/holders and static Item requests"
@@ -30131,7 +30983,8 @@ def render_eoc(
                     "    -- TODO: Camp_Upgrade/UI and other implicit upgrade shapes also "
                     "need explicit target, blueprint, and source/destination holder Item handles."
                 )
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                     "needs proven camp, manager, and worker handles; upgrade-shaped "
                     "Camp_Upgrade/UI inputs also need explicit target, blueprint, and holders"
@@ -30142,7 +30995,8 @@ def render_eoc(
                     "    -- TODO: translate basecamp_mission only with explicit "
                     "camp, manager, and worker handles."
                 )
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                     "needs proven camp, manager, and worker handles"
                 )
@@ -30176,7 +31030,8 @@ def render_eoc(
                         "    -- TODO: translate the companion mission role "
                         "through the typed NPC service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs a bounded companion-mission conversion"
                     )
@@ -30211,7 +31066,8 @@ def render_eoc(
                         "    -- TODO: translate item removal through the "
                         "typed inventory traversal service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs a bounded inventory-removal conversion"
                     )
@@ -30229,7 +31085,8 @@ def render_eoc(
                         "    -- TODO: translate the equipment allowance through "
                         "the typed NPC equipment service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs a bounded equipment-allowance conversion"
                     )
@@ -30246,7 +31103,8 @@ def render_eoc(
                         "    -- TODO: translate the monster purchase through "
                         "the typed trade service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs a bounded monster-purchase conversion"
                     )
@@ -30264,7 +31122,8 @@ def render_eoc(
                         "    -- TODO: translate the cash payment through "
                         "the typed trade service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs a bounded cash-payment conversion"
                     )
@@ -30282,7 +31141,8 @@ def render_eoc(
                         "    -- TODO: translate the item purchase through "
                         "the typed inventory/trade services."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs a bounded item-purchase conversion"
                     )
@@ -30301,7 +31161,8 @@ def render_eoc(
                         "    -- TODO: translate the item sale through "
                         "the typed inventory/trade services."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs a bounded item-sale conversion"
                     )
@@ -30327,7 +31188,8 @@ def render_eoc(
                         "    -- TODO: translate spell-class leveling through "
                         "the typed spell service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs a bounded spell-class conversion"
                     )
@@ -30354,7 +31216,8 @@ def render_eoc(
                         "    -- TODO: translate remainder selection through "
                         "typed mutation/spell/recipe services."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs a bounded remainder-roll conversion"
                     )
@@ -30373,7 +31236,8 @@ def render_eoc(
                         "    -- TODO: translate the NPC guard position through a "
                         "typed navigation service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs a bounded guard-variable conversion"
                     )
@@ -30397,7 +31261,8 @@ def render_eoc(
                         "    -- TODO: translate goto_location through a typed "
                         "overmap navigation service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs a proven NPC dialogue actor"
                     )
@@ -30414,7 +31279,8 @@ def render_eoc(
                         "    -- TODO: translate custom_light_level through an "
                         "explicit world-light service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -30441,7 +31307,8 @@ def render_eoc(
                         "    -- TODO: translate item activation through a "
                         "typed item-handle service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -30462,7 +31329,8 @@ def render_eoc(
                         "    -- TODO: translate item activation through a typed "
                         "item-handle service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -30484,7 +31352,8 @@ def render_eoc(
                         "    -- TODO: translate item fault mutation through a typed "
                         "item-handle service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs a bounded item-fault conversion"
                     )
@@ -30513,7 +31382,8 @@ def render_eoc(
                         "    -- TODO: translate random item-fault mutation through a "
                         "typed item-handle service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs a bounded random item-fault conversion"
                     )
@@ -30532,7 +31402,8 @@ def render_eoc(
                         "    -- TODO: translate item fault mutation through a typed "
                         "item-handle service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -30555,7 +31426,8 @@ def render_eoc(
                         "    -- TODO: translate random item-fault mutation through a "
                         "typed item-handle service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -30568,7 +31440,8 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} transform_item needs "
                         "a native item-talker transform service"
                     )
@@ -30585,7 +31458,8 @@ def render_eoc(
                         "    -- TODO: translate transform_line through an explicit "
                         "world transformation service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -30602,7 +31476,8 @@ def render_eoc(
                         "    -- TODO: translate u_travel_to_dimension with an explicit "
                         "dimension target and relocation policy."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -30620,7 +31495,8 @@ def render_eoc(
                         "    -- TODO: translate clear_dimension through the "
                         "typed relocation service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -30632,7 +31508,8 @@ def render_eoc(
                     "    -- TODO: translate open_dialogue only when exact NPC "
                     "and avatar handles plus an explicit topic are available."
                 )
-                result.todos.append(
+                result.add_todo(
+                    "semantic_choice",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                     "needs an explicit dialogue participant conversion with "
                     "exact NPC/avatar handles and topic"
@@ -30649,7 +31526,8 @@ def render_eoc(
                     lines.append(
                         "    -- TODO: translate place_override through the typed world service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -30679,7 +31557,8 @@ def render_eoc(
                         "    -- TODO: translate the activity id and duration into "
                         "a plain typed activity service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -30698,7 +31577,8 @@ def render_eoc(
                         "    -- TODO: translate this math expression into "
                         "ordinary Lua and typed variable services."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -30715,7 +31595,8 @@ def render_eoc(
                         "    -- TODO: translate copy_var into typed variable "
                         "services."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -30732,7 +31613,8 @@ def render_eoc(
                         "    -- TODO: translate add_debt through a bounded "
                         "NPC opinion/debt service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs a bounded debt-modifier conversion"
                     )
@@ -30754,7 +31636,8 @@ def render_eoc(
                         "    -- TODO: translate sample_range into bounded "
                         "random and variable services."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -30773,7 +31656,8 @@ def render_eoc(
                         "    -- TODO: translate set_string_var into typed "
                         "variable services."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -30790,7 +31674,8 @@ def render_eoc(
                         "    -- TODO: translate mirror_coordinates through "
                         "typed coordinate and variable services."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -30807,7 +31692,8 @@ def render_eoc(
                         "    -- TODO: translate dimension_name through a "
                         "typed Character variable service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -30822,7 +31708,8 @@ def render_eoc(
                         "    -- TODO: translate alter_timed_events through a "
                         "bounded timed-event service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -30842,7 +31729,8 @@ def render_eoc(
                         "    -- TODO: translate faction reputation through "
                         "the typed NPC faction service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs a bounded faction-reputation conversion"
                     )
@@ -30863,7 +31751,8 @@ def render_eoc(
                         "    -- TODO: translate faction trust through the "
                         "typed character-faction service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -30905,7 +31794,8 @@ def render_eoc(
                         "    -- TODO: translate faction relationship through "
                         "the typed character-faction service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -30922,7 +31812,8 @@ def render_eoc(
                         "    -- TODO: translate closest_city through a typed "
                         "city query and writable location variable."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -30983,7 +31874,8 @@ def render_eoc(
                         "    -- TODO: translate this combat effect through a "
                         "proven actor and bounded literal options."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -31026,7 +31918,8 @@ def render_eoc(
                         "    -- TODO: translate this combat effect through a "
                         "proven actor and bounded literal options."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs domain-service conversion"
                     )
@@ -31044,7 +31937,8 @@ def render_eoc(
                     "    -- TODO: translate this effect through a native "
                     "domain service; no placeholder call is emitted."
                 )
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                     "needs domain-service conversion"
                 )
@@ -31078,7 +31972,8 @@ def render_eoc(
                         "    -- TODO: translate the mission lifecycle shape "
                         "through typed mission services."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs a bounded mission lifecycle conversion"
                     )
@@ -31096,7 +31991,8 @@ def render_eoc(
                         "    -- TODO: translate NPC mission assignment through "
                         "the typed mission provider service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs a bounded NPC mission-assignment conversion"
                     )
@@ -31114,7 +32010,8 @@ def render_eoc(
                         "    -- TODO: translate mission offering through the "
                         "typed NPC mission provider service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs a bounded NPC mission-provider conversion"
                     )
@@ -31138,7 +32035,8 @@ def render_eoc(
                         "    -- TODO: translate the selected NPC mission "
                         "action through a typed provider service."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         "needs an exact NPC provider, avatar owner, and selected mission shape"
                     )
@@ -31233,7 +32131,8 @@ def render_eoc(
                         f"    -- TODO: translate {traversal_kind} traversal "
                         "through ordinary Lua callbacks."
                     )
-                    result.todos.append(
+                    result.add_todo(
+                        "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                         f"needs a complete {traversal_kind} traversal conversion"
                     )
@@ -31305,20 +32204,23 @@ def render_eoc(
                     "    -- TODO: translate this legacy effect through a typed "
                     "native service; no placeholder call is emitted."
                 )
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
                     "needs domain-service conversion"
                 )
                 all_effects_converted = False
             else:
                 lines.append("    -- TODO: translate one legacy effect into domain-service calls.")
-                result.todos.append(
+                result.add_todo(
+                    "manual_rewrite",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} needs domain-service conversion"
                 )
                 all_effects_converted = False
     else:
         lines.append("    -- TODO: translate the legacy effect into normal Lua control flow.")
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: EOC {eoc_id} effect needs domain-service conversion"
         )
         all_effects_converted = False
@@ -31466,20 +32368,26 @@ def render_eoc(
             "no event, hook, recurrence, or owning callback."
         )
         result.boundaries.append(
-            f"{source.location}: EOC {eoc_id} is source-unwired and was "
-            "preserved as an unattached stable Platform handler"
+            MigrationBoundary(
+                source.location,
+                f"EOC {eoc_id} is source-unwired and was "
+                "preserved as an unattached stable Platform handler",
+            )
         )
-        result.todos.append(
+        result.add_todo(
+            "semantic_choice",
             f"{source.location}: EOC {eoc_id} needs an explicit Platform trigger"
         )
     if (
         recurrence_value is not None and recurrence_expression is None
     ):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: EOC {eoc_id} recurrence needs a bounded task interval"
         )
     if deactivate_condition is not None and deactivate_expression is None:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: EOC {eoc_id} deactivate_condition needs a native Lua predicate"
         )
     unresolved = sorted(
@@ -31492,18 +32400,21 @@ def render_eoc(
         if not key.startswith("//")
     )
     if not stable_handler:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: EOC {eoc_id} needs a stable handler id"
         )
     if unresolved:
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: EOC {eoc_id} unresolved fields: {', '.join(unresolved)}"
         )
     if (
         generic_talker_actor_override and
         _node_contains_string(value, "u_is_furniture")
     ):
-        result.todos.append(
+        result.add_todo(
+            "manual_rewrite",
             f"{source.location}: EOC {eoc_id} furniture talker introspection "
             "requires callback context __ccb_talker_kind=furniture"
         )
@@ -31522,15 +32433,22 @@ def render_eoc(
 
 
 def render_report(result: MigrationResult, mod_id: str) -> str:
+    if any(not isinstance(todo, MigrationTodo) for todo in result.todos):
+        raise TypeError("migration result contains an unstructured TODO")
+    todo_counts = {
+        category: sum(todo.category == category for todo in result.todos)
+        for category in TODO_CATEGORIES
+    }
     lines = [
         f"# Lua-first migration report: `{mod_id}`",
         "",
         "This report is generated from source structure, not proof of gameplay equivalence.",
         "No JSON loader, EOC runner, or raw legacy object was emitted.",
+        "TODO categories are boundary records, not completion metrics.",
         "",
         f"- Fully translated skeletons: {len(result.converted)}",
         f"- Partial skeletons: {len(result.partial)}",
-        f"- Explicit TODOs: {len(result.todos)}",
+        f"- Explicit TODO records: {len(result.todos)}",
         f"- Classified source/safety boundaries: {len(result.boundaries)}",
         "",
         "## Fully translated skeletons",
@@ -31543,12 +32461,20 @@ def render_report(result: MigrationResult, mod_id: str) -> str:
     lines.extend(f"- {entry}" for entry in result.partial)
     if not result.partial:
         lines.append("- None")
-    lines.extend(("", "## Required manual decisions", ""))
-    lines.extend(f"- [ ] {entry}" for entry in result.todos)
-    if not result.todos:
-        lines.append("- None")
+    lines.extend(("", "## Classified migration TODOs", ""))
+    for category in TODO_CATEGORIES:
+        lines.extend((f"### `{category}` ({todo_counts[category]})", ""))
+        category_todos = (
+            todo for todo in result.todos if todo.category == category
+        )
+        lines.extend(
+            f"- [ ] {todo.location}: {todo.message}"
+            for todo in category_todos
+        )
+        if todo_counts[category] == 0:
+            lines.append("- None")
     lines.extend(("", "## Classified source and safety boundaries", ""))
-    lines.extend(f"- {entry}" for entry in result.boundaries)
+    lines.extend(f"- {entry.location}: {entry.message}" for entry in result.boundaries)
     if not result.boundaries:
         lines.append("- None")
     lines.append("")
@@ -31571,10 +32497,12 @@ def classify_non_actionable_boundaries(result: MigrationResult) -> None:
         "require non-finite values rejected by the Platform safety contract",
         "references missing test_eoc definitions",
     )
-    actionable: list[str] = []
+    actionable: list[MigrationTodo] = []
     for entry in result.todos:
         if any(fragment in entry for fragment in fragments):
-            result.boundaries.append(entry)
+            result.boundaries.append(
+                MigrationBoundary(entry.location, entry.message)
+            )
         else:
             actionable.append(entry)
     result.todos = actionable
@@ -31881,7 +32809,8 @@ def migrate(objects: list[SourceObject], mod_id: str,
             result.partial.append(
                 f"{source.location}: MOD_INFO {metadata_id}"
             )
-            result.todos.append(
+            result.add_todo(
+                "semantic_choice",
                 f"{source.location}: additional MOD_INFO cannot be represented by one Platform ModDefinition"
             )
         elif kind in ITEM_TYPES:
@@ -32286,7 +33215,8 @@ def migrate(objects: list[SourceObject], mod_id: str,
                 for speaker in speakers:
                     speech_pools.setdefault(speaker, []).append((sound, volume))
             if unresolved:
-                result.todos.append(
+                result.add_todo(
+                    "semantic_choice",
                     f"{source.location}: speech unresolved fields: " +
                     ", ".join(unresolved)
                 )
@@ -32295,7 +33225,8 @@ def migrate(objects: list[SourceObject], mod_id: str,
             else:
                 result.partial.append(f"{source.location}: speech line")
                 if not valid:
-                    result.todos.append(
+                    result.add_todo(
+                        "semantic_choice",
                         f"{source.location}: speech speakers, text, or volume need review"
                     )
         elif kind == "end_screen":

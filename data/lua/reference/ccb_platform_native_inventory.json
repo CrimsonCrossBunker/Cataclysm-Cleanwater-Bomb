@@ -678,7 +678,7 @@
         "namespace": "ccb",
         "source": {
           "path": "src/lua_platform_loader.cpp",
-          "line": 360
+          "line": 365
         },
         "direct_roots": []
       },
@@ -1053,7 +1053,7 @@
         "callee": "platform_v1.install_mod_definition",
         "source": {
           "path": "src/lua_platform_loader.cpp",
-          "line": 375
+          "line": 384
         },
         "surfaces": [
           "platform_v1"
@@ -1064,7 +1064,7 @@
         "callee": "platform_v1.install_runtime_api",
         "source": {
           "path": "src/lua_platform_loader.cpp",
-          "line": 377
+          "line": 386
         },
         "surfaces": [
           "platform_v1"

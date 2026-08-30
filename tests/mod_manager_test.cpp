@@ -86,3 +86,54 @@ TEST_CASE( "lua_first_platform_disabled_build_rejects_runtime_sources",
     CHECK( error.empty() );
 }
 #endif
+
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+TEST_CASE( "lua_first_platform_playable_mvp_is_discovered_and_activated",
+           "[playable_mvp][mod_manager][lua][platform]" )
+{
+    CHECK( cata::lua_platform::is_enabled() );
+
+    const on_out_of_scope cleanup( []() {
+        cata::lua_platform::shutdown();
+    } );
+    cata::lua_platform::shutdown();
+    CHECK( cata::lua_platform::loaded_mod_ids().empty() );
+
+    REQUIRE( world_generator != nullptr );
+    mod_manager &manager = world_generator->get_mod_manager();
+    manager.refresh_mod_list();
+
+    const mod_id bundled_example( "Lua_First_Example" );
+    REQUIRE( bundled_example.is_valid() );
+    const MOD_INFORMATION &info = bundled_example.obj();
+    REQUIRE( info.lua_platform_version == cata::lua_platform::platform_version );
+    REQUIRE( info.lua_platform_error.empty() );
+    REQUIRE( info.version == "0.1.0" );
+    REQUIRE( info.dependencies == std::vector<mod_id> { MOD_INFORMATION_dda } );
+    REQUIRE( info.mod_root_path.get_unrelative_path() ==
+             PATH_INFO::moddir().get_unrelative_path() / "Lua_First_Example" );
+    REQUIRE( info.lua_platform_entry.get_unrelative_path() ==
+             PATH_INFO::moddir().get_unrelative_path() /
+             "Lua_First_Example" / "main.lua" );
+
+    const cata::lua_platform::mod_source source = {
+        bundled_example.str(),
+        info.mod_root_path.get_unrelative_path(),
+        info.lua_platform_entry.get_unrelative_path()
+    };
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods( { source }, error ) );
+    CHECK( error.empty() );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    CHECK( error.empty() );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    CHECK( error.empty() );
+
+    cata::lua_platform::commit_prepared_mods();
+    CHECK( cata::lua_platform::loaded_mod_ids() ==
+           std::vector<std::string> { bundled_example.str() } );
+
+    cata::lua_platform::shutdown();
+    CHECK( cata::lua_platform::loaded_mod_ids().empty() );
+}
+#endif

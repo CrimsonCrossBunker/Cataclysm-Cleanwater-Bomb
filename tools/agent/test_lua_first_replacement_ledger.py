@@ -1,16 +1,100 @@
+import copy
+import json
 import unittest
+from pathlib import Path
+
+from jsonschema import Draft202012Validator
 
 from tools.agent.generate_lua_first_replacement_ledger import (
     IMPLEMENTED_VERIFIED,
     INVENTORIES,
     BOUNDED_IMPLEMENTED_VERIFIED,
+    TODO_CLASSIFICATIONS,
     build_ledger,
+    classify_migration_todo,
     legacy_evidence,
     normalize_evidence,
 )
 
 
 class LuaFirstReplacementLedgerTest(unittest.TestCase):
+    def test_schema_requires_each_todo_category_and_core_input_contract(self):
+        schema_root = Path(__file__).resolve().parents[2] / "ai"
+        schema_path = schema_root / "lua-first-replacement-ledger.schema.json"
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        generated = build_ledger()
+        validator = Draft202012Validator(schema)
+
+        self.assertEqual(list(validator.iter_errors(generated)), [])
+
+        for category in TODO_CLASSIFICATIONS:
+            duplicate = copy.deepcopy(generated)
+            classifications = duplicate["migration_todo_policy"][
+                "classifications"
+            ]
+            duplicate_index = next(
+                index
+                for index, entry in enumerate(classifications)
+                if entry["id"] != category
+            )
+            classifications[duplicate_index]["id"] = category
+            self.assertTrue(
+                list(validator.iter_errors(duplicate)),
+                category,
+            )
+
+        for category, expected in (
+            ("platform_gap", False),
+            ("auto_fix", True),
+        ):
+            mismatch = copy.deepcopy(generated)
+            entry = next(
+                item
+                for item in mismatch["migration_todo_policy"][
+                    "classifications"
+                ]
+                if item["id"] == category
+            )
+            entry["platform_core_input"] = expected
+            self.assertTrue(
+                list(validator.iter_errors(mismatch)),
+                category,
+            )
+
+    def test_migration_todo_policy_is_orthogonal_and_conservative(self):
+        policy = build_ledger()["migration_todo_policy"]
+        self.assertEqual(policy["scope"], "individual_migration_todo")
+        self.assertEqual(
+            policy["orthogonal_to"],
+            "selector_disposition_and_verification_status",
+        )
+        self.assertEqual(policy["unclassified"], "error")
+        self.assertEqual(policy["platform_core_input"], "platform_gap")
+        self.assertEqual(
+            [entry["id"] for entry in policy["classifications"]],
+            list(TODO_CLASSIFICATIONS),
+        )
+        self.assertEqual(
+            [
+                entry["id"]
+                for entry in policy["classifications"]
+                if entry["platform_core_input"]
+            ],
+            ["platform_gap"],
+        )
+
+    def test_migration_todo_classification_validates_all_categories(self):
+        for category in TODO_CLASSIFICATIONS:
+            self.assertEqual(classify_migration_todo(category), category)
+        with self.assertRaisesRegex(
+            ValueError, "unknown migration TODO classification"
+        ):
+            classify_migration_todo(None)
+        with self.assertRaisesRegex(
+            ValueError, "unknown migration TODO classification"
+        ):
+            classify_migration_todo("selector_todo")
+
     def test_verified_promotions_are_disabled_until_the_final_gate(self):
         self.assertEqual(IMPLEMENTED_VERIFIED, frozenset())
         self.assertEqual(BOUNDED_IMPLEMENTED_VERIFIED, frozenset())

@@ -9,9 +9,47 @@ from pathlib import Path
 
 import yaml
 
+try:
+    from migration_todo import (
+        TODO_CLASSIFICATIONS,
+        TodoCategory,
+        validate_todo_category,
+    )
+except ModuleNotFoundError:
+    from tools.agent.migration_todo import (
+        TODO_CLASSIFICATIONS,
+        TodoCategory,
+        validate_todo_category,
+    )
+
 
 ROOT = Path(__file__).resolve().parents[2]
 OUTPUT = ROOT / "ai" / "lua-first-replacement-ledger.yml"
+
+
+def classify_migration_todo(category: object) -> TodoCategory:
+    """Return an explicitly supplied, validated per-TODO category."""
+    return validate_todo_category(category)
+
+
+def migration_todo_policy() -> dict:
+    """Describe per-TODO policy independently from selector verification."""
+    return {
+        "scope": "individual_migration_todo",
+        "orthogonal_to": "selector_disposition_and_verification_status",
+        "unclassified": "error",
+        "platform_core_input": "platform_gap",
+        "classifications": [
+            {
+                "id": category,
+                "platform_core_input": values["platform_core_input"],
+                "definition": values["definition"],
+            }
+            for category, values in TODO_CLASSIFICATIONS.items()
+        ],
+    }
+
+
 INVENTORIES = {
     "json-object-types": (
         ROOT / "data/reference/json/ccb_json_object_types.json",
@@ -4622,6 +4660,7 @@ def build_ledger() -> dict:
             "Verified entries are reserved for the final semantic gate and "
             "must carry native behavior plus real JSON/EOC evidence."
         ),
+        "migration_todo_policy": migration_todo_policy(),
         "sources": sources,
         "summary": {
             "total": len(entries),

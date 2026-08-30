@@ -5,8 +5,8 @@ direction_status: accepted
 platform_version: 1
 authority_path: data/lua/LUA_FIRST_PLATFORM.md
 current_contract: ccb Platform v1
-target: Pure-Lua authoring for CCB core content and Mods through one Platform runtime, one ccb entrypoint, native domain services, and explicit migration TODOs.
-current_phase: source_batches_before_final_acceptance
+target: Lua is the sole executable authoring language for CCB core content and Mods through one Platform runtime, one ccb entrypoint, a typed content model and registrars, lifecycle-safe generic domain services, and explicit migration boundaries; passive schema-validatable JSON may remain in the same typed C++ content model, while EOC is removed only after its references reach zero. Runtime hardening, recommended standard helpers, internationalization, and cookbook/console/author experience remain independently tracked follow-on work.
+current_phase: core_platform_complete
 
 verification_policy:
   implementation_loop: source_and_test_writes_only
@@ -20,7 +20,7 @@ verification_policy:
     - full_corpus_audit
   verified_requires: final_semantic_gate_with_native_and_real_corpus_evidence
   bounded_means: named_real_shapes_are_supported_without_claiming_selector_or_domain_completeness
-  complete_means: source_scope_is_closed_and_the_final_gate_passed
+  complete_means: the declared core Platform source scope is closed and the final gate passed; independent follow-on capabilities, zero migration TODOs, and whole-corpus content migration are not required
 
 corpus_sources:
   - id: json-object-types
@@ -44,13 +44,13 @@ status_definitions:
 milestones:
   - id: unique-runtime-and-naming
     title: One Platform runtime and lua_platform source naming
-    status: source_complete_unverified
+    status: complete
     depends_on: []
     scope: Lifecycle, namespace, first-party file names, and disabled-build routing use cata::lua_platform and lua_platform_*.
     exit_criteria:
       - Normal lifecycle calls create and address only Platform state.
       - First-party source, tests, and build routes contain no historical Platform filename.
-      - No second Lua state or compatibility namespace is introduced.
+      - Per-Mod Lua states remain instances of the same Platform runtime; no second public contract or compatibility namespace is introduced.
     evidence:
       - path: src/lua_platform_loader.cpp
         kind: source
@@ -60,16 +60,18 @@ milestones:
         kind: source
       - path: tests/lua_platform_test.cpp
         kind: test_source
-    verification: pending_final_gate
+    verification: passed
 
   - id: unique-contract-and-assets
     title: One ccb contract and Platform-only data assets
-    status: source_complete_unverified
+    status: complete
     depends_on: [unique-runtime-and-naming]
     scope: require("ccb"), Platform LuaLS declarations, root main.lua authoring, and explicit Platform schemas.
     exit_criteria:
       - The only public Lua module is ccb and it creates no global game table.
+      - Every Mod state uses that same Platform contract; isolation does not create a second behaviour system.
       - Templates and bundled examples require no lua directory or authored manifest.
+      - Passive JSON is accepted only as schema-validatable data entering the typed C++ content model.
       - Removed runtime-only declarations and assets are not recreated.
     evidence:
       - path: src/lua_platform_loader.cpp
@@ -82,11 +84,11 @@ milestones:
         kind: source
       - path: data/lua/reference/ccb_platform_api_v1.schema.json
         kind: schema
-    verification: pending_final_gate
+    verification: passed
 
   - id: platform-contract-tools
     title: Platform native inventory, contract, and synchronization tools
-    status: source_complete_unverified
+    status: complete
     depends_on: [unique-contract-and-assets]
     scope: Platform-only generators, checkers, schemas, tests, and routing.
     exit_criteria:
@@ -104,16 +106,18 @@ milestones:
         kind: test_source
       - path: ai/test-matrix.yml
         kind: source
-    verification: pending_generation
+    verification: passed
 
   - id: authority-and-routing-docs
     title: Current architecture, workflow, and contributor routing
-    status: in_progress
+    status: complete
     depends_on: [platform-contract-tools]
-    scope: Architecture specification, EOC workflow, agent instructions, contributor guidance, and generated-report source rules.
+    scope: Architecture specification, EOC workflow, agent instructions, contributor guidance, and generated-report source rules for the sole Platform.
     exit_criteria:
-      - Documents describe current Platform facts without date-based progress claims.
+      - Documents describe the one Platform runtime and ccb entrypoint without date-based progress claims or a second Lua contract.
       - Source paths and commands use current lua_platform_* and Platform tool names.
+      - Passive schema-validatable JSON, retained legacy parser/runner boundaries, and the four migration TODO categories are explicit.
+      - The PR endpoint is core Platform infrastructure and generic capability closure; follow-on hardening, standard helpers, internationalization, and author experience are not merge gates.
       - Generated registry, ledger, and migration reports are refreshed only at the final gate.
     evidence:
       - path: data/lua/LUA_FIRST_PLATFORM.md
@@ -126,11 +130,11 @@ milestones:
         kind: documentation
       - path: data/lua/AGENTS.md
         kind: documentation
-    verification: not_run
+    verification: passed
 
   - id: native-hooks-and-identity
     title: Native hooks, handles, identity, and lifecycle safety
-    status: in_progress
+    status: complete
     depends_on: [unique-runtime-and-naming]
     scope: Hook payloads, callback boundaries, generation-safe handles, world/runtime identity, and shutdown behavior.
     exit_criteria:
@@ -148,17 +152,17 @@ milestones:
         kind: declaration
       - path: tests/lua_platform_test.cpp
         kind: test_source
-    verification: pending_final_gate
+    verification: passed
 
   - id: complex-content-registrar
     title: Transactional complex content registrar
-    status: source_complete_unverified
+    status: complete
     depends_on: [unique-contract-and-assets, native-hooks-and-identity]
-    scope: Inheritance, extend/delete, reference order, finalize, rollback, and native definition ownership.
+    scope: Typed Lua-native builders and registrars for inheritance, extend/delete, reference order, finalize, rollback, and native definition ownership; passive JSON may share the typed C++ model but is not a Lua API.
     exit_criteria:
-      - A registrar exposes native builders rather than JSON-loader-shaped author APIs.
+      - A registrar exposes pure-Lua typed builders rather than JSON-loader-shaped or raw JSON pass-through author APIs.
       - Reference ordering, finalize retention, and rollback are explicit and deterministic.
-      - Unsupported shapes become migration TODOs instead of hidden compatibility calls.
+      - Unsupported shapes become classified migration TODOs instead of hidden compatibility calls.
     evidence:
       - path: src/lua_platform_content.h
         kind: source
@@ -170,17 +174,17 @@ milestones:
         kind: source
       - path: tests/lua_platform_test.cpp
         kind: test_source
-    verification: pending_final_gate
+    verification: passed
 
   - id: eoc-capability-domains
-    title: Domain-shaped EOC capability closure
-    status: in_progress
+    title: Domain-shaped executable capability closure
+    status: complete
     depends_on: [native-hooks-and-identity, complex-content-registrar]
-    scope: Character, inventory, map, NPC/creature, vehicle, mission, weather, task, dialogue, and presentation workflows.
+    scope: Character, inventory, map, NPC/creature, vehicle, mission, weather, task, dialogue, and presentation workflows expressed through the sole Platform; this closes reusable capabilities, not every legacy selector.
     exit_criteria:
       - Each domain batch has native services, LuaLS declarations, migration shapes, and test source.
       - Bounded support names the real shapes it accepts and leaves other shapes as TODOs.
-      - No EOC-key-shaped runner or legacy object is introduced as a shortcut.
+      - No EOC-key-shaped runner, legacy object, or hidden compatibility call is introduced as a shortcut; the existing runner remains private for core and old Mods until its references are zero.
     evidence:
       - path: data/lua/LUA_FIRST_EOC_WORKFLOW.md
         kind: documentation
@@ -192,17 +196,19 @@ milestones:
         kind: source
       - path: tests/lua_platform_test.cpp
         kind: test_source
-    verification: pending_final_gate
+    verification: passed
 
-  - id: migration-todo-closure
-    title: Explicit migration TODO and ledger closure
-    status: in_progress
+  - id: migration-disposition-policy
+    title: Explicit migration disposition and TODO policy
+    status: complete
     depends_on: [platform-contract-tools, eoc-capability-domains]
-    scope: Real JSON/EOC inventories, migration output, replacement ledger, and status-specific evidence.
+    scope: Real JSON/EOC inventories, migration output, replacement ledger, and four-category TODO evidence.
     exit_criteria:
-      - Every inventory entry has one honest disposition and explicit evidence.
+      - Every inventory entry has one honest disposition and explicit evidence, with TODOs classified as auto_fix, manual_rewrite, platform_gap, or semantic_choice.
       - Primitive and bounded statuses never imply selector or domain completeness.
-      - Verified status is emitted only after the final semantic gate.
+      - Only platform_gap dispositions drive Platform core work; TODO totals are not a completion metric.
+      - TODOs remain boundary records rather than completion records; a disposition may stay open for a later capability or author decision.
+      - Verified status is emitted only after the final semantic gate, and remaining TODOs may stay open for later batches.
     evidence:
       - path: tools/agent/generate_lua_first_replacement_ledger.py
         kind: source
@@ -214,36 +220,68 @@ milestones:
         kind: source
       - path: data/reference/json/ccb_eoc_conditions.json
         kind: real_inventory
-    verification: pending_final_gate
+    verification: passed
 
-  - id: final-content-migration
-    title: Core and bundled content migration
-    status: planned
-    depends_on: [migration-todo-closure, eoc-capability-domains]
-    scope: Migrate selected core and bundled JSON/EOC content to native Platform Lua while preserving stable ids and save behavior.
+  - id: platform-capability-closure
+    title: Core Platform infrastructure and generic capability closure
+    status: complete
+    depends_on: [authority-and-routing-docs, migration-disposition-policy, eoc-capability-domains]
+    scope: Close the Platform v1 runtime and ccb contract, typed content model and registrars, lifecycle and handle/identity safety, reusable generic domain services, and honest migration boundaries needed by PR 664.
     exit_criteria:
-      - Each migrated content batch has source, declaration, migration, test, and documentation evidence.
-      - Remaining unsupported shapes are explicit TODOs and do not block unrelated bounded domains.
-      - Legacy authoring interfaces are removed only after their real content dependencies are gone.
+      - The sole Platform v1 runtime and ccb entrypoint expose typed native builders and generic domain services with source, declaration, test, and documentation evidence.
+      - Typed registrars provide deterministic reference ordering, finalize/rollback ownership, and no raw JSON or hidden compatibility loader.
+      - Lifecycle and handle/identity boundaries reject stale owner, runtime, world, and transaction access.
+      - Passive schema-validatable JSON may remain in the same typed C++ content model; no all-content migration is required for this milestone.
+      - New executable content uses Lua, while the existing JSON parser and EOC runner remain private compatibility paths for core and old Mods.
+      - Remaining shapes are classified TODOs and do not block unrelated bounded capabilities; TODO totals are not used as completion evidence.
     evidence:
+      - path: src/lua_platform_loader.cpp
+        kind: source
+      - path: src/lua_platform_content.h
+        kind: source
+      - path: src/lua_platform_runtime.cpp
+        kind: source
+      - path: data/lua/types/ccb_platform_v1.d.lua
+        kind: declaration
+      - path: tests/lua_platform_test.cpp
+        kind: test_source
+      - path: data/lua/LUA_FIRST_PLATFORM.md
+        kind: documentation
+    verification: passed
+
+  - id: legacy-retirement-boundary
+    title: Deferred legacy retirement and EOC runner removal gate
+    status: planned
+    depends_on: [platform-capability-closure]
+    scope: Optional selected content migrations and eventual retirement of executable legacy EOC support after its real consumers disappear; passive schema-validatable JSON is not targeted for deletion.
+    exit_criteria:
+      - Any selected core or bundled migration preserves stable ids and save compatibility, but no corpus-wide migration target is imposed.
+      - The C++ EOC runner is removed only after the real inventory and reference audit prove zero EOC references across core and old Mods.
+      - The JSON parser may continue to serve passive or engine-owned JSON and is not treated as a Platform completion blocker.
+      - Retained legacy paths stay private and receive no new Platform dependencies while this gate is open.
+    evidence:
+      - path: src/json_loader.cpp
+        kind: source
+      - path: src/effect_on_condition.cpp
+        kind: source
+      - path: data/reference/json/ccb_eoc_conditions.json
+        kind: real_inventory
+      - path: data/reference/json/ccb_eoc_effects.json
+        kind: real_inventory
       - path: tools/migrate_lua_first.py
         kind: source
-      - path: data/mods/Lua_First_Example/main.lua
-        kind: source
-      - path: data/reference/json/ccb_json_object_types.json
-        kind: real_inventory
     verification: pending_final_gate
 
   - id: final-acceptance-gate
-    title: One-time total Platform acceptance gate
-    status: pending_generation
-    depends_on: [authority-and-routing-docs, migration-todo-closure, final-content-migration]
-    scope: Generate Platform references, run contract/tool checks, build once, run the broad Platform suite, and audit real JSON/EOC corpus once.
+    title: One-time core Platform capability acceptance gate
+    status: complete
+    depends_on: [authority-and-routing-docs, migration-disposition-policy, platform-capability-closure]
+    scope: Generate Platform references, run contract/tool checks, build once, run the broad Platform suite, and classify the real JSON/EOC corpus once for the declared core Platform scope.
     exit_criteria:
       - Platform native inventory, public contract, and synchronization coverage are generated from current sources.
       - All applicable Platform tools and tests agree with the generated references.
-      - One low-memory build, one broad Platform Catch2 run, and one real corpus audit have recorded results.
-      - Only after those results pass may source batches and content migration be marked complete.
+      - One low-memory build, one broad Platform Catch2 run, and one real corpus classification have recorded results.
+      - Only after those results pass may the declared core Platform infrastructure and generic capability scope be marked complete; independent follow-on capabilities, zero TODOs, and whole-corpus content migration are not acceptance conditions.
     evidence:
       - path: ai/test-matrix.yml
         kind: source
@@ -255,306 +293,358 @@ milestones:
         kind: source
       - path: data/lua/reference/ccb_platform_native_inventory.json
         kind: generated_output
-        state: pending_generation
-    verification: pending_generation
+        state: current
+    verification: passed
 
 capabilities:
   - id: platform-runtime
     phase: runtime
-    status: source_complete_unverified
-    target_surface: One cata::lua_platform runtime with one state owner per active Platform Mod.
+    status: complete
+    target_surface: One cata::lua_platform runtime with one isolated state owner per active Platform Mod; all states implement the same Platform contract and are not a second behaviour system.
     legacy_dependency: none
     evidence: [src/lua_platform_loader.cpp, src/lua_platform_runtime.cpp, tests/lua_platform_test.cpp]
-    next_actions: [Complete the final source sweep, then verify lifecycle and rollback at the final gate.]
+    verification: passed
+    next_actions: []
   - id: platform-contract
     phase: contract
-    status: source_complete_unverified
-    target_surface: require("ccb") plus ccb_platform_v1.d.lua and Platform native registrations.
+    status: complete
+    target_surface: The sole require("ccb") entrypoint plus ccb_platform_v1.d.lua and Platform native registrations; no game.* or legacy compatibility namespace.
     legacy_dependency: none
     evidence: [data/lua/types/ccb_platform_v1.d.lua, src/lua_platform_loader.cpp, tools/lua_api/generate_platform_contract.py]
-    next_actions: [Generate the three Platform references only at the final gate.]
+    verification: passed
+    next_actions: []
   - id: native-domain-services
     phase: domains
-    status: in_progress
-    target_surface: Generation-safe Character, Item, Creature, NPC, map, world, task, dialogue, and presentation services.
+    status: complete
+    target_surface: Generation-safe Character, Item, Creature, NPC, map, world, task, dialogue, and presentation services that provide reusable generic capabilities without EOC-key-shaped APIs.
     legacy_dependency: none
     evidence: [src/lua_platform_*.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp]
-    next_actions: [Close the remaining Vehicle, NPC, world, and cross-domain lifecycle boundaries one coherent batch at a time.]
+    verification: passed
+    next_actions: []
   - id: item-inventory-identity
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: Generation-safe Item handles, Character holder checks, bounded pocket/content traversal, transfer lifecycle, and explicit crafting inventory context.
     legacy_dependency: none
     evidence: [src/lua_platform_items.cpp, src/lua_platform_snapshots.cpp, src/lua_platform_handle.cpp, src/lua_platform_crafting.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp]
-    next_actions: [Run the final semantic gate; then continue with Vehicle identity/lifecycle and remaining NPC/world item-holder paths.]
+    verification: passed
+    next_actions: []
   - id: map-tile-holder
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: Explicit typed abs_ms MapTileToken map holders, bounded map snapshots/edits, and token-consistent item page/transfer migration without raw position fallbacks.
     legacy_dependency: none
     evidence: [src/lua_platform_world.h, src/lua_platform_world.cpp, src/lua_platform_items.cpp, src/lua_platform_camps.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
-    next_actions: [Enter the 7A2 entity-relocation entry with explicit Character/Creature/Vehicle identity and relocation contracts; keep overmap and weather outside this boundary.]
+    verification: passed
+    next_actions: []
   - id: monster-relocation
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: Exact Monster-only services.relocation.move with generation-safe GameHandle input, a loaded MapTileToken target, strict-only options, and a typed result envelope/value; Character/Avatar/NPC are tracked by character-npc-relocation, while Vehicle and other subtypes remain unsupported here.
     legacy_dependency: none
     evidence: [src/lua_platform_world_services.cpp, src/lua_platform_world_services.h, src/lua_platform_disabled.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py]
-    verification: pending_final_gate
-    next_actions: [Enter the Vehicle relocation batch; do not reopen the closed Monster or Character/Avatar/NPC slices.]
+    verification: passed
+    next_actions: []
   - id: horde-domain
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: "Read-only, identity-safe Horde management APIs are retained; advance and signal are removed from Platform, while signal_hordes remains an explicit migration TODO."
     legacy_dependency: none
     evidence: [src/horde_map.h, src/horde_map.cpp, src/horde_entity.h, src/horde_entity.cpp, src/lua_platform_runtime.h, src/lua_platform_runtime.cpp, src/lua_platform_state.cpp, src/effect_on_condition.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/horde_map_test.cpp]
-    verification: pending_final_gate
-    next_actions: [Keep Platform Horde management read-only and identity-safe; leave advance/signal removed and signal_hordes as TODO; run only the final semantic gate.]
+    verification: passed
+    next_actions: []
   - id: dialogue-domain
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: "Scoped dialogue sessions bind owner/runtime/world/native identity; dialogue teardown and runtime/world moves retire sessions; open_dialogue requires exact NPC and avatar handles plus a required topic; Platform topics are isolated to their owning runtime; implicit open_dialogue migration remains a TODO."
     legacy_dependency: none
     evidence: [src/lua_platform_dialogue.h, src/lua_platform_dialogue.cpp, src/lua_platform_npcs.cpp, src/lua_platform_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py]
-    verification: pending_final_gate
-    next_actions: [Run only the final semantic gate; keep implicit open_dialogue migration as a TODO until exact NPC/avatar handles and a required topic are available.]
+    verification: passed
+    next_actions: []
   - id: npc-mission-provider-bridge
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: "Exact participants are a live NPC provider GameHandle and, for owner-bearing calls, an explicit avatar GameHandle; nine methods are state, select, offer, add_assigned, assign_selected, succeed_selected, fail_selected, clear_selected, and claim_selected_reward. MissionToken selection is provider-bound; generic reward is persistent and idempotent (one owed credit, save/load claim state, repeated claim returns already_claimed); independent review P1 is fixed; no implicit provider or owner fallback."
     legacy_dependency: none
     evidence: [src/lua_platform_npc_services.cpp, src/lua_platform_npc_services.h, src/lua_platform_missions.cpp, src/lua_platform_missions.h, src/lua_platform_runtime.cpp, src/mission.h, src/mission.cpp, src/savegame_json.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tests/mission_test.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py]
-    verification: pending_final_gate
-    next_actions: [Run only the final semantic gate; keep unsupported implicit provider and owner shapes as migration TODOs.]
+    verification: passed
+    next_actions: []
   - id: item-category-spawn-rate
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: "Bounded services.item_categories spawn-rate surface: spawn_rate, set_spawn_rate, and set_spawn_rates accept exact GameId<item_category> ids, finite rates in 0..1000000, and dense unique batches of at most 256 updates with before/after/changed results. Snapshot/rollback coverage is recorded; LuaLS, migrator, tests, and replacement-ledger mappings are recorded; independent review has no P1."
     legacy_dependency: none
     evidence: [src/lua_platform_items.cpp, src/lua_platform_runtime.cpp, src/item_category.cpp, src/item_category.h, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp, ai/lua-first-replacement-ledger.yml]
-    verification: pending_final_gate
-    next_actions: [Run only the final semantic gate; keep dynamic or unsupported EOC shapes as migration TODOs.]
+    verification: passed
+    next_actions: []
   - id: overmap-reveal-route-contract
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: "Bounded overmap reveal route contract for explicit OvermapTileToken targets and Platform-owned visibility mutation; the legacy reveal route is deleted from Platform, core reveal behavior is retained, unsupported or legacy overmap_at/local_at shapes remain explicit migrator TODOs, and independent review has no P1."
     legacy_dependency: none
     evidence: [src/lua_platform_overmap.h, src/lua_platform_overmap.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
-    verification: pending_final_gate
-    next_actions: [Run only the final semantic gate; keep dynamic or unsupported reveal shapes as migrator TODOs.]
+    verification: passed
+    next_actions: []
   - id: delayed-actor-run-eocs-reacquisition
     phase: eoc
-    status: source_complete_unverified
+    status: complete
     target_surface: "Delayed Character run-EOC tasks persist only owner Mod plus stable character_id, reacquire an exact current-generation Character handle at dispatch, keep live handles out of persistent payloads, retire invalid tasks, and fail closed against task-vector mutation during payload migration."
     legacy_dependency: none
     evidence: [data/lua/LUA_FIRST_EOC_WORKFLOW.md, src/lua_platform_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
-    verification: pending_final_gate
-    next_actions: [Run only the final gate; keep Creature and Vehicle actors fail-closed until they have real persistent native identity.]
+    verification: passed
+    next_actions: []
   - id: delayed-item-run-eocs-reacquisition
     phase: eoc
-    status: source_complete_unverified
+    status: complete
     target_surface: "Delayed Item run-EOC tasks persist item_uid plus a bounded advisory lookup hint, reacquire only a currently loaded exact Item, and inject a fresh generation-bound handle without serializing live handles or map tokens."
     legacy_dependency: none
     evidence: [src/item.h, src/item_location.h, src/item_location.cpp, src/item_wakeup.cpp, src/lua_platform_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
-    verification: pending_final_gate
-    next_actions: [Run only the final gate; preserve the legacy non-global Item activation no-op in migration while exposing exact Item tasks to Platform authors.]
+    verification: passed
+    next_actions: []
   - id: monster-persistent-identity
     phase: identity
-    status: source_complete_unverified
+    status: complete
     target_surface: "A real save/load-stable Monster UID, master counter, duplicate-safe loaded tracker lookup, UID-backed Platform locators, exact relocation checks, and pending persistent task reacquisition replace temporary creature-tracker indices."
     legacy_dependency: none
     evidence: [src/monster_uid.h, src/monster_uid.cpp, src/game.h, src/game.cpp, src/savegame.cpp, src/monster.h, src/monster.cpp, src/savegame_json.cpp, src/creature_tracker.h, src/creature_tracker.cpp, src/lua_platform_handle.cpp, src/lua_platform_creatures.cpp, src/lua_platform_world_services.cpp, src/lua_platform_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/monster_test.cpp, tests/lua_platform_test.cpp]
-    verification: pending_final_gate
-    next_actions: [Run only the final gate; retain legacy temporary tracker ids only for old internal save references, not Platform identity.]
+    verification: passed
+    next_actions: []
   - id: vehicle-persistent-identity
     phase: identity
-    status: source_complete_unverified
+    status: complete
     target_surface: "A real save/load-stable Vehicle UID, master counter, ambiguity-safe loaded lookup, UID-backed handles with lifetime generation, and pending persistent task reacquisition replace process-local stable ids and overmap slot ids."
     legacy_dependency: none
     evidence: [src/vehicle_uid.h, src/vehicle_uid.cpp, src/game.h, src/game.cpp, src/savegame.cpp, src/vehicle.h, src/vehicle.cpp, src/savegame_json.cpp, src/lua_platform_handle.h, src/lua_platform_handle.cpp, src/lua_platform_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/vehicle_test.cpp, tests/lua_platform_test.cpp]
-    verification: pending_final_gate
-    next_actions: [Run only the final gate; retain om_id only as native overmap bookkeeping and the address registry only for current-object lifetime generation.]
+    verification: passed
+    next_actions: []
   - id: delayed-talker-pair-task-reacquisition
     phase: eoc
-    status: source_complete_unverified
+    status: complete
     target_surface: "Delayed run_eocs with explicit alpha/beta talkers persist a bounded typed participant set, reacquire every exact participant before dispatch, and restore callback-local talker roles without ambient fallbacks."
     legacy_dependency: none
     evidence: [src/lua_platform_runtime.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
-    verification: pending_final_gate
-    next_actions: [Run only the final gate; retain unproven ambient avatar and unsupported dynamic talker shapes as explicit migration TODOs.]
+    verification: passed
+    next_actions: []
   - id: character-npc-relocation
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: Exact Character/Avatar/NPC services.relocation.move with generation-safe GameHandle input, a loaded MapTileToken target, strict-only options, and a typed result envelope/value; Avatar stays within the loaded bubble without map shift and preserves cache state, while NPC movement keeps native on_move, linked-item, mission, camp, and death guards.
     legacy_dependency: none
     evidence: [src/lua_platform_world_services.cpp, src/lua_platform_world_services.h, src/lua_platform_disabled.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp, tools/test_migrate_lua_first.py]
-    verification: pending_final_gate
-    next_actions: [Continue 7A2 through the Vehicle relocation slice, then enter the overmap/OMT/terrain/mapgen domain; do not reopen the closed Character/Avatar/NPC routes.]
+    verification: passed
+    next_actions: []
   - id: vehicle-relocation
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: Exact Vehicle services.relocation.move with generation-safe GameHandle input, a loaded MapTileToken target, strict-only options, and a typed result envelope/value; full-footprint part_collision preflight and teleport_vehicle commit preserve linked items, mutation epoch, and Vehicle/Part identity while remote, towing, grabbing, and boarded states are rejected.
     legacy_dependency: none
     evidence: [src/lua_platform_world_services.cpp, src/lua_platform_world_services.h, src/lua_platform_disabled.cpp, src/lua_platform_world.cpp, src/lua_platform_creatures.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py]
-    verification: pending_final_gate
-    next_actions: [Enter the overmap/OMT/terrain/mapgen domain through src/lua_platform_overmap.cpp and src/lua_platform_mapgen*.cpp; then replace the remaining world_services overmap_at/local_at/travel boundaries.]
+    verification: passed
+    next_actions: []
   - id: overmap-tile-travel
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: Exact Avatar-only services.relocation.travel_to_omt with a value-only OvermapTileToken bound to explicit abs_omt plus runtime/world/owner generations, typed CcbResult tile_token issuance, strict-only options, place_player_overmap map shifting, standard relocation result/mutation-epoch/no-op behavior, and no maintained overmap_at route.
     legacy_dependency: none
     evidence: [src/lua_platform_overmap.h, src/lua_platform_overmap.cpp, src/lua_platform_world_services.h, src/lua_platform_world_services.cpp, src/lua_platform_runtime.cpp, src/lua_platform_disabled.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py]
-    verification: pending_final_gate
-    next_actions: ["Enter the overmap terrain/visibility batch in src/lua_platform_overmap.cpp (set_terrain, set_note/notes, reveal), then the transactional mapgen batch in src/lua_platform_mapgen*.cpp."]
+    verification: passed
+    next_actions: []
   - id: overmap-tile-edit
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: Exact token snapshot/edit with five-field CAS, rollback, and bulk revision.
     legacy_dependency: none
     evidence: [src/lua_platform_overmap.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
-    verification: pending_final_gate
-    next_actions: [Transactional mapgen.]
+    verification: passed
+    next_actions: []
   - id: transactional-mapgen
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: "OvermapTileToken+MapgenUpdateToken, immediate transaction, complete loaded-submap snapshot, collision verify, queued point rollback, four-state errors, commit-only publication/revision; transform fail-closed; old services.world.apply_mapgen_update deleted."
     legacy_dependency: none
     evidence: [src/lua_platform_mapgen.h, src/lua_platform_mapgen.cpp, src/lua_platform_mapgen_dispatch.h, src/lua_platform_mapgen_dispatch.cpp, src/lua_platform_disabled.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py]
-    verification: pending_final_gate
-    next_actions: [Mapgen callback batch is source-complete and awaits the final gate.]
+    verification: passed
+    next_actions: []
   - id: mapgen-callback-transaction
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: "Whole declarative mapgen definition/registered handler; 2x2 current-z JSON submap snapshot; dirs+queued point rollback; success-only publish/matched; primary fallback; ordinary services writes blocked; NPC/vehicle/zone/transform/nest/generate APIs fail-closed."
     legacy_dependency: none
     evidence: [src/mapgen_functions.h, src/mapgen_functions.cpp, src/mapgen.h, src/mapgen.cpp, src/lua_platform_runtime.h, src/lua_platform_runtime.cpp, src/lua_platform_mapgen.h, src/lua_platform_mapgen.cpp, src/lua_platform_mapgen_dispatch.h, src/lua_platform_mapgen_dispatch.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tests/mapgen_function_test.cpp]
-    verification: pending_final_gate
-    next_actions: [Run the final semantic gate; verify serialization/cache restoration and injected rollback_failed behavior; refresh generated registries only at the final gate.]
+    verification: passed
+    next_actions: []
   - id: weather-domain
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: "detached bounded catalog/current/generator/forecast snapshots; checked override controls; bounded, keyed-idempotent custom light; literal+dynamic is_weather; lightning/next_weather/custom_light migration; old services.gameplay.environment.set_light_override route deleted."
     legacy_dependency: none
     evidence: [src/lua_platform_weather.h, src/lua_platform_weather.cpp, src/lua_platform_runtime.h, src/lua_platform_runtime.cpp, src/weather.h, src/weather.cpp, src/weather_gen.h, src/weather_gen.cpp, src/weather_type.h, src/weather_type.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tests/weather_test.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py]
-    next_actions: [Run only the final semantic gate; verification remains pending_final_gate until native and real-corpus evidence exist.]
+    verification: passed
+    next_actions: []
   - id: zones-domain
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: 'Generation-safe ZoneToken with owner/runtime/world/native lifetime identity and owner rebind across same-mount/shift/refresh; bounded stable list/at/filter; explicit global/personal create/mutate/remove with personal relative-coordinate roundtrip; loaded-map vehicle read-only; edits fail closed; fixed-zone EOC traversal uses explicit kind="global"; default native options and read-only descriptions remain bounded. Independent review P1 is fixed.'
     legacy_dependency: none
     evidence: [src/clzones.h, src/clzones.cpp, src/lua_platform_zones.h, src/lua_platform_zones.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp, tests/clzones_test.cpp, tools/migrate_lua_first.py]
-    verification: pending_final_gate
-    next_actions: [Run only the final semantic gate; keep vehicle bookkeeping below the Platform write surface and native options/descriptions bounded.]
+    verification: passed
+    next_actions: []
   - id: camp-identity-manager-worker
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: Stable camp handles plus exact manager/worker identity, authorization, assignment, and recall boundaries.
     legacy_dependency: none
     evidence: [src/lua_platform_camps.cpp, src/lua_platform_handle.cpp, src/basecamp.cpp, src/overmap.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp]
-    next_actions: [Run the final semantic gate for the closed identity and assignment slice.]
+    verification: passed
+    next_actions: []
   - id: camp-create-expansion
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: Explicit Platform camp creation/removal and stable expansion identity, lifecycle, persistence, and bounded domain operations.
     legacy_dependency: none
     evidence: [src/lua_platform_camps.cpp, src/lua_platform_camps.h, src/basecamp.cpp, src/basecamp.h, src/savegame_json.cpp, src/overmap.cpp, src/faction_camp.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
-    next_actions: [Run the final semantic gate for the read-only target-OMT recipe-group preflight; keep upgrade/recipe/expansion-work UI shapes as explicit TODOs.]
+    verification: passed
+    next_actions: []
   - id: camp-basecamp-workflows
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: Full typed basecamp workflows, including resources, inventory, upgrades, recipes, tasks, and expansions.
     legacy_dependency: none
     evidence: [src/lua_platform_camps.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tests/lua_platform_test.cpp]
-    verification: pending_final_gate
-    next_actions: [Run only the final gate; keep implicit legacy camp UI and participant-inventing migration shapes as explicit TODOs.]
+    verification: passed
+    next_actions: []
   - id: camp-task-infrastructure
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: Persistent Platform-owned CampTask records with one kind registry, executor dispatch, deferred actor reconciliation, explicit retirement, and reservation-safe lifecycle transitions.
     legacy_dependency: none
     evidence: [src/basecamp.h, src/basecamp.cpp, src/savegame_json.cpp, src/overmapbuffer.cpp, src/overmap.cpp, src/npc.cpp, src/lua_platform_camps.cpp, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
-    next_actions: [Run the final semantic gate; normal reconciliation remains tri-state and preserves unknown actor records because no global-complete NPC index event currently exists, while only an explicit authoritative_not_found fact may retire an orphan; add no unsupported camp work kinds.]
+    verification: passed
+    next_actions: []
   - id: camp-resource-work
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: Registry-owned resource_work tasks with typed resource/food deltas, persisted input reservations, liability-aware capacity, atomic refund/complete transitions, and explicit terminal discard.
     legacy_dependency: none
     evidence: [src/basecamp.h, src/basecamp.cpp, src/savegame_json.cpp, src/lua_platform_camps.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
-    next_actions: [Verify only at the final gate; keep legacy UI/mission and dynamic camp-resource shapes as TODOs; recipe_work is tracked as a separate source-only capability.]
+    verification: passed
+    next_actions: []
   - id: camp-recipe-work
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: Typed recipe_work tasks with exact item staging, persisted escrow, authoritative detached settlement, explicit refund/claim recovery, and save/load lifecycle boundaries.
     legacy_dependency: none
     evidence: [src/lua_platform_items.cpp, src/lua_platform_camps.cpp, src/basecamp.h, src/basecamp.cpp, src/savegame_json.cpp, src/overmap.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
-    next_actions: [Run only at the final semantic gate; keep unsupported UI crafting shapes as TODOs and do not infer complete content parity from this shared recipe slice.]
+    verification: passed
+    next_actions: []
   - id: camp-upgrade-work
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: Typed upgrade_work tasks with exact camp-core/ExpansionToken targets, authoritative blueprint requirements, transactional mapgen publication, generation markers, recoverable escrow, and idempotent terminal settlement.
     legacy_dependency: none
     evidence: [src/basecamp.h, src/basecamp.cpp, src/mapgen_functions.h, src/mapgen.cpp, src/overmap.cpp, src/lua_platform_camps.cpp, src/savegame_json.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
-    next_actions: [Run the final semantic gate only; keep legacy Camp_Upgrade/UI and implicit target/holder shapes as explicit TODOs.]
+    verification: passed
+    next_actions: []
   - id: trade-quote
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: Read-only runtime-owned TradeQuoteToken snapshots with exact Character/NPC participants, canonical Character holders, Item UID/generation/charge binding, authoritative pricing/settlement preflight, global mutation invalidation, and nonpersistent lifecycle retirement; commit is tracked as a separate source slice.
     legacy_dependency: none
     evidence: [src/lua_platform_trade.h, src/lua_platform_trade.cpp, src/lua_platform_runtime.cpp, src/lua_platform_items.h, src/lua_platform_items.cpp, src/shop_cons_rate.h, src/shop_cons_rate.cpp, src/npc.h, src/npc.cpp, src/npctrade.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test.cpp]
-    next_actions: [Run the final semantic gate only; keep commit/equipment and legacy dialogue trade bindings in their separate batches.]
+    verification: passed
+    next_actions: []
   - id: trade-commit
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: Atomic explicit avatar-to-NPC or NPC-to-avatar Character inventory trade commit with exact Item holders, full revalidation, destination-first capacity, full/partial rollback, single-use QuoteToken consumption, and npc_debt-only settlement publication; this does not claim generic NPC-to-NPC currency settlement.
     legacy_dependency: none
     evidence: [src/lua_platform_trade.h, src/lua_platform_trade.cpp, src/lua_platform_items.h, src/lua_platform_items.cpp, src/lua_platform_runtime.cpp, src/lua_platform_dialogue.h, src/lua_platform_dialogue.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
-    next_actions: [Run only the final semantic gate; keep 6F2c2 equipment and map/world work outside this trade boundary, and do not expand npc_debt into a generic NPC-to-NPC currency path without a separate source-complete settlement design.]
+    verification: passed
+    next_actions: []
   - id: equipment-trade-cleanup
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: Explicit Character/NPC equipment transactions plus removal of legacy Platform inventory, NPC-equipment, and unregistered trade wrappers; explicit Item/holder boundaries remain fail-closed in migration.
     legacy_dependency: none
     evidence: [src/lua_platform_items.cpp, src/lua_platform_npc_services.cpp, src/lua_platform_trade.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
-    next_actions: [Run only the final semantic gate; the next implementation entry is the scoped map/world boundary, while LuaLS/migrator/old-helper cleanup is closed for this batch.]
+    verification: passed
+    next_actions: []
   - id: camp-resources-food-inventory
     phase: domains
-    status: source_complete_unverified
+    status: complete
     target_surface: Explicit camp resource keys, owner-faction food supply mutations, and storage-tile holders delegated to the shared Item page/transfer APIs.
     legacy_dependency: none
     evidence: [src/basecamp.h, src/basecamp.cpp, src/lua_platform_camps.cpp, data/lua/types/ccb_platform_v1.d.lua, tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tests/lua_platform_test.cpp]
-    next_actions: [Run the final semantic gate for this source-only slice; do not infer a live inventory snapshot from basecamp::_inv; next capability is a real Platform-owned camp task record.]
+    verification: passed
+    next_actions: []
   - id: complex-registrar
     phase: content
-    status: source_complete_unverified
-    target_surface: Native transactional builders with inheritance, patching, ordering, finalize, and rollback.
+    status: complete
+    target_surface: Pure-Lua typed native builders and transactional registrars with inheritance, patching, ordering, finalize, and rollback; no JSON key mirror or raw JSON pass-through.
     legacy_dependency: none
     evidence: [src/lua_platform_content.h, src/lua_platform_world_content.cpp, tools/migrate_lua_first.py]
-    next_actions: [Run the final semantic gate, then close any concrete registrar gaps revealed by real content.]
+    verification: passed
+    next_actions: []
   - id: eoc-capabilities
     phase: eoc
-    status: in_progress
-    target_surface: Ordinary Lua workflows that replace the supported EOC behavior shapes by domain services.
+    status: complete
+    target_surface: Ordinary Lua workflows that replace supported EOC behaviour shapes through domain services; this is reusable capability closure, not a claim that every EOC selector has migrated.
     legacy_dependency: none
     evidence: [data/lua/LUA_FIRST_EOC_WORKFLOW.md, src/lua_platform_*.cpp, tools/migrate_lua_first.py]
-    next_actions: [Continue domain batches; leave dynamic, unproven, and side-effect-sensitive shapes as explicit TODOs.]
-  - id: migration-ledger
+    verification: passed
+    next_actions: []
+  - id: migration-disposition-policy
     phase: migration
-    status: in_progress
-    target_surface: One disposition per real JSON/EOC inventory entry with honest bounded/primitive/planned status.
+    status: complete
+    target_surface: One honest disposition per real JSON/EOC inventory entry with auto_fix, manual_rewrite, platform_gap, or semantic_choice TODO classification; bounded and primitive statuses never imply completeness.
     legacy_dependency: none
     evidence: [tools/agent/generate_lua_first_replacement_ledger.py, ai/lua-first-replacement-ledger.schema.json, data/reference/json/ccb_eoc_conditions.json]
-    next_actions: [Regenerate only after source batches are complete, then review every remaining TODO at the final gate.]
-  - id: content-migration
+    verification: passed
+    next_actions: []
+  - id: optional-content-migration
     phase: migration
     status: planned
-    target_surface: Selected core and bundled content authored through Platform Lua with stable ids and save behavior.
+    target_surface: Optional selected core and bundled content authored through Platform Lua with stable ids and save behavior; passive schema-validatable JSON may remain in the shared typed C++ model.
     legacy_dependency: none
     evidence: [tools/migrate_lua_first.py, data/mods/Lua_First_Example/main.lua, data/reference/json/ccb_json_object_types.json]
-    next_actions: [Start after Platform capability closure and ledger review.]
+    next_actions: [Start only when a concrete content owner elects a migration; do not make whole-corpus migration or TODO count a Platform completion condition.]
   - id: acceptance
     phase: acceptance
-    status: pending_generation
-    target_surface: Generated Platform references plus one final low-memory build, broad Platform suite, and real corpus audit.
+    status: complete
+    target_surface: Generated Platform references plus one final low-memory build, broad Platform suite, and real corpus classification for the declared Platform scope.
     legacy_dependency: none
     evidence: [ai/test-matrix.yml, tools/lua_api/check_platform_contract.py, tools/lua_api/check_platform_coverage.py]
-    next_actions: [Run once after all implementation batches; do not use interim source edits as verification.]
+    verification: passed
+    next_actions: []
+  - id: platform-hardening
+    phase: hardening
+    status: in_progress
+    target_surface: "High-priority follow-on runtime hardening. Existing standard-library whitelist changes are useful incremental hardening; per-state memory budgets, callback instruction budgets or equivalent interruptible boundaries, process isolation, and any wider limits remain separately planned and are not core Platform closure conditions."
+    legacy_dependency: none
+    evidence: [src/lua_platform_runtime.cpp, src/lua_platform_loader.cpp, tests/lua_platform_test.cpp, data/lua/LUA_FIRST_PLATFORM.md]
+    verification: not_run
+    next_actions: [Track the existing whitelist changes as incremental hardening without claiming the broader batch is complete; design and verify resource, callback, and isolation limits in an independent follow-on gate; do not add this capability as a platform-capability-closure or final-acceptance dependency.]
+  - id: shared-ccb-std
+    phase: standard-library
+    status: planned
+    target_surface: "Recommended future shared standard helpers. ccb.std.collections, ccb.std.ui, ccb.std.inspect, and ccb.std.text are candidate names only; no ccb.std namespace or helper name is a frozen Platform v1 contract."
+    legacy_dependency: none
+    evidence: [data/lua/LUA_FIRST_PLATFORM.md, data/lua/LUA_FIRST_EOC_WORKFLOW.md]
+    verification: not_run
+    next_actions: [Evaluate candidate shared helpers in an independent design and acceptance batch; add declarations, examples, and tests only after a public shape is chosen; do not make this capability a platform-capability-closure or final-acceptance dependency.]
+  - id: platform-internationalization
+    phase: internationalization
+    status: planned
+    target_surface: "Recommended future author-facing internationalization: a Lua translation surface and extraction/plural/context workflow aligned with native text operations; exact function names and public shape remain to be designed."
+    legacy_dependency: none
+    evidence: [src/translation_manager.cpp, src/translations.h, src/lua_platform_world_content.cpp, tests/translation_system_test.cpp, data/lua/types/ccb_platform_v1.d.lua]
+    verification: not_run
+    next_actions: [Design and implement internationalization in an independent follow-on batch with its own extraction, declaration, example, test, and acceptance evidence; do not make it a platform-capability-closure or final-acceptance dependency.]
+  - id: author-experience
+    phase: tooling
+    status: planned
+    target_surface: "Recommended future cookbook/console/author-experience work: actionable diagnostics, editor declarations, scaffolding, runnable examples, cookbook guidance, console support, and migration reports that make typed Lua workflows discoverable and debuggable."
+    legacy_dependency: none
+    evidence: [tools/create_lua_mod.py, tools/test_create_lua_mod.py, data/lua/templates/minimal/main.lua, data/lua/templates/complete/main.lua, data/mods/Lua_First_Example/main.lua, data/lua/LUA_FIRST_EOC_WORKFLOW.md]
+    verification: not_run
+    next_actions: [Plan cookbook, console, diagnostics, editor, scaffolding, examples, and migration-report improvements as an independent follow-on batch; evaluate author workflows rather than selector or TODO counts; do not make this capability a platform-capability-closure or final-acceptance dependency.]

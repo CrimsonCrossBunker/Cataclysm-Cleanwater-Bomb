@@ -1110,6 +1110,8 @@ ifeq ($(CATA_ENABLE_LUA_PLATFORM),1)
   CXXFLAGS += -I$(SRC_DIR)/lua
 else
   DEFINES += -DCATA_ENABLE_LUA_PLATFORM=0
+  # The disabled stub still exposes sol::table in linkable declarations.
+  CXXFLAGS += -I$(SRC_DIR)/lua
 endif
 
 # Enumerations of all the source files and headers.

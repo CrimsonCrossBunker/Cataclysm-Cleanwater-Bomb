@@ -13,6 +13,109 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class LuaFirstMigrationTest(unittest.TestCase):
+    def test_migration_todos_are_structured_and_categories_are_strict(self) -> None:
+        result = migrate_lua_first.MigrationResult()
+        categories = (
+            "auto_fix",
+            "manual_rewrite",
+            "platform_gap",
+            "semantic_choice",
+        )
+        for category in categories:
+            result.add_todo(
+                category,
+                f"source-{category}.json#0: {category} migration decision",
+            )
+
+        self.assertTrue(
+            all(
+                isinstance(todo, migrate_lua_first.MigrationTodo)
+                for todo in result.todos
+            )
+        )
+        self.assertEqual(
+            [todo.category for todo in result.todos], list(categories)
+        )
+        self.assertEqual(
+            [todo.location for todo in result.todos],
+            [f"source-{category}.json#0" for category in categories],
+        )
+        self.assertEqual(
+            [todo.platform_core_input for todo in result.todos],
+            [False, False, True, False],
+        )
+        self.assertIn("manual_rewrite migration decision", result.todos[1])
+
+        with self.assertRaises(TypeError):
+            result.add_todo("source.json#0: missing category")  # type: ignore[call-arg]
+        with self.assertRaisesRegex(
+            ValueError, "unknown migration TODO classification"
+        ):
+            result.add_todo(None, "source.json#0: missing category")  # type: ignore[arg-type]
+        with self.assertRaisesRegex(
+            ValueError, "unknown migration TODO classification"
+        ):
+            result.add_todo("not_a_category", "source.json#0: invalid category")
+
+    def test_report_groups_todos_by_category_without_using_counts_as_status(self) -> None:
+        result = migrate_lua_first.MigrationResult()
+        for category in (
+            "auto_fix",
+            "manual_rewrite",
+            "platform_gap",
+            "semantic_choice",
+        ):
+            result.add_todo(
+                category,
+                f"source-{category}.json#0: {category} migration decision",
+            )
+
+        report = migrate_lua_first.render_report(result, "sample_mod")
+
+        self.assertIn("TODO categories are boundary records, not completion metrics.", report)
+        for category in (
+            "auto_fix",
+            "manual_rewrite",
+            "platform_gap",
+            "semantic_choice",
+        ):
+            self.assertIn(f"### `{category}` (1)", report)
+            self.assertIn(f"source-{category}.json#0: {category} migration decision", report)
+
+    def test_regional_extend_failure_keeps_structured_manual_todo(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "region.json"
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "region_settings",
+                        "id": "child_region",
+                        "extend": {"feature_flag_settings": {"whitelist": ["flag"]}},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "region_mod"
+            )
+
+            self.assertTrue(result.todos)
+            self.assertTrue(
+                all(
+                    isinstance(todo, migrate_lua_first.MigrationTodo)
+                    for todo in result.todos
+                )
+            )
+            self.assertEqual(
+                result.todos[0].category,
+                "manual_rewrite",
+            )
+            self.assertIn(
+                "extend/delete requires a resolved copy-from parent",
+                result.todos[0],
+            )
+
     def test_game_start_avatar_proof_tracks_the_canonical_sender_set(self) -> None:
         self.assertEqual(
             migrate_lua_first.game_start_sender_sites(),

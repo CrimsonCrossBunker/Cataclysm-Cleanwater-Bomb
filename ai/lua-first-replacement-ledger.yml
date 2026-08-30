@@ -6,6 +6,27 @@ contract: Every checked legacy selector appears exactly once. Planned entries ar
   Primitive-available entries have native composition building blocks but are not claims of selector-level
   parity. Verified entries are reserved for the final semantic gate and must carry native behavior plus
   real JSON/EOC evidence.
+migration_todo_policy:
+  scope: individual_migration_todo
+  orthogonal_to: selector_disposition_and_verification_status
+  unclassified: error
+  platform_core_input: platform_gap
+  classifications:
+  - id: auto_fix
+    platform_core_input: false
+    definition: The required Platform API already exists, but the migrator does not yet emit the correct
+      Lua for this concrete shape.
+  - id: manual_rewrite
+    platform_core_input: false
+    definition: The behavior should be rewritten with ordinary Lua control flow and existing domain services.
+  - id: platform_gap
+    platform_core_input: true
+    definition: A reusable typed Platform service, registrar, or lifecycle boundary required by this shape
+      does not exist.
+  - id: semantic_choice
+    platform_core_input: false
+    definition: More than one intentional behavior is possible and a content author must choose the desired
+      Lua design.
 sources:
 - id: json-object-types
   path: data/reference/json/ccb_json_object_types.json
