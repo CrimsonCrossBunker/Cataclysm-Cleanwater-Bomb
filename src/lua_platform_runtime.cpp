@@ -13065,7 +13065,7 @@ std::uint64_t register_platform_declarative_mapgen(
         descriptor.raw_get<sol::object>( "on_generate" ).valid() ) {
         replacement.after_generate = descriptor.raw_get<sol::object>( "on_generate" );
     }
-    for( const std::pair<const char *, sol::object *> callback : {
+    for( const std::pair<const char *, sol::object *> &callback : {
              std::pair<const char *, sol::object *>( "before_generate",
                      &replacement.before_generate ),
              std::pair<const char *, sol::object *>( "after_generate",

@@ -13,7 +13,6 @@
 #include <utility>
 #include <vector>
 
-#include "cata_variant.h"
 #include "coordinates.h"
 #include "dialogue_helpers.h"
 #include "enum_bitset.h"

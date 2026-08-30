@@ -81,8 +81,6 @@
 #include "vpart_position.h"
 #include "vpart_range.h"
 
-class JsonObject;
-
 static const std::string GUN_MODE_VAR_NAME( "item::mode" );
 static const std::string EOC_CABLE_RELOCATION_TURN_VAR( "eoc_cable_relocation_turn" );
 static constexpr int EOC_CABLE_RELOCATION_TURNS = 100;

@@ -37,8 +37,6 @@ static std::map<risk_diff_level, translation> risk_diff_to_diff_name( {
     { risk_diff_level::VERY_HIGH,            to_translation( "difficulty level", "Difficulty: Very Hard" ) }
 } );
 
-class JsonObject;
-
 void faction_mission::load( const JsonObject &jo, const std::string_view & )
 {
     mandatory( jo, was_loaded, "name", name );

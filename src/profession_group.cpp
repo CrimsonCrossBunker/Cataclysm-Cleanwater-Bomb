@@ -7,8 +7,6 @@
 #include "generic_factory.h"
 #include "lua_platform_content.h"
 
-class JsonObject;
-
 namespace
 {
 generic_factory<profession_group> profession_group_factory( "profession_group" );

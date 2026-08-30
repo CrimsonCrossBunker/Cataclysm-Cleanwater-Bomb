@@ -7,8 +7,6 @@
 #include "generic_factory.h"
 #include "lua_platform_content.h"
 
-class JsonObject;
-
 void vpart_location::load( const JsonObject &jo, const std::string_view & )
 {
     mandatory( jo, was_loaded, "name", name );

@@ -16,8 +16,6 @@
 #include "flexbuffer_json.h"
 #include "translation.h"
 
-class JsonObject;
-class JsonValue;
 class math_exp;
 class npc;
 enum class math_type_t : int;

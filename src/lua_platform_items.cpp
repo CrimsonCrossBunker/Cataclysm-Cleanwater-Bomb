@@ -5,8 +5,6 @@
 #include <character_attire.h>
 #include <character_id.h>
 #include <enums.h>
-#include <flat_set.h>
-#include <game.h>
 #include <inventory_ui.h>
 #include <item_uid.h>
 extern "C" {
@@ -73,7 +71,6 @@ extern "C" {
 #include "math_parser_diag_value.h"
 #include "requirements.h"
 #include "string_formatter.h"
-#include "translations.h"
 #include "type_id.h"
 #include "units.h"
 #include "vehicle.h"

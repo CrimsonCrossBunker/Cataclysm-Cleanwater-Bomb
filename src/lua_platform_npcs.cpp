@@ -14,7 +14,7 @@
 #include <pimpl.h>
 #include <point.h>
 #include <simple_pathfinding.h>
-#include <translations.h>
+#include <translation.h>
 #include <type_id.h>
 #include <visitable.h>
 #include <algorithm>

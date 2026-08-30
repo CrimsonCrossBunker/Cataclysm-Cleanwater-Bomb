@@ -1,18 +1,58 @@
-#include "cata_catch.h"
-
+#include <build_reqs.h>
+#include <character_id.h>
+#include <debug.h>
+#include <dialogue.h>
+#include <dialogue_chatbin.h>
+#include <enums.h>
+#include <item_location.h>
+#include <item_uid.h>
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+extern "C" {
+#include <lua.h>
+}
+#endif
+#include <map_iterator.h>
+#include <memory_fast.h>
+#include <monster_uid.h>
+#include <npc_opinion.h>
+#include <overmap.h>
+#include <overmap_ui.h>
+#include <pimpl.h>
+#include <player_activity.h>
+#include <plf/list.h>
+#include <pocket_type.h>
+#include <point.h>
+#include <recipe.h>
+#include <ret_val.h>
+#include <stomach.h>
+#include <type_id.h>
+#include <units.h>
+#include <vehicle_uid.h>
+#include <visitable.h>
+#include <vpart_position.h>
+#include <weather.h>
+#include <weather_gen.h>
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <functional>
+#include <initializer_list>
 #include <limits>
+#include <list>
+#include <map>
 #include <memory>
-#include <set>
-#include <string>
 #include <optional>
+#include <set>
 #include <sstream>
 #include <stdexcept>
+#include <string>
+#include <string_view>
 #include <system_error>
 #include <type_traits>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -21,50 +61,53 @@
 #include "basecamp.h"
 #include "bodypart.h"
 #include "calendar.h"
-#include "character.h"
-#include "creature_tracker.h"
+#include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "character.h"
 #include "clzones.h"
 #include "coordinates.h"
+#include "creature_tracker.h"
 #include "faction.h"
 #include "field_type.h"
+// IWYU pragma: no_include <flexbuffer_json.h>
+#include "flexbuffer_json.h"
 #include "game.h"
+#include "inventory.h"
 #include "item.h"
 #include "item_category.h"
-#include "item_pocket.h"
-#include "inventory.h"
 #include "json.h"
 #include "json_loader.h"
-#include "map_helpers.h"
-#include "mapbuffer.h"
-#include "mapgen_functions.h"
-#include "map_scale_constants.h"
-#include "lua_platform_content.h"
+#include "lua_platform_bindings_coords.h"
+#include "lua_platform_bindings_enums.h"
+#include "lua_platform_bindings_values.h"
 #include "lua_platform_camps.h"
+#include "lua_platform_content.h"
 #include "lua_platform_dialogue.h"
 #include "lua_platform_factions.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_hooks.h"
 #include "lua_platform_hordes.h"
 #include "lua_platform_identity.h"
-#include "lua_platform_loader.h"
 #include "lua_platform_items.h"
-#include "lua_platform_bindings_values.h"
-#include "lua_platform_bindings_enums.h"
+#include "lua_platform_loader.h"
 #include "lua_platform_mapgen.h"
 #include "lua_platform_missions.h"
 #include "lua_platform_npcs.h"
 #include "lua_platform_overmap.h"
 #include "lua_platform_runtime.h"
+#include "lua_platform_sol.h"
 #include "lua_platform_trade.h"
 #include "lua_platform_vehicles.h"
 #include "lua_platform_weather.h"
 #include "lua_platform_world.h"
-#include "lua_platform_world_services.h"
 #include "lua_platform_world_content.h"
+#include "lua_platform_world_services.h"
 #include "lua_platform_zones.h"
-#include "lua_platform_bindings_coords.h"
 #include "map.h"
+#include "map_helpers.h"
+#include "map_scale_constants.h"
+#include "mapbuffer.h"
+#include "mapgen_functions.h"
 #include "mapgendata.h"
 #include "mission.h"
 #include "monster.h"
@@ -80,6 +123,11 @@
 #include "talker_topic.h"
 #include "veh_type.h"
 #include "vehicle.h"
+
+namespace cata::lua_platform
+{
+class runtime;
+}  // namespace cata::lua_platform
 
 namespace
 {

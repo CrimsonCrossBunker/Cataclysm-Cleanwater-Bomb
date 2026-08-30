@@ -5,6 +5,7 @@
 extern "C" {
 #include <lua.h>
 }
+#include <translation.h>
 #include <stdlib.h>
 #include <algorithm>
 #include <array>
@@ -33,7 +34,6 @@ extern "C" {
 #include "popup.h"
 #include "ranged.h"
 #include "sounds.h"
-#include "translations.h"
 #include "uilist.h"
 #include "units.h"
 
