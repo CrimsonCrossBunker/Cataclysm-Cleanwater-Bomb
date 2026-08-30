@@ -1598,7 +1598,8 @@ const zone_data *zone_manager::get_bottom_zone(
 // which constructor of the key-value pair we use which depends on new_zone being an rvalue or lvalue and constness.
 // If you are passing new_zone from a non-const iterator, be prepared for a move! This
 // may break some iterators like map iterators if you are less specific!
-zone_data *zone_manager::create_vehicle_loot_zone( vehicle &vehicle, const point_rel_ms &mount_point,
+zone_data *zone_manager::create_vehicle_loot_zone( vehicle &vehicle,
+        const point_rel_ms &mount_point,
         zone_data &new_zone, map *pmap )
 {
     //create a vehicle loot zone
@@ -1616,7 +1617,8 @@ zone_data *zone_manager::create_vehicle_loot_zone( vehicle &vehicle, const point
     return find_vehicle_zone( locator );
 }
 
-zone_data *zone_manager::add( const std::string &name, const zone_type_id &type, const faction_id &fac,
+zone_data *zone_manager::add( const std::string &name, const zone_type_id &type,
+                              const faction_id &fac,
                               const bool invert, const bool enabled, const tripoint_abs_ms &start,
                               const tripoint_abs_ms &end, const shared_ptr_fast<zone_options> &options,
                               bool silent, map *pmap, bool allow_vehicle_binding )
@@ -1649,7 +1651,8 @@ zone_data *zone_manager::add( const std::string &name, const zone_type_id &type,
     return &zones.back();
 }
 
-zone_data *zone_manager::add( const std::string &name, const zone_type_id &type, const faction_id &fac,
+zone_data *zone_manager::add( const std::string &name, const zone_type_id &type,
+                              const faction_id &fac,
                               const bool invert, const bool enabled, const tripoint_rel_ms &start,
                               const tripoint_rel_ms &end, const shared_ptr_fast<zone_options> &options )
 {
@@ -1891,9 +1894,9 @@ void zone_manager::deserialize( const JsonValue &jv )
         }
     }
     num_personal_zones = static_cast<int>( std::count_if( zones.begin(), zones.end(),
-                               []( const zone_data &zone ) {
-                                   return zone.get_is_personal();
-                               } ) );
+    []( const zone_data & zone ) {
+        return zone.get_is_personal();
+    } ) );
 }
 
 void zone_data::serialize( JsonOut &json ) const
@@ -2080,7 +2083,8 @@ bool zone_manager::zone_edited( zone_data &zone )
         return true;
     }
 
-    const std::optional<vehicle_zone_locator> maybe_locator = make_vehicle_zone_locator( zone, &get_map() );
+    const std::optional<vehicle_zone_locator> maybe_locator = make_vehicle_zone_locator( zone,
+            &get_map() );
     if( !maybe_locator || find_vehicle_zone( *maybe_locator ) == nullptr ) {
         debugmsg( "Could not snapshot vehicle zone before editing" );
         return false;

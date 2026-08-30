@@ -141,8 +141,8 @@ struct basecamp_platform_actor_lookup_result {
     npc_ptr actor;
 };
 
-using basecamp_platform_actor_lookup = std::function<
-    basecamp_platform_actor_lookup_result( character_id id )>;
+using basecamp_platform_actor_lookup = std::function <
+                                       basecamp_platform_actor_lookup_result( character_id id ) >;
 
 inline constexpr std::uint32_t basecamp_platform_task_schema_version = 3;
 inline constexpr std::uint32_t basecamp_platform_task_schema_version_legacy_v1 = 1;
@@ -354,8 +354,8 @@ struct basecamp_platform_task_execution_context {
 };
 
 using basecamp_platform_task_executor_dispatch = bool ( * )(
-    basecamp_platform_task_operation operation,
-    basecamp_platform_task_execution_context &context, std::string &error );
+            basecamp_platform_task_operation operation,
+            basecamp_platform_task_execution_context &context, std::string &error );
 
 /**
  * The single native registry entry for a Platform camp-task kind.
@@ -587,13 +587,13 @@ class basecamp
         std::list<item> use_charges( const itype_id &fake_id, int &quantity );
         /** Return semantically unique native resource entries as value data. */
         bool platform_resource_snapshot( std::vector<basecamp_resource> &result,
-                                          std::string &error ) const;
+                                         std::string &error ) const;
         /** Normalize resource keys without exposing native vector positions. */
         static bool platform_normalize_resources(
             const std::vector<basecamp_resource> &input,
             std::vector<basecamp_resource> &result, std::string &error );
         /** Apply a validated batch of resource changes atomically. */
-    bool platform_adjust_resources(
+        bool platform_adjust_resources(
             const std::vector<basecamp_platform_resource_change> &changes,
             std::string &error );
         /** Return resource/food quantities held by active resource-work ledgers. */
@@ -952,7 +952,8 @@ class basecamp
         // Tombstones keep an already-issued expansion token fail-closed until
         // its owning camp object is destroyed or a world is reloaded.  IDs
         // are monotonic and are never reused, so this map is not save data.
-        std::map<std::uint64_t, std::uint64_t> platform_retired_expansion_generations_; // NOLINT(cata-serialize)
+        std::map<std::uint64_t, std::uint64_t>
+        platform_retired_expansion_generations_; // NOLINT(cata-serialize)
         comp_list camp_workers; // NOLINT(cata-serialize)
         basecamp_map camp_map; // NOLINT(cata-serialize)
         // dumping spot in absolute co-ords

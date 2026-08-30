@@ -708,17 +708,19 @@ void tileset_cache::loader::parse_native_atlases(
         sprite_pixelscale = atlas.pixelscale;
         ts.max_tile_extent = half_open_rectangle<point> {
             {
-                std::min( { ts.max_tile_extent.p_min.x, sprite_offset.x,
-                            sprite_offset_retracted.x } ),
-                std::min( { ts.max_tile_extent.p_min.y, sprite_offset.y,
-                            sprite_offset_retracted.y } ),
+                std::min( {
+                    ts.max_tile_extent.p_min.x, sprite_offset.x,
+                    sprite_offset_retracted.x } ),
+                std::min( {
+                    ts.max_tile_extent.p_min.y, sprite_offset.y,
+                    sprite_offset_retracted.y } ),
             }, {
                 std::max( ts.max_tile_extent.p_max.x,
                           sprite_width + std::max( sprite_offset.x,
-                                  sprite_offset_retracted.x ) ),
+                                                   sprite_offset_retracted.x ) ),
                 std::max( ts.max_tile_extent.p_max.y,
                           sprite_height + std::max( sprite_offset.y,
-                                  sprite_offset_retracted.y ) ),
+                                                    sprite_offset_retracted.y ) ),
             }
         };
         dbg( D_INFO ) << "Attempting to Load Lua-first Mod tileset file " << image_path;

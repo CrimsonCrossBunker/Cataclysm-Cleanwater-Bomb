@@ -2546,7 +2546,8 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
         vehicle_part &part = vp.part();
         menu.add( string_format( _( "Activate  %s" ), vp.part().name() ) )
         .on_submit( [this, &part] {
-            if( part.info().activatable_eoc ) {
+            if( part.info().activatable_eoc )
+            {
                 dialogue newDialog( get_talker_for( get_player_character() ), nullptr );
                 part.info().activatable_eoc.value()->activate( newDialog );
             }

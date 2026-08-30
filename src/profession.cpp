@@ -977,7 +977,7 @@ bool json_item_substitution::contains_substitution( const std::string &item ) co
 
 bool json_item_substitution::contains_bonus( const std::string &group ) const
 {
-    return std::any_of( bonuses.begin(), bonuses.end(), [&group]( const auto &entry ) {
+    return std::any_of( bonuses.begin(), bonuses.end(), [&group]( const auto & entry ) {
         return entry.first.str() == group;
     } );
 }
@@ -1013,7 +1013,7 @@ void json_item_substitution::set_bonus(
     const cata::lua_platform::detail::profession_item_bonus_native_entry &entry )
 {
     bonuses.erase( std::remove_if( bonuses.begin(), bonuses.end(),
-    [&entry]( const auto &existing ) {
+    [&entry]( const auto & existing ) {
         return existing.first.str() == entry.group;
     } ), bonuses.end() );
     for( const cata::lua_platform::detail::profession_item_substitution_native_requirement

@@ -130,7 +130,7 @@ bool dialogue_session::participants_live() const noexcept
         return false;
     }
 
-    const auto participant_live = []( const native_callback_talker &participant ) {
+    const auto participant_live = []( const native_callback_talker & participant ) {
         if( !participant.present ) {
             return true;
         }
@@ -472,8 +472,8 @@ context::context( lua_State *const lua_state, ::dialogue &d, std::string topic_i
     state_->invalid_context_message = std::move( invalid_context_message );
     state_->convert_actor = std::move( convert_actor );
     state_->session = session ? std::move( session ) :
-                     session_for( d, state_->topic_id, runtime_identity,
-                                  world_generation );
+                      session_for( d, state_->topic_id, runtime_identity,
+                                   world_generation );
     state_->runtime_identity = std::move( runtime_identity );
     state_->world_generation = world_generation;
     state_->context_lifetime = std::make_shared<dialogue_context_lifetime>();
@@ -517,7 +517,7 @@ std::optional<game_handle_error> context::validation_error() const
         };
     }
     if( const std::optional<game_handle_error> error = state_->session->validation_error(
-            native_dialogue, state_->runtime_identity, state_->world_generation ) ) {
+                native_dialogue, state_->runtime_identity, state_->world_generation ) ) {
         return error;
     }
     if( !state_->session->active_for( state_->topic_id, state_->runtime_identity,
@@ -623,7 +623,7 @@ std::string context::expand_text( const std::string &text,
     ::dialogue &d = require_state().dialogue_ref();
     const_talker empty_participant;
     const const_talker &speaker = d.has_alpha ? *d.const_actor( false ) :
-                                   empty_participant;
+                                  empty_participant;
     const const_talker &interlocutor = d.has_beta ? *d.const_actor( true ) :
                                        empty_participant;
     std::string result = text;
@@ -837,7 +837,7 @@ talk_response response_from_table( const sol::table &descriptor,
                                          " response field 'on_select' must be a function" );
         }
         response.lua_response_id = options.register_on_select(
-                                      raw_on_select.as<sol::protected_function>() );
+                                       raw_on_select.as<sol::protected_function>() );
     }
     return response;
 }

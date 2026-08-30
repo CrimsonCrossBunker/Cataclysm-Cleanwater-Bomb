@@ -1268,8 +1268,8 @@ void install_faction_api(
     } );
     factions.set_function(
         "for_character",
-    [current_runtime_generation, current_world_generation, require_read](
-        sol::this_state lua_state, const game_handle &character ) {
+        [current_runtime_generation, current_world_generation, require_read](
+    sol::this_state lua_state, const game_handle & character ) {
         require_read();
         return character_faction(
                    lua_state, character,

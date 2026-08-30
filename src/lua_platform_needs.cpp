@@ -1333,8 +1333,8 @@ void install_need_api(
     needs.set_function(
         "get_vitamin",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &handle,
-    const script_game_id &id ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id ) {
         require_read();
         return get_vitamin(
                    lua_state, handle, id,
@@ -1344,8 +1344,8 @@ void install_need_api(
     needs.set_function(
         "set_vitamin",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const script_game_id &id, const int amount ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id, const int amount ) {
         require_write();
         return set_vitamin(
                    lua_state, handle, id, amount,
@@ -1355,8 +1355,8 @@ void install_need_api(
     needs.set_function(
         "modify_vitamin",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const script_game_id &id, const int delta ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id, const int delta ) {
         require_write();
         return modify_vitamin(
                    lua_state, handle, id, delta,
@@ -1366,7 +1366,7 @@ void install_need_api(
     needs.set_function(
         "daily_calories",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &handle,
+            sol::this_state lua_state, const game_handle & handle,
             const sol::optional<int> &day,
     const sol::optional<std::string> &type ) {
         require_read();
@@ -1378,8 +1378,8 @@ void install_need_api(
     needs.set_function(
         "morale",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &handle,
-            const sol::optional<script_game_id> &type ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::optional<script_game_id> &type ) {
         require_read();
         return get_morale(
                    lua_state, handle, type,
@@ -1389,9 +1389,9 @@ void install_need_api(
     needs.set_function(
         "add_morale",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const script_game_id &type, const int bonus,
-            const sol::optional<sol::table> &options ) {
+            sol::this_state lua_state, const game_handle & handle,
+            const script_game_id & type, const int bonus,
+    const sol::optional<sol::table> &options ) {
         require_write();
         return add_morale(
                    lua_state, handle, type, bonus, options,
@@ -1401,8 +1401,8 @@ void install_need_api(
     needs.set_function(
         "remove_morale",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const script_game_id &type ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & type ) {
         require_write();
         return remove_morale(
                    lua_state, handle, type,
@@ -1412,7 +1412,7 @@ void install_need_api(
     needs.set_function(
         "clear_morale",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_write();
         return clear_morale(
                    lua_state, handle,

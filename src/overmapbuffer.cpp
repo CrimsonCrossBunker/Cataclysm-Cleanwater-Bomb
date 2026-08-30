@@ -32,7 +32,7 @@
 #include "imgui/imgui.h"
 #include "json.h"
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-#include "lua_platform_handle.h"
+    #include "lua_platform_handle.h"
 #endif
 #include "line.h"
 #include "map.h"
@@ -1656,7 +1656,7 @@ void overmapbuffer::platform_register_npc( const shared_ptr_fast<npc> &who )
     std::vector<shared_ptr_fast<npc>> &instances = platform_npc_index_[id];
     if( std::find_if( instances.begin(), instances.end(),
     [&who]( const shared_ptr_fast<npc> &candidate ) {
-        return candidate && candidate.get() == who.get();
+    return candidate && candidate.get() == who.get();
     } ) == instances.end() ) {
         instances.push_back( who );
     }
@@ -1783,7 +1783,7 @@ void overmapbuffer::reconcile_platform_camp_tasks()
         return translated;
     };
     std::string first_error;
-    foreach_loaded_camp( [&]( basecamp &camp ) {
+    foreach_loaded_camp( [&]( basecamp & camp ) {
         std::string error;
         if( !camp.platform_reconcile_task_reservations(
                 lookup, error ) && first_error.empty() ) {
@@ -1820,7 +1820,7 @@ void overmapbuffer::insert_npc( const shared_ptr_fast<npc> &who )
                     break;
                 }
                 current.erase_npc( id );
-                foreach_loaded_camp( [&existing]( basecamp &camp ) {
+                foreach_loaded_camp( [&existing]( basecamp & camp ) {
                     camp.platform_retire_tasks_for_worker( *existing );
                 } );
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM

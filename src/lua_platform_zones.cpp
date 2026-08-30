@@ -754,9 +754,9 @@ zone_create_options read_zone_create_options(
                 " option 'personal' is no longer supported; use 'kind'" );
         } else {
             throw std::invalid_argument(
-            api_name +
-            " received unknown option '" +
-            key + "'" );
+                api_name +
+                " received unknown option '" +
+                key + "'" );
         }
     }
     if( !kind_seen ) {
@@ -909,10 +909,10 @@ sol::table create_zone(
         read_zone_create_options( requested );
     if( options.kind == "vehicle" ) {
         return make_game_error_result(
-                   state, {
-                       "unsupported_vehicle_mutation",
-                       "Vehicle-bound zones cannot be created through services.zones.create"
-                   } );
+        state, {
+            "unsupported_vehicle_mutation",
+            "Vehicle-bound zones cannot be created through services.zones.create"
+        } );
     }
     script_zone_token identity;
     identity.runtime = runtime_generation;
@@ -983,19 +983,19 @@ sol::table create_zone(
     zone_data *created = nullptr;
     if( relative_bounds ) {
         created = manager.add(
-            options.name, *options.type,
-            options.faction, options.invert,
-            options.enabled,
-            relative_bounds->first,
-            relative_bounds->second );
+                      options.name, *options.type,
+                      options.faction, options.invert,
+                      options.enabled,
+                      relative_bounds->first,
+                      relative_bounds->second );
     } else {
         created = manager.add(
-            options.name, *options.type,
-            options.faction, options.invert,
-            options.enabled,
-            absolute_bounds->first,
-            absolute_bounds->second,
-            nullptr, true, nullptr, false );
+                      options.name, *options.type,
+                      options.faction, options.invert,
+                      options.enabled,
+                      absolute_bounds->first,
+                      absolute_bounds->second,
+                      nullptr, true, nullptr, false );
     }
 
     if( created == nullptr ) {
@@ -1486,44 +1486,44 @@ std::vector<zone_match> matching_zones(
     }
     std::stable_sort(
         result.begin(), result.end(),
-        []( const zone_match &lhs, const zone_match &rhs ) {
-            const zone_data &lhs_zone = *lhs.zone;
-            const zone_data &rhs_zone = *rhs.zone;
-            const tripoint_abs_ms lhs_start =
-                lhs_zone.get_start_point();
-            const tripoint_abs_ms lhs_end =
-                lhs_zone.get_end_point();
-            const tripoint_abs_ms rhs_start =
-                rhs_zone.get_start_point();
-            const tripoint_abs_ms rhs_end =
-                rhs_zone.get_end_point();
-            return std::make_tuple(
-                       zone_kind(
-                           lhs_zone.get_is_personal(),
-                           lhs_zone.get_is_vehicle() ),
-                       lhs_zone.get_faction().str(),
-                       lhs_zone.get_type().str(),
-                       lhs_zone.get_name(),
-                       lhs_start.x(),
-                       lhs_start.y(),
-                       lhs_start.z(),
-                       lhs_end.x(),
-                       lhs_end.y(),
-                       lhs_end.z() ) <
-                   std::make_tuple(
-                       zone_kind(
-                           rhs_zone.get_is_personal(),
-                           rhs_zone.get_is_vehicle() ),
-                       rhs_zone.get_faction().str(),
-                       rhs_zone.get_type().str(),
-                       rhs_zone.get_name(),
-                       rhs_start.x(),
-                       rhs_start.y(),
-                       rhs_start.z(),
-                       rhs_end.x(),
-                       rhs_end.y(),
-                       rhs_end.z() );
-        } );
+    []( const zone_match & lhs, const zone_match & rhs ) {
+        const zone_data &lhs_zone = *lhs.zone;
+        const zone_data &rhs_zone = *rhs.zone;
+        const tripoint_abs_ms lhs_start =
+            lhs_zone.get_start_point();
+        const tripoint_abs_ms lhs_end =
+            lhs_zone.get_end_point();
+        const tripoint_abs_ms rhs_start =
+            rhs_zone.get_start_point();
+        const tripoint_abs_ms rhs_end =
+            rhs_zone.get_end_point();
+        return std::make_tuple(
+                   zone_kind(
+                       lhs_zone.get_is_personal(),
+                       lhs_zone.get_is_vehicle() ),
+                   lhs_zone.get_faction().str(),
+                   lhs_zone.get_type().str(),
+                   lhs_zone.get_name(),
+                   lhs_start.x(),
+                   lhs_start.y(),
+                   lhs_start.z(),
+                   lhs_end.x(),
+                   lhs_end.y(),
+                   lhs_end.z() ) <
+               std::make_tuple(
+                   zone_kind(
+                       rhs_zone.get_is_personal(),
+                       rhs_zone.get_is_vehicle() ),
+                   rhs_zone.get_faction().str(),
+                   rhs_zone.get_type().str(),
+                   rhs_zone.get_name(),
+                   rhs_start.x(),
+                   rhs_start.y(),
+                   rhs_start.z(),
+                   rhs_end.x(),
+                   rhs_end.y(),
+                   rhs_end.z() );
+    } );
     return result;
 }
 
@@ -1703,26 +1703,28 @@ void install_zone_api(
                    self.end.raw() );
     } ),
     "relative_start", sol::property(
-    []( const script_zone_token & self )
-        -> sol::optional<script_tripoint_coord> {
-        if( !self.personal ) {
+        []( const script_zone_token & self )
+    -> sol::optional<script_tripoint_coord> {
+        if( !self.personal )
+        {
             return sol::nullopt;
         }
         return script_tripoint_coord::from_native(
-                   coords::origin::relative,
-                   coords::scale::map_square,
-                   self.personal_start.raw() );
+            coords::origin::relative,
+            coords::scale::map_square,
+            self.personal_start.raw() );
     } ),
     "relative_end", sol::property(
-    []( const script_zone_token & self )
-        -> sol::optional<script_tripoint_coord> {
-        if( !self.personal ) {
+        []( const script_zone_token & self )
+    -> sol::optional<script_tripoint_coord> {
+        if( !self.personal )
+        {
             return sol::nullopt;
         }
         return script_tripoint_coord::from_native(
-                   coords::origin::relative,
-                   coords::scale::map_square,
-                   self.personal_end.raw() );
+            coords::origin::relative,
+            coords::scale::map_square,
+            self.personal_end.raw() );
     } ),
     "personal", sol::property(
     []( const script_zone_token & self ) {

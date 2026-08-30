@@ -93,7 +93,7 @@ TEST_CASE( "creature_tracker_find_monster_by_uid", "[monster][creature_tracker]"
 {
     creature_tracker tracker;
     const auto live_monster = make_shared_fast<monster>( mon_test_zombie,
-                                 tripoint_bub_ms( 0, 0, 0 ) );
+                              tripoint_bub_ms( 0, 0, 0 ) );
     REQUIRE( tracker.add( live_monster ) );
     REQUIRE( live_monster->uid().is_valid() );
     const auto live_uid = live_monster->uid().get_value();
@@ -106,7 +106,7 @@ TEST_CASE( "creature_tracker_find_monster_by_uid", "[monster][creature_tracker]"
     CHECK( tracker.find_by_uid( live_uid ) == nullptr );
 
     const auto dead_monster = make_shared_fast<monster>( mon_test_zombie,
-                                 tripoint_bub_ms( 1, 0, 0 ) );
+                              tripoint_bub_ms( 1, 0, 0 ) );
     REQUIRE( tracker.add( dead_monster ) );
     REQUIRE( dead_monster->uid().is_valid() );
     const auto dead_uid = dead_monster->uid().get_value();

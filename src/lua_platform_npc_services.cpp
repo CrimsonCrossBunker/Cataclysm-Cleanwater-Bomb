@@ -105,10 +105,10 @@ sol::table provider_service_state(
                             lua, provider );
     result["owed"] = provider.op_of_u.owed;
     result["attitude"] = static_cast<int>(
-                              provider.get_attitude() );
+                             provider.get_attitude() );
     result["busy_turns"] = to_turns<std::int64_t>(
-                                provider.get_effect_dur(
-                                    effect_currently_busy ) );
+                               provider.get_effect_dur(
+                                   effect_currently_busy ) );
     result["current_activity"] =
         provider.get_current_activity();
     return result;
@@ -519,13 +519,13 @@ sol::table npc_mission_provider_state(
                              runtime_generation,
                              world_generation );
     const std::size_t selected_available_count = static_cast<std::size_t>(
-            std::count( provider.chatbin.missions.begin(),
-                        provider.chatbin.missions.end(),
-                        provider.chatbin.mission_selected ) );
+                std::count( provider.chatbin.missions.begin(),
+                            provider.chatbin.missions.end(),
+                            provider.chatbin.mission_selected ) );
     const std::size_t selected_assigned_count = static_cast<std::size_t>(
-            std::count( provider.chatbin.missions_assigned.begin(),
-                        provider.chatbin.missions_assigned.end(),
-                        provider.chatbin.mission_selected ) );
+                std::count( provider.chatbin.missions_assigned.begin(),
+                            provider.chatbin.missions_assigned.end(),
+                            provider.chatbin.mission_selected ) );
     if( !live_mission_pointer( provider.chatbin.mission_selected ) ) {
         result["selected"] = sol::nil;
         result["selected_stale"] =
@@ -626,15 +626,15 @@ sol::table select_npc_mission(
         return make_game_error_result( state, *error );
     }
     const std::size_t available_count = static_cast<std::size_t>(
-                                             std::count(
-                                                 provider->chatbin.missions.begin(),
-                                                 provider->chatbin.missions.end(),
-                                                 selected ) );
+                                            std::count(
+                                                    provider->chatbin.missions.begin(),
+                                                    provider->chatbin.missions.end(),
+                                                    selected ) );
     const std::size_t assigned_count = static_cast<std::size_t>(
                                            std::count(
-                                               provider->chatbin.missions_assigned.begin(),
-                                               provider->chatbin.missions_assigned.end(),
-                                               selected ) );
+                                                   provider->chatbin.missions_assigned.begin(),
+                                                   provider->chatbin.missions_assigned.end(),
+                                                   selected ) );
     const bool selected_belongs_to_provider =
         selected->get_npc_id() == provider->getID();
     if( !selected_belongs_to_provider ||
@@ -764,15 +764,15 @@ sol::table run_selected_npc_mission_action(
                               provider->chatbin.missions_assigned,
                               selected );
     const std::size_t available_count = static_cast<std::size_t>(
-                                             std::count(
-                                                 provider->chatbin.missions.begin(),
-                                                 provider->chatbin.missions.end(),
-                                                 selected ) );
+                                            std::count(
+                                                    provider->chatbin.missions.begin(),
+                                                    provider->chatbin.missions.end(),
+                                                    selected ) );
     const std::size_t assigned_count = static_cast<std::size_t>(
                                            std::count(
-                                               provider->chatbin.missions_assigned.begin(),
-                                               provider->chatbin.missions_assigned.end(),
-                                               selected ) );
+                                                   provider->chatbin.missions_assigned.begin(),
+                                                   provider->chatbin.missions_assigned.end(),
+                                                   selected ) );
     if( selected->get_npc_id() != provider->getID() ) {
         return make_game_error_result( state, {
             "not_provided_here",
@@ -886,8 +886,8 @@ sol::table run_selected_npc_mission_action(
         try {
             available_after = provider->chatbin.missions;
             const auto available = std::find(
-                                        available_after.begin(),
-                                        available_after.end(), selected );
+                                       available_after.begin(),
+                                       available_after.end(), selected );
             if( available == available_after.end() ) {
                 return make_game_error_result( state, {
                     "invalid_selection",
@@ -1673,8 +1673,8 @@ void install_npc_domain_services(
     medical.set_function(
         "provide_aid",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, const game_handle &provider,
-            const game_handle &patient,
+            sol::this_state state, const game_handle & provider,
+            const game_handle & patient,
             const sol::optional<std::string> &level,
     const sol::optional<bool> &include_allies ) {
         require_write();
@@ -1687,9 +1687,9 @@ void install_npc_domain_services(
     medical.set_function(
         "open_bionic_service",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, const game_handle &provider,
-            const std::string &operation,
-            const game_handle &patient ) {
+            sol::this_state state, const game_handle & provider,
+            const std::string & operation,
+    const game_handle & patient ) {
         require_write();
         return open_bionic_service(
                    state, provider, operation, patient,
@@ -1699,8 +1699,8 @@ void install_npc_domain_services(
     medical.set_function(
         "repair_bionic_limbs",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, const game_handle &provider,
-            const game_handle &patient ) {
+            sol::this_state state, const game_handle & provider,
+    const game_handle & patient ) {
         require_write();
         return repair_bionic_limbs_with_provider(
                    state, provider, patient,
@@ -1713,9 +1713,9 @@ void install_npc_domain_services(
     grooming.set_function(
         "open_style",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, const game_handle &provider,
-            const game_handle &client,
-    const std::string &area ) {
+            sol::this_state state, const game_handle & provider,
+            const game_handle & client,
+    const std::string & area ) {
         require_write();
         return open_grooming_style(
                    state, provider, client, area,
@@ -1725,9 +1725,9 @@ void install_npc_domain_services(
     grooming.set_function(
         "provide",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, const game_handle &provider,
-            const game_handle &client,
-    const std::string &service ) {
+            sol::this_state state, const game_handle & provider,
+            const game_handle & client,
+    const std::string & service ) {
         require_write();
         return provide_grooming(
                    state, provider, client, service,
@@ -1741,8 +1741,8 @@ void install_npc_domain_services(
         "offerings",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state state,
-            const game_handle &teacher,
-    const game_handle &student ) {
+            const game_handle & teacher,
+    const game_handle & student ) {
         require_read();
         return npc_training_offerings(
                    state, teacher, student,
@@ -1753,9 +1753,9 @@ void install_npc_domain_services(
         "start",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state state,
-            const game_handle &teacher,
-            const sol::table &students,
-    const script_game_id &subject ) {
+            const game_handle & teacher,
+            const sol::table & students,
+    const script_game_id & subject ) {
         require_write();
         return start_npc_training(
                    state, teacher, students, subject,
@@ -1766,9 +1766,9 @@ void install_npc_domain_services(
         "start_selected",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state state,
-            const game_handle &provider,
-            const game_handle &student,
-    const std::string &mode ) {
+            const game_handle & provider,
+            const game_handle & student,
+    const std::string & mode ) {
         require_write();
         return start_selected_npc_training(
                    state, provider, student, mode,
@@ -1781,7 +1781,7 @@ void install_npc_domain_services(
     missions.set_function(
         "state",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state state, const game_handle &provider ) {
+    sol::this_state state, const game_handle & provider ) {
         require_read();
         return get_npc_mission_provider_state(
                    state, provider,
@@ -1791,8 +1791,8 @@ void install_npc_domain_services(
     missions.set_function(
         "select",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, const game_handle &provider,
-    const mission_token &token ) {
+            sol::this_state state, const game_handle & provider,
+    const mission_token & token ) {
         require_write();
         return select_npc_mission(
                    state, provider, token,
@@ -1802,8 +1802,8 @@ void install_npc_domain_services(
     missions.set_function(
         "offer",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, const game_handle &provider,
-    const script_game_id &mission ) {
+            sol::this_state state, const game_handle & provider,
+    const script_game_id & mission ) {
         require_write();
         return offer_npc_mission(
                    state, provider, mission,
@@ -1813,9 +1813,9 @@ void install_npc_domain_services(
     missions.set_function(
         "add_assigned",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, const game_handle &provider,
-            const game_handle &owner,
-    const script_game_id &mission ) {
+            sol::this_state state, const game_handle & provider,
+            const game_handle & owner,
+    const script_game_id & mission ) {
         require_write();
         return add_assigned_npc_mission(
                    state, provider, owner, mission,
@@ -1825,8 +1825,8 @@ void install_npc_domain_services(
     missions.set_function(
         "assign_selected",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, const game_handle &provider,
-            const game_handle &owner ) {
+            sol::this_state state, const game_handle & provider,
+    const game_handle & owner ) {
         require_write();
         return run_selected_npc_mission_action(
                    state, provider, owner, "assign", false,
@@ -1836,8 +1836,8 @@ void install_npc_domain_services(
     missions.set_function(
         "succeed_selected",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, const game_handle &provider,
-            const game_handle &owner,
+            sol::this_state state, const game_handle & provider,
+            const game_handle & owner,
     const sol::optional<bool> &force ) {
         require_write();
         return run_selected_npc_mission_action(
@@ -1849,8 +1849,8 @@ void install_npc_domain_services(
     missions.set_function(
         "fail_selected",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, const game_handle &provider,
-            const game_handle &owner ) {
+            sol::this_state state, const game_handle & provider,
+    const game_handle & owner ) {
         require_write();
         return run_selected_npc_mission_action(
                    state, provider, owner, "failure", false,
@@ -1860,8 +1860,8 @@ void install_npc_domain_services(
     missions.set_function(
         "clear_selected",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, const game_handle &provider,
-            const game_handle &owner ) {
+            sol::this_state state, const game_handle & provider,
+    const game_handle & owner ) {
         require_write();
         return run_selected_npc_mission_action(
                    state, provider, owner, "clear", false,
@@ -1871,8 +1871,8 @@ void install_npc_domain_services(
     missions.set_function(
         "claim_selected_reward",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, const game_handle &provider,
-            const game_handle &owner ) {
+            sol::this_state state, const game_handle & provider,
+    const game_handle & owner ) {
         require_write();
         return run_selected_npc_mission_action(
                    state, provider, owner, "reward", false,
@@ -1885,7 +1885,7 @@ void install_npc_domain_services(
     dialogue.set_function(
         "finish",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, const game_handle &handle ) {
+    sol::this_state state, const game_handle & handle ) {
         require_write();
         return finish_npc_dialogue(
                    state, handle,
@@ -1895,7 +1895,7 @@ void install_npc_domain_services(
     dialogue.set_function(
         "provoke_combat",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, const game_handle &handle ) {
+    sol::this_state state, const game_handle & handle ) {
         require_write();
         return provoke_npc_combat(
                    state, handle,
@@ -1908,8 +1908,8 @@ void install_npc_domain_services(
     orders.set_function(
         "run",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, const game_handle &handle,
-    const std::string &order ) {
+            sol::this_state state, const game_handle & handle,
+    const std::string & order ) {
         require_write();
         return run_npc_order(
                    state, handle, order,
@@ -1919,7 +1919,7 @@ void install_npc_domain_services(
     orders.set_function(
         "open_pickup_rules",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, const game_handle &handle ) {
+    sol::this_state state, const game_handle & handle ) {
         require_write();
         return open_npc_pickup_rules(
                    state, handle,
@@ -1929,7 +1929,7 @@ void install_npc_domain_services(
     orders.set_function(
         "choose_combat_style",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, const game_handle &handle ) {
+    sol::this_state state, const game_handle & handle ) {
         require_write();
         return choose_npc_combat_style(
                    state, handle,
@@ -1939,7 +1939,7 @@ void install_npc_domain_services(
     orders.set_function(
         "open_character_sheet",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state state, const game_handle &handle ) {
+    sol::this_state state, const game_handle & handle ) {
         require_read();
         return open_npc_character_sheet(
                    state, handle,

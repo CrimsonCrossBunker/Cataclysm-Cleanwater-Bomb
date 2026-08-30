@@ -22,7 +22,7 @@
 #include "avatar.h"
 #include "basecamp.h"
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-#include "lua_platform_handle.h"
+    #include "lua_platform_handle.h"
 #endif
 #include "build_reqs.h"
 #include "cached_options.h"

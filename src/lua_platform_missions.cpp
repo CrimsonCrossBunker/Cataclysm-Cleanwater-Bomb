@@ -1406,7 +1406,7 @@ void install_mission_api(
         "list",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state,
-    const game_handle & owner,
+            const game_handle & owner,
     const sol::optional<sol::table> &options ) {
         require_read();
         return list_instances(
@@ -1437,7 +1437,7 @@ void install_mission_api(
     missions.set_function(
         "has_active",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &owner,
+            sol::this_state lua_state, const game_handle & owner,
     const script_game_id & id ) {
         require_read();
         return has_active_instance(
@@ -1458,7 +1458,7 @@ void install_mission_api(
     missions.set_function(
         "is_complete",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &owner,
+            sol::this_state lua_state, const game_handle & owner,
             const mission_token & token,
     const sol::optional<int> &npc_id ) {
         require_read();
@@ -1494,7 +1494,7 @@ void install_mission_api(
     missions.set_function(
         "assign",
         [current_runtime_generation, current_world_generation, require_write](
-    sol::this_state lua_state, const game_handle &owner,
+            sol::this_state lua_state, const game_handle & owner,
     const mission_token & token ) {
         require_write();
         return assign_instance(
@@ -1516,7 +1516,7 @@ void install_mission_api(
     missions.set_function(
         "select",
         [current_runtime_generation, current_world_generation, require_write](
-    sol::this_state lua_state, const game_handle &owner,
+            sol::this_state lua_state, const game_handle & owner,
     const mission_token & token ) {
         require_write();
         return select_instance(
@@ -1527,7 +1527,7 @@ void install_mission_api(
     missions.set_function(
         "step_complete",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &owner,
+            sol::this_state lua_state, const game_handle & owner,
             const mission_token & token,
     const int step ) {
         require_write();
@@ -1539,7 +1539,7 @@ void install_mission_api(
     missions.set_function(
         "fail",
         [current_runtime_generation, current_world_generation, require_write](
-    sol::this_state lua_state, const game_handle &owner,
+            sol::this_state lua_state, const game_handle & owner,
     const mission_token & token ) {
         require_write();
         return fail_instance(
@@ -1550,7 +1550,7 @@ void install_mission_api(
     missions.set_function(
         "complete",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &owner,
+            sol::this_state lua_state, const game_handle & owner,
             const mission_token & token,
     const sol::optional<bool> &force ) {
         require_write();
@@ -1572,7 +1572,7 @@ void install_mission_api(
     missions.set_function(
         "abandon",
         [current_runtime_generation, current_world_generation, require_write](
-    sol::this_state lua_state, const game_handle &owner,
+            sol::this_state lua_state, const game_handle & owner,
     const mission_token & token ) {
         require_write();
         return abandon_instance(

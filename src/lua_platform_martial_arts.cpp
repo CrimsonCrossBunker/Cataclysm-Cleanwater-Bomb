@@ -767,7 +767,7 @@ void install_martial_art_api(
     martial_arts.set_function(
         "technique_definition",
         [require_read]( sol::this_state lua_state,
-    const script_game_id &id ) {
+    const script_game_id & id ) {
         require_read();
         return get_technique_definition( lua_state, id );
     } );

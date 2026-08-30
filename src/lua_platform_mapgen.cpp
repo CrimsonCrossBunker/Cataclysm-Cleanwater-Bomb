@@ -277,7 +277,7 @@ sol::table mapgen_transaction_value(
     value["message"] = report.message;
     if( mapgen_transaction_has_footprint( report.footprint ) ) {
         value["footprint"] = mapgen_transaction_footprint_value(
-                                  state, report.footprint );
+                                 state, report.footprint );
     }
     value["target"] = target;
     value["update"] = update;
@@ -299,7 +299,7 @@ sol::table mapgen_transaction_error(
     result["error"]["update"] = update;
     if( mapgen_transaction_has_footprint( report.footprint ) ) {
         result["error"]["footprint"] = mapgen_transaction_footprint_value(
-                                             state, report.footprint );
+                                           state, report.footprint );
     }
     return result;
 }
@@ -323,8 +323,8 @@ sol::table apply_mapgen_update(
     const overmap_tile_token &target =
         requested_target.as<const overmap_tile_token &>();
     if( const std::optional<game_handle_error> error =
-                validate_overmap_tile_token(
-                    target, runtime_generation, world_generation ) ) {
+            validate_overmap_tile_token(
+                target, runtime_generation, world_generation ) ) {
         return make_game_error_result( state, *error );
     }
 
@@ -337,21 +337,21 @@ sol::table apply_mapgen_update(
     const mapgen_update_token &update =
         requested_update.as<const mapgen_update_token &>();
     if( const std::optional<game_handle_error> error =
-                validate_mapgen_update_token(
-                    update, runtime_generation, world_generation ) ) {
+            validate_mapgen_update_token(
+                update, runtime_generation, world_generation ) ) {
         return make_game_error_result( state, *error );
     }
 
     mapgen_apply_options options;
     if( const std::optional<game_handle_error> error =
-                read_mapgen_apply_options( requested_options, options ) ) {
+            read_mapgen_apply_options( requested_options, options ) ) {
         return make_game_error_result( state, *error );
     }
 
     platform_mapgen_transaction_footprint footprint;
     std::string preflight_error;
     if( !platform_transaction_safe( update.native_id(), target.native_position(),
-                                     footprint, preflight_error ) ) {
+                                    footprint, preflight_error ) ) {
         platform_mapgen_transaction_report report;
         report.state = platform_mapgen_transaction_state::rejected;
         report.code = "unsafe_operator";
@@ -407,7 +407,7 @@ void install_mapgen_service_api(
         "owner_is_current", &mapgen_update_token::owner_is_current,
         "is_valid",
         [current_runtime_generation, current_world_generation, require_read](
-            const mapgen_update_token &token ) {
+    const mapgen_update_token & token ) {
         require_read();
         return !validate_mapgen_update_token(
                    token, current_runtime_generation(),
@@ -416,7 +416,7 @@ void install_mapgen_service_api(
     sol::meta_function::to_string,
     &mapgen_update_token::to_string,
     sol::meta_function::equal_to,
-    []( const mapgen_update_token &lhs, const mapgen_update_token &rhs ) {
+    []( const mapgen_update_token & lhs, const mapgen_update_token & rhs ) {
         return lhs == rhs;
     } );
 
@@ -427,7 +427,7 @@ void install_mapgen_service_api(
     mapgen.set_function(
         "update_token",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state state, const script_game_id &id ) {
+    sol::this_state state, const script_game_id & id ) {
         require_read();
         sol::state_view lua_state( state );
         if( id.kind() != "update_mapgen" || !id.is_valid() ||
@@ -451,7 +451,7 @@ void install_mapgen_service_api(
         "apply",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state state, sol::object target,
-            sol::object update, sol::optional<sol::object> options ) {
+    sol::object update, sol::optional<sol::object> options ) {
         return apply_mapgen_update(
                    state, target, update, options,
                    current_runtime_generation(),
@@ -1188,7 +1188,7 @@ void script_mapgen_context::place_corpse(
     consume( 1 );
     item corpse = item::make_corpse(
                       type, std::max( calendar::turn - time_duration::from_days( age_days ),
-                                     calendar::start_of_cataclysm ) );
+                                      calendar::start_of_cataclysm ) );
     state.data->m.add_item_or_charges( position, corpse );
 }
 

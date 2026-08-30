@@ -1160,7 +1160,7 @@ void install_game_interaction_api(
     interaction.set_function(
         "confirm",
         [require_actions, has_active_callback](
-            const std::string &message ) {
+    const std::string & message ) {
         require_actions();
         require_active_callback(
             has_active_callback, "services.interaction.confirm" );
@@ -1169,8 +1169,8 @@ void install_game_interaction_api(
     interaction.set_function(
         "input_text",
         [require_actions, has_active_callback](
-            sol::this_state lua, const std::string &title,
-            const sol::optional<sol::table> &options ) {
+            sol::this_state lua, const std::string & title,
+    const sol::optional<sol::table> &options ) {
         require_actions();
         require_active_callback(
             has_active_callback, "services.interaction.input_text" );
@@ -1181,8 +1181,8 @@ void install_game_interaction_api(
         "input_number",
         [require_actions, has_active_callback](
             sol::this_state lua,
-            const std::string &description,
-            const int default_value ) {
+            const std::string & description,
+    const int default_value ) {
         require_actions();
         require_active_callback(
             has_active_callback,
@@ -1193,8 +1193,8 @@ void install_game_interaction_api(
     interaction.set_function(
         "choose",
         [require_actions, has_active_callback](
-            sol::this_state lua, const sol::table &entries,
-            const sol::optional<sol::table> &options ) {
+            sol::this_state lua, const sol::table & entries,
+    const sol::optional<sol::table> &options ) {
         require_actions();
         require_active_callback(
             has_active_callback, "services.interaction.choose" );
@@ -1227,9 +1227,9 @@ void install_game_interaction_api(
     sound.set_function(
         "emit",
         [require_actions, has_active_callback](
-            const script_tripoint_coord &position,
-            const int volume, const std::string &category,
-            const std::string &description,
+            const script_tripoint_coord & position,
+            const int volume, const std::string & category,
+            const std::string & description,
             const sol::optional<bool> &ambient,
             const sol::optional<std::string> &id,
     const sol::optional<std::string> &variant ) {
@@ -1292,7 +1292,7 @@ void install_game_interaction_api(
     targeting.set_function(
         "choose_map_square",
         [authorize](
-            sol::this_state lua, const std::string &message,
+            sol::this_state lua, const std::string & message,
             const sol::optional<script_tripoint_coord> &center,
     const sol::optional<bool> &allow_vertical ) {
         authorize( "services.targeting.choose_map_square" );
@@ -1303,7 +1303,7 @@ void install_game_interaction_api(
     targeting.set_function(
         "choose_visible_map_square",
         [authorize](
-            sol::this_state lua, const std::string &message,
+            sol::this_state lua, const std::string & message,
     const int range ) {
         authorize(
             "services.targeting.choose_visible_map_square" );
@@ -1313,7 +1313,7 @@ void install_game_interaction_api(
     targeting.set_function(
         "choose_overmap_point",
         [authorize](
-            sol::this_state lua, const std::string &message,
+            sol::this_state lua, const std::string & message,
             const sol::optional<script_tripoint_coord> &center,
     const sol::optional<int> &distance ) {
         authorize( "services.targeting.choose_overmap_point" );
@@ -1365,9 +1365,9 @@ void install_game_interaction_api(
         [authorize](
             sol::this_state lua,
             const script_tripoint_coord & center,
-            const std::string &message,
-            const std::string &failure_message,
-            const sol::table &candidates,
+            const std::string & message,
+            const std::string & failure_message,
+            const sol::table & candidates,
             const sol::optional<bool> &allow_vertical,
     const sol::optional<bool> &allow_autoselect ) {
         authorize(

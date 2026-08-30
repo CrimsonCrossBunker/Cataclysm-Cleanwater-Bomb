@@ -33,7 +33,7 @@ class content_transaction;
 
 class relic_procgen_data
 {
-    friend class cata::lua_platform::content_transaction;
+        friend class cata::lua_platform::content_transaction;
     public:
 
         /*

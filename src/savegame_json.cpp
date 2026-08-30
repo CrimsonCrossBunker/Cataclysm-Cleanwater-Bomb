@@ -4971,7 +4971,7 @@ void basecamp::serialize( JsonOut &json ) const
         json.member( "platform_tasks" );
         json.start_array();
         const auto serialize_recipe_holder = [&json](
-            const basecamp_platform_recipe_holder &holder ) {
+        const basecamp_platform_recipe_holder & holder ) {
             json.start_object();
             json.member( "kind", "character" );
             json.member( "character_id", holder.character );
@@ -5235,8 +5235,8 @@ void basecamp::deserialize( const JsonObject &data )
     platform_expansions_.clear();
     platform_retired_expansion_generations_.clear();
     const auto read_platform_resource_changes = [](
-        JsonObject &source, const char *member,
-        std::vector<basecamp_platform_resource_change> &changes ) {
+                JsonObject & source, const char *member,
+    std::vector<basecamp_platform_resource_change> &changes ) {
         if( !source.has_array( member ) ) {
             return false;
         }
@@ -5253,15 +5253,15 @@ void basecamp::deserialize( const JsonObject &data )
         return true;
     };
     const auto resource_change_sets_match = [](
-        const std::vector<basecamp_platform_resource_change> &lhs,
-        const std::vector<basecamp_platform_resource_change> &rhs ) {
+            const std::vector<basecamp_platform_resource_change> &lhs,
+    const std::vector<basecamp_platform_resource_change> &rhs ) {
         if( lhs.size() != rhs.size() ) {
             return false;
         }
         std::vector<bool> matched( rhs.size(), false );
         for( const basecamp_platform_resource_change &left : lhs ) {
             const auto found = std::find_if( rhs.begin(), rhs.end(),
-            [&left, &rhs, &matched]( const basecamp_platform_resource_change &right ) {
+            [&left, &rhs, &matched]( const basecamp_platform_resource_change & right ) {
                 const std::size_t index = static_cast<std::size_t>( &right - rhs.data() );
                 return !matched[index] && left.resource_id == right.resource_id &&
                        left.delta == right.delta;
@@ -5273,8 +5273,8 @@ void basecamp::deserialize( const JsonObject &data )
         }
         return true;
     };
-    const auto read_recipe_holder = []( JsonObject &source,
-                                        basecamp_platform_recipe_holder &holder ) {
+    const auto read_recipe_holder = []( JsonObject & source,
+    basecamp_platform_recipe_holder & holder ) {
         source.allow_omitted_members();
         std::string kind;
         holder = {};
@@ -5288,8 +5288,8 @@ void basecamp::deserialize( const JsonObject &data )
         return true;
     };
     const auto read_recipe_holder_member = [&read_recipe_holder](
-        JsonObject &source, const char *member,
-        basecamp_platform_recipe_holder &holder ) {
+            JsonObject & source, const char *member,
+    basecamp_platform_recipe_holder & holder ) {
         if( !source.has_object( member ) ) {
             return false;
         }
@@ -5297,8 +5297,8 @@ void basecamp::deserialize( const JsonObject &data )
         return read_recipe_holder( holder_data, holder );
     };
     const auto read_recipe_escrow = [&read_recipe_holder](
-        JsonObject &source, std::vector<basecamp_platform_recipe_escrow_item> &escrow,
-        bool &structurally_valid ) {
+                                        JsonObject & source, std::vector<basecamp_platform_recipe_escrow_item> &escrow,
+    bool & structurally_valid ) {
         structurally_valid = source.has_array( "recipe_escrow" );
         if( !structurally_valid ) {
             return;
@@ -5325,17 +5325,17 @@ void basecamp::deserialize( const JsonObject &data )
         }
     };
     const auto recipe_holder_equal = [](
-        const basecamp_platform_recipe_holder &lhs,
-        const basecamp_platform_recipe_holder &rhs ) {
+                                         const basecamp_platform_recipe_holder & lhs,
+    const basecamp_platform_recipe_holder & rhs ) {
         return lhs.kind == rhs.kind && lhs.character == rhs.character &&
                lhs.identity_generation == rhs.identity_generation && lhs.slot == rhs.slot;
     };
     const auto validate_saved_item_escrow = [&recipe_holder_equal](
-        const std::vector<basecamp_platform_recipe_holder> &source_holders,
-        const basecamp_platform_recipe_holder &destination_holder,
-        const std::vector<basecamp_platform_recipe_escrow_item> &escrow,
-        const std::string_view label,
-        std::string &error ) {
+            const std::vector<basecamp_platform_recipe_holder> &source_holders,
+            const basecamp_platform_recipe_holder & destination_holder,
+            const std::vector<basecamp_platform_recipe_escrow_item> &escrow,
+            const std::string_view label,
+    std::string & error ) {
         if( escrow.empty() || escrow.size() > 256 ) {
             error = std::string( label ) + " escrow is empty or exceeds its bound";
             return false;
@@ -5349,8 +5349,8 @@ void basecamp::deserialize( const JsonObject &data )
                 return false;
             }
             bool holder_known = std::any_of( source_holders.begin(),
-            source_holders.end(), [&entry, &recipe_holder_equal](
-                const basecamp_platform_recipe_holder &holder ) {
+                                             source_holders.end(), [&entry, &recipe_holder_equal](
+            const basecamp_platform_recipe_holder & holder ) {
                 return recipe_holder_equal( entry.source_holder, holder );
             } );
             holder_known = holder_known || ( !entry.tool && recipe_holder_equal(
@@ -5456,9 +5456,9 @@ void basecamp::deserialize( const JsonObject &data )
             std::set<std::uint64_t> expansion_ids;
             std::set<point_rel_omt> expansion_directions;
             std::set<tripoint_abs_omt> expansion_positions;
-            const auto valid_expansion_name = []( const std::string &value ) {
+            const auto valid_expansion_name = []( const std::string & value ) {
                 return !value.empty() && value.size() <= 64 &&
-                       std::all_of( value.begin(), value.end(), []( const unsigned char ch ) {
+                std::all_of( value.begin(), value.end(), []( const unsigned char ch ) {
                     return ch >= 0x20U && ch != 0x7fU;
                 } );
             };
@@ -5475,7 +5475,7 @@ void basecamp::deserialize( const JsonObject &data )
                     expansion_data_json.read( "pos", expansion.position );
                 if( valid && expansion_data_json.has_member( "work_in_progress" ) ) {
                     valid = expansion_data_json.read( "work_in_progress",
-                                                       expansion.work_in_progress );
+                                                      expansion.work_in_progress );
                 }
                 const auto legacy = expansions.find( expansion.direction );
                 valid = valid && expansion.expansion_id != 0 &&
@@ -5557,7 +5557,7 @@ void basecamp::deserialize( const JsonObject &data )
                     // malformed descriptor must not make serialized Item values
                     // disappear from the recovery boundary.
                     read_recipe_escrow( task_data, preserved_upgrade_escrow,
-                                       preserved_upgrade_escrow_structurally_valid );
+                                        preserved_upgrade_escrow_structurally_valid );
                     // These reads are deliberately independent of the common
                     // validity chain below, whose short-circuiting is not a
                     // safe way to identify a recoverable record.
@@ -5593,10 +5593,10 @@ void basecamp::deserialize( const JsonObject &data )
                         task.parameters.clear();
                     } else if( task.kind == basecamp_platform_resource_work_kind ) {
                         task.parameters = std::string(
-                                      basecamp_platform_resource_work_parameter_schema );
+                                              basecamp_platform_resource_work_parameter_schema );
                     } else if( task.kind == basecamp_platform_recipe_work_kind ) {
                         task.parameters = std::string(
-                                      basecamp_platform_recipe_work_parameter_schema );
+                                              basecamp_platform_recipe_work_parameter_schema );
                     } else if( task.kind == basecamp_platform_upgrade_work_kind ) {
                         // v1/v2 never had a safe upgrade descriptor.  Do not
                         // invent a parameter schema; the item-bearing path
@@ -5662,7 +5662,7 @@ void basecamp::deserialize( const JsonObject &data )
                                                     task.reserved_food_kcal );
                             if( valid && task_data.has_member( "reservation_discarded" ) ) {
                                 valid = task_data.read( "reservation_discarded",
-                                                         task.reservation_discarded );
+                                                        task.reservation_discarded );
                             }
                             if( valid ) {
                                 std::string resource_error;
@@ -5695,19 +5695,19 @@ void basecamp::deserialize( const JsonObject &data )
                         task.recipe_work = work;
                         std::string recipe_error;
                         recipe_structurally_valid = recipe_structurally_valid &&
-                            validate_basecamp_platform_recipe_work( work, recipe_error );
+                                                    validate_basecamp_platform_recipe_work( work, recipe_error );
                     }
                     bool escrow_structurally_valid = false;
                     read_recipe_escrow( task_data, task.recipe_escrow,
-                                       escrow_structurally_valid );
+                                        escrow_structurally_valid );
                     if( recipe_structurally_valid && escrow_structurally_valid ) {
                         if( task_data.has_member( "recipe_commit_marker" ) ) {
                             recipe_structurally_valid = task_data.read(
-                                "recipe_commit_marker", task.recipe_commit_marker );
+                                                            "recipe_commit_marker", task.recipe_commit_marker );
                         }
                         if( task_data.has_member( "recipe_recovery_required" ) ) {
                             recipe_structurally_valid = task_data.read(
-                                "recipe_recovery_required", task.recipe_recovery_required );
+                                                            "recipe_recovery_required", task.recipe_recovery_required );
                         }
                         valid = recipe_structurally_valid;
                     } else {
@@ -5766,7 +5766,7 @@ void basecamp::deserialize( const JsonObject &data )
                         task.upgrade_work = work;
                         std::string upgrade_error;
                         upgrade_structurally_valid = upgrade_structurally_valid &&
-                            validate_basecamp_platform_upgrade_work( work, upgrade_error );
+                                                     validate_basecamp_platform_upgrade_work( work, upgrade_error );
                     }
                     bool escrow_structurally_valid = false;
                     if( upgrade_payload_present ) {
@@ -5775,33 +5775,33 @@ void basecamp::deserialize( const JsonObject &data )
                             preserved_upgrade_escrow_structurally_valid;
                     } else {
                         read_recipe_escrow( task_data, task.recipe_escrow,
-                                           escrow_structurally_valid );
+                                            escrow_structurally_valid );
                     }
                     if( upgrade_structurally_valid && escrow_structurally_valid ) {
                         if( task_data.has_member( "upgrade_commit_marker" ) ) {
                             upgrade_structurally_valid = task_data.read(
-                                "upgrade_commit_marker", task.upgrade_commit_marker );
+                                                             "upgrade_commit_marker", task.upgrade_commit_marker );
                         }
                         if( task_data.has_member( "upgrade_applying_marker" ) ) {
                             upgrade_structurally_valid = task_data.read(
-                                "upgrade_applying_marker", task.upgrade_applying_marker );
+                                                             "upgrade_applying_marker", task.upgrade_applying_marker );
                         }
                         if( task_data.has_member( "recipe_recovery_required" ) ) {
                             upgrade_structurally_valid = task_data.read(
-                                "recipe_recovery_required", task.recipe_recovery_required );
+                                                             "recipe_recovery_required", task.recipe_recovery_required );
                         }
                         valid = upgrade_structurally_valid;
                     } else {
                         valid = false;
                     }
                 } else if( valid && ( task_data.has_member( "resource_work" ) ||
-                                     task_data.has_member( "reserved_resources" ) ||
-                                     task_data.has_member( "reserved_food_kcal" ) ||
-                                     task_data.has_member( "recipe_work" ) ||
-                                     task_data.has_member( "recipe_escrow" ) ||
-                                     task_data.has_member( "upgrade_work" ) ||
-                                     task_data.has_member( "upgrade_commit_marker" ) ||
-                                     task_data.has_member( "upgrade_applying_marker" ) ) ) {
+                                      task_data.has_member( "reserved_resources" ) ||
+                                      task_data.has_member( "reserved_food_kcal" ) ||
+                                      task_data.has_member( "recipe_work" ) ||
+                                      task_data.has_member( "recipe_escrow" ) ||
+                                      task_data.has_member( "upgrade_work" ) ||
+                                      task_data.has_member( "upgrade_commit_marker" ) ||
+                                      task_data.has_member( "upgrade_applying_marker" ) ) ) {
                     valid = false;
                 }
                 if( upgrade_payload_present && !valid &&
@@ -5877,10 +5877,10 @@ void basecamp::deserialize( const JsonObject &data )
                 }
                 std::string kind_error;
                 const bool valid_kind = upgrade_marker_requires_authoritative_recovery ?
-                                         true : validate_basecamp_platform_task_kind(
-                                             task.kind, task.parameters,
-                                             basecamp_platform_task_operation::resolve,
-                                             kind_error );
+                                        true : validate_basecamp_platform_task_kind(
+                                            task.kind, task.parameters,
+                                            basecamp_platform_task_operation::resolve,
+                                            kind_error );
                 const bool escrow_terminal =
                     task.state == basecamp_platform_task_state::completed_unclaimed ||
                     task.state == basecamp_platform_task_state::refund_pending;
@@ -5938,23 +5938,24 @@ void basecamp::deserialize( const JsonObject &data )
                                 valid = entry.stable_uid > 0 &&
                                         entry.identity_generation > 0 && entry.charges > 0 &&
                                         escrow_uids.insert( entry.stable_uid ).second &&
-                                        [&entry, &restored, &escrow_error]() {
-                                            try {
-                                                const JsonValue parsed = json_loader::from_string(
-                                                    entry.serialized_item );
-                                                if( !parsed.test_object() ) {
-                                                    return false;
-                                                }
-                                                restored.deserialize( parsed.get_object() );
-                                                return true;
-                                            } catch( const std::exception &exception ) {
-                                                escrow_error = exception.what();
-                                                return false;
-                                            }
-                                        }() &&
-                                        restored.uid().get_value() == entry.stable_uid &&
-                                        ( restored.count_by_charges() ? restored.charges : 1 ) ==
-                                        entry.charges;
+                                [&entry, &restored, &escrow_error]() {
+                                    try {
+                                        const JsonValue parsed = json_loader::from_string(
+                                                                     entry.serialized_item );
+                                        if( !parsed.test_object() ) {
+                                            return false;
+                                        }
+                                        restored.deserialize( parsed.get_object() );
+                                        return true;
+                                    } catch( const std::exception &exception ) {
+                                        escrow_error = exception.what();
+                                        return false;
+                                    }
+                                }
+                                () &&
+                                restored.uid().get_value() == entry.stable_uid &&
+                                ( restored.count_by_charges() ? restored.charges : 1 ) ==
+                                entry.charges;
                                 if( !valid ) {
                                     break;
                                 }

@@ -97,7 +97,7 @@ struct has_legacy_dialogue_quote_trade_item : std::false_type {
 
 template<typename Type>
 struct has_legacy_dialogue_quote_trade_item<Type, std::void_t<
-    decltype( &Type::quote_trade_item )>> : std::true_type {
+decltype( &Type::quote_trade_item )>> : std::true_type {
 };
 
 template<typename Type, typename = void>
@@ -106,7 +106,7 @@ struct has_legacy_dialogue_buy_quoted_item : std::false_type {
 
 template<typename Type>
 struct has_legacy_dialogue_buy_quoted_item<Type, std::void_t<
-    decltype( &Type::buy_quoted_item )>> : std::true_type {
+decltype( &Type::buy_quoted_item )>> : std::true_type {
 };
 
 } // namespace
@@ -136,13 +136,13 @@ TEST_CASE( "lua_platform_registrar_orders_forward_inheritance_deterministically"
     std::string error;
     const bool resolved = cata::lua_platform::detail::resolve_platform_inheritance_order(
                               entries,
-    []( const registrar_graph_entry &entry ) {
+    []( const registrar_graph_entry & entry ) {
         return entry.id;
     },
-    []( const registrar_graph_entry &entry ) {
+    []( const registrar_graph_entry & entry ) {
         return entry.copy_from;
     },
-    []( const std::string &id ) {
+    []( const std::string & id ) {
         return id == "native_parent";
     },
     order, error, "test definition" );
@@ -167,10 +167,10 @@ TEST_CASE( "lua_platform_registrar_rejects_inheritance_cycles",
 
     CHECK_FALSE( cata::lua_platform::detail::resolve_platform_inheritance_order(
                      entries,
-    []( const registrar_graph_entry &entry ) {
+    []( const registrar_graph_entry & entry ) {
         return entry.id;
     },
-    []( const registrar_graph_entry &entry ) {
+    []( const registrar_graph_entry & entry ) {
         return entry.copy_from;
     },
     []( const std::string & ) {
@@ -191,17 +191,17 @@ TEST_CASE( "lua_platform_registrar_applies_typed_extend_delete_atomically",
 
     REQUIRE( cata::lua_platform::detail::apply_platform_collection_patch(
                  target, &extend, &remove,
-    []( const std::string &value ) {
+    []( const std::string & value ) {
         return value;
     },
     "test flags", error ) );
-    CHECK( target == std::set<std::string>{ "added" } );
+    CHECK( target == std::set<std::string> { "added" } );
 
     const std::set<std::string> conflicting = { "added" };
     CHECK_FALSE( cata::lua_platform::detail::apply_platform_collection_patch(
                      target, &conflicting,
                      static_cast<const std::set<std::string> *>( nullptr ),
-    []( const std::string &value ) {
+    []( const std::string & value ) {
         return value;
     },
     "test flags", error ) );

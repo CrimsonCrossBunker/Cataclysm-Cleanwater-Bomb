@@ -86,10 +86,11 @@ struct platform_mapgen_transaction_report {
     std::string message;
 };
 
-class platform_mapgen_callback_transaction {
+class platform_mapgen_callback_transaction
+{
     public:
         platform_mapgen_callback_transaction( mapgendata &,
-                                               platform_mapgen_transaction_report * );
+                                              platform_mapgen_transaction_report * );
         ~platform_mapgen_callback_transaction() noexcept;
 
         platform_mapgen_callback_transaction( const platform_mapgen_callback_transaction & ) = delete;

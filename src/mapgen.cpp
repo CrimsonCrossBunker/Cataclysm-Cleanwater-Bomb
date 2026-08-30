@@ -734,7 +734,7 @@ platform_mapgen_callback_transaction::platform_mapgen_callback_transaction(
         report->footprint.complete_omt_z_stack = false;
     }
 
-    const auto reject = [report]( const std::string &message ) {
+    const auto reject = [report]( const std::string & message ) {
         if( report != nullptr ) {
             report->state = platform_mapgen_transaction_state::rejected;
             report->code = "prepare_failed";
@@ -864,8 +864,8 @@ bool platform_mapgen_callback_transaction::rollback(
                 pimpl_->report->state = platform_mapgen_transaction_state::rollback_failed;
                 pimpl_->report->code = "rollback_failed";
                 pimpl_->report->message = string_format(
-                        "Platform mapgen callback transaction rollback failed (code=%s, message=%s)",
-                        code, message );
+                                              "Platform mapgen callback transaction rollback failed (code=%s, message=%s)",
+                                              code, message );
             }
         }
     } catch( ... ) {
@@ -5352,7 +5352,7 @@ bool mapgen_function_json_base::platform_transaction_safe( std::string &error ) 
         return false;
     }
 
-    const auto bounded = []( const jmapgen_int &value, const int upper ) {
+    const auto bounded = []( const jmapgen_int & value, const int upper ) {
         return value.val >= 0 && value.valmax >= value.val && value.valmax < upper;
     };
     for( const jmapgen_setmap &setmap : setmap_points ) {
@@ -8087,14 +8087,14 @@ ret_val<void> run_mapgen_update_func_transactional(
         *report = {};
     }
     const auto set_report = [report]( const platform_mapgen_transaction_state state,
-                                      const std::string &code, const std::string &message ) {
+    const std::string & code, const std::string & message ) {
         if( report != nullptr ) {
             report->state = state;
             report->code = code;
             report->message = message;
         }
     };
-    const auto reject = [&set_report]( const std::string &code, const std::string &message ) {
+    const auto reject = [&set_report]( const std::string & code, const std::string & message ) {
         set_report( platform_mapgen_transaction_state::rejected, code, message );
         return ret_val<void>::make_failure( message );
     };
@@ -8158,8 +8158,8 @@ ret_val<void> run_mapgen_update_func_transactional(
         if( !target.om->platform_terrain_set_preflight(
                 target.local, *expected_terrain, terrain_error ) ||
             ( terrain_publication &&
-                  !target.om->platform_terrain_set_preflight(
-                      target.local, *terrain_publication, terrain_error ) ) ) {
+              !target.om->platform_terrain_set_preflight(
+                  target.local, *terrain_publication, terrain_error ) ) ) {
             return reject( "terrain_mismatch", terrain_error );
         }
         terrain = terrain_snapshot{ target.om, target.local, previous, false };
@@ -8195,7 +8195,7 @@ ret_val<void> run_mapgen_update_func_transactional(
         }
     } catch( const std::exception &exception ) {
         return reject( "prepare_failed", string_format(
-                          _( "could not prepare transactional map update: %s" ), exception.what() ) );
+                           _( "could not prepare transactional map update: %s" ), exception.what() ) );
     }
 
     std::unordered_map<std::string, tripoint_abs_ms> queued_points_preimage;
@@ -8203,7 +8203,7 @@ ret_val<void> run_mapgen_update_func_transactional(
         queued_points_preimage = queued_points;
     } catch( const std::exception &exception ) {
         return reject( "prepare_failed", string_format(
-                          _( "could not prepare transactional map update: %s" ), exception.what() ) );
+                           _( "could not prepare transactional map update: %s" ), exception.what() ) );
     }
 
     ret_val<void> outcome = ret_val<void>::make_success();
@@ -8220,7 +8220,7 @@ ret_val<void> run_mapgen_update_func_transactional(
         }
     } catch( const std::exception &exception ) {
         outcome = ret_val<void>::make_failure( string_format(
-                   "Platform mapgen transaction threw while applying: %s", exception.what() ) );
+                "Platform mapgen transaction threw while applying: %s", exception.what() ) );
     } catch( ... ) {
         outcome = ret_val<void>::make_failure(
                       "Platform mapgen transaction threw while applying" );
@@ -8239,7 +8239,7 @@ ret_val<void> run_mapgen_update_func_transactional(
             }
         } catch( const std::exception &exception ) {
             outcome = ret_val<void>::make_failure( string_format(
-                              "Platform terrain publication threw: %s", exception.what() ) );
+                    "Platform terrain publication threw: %s", exception.what() ) );
         } catch( ... ) {
             outcome = ret_val<void>::make_failure(
                           "Platform terrain publication threw" );

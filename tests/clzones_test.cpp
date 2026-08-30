@@ -213,7 +213,7 @@ TEST_CASE( "vehicle_zone_identity_distinguishes_same_mount_and_refresh_return",
                           false, true, zone_abs, zone_abs );
     cart->zones_dirty = true;
     zone_data *first = zm.create_vehicle_loot_zone( *cart, cargo->mount_pos(), first_data,
-                         &here );
+                       &here );
     REQUIRE( first != nullptr );
 
     bool returned_pointer_is_current = false;
@@ -227,7 +227,7 @@ TEST_CASE( "vehicle_zone_identity_distinguishes_same_mount_and_refresh_return",
     zone_data second_data( "Second", zone_type_LOOT_FOOD, faction_your_followers,
                            false, true, zone_abs, zone_abs );
     zone_data *second = zm.create_vehicle_loot_zone( *cart, cargo->mount_pos(), second_data,
-                          &here );
+                        &here );
     REQUIRE( second != nullptr );
 
     REQUIRE( zm.remove( *first, &here ) );

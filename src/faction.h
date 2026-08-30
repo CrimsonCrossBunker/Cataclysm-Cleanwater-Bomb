@@ -116,7 +116,7 @@ struct faction_epilogue_data {
 
 class faction_template
 {
-    friend class cata::lua_platform::world_content_transaction;
+        friend class cata::lua_platform::world_content_transaction;
     protected:
         faction_template();
         void load_relations( const JsonObject &jsobj );

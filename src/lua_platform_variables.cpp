@@ -55,9 +55,9 @@ void require_active_callback(
 void validate_context_key( const std::string &key )
 {
     if( key.empty() || key.size() > maximum_context_key_bytes ||
-        std::any_of( key.begin(), key.end(), []( const unsigned char ch ) {
-        return ch == '\0' || ch < 0x20U || ch == 0x7fU;
-    } ) ) {
+    std::any_of( key.begin(), key.end(), []( const unsigned char ch ) {
+    return ch == '\0' || ch < 0x20U || ch == 0x7fU;
+} ) ) {
         throw std::invalid_argument(
             "services.variables context keys must contain 1..128 printable bytes" );
     }
@@ -464,7 +464,7 @@ sol::table resolve_variable(
                        state, sol::make_object( state, std::move( result ) ) );
         }
         const resolved_variable_talker resolved = resolve_variable_talker(
-                *actor, runtime_generation, world_generation );
+                    *actor, runtime_generation, world_generation );
         if( resolved.error ) {
             return make_game_error_result( state, *resolved.error );
         }
@@ -626,14 +626,14 @@ void install_variable_api(
     } );
     variables.set_function(
         "get_global",
-        [require_read]( sol::this_state lua_state, const std::string &key ) {
+    [require_read]( sol::this_state lua_state, const std::string & key ) {
         require_read();
         return get_global_variable( lua_state, key );
     } );
     variables.set_function(
         "set_global",
         [require_write, has_active_callback]( sol::this_state lua_state,
-    const std::string &key, const sol::object &value ) {
+    const std::string & key, const sol::object & value ) {
         require_write();
         require_active_callback( has_active_callback, "services.variables.set_global" );
         return set_global_variable( lua_state, key, value );
@@ -641,7 +641,7 @@ void install_variable_api(
     variables.set_function(
         "remove_global",
         [require_write, has_active_callback]( sol::this_state lua_state,
-    const std::string &key ) {
+    const std::string & key ) {
         require_write();
         require_active_callback( has_active_callback, "services.variables.remove_global" );
         return remove_global_variable( lua_state, key );
@@ -650,8 +650,8 @@ void install_variable_api(
         "resolve",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const sol::optional<sol::table> &context,
-    const sol::optional<game_handle> &actor, const std::string &scope,
-    const std::string &key ) {
+            const sol::optional<game_handle> &actor, const std::string & scope,
+    const std::string & key ) {
         require_read();
         return resolve_variable( lua_state, context, actor, scope, key,
                                  current_runtime_generation(),
@@ -660,10 +660,10 @@ void install_variable_api(
     variables.set_function(
         "set_resolved",
         [current_runtime_generation, current_world_generation,
-         require_write, has_active_callback](
+                                     require_write, has_active_callback](
             sol::this_state lua_state, const sol::optional<sol::table> &context,
-            const sol::optional<game_handle> &actor, const std::string &scope,
-            const std::string &key, const sol::object &value ) {
+            const sol::optional<game_handle> &actor, const std::string & scope,
+    const std::string & key, const sol::object & value ) {
         require_write();
         require_active_callback( has_active_callback, "services.variables.set_resolved" );
         return set_resolved_variable(

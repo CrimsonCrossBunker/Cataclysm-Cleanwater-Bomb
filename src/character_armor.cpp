@@ -274,7 +274,7 @@ bool Character::armor_absorb( damage_unit &du, item &armor, const bodypart_id &b
 
     // check if the armor was damaged - damage_armor=false still mitigates but does not degrade durability
     const double dmg_mult = damage_armor ? calculate_by_enchantment( 1,
-                                        enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ) : 0.0;
+                            enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ) : 0.0;
     item::armor_status damaged = armor.damage_armor_durability( du, pre_mitigation, bp, dmg_mult,
                                  this );
 
@@ -287,7 +287,7 @@ bool Character::armor_absorb( damage_unit &du, item &armor, const bodypart_id &b
 }
 
 bool Character::armor_absorb( damage_unit &du, item &armor, const bodypart_id &bp, int roll,
-                           bool damage_armor ) const
+                              bool damage_armor ) const
 {
     item::cover_type ctype = item::get_cover_type( du.type );
 
@@ -313,7 +313,7 @@ bool Character::armor_absorb( damage_unit &du, item &armor, const bodypart_id &b
 
     // check if the armor was damaged - damage_armor=false still mitigates but does not degrade durability
     const double dmg_mult = damage_armor ? calculate_by_enchantment( 1,
-                                        enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ) : 0.0;
+                            enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ) : 0.0;
     item::armor_status damaged = armor.damage_armor_durability( du, pre_mitigation, bp, dmg_mult,
                                  this );
 
@@ -332,7 +332,7 @@ bool Character::ablative_armor_absorb( damage_unit &du, item &armor, const sub_b
 
     item::cover_type ctype = item::get_cover_type( du.type );
     const double dmg_mult = damage_armor ? calculate_by_enchantment( 1,
-                                        enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ) : 0.0;
+                            enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ) : 0.0;
 
     for( item_pocket *const pocket : armor.get_ablative_pockets() ) {
         // if the pocket is ablative and not empty we should use its values

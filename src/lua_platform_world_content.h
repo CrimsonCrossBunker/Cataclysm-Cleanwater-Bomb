@@ -8,7 +8,7 @@
 #include <string>
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-#include "lua_platform_sol.h"
+    #include "lua_platform_sol.h"
 #endif
 
 namespace cata::lua_platform

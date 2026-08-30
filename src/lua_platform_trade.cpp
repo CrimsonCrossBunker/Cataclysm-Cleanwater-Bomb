@@ -144,7 +144,7 @@ struct trade_settlement_plan {
 };
 
 std::unordered_map<std::uint64_t, std::shared_ptr<trade_quote_token::state>>
-trade_quote_registry;
+        trade_quote_registry;
 std::uint64_t next_trade_quote_id = 1;
 
 bool present( const sol::object &value )
@@ -453,11 +453,11 @@ std::optional<game_handle_error> validate_trade_item_line(
     Character *source = nullptr;
     Character *destination = nullptr;
     if( const std::optional<game_handle_error> holder_error = resolve_trade_holder(
-            line.source, runtime, world_generation, source ) ) {
+                line.source, runtime, world_generation, source ) ) {
         return holder_error;
     }
     if( const std::optional<game_handle_error> holder_error = resolve_trade_holder(
-            line.destination, runtime, world_generation, destination ) ) {
+                line.destination, runtime, world_generation, destination ) ) {
         return holder_error;
     }
     const bool seller_to_buyer = line.direction == "seller_to_buyer";
@@ -480,7 +480,7 @@ std::optional<game_handle_error> validate_trade_item_line(
         };
     }
     const native_handle_result<item> native_item = line.item.resolve_item(
-            runtime, world_generation );
+                runtime, world_generation );
     if( !native_item ) {
         return native_item.error;
     }
@@ -582,12 +582,12 @@ std::vector<trade_line_input> read_trade_lines( const sol::table &requested )
                 "services.trade.quote line quantity is outside native bounds" );
         }
         if( const std::optional<game_handle_error> error = read_trade_holder(
-                raw_source.as<sol::table>(), "services.trade.quote" , parsed.source ) ) {
+                    raw_source.as<sol::table>(), "services.trade.quote", parsed.source ) ) {
             throw std::invalid_argument( error->message );
         }
         if( const std::optional<game_handle_error> error = read_trade_holder(
-                raw_destination.as<sol::table>(), "services.trade.quote" ,
-                parsed.destination ) ) {
+                    raw_destination.as<sol::table>(), "services.trade.quote",
+                    parsed.destination ) ) {
             throw std::invalid_argument( error->message );
         }
         result.push_back( std::move( parsed ) );
@@ -826,7 +826,7 @@ int authoritative_trade_price( Character &pricing_buyer,
     item_location location( source, &priced_item );
     return npc_trading::trading_price(
                pricing_buyer, pricing_seller,
-               { location, priced_item.count_by_charges() ? quantity : 1 } );
+    { location, priced_item.count_by_charges() ? quantity : 1 } );
 }
 
 sol::table trade_error_result( sol::state_view lua,
@@ -993,17 +993,17 @@ sol::table trade_quote_snapshot( sol::state_view lua,
     value["tax"] = snapshot.tax;
     value["settlement_amount"] = snapshot.settlement_amount;
     value["debt_before"] = snapshot.has_debt_account ?
-                            sol::make_object( lua, snapshot.debt_before ) :
-                            sol::make_object( lua, sol::nil );
+                           sol::make_object( lua, snapshot.debt_before ) :
+                           sol::make_object( lua, sol::nil );
     value["debt_after"] = snapshot.has_debt_account ?
-                           sol::make_object( lua, snapshot.debt_after ) :
-                           sol::make_object( lua, sol::nil );
+                          sol::make_object( lua, snapshot.debt_after ) :
+                          sol::make_object( lua, sol::nil );
     value["sold_before"] = snapshot.has_debt_account ?
-                            sol::make_object( lua, snapshot.sold_before ) :
-                            sol::make_object( lua, sol::nil );
-    value["sold_after"] = snapshot.has_debt_account ?
-                           sol::make_object( lua, snapshot.sold_after ) :
+                           sol::make_object( lua, snapshot.sold_before ) :
                            sol::make_object( lua, sol::nil );
+    value["sold_after"] = snapshot.has_debt_account ?
+                          sol::make_object( lua, snapshot.sold_after ) :
+                          sol::make_object( lua, sol::nil );
     value["buyer_cash_before"] = snapshot.buyer_cash_before;
     value["seller_cash_before"] = snapshot.seller_cash_before;
     value["buyer_cash_after"] = snapshot.buyer_cash_after;
@@ -1028,22 +1028,22 @@ sol::table trade_quote_snapshot( sol::state_view lua,
         entry["item"] = line.item;
         entry["item_uid"] = line.item_uid;
         entry["item_identity_generation"] = static_cast<lua_Integer>(
-                line.item_identity_generation );
+                                                line.item_identity_generation );
         entry["quantity"] = line.quantity;
         entry["charges_at_quote"] = line.charges;
         entry["source_holder"] = trade_holder_to_lua(
-                                      lua, line.source_holder, line.source_slot,
-                                      line.source_holder_locator,
-                                      line.source_holder_generation );
+                                     lua, line.source_holder, line.source_slot,
+                                     line.source_holder_locator,
+                                     line.source_holder_generation );
         entry["destination_holder"] = trade_holder_to_lua(
-                                           lua, line.destination_holder,
-                                           line.destination_slot,
-                                           line.destination_holder_locator,
-                                           line.destination_holder_generation );
+                                          lua, line.destination_holder,
+                                          line.destination_slot,
+                                          line.destination_holder_locator,
+                                          line.destination_holder_generation );
         entry["source_holder_mutation_generation"] = static_cast<lua_Integer>(
-                line.source_holder_generation );
+                    line.source_holder_generation );
         entry["destination_holder_mutation_generation"] = static_cast<lua_Integer>(
-                line.destination_holder_generation );
+                    line.destination_holder_generation );
         entry["unit_price"] = line.unit_price;
         entry["total"] = line.total;
         entry["tax"] = 0;
@@ -1091,11 +1091,11 @@ std::optional<game_handle_error> validate_trade_quote(
     Character *seller = nullptr;
     Character *buyer = nullptr;
     if( const std::optional<game_handle_error> error = resolve_trade_participant(
-            snapshot.seller, runtime, world_generation, seller ) ) {
+                snapshot.seller, runtime, world_generation, seller ) ) {
         return error;
     }
     if( const std::optional<game_handle_error> error = resolve_trade_participant(
-            snapshot.buyer, runtime, world_generation, buyer ) ) {
+                snapshot.buyer, runtime, world_generation, buyer ) ) {
         return error;
     }
     if( seller == buyer ||
@@ -1151,7 +1151,7 @@ std::optional<game_handle_error> validate_trade_quote(
             };
         }
         const native_handle_result<item> resolved = line.item.resolve_item(
-                runtime, world_generation );
+                    runtime, world_generation );
         if( !resolved ) {
             return resolved.error;
         }
@@ -1179,7 +1179,7 @@ std::optional<game_handle_error> validate_trade_quote(
         }
         item *resolved_item = resolved.value;
         if( const std::optional<game_handle_error> error = validate_trade_item_line(
-                input, *seller, *buyer, runtime, world_generation, resolved_item ) ) {
+                    input, *seller, *buyer, runtime, world_generation, resolved_item ) ) {
             return error;
         }
         Character *pricing_buyer = line.direction == "seller_to_buyer" ? buyer : seller;
@@ -1238,8 +1238,8 @@ std::optional<game_handle_error> validate_trade_quote(
     options.currency = snapshot.currency;
     trade_settlement_plan settlement;
     if( const std::optional<game_handle_error> error = prepare_trade_settlement(
-            options, *seller, *buyer, seller->as_npc(), buyer->as_npc(),
-            seller_to_buyer_total, buyer_to_seller_total, net, settlement ) ) {
+                options, *seller, *buyer, seller->as_npc(), buyer->as_npc(),
+                seller_to_buyer_total, buyer_to_seller_total, net, settlement ) ) {
         return error;
     }
     if( settlement.amount != snapshot.settlement_amount ||
@@ -1280,7 +1280,7 @@ sol::table commit_trade(
     }
 
     const trade_commit_settlement requested = read_trade_commit_settlement(
-            requested_settlement );
+                requested_settlement );
     if( requested.settlement_strategy != "npc_debt" ) {
         return make_game_error_result( state, {
             "unsupported_settlement",
@@ -1302,7 +1302,7 @@ sol::table commit_trade(
     }
 
     const auto validation_failure = [&state, snapshot](
-        const game_handle_error &error ) {
+    const game_handle_error & error ) {
         if( is_trade_commit_stale_error( error.code ) ) {
             retire_trade_quote( *const_cast<trade_quote_token::state *>( snapshot ) );
         }
@@ -1315,12 +1315,12 @@ sol::table commit_trade(
 
     Character *seller = nullptr;
     if( const std::optional<game_handle_error> error = resolve_trade_participant(
-            snapshot->seller, runtime, world_generation, seller ) ) {
+                snapshot->seller, runtime, world_generation, seller ) ) {
         return validation_failure( *error );
     }
     Character *buyer = nullptr;
     if( const std::optional<game_handle_error> error = resolve_trade_participant(
-            snapshot->buyer, runtime, world_generation, buyer ) ) {
+                snapshot->buyer, runtime, world_generation, buyer ) ) {
         return validation_failure( *error );
     }
     npc *seller_npc = seller->as_npc();
@@ -1406,7 +1406,7 @@ sol::table commit_trade(
     }
 
     const auto rollback_after_item_stage = [&state, snapshot, &item_transaction](
-        const game_handle_error &error ) {
+    const game_handle_error & error ) {
         const bool restored = item_transaction.rollback_now();
         if( !restored ) {
             retire_trade_quote( *const_cast<trade_quote_token::state *>( snapshot ) );
@@ -1430,12 +1430,12 @@ sol::table commit_trade(
 
     Character *post_seller = nullptr;
     if( const std::optional<game_handle_error> error = resolve_trade_participant(
-            snapshot->seller, runtime, world_generation, post_seller ) ) {
+                snapshot->seller, runtime, world_generation, post_seller ) ) {
         return rollback_after_item_stage( *error );
     }
     Character *post_buyer = nullptr;
     if( const std::optional<game_handle_error> error = resolve_trade_participant(
-            snapshot->buyer, runtime, world_generation, post_buyer ) ) {
+                snapshot->buyer, runtime, world_generation, post_buyer ) ) {
         return rollback_after_item_stage( *error );
     }
     if( post_seller == nullptr || post_buyer == nullptr ||
@@ -1597,7 +1597,7 @@ sol::table quote_trade(
         const trade_line_input &input = input_lines[index];
         item *entry = nullptr;
         if( const std::optional<game_handle_error> line_error = validate_trade_item_line(
-                input, *seller, *buyer, runtime, world_generation, entry ) ) {
+                    input, *seller, *buyer, runtime, world_generation, entry ) ) {
             return trade_error_result( state, *line_error, index + 1 );
         }
         if( !seen_uids.insert( entry->uid().get_value() ).second ) {
@@ -1657,9 +1657,9 @@ sol::table quote_trade(
 
     trade_settlement_plan settlement;
     if( const std::optional<game_handle_error> settlement_error = prepare_trade_settlement(
-            options, *seller, *buyer, seller->as_npc(), buyer->as_npc(),
-            snapshot->seller_to_buyer_total, snapshot->buyer_to_seller_total,
-            snapshot->net, settlement ) ) {
+                options, *seller, *buyer, seller->as_npc(), buyer->as_npc(),
+                snapshot->seller_to_buyer_total, snapshot->buyer_to_seller_total,
+                snapshot->net, settlement ) ) {
         return make_game_error_result( state, *settlement_error );
     }
     snapshot->settlement_amount = settlement.amount;
@@ -1857,7 +1857,7 @@ void install_trade_api(
         "registered", sol::property( &trade_quote_token::registered ),
         "is_valid",
         [current_runtime_generation, current_world_generation, require_read](
-    const trade_quote_token &token ) {
+    const trade_quote_token & token ) {
         require_read();
         const trade_quote_token::state *snapshot = token.state_ptr();
         return snapshot != nullptr &&
@@ -1867,7 +1867,7 @@ void install_trade_api(
     sol::meta_function::to_string,
     &trade_quote_token::to_string,
     sol::meta_function::equal_to,
-    []( const trade_quote_token &lhs, const trade_quote_token &rhs ) {
+    []( const trade_quote_token & lhs, const trade_quote_token & rhs ) {
         return lhs == rhs;
     } );
     sol::table trade = lua.create_table();
@@ -1875,11 +1875,11 @@ void install_trade_api(
         "quote",
         [current_runtime_generation,
          current_world_generation, require_read](
-             sol::this_state state,
-             const game_handle &seller,
-             const game_handle &buyer,
-             const sol::table &lines,
-             const sol::table &options ) {
+            sol::this_state state,
+            const game_handle & seller,
+            const game_handle & buyer,
+            const sol::table & lines,
+    const sol::table & options ) {
         require_read();
         return quote_trade(
                    state, seller, buyer, lines, options,
@@ -1890,8 +1890,8 @@ void install_trade_api(
         "get",
         [current_runtime_generation,
          current_world_generation, require_read](
-             sol::this_state state,
-             const trade_quote_token &token ) {
+            sol::this_state state,
+    const trade_quote_token & token ) {
         require_read();
         return get_trade_quote(
                    state, token, current_runtime_generation(),
@@ -1901,9 +1901,9 @@ void install_trade_api(
         "commit",
         [current_runtime_generation,
          current_world_generation, require_write](
-             sol::this_state state,
-             const trade_quote_token &token,
-             const sol::table &settlement ) {
+            sol::this_state state,
+            const trade_quote_token & token,
+    const sol::table & settlement ) {
         require_write();
         return commit_trade(
                    state, token, settlement,

@@ -1243,7 +1243,7 @@ sol::table override_light(
     const std::string key =
         requested_key.value_or( std::string() );
     if( key.size() >
-            maximum_custom_light_key_bytes ||
+        maximum_custom_light_key_bytes ||
         key.find( '\0' ) != std::string::npos ) {
         throw std::invalid_argument(
             "services.weather.override_light key exceeds 256 bytes" );
@@ -1255,7 +1255,7 @@ sol::table override_light(
     bool replaced = false;
     if( !key.empty() ) {
         if( timed_event *event = timed_events.get(
-                timed_event_type::CUSTOM_LIGHT_LEVEL, key ) ) {
+                                     timed_event_type::CUSTOM_LIGHT_LEVEL, key ) ) {
             event->when = expires_at;
             event->strength = level;
             replaced = true;
@@ -1264,9 +1264,9 @@ sol::table override_light(
     if( !replaced ) {
         const std::size_t pending =
             static_cast<std::size_t>( std::count_if(
-                timed_events.get_all().begin(),
-                timed_events.get_all().end(),
-        []( const timed_event &event ) {
+                                          timed_events.get_all().begin(),
+                                          timed_events.get_all().end(),
+        []( const timed_event & event ) {
             return event.type ==
                    timed_event_type::CUSTOM_LIGHT_LEVEL;
         } ) );
@@ -1469,8 +1469,8 @@ void install_weather_api(
         "override_light",
         [require_write](
             sol::this_state state, const int level,
-            const script_time_duration &duration,
-            const sol::optional<std::string> &key ) {
+            const script_time_duration & duration,
+    const sol::optional<std::string> &key ) {
         require_write();
         return override_light(
                    state, level, duration, key );

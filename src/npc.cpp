@@ -3362,7 +3362,7 @@ void npc::die( map *here, Creature *nkiller )
         }
     }
     dead = true;
-    overmap_buffer.foreach_loaded_camp( [this]( basecamp &camp ) {
+    overmap_buffer.foreach_loaded_camp( [this]( basecamp & camp ) {
         camp.platform_retire_tasks_for_worker( *this );
     } );
     overmap_buffer.platform_unregister_npc( *this );
@@ -3547,7 +3547,7 @@ void npc::on_unload()
     // active map.  Retire the actor-bound handle lifetime and release only
     // the ephemeral live reservation; the durable Platform task record must
     // survive until this stable NPC id is reconciled after load.
-    overmap_buffer.foreach_loaded_camp( [this]( basecamp &camp ) {
+    overmap_buffer.foreach_loaded_camp( [this]( basecamp & camp ) {
         camp.platform_release_worker_reservation( *this );
     } );
     overmap_buffer.platform_unregister_npc( *this );

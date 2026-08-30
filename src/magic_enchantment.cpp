@@ -1248,8 +1248,8 @@ void enchant_cache::force_add_with_dialogue( const enchantment &rhs, const const
                 limb_score_add[score] += add;
                 limb_score_multiply[score] += multiply;
             } else {
-                limb_score_bp_add[{ part, score }] += add;
-                limb_score_bp_multiply[{ part, score }] += multiply;
+                limb_score_bp_add[ { part, score }] += add;
+                limb_score_bp_multiply[ { part, score }] += multiply;
             }
         } else if( modifier.kind == "melee_damage" ) {
             damage_values_add[damage_type_id( modifier.target )] += add;

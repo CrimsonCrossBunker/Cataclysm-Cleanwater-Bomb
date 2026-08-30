@@ -60,20 +60,20 @@ namespace cata::lua_platform
 {
 
 struct map_tile_token_owner {
-    explicit map_tile_token_owner( const std::size_t generation ) :
-        generation_( generation ) {}
+        explicit map_tile_token_owner( const std::size_t generation ) :
+            generation_( generation ) {}
 
-    bool is_active() const noexcept {
-        return active_.load( std::memory_order_acquire );
-    }
+        bool is_active() const noexcept {
+            return active_.load( std::memory_order_acquire );
+        }
 
-    void retire() noexcept {
-        active_.store( false, std::memory_order_release );
-    }
+        void retire() noexcept {
+            active_.store( false, std::memory_order_release );
+        }
 
-    std::size_t generation() const noexcept {
-        return generation_;
-    }
+        std::size_t generation() const noexcept {
+            return generation_;
+        }
 
     private:
         std::atomic<bool> active_ { true };
@@ -191,7 +191,7 @@ std::vector<std::string> map_filter_values(
         return {};
     }
     std::vector<std::string> result;
-    const auto append = [&result, &key]( const sol::object &entry ) {
+    const auto append = [&result, &key]( const sol::object & entry ) {
         if( !entry.is<std::string>() ) {
             throw std::invalid_argument( "services.world.items_nearby filter '" + key +
                                          "' values must be strings" );
@@ -207,7 +207,7 @@ std::vector<std::string> map_filter_values(
     } else if( raw.get_type() == sol::type::table ) {
         const sol::table values = raw.as<sol::table>();
         const std::size_t count = require_dense_lua_array(
-            values, "services.world.items_nearby filter", 0, 128 );
+                                      values, "services.world.items_nearby filter", 0, 128 );
         for( std::size_t index = 1; index <= count; ++index ) {
             append( values.raw_get<sol::object>( index ) );
         }
@@ -233,28 +233,31 @@ bool map_item_matches_filter( const item &entry, const sol::table &descriptor )
         return false;
     }
     const std::string category = entry.get_category_shallow().get_id().str();
-    if( !categories.empty() && std::find( categories.begin(), categories.end(), category ) == categories.end() ) {
+    if( !categories.empty() &&
+        std::find( categories.begin(), categories.end(), category ) == categories.end() ) {
         return false;
     }
     if( !materials.empty() && std::none_of( materials.begin(), materials.end(),
-    [&entry]( const std::string &value ) {
-        return entry.made_of( material_id( value ) ) > 0;
+    [&entry]( const std::string & value ) {
+    return entry.made_of( material_id( value ) ) > 0;
     } ) ) {
         return false;
     }
     if( !flags.empty() && std::none_of( flags.begin(), flags.end(),
-    [&entry]( const std::string &value ) {
-        return entry.has_flag( flag_id( value ) );
+    [&entry]( const std::string & value ) {
+    return entry.has_flag( flag_id( value ) );
     } ) ) {
         return false;
     }
     if( std::any_of( excluded_flags.begin(), excluded_flags.end(),
-    [&entry]( const std::string &value ) {
-        return entry.has_flag( flag_id( value ) );
+    [&entry]( const std::string & value ) {
+    return entry.has_flag( flag_id( value ) );
     } ) ) {
         return false;
     }
-    for( const char *key : { "uses_energy", "is_chargeable" } ) {
+    for( const char *key : {
+             "uses_energy", "is_chargeable"
+         } ) {
         const sol::object raw = descriptor.raw_get<sol::object>( key );
         if( raw.valid() && raw.get_type() != sol::type::nil ) {
             if( !raw.is<bool>() ) {
@@ -267,7 +270,9 @@ bool map_item_matches_filter( const item &entry, const sol::table &descriptor )
             }
         }
     }
-    for( const char *key : { "worn_only", "wielded_only", "held_only" } ) {
+    for( const char *key : {
+             "worn_only", "wielded_only", "held_only"
+         } ) {
         const sol::object raw = descriptor.raw_get<sol::object>( key );
         if( raw.valid() && raw.get_type() != sol::type::nil ) {
             if( !raw.is<bool>() ) {
@@ -453,8 +458,8 @@ bool world_tile_has_flag(
     if( flag.empty() || flag.size() > 256 ||
         std::any_of( flag.begin(), flag.end(),
     []( const unsigned char ch ) {
-        return ch < 0x20U || ch == 0x7fU;
-    } ) ) {
+    return ch < 0x20U || ch == 0x7fU;
+} ) ) {
         throw std::invalid_argument(
             std::string( api_name ) +
             " flag must contain 1 to 256 non-control bytes" );
@@ -740,7 +745,7 @@ void append_map_tile_field_change(
 {
     const auto duplicate = std::find_if(
                                result.fields.begin(), result.fields.end(),
-    [&change]( const map_tile_field_change &existing ) {
+    [&change]( const map_tile_field_change & existing ) {
         return existing.id == change.id;
     } );
     if( duplicate != result.fields.end() ) {
@@ -790,10 +795,11 @@ map_tile_changes read_map_tile_changes( const sol::table &requested )
     constexpr std::string_view api_name = "services.map.edit changes";
     map_tile_changes result;
     require_map_tile_change_keys(
-        requested,
-        { "terrain", "furniture", "furniture_clear", "trap", "trap_clear",
-          "field", "fields", "remove_field" },
-        std::string( api_name ) );
+    requested, {
+        "terrain", "furniture", "furniture_clear", "trap", "trap_clear",
+        "field", "fields", "remove_field"
+    },
+    std::string( api_name ) );
     for( const auto &entry : requested ) {
         const std::string key = entry.first.as<std::string>();
         const sol::object value = entry.second;
@@ -851,8 +857,8 @@ map_tile_changes read_map_tile_changes( const sol::table &requested )
                 } else {
                     result.trap_requested = true;
                     result.trap = read_nested_map_tile_id(
-                                       descriptor, "trap",
-                                       std::string( api_name ) + " trap" );
+                                      descriptor, "trap",
+                                      std::string( api_name ) + " trap" );
                 }
             } else {
                 result.trap_requested = true;
@@ -882,17 +888,19 @@ map_tile_changes read_map_tile_changes( const sol::table &requested )
                 for( std::size_t index = 1; index <= count; ++index ) {
                     const sol::object id = values.raw_get<sol::object>( index );
                     append_map_tile_field_change(
-                        result,
-                        { read_map_tile_id( id, "field", std::string( api_name ) +
-                                             " remove_field" ), 1, 0_turns, false, true },
-                        std::string( api_name ) + " remove_field" );
+                    result, {
+                        read_map_tile_id( id, "field", std::string( api_name ) +
+                                          " remove_field" ), 1, 0_turns, false, true
+                    },
+                    std::string( api_name ) + " remove_field" );
                 }
             } else {
                 append_map_tile_field_change(
-                    result,
-                    { read_map_tile_id( value, "field", std::string( api_name ) +
-                                         " remove_field" ), 1, 0_turns, false, true },
-                    std::string( api_name ) + " remove_field" );
+                result, {
+                    read_map_tile_id( value, "field", std::string( api_name ) +
+                                      " remove_field" ), 1, 0_turns, false, true
+                },
+                std::string( api_name ) + " remove_field" );
             }
         }
     }
@@ -1931,7 +1939,7 @@ sol::table world_items_nearby(
     std::vector<sol::table> filters;
     if( options.filters ) {
         const std::size_t count = require_dense_lua_array(
-            *options.filters, "services.world.items_nearby filters", 0, 128 );
+                                      *options.filters, "services.world.items_nearby filters", 0, 128 );
         filters.reserve( count );
         for( std::size_t index = 1; index <= count; ++index ) {
             const sol::object descriptor = options.filters->raw_get<sol::object>( index );
@@ -1964,8 +1972,8 @@ sol::table world_items_nearby(
             here.get_abs( position );
         for( item &entry : here.i_at( position ) ) {
             if( !filters.empty() && std::none_of( filters.begin(), filters.end(),
-            [&entry]( const sol::table &descriptor ) {
-                return map_item_matches_filter( entry, descriptor );
+            [&entry]( const sol::table & descriptor ) {
+            return map_item_matches_filter( entry, descriptor );
             } ) ) {
                 continue;
             }
@@ -2382,7 +2390,7 @@ sol::table place_world_spawn_items(
                                   world_generation );
             entry["uid"] = added->uid().get_value();
             entry["id"] = script_game_id(
-                               "item", added->typeId().str() );
+                              "item", added->typeId().str() );
             entry["name"] = added->tname();
             entry["charges"] = added->charges;
             items[++added_count] = std::move( entry );
@@ -2402,7 +2410,7 @@ sol::table place_world_spawn_items(
             entry["handle"] = sol::nil;
             entry["uid"] = added.uid().get_value();
             entry["id"] = script_game_id(
-                               "item", added.typeId().str() );
+                              "item", added.typeId().str() );
             entry["name"] = added.tname();
             entry["charges"] = added.charges;
             items[++added_count] = std::move( entry );
@@ -2808,9 +2816,9 @@ sol::table schedule_world_location_revert(
     sol::state_view state( lua );
     sol::table value = state.create_table();
     value["position"] = script_tripoint_coord::from_native(
-                             coords::origin::abs,
-                             coords::scale::overmap_terrain,
-                             omt.raw() );
+                            coords::origin::abs,
+                            coords::scale::overmap_terrain,
+                            omt.raw() );
     value["when"] = script_time_point::from_native( when );
     value["key"] = key;
     value["events"] = 4;
@@ -2830,8 +2838,8 @@ sol::table schedule_world_location_copy(
     const tripoint_abs_omt source = require_absolute_omt(
                                         source_position, api_name );
     const tripoint_abs_omt destination = require_absolute_omt(
-                                             destination_position,
-                                             api_name );
+            destination_position,
+            api_name );
     const time_duration delay = require_world_change_delay(
                                     requested_delay, api_name, false );
     const std::string key = requested_key.value_or( "" );
@@ -2854,13 +2862,13 @@ sol::table schedule_world_location_copy(
     sol::state_view state( lua );
     sol::table value = state.create_table();
     value["source"] = script_tripoint_coord::from_native(
-                           coords::origin::abs,
-                           coords::scale::overmap_terrain,
-                           source.raw() );
+                          coords::origin::abs,
+                          coords::scale::overmap_terrain,
+                          source.raw() );
     value["destination"] = script_tripoint_coord::from_native(
-                                coords::origin::abs,
-                                coords::scale::overmap_terrain,
-                                destination.raw() );
+                               coords::origin::abs,
+                               coords::scale::overmap_terrain,
+                               destination.raw() );
     value["when"] = script_time_point::from_native( when );
     value["key"] = key;
     value["events"] = 4;
@@ -2929,7 +2937,7 @@ sol::table reschedule_world_events(
     value["key"] = key;
     value["matched"] = matched;
     value["when"] = script_time_point::from_native(
-                         calendar::turn + delay );
+                        calendar::turn + delay );
     return make_game_value_result(
                state, sol::make_object(
                    state, std::move( value ) ) );
@@ -3035,18 +3043,18 @@ sol::table snapshot_map_vehicle_part(
 
     result["present"] = true;
     result["id"] = script_game_id(
-                        "vehicle_part", definition.id.str() );
+                       "vehicle_part", definition.id.str() );
     result["location"] = script_game_id(
-                              "vehicle_part_location", definition.location.str() );
+                             "vehicle_part_location", definition.location.str() );
     result["name"] = part.name( false );
     sol::table mount = lua.create_table();
     mount["x"] = part.mount.x();
     mount["y"] = part.mount.y();
     result["mount"] = std::move( mount );
     result["position"] = script_tripoint_coord::from_native(
-                              coords::origin::abs,
-                              coords::scale::map_square,
-                              found->pos_abs().raw() );
+                             coords::origin::abs,
+                             coords::scale::map_square,
+                             found->pos_abs().raw() );
     result["vehicle_prototype"] = script_game_id(
                                       "vehicle_prototype", entry.type.str() );
     result["index"] = part_index;
@@ -3087,9 +3095,9 @@ sol::table snapshot_map_tile_value(
 
     sol::table result = lua.create_table();
     result["position"] = script_tripoint_coord::from_native(
-                              coords::origin::abs,
-                              coords::scale::map_square,
-                              token.native_position().raw() );
+                             coords::origin::abs,
+                             coords::scale::map_square,
+                             token.native_position().raw() );
     result["terrain"] = script_game_id(
                             "terrain", terrain.id().str() );
     result["terrain_name"] = terrain->name();
@@ -3119,7 +3127,7 @@ sol::table snapshot_map_tile_value(
     result["signage"] = signage.substr( 0, options.signage_limit );
     result["signage_truncated"] = signage_truncated;
     result["vehicle_part"] = snapshot_map_vehicle_part(
-                                  lua, here, position );
+                                 lua, here, position );
     result["item_count"] = here.i_at( position ).size();
     result["revision"] = revision;
     return result;
@@ -3172,7 +3180,7 @@ map_tile_edit_plan make_map_tile_edit_plan(
     const furn_id final_furniture = result.furniture_requested ?
                                     result.furniture : here.furn( position );
     const auto final_has_flag = [&final_terrain, &final_furniture](
-                                    const ter_furn_flag flag ) {
+    const ter_furn_flag flag ) {
         return final_terrain->has_flag( flag ) ||
                final_furniture->has_flag( flag );
     };
@@ -3349,10 +3357,10 @@ sol::table snapshot_map_tile(
 {
     sol::state_view state( lua );
     const map_snapshot_options options = read_map_snapshot_options(
-                                             requested_options );
+            requested_options );
     std::optional<game_handle_error> error;
     const std::optional<resolved_map_tile> resolved = resolve_map_tile_token(
-            token, runtime_generation, world_generation, error );
+                token, runtime_generation, world_generation, error );
     if( !resolved ) {
         return make_game_error_result( state, *error );
     }
@@ -3373,7 +3381,7 @@ sol::table edit_map_tile(
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     const std::optional<resolved_map_tile> resolved = resolve_map_tile_token(
-            token, runtime_generation, world_generation, error );
+                token, runtime_generation, world_generation, error );
     if( !resolved ) {
         return make_game_error_result( state, *error );
     }
@@ -3392,7 +3400,7 @@ sol::table edit_map_tile(
                                         changes, *resolved->value,
                                         resolved->local );
     const map_tile_original_state original = capture_map_tile_original_state(
-            *resolved->value, resolved->local );
+                *resolved->value, resolved->local );
     try {
         commit_map_tile_edit(
             *resolved->value, resolved->local, plan, original );
@@ -3555,40 +3563,40 @@ void install_map_api(
     lua.new_usertype<map_tile_token>(
         "MapTileToken", sol::no_constructor,
         "position", sol::property(
-            []( const map_tile_token &token ) {
-                return script_tripoint_coord::from_native(
-                           coords::origin::abs,
-                           coords::scale::map_square,
-                           token.native_position().raw() );
-            } ),
-        "runtime_generation",
-        sol::property( &map_tile_token::runtime_generation ),
-        "world_generation",
-        sol::property( &map_tile_token::world_generation ),
-        "owner_generation",
-        sol::property( &map_tile_token::owner_generation ),
-        "is_valid",
-        [current_runtime_generation, current_world_generation, require_read](
-            const map_tile_token &token ) {
-            require_read();
-            std::optional<game_handle_error> error;
-            return resolve_map_tile_token(
-                       token, current_runtime_generation(),
-                       current_world_generation(), error ).has_value();
-        },
-        sol::meta_function::to_string,
-        &map_tile_token::to_string,
-        sol::meta_function::equal_to,
-        []( const map_tile_token &lhs, const map_tile_token &rhs ) {
-            return lhs == rhs;
-        } );
+    []( const map_tile_token & token ) {
+        return script_tripoint_coord::from_native(
+                   coords::origin::abs,
+                   coords::scale::map_square,
+                   token.native_position().raw() );
+    } ),
+    "runtime_generation",
+    sol::property( &map_tile_token::runtime_generation ),
+    "world_generation",
+    sol::property( &map_tile_token::world_generation ),
+    "owner_generation",
+    sol::property( &map_tile_token::owner_generation ),
+    "is_valid",
+    [current_runtime_generation, current_world_generation, require_read](
+        const map_tile_token & token ) {
+        require_read();
+        std::optional<game_handle_error> error;
+        return resolve_map_tile_token(
+                   token, current_runtime_generation(),
+                   current_world_generation(), error ).has_value();
+    },
+    sol::meta_function::to_string,
+    &map_tile_token::to_string,
+    sol::meta_function::equal_to,
+    []( const map_tile_token & lhs, const map_tile_token & rhs ) {
+        return lhs == rhs;
+    } );
 
     sol::table map_api = lua.create_table();
     map_api.set_function(
         "tile",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state state,
-            const script_tripoint_coord &position ) {
+    const script_tripoint_coord & position ) {
         require_read();
         return map_tile_from_position(
                    state, position, current_runtime_generation(),
@@ -3598,8 +3606,8 @@ void install_map_api(
         "snapshot",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state state,
-            const map_tile_token &token,
-            const sol::optional<sol::table> &options ) {
+            const map_tile_token & token,
+    const sol::optional<sol::table> &options ) {
         require_read();
         return snapshot_map_tile(
                    state, token, options, current_runtime_generation(),
@@ -3609,15 +3617,15 @@ void install_map_api(
         "edit",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state state,
-            const map_tile_token &token,
+            const map_tile_token & token,
             const lua_Integer expected_revision,
-            const sol::table &requested_changes ) {
+    const sol::table & requested_changes ) {
         if( expected_revision < 0 ) {
             throw std::invalid_argument(
                 "services.map.edit expected_revision cannot be negative" );
         }
         const map_tile_changes changes = read_map_tile_changes(
-                                              requested_changes );
+                                             requested_changes );
         require_write();
         return edit_map_tile(
                    state, token,
@@ -3664,10 +3672,10 @@ void install_world_api(
     world.set_function(
         "has_line_of_sight",
         [require_read](
-            const script_tripoint_coord &first,
-            const script_tripoint_coord &second,
+            const script_tripoint_coord & first,
+            const script_tripoint_coord & second,
             const sol::optional<int> &range,
-            const sol::optional<bool> &with_fields ) {
+    const sol::optional<bool> &with_fields ) {
         require_read();
         return world_has_line_of_sight(
                    first, second, range, with_fields );
@@ -3675,9 +3683,9 @@ void install_world_api(
     world.set_function(
         "tile_has_flag",
         [require_read](
-            const script_tripoint_coord &position,
-            const std::string &layer,
-            const std::string &flag ) {
+            const script_tripoint_coord & position,
+            const std::string & layer,
+    const std::string & flag ) {
         require_read();
         return world_tile_has_flag(
                    position, layer, flag );
@@ -3685,15 +3693,15 @@ void install_world_api(
     world.set_function(
         "light_level",
         [require_read](
-            const script_tripoint_coord &position ) {
+    const script_tripoint_coord & position ) {
         require_read();
         return world_light_level( position );
     } );
     world.set_function(
         "field_strength",
         [require_read](
-            const script_tripoint_coord &position,
-            const script_game_id &field ) {
+            const script_tripoint_coord & position,
+    const script_game_id & field ) {
         require_read();
         return world_field_strength( position, field );
     } );
@@ -3701,7 +3709,7 @@ void install_world_api(
         "find_location",
         [require_read](
             sol::this_state lua_state,
-            const script_tripoint_coord &origin,
+            const script_tripoint_coord & origin,
             const sol::optional<sol::table> &selector,
     const sol::optional<sol::table> &options ) {
         require_read();
@@ -3741,15 +3749,15 @@ void install_world_api(
         std::function<sol::table(
             sol::this_state,
             const script_tripoint_coord &,
-            const sol::optional<sol::table> &)>(
-                [require_read](
-                    sol::this_state lua_state,
-                    const script_tripoint_coord & origin,
-            const sol::optional<sol::table> &options ) {
-                require_read();
-                return world_points_nearby(
-                           lua_state, origin, options );
-            } ) );
+            const sol::optional<sol::table> & )>(
+            [require_read](
+                sol::this_state lua_state,
+                const script_tripoint_coord & origin,
+    const sol::optional<sol::table> &options ) {
+        require_read();
+        return world_points_nearby(
+                   lua_state, origin, options );
+    } ) );
     world.set_function(
         "vehicles",
         [current_runtime_generation,
@@ -3769,7 +3777,7 @@ void install_world_api(
             sol::this_state lua_state,
             const script_tripoint_coord & first,
             const script_tripoint_coord & second,
-            const script_game_id & transform_id ) {
+    const script_game_id & transform_id ) {
         require_write();
         return transform_line(
                    lua_state, first, second, transform_id );
@@ -3778,9 +3786,9 @@ void install_world_api(
         "transform_radius",
         [require_write](
             sol::this_state lua_state,
-            const script_tripoint_coord &position,
+            const script_tripoint_coord & position,
             const int radius,
-            const script_game_id &transform_id,
+            const script_game_id & transform_id,
     const sol::optional<sol::table> &options ) {
         require_write();
         return transform_world_radius(
@@ -3791,8 +3799,8 @@ void install_world_api(
         "schedule_location_revert",
         [require_write](
             sol::this_state lua_state,
-            const script_tripoint_coord &position,
-            const script_time_duration &delay,
+            const script_tripoint_coord & position,
+            const script_time_duration & delay,
     const sol::optional<std::string> &key ) {
         require_write();
         return schedule_world_location_revert(
@@ -3802,9 +3810,9 @@ void install_world_api(
         "schedule_location_copy",
         [require_write](
             sol::this_state lua_state,
-            const script_tripoint_coord &source,
-            const script_tripoint_coord &destination,
-            const script_time_duration &delay,
+            const script_tripoint_coord & source,
+            const script_tripoint_coord & destination,
+            const script_time_duration & delay,
     const sol::optional<std::string> &key ) {
         require_write();
         return schedule_world_location_copy(
@@ -3815,8 +3823,8 @@ void install_world_api(
         "override_place_name",
         [require_write](
             sol::this_state lua_state,
-            const std::string &name,
-            const script_time_duration &duration,
+            const std::string & name,
+            const script_time_duration & duration,
     const sol::optional<std::string> &key ) {
         require_write();
         return override_world_place_name(
@@ -3826,8 +3834,8 @@ void install_world_api(
         "reschedule_events",
         [require_write](
             sol::this_state lua_state,
-            const std::string &key,
-    const script_time_duration &delay ) {
+            const std::string & key,
+    const script_time_duration & delay ) {
         require_write();
         return reschedule_world_events(
                    lua_state, key, delay );
@@ -3836,8 +3844,8 @@ void install_world_api(
         "emit",
         [require_write](
             sol::this_state lua_state,
-            const script_tripoint_coord &position,
-            const std::string &emission,
+            const script_tripoint_coord & position,
+            const std::string & emission,
     const sol::optional<double> &chance ) {
         require_write();
         return emit_field_at(
@@ -3864,8 +3872,8 @@ void install_world_api(
          current_world_generation,
          require_write](
             sol::this_state lua_state,
-            const script_tripoint_coord &position,
-            const script_game_id &group,
+            const script_tripoint_coord & position,
+            const script_game_id & group,
     const sol::optional<sol::table> &flags ) {
         require_write();
         return spawn_world_item_group(
@@ -3879,10 +3887,10 @@ void install_world_api(
          current_world_generation,
          require_write](
             sol::this_state lua_state,
-            const script_tripoint_coord &position,
-            const script_game_id &contents,
+            const script_tripoint_coord & position,
+            const script_game_id & contents,
             const std::int64_t quantity,
-            const script_game_id &container,
+            const script_game_id & container,
     const sol::optional<sol::table> &flags ) {
         require_write();
         return spawn_world_item_in_container(

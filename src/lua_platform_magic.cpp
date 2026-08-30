@@ -1937,7 +1937,7 @@ void install_magic_api(
     } );
     spells.set_function(
         "experience_for_level",
-        [require_read]( const script_game_id &id, const int level ) {
+    [require_read]( const script_game_id & id, const int level ) {
         require_read();
         return spell_experience_for_level( id, level );
     } );
@@ -1979,7 +1979,7 @@ void install_magic_api(
         "set_school_level_adjustment",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state, const game_handle & handle,
-            const script_game_id & school, const double amount ) {
+    const script_game_id & school, const double amount ) {
         require_write();
         return set_school_level_adjustment(
                    lua_state, handle, school, amount,
@@ -1990,7 +1990,7 @@ void install_magic_api(
         "adjust_casting",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state, const game_handle & handle,
-            const std::string &property, const double amount,
+            const std::string & property, const double amount,
     const sol::optional<sol::table> &options ) {
         require_write();
         return adjust_spellcasting(

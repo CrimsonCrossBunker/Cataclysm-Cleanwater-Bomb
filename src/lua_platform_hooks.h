@@ -107,16 +107,16 @@ class native_callback_value final
 {
     public:
         using storage_type = std::variant <
-                                  bool, std::int64_t, double, std::string,
-                                  native_callback_entity, native_callback_point,
-                                  native_callback_id, std::vector<std::string>,
-                                  native_callback_talker, native_callback_mission >;
+                             bool, std::int64_t, double, std::string,
+                             native_callback_entity, native_callback_point,
+                             native_callback_id, std::vector<std::string>,
+                             native_callback_talker, native_callback_mission >;
 
         native_callback_value() = default;
         native_callback_value( bool value ) : value_( value ) {}
-        template<typename T,
-                 std::enable_if_t<std::is_integral_v<T> &&
-                                  !std::is_same_v<std::remove_cv_t<T>, bool>, int> = 0>
+        template < typename T,
+                   std::enable_if_t < std::is_integral_v<T> &&
+                                      !std::is_same_v<std::remove_cv_t<T>, bool>, int > = 0 >
         native_callback_value( T value ) : value_( static_cast<std::int64_t>( value ) ) {}
         native_callback_value( double value ) : value_( value ) {}
         native_callback_value( std::string value ) : value_( std::move( value ) ) {}
@@ -155,11 +155,11 @@ constexpr bool native_callback_storage_has_no_pointers(
 {
     return ( ... &&
              !std::is_pointer_v<std::variant_alternative_t<
-                 Index, native_callback_value::storage_type>> );
+             Index, native_callback_value::storage_type>> );
 }
 
-static_assert( native_callback_storage_has_no_pointers( std::make_index_sequence<
-                  std::variant_size_v<native_callback_value::storage_type>> {} ) );
+static_assert( native_callback_storage_has_no_pointers( std::make_index_sequence <
+               std::variant_size_v<native_callback_value::storage_type >> {} ) );
 
 struct native_callback_argument {
     std::string name;

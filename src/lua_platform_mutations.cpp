@@ -81,12 +81,12 @@ std::vector<trait_and_var> mutation_state( const Character &character )
                                             true, false );
     std::sort(
         result.begin(), result.end(),
-        []( const trait_and_var &lhs, const trait_and_var &rhs ) {
-            if( lhs.trait.str() != rhs.trait.str() ) {
-                return lhs.trait.str() < rhs.trait.str();
-            }
-            return lhs.variant < rhs.variant;
-        } );
+    []( const trait_and_var & lhs, const trait_and_var & rhs ) {
+        if( lhs.trait.str() != rhs.trait.str() ) {
+            return lhs.trait.str() < rhs.trait.str();
+        }
+        return lhs.variant < rhs.variant;
+    } );
     return result;
 }
 
@@ -978,8 +978,8 @@ sol::table mutate_category_state(
         return make_game_error_result( state, *error );
     }
     const mutation_category_id category = resolve_mutation_category(
-                                              requested_category,
-                                              "services.mutations.mutate_category" );
+            requested_category,
+            "services.mutations.mutate_category" );
     const bool use_vitamins = requested_use_vitamins.value_or( true );
     const bool true_random = requested_true_random.value_or( false );
     const std::vector<trait_and_var> before = mutation_state( *character );
@@ -1010,8 +1010,8 @@ sol::table mutate_towards_state(
         return make_game_error_result( state, *error );
     }
     const mutation_category_id category = resolve_mutation_category(
-                                              requested_category,
-                                              "services.mutations.mutate_towards" );
+            requested_category,
+            "services.mutations.mutate_towards" );
     const bool use_vitamins = requested_use_vitamins.value_or( true );
     const std::vector<trait_and_var> before = mutation_state( *character );
     const bool accepted = character->mutate_towards(
@@ -1303,8 +1303,8 @@ void install_mutation_api(
     mutations.set_function(
         "category_count",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &handle,
-            const script_game_id &category,
+            sol::this_state lua_state, const game_handle & handle,
+            const script_game_id & category,
             const sol::optional<std::string> &type,
     const sol::optional<bool> &permanent_only ) {
         require_read();
@@ -1317,9 +1317,9 @@ void install_mutation_api(
         "is_visible_to",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state,
-            const game_handle &observed,
-            const game_handle &observer,
-            const script_game_id &id ) {
+            const game_handle & observed,
+            const game_handle & observer,
+    const script_game_id & id ) {
         require_read();
         return is_visible_to(
                    lua_state, observed, observer, id,
@@ -1329,8 +1329,8 @@ void install_mutation_api(
     mutations.set_function(
         "is_purifiable",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &handle,
-            const script_game_id &id ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id ) {
         require_read();
         return is_purifiable(
                    lua_state, handle, id,
@@ -1351,9 +1351,9 @@ void install_mutation_api(
     mutations.set_function(
         "mutate",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
+            sol::this_state lua_state, const game_handle & handle,
             const sol::optional<double> &chance,
-            const sol::optional<bool> &use_vitamins ) {
+    const sol::optional<bool> &use_vitamins ) {
         require_write();
         return mutate_state(
                    lua_state, handle, chance, use_vitamins,
@@ -1363,10 +1363,10 @@ void install_mutation_api(
     mutations.set_function(
         "mutate_category",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
+            sol::this_state lua_state, const game_handle & handle,
             const sol::optional<script_game_id> &category,
             const sol::optional<bool> &use_vitamins,
-            const sol::optional<bool> &true_random ) {
+    const sol::optional<bool> &true_random ) {
         require_write();
         return mutate_category_state(
                    lua_state, handle, category, use_vitamins, true_random,
@@ -1376,10 +1376,10 @@ void install_mutation_api(
     mutations.set_function(
         "mutate_towards",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const script_game_id &id,
+            sol::this_state lua_state, const game_handle & handle,
+            const script_game_id & id,
             const sol::optional<script_game_id> &category,
-            const sol::optional<bool> &use_vitamins ) {
+    const sol::optional<bool> &use_vitamins ) {
         require_write();
         return mutate_towards_state(
                    lua_state, handle, id, category, use_vitamins,
@@ -1412,8 +1412,8 @@ void install_mutation_api(
     mutations.set_function(
         "set_purifiable",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const script_game_id &id, const bool purifiable ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id, const bool purifiable ) {
         require_write();
         return set_purifiable(
                    lua_state, handle, id, purifiable,
@@ -1423,8 +1423,8 @@ void install_mutation_api(
     mutations.set_function(
         "remove_category",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const script_game_id &category ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & category ) {
         require_write();
         return remove_category(
                    lua_state, handle, category,

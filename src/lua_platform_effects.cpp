@@ -665,7 +665,7 @@ void install_effect_api(
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle & handle,
             const script_game_id & id,
-    const std::optional<script_game_id> &body_part,
+            const std::optional<script_game_id> &body_part,
     const std::optional<double> &intensity ) {
         require_read();
         return has_effect(

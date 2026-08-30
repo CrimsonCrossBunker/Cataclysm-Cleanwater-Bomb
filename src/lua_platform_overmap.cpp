@@ -36,20 +36,20 @@ namespace cata::lua_platform
 {
 
 struct overmap_tile_token_owner {
-    explicit overmap_tile_token_owner( const std::size_t generation ) :
-        generation_( generation ) {}
+        explicit overmap_tile_token_owner( const std::size_t generation ) :
+            generation_( generation ) {}
 
-    bool is_active() const noexcept {
-        return active_.load( std::memory_order_acquire );
-    }
+        bool is_active() const noexcept {
+            return active_.load( std::memory_order_acquire );
+        }
 
-    void retire() noexcept {
-        active_.store( false, std::memory_order_release );
-    }
+        void retire() noexcept {
+            active_.store( false, std::memory_order_release );
+        }
 
-    std::size_t generation() const noexcept {
-        return generation_;
-    }
+        std::size_t generation() const noexcept {
+            return generation_;
+        }
 
     private:
         std::atomic<bool> active_ { true };
@@ -91,7 +91,7 @@ struct overmap_tile_position_less {
 struct overmap_mutation_state {
     std::size_t epoch = initial_overmap_mutation_epoch;
     std::map<tripoint_abs_omt, std::size_t,
-    overmap_tile_position_less> revisions;
+        overmap_tile_position_less> revisions;
 };
 
 overmap_mutation_state &active_overmap_mutation_state()
@@ -824,8 +824,8 @@ sol::table overmap_tile_snapshot_from_token(
 {
     sol::state_view state( lua );
     if( const std::optional<game_handle_error> error =
-                validate_overmap_tile_token(
-                    token, runtime_generation, world_generation ) ) {
+            validate_overmap_tile_token(
+                token, runtime_generation, world_generation ) ) {
         return make_game_error_result( state, *error );
     }
     sol::table value = snapshot_overmap_tile(
@@ -833,7 +833,7 @@ sol::table overmap_tile_snapshot_from_token(
     track_overmap_tile_revision( token.native_position() );
     value["epoch"] = current_overmap_mutation_epoch();
     value["revision"] = overmap_tile_revision(
-                             token.native_position() );
+                            token.native_position() );
     return make_game_value_result(
                state,
                sol::make_object(
@@ -872,8 +872,8 @@ sol::table overmap_tile_token_from_position(
     const overmap_tile_token token(
         *absolute, runtime_generation, world_generation );
     if( const std::optional<game_handle_error> error =
-                validate_overmap_tile_token(
-                    token, runtime_generation, world_generation ) ) {
+            validate_overmap_tile_token(
+                token, runtime_generation, world_generation ) ) {
         return make_game_error_result( state, *error );
     }
     return make_game_value_result(
@@ -1083,12 +1083,12 @@ sol::table overmap_closest_city(
     // round-tripping through a character/context variable.  New Lua code can
     // use the explicitly typed overmap position instead.
     value["position"] = script_tripoint_coord::from_native(
-                             coords::origin::abs, coords::scale::map_square,
-                             center.raw() );
+                            coords::origin::abs, coords::scale::map_square,
+                            center.raw() );
     value["overmap_position"] = script_tripoint_coord::from_native(
-                                      coords::origin::abs,
-                                      coords::scale::overmap_terrain,
-                                      center.raw() );
+                                    coords::origin::abs,
+                                    coords::scale::overmap_terrain,
+                                    center.raw() );
     value["name"] = reference.city->name;
     value["size"] = reference.city->size;
     value["distance"] = reference.distance;
@@ -1170,8 +1170,8 @@ sol::table overmap_random(
             "services.overmap.random selector returned an invalid index" );
     }
     const tripoint_abs_omt matched = native_compatible ?
-                                      native_matches[selected] :
-                                      scan.matches[selected];
+                                     native_matches[selected] :
+                                     scan.matches[selected];
     sol::table value =
         snapshot_overmap_tile(
             state, matched );
@@ -1243,8 +1243,8 @@ bool overmap_is_camp_start(
     const std::optional<mapgen_arguments> *arguments =
         overmap_buffer.mapgen_args( native_position );
     return !recipe_group::get_recipes_by_id(
-                "all_faction_base_types",
-                terrain, arguments ).empty();
+               "all_faction_base_types",
+               terrain, arguments ).empty();
 }
 
 void validate_note(
@@ -1442,8 +1442,8 @@ sol::table edit_overmap(
     }
 
     if( const std::optional<game_handle_error> error =
-                validate_overmap_tile_token(
-                    token, runtime_generation, world_generation ) ) {
+            validate_overmap_tile_token(
+                token, runtime_generation, world_generation ) ) {
         return make_game_error_result( state, *error );
     }
     const overmap_with_local_coords located =
@@ -1970,32 +1970,32 @@ void install_overmap_api(
     lua.new_usertype<overmap_tile_token>(
         "OvermapTileToken", sol::no_constructor,
         "position", sol::property(
-            []( const overmap_tile_token &token ) {
-                return script_tripoint_coord::from_native(
-                           coords::origin::abs,
-                           coords::scale::overmap_terrain,
-                           token.native_position().raw() );
-            } ),
-        "runtime_generation",
-        sol::property( &overmap_tile_token::runtime_generation ),
-        "world_generation",
-        sol::property( &overmap_tile_token::world_generation ),
-        "owner_generation",
-        sol::property( &overmap_tile_token::owner_generation ),
-        "is_valid",
-        [current_runtime_generation, current_world_generation, require_read](
-            const overmap_tile_token &token ) {
-            require_read();
-            return !validate_overmap_tile_token(
-                       token, current_runtime_generation(),
-                       current_world_generation() ).has_value();
-        },
-        sol::meta_function::to_string,
-        &overmap_tile_token::to_string,
-        sol::meta_function::equal_to,
-        []( const overmap_tile_token &lhs, const overmap_tile_token &rhs ) {
-            return lhs == rhs;
-        } );
+    []( const overmap_tile_token & token ) {
+        return script_tripoint_coord::from_native(
+                   coords::origin::abs,
+                   coords::scale::overmap_terrain,
+                   token.native_position().raw() );
+    } ),
+    "runtime_generation",
+    sol::property( &overmap_tile_token::runtime_generation ),
+    "world_generation",
+    sol::property( &overmap_tile_token::world_generation ),
+    "owner_generation",
+    sol::property( &overmap_tile_token::owner_generation ),
+    "is_valid",
+    [current_runtime_generation, current_world_generation, require_read](
+        const overmap_tile_token & token ) {
+        require_read();
+        return !validate_overmap_tile_token(
+                   token, current_runtime_generation(),
+                   current_world_generation() ).has_value();
+    },
+    sol::meta_function::to_string,
+    &overmap_tile_token::to_string,
+    sol::meta_function::equal_to,
+    []( const overmap_tile_token & lhs, const overmap_tile_token & rhs ) {
+        return lhs == rhs;
+    } );
 
     sol::table overmap = lua.create_table();
     overmap.set_function(
@@ -2008,29 +2008,29 @@ void install_overmap_api(
         "tile_token",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state,
-            const script_tripoint_coord &position ) -> sol::table {
+    const script_tripoint_coord & position ) -> sol::table {
         require_read();
         return overmap_tile_token_from_position(
-                   lua_state, position, current_runtime_generation(),
-                   current_world_generation() );
+            lua_state, position, current_runtime_generation(),
+            current_world_generation() );
     } );
     overmap.set_function(
         "snapshot",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state,
-            const overmap_tile_token &token ) -> sol::table {
+    const overmap_tile_token & token ) -> sol::table {
         require_read();
         return overmap_tile_snapshot_from_token(
-                   lua_state, token, current_runtime_generation(),
-                   current_world_generation() );
+            lua_state, token, current_runtime_generation(),
+            current_world_generation() );
     } );
     overmap.set_function(
         "edit",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state,
-            const overmap_tile_token &token,
+            const overmap_tile_token & token,
             const lua_Integer expected_revision,
-            const sol::table &changes ) {
+    const sol::table & changes ) {
         if( expected_revision < 0 ) {
             throw std::invalid_argument(
                 "services.overmap.edit expected_revision cannot be negative" );
@@ -2067,7 +2067,7 @@ void install_overmap_api(
         [require_read](
             sol::this_state lua_state,
             const script_tripoint_coord & origin,
-            const sol::optional<bool> &known ) {
+    const sol::optional<bool> &known ) {
         require_read();
         return overmap_closest_city( lua_state, origin, known );
     } );
@@ -2095,7 +2095,7 @@ void install_overmap_api(
     overmap.set_function(
         "is_safe",
         [require_read](
-            const script_tripoint_coord & position ) {
+    const script_tripoint_coord & position ) {
         require_read();
         return overmap_buffer.is_safe(
                    require_absolute_omt(
@@ -2104,8 +2104,8 @@ void install_overmap_api(
     overmap.set_function(
         "is_camp",
         [require_read](
-            const script_tripoint_coord &position,
-            const sol::optional<bool> &include_legacy_terrain ) {
+            const script_tripoint_coord & position,
+    const sol::optional<bool> &include_legacy_terrain ) {
         require_read();
         return overmap_is_camp(
                    position,
@@ -2114,14 +2114,14 @@ void install_overmap_api(
     overmap.set_function(
         "is_camp_start",
         [require_read](
-            const script_tripoint_coord &position ) {
+    const script_tripoint_coord & position ) {
         require_read();
         return overmap_is_camp_start( position );
     } );
     overmap.set_function(
         "is_in_city",
         [require_read](
-            const script_tripoint_coord & position ) {
+    const script_tripoint_coord & position ) {
         require_read();
         if( position.native_origin() != coords::origin::abs ||
             position.native_scale() != coords::scale::map_square ) {

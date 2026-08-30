@@ -1041,7 +1041,7 @@ void translate_relocated_linked_items(
 {
     static constexpr std::string_view cable_turn_key =
         "eoc_cable_relocation_turn";
-    items.visit_items( [&]( item *entry, item * ) {
+    items.visit_items( [&]( item * entry, item * ) {
         if( entry->has_link_data() && !entry->has_no_links() &&
             entry->link().t_abs_pos != tripoint_abs_ms::invalid ) {
             entry->link().t_abs_pos += offset;
@@ -1061,14 +1061,14 @@ sol::table creature_relocation_snapshot(
     value["changed"] = changed;
     value["scope"] = creature_scope( creature );
     value["handle"] = make_creature_handle(
-                           creature, runtime_generation,
-                           world_generation );
+                          creature, runtime_generation,
+                          world_generation );
     value["position"] = absolute_position( creature );
     value["overmap_terrain"] = script_tripoint_coord::from_native(
-                                    coords::origin::abs,
-                                    coords::scale::overmap_terrain,
-                                    project_to<coords::omt>(
-                                        creature.pos_abs() ).raw() );
+                                   coords::origin::abs,
+                                   coords::scale::overmap_terrain,
+                                   project_to<coords::omt>(
+                                       creature.pos_abs() ).raw() );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -1131,14 +1131,14 @@ sol::table vehicle_relocation_snapshot(
     result["handle"] = make_relocated_vehicle_handle(
                            entry, runtime_generation, world_generation );
     result["position"] = script_tripoint_coord::from_native(
-                              coords::origin::abs,
-                              coords::scale::map_square,
-                              position.raw() );
+                             coords::origin::abs,
+                             coords::scale::map_square,
+                             position.raw() );
     result["overmap_terrain"] = script_tripoint_coord::from_native(
-                                      coords::origin::abs,
-                                      coords::scale::overmap_terrain,
-                                      project_to<coords::omt>(
-                                          position ).raw() );
+                                    coords::origin::abs,
+                                    coords::scale::overmap_terrain,
+                                    project_to<coords::omt>(
+                                        position ).raw() );
     return make_game_value_result(
                state, sol::make_object( state, std::move( result ) ) );
 }
@@ -1241,8 +1241,8 @@ sol::table relocate_monster(
     }
 
     if( const std::optional<game_handle_error> token_error =
-                validate_map_tile_token(
-                    target_token, runtime_generation, world_generation ) ) {
+            validate_map_tile_token(
+                target_token, runtime_generation, world_generation ) ) {
         return make_game_error_result( state, *token_error );
     }
 
@@ -1325,7 +1325,7 @@ sol::table relocate_monster(
     }
 
     if( const std::optional<game_handle_error> state_error =
-                monster_relocation_state_error( *value ) ) {
+            monster_relocation_state_error( *value ) ) {
         return make_game_error_result( state, *state_error );
     }
 
@@ -1362,8 +1362,8 @@ sol::table relocate_monster(
         // break this transaction's rollback boundary.
         value->set_pos_abs_only( target_abs );
         result = monster_relocation_snapshot(
-                      state, *value, true, monster_uid,
-                      runtime_generation, world_generation );
+                     state, *value, true, monster_uid,
+                     runtime_generation, world_generation );
     } catch( const std::exception &exception ) {
         value->set_pos_abs_only( source_abs );
         if( tracker_update_attempted && !restore_tracker_source() ) {
@@ -1421,8 +1421,8 @@ sol::table relocate_avatar(
     }
 
     if( const std::optional<game_handle_error> token_error =
-                validate_map_tile_token(
-                    target_token, runtime_generation, world_generation ) ) {
+            validate_map_tile_token(
+                target_token, runtime_generation, world_generation ) ) {
         return make_game_error_result( state, *token_error );
     }
 
@@ -1583,8 +1583,8 @@ sol::table travel_avatar_to_omt(
     }
 
     if( const std::optional<game_handle_error> token_error =
-                validate_overmap_tile_token(
-                    target_token, runtime_generation, world_generation ) ) {
+            validate_overmap_tile_token(
+                target_token, runtime_generation, world_generation ) ) {
         return make_game_error_result( state, *token_error );
     }
 
@@ -1681,8 +1681,8 @@ sol::table relocate_npc(
     }
 
     if( const std::optional<game_handle_error> token_error =
-                validate_map_tile_token(
-                    target_token, runtime_generation, world_generation ) ) {
+            validate_map_tile_token(
+                target_token, runtime_generation, world_generation ) ) {
         return make_game_error_result( state, *token_error );
     }
 
@@ -1903,8 +1903,8 @@ sol::table relocate_vehicle_move(
     }
 
     if( const std::optional<game_handle_error> token_error =
-                validate_map_tile_token(
-                    target_token, runtime_generation, world_generation ) ) {
+            validate_map_tile_token(
+                target_token, runtime_generation, world_generation ) ) {
         return make_game_error_result( state, *token_error );
     }
 
@@ -1913,7 +1913,7 @@ sol::table relocate_vehicle_move(
     const tripoint_abs_ms source_abs = entry.pos_abs();
     const tripoint_abs_ms target_abs = target_token.native_position();
 
-    const auto point_is_loaded = [&here]( const tripoint_abs_ms &point ) {
+    const auto point_is_loaded = [&here]( const tripoint_abs_ms & point ) {
         return here.inbounds_z( point.z() ) &&
                ( here.supports_zlevels() ||
                  point.z() == here.get_abs_sub().z() ) &&
@@ -1978,7 +1978,7 @@ sol::table relocate_vehicle_move(
     avatar &you = get_avatar();
     if( you.get_grab_type() == object_type::VEHICLE ) {
         const optional_vpart_position grabbed_vehicle = here.veh_at(
-                you.pos_bub() + you.grab_point );
+                    you.pos_bub() + you.grab_point );
         if( grabbed_vehicle && &grabbed_vehicle->vehicle() == &entry ) {
             return make_game_error_result( state, {
                 "unsupported_state",
@@ -2027,7 +2027,7 @@ sol::table relocate_vehicle_move(
             continue;
         }
         const veh_collision collision = entry.part_collision(
-                here, part.part_index(), target_part, true, false );
+                                            here, part.part_index(), target_part, true, false );
         if( collision.type != veh_coll_nothing ) {
             return make_game_error_result( state, {
                 "blocked",
@@ -2187,7 +2187,7 @@ sol::table travel_to_dimension(
         avatar &player = get_avatar();
         const int radius = options.npc_travel_radius;
         const std::string filter = options.npc_travel_filter;
-        travellers = g->get_npcs_if( [&player, radius, filter]( const npc &candidate ) {
+        travellers = g->get_npcs_if( [&player, radius, filter]( const npc & candidate ) {
             if( rl_dist( candidate.pos_abs(), player.pos_abs() ) > radius ) {
                 return false;
             }
@@ -2216,7 +2216,7 @@ sol::table travel_to_dimension(
     vehicle *vehicle_to_take = nullptr;
     if( options.take_vehicle ) {
         const optional_vpart_position vehicle_position = here.veh_at(
-                get_avatar().pos_bub( here ) );
+                    get_avatar().pos_bub( here ) );
         if( !vehicle_position ) {
             return make_game_error_result( state, {
                 "no_vehicle",
@@ -2375,10 +2375,10 @@ void install_relocation_move_api(
     relocation.set_function(
         "move",
         [current_runtime_generation, current_world_generation,
-         require_write, require_dangerous_relocation, has_active_callback](
-            sol::this_state lua, const game_handle &handle,
-            const map_tile_token &target,
-            const sol::optional<sol::table> &options ) {
+                                     require_write, require_dangerous_relocation, has_active_callback](
+            sol::this_state lua, const game_handle & handle,
+            const map_tile_token & target,
+    const sol::optional<sol::table> &options ) {
         require_write();
         require_dangerous_relocation();
         require_active_callback(
@@ -2405,14 +2405,14 @@ void install_game_world_service_api(
     spawns.set_function(
         "group_members",
         [require_read]( sol::this_state lua,
-    const script_game_id &monster_group ) {
+    const script_game_id & monster_group ) {
         require_read();
         return monsters_from_group(
                    lua, monster_group );
     } );
     spawns.set_function(
         "choose_monster_from_group",
-        [require_read]( const script_game_id &monster_group ) {
+    [require_read]( const script_game_id & monster_group ) {
         require_read();
         return random_monster_from_group( monster_group );
     } );
@@ -2441,8 +2441,8 @@ void install_game_world_service_api(
          require_write,
          has_active_callback](
             sol::this_state lua,
-            const script_game_id &monster_type,
-            const script_tripoint_coord &position,
+            const script_game_id & monster_type,
+            const script_tripoint_coord & position,
     const sol::optional<sol::table> &options ) {
         require_write();
         require_active_callback(
@@ -2460,8 +2460,8 @@ void install_game_world_service_api(
          require_write,
          has_active_callback](
             sol::this_state lua,
-            const script_game_id &monster_group,
-            const script_tripoint_coord &position,
+            const script_game_id & monster_group,
+            const script_tripoint_coord & position,
     const sol::optional<sol::table> &options ) {
         require_write();
         require_active_callback(
@@ -2481,9 +2481,9 @@ void install_game_world_service_api(
          require_write,
          has_active_callback](
             sol::this_state lua,
-            const script_game_id &npc_template,
-            const script_tripoint_coord &position,
-            const sol::optional<sol::table> &options ) {
+            const script_game_id & npc_template,
+            const script_tripoint_coord & position,
+    const sol::optional<sol::table> &options ) {
         require_write();
         require_active_callback(
             has_active_callback, "services.spawns.npc" );
@@ -2578,10 +2578,10 @@ void install_game_world_service_api(
     relocation.set_function(
         "travel_to_omt",
         [authorize_relocation, current_runtime_generation,
-         current_world_generation, require_write](
-            sol::this_state lua, const game_handle &handle,
-            const overmap_tile_token &target,
-            const sol::optional<sol::table> &options ) {
+                               current_world_generation, require_write](
+            sol::this_state lua, const game_handle & handle,
+            const overmap_tile_token & target,
+    const sol::optional<sol::table> &options ) {
         require_write();
         authorize_relocation(
             "services.relocation.travel_to_omt" );
@@ -2593,9 +2593,9 @@ void install_game_world_service_api(
     relocation.set_function(
         "item_at",
         [authorize_relocation, current_runtime_generation,
-         current_world_generation, require_write](
-            sol::this_state lua, const game_handle &handle,
-            const script_tripoint_coord &position ) {
+                               current_world_generation, require_write](
+            sol::this_state lua, const game_handle & handle,
+    const script_tripoint_coord & position ) {
         require_write();
         authorize_relocation(
             "services.relocation.item_at" );
@@ -2607,8 +2607,8 @@ void install_game_world_service_api(
     relocation.set_function(
         "travel_to_dimension",
         [authorize_relocation, require_write](
-            sol::this_state lua, const std::string &dimension,
-            const sol::optional<sol::table> &options ) {
+            sol::this_state lua, const std::string & dimension,
+    const sol::optional<sol::table> &options ) {
         require_write();
         authorize_relocation(
             "services.relocation.travel_to_dimension" );
@@ -2617,7 +2617,7 @@ void install_game_world_service_api(
     relocation.set_function(
         "clear_dimension",
         [authorize_relocation, require_write](
-            sol::this_state lua, const std::string &dimension ) {
+    sol::this_state lua, const std::string & dimension ) {
         require_write();
         authorize_relocation(
             "services.relocation.clear_dimension" );

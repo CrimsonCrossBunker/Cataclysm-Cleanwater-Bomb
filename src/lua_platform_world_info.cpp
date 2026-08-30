@@ -220,8 +220,8 @@ void validate_mod_id_text(
     if( id.empty() || id.size() > 256 ||
         std::any_of( id.begin(), id.end(),
     []( const unsigned char ch ) {
-        return ch < 0x20U || ch == 0x7fU;
-    } ) ) {
+    return ch < 0x20U || ch == 0x7fU;
+} ) ) {
         throw std::invalid_argument(
             std::string( api_name ) +
             " id must contain 1 to 256 non-control bytes" );
@@ -391,7 +391,7 @@ void install_world_info_api(
     sol::table options = state.create_table();
     options.set_function(
         "get",
-        [require_read]( const std::string &name ) {
+    [require_read]( const std::string & name ) {
         require_read();
         return option_string( name );
     } );
@@ -400,13 +400,13 @@ void install_world_info_api(
     sol::table mods = state.create_table();
     mods.set_function(
         "is_active",
-        [require_read]( const std::string &id ) {
+    [require_read]( const std::string & id ) {
         require_read();
         return mod_is_active( id );
     } );
     mods.set_function(
         "active",
-        [require_read]( sol::this_state lua ) {
+    [require_read]( sol::this_state lua ) {
         require_read();
         return active_mods( lua );
     } );
@@ -415,7 +415,7 @@ void install_world_info_api(
     sol::table safety = state.create_table();
     safety.set_function(
         "snapshot",
-        [require_read]( sol::this_state lua ) {
+    [require_read]( sol::this_state lua ) {
         require_read();
         return safety_snapshot( lua );
     } );

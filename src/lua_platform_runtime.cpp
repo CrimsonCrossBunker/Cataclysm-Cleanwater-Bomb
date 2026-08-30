@@ -1537,7 +1537,7 @@ struct enchantment_definition_data {
     std::vector<enchantment_fake_spell_definition_data> hit_you_effects;
     std::vector<enchantment_fake_spell_definition_data> hit_me_effects;
     std::vector<std::pair<std::int64_t, enchantment_fake_spell_definition_data>>
-    intermittent_effects;
+            intermittent_effects;
     std::vector<enchantment_vision_definition_data> visions;
     bool registered = false;
 };
@@ -2951,7 +2951,7 @@ struct item_definition_handle {
     }
 
     item_definition_handle &magazine_ammo( const std::string &ammo_type,
-                                            std::int64_t capacity ) {
+                                           std::int64_t capacity ) {
         require_building_handle( token, *definition, "item" );
         if( ammo_type.empty() || capacity <= 0 ||
             capacity > std::numeric_limits<int>::max() ) {
@@ -3150,7 +3150,7 @@ struct recipe_definition_handle {
     }
 
     recipe_definition_handle &proficiency( const std::string &id,
-                                            const sol::optional<sol::table> &options ) {
+                                           const sol::optional<sol::table> &options ) {
         require_building_handle( token, *definition, "recipe" );
         if( id.empty() ) {
             throw std::runtime_error( "recipe proficiency id cannot be empty" );
@@ -4066,9 +4066,9 @@ struct butchery_requirement_definition_handle {
                 "butchery requirement size, butcher, and requirement cannot be empty" );
         }
         definition->entries.push_back(
-            butchery_requirement_definition_data::requirement_entry{
-                speed, size, butcher, requirement_id
-            } );
+        butchery_requirement_definition_data::requirement_entry{
+            speed, size, butcher, requirement_id
+        } );
         return *this;
     }
 
@@ -5146,7 +5146,7 @@ struct monster_definition_handle {
         }
 
         monster_definition_handle &on_attack( const std::string &attack_id,
-                                               const std::string &handler_id ) {
+                                              const std::string &handler_id ) {
             require_building_handle( token, *definition, "monster" );
             if( attack_id.empty() || handler_id.empty() ) {
                 throw std::runtime_error(
@@ -5867,7 +5867,7 @@ struct profession_definition_handle {
     }
 
     profession_definition_handle &skill( const std::string &skill,
-                                          const std::int64_t level ) {
+                                         const std::int64_t level ) {
         require_building_handle( token, *definition, "profession" );
         definition->skills.emplace_back( skill, level );
         return *this;
@@ -5899,7 +5899,7 @@ struct profession_definition_handle {
     }
 
     profession_definition_handle &trait( const std::string &trait,
-                                          const std::string &variant ) {
+                                         const std::string &variant ) {
         require_building_handle( token, *definition, "profession" );
         definition->traits.push_back( { trait, variant } );
         return *this;
@@ -5936,14 +5936,14 @@ struct profession_definition_handle {
     }
 
     profession_definition_handle &pet( const std::string &monster,
-                                        const std::int64_t amount ) {
+                                       const std::int64_t amount ) {
         require_building_handle( token, *definition, "profession" );
         definition->pets.emplace_back( monster, amount );
         return *this;
     }
 
     profession_definition_handle &spell( const std::string &spell,
-                                          const std::int64_t level ) {
+                                         const std::int64_t level ) {
         require_building_handle( token, *definition, "profession" );
         definition->spells.emplace_back( spell, level );
         return *this;
@@ -6118,17 +6118,17 @@ struct enchantment_definition_handle {
     }
 
     enchantment_definition_handle &value( const std::string &target,
-                                           const sol::table &options ) {
+                                          const sol::table &options ) {
         return modifier( "value", target, options );
     }
 
     enchantment_definition_handle &skill( const std::string &target,
-                                           const sol::table &options ) {
+                                          const sol::table &options ) {
         return modifier( "skill", target, options );
     }
 
     enchantment_definition_handle &custom( const std::string &target,
-                                            const sol::table &options ) {
+                                           const sol::table &options ) {
         return modifier( "custom", target, options );
     }
 
@@ -6138,7 +6138,7 @@ struct enchantment_definition_handle {
     }
 
     enchantment_definition_handle &max_hp( const std::string &bodypart,
-                                            const sol::table &options ) {
+                                           const sol::table &options ) {
         return modifier( "max_hp", bodypart, options );
     }
 
@@ -6163,7 +6163,7 @@ struct enchantment_definition_handle {
     }
 
     enchantment_definition_handle &effect( const std::string &effect,
-                                            const std::int64_t intensity ) {
+                                           const std::int64_t intensity ) {
         require_building_handle( token, *definition, "enchantment" );
         definition->effects.emplace_back( effect, intensity );
         return *this;
@@ -6195,7 +6195,7 @@ struct enchantment_definition_handle {
     }
 
     enchantment_definition_handle &every( const std::int64_t turns,
-                                           const sol::table &options ) {
+                                          const sol::table &options ) {
         require_building_handle( token, *definition, "enchantment" );
         definition->intermittent_effects.emplace_back( turns, parse_spell( options ) );
         return *this;
@@ -6314,7 +6314,7 @@ struct bionic_definition_handle {
     }
 
     bionic_definition_handle &flag( const std::string &flag,
-                                     const std::string &state ) {
+                                    const std::string &state ) {
         require_building_handle( token, *definition, "bionic" );
         if( state.empty() || state == "always" ) {
             definition->flags.push_back( flag );
@@ -6336,8 +6336,8 @@ struct bionic_definition_handle {
     }
 
     bionic_definition_handle &armor( const std::string &bodypart,
-                                      const std::string &damage_type,
-                                      const double amount ) {
+                                     const std::string &damage_type,
+                                     const double amount ) {
         require_building_handle( token, *definition, "bionic" );
         definition->protection.push_back( { bodypart, damage_type, amount } );
         return *this;
@@ -6382,7 +6382,7 @@ struct bionic_definition_handle {
     }
 
     bionic_definition_handle &learn_spell( const std::string &spell,
-                                            const std::int64_t level ) {
+                                           const std::int64_t level ) {
         require_building_handle( token, *definition, "bionic" );
         definition->learned_spells.emplace_back( spell, level );
         return *this;
@@ -6448,7 +6448,7 @@ struct spell_definition_handle {
     }
 
     spell_definition_handle &learn_spell( const std::string &spell,
-                                           const std::int64_t level ) {
+                                          const std::int64_t level ) {
         require_building_handle( token, *definition, "spell" );
         definition->learned_spells.emplace_back( spell, level );
         return *this;
@@ -6467,8 +6467,8 @@ struct spell_definition_handle {
     }
 
     spell_definition_handle &stat_range( const std::string &name,
-                                          const double minimum,
-                                          const double maximum ) {
+                                         const double minimum,
+                                         const double maximum ) {
         require_building_handle( token, *definition, "spell" );
         const auto found = definition->stats.find( name );
         if( found == definition->stats.end() ) {
@@ -6481,7 +6481,7 @@ struct spell_definition_handle {
     }
 
     spell_definition_handle &dynamic_stat( const std::string &name,
-                                            const std::string &handler ) {
+                                           const std::string &handler ) {
         require_building_handle( token, *definition, "spell" );
         if( definition->stats.count( name ) == 0 ) {
             throw std::runtime_error( "unknown spell stat '" + name + "'" );
@@ -6499,7 +6499,7 @@ struct spell_definition_handle {
     }
 
     spell_definition_handle &caster_when( const std::string &handler,
-                                           const std::string &failure_message ) {
+                                          const std::string &failure_message ) {
         require_building_handle( token, *definition, "spell" );
         definition->caster_condition_handler = handler;
         definition->caster_condition_fail_message = failure_message;
@@ -6507,7 +6507,7 @@ struct spell_definition_handle {
     }
 
     spell_definition_handle &target_when( const std::string &handler,
-                                           const std::string &failure_message ) {
+                                          const std::string &failure_message ) {
         require_building_handle( token, *definition, "spell" );
         definition->target_condition_handler = handler;
         definition->target_condition_fail_message = failure_message;
@@ -6531,25 +6531,25 @@ struct mission_definition_handle {
     }
 
     mission_definition_handle &dialogue( const std::string &phase,
-                                          const std::string &text ) {
+                                         const std::string &text ) {
         require_building_handle( token, *definition, "mission definition" );
         definition->dialogue[phase] = text;
         return *this;
     }
 
     mission_definition_handle &reward( const double value,
-                                        const std::string &description ) {
+                                       const std::string &description ) {
         require_building_handle( token, *definition, "mission definition" );
         definition->likely_rewards.emplace_back( value, description );
         return *this;
     }
 
     mission_definition_handle &deadline( const std::int64_t minimum_turns,
-                                          const sol::optional<std::int64_t> &maximum_turns ) {
+                                         const sol::optional<std::int64_t> &maximum_turns ) {
         require_building_handle( token, *definition, "mission definition" );
         definition->deadline_min_turns = minimum_turns;
         definition->deadline_max_turns = maximum_turns ?
-                std::optional<std::int64_t>( *maximum_turns ) : std::nullopt;
+                                         std::optional<std::int64_t>( *maximum_turns ) : std::nullopt;
         definition->deadline_handler.clear();
         return *this;
     }
@@ -6644,9 +6644,9 @@ struct mutation_definition_handle {
         value.max_collector = options.get_or<std::int64_t>(
                                   "max_collector", value.max_collector );
         value.min_altruism = options.get_or<std::int64_t>(
-                                "min_altruism", value.min_altruism );
+                                 "min_altruism", value.min_altruism );
         value.max_altruism = options.get_or<std::int64_t>(
-                                "max_altruism", value.max_altruism );
+                                 "max_altruism", value.max_altruism );
         definition->personality = value;
         return *this;
     }
@@ -6744,8 +6744,8 @@ struct mutation_definition_handle {
     }
 
     mutation_definition_handle &armor( const std::string &bodypart,
-                                        const std::string &damage_type,
-                                        const double amount ) {
+                                       const std::string &damage_type,
+                                       const double amount ) {
         require_building_handle( token, *definition, "mutation" );
         definition->armor.push_back( { bodypart, damage_type, amount } );
         return *this;
@@ -6757,9 +6757,9 @@ struct mutation_definition_handle {
                                  "damage_type", options.get_or( "type", std::string() ) );
         damage.amount = options.get_or( "amount", 0.0 );
         damage.armor_penetration = options.get_or(
-                                      "armor_penetration", options.get_or( "arpen", 0.0 ) );
+                                       "armor_penetration", options.get_or( "arpen", 0.0 ) );
         damage.armor_penetration_multiplier = options.get_or(
-                    "armor_penetration_multiplier", options.get_or( "arpen_mult", 1.0 ) );
+                "armor_penetration_multiplier", options.get_or( "arpen_mult", 1.0 ) );
         damage.damage_multiplier = options.get_or(
                                        "damage_multiplier", options.get_or( "damage_mult", 1.0 ) );
         damage.unconditional_armor_penetration_multiplier = options.get_or(
@@ -6842,11 +6842,11 @@ struct mutation_definition_handle {
             condition.handler = entry.get_or(
                                     "handler", entry.get_or( "condition", std::string() ) );
             condition.message_on = entry.get_or( "message_on", entry.get_or(
-                                       "msg_on", std::string() ) );
+                    "msg_on", std::string() ) );
             condition.message_on_type = entry.get_or(
                                             "message_on_type", entry.get_or( "msg_on_type", std::string( "neutral" ) ) );
             condition.message_off = entry.get_or( "message_off", entry.get_or(
-                                        "msg_off", std::string() ) );
+                    "msg_off", std::string() ) );
             condition.message_off_type = entry.get_or(
                                              "message_off_type", entry.get_or( "msg_off_type", std::string( "neutral" ) ) );
             group.push_back( std::move( condition ) );
@@ -7792,7 +7792,7 @@ struct relic_procgen_definition_handle {
         relic_procgen_active_definition_data value;
         value.kind = kind;
         value.spell = options.get_or( "spell", options.get_or(
-                                         "spell_id", std::string() ) );
+                                          "spell_id", std::string() ) );
         value.weight = options.get_or<std::int64_t>( "weight", 0 );
         value.base_power = options.get_or<std::int64_t>( "base_power", 0 );
         value.power_per_increment = options.get_or<std::int64_t>(
@@ -7850,7 +7850,7 @@ struct relic_procgen_definition_handle {
         value.initial_minimum = initial_minimum;
         value.initial_maximum = initial_maximum;
         const auto [use_minimum, use_maximum] = integer_range(
-                    options.raw_get<sol::object>( "charges_per_use" ), "charges per use" );
+                options.raw_get<sol::object>( "charges_per_use" ), "charges per use" );
         value.use_minimum = use_minimum;
         value.use_maximum = use_maximum;
         const auto [maximum_minimum, maximum_maximum] = integer_range(
@@ -9749,7 +9749,7 @@ struct region_settings_definition_handle {
             throw std::runtime_error( "region settings feature flag cannot be empty" );
         }
         if( std::find( definition->feature_blacklist.begin(),
-                      definition->feature_blacklist.end(), flag ) ==
+                       definition->feature_blacklist.end(), flag ) ==
             definition->feature_blacklist.end() ) {
             definition->feature_blacklist.push_back( flag );
         }
@@ -9762,7 +9762,7 @@ struct region_settings_definition_handle {
             throw std::runtime_error( "region settings feature flag cannot be empty" );
         }
         if( std::find( definition->feature_whitelist.begin(),
-                      definition->feature_whitelist.end(), flag ) ==
+                       definition->feature_whitelist.end(), flag ) ==
             definition->feature_whitelist.end() ) {
             definition->feature_whitelist.push_back( flag );
         }
@@ -10039,9 +10039,9 @@ struct omt_placeholder_definition_handle {
         for( std::size_t index = 1; index <= definition->grid.size(); ++index ) {
             const std::string row = values.get<std::string>( index );
             if( row.size() != 24 ||
-                std::any_of( row.begin(), row.end(), []( const char value ) {
-                return value != '0' && value != '1';
-            } ) ) {
+            std::any_of( row.begin(), row.end(), []( const char value ) {
+            return value != '0' && value != '1';
+        } ) ) {
                 throw std::runtime_error(
                     "overmap terrain placeholder grid rows need exactly 24 binary cells" );
             }
@@ -10357,7 +10357,8 @@ struct faction_mission_definition_handle {
 
     faction_mission_definition_handle &items_possibilities( const sol::table &table ) {
         require_building_handle( token, *definition, "faction_mission" );
-        const std::size_t count = require_dense_array( table, "faction_mission items_possibilities", 0, 1024 );
+        const std::size_t count = require_dense_array( table, "faction_mission items_possibilities", 0,
+                                  1024 );
         definition->items_possibilities.clear();
         for( std::size_t i = 1; i <= count; ++i ) {
             const sol::object elem = table.raw_get<sol::object>( i );
@@ -10507,7 +10508,8 @@ struct region_settings_city_definition_handle {
         return *this;
     }
 
-    region_settings_city_definition_handle &house( const std::string &special_id, const std::int64_t weight ) {
+    region_settings_city_definition_handle &house( const std::string &special_id,
+            const std::int64_t weight ) {
         require_building_handle( token, *definition, "region_settings_city" );
         if( special_id.empty() || weight <= 0 ) {
             throw std::runtime_error( "region_settings_city house needs an id and positive weight" );
@@ -10516,7 +10518,8 @@ struct region_settings_city_definition_handle {
         return *this;
     }
 
-    region_settings_city_definition_handle &add_house( const std::string &special_id, const std::int64_t weight ) {
+    region_settings_city_definition_handle &add_house( const std::string &special_id,
+            const std::int64_t weight ) {
         return house( special_id, weight );
     }
 
@@ -10527,7 +10530,8 @@ struct region_settings_city_definition_handle {
         return *this;
     }
 
-    region_settings_city_definition_handle &shop( const std::string &special_id, const std::int64_t weight ) {
+    region_settings_city_definition_handle &shop( const std::string &special_id,
+            const std::int64_t weight ) {
         require_building_handle( token, *definition, "region_settings_city" );
         if( special_id.empty() || weight <= 0 ) {
             throw std::runtime_error( "region_settings_city shop needs an id and positive weight" );
@@ -10536,7 +10540,8 @@ struct region_settings_city_definition_handle {
         return *this;
     }
 
-    region_settings_city_definition_handle &add_shop( const std::string &special_id, const std::int64_t weight ) {
+    region_settings_city_definition_handle &add_shop( const std::string &special_id,
+            const std::int64_t weight ) {
         return shop( special_id, weight );
     }
 
@@ -10547,7 +10552,8 @@ struct region_settings_city_definition_handle {
         return *this;
     }
 
-    region_settings_city_definition_handle &park( const std::string &special_id, const std::int64_t weight ) {
+    region_settings_city_definition_handle &park( const std::string &special_id,
+            const std::int64_t weight ) {
         require_building_handle( token, *definition, "region_settings_city" );
         if( special_id.empty() || weight <= 0 ) {
             throw std::runtime_error( "region_settings_city park needs an id and positive weight" );
@@ -10556,7 +10562,8 @@ struct region_settings_city_definition_handle {
         return *this;
     }
 
-    region_settings_city_definition_handle &add_park( const std::string &special_id, const std::int64_t weight ) {
+    region_settings_city_definition_handle &add_park( const std::string &special_id,
+            const std::int64_t weight ) {
         return park( special_id, weight );
     }
 
@@ -10637,7 +10644,8 @@ struct forest_biome_mapgen_definition_handle {
         if( definition->terrains.size() >= 1024 ) {
             throw std::runtime_error( "forest_biome_mapgen terrains exceeds Platform limit" );
         }
-        if( std::find( definition->terrains.begin(), definition->terrains.end(), value ) == definition->terrains.end() ) {
+        if( std::find( definition->terrains.begin(), definition->terrains.end(),
+                       value ) == definition->terrains.end() ) {
             definition->terrains.push_back( value );
             std::sort( definition->terrains.begin(), definition->terrains.end() );
         }
@@ -10670,7 +10678,8 @@ struct forest_biome_mapgen_definition_handle {
         if( definition->components.size() >= 1024 ) {
             throw std::runtime_error( "forest_biome_mapgen components exceeds Platform limit" );
         }
-        if( std::find( definition->components.begin(), definition->components.end(), value ) == definition->components.end() ) {
+        if( std::find( definition->components.begin(), definition->components.end(),
+                       value ) == definition->components.end() ) {
             definition->components.push_back( value );
             std::sort( definition->components.begin(), definition->components.end() );
         }
@@ -10695,7 +10704,8 @@ struct forest_biome_mapgen_definition_handle {
         return *this;
     }
 
-    forest_biome_mapgen_definition_handle &groundcover_entry( const std::string &ter_id, const std::int64_t weight ) {
+    forest_biome_mapgen_definition_handle &groundcover_entry( const std::string &ter_id,
+            const std::int64_t weight ) {
         require_building_handle( token, *definition, "forest_biome_mapgen" );
         if( ter_id.empty() || weight <= 0 ) {
             throw std::runtime_error( "forest_biome_mapgen groundcover needs terrain id and positive weight" );
@@ -10704,7 +10714,8 @@ struct forest_biome_mapgen_definition_handle {
         return *this;
     }
 
-    forest_biome_mapgen_definition_handle &add_groundcover( const std::string &ter_id, const std::int64_t weight ) {
+    forest_biome_mapgen_definition_handle &add_groundcover( const std::string &ter_id,
+            const std::int64_t weight ) {
         return groundcover_entry( ter_id, weight );
     }
 
@@ -10725,9 +10736,9 @@ struct forest_biome_mapgen_definition_handle {
             throw std::runtime_error( "forest_biome_mapgen terrain_furniture chance must be >= 0" );
         }
         auto it = std::find_if( definition->terrain_furniture.begin(), definition->terrain_furniture.end(),
-            [&ter_id]( const forest_biome_terrain_furniture_data &entry ) {
-                return entry.ter_id == ter_id;
-            } );
+        [&ter_id]( const forest_biome_terrain_furniture_data & entry ) {
+            return entry.ter_id == ter_id;
+        } );
         if( it == definition->terrain_furniture.end() ) {
             if( definition->terrain_furniture.size() >= 1024 ) {
                 throw std::runtime_error( "forest_biome_mapgen terrain_furniture exceeds Platform limit" );
@@ -10738,9 +10749,10 @@ struct forest_biome_mapgen_definition_handle {
             it->chance = chance;
         }
         it->furniture.clear();
-        parse_weighted_table_entries( furniture_table, "forest_biome_mapgen terrain_furniture furniture", it->furniture );
+        parse_weighted_table_entries( furniture_table, "forest_biome_mapgen terrain_furniture furniture",
+                                      it->furniture );
         std::sort( definition->terrain_furniture.begin(), definition->terrain_furniture.end(),
-        []( const forest_biome_terrain_furniture_data & lhs,
+                   []( const forest_biome_terrain_furniture_data & lhs,
         const forest_biome_terrain_furniture_data & rhs ) {
             return lhs.ter_id < rhs.ter_id;
         } );
@@ -11556,9 +11568,9 @@ constexpr int maximum_computer_value_depth = 8;
 void require_computer_value_key( const std::string &key )
 {
     if( key.empty() || key.size() > 128 ||
-        std::any_of( key.begin(), key.end(), []( const unsigned char ch ) {
-        return ch == '\0' || ch < 0x20U || ch == 0x7fU;
-    } ) ) {
+    std::any_of( key.begin(), key.end(), []( const unsigned char ch ) {
+    return ch == '\0' || ch < 0x20U || ch == 0x7fU;
+} ) ) {
         throw std::invalid_argument(
             "computer value keys must contain 1 to 128 printable bytes" );
     }
@@ -11989,16 +12001,16 @@ persistent_state read_typed_values( const JsonObject &values )
         const std::string type = entry.get_string( "type" );
         if( type == "boolean" ) {
             cata::lua_platform::assign_persistent_value( result, key,
-                                                   entry.get_bool( "value" ) );
+                    entry.get_bool( "value" ) );
         } else if( type == "integer" ) {
             cata::lua_platform::assign_persistent_value( result, key,
-                                                   entry.get_int64( "value" ) );
+                    entry.get_int64( "value" ) );
         } else if( type == "float" ) {
             cata::lua_platform::assign_persistent_value( result, key,
-                                                   entry.get_float( "value" ) );
+                    entry.get_float( "value" ) );
         } else if( type == "string" ) {
             cata::lua_platform::assign_persistent_value( result, key,
-                                                   entry.get_string( "value" ) );
+                    entry.get_string( "value" ) );
         } else {
             throw std::runtime_error( "unknown Platform state value type '" + type + "'" );
         }
@@ -12562,7 +12574,7 @@ bool valid_platform_dialogue_id( const std::string &value )
 }
 
 void require_platform_dialogue_text( const std::string &value,
-                                    const std::string_view field )
+                                     const std::string_view field )
 {
     cata::lua_platform::dialogue::require_text( value, "ccb.dialogue", field );
 }
@@ -12625,10 +12637,11 @@ std::uint64_t register_platform_dialogue_topic( runtime &owner,
         throw std::runtime_error(
             "ccb.dialogue register_topic is only available during Platform bootstrap" );
     }
-    validate_platform_dialogue_descriptor_keys( descriptor,
-    { "id", "dynamic_line", "responses", "speaker_effects", "on_enter",
-      "repeat_responses", "replace_built_in_responses",
-      "insert_before_standard_exits" },
+    validate_platform_dialogue_descriptor_keys( descriptor, {
+        "id", "dynamic_line", "responses", "speaker_effects", "on_enter",
+        "repeat_responses", "replace_built_in_responses",
+        "insert_before_standard_exits"
+    },
     "register_topic" );
     const std::string id = descriptor.get_or( "id", std::string() );
     if( !valid_platform_dialogue_id( id ) ) {
@@ -12708,9 +12721,10 @@ std::uint64_t extend_platform_dialogue_topic( runtime &owner,
         throw std::runtime_error(
             "ccb.dialogue extend_topic is only available during Platform bootstrap" );
     }
-    validate_platform_dialogue_descriptor_keys( descriptor,
-    { "id", "key", "insert_before_standard_exits", "responses",
-      "speaker_effects", "on_enter", "repeat_responses" }, "extend_topic" );
+    validate_platform_dialogue_descriptor_keys( descriptor, {
+        "id", "key", "insert_before_standard_exits", "responses",
+        "speaker_effects", "on_enter", "repeat_responses"
+    }, "extend_topic" );
     const std::string id = descriptor.get_or( "id", std::string() );
     if( !valid_platform_dialogue_id( id ) ) {
         throw std::invalid_argument(
@@ -12942,10 +12956,11 @@ std::uint64_t register_platform_declarative_mapgen(
         throw std::runtime_error(
             "ccb.services.mapgen define is only available during bootstrap" );
     }
-    validate_platform_mapgen_descriptor_keys( descriptor,
-    { "id", "terrain_ids", "z_min", "z_max", "primary", "offset_x",
-      "offset_y", "fill_terrain", "rows", "palettes", "symbols", "mapping",
-      "before_generate", "after_generate", "on_generate" }, "define" );
+    validate_platform_mapgen_descriptor_keys( descriptor, {
+        "id", "terrain_ids", "z_min", "z_max", "primary", "offset_x",
+        "offset_y", "fill_terrain", "rows", "palettes", "symbols", "mapping",
+        "before_generate", "after_generate", "on_generate"
+    }, "define" );
     runtime::declarative_mapgen_definition replacement;
     replacement.id = descriptor.get_or( "id", std::string() );
     if( replacement.id.empty() || replacement.id.size() > 256 ||
@@ -13020,7 +13035,8 @@ std::uint64_t register_platform_declarative_mapgen(
              std::pair<const char *, sol::object *>( "before_generate",
                      &replacement.before_generate ),
              std::pair<const char *, sol::object *>( "after_generate",
-                     &replacement.after_generate ) } ) {
+                     &replacement.after_generate )
+         } ) {
         if( callback.second->valid() && callback.second->get_type() != sol::type::nil &&
             callback.second->get_type() != sol::type::function ) {
             throw std::invalid_argument( std::string( "mapgen " ) + callback.first +
@@ -13235,9 +13251,10 @@ mod_tileset_tile_definition platform_tileset_tile(
     const sol::table &descriptor, const bool subtile )
 {
     validate_platform_tileset_descriptor_keys(
-        descriptor,
-    { "id", "fg", "bg", "multitile", "rotates", "animated",
-      "height_3d", "additional_tiles" },
+    descriptor, {
+        "id", "fg", "bg", "multitile", "rotates", "animated",
+        "height_3d", "additional_tiles"
+    },
     subtile ? "Lua-first tileset subtile" : "Lua-first tileset tile" );
     mod_tileset_tile_definition result;
     result.ids = platform_tileset_ids(
@@ -13270,8 +13287,8 @@ mod_tileset_tile_definition platform_tileset_tile(
     result.animated = platform_tileset_boolean(
                           descriptor, "animated", false );
     result.height_3d = static_cast<int>( platform_tileset_integer(
-                                            descriptor, "height_3d", 0,
-                                            -4096, 4096 ) );
+            descriptor, "height_3d", 0,
+            -4096, 4096 ) );
     const sol::object raw_additional = descriptor.raw_get<sol::object>(
                                            "additional_tiles" );
     if( raw_additional.valid() && raw_additional.get_type() != sol::type::nil ) {
@@ -13383,11 +13400,12 @@ mod_tileset_atlas_definition platform_tileset_atlas(
     const sol::table &descriptor )
 {
     validate_platform_tileset_descriptor_keys(
-        descriptor,
-    { "file", "sprite_width", "sprite_height", "sprite_offset_x",
-      "sprite_offset_y", "sprite_offset_x_retracted",
-      "sprite_offset_y_retracted", "pixelscale", "transparency", "tiles",
-      "ascii" },
+    descriptor, {
+        "file", "sprite_width", "sprite_height", "sprite_offset_x",
+        "sprite_offset_y", "sprite_offset_x_retracted",
+        "sprite_offset_y_retracted", "pixelscale", "transparency", "tiles",
+        "ascii"
+    },
     "Lua-first tileset atlas" );
     mod_tileset_atlas_definition result;
     const sol::object file = descriptor.raw_get<sol::object>( "file" );
@@ -13402,7 +13420,7 @@ mod_tileset_atlas_definition platform_tileset_atlas(
     }
     result.file = relative.generic_u8string();
     result.sprite_width = static_cast<int>( platform_tileset_integer(
-                              descriptor, "sprite_width", 0, 0, 4096 ) );
+            descriptor, "sprite_width", 0, 0, 4096 ) );
     result.sprite_height = static_cast<int>( platform_tileset_integer(
                                descriptor, "sprite_height", 0, 0, 4096 ) );
     if( ( result.sprite_width == 0 ) != ( result.sprite_height == 0 ) ) {
@@ -13414,13 +13432,13 @@ mod_tileset_atlas_definition platform_tileset_atlas(
     result.sprite_offset_y = static_cast<int>( platform_tileset_integer(
                                  descriptor, "sprite_offset_y", 0, -4096, 4096 ) );
     result.sprite_offset_x_retracted = static_cast<int>( platform_tileset_integer(
-            descriptor, "sprite_offset_x_retracted", result.sprite_offset_x,
-            -4096, 4096 ) );
+                                           descriptor, "sprite_offset_x_retracted", result.sprite_offset_x,
+                                           -4096, 4096 ) );
     result.sprite_offset_y_retracted = static_cast<int>( platform_tileset_integer(
-            descriptor, "sprite_offset_y_retracted", result.sprite_offset_y,
-            -4096, 4096 ) );
+                                           descriptor, "sprite_offset_y_retracted", result.sprite_offset_y,
+                                           -4096, 4096 ) );
     result.pixelscale = static_cast<float>( platform_tileset_number(
-                            descriptor, "pixelscale", 1.0, 0.0001, 64.0 ) );
+            descriptor, "pixelscale", 1.0, 0.0001, 64.0 ) );
     const sol::object transparency = descriptor.raw_get<sol::object>( "transparency" );
     if( transparency.valid() && transparency.get_type() != sol::type::nil ) {
         if( transparency.get_type() != sol::type::table ) {
@@ -13700,10 +13718,10 @@ sol::object platform_callback_entity_to_lua(
                 return sol::make_object( lua, sol::lua_nil );
             }
             return sol::make_object( lua, cata::lua_platform::game_handle::from_item(
-                                         *value, {
-                                             "platform_callback_item", value->uid().get_value(),
-                                             0, 0, 0, {}
-                                         }, owner.handle_runtime(), active_world_generation ) );
+            *value, {
+                "platform_callback_item", value->uid().get_value(),
+                0, 0, 0, {}
+            }, owner.handle_runtime(), active_world_generation ) );
         }
         case cata::lua_platform::native_callback_entity_kind::vehicle: {
             const safe_reference<vehicle> reference = entity.vehicle_reference();
@@ -13713,10 +13731,10 @@ sol::object platform_callback_entity_to_lua(
             }
             const tripoint_abs_ms position = value->pos_abs();
             return sol::make_object( lua, cata::lua_platform::game_handle::from_vehicle(
-                                         *value, {
-                                             "platform_callback_vehicle", 0,
-                                             position.x(), position.y(), position.z(), {}
-                                         }, owner.handle_runtime(), active_world_generation ) );
+            *value, {
+                "platform_callback_vehicle", 0,
+                position.x(), position.y(), position.z(), {}
+            }, owner.handle_runtime(), active_world_generation ) );
         }
         case cata::lua_platform::native_callback_entity_kind::none:
             return sol::make_object( lua, sol::lua_nil );
@@ -13823,7 +13841,7 @@ sol::table event_to_lua( runtime &owner, const cata::event &event,
                 const auto character = characters.find( name );
                 if( character != characters.end() ) {
                     const cata::lua_platform::game_handle handle = platform_creature_handle(
-                        owner, *character->second );
+                                owner, *character->second );
                     actors[name] = handle;
                 }
             }
@@ -13839,7 +13857,7 @@ sol::table event_to_lua( runtime &owner, const cata::event &event,
     }
     if( event_item != nullptr ) {
         actors["item"] = cata::lua_platform::game_handle::from_item(
-            const_cast<item &>( *event_item ), {
+        const_cast<item &>( *event_item ), {
             "platform_event_item", event_item->uid().get_value(), 0, 0, 0, {}
         }, owner.handle_runtime(), active_world_generation );
     }
@@ -13956,7 +13974,8 @@ bool migrate_task_payload( runtime &owner, persistent_task &task, std::string &e
             owner.task_migration_active = true;
             return callback(
                        persistent_table( *owner.lua, candidate.payload ), metadata );
-        }();
+        }
+        ();
         if( !result.valid() ) {
             const sol::error callback_error = result;
             error = callback_error.what();
@@ -14424,8 +14443,10 @@ std::optional<bool> invoke_spell_condition_handler(
         { "interlocutor", interlocutor },
         { "has_speaker", dialogue.has_alpha },
         { "has_interlocutor", dialogue.has_beta },
-        { "spell", cata::lua_platform::native_callback_id{
-              "spell", std::string( spell_id_value ) } },
+        {
+            "spell", cata::lua_platform::native_callback_id{
+                "spell", std::string( spell_id_value ) }
+        },
         { "phase", std::string( phase ) }
     } );
     sol::protected_function callback = handler->second.callback;
@@ -14466,8 +14487,10 @@ std::optional<double> invoke_spell_stat_handler(
         { "interlocutor", interlocutor },
         { "has_speaker", dialogue.has_alpha },
         { "has_interlocutor", dialogue.has_beta },
-        { "spell", cata::lua_platform::native_callback_id{
-              "spell", std::string( spell_id_value ) } },
+        {
+            "spell", cata::lua_platform::native_callback_id{
+                "spell", std::string( spell_id_value ) }
+        },
         { "stat", std::string( stat ) }
     } );
     sol::protected_function callback = handler->second.callback;
@@ -14511,10 +14534,14 @@ void invoke_spell_effect_handler(
     }
     sol::table payload = platform_callback_payload( *owner, {
         { "caster", static_cast<const Creature *>( &caster ) },
-        { "spell", cata::lua_platform::native_callback_id{
-              "spell", std::string( spell_id_value ) } },
-        { "target", cata::lua_platform::native_callback_point{
-              "bubble", tripoint_rel_ms( target.x(), target.y(), target.z() ) } },
+        {
+            "spell", cata::lua_platform::native_callback_id{
+                "spell", std::string( spell_id_value ) }
+        },
+        {
+            "target", cata::lua_platform::native_callback_point{
+                "bubble", tripoint_rel_ms( target.x(), target.y(), target.z() ) }
+        },
         { "level", static_cast<std::int64_t>( cast_spell.get_level() ) }
     } );
     sol::protected_function callback = handler->second.callback;
@@ -14547,8 +14574,10 @@ std::optional<bool> invoke_mission_condition_handler(
         { "interlocutor", interlocutor },
         { "has_speaker", dialogue.has_alpha },
         { "has_interlocutor", dialogue.has_beta },
-        { "mission_type", cata::lua_platform::native_callback_id{
-              "mission_type", std::string( mission_type ) } },
+        {
+            "mission_type", cata::lua_platform::native_callback_id{
+                "mission_type", std::string( mission_type ) }
+        },
         { "phase", std::string( phase ) }
     } );
     sol::protected_function callback = handler->second.callback;
@@ -14588,8 +14617,10 @@ std::optional<std::int64_t> invoke_mission_deadline_handler(
         { "interlocutor", interlocutor },
         { "has_speaker", dialogue.has_alpha },
         { "has_interlocutor", dialogue.has_beta },
-        { "mission_type", cata::lua_platform::native_callback_id{
-              "mission_type", std::string( mission_type ) } },
+        {
+            "mission_type", cata::lua_platform::native_callback_id{
+                "mission_type", std::string( mission_type ) }
+        },
         { "phase", std::string( "deadline" ) }
     } );
     sol::protected_function callback = handler->second.callback;
@@ -14628,10 +14659,14 @@ std::optional<bool> invoke_mission_place_handler(
         return std::nullopt;
     }
     sol::table payload = platform_callback_payload( *owner, {
-        { "mission_type", cata::lua_platform::native_callback_id{
-              "mission_type", std::string( mission_type ) } },
-        { "position", cata::lua_platform::native_callback_point{
-              "abs_omt", tripoint_rel_ms( position.x(), position.y(), position.z() ) } }
+        {
+            "mission_type", cata::lua_platform::native_callback_id{
+                "mission_type", std::string( mission_type ) }
+        },
+        {
+            "position", cata::lua_platform::native_callback_point{
+                "abs_omt", tripoint_rel_ms( position.x(), position.y(), position.z() ) }
+        }
     } );
     sol::protected_function callback = handler->second.callback;
     callback_scope callback_guard( *owner );
@@ -14666,10 +14701,14 @@ void invoke_mission_phase_handler(
         return;
     }
     sol::table payload = platform_callback_payload( *owner, {
-        { "mission", cata::lua_platform::native_callback_mission{
-              active_mission->get_id(), active_mission->identity_generation() } },
-        { "mission_type", cata::lua_platform::native_callback_id{
-              "mission_type", std::string( mission_type ) } },
+        {
+            "mission", cata::lua_platform::native_callback_mission{
+                active_mission->get_id(), active_mission->identity_generation() }
+        },
+        {
+            "mission_type", cata::lua_platform::native_callback_id{
+                "mission_type", std::string( mission_type ) }
+        },
         { "phase", std::string( phase ) }
     } );
     sol::protected_function callback = handler->second.callback;
@@ -14701,8 +14740,10 @@ std::optional<bool> invoke_mutation_condition_handler(
         { "interlocutor", interlocutor },
         { "has_speaker", dialogue.has_alpha },
         { "has_interlocutor", dialogue.has_beta },
-        { "mutation", cata::lua_platform::native_callback_id{
-              "mutation", std::string( mutation_id ) } }
+        {
+            "mutation", cata::lua_platform::native_callback_id{
+                "mutation", std::string( mutation_id ) }
+        }
     } );
     sol::protected_function callback = handler->second.callback;
     callback_scope callback_guard( *owner );
@@ -15255,7 +15296,7 @@ void load_scope( const cata_path &path, const std::string &scope,
                             participant_json.allow_omitted_members();
                         }
                         std::sort( task.participants.begin(), task.participants.end(),
-                        []( const persistent_task_participant & lhs,
+                                   []( const persistent_task_participant & lhs,
                         const persistent_task_participant & rhs ) {
                             return lhs.role < rhs.role;
                         } );
@@ -16443,10 +16484,12 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         "population", &city_definition_handle::population,
         "size", &city_definition_handle::size,
         "pos_om", sol::overload(
-            static_cast<city_definition_handle&(city_definition_handle::*)(std::int64_t, std::int64_t)>(&city_definition_handle::pos_om),
+            static_cast<city_definition_handle&( city_definition_handle::* )( std::int64_t, std::int64_t )>
+            ( &city_definition_handle::pos_om ),
             &city_definition_handle::pos_om_table ),
         "pos", sol::overload(
-            static_cast<city_definition_handle&(city_definition_handle::*)(std::int64_t, std::int64_t)>(&city_definition_handle::pos),
+            static_cast<city_definition_handle&( city_definition_handle::* )( std::int64_t, std::int64_t )>
+            ( &city_definition_handle::pos ),
             &city_definition_handle::pos_table ) );
     ccb.new_usertype<faction_mission_definition_handle>(
         "FactionMissionDefinition", sol::no_constructor,
@@ -16738,8 +16781,8 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         auto definition = std::make_shared<item_definition_data>();
         definition->id = options.get_or( "id", std::string() );
         definition->copy_from = options.get_or( "copy_from", std::string() );
-        const auto read_string = [&options]( const char *key, std::string &target,
-        bool &present ) {
+        const auto read_string = [&options]( const char *key, std::string & target,
+        bool & present ) {
             if( const sol::optional<std::string> value =
                     options.get<sol::optional<std::string>>( key ) ) {
                 target = *value;
@@ -17640,9 +17683,9 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         const std::string common_description =
             options.get_or( "description", std::string() );
         definition->description_male = options.get_or(
-                "description_male", common_description );
+                                           "description_male", common_description );
         definition->description_female = options.get_or(
-                "description_female", common_description );
+                                             "description_female", common_description );
         definition->points = options.get_or<std::int64_t>( "points", 0 );
         if( const sol::optional<std::int64_t> starting_cash =
                 options.get<sol::optional<std::int64_t>>( "starting_cash" ) ) {
@@ -18028,10 +18071,10 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->upgraded_bionic = options.get_or( "upgraded_bionic", std::string() );
         definition->required_bionic = options.get_or( "required_bionic", std::string() );
         definition->installation_requirement = options.get_or(
-                    "installation_requirement", std::string() );
+                "installation_requirement", std::string() );
         definition->fuel_efficiency = options.get_or( "fuel_efficiency", 0.0 );
         definition->passive_fuel_efficiency = options.get_or(
-                    "passive_fuel_efficiency", 0.0 );
+                "passive_fuel_efficiency", 0.0 );
         if( const sol::optional<double> penalty =
                 options.get<sol::optional<double>>( "coverage_power_gen_penalty" ) ) {
             definition->coverage_power_gen_penalty = *penalty;
@@ -18249,17 +18292,17 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
                                                 "get_level_formula_id", std::string() ) );
         definition->exp_for_level_formula = options.get_or(
                                                 "exp_for_level_formula", options.get_or(
-                                                    "exp_for_level_formula_id", std::string() ) );
+                                                        "exp_for_level_formula_id", std::string() ) );
         if( const sol::optional<std::int64_t> maximum =
                 options.get<sol::optional<std::int64_t>>( "max_book_level" ) ) {
             definition->max_book_level = *maximum;
         }
         definition->caster_condition_handler = options.get_or(
-                    "caster_condition", options.get_or( "caster_condition_handler", std::string() ) );
+                "caster_condition", options.get_or( "caster_condition_handler", std::string() ) );
         definition->caster_condition_fail_message = options.get_or(
                     "caster_condition_fail_message", std::string() );
         definition->target_condition_handler = options.get_or(
-                    "target_condition", options.get_or( "target_condition_handler", std::string() ) );
+                "target_condition", options.get_or( "target_condition_handler", std::string() ) );
         definition->target_condition_fail_message = options.get_or(
                     "target_condition_fail_message", std::string() );
         definition->teachable = options.get_or( "teachable", true );
@@ -18270,18 +18313,18 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             definition->channel_turns = channel->get<sol::optional<std::int64_t>>(
                                             "turns" ).value_or( max_channel_turns );
             definition->channel_spell = channel->get_or( "spell", channel->get_or(
-                                                   "channel_spell", std::string() ) );
+                                            "channel_spell", std::string() ) );
             definition->channel_end_spell = channel->get_or(
                                                 "end_spell", channel->get_or(
                                                     "channel_end_spell", std::string() ) );
             definition->channel_interrupt_spell = channel->get_or(
-                        "interrupt_spell", channel->get_or(
-                            "channel_interrupt_spell", std::string() ) );
+                    "interrupt_spell", channel->get_or(
+                        "channel_interrupt_spell", std::string() ) );
             definition->channel_uses_energy = channel->get_or(
                                                   "uses_energy", channel->get_or(
-                                                      "channel_uses_energy", true ) );
+                                                          "channel_uses_energy", true ) );
         }
-        const auto has_option = [&options]( const std::string &name ) {
+        const auto has_option = [&options]( const std::string & name ) {
             const sol::object value = options.raw_get<sol::object>( name );
             return value.valid() && value.get_type() != sol::type::nil;
         };
@@ -18429,7 +18472,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->end_handler = options.get_or( "end_handler", std::string() );
         definition->fail_handler = options.get_or( "fail_handler", std::string() );
         definition->goal_condition_handler = options.get_or(
-                    "goal_condition", options.get_or( "goal_condition_handler", std::string() ) );
+                "goal_condition", options.get_or( "goal_condition_handler", std::string() ) );
         definition->deadline_handler = options.get_or( "deadline_handler", std::string() );
         if( const sol::optional<std::int64_t> deadline =
                 options.get<sol::optional<std::int64_t>>( "deadline_turns" ) ) {
@@ -18438,14 +18481,14 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         if( const sol::optional<sol::table> deadline =
                 options.get<sol::optional<sol::table>>( "deadline" ) ) {
             const std::int64_t min_turns = deadline->get_or<std::int64_t>(
-                    "min_turns", 0 );
+                                               "min_turns", 0 );
             definition->deadline_min_turns = deadline->get<sol::optional<std::int64_t>>(
-                        "minimum_turns" ).value_or( min_turns );
+                                                 "minimum_turns" ).value_or( min_turns );
             if( const sol::optional<std::int64_t> maximum =
                     deadline->get<sol::optional<std::int64_t>>( "maximum_turns" ) ) {
                 definition->deadline_max_turns = *maximum;
             } else if( const sol::optional<std::int64_t> maximum =
-                       deadline->get<sol::optional<std::int64_t>>( "max_turns" ) ) {
+                           deadline->get<sol::optional<std::int64_t>>( "max_turns" ) ) {
                 definition->deadline_max_turns = *maximum;
             }
             definition->deadline_handler = deadline->get_or(
@@ -18455,9 +18498,9 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
                 options.get<sol::optional<sol::table>>( "phases" ) ) {
             definition->start_handler = phases->get_or( "start", definition->start_handler );
             definition->end_handler = phases->get_or( "success", phases->get_or(
-                                              "end", definition->end_handler ) );
+                                          "end", definition->end_handler ) );
             definition->fail_handler = phases->get_or( "failure", phases->get_or(
-                                               "fail", definition->fail_handler ) );
+                                           "fail", definition->fail_handler ) );
         }
         mission_definition_handle handle{ definition, transaction->token };
         const auto each_array_entry = [&options]( const char *key, const char *label,
@@ -18486,7 +18529,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             const sol::table reward = value.as<sol::table>();
             handle.reward( reward.get_or( "value", 0.0 ),
                            reward.get_or( "description", reward.get_or(
-                                             "text", std::string() ) ) );
+                                              "text", std::string() ) ) );
         } );
         if( const sol::optional<sol::table> dialogue =
                 options.get<sol::optional<sol::table>>( "dialogue" ) ) {
@@ -18571,7 +18614,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
                 "ranged_mutation_message", std::string() );
         definition->override_look_id = options.get_or( "override_look_id", std::string() );
         definition->override_look_category = options.get_or(
-                                                "override_look_category", std::string() );
+                "override_look_category", std::string() );
         if( const sol::optional<std::int64_t> value =
                 options.get<sol::optional<std::int64_t>>( "scent_intensity" ) ) {
             definition->scent_intensity = *value;
@@ -18602,7 +18645,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             handle.personality( *value );
         }
         const auto each_table = [&options]( const char *key, const char *label,
-        const auto &visitor ) {
+        const auto & visitor ) {
             const sol::optional<sol::table> values =
                 options.get<sol::optional<sol::table>>( key );
             if( !values ) {
@@ -19684,16 +19727,16 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->lake_depth = options.get_or<std::int64_t>( "lake_depth", -5 );
         definition->invert_lakes = options.get_or( "invert_lakes", false );
         definition->surface = options.get_or( "surface_ter", options.get_or( "surface",
-            std::string( "lake_surface" ) ) );
+                                              std::string( "lake_surface" ) ) );
         definition->shore = options.get_or( "shore_ter", options.get_or( "shore",
-            std::string( "lake_shore" ) ) );
+                                            std::string( "lake_shore" ) ) );
         definition->interior = options.get_or( "interior_ter", options.get_or( "interior",
-            std::string( "lake_water_cube" ) ) );
+                                               std::string( "lake_water_cube" ) ) );
         definition->bed = options.get_or( "bed_ter", options.get_or( "bed", std::string( "lake_bed" ) ) );
         if( const sol::optional<sol::table> shore_tbl =
                 options.get<sol::optional<sol::table>>( "shore_extendable_overmap_terrain" ) ) {
             const std::size_t count = require_dense_array( *shore_tbl, "shore extendable overmap terrain", 0,
-                1024 );
+                                      1024 );
             for( std::size_t i = 1; i <= count; ++i ) {
                 definition->shore_extendable_overmap_terrain.push_back( ( *shore_tbl ).get<std::string>( i ) );
             }
@@ -19701,7 +19744,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         if( const sol::optional<sol::table> aliases_tbl =
                 options.get<sol::optional<sol::table>>( "shore_extendable_overmap_terrain_aliases" ) ) {
             const std::size_t count = require_dense_array( *aliases_tbl,
-                "shore extendable overmap terrain aliases", 0, 1024 );
+                                      "shore extendable overmap terrain aliases", 0, 1024 );
             for( std::size_t i = 1; i <= count; ++i ) {
                 const sol::table alias_tbl = ( *aliases_tbl ).get<sol::table>( i );
                 region_settings_lake_alias_data alias_entry;
@@ -19756,13 +19799,13 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->noise_threshold_swamp_adjacent_water =
             options.get_or( "noise_threshold_swamp_adjacent_water", 0.3 );
         definition->noise_threshold_swamp_isolated = options.get_or( "noise_threshold_swamp_isolated",
-            0.6 );
+                0.6 );
         definition->river_floodplain_buffer_distance_min =
             options.get_or<std::int64_t>( "river_floodplain_buffer_distance_min", 3 );
         definition->river_floodplain_buffer_distance_max =
             options.get_or<std::int64_t>( "river_floodplain_buffer_distance_max", 15 );
         definition->forest_threshold_limit = options.get_or( "forest_threshold_limit",
-            options.get_or( "max_forest", 0.395 ) );
+                                             options.get_or( "max_forest", 0.395 ) );
         if( const sol::optional<sol::table> inc_tbl =
                 options.get<sol::optional<sol::table>>( "forest_threshold_increase" ) ) {
             const std::size_t count = require_dense_array( *inc_tbl, "forest threshold increase", 4, 4 );
@@ -20183,7 +20226,8 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->items_label = options.get_or( "items_label", std::string() );
         if( const sol::optional<sol::table> items_tbl =
                 options.get<sol::optional<sol::table>>( "items_possibilities" ) ) {
-            const std::size_t count = require_dense_array( *items_tbl, "faction_mission items_possibilities", 0, 1024 );
+            const std::size_t count = require_dense_array( *items_tbl, "faction_mission items_possibilities", 0,
+                                      1024 );
             for( std::size_t i = 1; i <= count; ++i ) {
                 const sol::object elem = items_tbl->raw_get<sol::object>( i );
                 if( !elem.is<std::string>() ) {
@@ -20243,7 +20287,8 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         }
         auto definition = std::make_shared<forest_biome_mapgen_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->sparseness_adjacency_factor = options.get_or<std::int64_t>( "sparseness_adjacency_factor", 0 );
+        definition->sparseness_adjacency_factor =
+            options.get_or<std::int64_t>( "sparseness_adjacency_factor", 0 );
         definition->item_group = options.get_or( "item_group", std::string() );
         definition->item_group_chance = options.get_or<std::int64_t>( "item_group_chance", 0 );
         definition->item_spawn_iterations = options.get_or<std::int64_t>( "item_spawn_iterations", 0 );
@@ -20879,10 +20924,10 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             }
             if( handle.definition->files.empty() ) {
                 transaction->sound_effect_preloads.push_back(
-                    { operation, handle.definition } );
+                { operation, handle.definition } );
             } else {
                 transaction->sound_effects.push_back(
-                    { operation, handle.definition } );
+                { operation, handle.definition } );
             }
             return;
         }
@@ -22798,7 +22843,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
             }
         };
         const auto validate_widget_clause = [&owner_runtime, &validate_widget_reference](
-                const std::string &owner,
+                                                const std::string & owner,
         const widget_clause_definition_data & clause ) {
             if( !fits_native_int( clause.value ) ) {
                 throw std::runtime_error( "widget '" + owner +
@@ -23067,7 +23112,9 @@ bool content_transaction::validate( const runtime &owner_runtime,
                     throw std::runtime_error( "enchantment '" + definition.id +
                                               "' has an empty body-part change" );
                 }
-                for( const std::string *part : { &gain, &lose } ) {
+                for( const std::string *part : {
+                         &gain, &lose
+                     } ) {
                     if( part->empty() ) {
                         continue;
                     }
@@ -23216,16 +23263,16 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 return entry.definition->id == id;
             } );
         };
-        const auto require_bionic_reference = [&]( const std::string &owner,
-        const std::string &id, const char *kind, const auto &exists ) {
+        const auto require_bionic_reference = [&]( const std::string & owner,
+        const std::string & id, const char *kind, const auto & exists ) {
             require_valid_id( id, kind );
             if( check_engine_state && !exists( id ) ) {
                 throw std::runtime_error( "bionic '" + owner + "' references unknown " +
                                           kind + " '" + id + "'" );
             }
         };
-        const auto validate_bionic_list = [&]( const std::string &owner,
-        const std::vector<std::string> &values, const char *kind, const auto &exists ) {
+        const auto validate_bionic_list = [&]( const std::string & owner,
+        const std::vector<std::string> &values, const char *kind, const auto & exists ) {
             std::set<std::string> unique;
             for( const std::string &value : values ) {
                 if( !unique.insert( value ).second ) {
@@ -23313,7 +23360,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
             }
             if( !definition.power_gen_emission.empty() ) {
                 require_bionic_reference( definition.id, definition.power_gen_emission,
-                                          "emission", [&staged_emission]( const std::string & id ) {
+                "emission", [&staged_emission]( const std::string & id ) {
                     return staged_emission( id ) || emit_id( id ).is_valid();
                 } );
             }
@@ -23321,7 +23368,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 require_bionic_reference( definition.id, definition.fake_weapon,
                                           "fake weapon", item_exists );
             }
-            const auto validate_optional_bionic = [&]( const std::string &id,
+            const auto validate_optional_bionic = [&]( const std::string & id,
             const char *kind ) {
                 if( id.empty() ) {
                     return;
@@ -23337,7 +23384,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
             if( !definition.installation_requirement.empty() ) {
                 require_bionic_reference(
                     definition.id, definition.installation_requirement,
-                    "installation requirement", [&staged_requirement]( const std::string & id ) {
+                "installation requirement", [&staged_requirement]( const std::string & id ) {
                     return staged_requirement( id ) || requirement_id( id ).is_valid();
                 } );
             }
@@ -23426,7 +23473,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                           "protection body part", body_part_exists );
                 require_bionic_reference(
                     definition.id, protection.damage_type, "protection damage type",
-                    [&damage_type_ids]( const std::string & id ) {
+                [&damage_type_ids]( const std::string & id ) {
                     return damage_type_ids.count( id ) != 0 || damage_type_id( id ).is_valid();
                 } );
                 if( !native_nonnegative_float( protection.amount ) ||
@@ -23455,7 +23502,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
             const bool is_toggled = std::find( definition.flags.begin(), definition.flags.end(),
                                                "BIONIC_TOGGLED" ) != definition.flags.end();
             if( ( is_gun && is_weapon ) || ( ( is_gun || is_weapon ) &&
-                                              definition.fake_weapon.empty() ) ||
+                                             definition.fake_weapon.empty() ) ||
                 ( is_weapon && !is_toggled ) ) {
                 throw std::runtime_error( "bionic '" + definition.id +
                                           "' has inconsistent weapon flags or fake weapon" );
@@ -23505,7 +23552,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
             return spell_ids.count( id ) != 0;
         };
         const auto validate_spell_handler = [&owner_runtime](
-        const std::string &owner, const std::string &handler, const char *kind ) {
+        const std::string & owner, const std::string & handler, const char *kind ) {
             if( !handler.empty() && owner_runtime.handlers.count( handler ) == 0 ) {
                 throw std::runtime_error( "spell '" + owner + "' references missing " +
                                           kind + " handler '" + handler + "'" );
@@ -23688,7 +23735,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                           "' requires additional spells" );
             }
             const auto validate_spell_string_list = [&]( const std::vector<std::string> &values,
-            const char *kind, const auto &exists ) {
+            const char *kind, const auto & exists ) {
                 std::set<std::string> ids;
                 for( const std::string &value : values ) {
                     require_valid_id( value, kind );
@@ -23702,17 +23749,17 @@ bool content_transaction::validate( const runtime &owner_runtime,
             };
             validate_spell_string_list(
                 definition.targeted_monsters, "targeted monster",
-                [&staged_monster_for_spell]( const std::string & id ) {
+            [&staged_monster_for_spell]( const std::string & id ) {
                 return staged_monster_for_spell( id ) || mtype_id( id ).is_valid();
             } );
             validate_spell_string_list(
                 definition.targeted_species, "targeted species",
-                [&staged_species]( const std::string & id ) {
+            [&staged_species]( const std::string & id ) {
                 return staged_species( id ) || species_id( id ).is_valid();
             } );
             validate_spell_string_list(
                 definition.ignored_species, "ignored species",
-                [&staged_species]( const std::string & id ) {
+            [&staged_species]( const std::string & id ) {
                 return staged_species( id ) || species_id( id ).is_valid();
             } );
             validate_spell_string_list(
@@ -23824,7 +23871,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
             return mission_definition_ids.count( id ) != 0 || mission_type_id( id ).is_valid();
         };
         const auto validate_mission_handler = [&owner_runtime](
-        const std::string &owner, const std::string &handler, const char *kind ) {
+        const std::string & owner, const std::string & handler, const char *kind ) {
             if( !handler.empty() && owner_runtime.handlers.count( handler ) == 0 ) {
                 throw std::runtime_error( "mission definition '" + owner +
                                           "' references missing " + kind + " handler '" +
@@ -23902,7 +23949,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "conditional mission definition '" + definition.id +
                                           "' requires a Lua goal-condition handler" );
             }
-            const auto validate_item_reference = [&]( const std::string &id,
+            const auto validate_item_reference = [&]( const std::string & id,
             const char *kind ) {
                 if( id.empty() ) {
                     return;
@@ -24009,7 +24056,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
         };
         const auto mutation_category_exists = [this]( const std::string & id ) {
             return std::any_of( pimpl_->mutation_categories.begin(),
-                               pimpl_->mutation_categories.end(),
+                                pimpl_->mutation_categories.end(),
             [&id]( const mutation_category_registration & entry ) {
                 return entry.definition->id == id;
             } ) || detail::mutation_category_registry_find( id ) != nullptr;
@@ -24020,8 +24067,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 return entry.definition->id == id;
             } ) || mutation_type_exists( id );
         };
-        const auto validate_mutation_ids = [&]( const mutation_definition_data &owner,
-        const std::vector<std::string> &values, const char *kind, const auto &exists ) {
+        const auto validate_mutation_ids = [&]( const mutation_definition_data & owner,
+        const std::vector<std::string> &values, const char *kind, const auto & exists ) {
             std::set<std::string> unique;
             for( const std::string &value : values ) {
                 require_valid_id( value, kind );
@@ -24033,9 +24080,9 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 }
             }
         };
-        const auto validate_mutation_pairs = [&]( const mutation_definition_data &owner,
-        const std::vector<std::pair<std::string, std::int64_t>> &values,
-        const char *kind, const bool allow_negative, const auto &exists ) {
+        const auto validate_mutation_pairs = [&]( const mutation_definition_data & owner,
+                                             const std::vector<std::pair<std::string, std::int64_t>> &values,
+        const char *kind, const bool allow_negative, const auto & exists ) {
             std::set<std::string> unique;
             for( const auto &[id, amount] : values ) {
                 require_valid_id( id, kind );
@@ -24150,43 +24197,43 @@ bool content_transaction::validate( const runtime &owner_runtime,
             validate_mutation_ids( definition, definition.can_heal_with,
                                    "healing item", item_exists );
             validate_mutation_ids( definition, definition.ignored_by,
-                                   "ignored species", [&staged_species]( const std::string & id ) {
+            "ignored species", [&staged_species]( const std::string & id ) {
                 return staged_species( id ) || species_id( id ).is_valid();
             } );
             validate_mutation_ids( definition, definition.empathize_with,
-                                   "empathized species", [&staged_species]( const std::string & id ) {
+            "empathized species", [&staged_species]( const std::string & id ) {
                 return staged_species( id ) || species_id( id ).is_valid();
             } );
             validate_mutation_ids( definition, definition.no_empathize_with,
-                                   "non-empathized species", [&staged_species]( const std::string & id ) {
+            "non-empathized species", [&staged_species]( const std::string & id ) {
                 return staged_species( id ) || species_id( id ).is_valid();
             } );
             validate_mutation_pairs( definition, definition.provided_qualities,
                                      "provided quality", false,
-                                     [&tool_quality_ids]( const std::string & id ) {
+            [&tool_quality_ids]( const std::string & id ) {
                 return tool_quality_ids.count( id ) != 0 || quality_id( id ).is_valid();
             } );
             validate_mutation_pairs( definition, definition.learned_spells,
                                      "learned spell", false,
-                                     [&staged_spell]( const std::string & id ) {
+            [&staged_spell]( const std::string & id ) {
                 return staged_spell( id ) || spell_id( id ).is_valid();
             } );
             validate_mutation_pairs( definition, definition.craft_skill_bonuses,
                                      "craft skill bonus", true,
-                                     [&skill_ids]( const std::string & id ) {
+            [&skill_ids]( const std::string & id ) {
                 return skill_ids.count( id ) != 0 || skill_id( id ).is_valid();
             } );
             validate_mutation_pairs( definition, definition.monster_cameras,
                                      "monster camera", false,
-                                     [&staged_monster_for_spell]( const std::string & id ) {
+            [&staged_monster_for_spell]( const std::string & id ) {
                 return staged_monster_for_spell( id ) || mtype_id( id ).is_valid();
             } );
             validate_mutation_pairs( definition, definition.anger_relations,
                                      "anger species", true,
-                                     [&staged_species]( const std::string & id ) {
+            [&staged_species]( const std::string & id ) {
                 return staged_species( id ) || species_id( id ).is_valid();
             } );
-            const auto validate_mutation_item = [&]( const std::string &id,
+            const auto validate_mutation_item = [&]( const std::string & id,
             const char *kind ) {
                 if( id.empty() ) {
                     return;
@@ -24202,8 +24249,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
             if( !definition.scent_type.empty() && check_engine_state &&
                 !std::any_of( pimpl_->scent_types.begin(), pimpl_->scent_types.end(),
             [&definition]( const scent_type_registration & candidate ) {
-                return candidate.definition->id == definition.scent_type;
-            } ) && !scenttype_id( definition.scent_type ).is_valid() ) {
+            return candidate.definition->id == definition.scent_type;
+        } ) && !scenttype_id( definition.scent_type ).is_valid() ) {
                 throw std::runtime_error( "mutation '" + definition.id +
                                           "' references unknown scent type '" +
                                           definition.scent_type + "'" );
@@ -24215,7 +24262,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
             }
             validate_mutation_pairs( definition, definition.vitamin_rates,
                                      "vitamin rate", true,
-                                     [&vitamin_ids]( const std::string & id ) {
+            [&vitamin_ids]( const std::string & id ) {
                 return vitamin_ids.count( id ) != 0 || vitamin_id( id ).is_valid();
             } );
             std::set<std::pair<std::string, std::string>> vitamin_absorption;
@@ -24233,7 +24280,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 }
             }
             const auto validate_bodypart_integer_pairs = [&](
-            const std::vector<std::pair<std::string, std::int64_t>> &values,
+                        const std::vector<std::pair<std::string, std::int64_t>> &values,
             const char *kind ) {
                 std::set<std::string> unique;
                 for( const auto &[bodypart, amount] : values ) {
@@ -24314,7 +24361,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
             validate_body_or_sub_bodyparts( definition.remove_rigid,
                                             "rigid-removal body part" );
             validate_mutation_ids( definition, definition.allowed_item_flags,
-                                   "allowed item flag", [&json_flag_ids]( const std::string & id ) {
+            "allowed item flag", [&json_flag_ids]( const std::string & id ) {
                 return json_flag_ids.count( id ) != 0 || flag_id( id ).is_valid();
             } );
             for( const std::vector<mutation_reflex_definition_data> &group :
@@ -24407,8 +24454,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
         }
 
         const auto validate_profession_item_requirements =
-        [&]( const detail::profession_item_substitution_native_requirement &requirements,
-             const std::string &owner ) {
+            [&]( const detail::profession_item_substitution_native_requirement & requirements,
+        const std::string & owner ) {
             std::set<std::string> traits;
             for( const std::string &trait : requirements.present ) {
                 require_valid_id( trait, "profession item substitution trait" );
@@ -24571,7 +24618,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                     location.facings.empty() || location.facings.size() > 64 ||
                     std::any_of( location.facings.begin(), location.facings.end(),
                 []( const std::int64_t facing ) {
-                    return facing < std::numeric_limits<int>::min() ||
+                return facing < std::numeric_limits<int>::min() ||
                            facing > std::numeric_limits<int>::max();
                 } ) ) {
                     throw std::runtime_error( "vehicle placement '" + definition.id +
@@ -24644,7 +24691,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                         location.facings.empty() || location.facings.size() > 64 ||
                         std::any_of( location.facings.begin(), location.facings.end(),
                     []( const std::int64_t facing ) {
-                        return facing < std::numeric_limits<int>::min() ||
+                    return facing < std::numeric_limits<int>::min() ||
                                facing > std::numeric_limits<int>::max();
                     } ) ) {
                         throw std::runtime_error( "vehicle spawn '" + definition.id +
@@ -25069,8 +25116,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
             }
         }
         const auto validate_event_source =
-        [&]( const detail::event_source_native_definition &source,
-             const std::string &owner ) {
+            [&]( const detail::event_source_native_definition & source,
+        const std::string & owner ) {
             require_valid_id( source.id, "event source" );
             if( source.kind == "event_type" ) {
                 if( !io::enum_is_valid<event_type>( source.id ) ) {
@@ -28535,14 +28582,14 @@ bool content_transaction::validate( const runtime &owner_runtime,
         std::string inheritance_error;
         if( !detail::resolve_platform_inheritance_order(
                 pimpl_->items,
-        []( const item_registration &entry ) {
-            return entry.definition->id;
-        },
-        []( const item_registration &entry ) {
-            return entry.definition->copy_from;
-        },
-        [check_engine_state]( const std::string &id ) {
-            if( !check_engine_state ) {
+        []( const item_registration & entry ) {
+        return entry.definition->id;
+    },
+    []( const item_registration & entry ) {
+        return entry.definition->copy_from;
+    },
+    [check_engine_state]( const std::string & id ) {
+        if( !check_engine_state ) {
                 return true;
             }
             const itype_id native_id( id );
@@ -28656,9 +28703,9 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                           "' is registered more than once in one transaction" );
             }
             const bool exists = entry.definition->uncraft ?
-                               recipe_dict.uncraft.count(
-                                   recipe_id( entry.definition->result ) ) > 0 :
-                               recipe_dict.recipes.count( recipe_id( definition.id ) ) > 0;
+                                recipe_dict.uncraft.count(
+                                    recipe_id( entry.definition->result ) ) > 0 :
+                                recipe_dict.recipes.count( recipe_id( definition.id ) ) > 0;
             validate_operation( entry.operation, exists, definition.id,
                                 definition.nested_category ?
                                 "nested recipe category" : "recipe" );
@@ -28732,8 +28779,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 }
             }
             const auto validate_recipe_groups = [&definition, &declared_item_ids,
-                                                &requirement_ids](
-            const std::vector<std::vector<component_requirement>> &groups,
+                                                              &requirement_ids](
+                           const std::vector<std::vector<component_requirement>> &groups,
             const char *kind ) {
                 for( const std::vector<component_requirement> &group : groups ) {
                     for( const component_requirement &component : group ) {
@@ -29387,8 +29434,10 @@ bool content_transaction::validate( const runtime &owner_runtime,
             check_special( definition.counterclockwise_slant_special, "counterclockwise_slant" );
             check_special( definition.fallback_onramp_special, "fallback_onramp" );
             check_special( definition.fallback_bend_special, "fallback_bend" );
-            check_special( definition.fallback_three_way_intersection_special, "fallback_three_way_intersection" );
-            check_special( definition.fallback_four_way_intersection_special, "fallback_four_way_intersection" );
+            check_special( definition.fallback_three_way_intersection_special,
+                           "fallback_three_way_intersection" );
+            check_special( definition.fallback_four_way_intersection_special,
+                           "fallback_four_way_intersection" );
 
             const auto check_building_bin = [&]( const std::vector<std::pair<std::string, std::int64_t>> &bin,
             const char *label ) {
@@ -29591,7 +29640,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                               "' has invalid activity level: " + definition.activity );
                 }
             }
-            if( !native_int( definition.positions ) || definition.positions < 0 || definition.positions > 65535 ) {
+            if( !native_int( definition.positions ) || definition.positions < 0 ||
+                definition.positions > 65535 ) {
                 throw std::runtime_error( "faction_mission '" + definition.id +
                                           "' positions must be between 0 and 65535" );
             }
@@ -29644,7 +29694,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "region_settings_city '" + definition.id +
                                           "' city_size must be between 0 and 16" );
             }
-            if( !native_int( definition.city_spacing ) || definition.city_spacing < 0 || definition.city_spacing > 8 ) {
+            if( !native_int( definition.city_spacing ) || definition.city_spacing < 0 ||
+                definition.city_spacing > 8 ) {
                 throw std::runtime_error( "region_settings_city '" + definition.id +
                                           "' city_spacing must be between 0 and 8" );
             }
@@ -29656,7 +29707,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                           "' radius and sigma values must be non-negative native integers" );
             }
             const auto check_city_bin = [&]( const std::vector<std::pair<std::string, std::int64_t>> &bin,
-                                             const char *label ) {
+            const char *label ) {
                 if( bin.size() > 1024 ) {
                     throw std::runtime_error( "region_settings_city '" + definition.id +
                                               "' exceeds Platform limit for " + label );
@@ -29813,7 +29864,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                     throw std::runtime_error( "terrain transform '" + definition.id +
                                               "' has an invalid " + rule.kind + " rule" );
                 }
-                const auto valid_native_id = [&]( const std::string &id ) {
+                const auto valid_native_id = [&]( const std::string & id ) {
                     if( rule.kind == "terrain" ) {
                         return terrain_ids.count( id ) != 0 || ter_str_id( id ).is_valid();
                     }
@@ -29883,7 +29934,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                            value <= std::numeric_limits<int>::max();
                 };
                 if( !known_kind || ( stage.scope != "omt" &&
-                                    stage.scope != "overmap_special" ) ||
+                                     stage.scope != "overmap_special" ) ||
                     !native_int( stage.attempts ) || !native_int( stage.chance ) ||
                     !native_int( stage.min_intensity ) ||
                     !native_int( stage.max_intensity ) ||
@@ -29977,8 +30028,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                               terrain + "'" );
                 }
             }
-            const auto require_reference = [&]( const std::string &reference,
-            const std::set<std::string> &staged, const bool native_valid,
+            const auto require_reference = [&]( const std::string & reference,
+                                                const std::set<std::string> &staged, const bool native_valid,
             const char *label, const bool required ) {
                 if( reference.empty() ) {
                     if( required ) {
@@ -30053,7 +30104,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 }
             }
             const auto check_connection = [&]( const char *label,
-            const std::string &connection, const bool require_resolved = true ) {
+            const std::string & connection, const bool require_resolved = true ) {
                 if( connection.empty() ) {
                     return;
                 }
@@ -31287,7 +31338,7 @@ bool content_transaction::apply( std::string &error )
                 native.mutations.emplace_back( mutation );
             }
             for( const enchantment_modifier_definition_data &modifier : source.modifiers ) {
-                const auto static_value = []( const std::optional<double> & number,
+                const auto static_value = []( const std::optional<double> &number,
                 auto & map, const auto & key ) {
                     if( number ) {
                         map.emplace( key, dbl_or_var( *number ) );
@@ -31589,7 +31640,7 @@ bool content_transaction::apply( std::string &error )
             native.passive_fuel_efficiency = static_cast<float>( source.passive_fuel_efficiency );
             if( source.coverage_power_gen_penalty ) {
                 native.coverage_power_gen_penalty = static_cast<float>(
-                            *source.coverage_power_gen_penalty );
+                                                        *source.coverage_power_gen_penalty );
             }
             native.social_mods.lie = static_cast<int>( source.social_lie );
             native.social_mods.persuade = static_cast<int>( source.social_persuade );
@@ -31741,7 +31792,7 @@ bool content_transaction::apply( std::string &error )
                 };
             }
             native.caster_condition_fail_message_ = no_translation(
-                        source.caster_condition_fail_message );
+                    source.caster_condition_fail_message );
             if( !source.target_condition_handler.empty() ) {
                 const std::string owner = pimpl_->owner;
                 const std::string spell_name = source.id;
@@ -31754,8 +31805,8 @@ bool content_transaction::apply( std::string &error )
                 };
             }
             native.target_condition_fail_message_ = no_translation(
-                        source.target_condition_fail_message );
-            const auto make_stat = [&]( const std::string &name ) {
+                    source.target_condition_fail_message );
+            const auto make_stat = [&]( const std::string & name ) {
                 dbl_or_var result( source.stats.at( name ) );
                 const auto maximum = source.stat_maximums.find( name );
                 if( maximum != source.stat_maximums.end() ) {
@@ -31909,8 +31960,8 @@ bool content_transaction::apply( std::string &error )
                 native.place = mission_place::always;
             }
             const auto make_phase = [this, &source](
-                                        const std::string &phase,
-                                        const std::string &handler ) {
+                                        const std::string & phase,
+            const std::string & handler ) {
                 const std::string owner = pimpl_->owner;
                 const std::string mission_id = source.id;
                 return [owner, mission_id, phase, handler]( mission * active_mission ) {
@@ -32026,9 +32077,9 @@ bool content_transaction::apply( std::string &error )
                 native.personality_score->max_aggression = static_cast<int>(
                             source.personality->max_aggression );
                 native.personality_score->min_bravery = static_cast<int>(
-                            source.personality->min_bravery );
+                        source.personality->min_bravery );
                 native.personality_score->max_bravery = static_cast<int>(
-                            source.personality->max_bravery );
+                        source.personality->max_bravery );
                 native.personality_score->min_collector = static_cast<int>(
                             source.personality->min_collector );
                 native.personality_score->max_collector = static_cast<int>(
@@ -32187,7 +32238,7 @@ bool content_transaction::apply( std::string &error )
                 native.set_platform_bionic_slot_bonus(
                     bodypart_str_id( bodypart ), static_cast<int>( amount ) );
             }
-            const auto add_damage = []( damage_instance &target,
+            const auto add_damage = []( damage_instance & target,
             const mutation_damage_definition_data & value ) {
                 target.add_damage(
                     damage_type_id( value.damage_type ), static_cast<float>( value.amount ),
@@ -32812,11 +32863,14 @@ bool content_transaction::apply( std::string &error )
                  entry.definition->charges ) {
                 relic_charge_template value;
                 value.init_charges = { static_cast<int>( source.initial_minimum ),
-                                       static_cast<int>( source.initial_maximum ) };
+                                       static_cast<int>( source.initial_maximum )
+                                     };
                 value.charges_per_use = { static_cast<int>( source.use_minimum ),
-                                          static_cast<int>( source.use_maximum ) };
+                                          static_cast<int>( source.use_maximum )
+                                        };
                 value.max_charges = { static_cast<int>( source.maximum_minimum ),
-                                      static_cast<int>( source.maximum_maximum ) };
+                                      static_cast<int>( source.maximum_maximum )
+                                    };
                 value.time = {
                     time_duration::from_turns( static_cast<int>( source.time_minimum_turns ) ),
                     time_duration::from_turns( static_cast<int>( source.time_maximum_turns ) )
@@ -33112,7 +33166,7 @@ bool content_transaction::apply( std::string &error )
             native.src.emplace_back( id, mod_id( pimpl_->owner ) );
             native.name = no_translation( source.name );
             native.description = source.description.empty() ? translation() :
-                                no_translation( source.description );
+                                 no_translation( source.description );
             if( !source.avatar_message.empty() ) {
                 native.avatar_message = no_translation( source.avatar_message );
             }
@@ -33174,7 +33228,7 @@ bool content_transaction::apply( std::string &error )
             native.src.emplace_back( id, mod_id( pimpl_->owner ) );
             native.name = no_translation( source.name );
             native.description = source.description.empty() ? translation() :
-                               no_translation( source.description );
+                                 no_translation( source.description );
             if( !source.initiate_avatar.empty() ) {
                 native.initiate.emplace_back( no_translation( source.initiate_avatar ) );
             }
@@ -34124,7 +34178,7 @@ bool content_transaction::apply( std::string &error )
                         // ordinary Mod data is present, and omit unavailable items
                         // rather than rejecting the complete group.
                         const itype_id migrated_item = item_controller->migrate_id(
-                                itype_id( source_entry.id ) );
+                                                           itype_id( source_entry.id ) );
                         if( !item::type_is_defined( migrated_item ) ) {
                             DebugLog( D_WARNING, D_MAIN ) << "Lua-first item group '" << source.id
                                                           << "' skipped unavailable item '"
@@ -34914,14 +34968,14 @@ bool content_transaction::apply( std::string &error )
         std::string inheritance_error;
         if( !detail::resolve_platform_inheritance_order(
                 pimpl_->items,
-        []( const item_registration &entry ) {
-            return entry.definition->id;
-        },
-        []( const item_registration &entry ) {
-            return entry.definition->copy_from;
-        },
-        []( const std::string &id ) {
-            const itype_id native_id( id );
+        []( const item_registration & entry ) {
+        return entry.definition->id;
+    },
+    []( const item_registration & entry ) {
+        return entry.definition->copy_from;
+    },
+    []( const std::string & id ) {
+        const itype_id native_id( id );
             const generic_factory<itype> &factory =
                 item_controller->get_generic_factory();
             return item::type_is_defined( native_id ) ||
@@ -35039,8 +35093,8 @@ bool content_transaction::apply( std::string &error )
                 for( const auto &[ammo, capacity] : entry.definition->magazine_ammo ) {
                     native->magazine->type.emplace( ammo );
                     native->magazine->capacity = std::max(
-                                                    native->magazine->capacity,
-                                                    static_cast<int>( capacity ) );
+                                                     native->magazine->capacity,
+                                                     static_cast<int>( capacity ) );
                     pocket.ammo_restriction.emplace(
                         ammotype( ammo ), static_cast<int>( capacity ) );
                 }
@@ -35473,7 +35527,7 @@ bool content_transaction::apply( std::string &error )
             pp_generator native;
             native.id = id;
             native.was_loaded = true;
-            const auto stage_type = []( const std::string &kind ) {
+            const auto stage_type = []( const std::string & kind ) {
                 if( kind == "bash_damage" ) {
                     return sub_generator_type::bash_damage;
                 }
@@ -35605,9 +35659,9 @@ bool content_transaction::apply( std::string &error )
                 entry.definition->noise_threshold_swamp_adjacent_water;
             native.noise_threshold_swamp_isolated = entry.definition->noise_threshold_swamp_isolated;
             native.river_floodplain_buffer_distance_min = static_cast<int>
-                ( entry.definition->river_floodplain_buffer_distance_min );
+                    ( entry.definition->river_floodplain_buffer_distance_min );
             native.river_floodplain_buffer_distance_max = static_cast<int>
-                ( entry.definition->river_floodplain_buffer_distance_max );
+                    ( entry.definition->river_floodplain_buffer_distance_max );
             native.max_forest = static_cast<float>( entry.definition->forest_threshold_limit );
             native.forest_increase = entry.definition->forest_threshold_increase;
             native.was_loaded = true;
@@ -35839,7 +35893,7 @@ bool content_transaction::apply( std::string &error )
             }
             if( !entry.definition->terrain_furniture.empty() ) {
                 native.region_terrain_and_furniture = region_settings_terrain_furniture_id(
-                            entry.definition->terrain_furniture );
+                        entry.definition->terrain_furniture );
             }
             native.overmap_feature_flag.blacklist.insert(
                 entry.definition->feature_blacklist.begin(),
@@ -36115,7 +36169,8 @@ bool content_transaction::apply( std::string &error )
                 }
                 native.terrain_dependent_furniture[ter_id( tdf.ter_id )] = std::move( ftdf );
             }
-            native.sparseness_adjacency_factor = static_cast<int>( entry.definition->sparseness_adjacency_factor );
+            native.sparseness_adjacency_factor = static_cast<int>
+                                                 ( entry.definition->sparseness_adjacency_factor );
             if( !entry.definition->item_group.empty() ) {
                 native.item_group = item_group_id( entry.definition->item_group );
             }
@@ -36996,7 +37051,7 @@ bool content_transaction::validate_finalized( std::string &error ) const
     }
     for( const recipe_registration &entry : pimpl_->recipes ) {
         const auto &native_dict = entry.definition->uncraft ?
-                                 recipe_dict.uncraft : recipe_dict.recipes;
+                                  recipe_dict.uncraft : recipe_dict.recipes;
         const recipe_id id( entry.definition->uncraft ?
                             recipe_id( entry.definition->result ) :
                             recipe_id( entry.definition->id ) );
@@ -37021,22 +37076,22 @@ bool content_transaction::validate_finalized( std::string &error ) const
             return false;
         }
     }
-for( const region_settings_ravine_registration &entry : pimpl_->region_settings_ravines ) {
-    if( !region_settings_ravine_id( entry.definition->id ).is_valid() ) {
+    for( const region_settings_ravine_registration &entry : pimpl_->region_settings_ravines ) {
+        if( !region_settings_ravine_id( entry.definition->id ).is_valid() ) {
             error = "Lua-first region settings ravine '" + entry.definition->id +
                     "' did not survive global finalization";
             return false;
         }
     }
-for( const region_settings_lake_registration &entry : pimpl_->region_settings_lakes ) {
-    if( !region_settings_lake_id( entry.definition->id ).is_valid() ) {
+    for( const region_settings_lake_registration &entry : pimpl_->region_settings_lakes ) {
+        if( !region_settings_lake_id( entry.definition->id ).is_valid() ) {
             error = "Lua-first region settings lake '" + entry.definition->id +
                     "' did not survive global finalization";
             return false;
         }
     }
-for( const region_settings_ocean_registration &entry : pimpl_->region_settings_oceans ) {
-    if( !region_settings_ocean_id( entry.definition->id ).is_valid() ) {
+    for( const region_settings_ocean_registration &entry : pimpl_->region_settings_oceans ) {
+        if( !region_settings_ocean_id( entry.definition->id ).is_valid() ) {
             error = "Lua-first region settings ocean '" + entry.definition->id +
                     "' did not survive global finalization";
             return false;
@@ -40029,7 +40084,7 @@ std::string content_transaction::fingerprint() const
         hash_part( state, value.required_bionic );
         hash_part( state, value.installation_requirement );
         const auto hash_strings = [&state]( const char *kind,
-        const std::vector<std::string> & values ) {
+        const std::vector<std::string> &values ) {
             for( const std::string &item : values ) {
                 hash_part( state, kind );
                 hash_part( state, item );
@@ -40137,7 +40192,7 @@ std::string content_transaction::fingerprint() const
         hash_part( state, value.target_condition_handler );
         hash_part( state, value.target_condition_fail_message );
         const auto hash_spell_strings = [&state]( const char *kind,
-        const std::vector<std::string> & values ) {
+        const std::vector<std::string> &values ) {
             for( const std::string &item : values ) {
                 hash_part( state, kind );
                 hash_part( state, item );
@@ -40328,7 +40383,7 @@ std::string content_transaction::fingerprint() const
             hash_part( state, std::to_string( variant.weight ) );
         }
         const auto hash_mutation_strings = [&state]( const char *kind,
-        const std::vector<std::string> & values ) {
+        const std::vector<std::string> &values ) {
             for( const std::string &item : values ) {
                 hash_part( state, kind );
                 hash_part( state, item );
@@ -40361,7 +40416,7 @@ std::string content_transaction::fingerprint() const
         hash_mutation_strings( "allowed_item_flag", value.allowed_item_flags );
         hash_mutation_strings( "integrated_armor", value.integrated_armor );
         const auto hash_mutation_integer_pairs = [&state]( const char *kind,
-        const std::vector<std::pair<std::string, std::int64_t>> & values ) {
+        const std::vector<std::pair<std::string, std::int64_t>> &values ) {
             for( const auto &[id, amount] : values ) {
                 hash_part( state, kind );
                 hash_part( state, id );
@@ -42292,7 +42347,7 @@ bool content_transaction::find_item_handler(
 {
     const auto found = std::find_if(
                            pimpl_->items.rbegin(), pimpl_->items.rend(),
-    [item_id]( const auto &entry ) {
+    [item_id]( const auto & entry ) {
         return entry.definition->id == item_id;
     } );
     if( found == pimpl_->items.rend() ) {
@@ -42642,33 +42697,33 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         "has_reason", &platform_dialogue_context::has_reason,
         "reason", &platform_dialogue_context::reason,
         "trial_chance",
-        []( const platform_dialogue_context &context,
-            const std::string &kind, const int difficulty,
+        []( const platform_dialogue_context & context,
+            const std::string & kind, const int difficulty,
+    const sol::optional<std::string> &skill ) {
+        return context.trial_chance(
+                   kind, difficulty,
+                   skill.value_or( std::string() ) );
+    },
+    "roll_trial",
+    []( const platform_dialogue_context & context,
+        const std::string & kind, const int difficulty,
         const sol::optional<std::string> &skill ) {
-            return context.trial_chance(
-                       kind, difficulty,
-                       skill.value_or( std::string() ) );
-        },
-        "roll_trial",
-        []( const platform_dialogue_context &context,
-            const std::string &kind, const int difficulty,
-        const sol::optional<std::string> &skill ) {
-            return context.roll_trial(
-                       kind, difficulty,
-                       skill.value_or( std::string() ) );
-        },
-        "expand_text",
-        []( const platform_dialogue_context &context,
-            const std::string &text,
+        return context.roll_trial(
+                   kind, difficulty,
+                   skill.value_or( std::string() ) );
+    },
+    "expand_text",
+    []( const platform_dialogue_context & context,
+        const std::string & text,
         const sol::optional<std::string> &item_id ) {
-            return context.expand_text(
-                       text, item_id.value_or( std::string() ) );
-        },
-        "speaker", &platform_dialogue_context::speaker,
-        "interlocutor", &platform_dialogue_context::interlocutor,
-        "get", &platform_dialogue_context::get,
-        "set", &platform_dialogue_context::set,
-        "remove", &platform_dialogue_context::remove );
+        return context.expand_text(
+                   text, item_id.value_or( std::string() ) );
+    },
+    "speaker", &platform_dialogue_context::speaker,
+    "interlocutor", &platform_dialogue_context::interlocutor,
+    "get", &platform_dialogue_context::get,
+    "set", &platform_dialogue_context::set,
+    "remove", &platform_dialogue_context::remove );
     ccb["PlatformDialogueContext"] = sol::lua_nil;
 
     const std::weak_ptr<runtime> weak = value;
@@ -42697,8 +42752,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         }
     } );
     runtime_api.set_function( "character_recurring", [weak](
-                                  const std::string &effect_handler,
-    const std::string &interval_handler ) {
+                                  const std::string & effect_handler,
+    const std::string & interval_handler ) {
         const std::shared_ptr<runtime> owner = weak.lock();
         if( !owner ) {
             throw std::runtime_error( "stale Platform runtime" );
@@ -42913,13 +42968,13 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     const auto schedule_persistent_task = [weak](
             const std::int64_t delay_turns,
             const std::int64_t interval_turns,
-            const std::string &handler_id,
+            const std::string & handler_id,
             const sol::optional<sol::table> &payload,
             const sol::optional<std::int64_t> &payload_version,
             const sol::optional<std::string> &scope,
             const sol::optional<cata::lua_platform::game_handle> &actor,
             const sol::optional<sol::table> &participants,
-            const std::string &api_name ) {
+    const std::string & api_name ) {
         const std::shared_ptr<runtime> owner = weak.lock();
         if( !owner || !owner->world_is_ready ) {
             throw std::runtime_error( "persistent tasks are only available after world_ready" );
@@ -43151,7 +43206,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                 task.participants.push_back( std::move( participant ) );
             }
             std::sort( task.participants.begin(), task.participants.end(),
-            []( const persistent_task_participant & lhs,
+                       []( const persistent_task_participant & lhs,
             const persistent_task_participant & rhs ) {
                 return lhs.role < rhs.role;
             } );
@@ -43173,8 +43228,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     };
 
     sol::table tasks = lua.create_table();
-    const auto task_snapshot = []( runtime &owner,
-    const persistent_task &task ) {
+    const auto task_snapshot = []( runtime & owner,
+    const persistent_task & task ) {
         sol::table result = owner.lua->create_table();
         const std::int64_t now =
             to_turn<std::int64_t>( calendar::turn );
@@ -43272,25 +43327,25 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         return result;
     };
     tasks.set_function( "after", [schedule_persistent_task](
-            const std::int64_t turns,
-            const std::string &handler_id,
-            const sol::optional<sol::table> &payload,
-            const sol::optional<std::int64_t> &payload_version,
-            const sol::optional<std::string> &scope,
-            const sol::optional<cata::lua_platform::game_handle> &actor,
-            const sol::optional<sol::table> &participants ) {
+                            const std::int64_t turns,
+                            const std::string & handler_id,
+                            const sol::optional<sol::table> &payload,
+                            const sol::optional<std::int64_t> &payload_version,
+                            const sol::optional<std::string> &scope,
+                            const sol::optional<cata::lua_platform::game_handle> &actor,
+    const sol::optional<sol::table> &participants ) {
         return schedule_persistent_task(
                    turns, 0, handler_id, payload,
                    payload_version, scope, actor, participants, "tasks.after" );
     } );
     tasks.set_function( "every", [schedule_persistent_task](
-            const std::int64_t interval_turns,
-            const std::string &handler_id,
-            const sol::optional<sol::table> &payload,
-            const sol::optional<std::int64_t> &payload_version,
-            const sol::optional<std::string> &scope,
-            const sol::optional<cata::lua_platform::game_handle> &actor,
-            const sol::optional<sol::table> &participants ) {
+                            const std::int64_t interval_turns,
+                            const std::string & handler_id,
+                            const sol::optional<sol::table> &payload,
+                            const sol::optional<std::int64_t> &payload_version,
+                            const sol::optional<std::string> &scope,
+                            const sol::optional<cata::lua_platform::game_handle> &actor,
+    const sol::optional<sol::table> &participants ) {
         if( interval_turns <= 0 ) {
             throw std::runtime_error( "task interval must be positive" );
         }
@@ -43343,7 +43398,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                    lua_state, task_snapshot( *owner, *found ) );
     } );
     tasks.set_function( "next", [weak, task_snapshot](
-        sol::this_state state, const std::string &handler_id,
+                            sol::this_state state, const std::string & handler_id,
     const sol::optional<std::string> &scope ) {
         const std::shared_ptr<runtime> owner = weak.lock();
         if( !owner || !owner->world_is_ready ) {
@@ -43375,9 +43430,9 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                    lua_state, task_snapshot( *owner, *next ) );
     } );
     tasks.set_function( "list", [weak, task_snapshot](
-        sol::this_state state,
-        const sol::optional<std::string> &handler_id,
-        const sol::optional<std::string> &scope,
+                            sol::this_state state,
+                            const sol::optional<std::string> &handler_id,
+                            const sol::optional<std::string> &scope,
     const sol::optional<std::int64_t> &requested_limit ) {
         const std::shared_ptr<runtime> owner = weak.lock();
         if( !owner || !owner->world_is_ready ) {
@@ -43538,10 +43593,10 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     } );
     sol::table mapgen = lua.create_table();
     const auto register_mapgen = [weak](
-                                           const std::string &handler_id,
-                                           const sol::optional<sol::table> &options,
-                                           const bool primary,
-                                           const std::string_view api_name ) {
+                                     const std::string & handler_id,
+                                     const sol::optional<sol::table> &options,
+                                     const bool primary,
+    const std::string_view api_name ) {
         const std::shared_ptr<runtime> owner = weak.lock();
         if( !owner ) {
             throw std::runtime_error( "stale Platform runtime" );
@@ -43597,23 +43652,23 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         owner->mapgen_handlers.push_back( std::move( registration ) );
     };
     mapgen.set_function( "on_generate", [register_mapgen](
-    const std::string &handler_id, const sol::optional<sol::table> &options ) {
+    const std::string & handler_id, const sol::optional<sol::table> &options ) {
         register_mapgen( handler_id, options, true,
                          "services.mapgen.on_generate" );
     } );
     mapgen.set_function( "on_postprocess", [register_mapgen](
-    const std::string &handler_id, const sol::optional<sol::table> &options ) {
+    const std::string & handler_id, const sol::optional<sol::table> &options ) {
         register_mapgen( handler_id, options, false,
                          "services.mapgen.on_postprocess" );
     } );
-    mapgen.set_function( "register_palette", [weak]( const sol::table &descriptor ) {
+    mapgen.set_function( "register_palette", [weak]( const sol::table & descriptor ) {
         const std::shared_ptr<runtime> owner = weak.lock();
         if( !owner ) {
             throw std::runtime_error( "stale Platform runtime" );
         }
         return register_platform_mapgen_palette( *owner, descriptor );
     } );
-    mapgen.set_function( "define", [weak]( const sol::table &descriptor ) {
+    mapgen.set_function( "define", [weak]( const sol::table & descriptor ) {
         const std::shared_ptr<runtime> owner = weak.lock();
         if( !owner ) {
             throw std::runtime_error( "stale Platform runtime" );
@@ -43634,7 +43689,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     services["mapgen"] = std::move( mapgen );
 
     sol::table tileset = lua.create_table();
-    tileset.set_function( "register", [weak]( const sol::table &descriptor ) {
+    tileset.set_function( "register", [weak]( const sol::table & descriptor ) {
         const std::shared_ptr<runtime> owner = weak.lock();
         if( !owner ) {
             throw std::runtime_error( "stale Platform runtime" );
@@ -43710,13 +43765,13 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     cata::lua_platform::install_registry_api( lua, services, require_read, require_read );
     cata::lua_platform::install_time_api( services, require_read, require_write );
     cata::lua_platform::install_game_handle_api( lua, services, runtime_generation,
-                                           world_generation, require_read );
+            world_generation, require_read );
     cata::lua_platform::install_creature_api( services, runtime_generation, world_generation,
-                                        require_read, require_write );
+            require_read, require_write );
     cata::lua_platform::install_effect_api( services, runtime_generation, world_generation,
-                                      require_read, require_write );
+                                            require_read, require_write );
     cata::lua_platform::install_bionic_api( services, runtime_generation, world_generation,
-                                      require_read, require_write );
+                                            require_read, require_write );
     sol::table bionics = services["bionics"];
     bionics.set_function( "summary", [require_read, runtime_generation, world_generation](
     sol::this_state state, const cata::lua_platform::game_handle & handle ) {
@@ -43984,17 +44039,17 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     } );
     services["wounds"] = std::move( wounds );
     cata::lua_platform::install_mutation_api( services, runtime_generation, world_generation,
-                                        require_read, require_write );
+            require_read, require_write );
     cata::lua_platform::install_skill_api( services, runtime_generation, world_generation,
-                                     require_read, require_write );
-    cata::lua_platform::install_proficiency_api( services, runtime_generation, world_generation,
                                            require_read, require_write );
+    cata::lua_platform::install_proficiency_api( services, runtime_generation, world_generation,
+            require_read, require_write );
     cata::lua_platform::install_vitamin_api( services, runtime_generation, world_generation,
-                                       require_read, require_write );
+            require_read, require_write );
     cata::lua_platform::install_addiction_api( services, runtime_generation, world_generation,
-                                         require_read, require_write );
+            require_read, require_write );
     cata::lua_platform::install_need_api( services, runtime_generation, world_generation,
-                                    require_read, require_write );
+                                          require_read, require_write );
     cata::lua_platform::install_activity_api(
         services, runtime_generation, world_generation,
         require_read, require_write );
@@ -44112,7 +44167,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     } );
     services["morale"] = std::move( morale );
     cata::lua_platform::install_martial_art_api( services, runtime_generation, world_generation,
-                                           require_read, require_write );
+            require_read, require_write );
     sol::table martial_arts = services["martial_arts"];
     martial_arts.set_function( "learn", [require_write, runtime_generation, world_generation](
                                    sol::this_state state, const cata::lua_platform::game_handle & handle,
@@ -44176,24 +44231,24 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     } );
     services["martial_arts"] = std::move( martial_arts );
     cata::lua_platform::install_vehicle_api( services, runtime_generation, world_generation,
-                                       require_read, require_write );
+            require_read, require_write );
     cata::lua_platform::install_npc_api(
         services, runtime_generation, world_generation,
         require_read, require_write, runtime_npc_identity_changed );
     cata::lua_platform::install_trade_api( services, runtime_generation, world_generation,
-                                     require_read, require_write );
+                                           require_read, require_write );
     cata::lua_platform::install_magic_api( services, runtime_generation, world_generation,
-                                     require_read, require_write );
+                                           require_read, require_write );
     cata::lua_platform::install_mission_api( services, runtime_generation, world_generation,
-                                       require_read, require_write );
+            require_read, require_write );
     cata::lua_platform::install_horde_api( services, runtime_generation, world_generation,
-                                     require_read, require_write );
+                                           require_read, require_write );
     cata::lua_platform::install_world_api( services, runtime_generation, world_generation,
-                                     require_read, require_write );
+                                           require_read, require_write );
     cata::lua_platform::install_map_api( services, runtime_generation, world_generation,
-                                   require_read, require_write );
+                                         require_read, require_write );
     cata::lua_platform::install_item_api( services, runtime_generation, world_generation,
-                                    require_read, require_write );
+                                          require_read, require_write );
     sol::table inventory = services["inventory"];
     inventory.set_function( "wielded", [require_read, runtime_generation,
                                                       world_generation]( sol::this_state state,
@@ -44227,8 +44282,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                            world_generation() ) ) );
     } );
     inventory.set_function( "is_wearing", [require_read, runtime_generation,
-                                                    world_generation]( sol::this_state state,
-    const cata::lua_platform::game_handle & handle,
+                                                         world_generation]( sol::this_state state,
+                                                   const cata::lua_platform::game_handle & handle,
     const cata::lua_platform::script_game_id & id ) {
         require_read();
         if( id.kind() != "item" ) {
@@ -44251,7 +44306,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     } );
     services["inventory"] = std::move( inventory );
     cata::lua_platform::install_zone_api( lua, services, runtime_generation, world_generation,
-                                    require_read, require_write );
+                                          require_read, require_write );
     cata::lua_platform::install_achievement_api( services, require_read, require_write );
     sol::table achievements = services["achievements"];
     achievements.set_function( "complete", [require_write](
@@ -44420,13 +44475,13 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     } );
     services["recipes"] = std::move( recipes );
     cata::lua_platform::install_overmap_api( services, runtime_generation, world_generation,
-                                       require_read, require_write, random_index );
+            require_read, require_write, random_index );
     cata::lua_platform::install_snapshot_api(
         services, runtime_generation, world_generation, require_read );
     cata::lua_platform::install_world_info_api( services, require_read, require_write,
-                                         has_callback );
+            has_callback );
 
-    const auto require_snippet_key = []( const std::string &value,
+    const auto require_snippet_key = []( const std::string & value,
     const std::string_view api_name ) {
         if( value.empty() || value.size() > 512 ||
             value.find( '\0' ) != std::string::npos ) {
@@ -44444,7 +44499,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         return static_cast<unsigned int>( owner->random_engine() );
     };
     const auto snippet_record = []( sol::state_view state,
-    const snippet_id &id ) {
+    const snippet_id & id ) {
         sol::table record = state.create_table();
         record["id"] = id.str();
         const std::optional<translation> text =
@@ -44462,20 +44517,20 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
 
     sol::table snippets = lua.create_table();
     snippets.set_function( "has_category", [require_read, require_snippet_key](
-    const std::string &category ) {
+    const std::string & category ) {
         require_read();
         require_snippet_key( category, "services.snippets.has_category" );
         return SNIPPET.has_category( category );
     } );
     snippets.set_function( "has", [require_read, require_snippet_key](
-    const std::string &id ) {
+    const std::string & id ) {
         require_read();
         require_snippet_key( id, "services.snippets.has" );
         return SNIPPET.has_snippet_with_id( snippet_id( id ) );
     } );
     snippets.set_function( "get", [require_read, require_snippet_key,
-                                     snippet_record](
-    sol::this_state state, const std::string &id ) {
+                                                 snippet_record](
+    sol::this_state state, const std::string & id ) {
         require_read();
         require_snippet_key( id, "services.snippets.get" );
         sol::state_view lua_state( state );
@@ -44487,7 +44542,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                    lua_state, snippet_record( lua_state, native_id ) );
     } );
     snippets.set_function( "expand", [require_read, next_snippet_seed](
-    const std::string &text ) {
+    const std::string & text ) {
         require_read();
         if( text.size() > maximum_presentation_text_bytes ||
             text.find( '\0' ) != std::string::npos ) {
@@ -44497,8 +44552,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         return SNIPPET.expand( text, next_snippet_seed() );
     } );
     snippets.set_function( "random", [require_read, require_snippet_key,
-                                        next_snippet_seed](
-    sol::this_state state, const std::string &category ) {
+                                                    next_snippet_seed](
+    sol::this_state state, const std::string & category ) {
         require_read();
         require_snippet_key( category, "services.snippets.random" );
         sol::state_view lua_state( state );
@@ -44513,8 +44568,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                        selected->translated(), next_snippet_seed() ) );
     } );
     snippets.set_function( "random_named", [require_read, require_snippet_key,
-            next_snippet_seed, snippet_record](
-    sol::this_state state, const std::string &category ) {
+                                                          next_snippet_seed, snippet_record](
+    sol::this_state state, const std::string & category ) {
         require_read();
         require_snippet_key( category, "services.snippets.random_named" );
         sol::state_view lua_state( state );
@@ -44530,10 +44585,10 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
 
     sol::table text_services = lua.create_table();
     text_services.set_function( "expand_for", [require_read, next_snippet_seed,
-            runtime_generation, world_generation](
-                sol::this_state state, const std::string &text,
-                const cata::lua_platform::game_handle &speaker_handle,
-                const sol::optional<cata::lua_platform::game_handle> &interlocutor_handle,
+                                              runtime_generation, world_generation](
+                                    sol::this_state state, const std::string & text,
+                                    const cata::lua_platform::game_handle & speaker_handle,
+                                    const sol::optional<cata::lua_platform::game_handle> &interlocutor_handle,
     const sol::optional<std::string> &item_id ) {
         require_read();
         if( text.size() > maximum_presentation_text_bytes ||
@@ -44583,13 +44638,13 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
 
     sol::table lore = lua.create_table();
     lore.set_function( "knows_snippet", [require_read, require_snippet_key](
-    const std::string &id ) {
+    const std::string & id ) {
         require_read();
         require_snippet_key( id, "services.lore.knows_snippet" );
         return get_avatar().has_seen_snippet( snippet_id( id ) );
     } );
     lore.set_function( "remember_snippet", [require_write, require_snippet_key](
-    const std::string &id ) {
+    const std::string & id ) {
         require_write();
         require_snippet_key( id, "services.lore.remember_snippet" );
         const snippet_id native_id( id );
@@ -44616,7 +44671,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     } );
     services["lore"] = std::move( lore );
 
-    const auto platform_message_type = []( const std::string &name ) {
+    const auto platform_message_type = []( const std::string & name ) {
         if( name == "good" ) {
             return m_good;
         }
@@ -44651,8 +44706,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
             "services.messages received unknown message type '" + name + "'" );
     };
     const auto add_audible_message = [weak, require_write,
-            platform_message_type]( const std::string &message,
-                                    const sol::optional<std::string> &type,
+                                            platform_message_type]( const std::string & message,
+                                              const sol::optional<std::string> &type,
     const bool from_outdoors ) {
         require_write();
         if( message.size() > 8192 ||
@@ -44672,7 +44727,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                            0.01, static_cast<double>( player.hearing_ability() ) );
                 const int denominator = std::max(
                                             1, static_cast<int>( std::ceil(
-                                                    2.0 * depth / hearing ) ) );
+                                                        2.0 * depth / hearing ) ) );
                 const std::shared_ptr<runtime> owner = weak.lock();
                 if( !owner ) {
                     throw std::runtime_error( "stale Platform runtime" );
@@ -44690,7 +44745,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     };
     sol::table platform_messages = services["messages"];
     platform_messages.set_function( "add", [weak, platform_message_type](
-    const std::string &message, const sol::optional<std::string> &type ) {
+    const std::string & message, const sol::optional<std::string> &type ) {
         const std::shared_ptr<runtime> owner = weak.lock();
         if( !owner || !owner->world_is_ready ) {
             throw std::runtime_error(
@@ -44706,11 +44761,11 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         return true;
     } );
     platform_messages.set_function( "add_if_audible", [add_audible_message](
-    const std::string &message, const sol::optional<std::string> &type ) {
+    const std::string & message, const sol::optional<std::string> &type ) {
         return add_audible_message( message, type, false );
     } );
     platform_messages.set_function( "add_from_outdoors", [add_audible_message](
-    const std::string &message, const sol::optional<std::string> &type ) {
+    const std::string & message, const sol::optional<std::string> &type ) {
         return add_audible_message( message, type, true );
     } );
     services["messages"] = std::move( platform_messages );
@@ -44829,8 +44884,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
 
     sol::table gameplay = lua.create_table();
     const auto make_math_dialogue = [runtime_generation, world_generation](
-        const sol::optional<cata::lua_platform::game_handle> &requested_actor,
-        const sol::optional<sol::table> &requested_context ) {
+                                        const sol::optional<cata::lua_platform::game_handle> &requested_actor,
+    const sol::optional<sol::table> &requested_context ) {
         std::unique_ptr<talker> alpha;
         if( requested_actor ) {
             const cata::lua_platform::native_handle_result<Creature> resolved =
@@ -44852,9 +44907,9 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                 }
                 const std::string key = entry.first.as<std::string>();
                 if( key.empty() || key.size() > 128 ||
-                    std::any_of( key.begin(), key.end(), []( const unsigned char ch ) {
-                    return ch == '\0' || ch < 0x20U || ch == 0x7fU;
-                } ) ) {
+                std::any_of( key.begin(), key.end(), []( const unsigned char ch ) {
+                return ch == '\0' || ch < 0x20U || ch == 0x7fU;
+            } ) ) {
                     throw std::invalid_argument(
                         "services.gameplay.math context keys must be printable and bounded" );
                 }
@@ -44889,9 +44944,9 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     };
     sol::table math = lua.create_table();
     math.set_function( "evaluate", [require_read, make_math_dialogue](
-        sol::this_state state, const std::string &source,
-        const sol::optional<cata::lua_platform::game_handle> &actor,
-        const sol::optional<sol::table> &context ) {
+                           sol::this_state state, const std::string & source,
+                           const sol::optional<cata::lua_platform::game_handle> &actor,
+    const sol::optional<sol::table> &context ) {
         require_read();
         if( source.empty() || source.size() > 8192 || source.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
@@ -44913,9 +44968,9 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                    lua_state, sol::make_object( lua_state, result ) );
     } );
     math.set_function( "apply", [require_write, make_math_dialogue](
-        sol::this_state state, const std::string &source,
-        const sol::optional<cata::lua_platform::game_handle> &actor,
-        const sol::optional<sol::table> &context ) {
+                           sol::this_state state, const std::string & source,
+                           const sol::optional<cata::lua_platform::game_handle> &actor,
+    const sol::optional<sol::table> &context ) {
         require_write();
         if( source.empty() || source.size() > 8192 || source.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
@@ -45013,20 +45068,20 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     } );
     gameplay["mods"] = std::move( mods );
 
-    const auto require_option_id = []( const std::string &id ) {
+    const auto require_option_id = []( const std::string & id ) {
         if( id.empty() || id.size() > 256 ||
             !std::all_of(
                 id.begin(), id.end(),
         []( const unsigned char ch ) {
-            return ch >= 0x20U && ch != 0x7fU;
-        } ) ) {
+        return ch >= 0x20U && ch != 0x7fU;
+    } ) ) {
             throw std::invalid_argument(
                 "services.gameplay.options requires a 1..256 byte "
                 "non-control option id" );
         }
     };
     const auto option_snapshot = []( sol::state_view state,
-                                     const std::string &id ) {
+    const std::string & id ) {
         options_manager::cOpt &entry =
             get_options().get_option( id );
         sol::table value = state.create_table();
@@ -45045,14 +45100,14 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     };
     sol::table gameplay_options = lua.create_table();
     gameplay_options.set_function(
-        "has", [require_read, require_option_id]( const std::string &id ) {
+    "has", [require_read, require_option_id]( const std::string & id ) {
         require_read();
         require_option_id( id );
         return get_options().has_option( id );
     } );
     gameplay_options.set_function(
         "get", [require_read, require_option_id, option_snapshot](
-            sol::this_state lua_state, const std::string &id ) {
+    sol::this_state lua_state, const std::string & id ) {
         require_read();
         require_option_id( id );
         sol::state_view state( lua_state );
@@ -45064,7 +45119,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     } );
     gameplay_options.set_function(
         "value", [require_read, require_option_id](
-            sol::this_state lua_state, const std::string &id ) {
+    sol::this_state lua_state, const std::string & id ) {
         require_read();
         require_option_id( id );
         sol::state_view state( lua_state );
@@ -45088,7 +45143,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     environment.set_function(
         "clear_saved_dimension",
         [require_write]( sol::this_state lua_state,
-    const std::string &dimension ) {
+    const std::string & dimension ) {
         require_write();
         if( g == nullptr ) {
             throw std::runtime_error(
@@ -45098,7 +45153,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
             !std::all_of(
                 dimension.begin(), dimension.end(),
         []( const unsigned char ch ) {
-            return std::isalnum( ch ) || ch == '_' || ch == '-';
+        return std::isalnum( ch ) || ch == '_' || ch == '-';
         } ) ) {
             throw std::invalid_argument(
                 "services.gameplay.environment.clear_saved_dimension requires a safe 1..128 byte dimension id" );
@@ -45171,7 +45226,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                           with_fields.value_or( true ) );
     } );
     environment.set_function( "furniture_has_flag", [require_read](
-    const cata::lua_platform::script_tripoint_coord & position, const std::string &flag ) {
+    const cata::lua_platform::script_tripoint_coord & position, const std::string & flag ) {
         require_read();
         if( flag.empty() || flag.size() > 256 || flag.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
@@ -45214,7 +45269,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         return here.furn( here.get_bub( absolute ) ).id().str();
     } );
     environment.set_function( "field_exists", [require_read](
-    const cata::lua_platform::script_tripoint_coord & position, const std::string &field_id ) {
+    const cata::lua_platform::script_tripoint_coord & position, const std::string & field_id ) {
         require_read();
         if( field_id.empty() || field_id.size() > 256 || field_id.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
@@ -45231,7 +45286,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                    field_type_id( field_id ) );
     } );
     environment.set_function( "terrain_has_flag", [require_read](
-    const cata::lua_platform::script_tripoint_coord & position, const std::string &flag ) {
+    const cata::lua_platform::script_tripoint_coord & position, const std::string & flag ) {
         require_read();
         if( flag.empty() || flag.size() > 256 || flag.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
@@ -45263,7 +45318,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         return !here.is_outside( bub );
     } );
     environment.set_function( "safe_mode_dangerous", [require_read](
-    const std::string &direction ) {
+    const std::string & direction ) {
         require_read();
         const std::optional<cardinal_direction> dir =
             io::string_to_enum_optional<cardinal_direction>( direction );
@@ -45272,7 +45327,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                 "services.gameplay.environment.safe_mode_dangerous requires a valid cardinal direction" );
         }
         return get_avatar().get_mon_visible().dangerous[
-                   static_cast<int>( *dir )];
+            static_cast<int>( *dir )];
     } );
     gameplay["environment"] = std::move( environment );
     services["gameplay"] = std::move( gameplay );
@@ -45280,7 +45335,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     sol::table native_events = lua.create_table();
     native_events.set_function(
         "emit",
-        [require_write]( const std::string &type_name,
+        [require_write]( const std::string & type_name,
     const sol::optional<sol::table> &requested_args ) {
         require_write();
         if( type_name.empty() || type_name.size() > 128 ) {
@@ -45337,8 +45392,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
 
     cata::lua_platform::install_game_interaction_api( services, require_write, has_callback );
     const auto play_audible_sound = [weak, require_write](
-            const std::string &id, const std::string &variant,
-            const sol::optional<int> &requested_volume,
+                                        const std::string & id, const std::string & variant,
+                                        const sol::optional<int> &requested_volume,
     const bool from_outdoors ) {
         require_write();
         if( id.empty() || id.size() > 128 || id.find( '\0' ) != std::string::npos ||
@@ -45369,7 +45424,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                            0.01, static_cast<double>( player.hearing_ability() ) );
                 const int denominator = std::max(
                                             1, static_cast<int>( std::ceil(
-                                                    2.0 * depth / hearing ) ) );
+                                                        2.0 * depth / hearing ) ) );
                 std::uniform_int_distribution<int> gate( 1, denominator );
                 if( gate( owner->random_engine ) != 1 ) {
                     return false;
@@ -45389,12 +45444,12 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     };
     sol::table platform_sound = services["sound"];
     platform_sound.set_function( "play_if_audible", [play_audible_sound](
-            const std::string &id, const std::string &variant,
+                                     const std::string & id, const std::string & variant,
     const sol::optional<int> &volume ) {
         return play_audible_sound( id, variant, volume, false );
     } );
     platform_sound.set_function( "play_from_outdoors", [play_audible_sound](
-            const std::string &id, const std::string &variant,
+                                     const std::string & id, const std::string & variant,
     const sol::optional<int> &volume ) {
         return play_audible_sound( id, variant, volume, true );
     } );
@@ -45403,7 +45458,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         services, runtime_generation, world_generation, require_read, require_write,
         require_write, has_callback );
     cata::lua_platform::install_variable_api( services, runtime_generation, world_generation,
-                                        require_read, require_write, has_callback );
+            require_read, require_write, has_callback );
     ccb["services"] = std::move( services );
 }
 
@@ -45552,8 +45607,8 @@ bool validate_runtime( const std::shared_ptr<runtime> &value,
             for( const mod_tileset_atlas_definition &atlas : definition.atlases ) {
                 filesystem_error.clear();
                 const std::filesystem::path image = std::filesystem::canonical(
-                            canonical_root / std::filesystem::u8path( atlas.file ),
-                            filesystem_error );
+                                                        canonical_root / std::filesystem::u8path( atlas.file ),
+                                                        filesystem_error );
                 if( filesystem_error ||
                     !platform_filesystem_path_is_within( image, canonical_root ) ||
                     !std::filesystem::is_regular_file( image, filesystem_error ) ||
@@ -45703,7 +45758,7 @@ void invoke_platform_mapgen_callback(
     callback_scope scope( owner );
     platform_mapgen_callback_write_scope mapgen_write_scope;
     sol::protected_function_result result = x && y ?
-            callback( context, *x, *y, glyph ) : callback( context );
+                                            callback( context, *x, *y, glyph ) : callback( context );
     if( !result.valid() ) {
         const sol::error error = result;
         throw std::runtime_error( error.what() );
@@ -45804,13 +45859,14 @@ void apply_platform_mapgen_computer(
     const sol::table descriptor = platform_mapgen_table(
                                       source, "mapgen symbol computer" );
     validate_platform_mapgen_descriptor_keys(
-        descriptor,
-    { "name", "security", "access_denied", "mission_target", "options",
-      "failures", "eocs", "chat_topics", "on_access", "access_handler" },
-        "symbol computer" );
+    descriptor, {
+        "name", "security", "access_denied", "mission_target", "options",
+        "failures", "eocs", "chat_topics", "on_access", "access_handler"
+    },
+    "symbol computer" );
     const std::string name = platform_mapgen_string( descriptor, "name" );
     const int security = static_cast<int>( platform_mapgen_integer(
-                                              descriptor, "security", 0, -1000000, 1000000 ) );
+            descriptor, "security", 0, -1000000, 1000000 ) );
     context->place_computer(
         x, y, name, security,
         platform_mapgen_string( descriptor, "access_denied" ),
@@ -45877,9 +45933,10 @@ void apply_platform_mapgen_sealed_item(
     const sol::table descriptor = platform_mapgen_table(
                                       source, "mapgen symbol sealed_item" );
     validate_platform_mapgen_descriptor_keys(
-        descriptor,
-    { "furniture", "item", "quantity", "charges", "item_group",
-      "item_group_chance", "faction" }, "symbol sealed_item" );
+    descriptor, {
+        "furniture", "item", "quantity", "charges", "item_group",
+        "item_group_chance", "faction"
+    }, "symbol sealed_item" );
     context->place_sealed_item(
         x, y, platform_mapgen_string( descriptor, "furniture" ),
         platform_mapgen_string( descriptor, "item" ),
@@ -45943,20 +46000,21 @@ void apply_platform_mapgen_symbol(
         }
         return;
     }
-    validate_platform_mapgen_descriptor_keys( descriptor,
-    { "chance", "repeat", "one_of", "sequence", "terrain", "furniture",
-      "trap", "field", "field_intensity", "field_age_turns", "field_remove",
-      "item", "item_quantity", "item_charges", "item_group",
-      "item_group_chance", "item_faction", "liquid", "liquid_charges",
-      "toilet", "sign", "sign_furniture", "graffiti", "vending",
-      "vending_reinforced", "vending_lootable", "vending_powered",
-      "vending_networked", "gas_pump", "gas_pump_charges",
-      "monster_group", "monster_group_chance", "monster_density",
-      "monster_individual", "monster_friendly", "monster_name",
-      "monster_mission_target", "monster", "monster_count", "monster_chance",
-      "corpse", "corpse_group", "corpse_age_days", "rubble", "rubble_floor",
-      "rubble_items", "rubble_overwrite", "computer", "sealed_item",
-      "queue_point", "callback" }, "symbol" );
+    validate_platform_mapgen_descriptor_keys( descriptor, {
+        "chance", "repeat", "one_of", "sequence", "terrain", "furniture",
+        "trap", "field", "field_intensity", "field_age_turns", "field_remove",
+        "item", "item_quantity", "item_charges", "item_group",
+        "item_group_chance", "item_faction", "liquid", "liquid_charges",
+        "toilet", "sign", "sign_furniture", "graffiti", "vending",
+        "vending_reinforced", "vending_lootable", "vending_powered",
+        "vending_networked", "gas_pump", "gas_pump_charges",
+        "monster_group", "monster_group_chance", "monster_density",
+        "monster_individual", "monster_friendly", "monster_name",
+        "monster_mission_target", "monster", "monster_count", "monster_chance",
+        "corpse", "corpse_group", "corpse_age_days", "rubble", "rubble_floor",
+        "rubble_items", "rubble_overwrite", "computer", "sealed_item",
+        "queue_point", "callback"
+    }, "symbol" );
     const std::int64_t chance = platform_mapgen_integer(
                                     descriptor, "chance", 100, 0, 100 );
     const std::int64_t repeat = platform_mapgen_integer(
@@ -46162,8 +46220,8 @@ void apply_platform_mapgen_symbol(
             if( place ) {
                 context->place_gas_pump(
                     x, y, static_cast<int>( platform_mapgen_integer(
-                                               descriptor, "gas_pump_charges", 10000,
-                                               1, 1000000000 ) ), fuel );
+                                                descriptor, "gas_pump_charges", 10000,
+                                                1, 1000000000 ) ), fuel );
             }
         }
         const sol::object monster_group =
@@ -46408,7 +46466,7 @@ bool dispatch_platform_mapgen_phase( mapgendata &data, const bool primary )
 {
     if( platform_event_dispatch_depth >= 4 ) {
         DebugLog( D_ERROR, D_MAP_GEN ) <<
-                "Lua-first Platform mapgen recursion limit reached";
+                                       "Lua-first Platform mapgen recursion limit reached";
         return false;
     }
     platform_event_dispatch_scope dispatch_scope;
@@ -46481,7 +46539,7 @@ bool dispatch_platform_mapgen_phase( mapgendata &data, const bool primary )
                     const sol::error error = result;
                     const std::string message = error.what();
                     const bool rolled_back = transaction.rollback(
-                                                  "callback_failed", message );
+                                                 "callback_failed", message );
                     context->invalidate();
                     report_callback_error( *owner, registration.handler_id, result );
                     if( !rolled_back ) {
@@ -46501,7 +46559,7 @@ bool dispatch_platform_mapgen_phase( mapgendata &data, const bool primary )
             } catch( const std::exception &exception ) {
                 const std::string message = exception.what();
                 const bool rolled_back = transaction.rollback(
-                                              "callback_failed", message );
+                                             "callback_failed", message );
                 if( context ) {
                     context->invalidate();
                 }
@@ -46514,7 +46572,7 @@ bool dispatch_platform_mapgen_phase( mapgendata &data, const bool primary )
             } catch( ... ) {
                 const std::string message = "unknown exception";
                 const bool rolled_back = transaction.rollback(
-                                              "callback_failed", message );
+                                             "callback_failed", message );
                 if( context ) {
                     context->invalidate();
                 }
@@ -46539,7 +46597,7 @@ bool runtime_has_primary_mapgen_for( const std::shared_ptr<runtime> &value,
         return false;
     }
     const bool declarative = std::any_of(
-    value->declarative_mapgens.begin(), value->declarative_mapgens.end(),
+                                 value->declarative_mapgens.begin(), value->declarative_mapgens.end(),
     [terrain_id]( const runtime::declarative_mapgen_definition & definition ) {
         return definition.primary &&
                ( definition.terrain_ids.empty() ||
@@ -46771,13 +46829,16 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
     declarative_platform_dialogue_response generated;
     generated.response = cata::lua_platform::dialogue::response_from_table( descriptor, {
         "dialogue", "response descriptor", "has", true,
-        []( const std::string & text, const std::string_view field ) {
+        []( const std::string & text, const std::string_view field )
+        {
             require_platform_dialogue_text( text, field );
         },
-        []( const std::string & id ) {
+        []( const std::string & id )
+        {
             return valid_platform_dialogue_id( id );
         },
-        [&on_select]( sol::protected_function callback ) {
+        [&on_select]( sol::protected_function callback )
+        {
             on_select = std::move( callback );
             return std::uint64_t{ 0 };
         },
@@ -46809,7 +46870,7 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
     }
     generated.response.show_reason = descriptor.get_or(
                                          "show_reason", descriptor.get_or(
-                                             "failure_explanation", std::string() ) );
+                                                 "failure_explanation", std::string() ) );
     generated.response.ignore_conditionals = generated.condition_exists &&
             !generated.condition_result && show_anyway;
     if( generated.condition_exists && !generated.condition_result && !show_anyway ) {
@@ -46827,10 +46888,10 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
         if( !explanation.empty() ) {
             require_platform_dialogue_text( explanation, "failure_explanation" );
             generated.response.truetext = no_translation(
-                "*" + explanation + ": " + generated.response.truetext.translated() );
+                                              "*" + explanation + ": " + generated.response.truetext.translated() );
         }
         generated.response.success.next_topic = talk_topic(
-                    failure_topic.empty() ? "TALK_NONE" : failure_topic );
+                failure_topic.empty() ? "TALK_NONE" : failure_topic );
         generated.condition_exists = false;
         generated.condition_result = true;
     }
@@ -46859,11 +46920,12 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
             throw std::invalid_argument( "dialogue trial must be a table" );
         }
         const sol::table trial = trial_object.as<sol::table>();
-        validate_platform_dialogue_descriptor_keys( trial,
-        { "kind", "type", "difficulty", "skill", "skill_required",
-          "condition", "modifiers", "mod" }, "trial" );
+        validate_platform_dialogue_descriptor_keys( trial, {
+            "kind", "type", "difficulty", "skill", "skill_required",
+            "condition", "modifiers", "mod"
+        }, "trial" );
         const std::string kind = trial.get_or( "kind", trial.get_or(
-                                     "type", std::string( "none" ) ) );
+                "type", std::string( "none" ) ) );
         if( kind == "none" ) {
             generated.response.trial.type = TALK_TRIAL_NONE;
         } else if( kind == "lie" ) {
@@ -46990,11 +47052,11 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
     validate_topic_payload( success_item, success_reason, "success" );
     validate_topic_payload( failure_item, failure_reason, "failure" );
     generated.response.success.next_topic = talk_topic(
-                success_topic, success_item.empty() ? itype_id::NULL_ID() :
-                itype_id( success_item ), success_reason );
+            success_topic, success_item.empty() ? itype_id::NULL_ID() :
+            itype_id( success_item ), success_reason );
     generated.response.failure.next_topic = talk_topic(
-                failure_topic, failure_item.empty() ? itype_id::NULL_ID() :
-                itype_id( failure_item ), failure_reason );
+            failure_topic, failure_item.empty() ? itype_id::NULL_ID() :
+            itype_id( failure_item ), failure_reason );
     generated.response.success.opinion = platform_dialogue_opinion(
             descriptor.raw_get<sol::object>( "success_opinion" ), "success_opinion" );
     generated.response.failure.opinion = platform_dialogue_opinion(
@@ -47012,11 +47074,11 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
                 descriptor.get_or( "failure_consequence", std::string() ) );
     if( success_consequence != dialogue_consequence::none ) {
         generated.response.success.set_effect_consequence(
-            talk_effect_fun_t( []( ::dialogue & ) {} ), success_consequence );
+        talk_effect_fun_t( []( ::dialogue & ) {} ), success_consequence );
     }
     if( failure_consequence != dialogue_consequence::none ) {
         generated.response.failure.set_effect_consequence(
-            talk_effect_fun_t( []( ::dialogue & ) {} ), failure_consequence );
+        talk_effect_fun_t( []( ::dialogue & ) {} ), failure_consequence );
     }
 
     const auto read_training_id = [&descriptor]( const char *field ) {
@@ -47041,12 +47103,14 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
 
     const sol::object on_success = descriptor.raw_get<sol::object>( "on_success" );
     const sol::object on_failure = descriptor.raw_get<sol::object>( "on_failure" );
-    const auto optional_callback = []( const sol::object &value,
+    const auto optional_callback = []( const sol::object & value,
     const char *field ) -> std::optional<sol::protected_function> {
-        if( !value.valid() || value.get_type() == sol::type::nil ) {
+        if( !value.valid() || value.get_type() == sol::type::nil )
+        {
             return std::nullopt;
         }
-        if( value.get_type() != sol::type::function ) {
+        if( value.get_type() != sol::type::function )
+        {
             throw std::invalid_argument( std::string( "dialogue " ) + field +
                                          " must be a function" );
         }
@@ -47067,28 +47131,31 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
             cata::lua_platform::dialogue::register_response_callback(
                 cata::lua_platform::dialogue::response_callback_origin::platform,
                 [weak_owner, topic_id, session, on_select, success_callback, failure_callback](
-        ::dialogue & active_dialogue, const talk_topic & fallback,
+                    ::dialogue & active_dialogue, const talk_topic & fallback,
         const bool trial_success ) mutable {
             const std::shared_ptr<runtime> active_owner = weak_owner.lock();
             if( !active_owner || !active_owner->world_is_ready || !session ||
                 !session->active_for( topic_id, &active_dialogue ) ||
                 session->validation_error( &active_dialogue,
-                                            active_owner->handle_runtime(),
-                                            active_world_generation ) ) {
+                                           active_owner->handle_runtime(),
+                                           active_world_generation ) )
+            {
                 return fallback;
             }
             talk_topic result = fallback;
             const std::optional<sol::protected_function> &phase_callback =
-                trial_success ? success_callback : failure_callback;
-            if( phase_callback ) {
+            trial_success ? success_callback : failure_callback;
+            if( phase_callback )
+            {
                 result = invoke_platform_dialogue_response_callback(
-                             weak_owner, topic_id, *phase_callback, active_dialogue,
-                             result, trial_success );
+                    weak_owner, topic_id, *phase_callback, active_dialogue,
+                    result, trial_success );
             }
-            if( on_select ) {
+            if( on_select )
+            {
                 result = invoke_platform_dialogue_response_callback(
-                             weak_owner, topic_id, *on_select, active_dialogue,
-                             result, trial_success );
+                    weak_owner, topic_id, *on_select, active_dialogue,
+                    result, trial_success );
             }
             return result;
         }, session, topic_id );
@@ -47209,9 +47276,10 @@ void add_declarative_platform_dialogue_repeat_responses(
                 "dialogue repeat_responses must contain descriptor tables" );
         }
         const sol::table repeat = raw_repeat.as<sol::table>();
-        validate_platform_dialogue_descriptor_keys( repeat,
-        { "actor", "include_containers", "item", "items", "category",
-          "categories", "response" }, "repeat response" );
+        validate_platform_dialogue_descriptor_keys( repeat, {
+            "actor", "include_containers", "item", "items", "category",
+            "categories", "response"
+        }, "repeat response" );
         const std::string actor_name = repeat.get_or( "actor", std::string( "speaker" ) );
         bool beta = false;
         if( actor_name == "speaker" ) {
@@ -47318,7 +47386,7 @@ sol::protected_function_result invoke_platform_dialogue_handler(
         throw std::runtime_error( "dialogue callback recursion limit reached" );
     }
     const const_talker *speaker = d.has_alpha ?
-                                   d.const_actor( false ) : nullptr;
+                                  d.const_actor( false ) : nullptr;
     const const_talker *interlocutor = d.has_beta ?
                                        d.const_actor( true ) : nullptr;
     sol::table payload = platform_callback_payload( owner, {
@@ -47404,7 +47472,7 @@ void apply_platform_dialogue_speaker_effects( ::dialogue &d,
         const talk_topic &topic )
 {
     const auto apply_source = [&d, &topic](
-    const std::shared_ptr<runtime> &owner, const sol::object &source,
+                                  const std::shared_ptr<runtime> &owner, const sol::object & source,
     const std::string_view label ) {
         if( !owner || !source.valid() || source.get_type() == sol::type::nil ) {
             return;
@@ -47803,7 +47871,7 @@ std::string runtime_fingerprint( const std::shared_ptr<runtime> &value )
     };
     std::function<void( const mod_tileset_tile_definition & )> hash_tile;
     hash_tile = [&state, &hash_variations, &hash_tile](
-    const mod_tileset_tile_definition &tile ) {
+    const mod_tileset_tile_definition & tile ) {
         hash_part( state, std::to_string( tile.ids.size() ) );
         for( const std::string &id : tile.ids ) {
             hash_part( state, id );
@@ -48463,7 +48531,7 @@ void invoke_vehicle_part_activation_handler(
         payload["part_index"] = subject.index_of_part( &part, true );
         payload["character"] = platform_creature_handle( *owner, character );
         payload["vehicle"] = cata::lua_platform::game_handle::from_vehicle(
-                                 subject, {
+        subject, {
             "platform_vehicle_part_activation", 0,
             position.x(), position.y(), position.z(), {}
         }, owner->handle_runtime(), active_world_generation );
@@ -48491,7 +48559,7 @@ std::optional<bool> invoke_computer_access_handler(
         return std::nullopt;
     }
     const std::shared_ptr<runtime> owner = find_active_runtime(
-                                               terminal.platform_access_mod() );
+            terminal.platform_access_mod() );
     if( !owner || !owner->world_is_ready ) {
         DebugLog( D_ERROR, D_MAIN ) << "Lua-first computer runtime unavailable for '"
                                     << terminal.platform_access_mod() << ':'
@@ -48844,7 +48912,7 @@ void invoke_item_consumption_handler(
     payload["item_id"] = std::string( item_id );
     payload["character"] = platform_creature_handle( *owner, character );
     payload["item"] = cata::lua_platform::game_handle::from_item(
-                          consumed_item, {
+    consumed_item, {
         "platform_item_consumption", consumed_item.uid().get_value(), 0, 0, 0, {}
     }, owner->handle_runtime(), active_world_generation );
     sol::protected_function callback = handler->second.callback;
@@ -50041,7 +50109,7 @@ void runtime_process_character_recurring( Character &character )
                                             std::to_string( character.getID().get_value() );
             std::optional<std::int64_t> due;
             if( const diag_value *stored = character.maybe_get_value(
-                        registration.due_variable ) ) {
+                                               registration.due_variable ) ) {
                 const double raw = stored->dbl();
                 if( std::isfinite( raw ) && raw >= 0.0 &&
                     raw <= static_cast<double>( std::numeric_limits<std::int64_t>::max() ) &&
@@ -50104,7 +50172,7 @@ void runtime_process_character_recurring( Character &character )
             }
             if( !interval_turns ) {
                 if( owner->reported_character_recurring_failures.insert(
-                            failure_key ).second ) {
+                        failure_key ).second ) {
                     DebugLog( D_ERROR, D_MAIN )
                             << "Lua-first character recurrence '" << owner->mod_id
                             << ':' << registration.interval_handler

@@ -82,7 +82,7 @@ struct shopkeeper_item_group {
 
 class npc_class
 {
-    friend class cata::lua_platform::world_content_transaction;
+        friend class cata::lua_platform::world_content_transaction;
     private:
         translation name;
         translation job_description;

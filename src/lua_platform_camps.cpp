@@ -96,13 +96,13 @@ sol::table snapshot_camp( sol::state_view lua, basecamp &camp,
     value["board_name"] = camp.board_name();
     value["valid"] = camp.is_valid();
     value["position"] = script_tripoint_coord::from_native(
-                             coords::origin::abs,
-                             coords::scale::overmap_terrain,
-                             camp.camp_omt_pos().raw() );
+                            coords::origin::abs,
+                            coords::scale::overmap_terrain,
+                            camp.camp_omt_pos().raw() );
     value["board_position"] = script_tripoint_coord::from_native(
-                                    coords::origin::abs,
-                                    coords::scale::map_square,
-                                    camp.get_bb_pos_abs().raw() );
+                                  coords::origin::abs,
+                                  coords::scale::map_square,
+                                  camp.get_bb_pos_abs().raw() );
     value["assigned_worker_count"] = camp.exact_worker_count();
     const faction_id owner = camp.get_owner();
     if( owner.is_null() ) {
@@ -143,7 +143,7 @@ sol::table list_camps( sol::this_state lua,
     const tripoint_abs_omt native_center = require_omt( center, "services.camps.list" );
     const camp_query_options options = read_options( requested );
     const std::vector<camp_reference> references = overmap_buffer.get_camps_near(
-            project_to<coords::sm>( native_center ), options.radius_omt * 2 );
+                project_to<coords::sm>( native_center ), options.radius_omt * 2 );
     sol::state_view state( lua );
     sol::table items = state.create_table();
     int returned = 0;
@@ -159,9 +159,9 @@ sol::table list_camps( sol::this_state lua,
     sol::table result = state.create_table();
     result["items"] = std::move( items );
     result["center"] = script_tripoint_coord::from_native(
-                            coords::origin::abs,
-                            coords::scale::overmap_terrain,
-                            native_center.raw() );
+                           coords::origin::abs,
+                           coords::scale::overmap_terrain,
+                           native_center.raw() );
     result["radius_omt"] = options.radius_omt;
     result["returned"] = returned;
     result["limit"] = options.limit;
@@ -175,7 +175,7 @@ basecamp *resolve_camp( const game_handle &handle,
                         std::optional<game_handle_error> &error )
 {
     const native_handle_result<basecamp> resolved = handle.resolve_camp(
-            runtime, world_generation );
+                runtime, world_generation );
     if( !resolved ) {
         error = resolved.error;
         return nullptr;
@@ -185,9 +185,9 @@ basecamp *resolve_camp( const game_handle &handle,
 }
 
 Character *resolve_manager( basecamp &camp, const game_handle &handle,
-                             const game_handle_runtime &runtime,
-                             const std::size_t world_generation,
-                             std::optional<game_handle_error> &error )
+                            const game_handle_runtime &runtime,
+                            const std::size_t world_generation,
+                            std::optional<game_handle_error> &error )
 {
     Character *manager = resolve_exact_character(
                              handle, runtime, world_generation, error );
@@ -331,7 +331,7 @@ void validate_name( const std::string &name )
     }
     if( std::any_of( name.begin(), name.end(), []( const unsigned char ch ) {
     return ch < 0x20U || ch == 0x7fU;
-    } ) ) {
+} ) ) {
         throw std::invalid_argument( "services.camps.rename name contains a control character" );
     }
 }
@@ -387,10 +387,10 @@ camp_create_options read_camp_create_options(
 }
 
 Character *resolve_create_manager( const game_handle &handle,
-                                    const game_handle_runtime &runtime,
-                                    const std::size_t world_generation,
-                                    const faction_id &owner,
-                                    std::optional<game_handle_error> &error )
+                                   const game_handle_runtime &runtime,
+                                   const std::size_t world_generation,
+                                   const faction_id &owner,
+                                   std::optional<game_handle_error> &error )
 {
     Character *manager = resolve_exact_character(
                              handle, runtime, world_generation, error );
@@ -450,7 +450,7 @@ sol::table create_camp( sol::this_state lua,
     }
     validate_name( name );
     const tripoint_abs_omt position = require_omt(
-                                           position_value, "services.camps.create" );
+                                          position_value, "services.camps.create" );
     const camp_create_options create_options = read_camp_create_options( options );
     const faction_id owner( owner_value.value() );
     std::optional<game_handle_error> error;
@@ -490,7 +490,7 @@ sol::table create_camp( sol::this_state lua,
         overmap_buffer.add_camp( candidate );
     } catch( const std::exception &exception ) {
         if( const std::optional<basecamp *> published =
-                    find_exact_loaded_camp( position );
+                find_exact_loaded_camp( position );
             published && *published != nullptr &&
             ( *published )->platform_id() == candidate_id ) {
             // `add_camp` is normally all-or-nothing.  Keep the postcondition
@@ -503,7 +503,7 @@ sol::table create_camp( sol::this_state lua,
         } );
     } catch( ... ) {
         if( const std::optional<basecamp *> published =
-                    find_exact_loaded_camp( position );
+                find_exact_loaded_camp( position );
             published && *published != nullptr &&
             ( *published )->platform_id() == candidate_id ) {
             overmap_buffer.remove_camp( position.xy() );
@@ -551,7 +551,7 @@ sol::table remove_camp( sol::this_state lua, const game_handle &camp_handle,
     const std::size_t old_generation = camp_handle.identity_generation();
     overmap_buffer.remove_camp( position.xy() );
     if( const std::optional<basecamp *> still_present =
-                find_exact_loaded_camp( position ); still_present ) {
+            find_exact_loaded_camp( position ); still_present ) {
         return make_game_error_result( state, {
             "remove_failed", "The camp removal postcondition failed"
         } );
@@ -724,7 +724,7 @@ basecamp_platform_resource_work read_resource_work_descriptor(
         }
     }
 
-    const auto read_amounts = []( const sol::object &raw, const char *field ) {
+    const auto read_amounts = []( const sol::object & raw, const char *field ) {
         std::vector<basecamp_platform_resource_change> result;
         if( !raw.valid() || raw.get_type() == sol::type::nil ) {
             return result;
@@ -775,22 +775,25 @@ basecamp_platform_resource_work read_resource_work_descriptor(
     };
 
     work.resource_inputs = read_amounts(
-                                descriptor["resource_inputs"], "resource_inputs" );
+                               descriptor["resource_inputs"], "resource_inputs" );
     work.resource_outputs = read_amounts(
-                                 descriptor["resource_outputs"], "resource_outputs" );
+                                descriptor["resource_outputs"], "resource_outputs" );
 
     const auto read_food = [&descriptor]( const char *field ) -> std::optional<std::int64_t> {
         const sol::object raw = descriptor[field];
-        if( !raw.valid() || raw.get_type() == sol::type::nil ) {
+        if( !raw.valid() || raw.get_type() == sol::type::nil )
+        {
             return std::nullopt;
         }
-        if( !raw.is<lua_Integer>() ) {
+        if( !raw.is<lua_Integer>() )
+        {
             throw std::invalid_argument(
                 std::string( "services.camps.tasks.create " ) + field +
                 " must be an integer" );
         }
         const lua_Integer value = raw.as<lua_Integer>();
-        if( value <= 0 || value > 1000000000 ) {
+        if( value <= 0 || value > 1000000000 )
+        {
             throw std::invalid_argument(
                 std::string( "services.camps.tasks.create " ) + field +
                 " must be positive and bounded" );
@@ -819,7 +822,7 @@ basecamp_platform_resource_work read_resource_work_descriptor(
 }
 
 bool recipe_holder_equals( const basecamp_platform_recipe_holder &lhs,
-                            const basecamp_platform_recipe_holder &rhs )
+                           const basecamp_platform_recipe_holder &rhs )
 {
     return lhs.kind == rhs.kind && lhs.character == rhs.character &&
            lhs.identity_generation == rhs.identity_generation &&
@@ -891,7 +894,8 @@ basecamp_platform_recipe_work read_recipe_work_descriptor(
         const std::string key = field.first.as<std::string>();
         if( key != "recipe_id" && key != "batch" && key != "duration_turns" &&
             key != "source_holders" && key != "destination_holder" ) {
-            throw std::invalid_argument( "services.camps.tasks.create recipe_work descriptor has an unknown field '" +
+            throw std::invalid_argument( "services.camps.tasks.create recipe_work descriptor has an unknown field '"
+                                         +
                                          key + "'" );
         }
     }
@@ -928,8 +932,8 @@ basecamp_platform_recipe_work read_recipe_work_descriptor(
             throw std::invalid_argument( "services.camps.tasks.create recipe_work source_holders must be a dense typed array" );
         }
         result.source_holders.push_back( read_recipe_holder_descriptor(
-                                              entry.second.as<sol::table>(), api_name,
-                                              runtime, world_generation ) );
+                                             entry.second.as<sol::table>(), api_name,
+                                             runtime, world_generation ) );
     }
     if( result.source_holders.empty() ) {
         throw std::invalid_argument( "services.camps.tasks.create recipe_work requires at least one source holder" );
@@ -1095,7 +1099,7 @@ basecamp_platform_upgrade_work read_upgrade_work_descriptor(
                                          " camp_core target requires a positive generation" );
         }
         result.target_core_generation = static_cast<std::uint64_t>(
-                                             raw_generation.as<lua_Integer>() );
+                                            raw_generation.as<lua_Integer>() );
         if( target["expansion"].valid() &&
             target["expansion"].get_type() != sol::type::nil ) {
             throw std::invalid_argument( std::string( api_name ) +
@@ -1139,8 +1143,8 @@ basecamp_platform_upgrade_work read_upgrade_work_descriptor(
                                          " source_holders must be a dense typed array" );
         }
         result.source_holders.push_back( read_recipe_holder_descriptor(
-                                              entry.second.as<sol::table>(), api_name,
-                                              runtime, world_generation ) );
+                                             entry.second.as<sol::table>(), api_name,
+                                             runtime, world_generation ) );
     }
     if( result.source_holders.empty() ) {
         throw std::invalid_argument( std::string( api_name ) +
@@ -1346,8 +1350,8 @@ sol::table camp_storage_tiles(
     }
     std::vector<tripoint_abs_ms> positions(
         camp->get_storage_tiles().begin(), camp->get_storage_tiles().end() );
-    std::sort( positions.begin(), positions.end(), []( const tripoint_abs_ms &lhs,
-    const tripoint_abs_ms &rhs ) {
+    std::sort( positions.begin(), positions.end(), []( const tripoint_abs_ms & lhs,
+    const tripoint_abs_ms & rhs ) {
         return std::make_tuple( lhs.x(), lhs.y(), lhs.z() ) <
                std::make_tuple( rhs.x(), rhs.y(), rhs.z() );
     } );
@@ -1359,7 +1363,7 @@ sol::table camp_storage_tiles(
     for( std::size_t index = begin; index < end; ++index ) {
         sol::table value = state.create_table();
         value["holder"] = make_map_tile_holder(
-                               state, positions[index], runtime, world_generation );
+                              state, positions[index], runtime, world_generation );
         entries[++returned] = std::move( value );
     }
     sol::table value = state.create_table();
@@ -1462,7 +1466,7 @@ sol::table set_board_position( sol::this_state lua, const game_handle &camp_hand
                                const std::size_t world_generation )
 {
     const tripoint_abs_ms board = require_map_square(
-            position, "services.camps.set_board_position" );
+                                      position, "services.camps.set_board_position" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     basecamp *camp = resolve_camp( camp_handle, runtime, world_generation, error );
@@ -1482,10 +1486,10 @@ sol::table set_board_position( sol::this_state lua, const game_handle &camp_hand
     sol::table value = state.create_table();
     value["camp"] = make_camp_handle( *camp, runtime, world_generation );
     value["before"] = script_tripoint_coord::from_native(
-                           coords::origin::abs, coords::scale::map_square, before.raw() );
+                          coords::origin::abs, coords::scale::map_square, before.raw() );
     value["after"] = script_tripoint_coord::from_native(
-                          coords::origin::abs, coords::scale::map_square,
-                          camp->get_bb_pos_abs().raw() );
+                         coords::origin::abs, coords::scale::map_square,
+                         camp->get_bb_pos_abs().raw() );
     value["changed"] = before != camp->get_bb_pos_abs();
     return make_game_value_result( state, sol::make_object( state, std::move( value ) ) );
 }
@@ -1771,7 +1775,7 @@ std::optional<game_handle_error> resolve_platform_task(
     const std::vector<basecamp_platform_task> tasks =
         resolved.camp->platform_task_snapshot();
     const auto task_it = std::find_if( tasks.begin(), tasks.end(),
-    [&token]( const basecamp_platform_task &candidate ) {
+    [&token]( const basecamp_platform_task & candidate ) {
         return candidate.task_id == token.task_id();
     } );
     if( task_it == tasks.end() ) {
@@ -1881,10 +1885,11 @@ sol::table resource_work_value(
     sol::state_view lua, const basecamp_platform_resource_work &work )
 {
     auto changes_value = [lua](
-        const std::vector<basecamp_platform_resource_change> &changes ) mutable {
+    const std::vector<basecamp_platform_resource_change> &changes ) mutable {
         sol::table values = lua.create_table();
         int index = 0;
-        for( const basecamp_platform_resource_change &change : changes ) {
+        for( const basecamp_platform_resource_change &change : changes )
+        {
             sol::table value = lua.create_table();
             value["id"] = script_game_id( "item", change.resource_id.str() );
             value["amount"] = static_cast<lua_Integer>( change.delta );
@@ -1916,7 +1921,7 @@ sol::table recipe_holder_value( sol::state_view lua,
     value["kind"] = "character";
     value["character_id"] = holder.character.get_value();
     value["identity_generation"] = static_cast<lua_Integer>(
-                                          holder.identity_generation );
+                                       holder.identity_generation );
     value["slot"] = holder.slot;
     return value;
 }
@@ -1980,11 +1985,11 @@ sol::table upgrade_work_value( sol::state_view lua,
     }
     sol::table target = lua.create_table();
     target["kind"] = work.target_kind == basecamp_platform_upgrade_target_kind::camp_core ?
-                      "camp_core" : "expansion";
+                     "camp_core" : "expansion";
     if( work.target_kind == basecamp_platform_upgrade_target_kind::expansion ) {
         target["expansion_id"] = static_cast<lua_Integer>( work.target_expansion_id );
         target["expansion_generation"] = static_cast<lua_Integer>(
-                                                 work.target_expansion_generation );
+                                             work.target_expansion_generation );
         target["generation"] = sol::nil;
     } else {
         target["expansion_id"] = sol::nil;
@@ -1992,9 +1997,9 @@ sol::table upgrade_work_value( sol::state_view lua,
         target["generation"] = static_cast<lua_Integer>( work.target_core_generation );
     }
     target["position"] = script_tripoint_coord::from_native(
-                              coords::origin::abs,
-                              coords::scale::overmap_terrain,
-                              work.target_position.raw() );
+                             coords::origin::abs,
+                             coords::scale::overmap_terrain,
+                             work.target_position.raw() );
     target["terrain"] = work.target_terrain;
     target["mapgen_args"] = upgrade_mapgen_arguments_value( lua, work.mapgen_args );
 
@@ -2087,11 +2092,11 @@ sol::table snapshot_platform_task(
         value["recipe_escrow"] = sol::nil;
     }
     value["recipe_commit_marker"] = static_cast<lua_Integer>(
-                                          task.recipe_commit_marker );
+                                        task.recipe_commit_marker );
     value["upgrade_commit_marker"] = static_cast<lua_Integer>(
-                                           task.upgrade_commit_marker );
+                                         task.upgrade_commit_marker );
     value["upgrade_applying_marker"] = static_cast<lua_Integer>(
-                                            task.upgrade_applying_marker );
+                                           task.upgrade_applying_marker );
     value["recipe_recovery_required"] = task.recipe_recovery_required;
     value["reservation"] = resource_reservation_value( lua, task );
     value["state"] = basecamp_platform_task_state_name( task.state );
@@ -2175,7 +2180,7 @@ sol::table create_platform_task(
         return make_game_error_result( state, *error );
     }
     Character *manager = resolve_manager( *camp, manager_handle, runtime,
-                                           world_generation, error );
+                                          world_generation, error );
     if( manager == nullptr ) {
         return make_game_error_result( state, *error );
     }
@@ -2232,13 +2237,13 @@ sol::table get_platform_task(
     sol::state_view state( lua );
     resolved_platform_task resolved;
     if( const std::optional<game_handle_error> error = resolve_platform_task(
-            token, camp_handle, manager_handle, worker_handle, runtime,
-            world_generation, resolved ) ) {
+                token, camp_handle, manager_handle, worker_handle, runtime,
+                world_generation, resolved ) ) {
         return make_game_error_result( state, *error );
     }
     const camp_task_token current = make_camp_task_token(
-                                       resolved.task, camp_handle, manager_handle,
-                                       worker_handle, runtime, world_generation );
+                                        resolved.task, camp_handle, manager_handle,
+                                        worker_handle, runtime, world_generation );
     return make_game_value_result( state, sol::make_object( state,
                                    snapshot_platform_task( state, resolved.task,
                                            camp_handle, manager_handle, worker_handle,
@@ -2281,8 +2286,8 @@ sol::table resolve_recipe_escrow(
 
     resolved_platform_task resolved;
     if( const std::optional<game_handle_error> error = resolve_platform_task(
-            token, camp_handle, manager_handle, worker_handle, runtime,
-            world_generation, resolved ) ) {
+                token, camp_handle, manager_handle, worker_handle, runtime,
+                world_generation, resolved ) ) {
         return make_game_error_result( state, *error );
     }
     const bool item_escrow_task =
@@ -2302,7 +2307,7 @@ sol::table resolve_recipe_escrow(
         resolved.task.recipe_escrow;
     platform_recipe_item_transaction transaction;
     if( const std::optional<game_handle_error> error = restore_platform_recipe_items(
-            escrow, *destination_holder, runtime, world_generation, transaction ) ) {
+                escrow, *destination_holder, runtime, world_generation, transaction ) ) {
         return make_game_error_result( state, *error );
     }
 
@@ -2326,7 +2331,7 @@ sol::table resolve_recipe_escrow(
     const std::vector<basecamp_platform_task> tasks =
         resolved.camp->platform_task_snapshot();
     const auto task_it = std::find_if( tasks.begin(), tasks.end(),
-    [&token]( const basecamp_platform_task &candidate ) {
+    [&token]( const basecamp_platform_task & candidate ) {
         return candidate.task_id == token.task_id();
     } );
     if( task_it == tasks.end() ) {
@@ -2339,8 +2344,8 @@ sol::table resolve_recipe_escrow(
                                            camp_handle, manager_handle, worker_handle,
                                            runtime, world_generation,
                                            current_platform_task_token(
-                                               *task_it, camp_handle, manager_handle,
-                                               worker_handle, runtime, world_generation ) ) ) );
+                                                   *task_it, camp_handle, manager_handle,
+                                                   worker_handle, runtime, world_generation ) ) ) );
 }
 
 sol::table page_platform_tasks(
@@ -2359,7 +2364,7 @@ sol::table page_platform_tasks(
         return make_game_error_result( state, *error );
     }
     Character *manager = resolve_manager( *camp, manager_handle, runtime,
-                                           world_generation, error );
+                                          world_generation, error );
     if( manager == nullptr ) {
         return make_game_error_result( state, *error );
     }
@@ -2379,10 +2384,10 @@ sol::table page_platform_tasks(
     const std::uint64_t manager_generation =
         persistent_character_identity_generation( *manager );
     const std::uint64_t worker_generation = worker ?
-            persistent_character_identity_generation( *worker ) :
-            worker_handle.identity_generation();
+                                            persistent_character_identity_generation( *worker ) :
+                                            worker_handle.identity_generation();
     const std::int64_t worker_stable_id = worker ? worker->getID().get_value() :
-            worker_handle.locator().stable_id;
+                                          worker_handle.locator().stable_id;
     std::vector<basecamp_platform_task> matching;
     for( const basecamp_platform_task &task : camp->platform_task_snapshot() ) {
         if( task.manager != manager->getID() ||
@@ -2459,11 +2464,11 @@ sol::table page_platform_tasks(
             task.state == basecamp_platform_task_state::refund_pending ||
             task.state == basecamp_platform_task_state::completed_unclaimed ) {
             token = make_camp_task_token( task, camp_handle, manager_handle,
-                                           worker_handle, runtime, world_generation );
+                                          worker_handle, runtime, world_generation );
         }
         entries[++returned] = snapshot_platform_task(
-                                 state, task, camp_handle, manager_handle, worker_handle,
-                                 runtime, world_generation, token );
+                                  state, task, camp_handle, manager_handle, worker_handle,
+                                  runtime, world_generation, token );
     }
     sol::table value = state.create_table();
     value["camp"] = camp_handle;
@@ -2489,11 +2494,11 @@ sol::table start_platform_task(
 {
     sol::state_view state( lua );
     const sol::object requested_arg = requested_items_or_duration ?
-                                     *requested_items_or_duration : sol::object();
+                                      *requested_items_or_duration : sol::object();
     resolved_platform_task resolved;
     if( const std::optional<game_handle_error> error = resolve_platform_task(
-            token, camp_handle, manager_handle, worker_handle, runtime,
-            world_generation, resolved ) ) {
+                token, camp_handle, manager_handle, worker_handle, runtime,
+                world_generation, resolved ) ) {
         return make_game_error_result( state, *error );
     }
     std::int64_t duration_turns = 0;
@@ -2523,7 +2528,7 @@ sol::table start_platform_task(
                 } );
             }
             const std::int64_t inline_duration = static_cast<std::int64_t>(
-                                                   requested_arg.as<lua_Integer>() );
+                    requested_arg.as<lua_Integer>() );
             if( requested_duration_turns && *requested_duration_turns != inline_duration ) {
                 return make_game_error_result( state, {
                     "invalid_duration", "Platform task received two different durations"
@@ -2573,7 +2578,7 @@ sol::table start_platform_task(
         platform_recipe_item_transaction transaction;
         std::vector<basecamp_platform_recipe_escrow_item> escrow;
         if( const std::optional<game_handle_error> error = stage_platform_recipe_items(
-                requests, runtime, world_generation, escrow, transaction ) ) {
+                    requests, runtime, world_generation, escrow, transaction ) ) {
             return make_game_error_result( state, *error );
         }
         for( const basecamp_platform_recipe_escrow_item &entry : escrow ) {
@@ -2582,7 +2587,7 @@ sol::table start_platform_task(
                 resolved.task.upgrade_work->source_holders;
             const bool declared_holder = std::any_of(
                                              source_holders.begin(), source_holders.end(), [&entry](
-                const basecamp_platform_recipe_holder &holder ) {
+            const basecamp_platform_recipe_holder & holder ) {
                 return recipe_holder_equals( entry.source_holder, holder );
             } );
             if( !declared_holder ) {
@@ -2615,7 +2620,7 @@ sol::table start_platform_task(
     const std::vector<basecamp_platform_task> tasks =
         resolved.camp->platform_task_snapshot();
     const auto task_it = std::find_if( tasks.begin(), tasks.end(),
-    [&token]( const basecamp_platform_task &candidate ) {
+    [&token]( const basecamp_platform_task & candidate ) {
         return candidate.task_id == token.task_id();
     } );
     if( task_it == tasks.end() ) {
@@ -2624,8 +2629,8 @@ sol::table start_platform_task(
         } );
     }
     const camp_task_token current = make_camp_task_token(
-                                       *task_it, camp_handle, manager_handle,
-                                       worker_handle, runtime, world_generation );
+                                        *task_it, camp_handle, manager_handle,
+                                        worker_handle, runtime, world_generation );
     return make_game_value_result( state, sol::make_object( state,
                                    snapshot_platform_task( state, *task_it,
                                            camp_handle, manager_handle, worker_handle,
@@ -2641,8 +2646,8 @@ sol::table finish_platform_task(
     sol::state_view state( lua );
     resolved_platform_task resolved;
     if( const std::optional<game_handle_error> error = resolve_platform_task(
-            token, camp_handle, manager_handle, worker_handle, runtime,
-            world_generation, resolved ) ) {
+                token, camp_handle, manager_handle, worker_handle, runtime,
+                world_generation, resolved ) ) {
         return make_game_error_result( state, *error );
     }
     std::string rejection;
@@ -2699,7 +2704,7 @@ sol::table finish_platform_task(
         const std::vector<basecamp_platform_task> tasks =
             resolved.camp->platform_task_snapshot();
         const auto task_it = std::find_if( tasks.begin(), tasks.end(),
-        [&token]( const basecamp_platform_task &candidate ) {
+        [&token]( const basecamp_platform_task & candidate ) {
             return candidate.task_id == token.task_id();
         } );
         if( task_it == tasks.end() ) {
@@ -2712,9 +2717,9 @@ sol::table finish_platform_task(
                                                camp_handle, manager_handle, worker_handle,
                                                runtime, world_generation,
                                                current_platform_task_token(
-                                                   *task_it, camp_handle, manager_handle,
-                                                   worker_handle, runtime,
-                                                   world_generation ) ) ) );
+                                                       *task_it, camp_handle, manager_handle,
+                                                       worker_handle, runtime,
+                                                       world_generation ) ) ) );
     }
     if( !resolved.camp->platform_finish_task(
             token.task_id(), token.identity_generation(), resolved.worker,
@@ -2724,7 +2729,7 @@ sol::table finish_platform_task(
     const std::vector<basecamp_platform_task> tasks =
         resolved.camp->platform_task_snapshot();
     const auto task_it = std::find_if( tasks.begin(), tasks.end(),
-    [&token]( const basecamp_platform_task &candidate ) {
+    [&token]( const basecamp_platform_task & candidate ) {
         return candidate.task_id == token.task_id();
     } );
     if( task_it == tasks.end() ) {
@@ -2756,7 +2761,7 @@ sol::table snapshot_camp_expansion(
 {
     sol::table value = lua.create_table();
     value["token"] = make_camp_expansion_token(
-                           expansion, camp, camp_handle, runtime, world_generation );
+                         expansion, camp, camp_handle, runtime, world_generation );
     value["expansion_id"] = expansion.expansion_id;
     value["identity_generation"] = expansion.identity_generation;
     value["camp"] = camp_handle;
@@ -2766,9 +2771,9 @@ sol::table snapshot_camp_expansion(
     direction["y"] = expansion.direction.y();
     value["direction"] = std::move( direction );
     value["position"] = script_tripoint_coord::from_native(
-                             coords::origin::abs,
-                             coords::scale::overmap_terrain,
-                             expansion.position.raw() );
+                            coords::origin::abs,
+                            coords::scale::overmap_terrain,
+                            expansion.position.raw() );
     value["type"] = expansion.type;
     value["name"] = expansion.name;
     value["work_in_progress"] = expansion.work_in_progress;
@@ -2834,9 +2839,9 @@ std::optional<game_handle_error> resolve_camp_expansion(
 void validate_expansion_name( const std::string &name )
 {
     if( name.empty() || name.size() > 64 ||
-        std::any_of( name.begin(), name.end(), []( const unsigned char ch ) {
-        return ch < 0x20U || ch == 0x7fU;
-    } ) ) {
+    std::any_of( name.begin(), name.end(), []( const unsigned char ch ) {
+    return ch < 0x20U || ch == 0x7fU;
+} ) ) {
         throw std::invalid_argument(
             "services.camps.expansions.create name must contain 1..64 printable bytes" );
     }
@@ -2851,7 +2856,7 @@ sol::table create_camp_expansion(
     sol::state_view state( lua );
     validate_expansion_name( name );
     const tripoint_abs_omt position = require_omt(
-                                           position_value, "services.camps.expansions.create" );
+                                          position_value, "services.camps.expansions.create" );
     std::optional<game_handle_error> error;
     basecamp *camp = resolve_camp( camp_handle, runtime, world_generation, error );
     if( camp == nullptr ) {
@@ -2901,8 +2906,8 @@ sol::table list_camp_expansions(
     int returned = 0;
     for( std::size_t index = begin; index < end; ++index ) {
         entries[++returned] = snapshot_camp_expansion(
-                                 state, *camp, expansions[index], current_camp,
-                                 runtime, world_generation );
+                                  state, *camp, expansions[index], current_camp,
+                                  runtime, world_generation );
     }
     sol::table value = state.create_table();
     value["camp"] = current_camp;
@@ -2925,7 +2930,7 @@ sol::table get_camp_expansion(
     basecamp *camp = nullptr;
     basecamp_platform_expansion expansion;
     if( const std::optional<game_handle_error> error = resolve_camp_expansion(
-            token, camp_handle, manager_handle, runtime, world_generation, camp, expansion ) ) {
+                token, camp_handle, manager_handle, runtime, world_generation, camp, expansion ) ) {
         return make_game_error_result( state, *error );
     }
     const game_handle current_camp = make_camp_handle( *camp, runtime, world_generation );
@@ -2943,7 +2948,7 @@ sol::table remove_camp_expansion(
     basecamp *camp = nullptr;
     basecamp_platform_expansion expansion;
     if( const std::optional<game_handle_error> error = resolve_camp_expansion(
-            token, camp_handle, manager_handle, runtime, world_generation, camp, expansion ) ) {
+                token, camp_handle, manager_handle, runtime, world_generation, camp, expansion ) ) {
         return make_game_error_result( state, *error );
     }
     std::string rejection;
@@ -2988,7 +2993,7 @@ void install_camp_api(
         sol::property( &camp_task_token::worker_identity_generation ),
         "is_valid",
         [current_runtime_generation, current_world_generation, require_read](
-    const camp_task_token &token ) {
+    const camp_task_token & token ) {
         require_read();
         resolved_platform_task resolved;
         return !resolve_platform_task(
@@ -2999,7 +3004,7 @@ void install_camp_api(
     sol::meta_function::to_string,
     &camp_task_token::to_string,
     sol::meta_function::equal_to,
-    []( const camp_task_token &lhs, const camp_task_token &rhs ) {
+    []( const camp_task_token & lhs, const camp_task_token & rhs ) {
         return lhs == rhs;
     } );
     lua.new_usertype<camp_expansion_token>(
@@ -3019,7 +3024,7 @@ void install_camp_api(
         sol::property( &camp_expansion_token::owner_faction ),
         "is_valid",
         [current_runtime_generation, current_world_generation, require_read](
-    const camp_expansion_token &token ) {
+    const camp_expansion_token & token ) {
         require_read();
         std::optional<game_handle_error> error;
         if( !token.belongs_to( current_runtime_generation() ) ||
@@ -3040,77 +3045,77 @@ void install_camp_api(
     sol::meta_function::to_string,
     &camp_expansion_token::to_string,
     sol::meta_function::equal_to,
-    []( const camp_expansion_token &lhs, const camp_expansion_token &rhs ) {
+    []( const camp_expansion_token & lhs, const camp_expansion_token & rhs ) {
         return lhs == rhs;
     } );
     sol::table camps = lua.create_table();
     camps.set_function( "create",
-    [current_runtime_generation, current_world_generation, require_write](
-        sol::this_state state, const script_game_id &owner,
-        const game_handle &manager, const script_tripoint_coord &position,
-        const std::string &name, const sol::optional<sol::table> &options ) {
+                        [current_runtime_generation, current_world_generation, require_write](
+                            sol::this_state state, const script_game_id & owner,
+                            const game_handle & manager, const script_tripoint_coord & position,
+    const std::string & name, const sol::optional<sol::table> &options ) {
         require_write();
         return create_camp( state, owner, manager, position, name, options,
                             current_runtime_generation(), current_world_generation() );
     } );
     camps.set_function( "remove",
-    [current_runtime_generation, current_world_generation, require_write](
-        sol::this_state state, const game_handle &camp, const game_handle &manager ) {
+                        [current_runtime_generation, current_world_generation, require_write](
+    sol::this_state state, const game_handle & camp, const game_handle & manager ) {
         require_write();
         return remove_camp( state, camp, manager, current_runtime_generation(),
                             current_world_generation() );
     } );
     camps.set_function( "list",
-    [current_runtime_generation, current_world_generation, require_read](
-        sol::this_state state, const script_tripoint_coord &center,
-        const sol::optional<sol::table> &options ) {
+                        [current_runtime_generation, current_world_generation, require_read](
+                            sol::this_state state, const script_tripoint_coord & center,
+    const sol::optional<sol::table> &options ) {
         require_read();
         return list_camps( state, center, options, current_runtime_generation(),
                            current_world_generation() );
     } );
     camps.set_function( "get",
-    [current_runtime_generation, current_world_generation, require_read](
-        sol::this_state state, const game_handle &camp, const game_handle &manager ) {
+                        [current_runtime_generation, current_world_generation, require_read](
+    sol::this_state state, const game_handle & camp, const game_handle & manager ) {
         require_read();
         return get_camp( state, camp, manager, current_runtime_generation(),
                          current_world_generation() );
     } );
     camps.set_function( "rename",
-    [current_runtime_generation, current_world_generation, require_write](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const std::string &name ) {
+                        [current_runtime_generation, current_world_generation, require_write](
+                            sol::this_state state, const game_handle & camp, const game_handle & manager,
+    const std::string & name ) {
         require_write();
         return rename_camp( state, camp, manager, name, current_runtime_generation(),
                             current_world_generation() );
     } );
     camps.set_function( "set_owner",
-    [current_runtime_generation, current_world_generation, require_write](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const script_game_id &owner ) {
+                        [current_runtime_generation, current_world_generation, require_write](
+                            sol::this_state state, const game_handle & camp, const game_handle & manager,
+    const script_game_id & owner ) {
         require_write();
         return set_owner( state, camp, manager, owner, current_runtime_generation(),
                           current_world_generation() );
     } );
     camps.set_function( "set_board_position",
-    [current_runtime_generation, current_world_generation, require_write](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const script_tripoint_coord &position ) {
+                        [current_runtime_generation, current_world_generation, require_write](
+                            sol::this_state state, const game_handle & camp, const game_handle & manager,
+    const script_tripoint_coord & position ) {
         require_write();
         return set_board_position( state, camp, manager, position,
                                    current_runtime_generation(), current_world_generation() );
     } );
     camps.set_function( "assign_worker",
-    [current_runtime_generation, current_world_generation, require_write](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const game_handle &worker ) {
+                        [current_runtime_generation, current_world_generation, require_write](
+                            sol::this_state state, const game_handle & camp, const game_handle & manager,
+    const game_handle & worker ) {
         require_write();
         return mutate_worker( state, camp, manager, worker, true,
                               current_runtime_generation(), current_world_generation() );
     } );
     camps.set_function( "recall_worker",
-    [current_runtime_generation, current_world_generation, require_write](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const game_handle &worker ) {
+                        [current_runtime_generation, current_world_generation, require_write](
+                            sol::this_state state, const game_handle & camp, const game_handle & manager,
+    const game_handle & worker ) {
         require_write();
         return mutate_worker( state, camp, manager, worker, false,
                               current_runtime_generation(), current_world_generation() );
@@ -3118,37 +3123,37 @@ void install_camp_api(
 
     sol::table expansions = lua.create_table();
     expansions.set_function( "create",
-    [current_runtime_generation, current_world_generation, require_write](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const script_tripoint_coord &position, const std::string &type,
-        const std::string &name ) {
+                             [current_runtime_generation, current_world_generation, require_write](
+                                 sol::this_state state, const game_handle & camp, const game_handle & manager,
+                                 const script_tripoint_coord & position, const std::string & type,
+    const std::string & name ) {
         require_write();
         return create_camp_expansion(
                    state, camp, manager, position, type, name,
                    current_runtime_generation(), current_world_generation() );
     } );
     expansions.set_function( "list",
-    [current_runtime_generation, current_world_generation, require_read](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const sol::optional<sol::table> &options ) {
+                             [current_runtime_generation, current_world_generation, require_read](
+                                 sol::this_state state, const game_handle & camp, const game_handle & manager,
+    const sol::optional<sol::table> &options ) {
         require_read();
         return list_camp_expansions(
                    state, camp, manager, options, current_runtime_generation(),
                    current_world_generation() );
     } );
     expansions.set_function( "get",
-    [current_runtime_generation, current_world_generation, require_read](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const camp_expansion_token &token ) {
+                             [current_runtime_generation, current_world_generation, require_read](
+                                 sol::this_state state, const game_handle & camp, const game_handle & manager,
+    const camp_expansion_token & token ) {
         require_read();
         return get_camp_expansion(
                    state, camp, manager, token, current_runtime_generation(),
                    current_world_generation() );
     } );
     expansions.set_function( "remove",
-    [current_runtime_generation, current_world_generation, require_write](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const camp_expansion_token &token ) {
+                             [current_runtime_generation, current_world_generation, require_write](
+                                 sol::this_state state, const game_handle & camp, const game_handle & manager,
+    const camp_expansion_token & token ) {
         require_write();
         return remove_camp_expansion(
                    state, camp, manager, token, current_runtime_generation(),
@@ -3162,19 +3167,19 @@ void install_camp_api(
         std::function<void()> write;
     };
     const auto task_callbacks = std::make_shared<const camp_task_api_callbacks>(
-                                    camp_task_api_callbacks{
-                                        current_runtime_generation,
-                                        current_world_generation,
-                                        require_read,
-                                        require_write
-                                    } );
+    camp_task_api_callbacks{
+        current_runtime_generation,
+        current_world_generation,
+        require_read,
+        require_write
+    } );
 
     sol::table tasks = lua.create_table();
     tasks.set_function( "create",
-    [task_callbacks](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const game_handle &worker, const std::string &kind,
-        const sol::optional<sol::table> &descriptor ) {
+                        [task_callbacks](
+                            sol::this_state state, const game_handle & camp, const game_handle & manager,
+                            const game_handle & worker, const std::string & kind,
+    const sol::optional<sol::table> &descriptor ) {
         task_callbacks->write();
         return create_platform_task(
                    state, camp, manager, worker, kind, descriptor,
@@ -3182,9 +3187,9 @@ void install_camp_api(
                    task_callbacks->world_generation() );
     } );
     tasks.set_function( "page",
-    [task_callbacks](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const game_handle &worker, const sol::optional<sol::table> &options ) {
+                        [task_callbacks](
+                            sol::this_state state, const game_handle & camp, const game_handle & manager,
+    const game_handle & worker, const sol::optional<sol::table> &options ) {
         task_callbacks->read();
         return page_platform_tasks(
                    state, camp, manager, worker, options,
@@ -3192,9 +3197,9 @@ void install_camp_api(
                    task_callbacks->world_generation() );
     } );
     tasks.set_function( "get",
-    [task_callbacks](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const game_handle &worker, const camp_task_token &token ) {
+                        [task_callbacks](
+                            sol::this_state state, const game_handle & camp, const game_handle & manager,
+    const game_handle & worker, const camp_task_token & token ) {
         task_callbacks->read();
         return get_platform_task(
                    state, camp, manager, worker, token,
@@ -3202,10 +3207,10 @@ void install_camp_api(
                    task_callbacks->world_generation() );
     } );
     tasks.set_function( "resolve",
-    [task_callbacks](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const game_handle &worker, const camp_task_token &token,
-        const sol::optional<sol::table> &destination_holder ) {
+                        [task_callbacks](
+                            sol::this_state state, const game_handle & camp, const game_handle & manager,
+                            const game_handle & worker, const camp_task_token & token,
+    const sol::optional<sol::table> &destination_holder ) {
         if( destination_holder ) {
             task_callbacks->write();
         } else {
@@ -3217,10 +3222,10 @@ void install_camp_api(
                    task_callbacks->world_generation() );
     } );
     tasks.set_function( "claim",
-    [task_callbacks](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const game_handle &worker, const camp_task_token &token,
-        const sol::optional<sol::table> &destination_holder ) {
+                        [task_callbacks](
+                            sol::this_state state, const game_handle & camp, const game_handle & manager,
+                            const game_handle & worker, const camp_task_token & token,
+    const sol::optional<sol::table> &destination_holder ) {
         task_callbacks->write();
         return resolve_recipe_escrow(
                    state, camp, manager, worker, token, destination_holder, true,
@@ -3228,10 +3233,10 @@ void install_camp_api(
                    task_callbacks->world_generation() );
     } );
     tasks.set_function( "retry",
-    [task_callbacks](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const game_handle &worker, const camp_task_token &token,
-        const sol::optional<sol::table> &destination_holder ) {
+                        [task_callbacks](
+                            sol::this_state state, const game_handle & camp, const game_handle & manager,
+                            const game_handle & worker, const camp_task_token & token,
+    const sol::optional<sol::table> &destination_holder ) {
         task_callbacks->write();
         return resolve_recipe_escrow(
                    state, camp, manager, worker, token, destination_holder, true,
@@ -3239,11 +3244,11 @@ void install_camp_api(
                    task_callbacks->world_generation() );
     } );
     tasks.set_function( "start",
-    [task_callbacks](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const game_handle &worker, const camp_task_token &token,
-        const sol::optional<sol::object> &requested_items_or_duration,
-        const sol::optional<std::int64_t> &duration_turns ) {
+                        [task_callbacks](
+                            sol::this_state state, const game_handle & camp, const game_handle & manager,
+                            const game_handle & worker, const camp_task_token & token,
+                            const sol::optional<sol::object> &requested_items_or_duration,
+    const sol::optional<std::int64_t> &duration_turns ) {
         task_callbacks->write();
         return start_platform_task(
                    state, camp, manager, worker, token,
@@ -3252,9 +3257,9 @@ void install_camp_api(
                    task_callbacks->world_generation() );
     } );
     tasks.set_function( "cancel",
-    [task_callbacks](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const game_handle &worker, const camp_task_token &token ) {
+                        [task_callbacks](
+                            sol::this_state state, const game_handle & camp, const game_handle & manager,
+    const game_handle & worker, const camp_task_token & token ) {
         task_callbacks->write();
         return finish_platform_task(
                    state, camp, manager, worker, token, false,
@@ -3262,9 +3267,9 @@ void install_camp_api(
                    task_callbacks->world_generation() );
     } );
     tasks.set_function( "recall",
-    [task_callbacks](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const game_handle &worker, const camp_task_token &token ) {
+                        [task_callbacks](
+                            sol::this_state state, const game_handle & camp, const game_handle & manager,
+    const game_handle & worker, const camp_task_token & token ) {
         task_callbacks->write();
         return finish_platform_task(
                    state, camp, manager, worker, token, false,
@@ -3272,9 +3277,9 @@ void install_camp_api(
                    task_callbacks->world_generation() );
     } );
     tasks.set_function( "complete",
-    [task_callbacks](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const game_handle &worker, const camp_task_token &token ) {
+                        [task_callbacks](
+                            sol::this_state state, const game_handle & camp, const game_handle & manager,
+    const game_handle & worker, const camp_task_token & token ) {
         task_callbacks->write();
         return finish_platform_task(
                    state, camp, manager, worker, token, true,
@@ -3284,27 +3289,27 @@ void install_camp_api(
 
     sol::table resources = lua.create_table();
     resources.set_function( "snapshot",
-    [current_runtime_generation, current_world_generation, require_read](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const sol::optional<sol::table> &options ) {
+                            [current_runtime_generation, current_world_generation, require_read](
+                                sol::this_state state, const game_handle & camp, const game_handle & manager,
+    const sol::optional<sol::table> &options ) {
         require_read();
         return camp_resources_snapshot( state, camp, manager, options,
                                         current_runtime_generation(),
                                         current_world_generation() );
     } );
     resources.set_function( "adjust",
-    [current_runtime_generation, current_world_generation, require_write](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const sol::table &requested ) {
+                            [current_runtime_generation, current_world_generation, require_write](
+                                sol::this_state state, const game_handle & camp, const game_handle & manager,
+    const sol::table & requested ) {
         require_write();
         return adjust_camp_resources(
                    state, camp, manager, read_resource_changes( requested ),
                    current_runtime_generation(), current_world_generation() );
     } );
     resources.set_function( "add",
-    [current_runtime_generation, current_world_generation, require_write](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const script_game_id &resource_id, const std::int64_t amount ) {
+                            [current_runtime_generation, current_world_generation, require_write](
+                                sol::this_state state, const game_handle & camp, const game_handle & manager,
+    const script_game_id & resource_id, const std::int64_t amount ) {
         require_write();
         if( resource_id.kind() != "item" || !resource_id.is_valid() ) {
             throw std::invalid_argument(
@@ -3320,9 +3325,9 @@ void install_camp_api(
         current_runtime_generation(), current_world_generation() );
     } );
     resources.set_function( "consume",
-    [current_runtime_generation, current_world_generation, require_write](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const script_game_id &resource_id, const std::int64_t amount ) {
+                            [current_runtime_generation, current_world_generation, require_write](
+                                sol::this_state state, const game_handle & camp, const game_handle & manager,
+    const script_game_id & resource_id, const std::int64_t amount ) {
         require_write();
         if( resource_id.kind() != "item" || !resource_id.is_valid() ) {
             throw std::invalid_argument(
@@ -3340,18 +3345,18 @@ void install_camp_api(
 
     sol::table food = lua.create_table();
     food.set_function( "add",
-    [current_runtime_generation, current_world_generation, require_write](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const std::int64_t kcal ) {
+                       [current_runtime_generation, current_world_generation, require_write](
+                           sol::this_state state, const game_handle & camp, const game_handle & manager,
+    const std::int64_t kcal ) {
         require_write();
         return adjust_camp_food( state, camp, manager, kcal, true,
                                  current_runtime_generation(),
                                  current_world_generation() );
     } );
     food.set_function( "consume",
-    [current_runtime_generation, current_world_generation, require_write](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const std::int64_t kcal ) {
+                       [current_runtime_generation, current_world_generation, require_write](
+                           sol::this_state state, const game_handle & camp, const game_handle & manager,
+    const std::int64_t kcal ) {
         require_write();
         return adjust_camp_food( state, camp, manager, kcal, false,
                                  current_runtime_generation(),
@@ -3360,9 +3365,9 @@ void install_camp_api(
 
     sol::table inventory = lua.create_table();
     inventory.set_function( "storage_tiles",
-    [current_runtime_generation, current_world_generation, require_read](
-        sol::this_state state, const game_handle &camp, const game_handle &manager,
-        const sol::optional<sol::table> &options ) {
+                            [current_runtime_generation, current_world_generation, require_read](
+                                sol::this_state state, const game_handle & camp, const game_handle & manager,
+    const sol::optional<sol::table> &options ) {
         require_read();
         return camp_storage_tiles( state, camp, manager, options,
                                    current_runtime_generation(),

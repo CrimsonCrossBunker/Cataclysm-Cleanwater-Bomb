@@ -1064,7 +1064,7 @@ void install_crafting_api(
         "list",
         [require_read, current_runtime_generation, world_generation](
             sol::this_state lua,
-            const game_handle &character_handle,
+            const game_handle & character_handle,
     const sol::optional<sol::table> &options ) {
         require_read();
         sol::state_view state( lua );
@@ -1086,7 +1086,7 @@ void install_crafting_api(
         "all",
         [require_read, current_runtime_generation, world_generation](
             sol::this_state lua,
-            const game_handle &character_handle,
+            const game_handle & character_handle,
     const sol::optional<sol::table> &options ) {
         require_read();
         sol::state_view state( lua );
@@ -1108,7 +1108,7 @@ void install_crafting_api(
         "by_skill",
         [require_read, current_runtime_generation, world_generation](
             sol::this_state lua, const script_game_id & skill,
-            const game_handle &character_handle,
+            const game_handle & character_handle,
     const sol::optional<sol::table> &options ) {
         require_read();
         require_id(
@@ -1133,7 +1133,7 @@ void install_crafting_api(
         "by_flag",
         [require_read, current_runtime_generation, world_generation](
             sol::this_state lua, const std::string & flag,
-            const game_handle &character_handle,
+            const game_handle & character_handle,
     const sol::optional<sol::table> &options ) {
         require_read();
         if( flag.empty() ||
@@ -1162,7 +1162,7 @@ void install_crafting_api(
     recipes.set_function(
         "get",
         [require_read, current_runtime_generation, world_generation](
-            sol::this_state lua, const game_handle &character_handle,
+            sol::this_state lua, const game_handle & character_handle,
             const script_game_id & id,
     const sol::optional<int> &batch ) {
         require_read();
@@ -1200,10 +1200,10 @@ void install_crafting_api(
     recipes.set_function(
         "knows",
         [require_read, current_runtime_generation,
-         world_generation](
+                       world_generation](
             sol::this_state lua,
             const game_handle & character,
-            const script_game_id & id ) {
+    const script_game_id & id ) {
         require_read();
         return recipe_known_result(
                    lua, character, id,
@@ -1213,11 +1213,11 @@ void install_crafting_api(
     recipes.set_function(
         "learn",
         [require_write, current_runtime_generation,
-         world_generation](
+                        world_generation](
             sol::this_state lua,
             const game_handle & character,
             const script_game_id & id,
-            const sol::optional<bool> &override_never_learn ) {
+    const sol::optional<bool> &override_never_learn ) {
         require_write();
         return learn_recipe_result(
                    lua, character, id,
@@ -1228,10 +1228,10 @@ void install_crafting_api(
     recipes.set_function(
         "forget",
         [require_write, current_runtime_generation,
-         world_generation](
+                        world_generation](
             sol::this_state lua,
             const game_handle & character,
-            const script_game_id & id ) {
+    const script_game_id & id ) {
         require_write();
         return forget_recipe_result(
                    lua, character, id,
@@ -1241,11 +1241,11 @@ void install_crafting_api(
     recipes.set_function(
         "forget_category",
         [require_write, current_runtime_generation,
-         world_generation](
+                        world_generation](
             sol::this_state lua,
             const game_handle & character,
             const script_game_id & category,
-            const sol::optional<std::string> &subcategory ) {
+    const sol::optional<std::string> &subcategory ) {
         require_write();
         return forget_recipe_category_result(
                    lua, character, category, subcategory,
@@ -1265,7 +1265,7 @@ void install_crafting_api(
         "list",
         [require_read, current_runtime_generation, world_generation](
             sol::this_state lua,
-            const game_handle &character_handle,
+            const game_handle & character_handle,
     const sol::optional<sol::table> &options ) {
         require_read();
         sol::state_view state( lua );
@@ -1286,7 +1286,7 @@ void install_crafting_api(
     requirements.set_function(
         "get",
         [require_read, current_runtime_generation, world_generation](
-            sol::this_state lua, const game_handle &character_handle,
+            sol::this_state lua, const game_handle & character_handle,
             const std::string & id,
     const sol::optional<int> &batch ) {
         require_read();
@@ -1306,7 +1306,7 @@ void install_crafting_api(
     requirements.set_function(
         "for_recipe",
         [require_read, current_runtime_generation, world_generation](
-            sol::this_state lua, const game_handle &character_handle,
+            sol::this_state lua, const game_handle & character_handle,
             const script_game_id & id,
     const sol::optional<int> &batch ) {
         require_read();

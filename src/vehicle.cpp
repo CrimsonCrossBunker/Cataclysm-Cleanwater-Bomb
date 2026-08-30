@@ -2793,7 +2793,8 @@ bool vehicle::split_vehicles( map &here,
         // because we need only to move the zone once per mount, not per part. If we move per
         // part, we will end up with duplicates of the zone per part on the same mount
         for( std::pair<point_rel_ms, zone_data> zone : new_zones ) {
-            zone_manager::get_manager().create_vehicle_loot_zone( *new_vehicle, zone.first, zone.second, &here );
+            zone_manager::get_manager().create_vehicle_loot_zone( *new_vehicle, zone.first, zone.second,
+                    &here );
         }
 
         // create_vehicle_loot_zone marks the vehicle as not dirty but since we got these zones

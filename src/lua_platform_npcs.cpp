@@ -584,8 +584,8 @@ sol::table snapshot_npc(
                                 world_generation );
         selected["uid"] = selected_mission->get_id();
         selected["id"] = script_game_id(
-                              "mission",
-                              selected_mission->mission_id().str() );
+                             "mission",
+                             selected_mission->mission_id().str() );
         selected["assigned"] =
             selected_mission->is_assigned();
         selected["in_progress"] =
@@ -804,7 +804,7 @@ std::size_t count_npc_allies( const bool global )
     }
     const auto all_npcs = overmap_buffer.get_overmap_npcs();
     return static_cast<std::size_t>( std::count_if(
-                                        all_npcs.begin(), all_npcs.end(),
+                                         all_npcs.begin(), all_npcs.end(),
     []( const auto & entry ) {
         return entry && entry->is_player_ally() &&
                !entry->hallucination && !entry->is_dead();
@@ -1237,9 +1237,10 @@ sol::table add_npc_faction_rep(
     }
     auto checked_add = [amount]( const int before ) -> std::optional<int> {
         const std::int64_t after =
-            static_cast<std::int64_t>( before ) + amount;
+        static_cast<std::int64_t>( before ) + amount;
         if( after < std::numeric_limits<int>::min() ||
-            after > std::numeric_limits<int>::max() ) {
+            after > std::numeric_limits<int>::max() )
+        {
             return std::nullopt;
         }
         return static_cast<int>( after );
@@ -1341,9 +1342,9 @@ sol::table set_npc_faction(
 void validate_npc_topic( const std::string &topic )
 {
     if( topic.empty() || topic.size() > maximum_npc_topic_bytes ||
-        std::any_of( topic.begin(), topic.end(), []( const unsigned char ch ) {
-        return ch < 0x20U || ch == 0x7fU;
-    } ) ) {
+    std::any_of( topic.begin(), topic.end(), []( const unsigned char ch ) {
+    return ch < 0x20U || ch == 0x7fU;
+} ) ) {
         throw std::invalid_argument(
             "services.npcs.set_first_topic requires 1 to 256 non-control bytes" );
     }
@@ -1355,9 +1356,9 @@ void validate_dialogue_topic(
     const std::size_t world_generation )
 {
     if( topic.empty() || topic.size() > maximum_npc_topic_bytes ||
-        std::any_of( topic.begin(), topic.end(), []( const unsigned char ch ) {
-        return ch < 0x20U || ch == 0x7fU;
-    } ) ) {
+    std::any_of( topic.begin(), topic.end(), []( const unsigned char ch ) {
+    return ch < 0x20U || ch == 0x7fU;
+} ) ) {
         throw std::invalid_argument(
             "services.npcs.open_dialogue topic requires 1 to 256 non-control bytes" );
     }
@@ -2094,29 +2095,29 @@ sol::table list_npc_destinations(
         }
         const std::string position_id = camp_position.to_string();
         destinations.push_back( {
-                "camp:" + position_id,
-                "camp",
-                ( *camp )->camp_name(),
-                ( *camp )->camp_omt_pos()
-            } );
+            "camp:" + position_id,
+            "camp",
+            ( *camp )->camp_name(),
+            ( *camp )->camp_omt_pos()
+        } );
     }
 
     if( player.pos_abs_omt() != npc_position ) {
         destinations.push_back( {
-                "player_current", "player", _( "My current location" ),
-                player.pos_abs_omt()
-            } );
+            "player_current", "player", _( "My current location" ),
+            player.pos_abs_omt()
+        } );
     }
     if( !player.omt_path.empty() ) {
         destinations.push_back( {
-                "player_destination", "player", _( "My destination" ),
-                player.omt_path.front()
-            } );
+            "player_destination", "player", _( "My destination" ),
+            player.omt_path.front()
+        } );
     }
 
     std::sort( destinations.begin(), destinations.end(),
-    []( const npc_destination_entry &lhs,
-        const npc_destination_entry &rhs ) {
+               []( const npc_destination_entry & lhs,
+    const npc_destination_entry & rhs ) {
         if( lhs.kind != rhs.kind ) {
             return lhs.kind < rhs.kind;
         }
@@ -2134,9 +2135,9 @@ sol::table list_npc_destinations(
         value["kind"] = destination.kind;
         value["label"] = destination.label;
         value["position"] = script_tripoint_coord::from_native(
-                                 coords::origin::abs,
-                                 coords::scale::overmap_terrain,
-                                 destination.position.raw() );
+                                coords::origin::abs,
+                                coords::scale::overmap_terrain,
+                                destination.position.raw() );
         items[index + 1] = std::move( value );
     }
     sol::table value = state.create_table();
@@ -2192,9 +2193,9 @@ sol::table set_npc_goal(
     value["accepted"] = true;
     value["changed"] = changed;
     value["goal"] = script_tripoint_coord::from_native(
-                         coords::origin::abs,
-                         coords::scale::overmap_terrain,
-                         entry->goal.raw() );
+                        coords::origin::abs,
+                        coords::scale::overmap_terrain,
+                        entry->goal.raw() );
     value["path_length"] = entry->omt_path.size();
     value["mission"] = io::enum_to_string( entry->mission );
     value["attitude"] = npc_attitude_id( entry->get_attitude() );
@@ -2254,9 +2255,9 @@ sol::table set_npc_guard_position(
     sol::table value = state.create_table();
     value["changed"] = !before || *before != destination;
     value["position"] = script_tripoint_coord::from_native(
-                             coords::origin::abs,
-                             coords::scale::map_square,
-                             destination.raw() );
+                            coords::origin::abs,
+                            coords::scale::map_square,
+                            destination.raw() );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -2378,7 +2379,7 @@ item *find_character_item_by_uid(
 {
     item *found = nullptr;
     character.visit_items(
-    [&]( item *entry, item * ) {
+    [&]( item * entry, item * ) {
         if( entry->uid().get_value() == uid ) {
             found = entry;
             return VisitResponse::ABORT;
@@ -2434,7 +2435,7 @@ sol::table offer_item_to_npc(
     item *recipient_item = find_character_item_by_uid(
                                *recipient, uid );
     item *giver_item = find_character_item_by_uid(
-                               *giver, uid );
+                           *giver, uid );
 
     std::string outcome = "retained";
     if( recipient_item != nullptr ) {
@@ -2491,16 +2492,16 @@ sol::table open_npc_dialogue(
         return make_game_error_result( state, *error );
     }
     avatar *player = resolve_exact_avatar(
-                          speaker_handle, runtime_generation,
-                          world_generation, error );
+                         speaker_handle, runtime_generation,
+                         world_generation, error );
     if( player == nullptr ) {
         return make_game_error_result( state, *error );
     }
     const std::int64_t speaker_id_before =
         player->getID().get_value();
     const avatar_talk_to_result result = player->talk_to(
-        get_talker_for( entry ), false, false, false,
-        topic, std::string(), false );
+            get_talker_for( entry ), false, false, false,
+            topic, std::string(), false );
     const std::int64_t speaker_id_after =
         player->getID().get_value();
     const bool handles_invalidated =
@@ -2550,8 +2551,8 @@ sol::table open_npc_control_menu(
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     avatar *player = resolve_exact_avatar(
-                          avatar_handle, runtime_generation,
-                          world_generation, error );
+                         avatar_handle, runtime_generation,
+                         world_generation, error );
     if( player == nullptr ) {
         return make_game_error_result( state, *error );
     }
@@ -2616,7 +2617,7 @@ sol::table take_control_of_npc(
     invalidate_handles();
     const tripoint_abs_ms position = owner->pos_abs();
     const game_handle new_avatar_handle = game_handle::from_creature(
-                                          *owner, {
+    *owner, {
         "avatar", owner->getID().get_value(),
         position.x(), position.y(), position.z(), {}
     }, current_runtime_generation(), current_world_generation() );
@@ -2705,7 +2706,7 @@ void install_npc_api(
         "find_unique",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state,
-    const std::string &unique_id ) {
+    const std::string & unique_id ) {
         require_read();
         return find_unique_npc(
                    lua_state, unique_id,
@@ -2714,7 +2715,7 @@ void install_npc_api(
     } );
     npcs.set_function(
         "count_allies",
-        [require_read]( const sol::optional<bool> &global ) {
+    [require_read]( const sol::optional<bool> &global ) {
         require_read();
         return count_npc_allies( global.value_or( false ) );
     } );
@@ -2722,9 +2723,9 @@ void install_npc_api(
         "has_role_nearby",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state,
-            const game_handle &origin,
-            const std::string &role,
-            const sol::optional<int> &radius ) {
+            const game_handle & origin,
+            const std::string & role,
+    const sol::optional<int> &radius ) {
         require_read();
         return has_npc_role_nearby(
                    lua_state, origin, role, radius,
@@ -2735,9 +2736,9 @@ void install_npc_api(
         "has_follower_nearby",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state,
-            const game_handle &origin,
-            const script_game_id &npc_class,
-            const sol::optional<int> &radius ) {
+            const game_handle & origin,
+            const script_game_id & npc_class,
+    const sol::optional<int> &radius ) {
         require_read();
         return has_npc_follower_nearby(
                    lua_state, origin, npc_class, radius,
@@ -2780,8 +2781,8 @@ void install_npc_api(
     npcs.set_function(
         "add_debt",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const int amount ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const int amount ) {
         require_write();
         return add_npc_debt(
                    lua_state, handle, amount,
@@ -2791,8 +2792,8 @@ void install_npc_api(
     npcs.set_function(
         "add_faction_rep",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const int amount ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const int amount ) {
         require_write();
         return add_npc_faction_rep(
                    lua_state, handle, amount,
@@ -2802,8 +2803,8 @@ void install_npc_api(
     npcs.set_function(
         "set_class",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const script_game_id &npc_class ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & npc_class ) {
         require_write();
         return set_npc_class(
                    lua_state, handle, npc_class,
@@ -2812,8 +2813,8 @@ void install_npc_api(
     npcs.set_function(
         "set_faction",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const script_game_id &faction ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & faction ) {
         require_write();
         return set_npc_faction(
                    lua_state, handle, faction,
@@ -2822,8 +2823,8 @@ void install_npc_api(
     npcs.set_function(
         "set_first_topic",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const std::string &topic ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string & topic ) {
         require_write();
         return set_npc_first_topic(
                    lua_state, handle, topic,
@@ -2832,9 +2833,9 @@ void install_npc_api(
     npcs.set_function(
         "set_radio_representative",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const game_handle &avatar_handle,
-            const bool enabled ) {
+            sol::this_state lua_state, const game_handle & handle,
+            const game_handle & avatar_handle,
+    const bool enabled ) {
         return set_npc_radio_representative(
                    lua_state, handle, avatar_handle, enabled,
                    current_runtime_generation(), current_world_generation(),
@@ -2842,15 +2843,15 @@ void install_npc_api(
     } );
     npcs.set_function(
         "ai_rule_catalog",
-        [require_read]( sol::this_state lua_state ) {
+    [require_read]( sol::this_state lua_state ) {
         require_read();
         return npc_ai_rule_catalog( lua_state );
     } );
     npcs.set_function(
         "set_ai_policy",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const std::string &family, const std::string &rule ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string & family, const std::string & rule ) {
         require_write();
         return set_npc_ai_policy(
                    lua_state, handle, family, rule,
@@ -2859,8 +2860,8 @@ void install_npc_api(
     npcs.set_function(
         "set_ally_rule",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const std::string &rule, const sol::optional<bool> &enabled ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string & rule, const sol::optional<bool> &enabled ) {
         require_write();
         return set_npc_ally_rule(
                    lua_state, handle, rule, enabled,
@@ -2869,8 +2870,8 @@ void install_npc_api(
     npcs.set_function(
         "set_ally_override",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const std::string &rule, const std::string &state ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string & rule, const std::string & state ) {
         require_write();
         return set_npc_ally_override(
                    lua_state, handle, rule, state,
@@ -2879,8 +2880,8 @@ void install_npc_api(
     npcs.set_function(
         "copy_ai_rules",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &target,
-            const game_handle &source ) {
+            sol::this_state lua_state, const game_handle & target,
+    const game_handle & source ) {
         require_write();
         return copy_npc_ai_rules(
                    lua_state, target, source,
@@ -2889,7 +2890,7 @@ void install_npc_api(
     npcs.set_function(
         "make_thankful",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_write();
         return make_npc_thankful(
                    lua_state, handle,
@@ -2898,8 +2899,8 @@ void install_npc_api(
     npcs.set_function(
         "record_refusal",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-    const std::string &request ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string & request ) {
         require_write();
         return record_npc_refusal(
                    lua_state, handle, request,
@@ -2908,7 +2909,7 @@ void install_npc_api(
     npcs.set_function(
         "follow_temporarily",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_write();
         return set_npc_relationship_state(
                    lua_state, handle, NPCATT_FOLLOW, false, false,
@@ -2917,7 +2918,7 @@ void install_npc_api(
     npcs.set_function(
         "stop_temporary_following",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_write();
         return set_npc_relationship_state(
                    lua_state, handle, NPCATT_NULL, false, true,
@@ -2926,7 +2927,7 @@ void install_npc_api(
     npcs.set_function(
         "make_neutral",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_write();
         return set_npc_relationship_state(
                    lua_state, handle, NPCATT_NULL, true, false,
@@ -2935,7 +2936,7 @@ void install_npc_api(
     npcs.set_function(
         "start_fleeing",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_write();
         return set_npc_relationship_state(
                    lua_state, handle, NPCATT_FLEE, false, false,
@@ -2944,7 +2945,7 @@ void install_npc_api(
     npcs.set_function(
         "start_mugging",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_write();
         return set_npc_relationship_state(
                    lua_state, handle, NPCATT_MUG, false, false,
@@ -2953,8 +2954,8 @@ void install_npc_api(
     npcs.set_function(
         "join_player",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const game_handle &avatar_handle ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const game_handle & avatar_handle ) {
         return join_npc_to_player(
                    lua_state, handle, avatar_handle,
                    current_runtime_generation(), current_world_generation(),
@@ -2963,8 +2964,8 @@ void install_npc_api(
     npcs.set_function(
         "leave_player",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const game_handle &avatar_handle ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const game_handle & avatar_handle ) {
         return leave_npc_player(
                    lua_state, handle, avatar_handle,
                    current_runtime_generation(), current_world_generation(),
@@ -2973,8 +2974,8 @@ void install_npc_api(
     npcs.set_function(
         "set_guarding",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const bool enabled ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const bool enabled ) {
         require_write();
         return set_npc_guarding(
                    lua_state, handle, enabled,
@@ -2983,7 +2984,7 @@ void install_npc_api(
     npcs.set_function(
         "become_hostile",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_write();
         return make_npc_hostile(
                    lua_state, handle,
@@ -2992,7 +2993,7 @@ void install_npc_api(
     npcs.set_function(
         "warn_player_departure",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_write();
         return set_npc_departure_warning(
                    lua_state, handle,
@@ -3001,7 +3002,7 @@ void install_npc_api(
     npcs.set_function(
         "clear_stolen_item_claim",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_write();
         return clear_npc_stolen_item_claim(
                    lua_state, handle,
@@ -3010,7 +3011,7 @@ void install_npc_api(
     npcs.set_function(
         "destinations",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_read();
         return list_npc_destinations(
                    lua_state, handle,
@@ -3020,8 +3021,8 @@ void install_npc_api(
     npcs.set_function(
         "plan_travel",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &handle,
-            const script_tripoint_coord &goal ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const script_tripoint_coord & goal ) {
         require_read();
         return plan_npc_travel(
                    lua_state, handle, goal,
@@ -3031,8 +3032,8 @@ void install_npc_api(
     npcs.set_function(
         "set_goal",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const script_tripoint_coord &goal ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const script_tripoint_coord & goal ) {
         require_write();
         return set_npc_goal(
                    lua_state, handle, goal,
@@ -3042,8 +3043,8 @@ void install_npc_api(
     npcs.set_function(
         "lead_to",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const script_tripoint_coord &goal ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const script_tripoint_coord & goal ) {
         require_write();
         return set_npc_leading_goal(
                    lua_state, handle, goal,
@@ -3053,8 +3054,8 @@ void install_npc_api(
     npcs.set_function(
         "set_guard_position",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const script_tripoint_coord &position ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const script_tripoint_coord & position ) {
         require_write();
         return set_npc_guard_position(
                    lua_state, handle, position,
@@ -3064,7 +3065,7 @@ void install_npc_api(
     npcs.set_function(
         "companion_state",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_read();
         return get_npc_companion_state(
                    lua_state, handle,
@@ -3074,8 +3075,8 @@ void install_npc_api(
     npcs.set_function(
         "set_companion_role",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-    const std::string &role ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string & role ) {
         require_write();
         return set_npc_companion_role(
                    lua_state, handle, role,
@@ -3085,8 +3086,8 @@ void install_npc_api(
     npcs.set_function(
         "open_companion_missions",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-    const std::string &role ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string & role ) {
         require_write();
         return open_npc_companion_missions(
                    lua_state, handle, role,
@@ -3097,9 +3098,9 @@ void install_npc_api(
         "offer_item",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state,
-            const game_handle &recipient,
-            const game_handle &giver,
-            const game_handle &item,
+            const game_handle & recipient,
+            const game_handle & giver,
+            const game_handle & item,
     const sol::optional<bool> &use_item ) {
         require_write();
         return offer_item_to_npc(
@@ -3111,10 +3112,10 @@ void install_npc_api(
     npcs.set_function(
         "open_dialogue",
         [current_runtime_generation, current_world_generation,
-         require_write, invalidate_handles](
-            sol::this_state lua_state, const game_handle &handle,
-    const game_handle &speaker,
-    const std::string &topic ) {
+                                     require_write, invalidate_handles](
+            sol::this_state lua_state, const game_handle & handle,
+            const game_handle & speaker,
+    const std::string & topic ) {
         require_write();
         return open_npc_dialogue(
                    lua_state, handle, speaker, topic,
@@ -3125,7 +3126,7 @@ void install_npc_api(
     npcs.set_function(
         "open_rules",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_write();
         return open_npc_rules(
                    lua_state, handle,
@@ -3135,8 +3136,8 @@ void install_npc_api(
     npcs.set_function(
         "open_control_menu",
         [current_runtime_generation, current_world_generation,
-         require_write, invalidate_handles](
-            sol::this_state lua_state, const game_handle &avatar_handle ) {
+                                     require_write, invalidate_handles](
+    sol::this_state lua_state, const game_handle & avatar_handle ) {
         require_write();
         return open_npc_control_menu(
                    lua_state, avatar_handle,
@@ -3146,9 +3147,9 @@ void install_npc_api(
     npcs.set_function(
         "take_control",
         [current_runtime_generation, current_world_generation,
-         require_write, invalidate_handles](
-            sol::this_state lua_state, const game_handle &handle,
-            const game_handle &avatar_handle ) {
+                                     require_write, invalidate_handles](
+            sol::this_state lua_state, const game_handle & handle,
+    const game_handle & avatar_handle ) {
         return take_control_of_npc(
                    lua_state, handle, avatar_handle,
                    current_runtime_generation(),

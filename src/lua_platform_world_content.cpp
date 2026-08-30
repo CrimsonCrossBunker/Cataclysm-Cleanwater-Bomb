@@ -658,7 +658,7 @@ integer_distribution_data read_integer_distribution( const sol::object &source,
     const sol::object uniform = descriptor.raw_get<sol::object>( "uniform" );
     const sol::object poisson = descriptor.raw_get<sol::object>( "poisson" );
     const sol::object binomial = descriptor.raw_get<sol::object>( "binomial" );
-    const auto present = []( const sol::object &value ) {
+    const auto present = []( const sol::object & value ) {
         return value.valid() && value.get_type() != sol::type::nil;
     };
     const int alternatives = static_cast<int>( present( fixed ) ) +
@@ -728,10 +728,10 @@ int_distribution make_integer_distribution( const integer_distribution_data &sou
             return int_distribution::uniform( source.bounds.minimum, source.bounds.maximum );
         case integer_distribution_data::kind::poisson:
             return int_distribution::poisson( source.parameter, source.bounds.minimum,
-                                               source.bounds.maximum );
+                                              source.bounds.maximum );
         case integer_distribution_data::kind::binomial:
             return int_distribution::binomial( source.trials, source.parameter,
-                                                source.bounds.minimum, source.bounds.maximum );
+                                               source.bounds.minimum, source.bounds.maximum );
     }
     throw std::invalid_argument( "unknown integer distribution type" );
 }
@@ -789,7 +789,9 @@ distribution_data read_distribution_object( const sol::object &source,
         throw std::invalid_argument( "distribution add must be finite" );
     }
     int alternatives = 0;
-    for( const char *key : { "constant", "one_in", "rng", "dice", "sum", "mul" } ) {
+    for( const char *key : {
+             "constant", "one_in", "rng", "dice", "sum", "mul"
+         } ) {
         const sol::object value = descriptor.raw_get<sol::object>( key );
         alternatives += value.valid() && value.get_type() != sol::type::nil ? 1 : 0;
     }
@@ -876,11 +878,11 @@ distribution make_distribution( const distribution_data &source )
             break;
         case distribution_data::kind::random:
             result = distribution::rng_roll( static_cast<int>( source.first ),
-                                              static_cast<int>( source.second ) );
+                                             static_cast<int>( source.second ) );
             break;
         case distribution_data::kind::dice:
             result = distribution::dice_roll( static_cast<int>( source.first ),
-                                               static_cast<int>( source.second ) );
+                                              static_cast<int>( source.second ) );
             break;
         case distribution_data::kind::one_in:
             result = distribution::one_in( static_cast<float>( source.first ) );
@@ -1761,22 +1763,22 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
     using vehicle_handle = definition_handle<vehicle_data>;
 
     ccb.new_usertype<faction_handle>( "FactionDefinition", sol::no_constructor,
-                                     "id", sol::property( &faction_handle::id ) );
+                                      "id", sol::property( &faction_handle::id ) );
     ccb.new_usertype<npc_class_handle>( "NpcClassDefinition", sol::no_constructor,
-                                       "id", sol::property( &npc_class_handle::id ) );
+                                        "id", sol::property( &npc_class_handle::id ) );
     ccb.new_usertype<npc_handle>( "NpcDefinition", sol::no_constructor,
-                                 "id", sol::property( &npc_handle::id ) );
+                                  "id", sol::property( &npc_handle::id ) );
     ccb.new_usertype<omt_handle>( "OvermapTerrainDefinition", sol::no_constructor,
-                                 "id", sol::property( &omt_handle::id ) );
+                                  "id", sol::property( &omt_handle::id ) );
     ccb.new_usertype<special_handle>( "OvermapSpecialDefinition", sol::no_constructor,
-                                     "id", sol::property( &special_handle::id ) );
+                                      "id", sol::property( &special_handle::id ) );
     ccb.new_usertype<vpart_handle>( "VehiclePartDefinition", sol::no_constructor,
-                                   "id", sol::property( &vpart_handle::id ) );
+                                    "id", sol::property( &vpart_handle::id ) );
     ccb.new_usertype<vehicle_handle>( "VehicleDefinition", sol::no_constructor,
-                                     "id", sol::property( &vehicle_handle::id ) );
+                                      "id", sol::property( &vehicle_handle::id ) );
 
     const std::shared_ptr<token> owner = pimpl_->handle_token;
-    content.set_function( "Faction", [owner]( const sol::table &options ) {
+    content.set_function( "Faction", [owner]( const sol::table & options ) {
         if( owner->state != lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -1808,7 +1810,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         if( const sol::optional<sol::table> rules =
                 options.get<sol::optional<sol::table>>( "price_rules" ) ) {
             for( const sol::table &rule : read_dense_array<sol::table>(
-                        *rules, "faction price rules" ) ) {
+                     *rules, "faction price rules" ) ) {
                 value->price_rules.push_back( read_price_rule( rule ) );
             }
         }
@@ -1823,7 +1825,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         if( const sol::optional<sol::table> epilogues =
                 options.get<sol::optional<sol::table>>( "epilogues" ) ) {
             for( const sol::table &epilogue : read_dense_array<sol::table>(
-                        *epilogues, "faction epilogues" ) ) {
+                     *epilogues, "faction epilogues" ) ) {
                 faction_epilogue_data_definition parsed;
                 parsed.id = epilogue.get_or( "id", std::string() );
                 parsed.power_min = read_optional<int>( epilogue, "power_min" );
@@ -1831,7 +1833,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                 if( const sol::optional<sol::table> dynamic =
                         epilogue.get<sol::optional<sol::table>>( "dynamic" ) ) {
                     for( const sol::table &condition : read_dense_array<sol::table>(
-                                *dynamic, "faction epilogue dynamic conditions" ) ) {
+                             *dynamic, "faction epilogue dynamic conditions" ) ) {
                         faction_epilogue_condition_data native_condition;
                         native_condition.faction = condition.get_or(
                                                        "faction", std::string() );
@@ -1847,7 +1849,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         return faction_handle{ std::move( value ), owner };
     } );
-    content.set_function( "NpcClass", [owner]( const sol::table &options ) {
+    content.set_function( "NpcClass", [owner]( const sol::table & options ) {
         if( owner->state != lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -1946,7 +1948,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         return npc_class_handle{ std::move( value ), owner };
     } );
-    content.set_function( "Npc", [owner]( const sol::table &options ) {
+    content.set_function( "Npc", [owner]( const sol::table & options ) {
         if( owner->state != lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -2010,7 +2012,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         value->death_handler = options.get_or( "on_death", std::string() );
         return npc_handle{ std::move( value ), owner };
     } );
-    content.set_function( "OvermapTerrain", [owner]( const sol::table &options ) {
+    content.set_function( "OvermapTerrain", [owner]( const sol::table & options ) {
         if( owner->state != lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -2036,7 +2038,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                                 "overmap terrain looks_like" );
         value->post_process_generators = read_string_vector(
                                              options.get<sol::optional<sol::table>>(
-                                                 "post_process_generators" ),
+                                                     "post_process_generators" ),
                                              "overmap terrain post-process generators" );
         value->monster_density = options.get_or( "monster_density", 0 );
         if( const sol::optional<sol::table> spawns =
@@ -2053,7 +2055,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                            options.get<sol::optional<sol::table>>( "flags" ), "overmap terrain flags" );
         return omt_handle{ std::move( value ), owner };
     } );
-    content.set_function( "OvermapSpecial", [owner]( const sol::table &options ) {
+    content.set_function( "OvermapSpecial", [owner]( const sol::table & options ) {
         if( owner->state != lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -2069,8 +2071,8 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         value->flags = read_string_set(
                            options.get<sol::optional<sol::table>>( "flags" ), "overmap special flags" );
         value->city_size = read_interval(
-                                   options.get<sol::optional<sol::table>>( "city_size" ),
-                                   value->city_size, "overmap special city size" );
+                               options.get<sol::optional<sol::table>>( "city_size" ),
+                               value->city_size, "overmap special city size" );
         value->city_distance = read_interval(
                                    options.get<sol::optional<sol::table>>( "city_distance" ),
                                    value->city_distance, "overmap special city distance" );
@@ -2101,13 +2103,13 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                 for( const sol::table &terrain : read_dense_array<sol::table>( *terrains,
                         "overmap special terrains" ) ) {
                     const std::array<int, 3> point = read_point(
-                            terrain.get<sol::table>( "point" ), "overmap special point" );
+                                                         terrain.get<sol::table>( "point" ), "overmap special point" );
                     special_terrain_data parsed;
                     parsed.x = point[0];
                     parsed.y = point[1];
                     parsed.z = point[2];
                     parsed.terrain = terrain.get_or( "terrain", terrain.get_or(
-                                                        "overmap", std::string() ) );
+                                                         "overmap", std::string() ) );
                     parsed.locations = read_string_set(
                                            terrain.get<sol::optional<sol::table>>( "locations" ),
                                            "overmap special terrain locations" );
@@ -2124,7 +2126,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                 for( const sol::table &connection : read_dense_array<sol::table>( *connections,
                         "overmap special connections" ) ) {
                     const std::array<int, 3> point = read_point(
-                            connection.get<sol::table>( "point" ), "overmap connection point" );
+                                                         connection.get<sol::table>( "point" ), "overmap connection point" );
                     special_connection_data parsed;
                     parsed.x = point[0];
                     parsed.y = point[1];
@@ -2171,9 +2173,9 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                 for( const sol::table &area : read_dense_array<sol::table>( *areas,
                         "mutable special checked location areas" ) ) {
                     const std::array<int, 3> from = read_point(
-                            area.get<sol::table>( "from" ), "mutable special checked area start" );
+                                                        area.get<sol::table>( "from" ), "mutable special checked area start" );
                     const std::array<int, 3> to = read_point(
-                            area.get<sol::table>( "to" ), "mutable special checked area end" );
+                                                      area.get<sol::table>( "to" ), "mutable special checked area end" );
                     const std::set<std::string> allowed = read_string_set(
                             area.get<sol::optional<sol::table>>( "locations" ) ?
                             area.get<sol::optional<sol::table>>( "locations" ) :
@@ -2205,7 +2207,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             if( const sol::optional<sol::table> joins =
                     options.get<sol::optional<sol::table>>( "joins" ) ) {
                 for( const sol::object &entry : read_dense_array<sol::object>(
-                            *joins, "mutable special joins" ) ) {
+                         *joins, "mutable special joins" ) ) {
                     special_join_data parsed;
                     if( entry.get_type() == sol::type::string ) {
                         parsed.id = entry.as<std::string>();
@@ -2261,8 +2263,8 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                             parsed_join.type = join_descriptor.get_or(
                                                    "type", std::string( "mandatory" ) );
                             parsed_join.alternatives = read_string_set(
-                                join_descriptor.get<sol::optional<sol::table>>( "alternatives" ),
-                                "mutable special alternative joins" );
+                                                           join_descriptor.get<sol::optional<sol::table>>( "alternatives" ),
+                                                           "mutable special alternative joins" );
                         } else {
                             throw std::invalid_argument(
                                 "mutable special terrain join must be a string or table" );
@@ -2297,10 +2299,10 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             if( const sol::optional<sol::table> phases =
                     options.get<sol::optional<sol::table>>( "phases" ) ) {
                 for( const sol::table &phase : read_dense_array<sol::table>(
-                            *phases, "mutable special phases" ) ) {
+                         *phases, "mutable special phases" ) ) {
                     std::vector<mutable_special_rule_data> parsed_phase;
                     for( const sol::table &rule : read_dense_array<sol::table>(
-                                phase, "mutable special phase rules" ) ) {
+                             phase, "mutable special phase rules" ) ) {
                         mutable_special_rule_data parsed_rule;
                         parsed_rule.name = rule.get_or( "name", std::string() );
                         const sol::object maximum = rule.raw_get<sol::object>( "max" );
@@ -2315,7 +2317,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                         } else if( const sol::optional<sol::table> chunk =
                                        rule.get<sol::optional<sol::table>>( "chunk" ) ) {
                             for( const sol::table &piece : read_dense_array<sol::table>(
-                                        *chunk, "mutable special rule pieces" ) ) {
+                                     *chunk, "mutable special rule pieces" ) ) {
                                 std::array<int, 3> point = { 0, 0, 0 };
                                 if( const sol::optional<sol::table> position =
                                         piece.get<sol::optional<sol::table>>( "pos" ) ) {
@@ -2343,7 +2345,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
     // The native loader treats city_building as a fixed overmap_special alias.
     // Keep one implementation and registry path while exposing both authoring names.
     content["CityBuilding"] = content["OvermapSpecial"];
-    content.set_function( "VehiclePart", [owner]( const sol::table &options ) {
+    content.set_function( "VehiclePart", [owner]( const sol::table & options ) {
         if( owner->state != lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -2380,9 +2382,9 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         value->cargo_spoil_multiplier = read_optional<int>( options, "cargo_spoil_multiplier" );
         value->comfort = read_optional<int>( options, "comfort" );
         value->floor_bedding_warmth_celsius = read_optional<double>(
-                    options, "floor_bedding_warmth_celsius" );
+                options, "floor_bedding_warmth_celsius" );
         value->bonus_fire_warmth_feet_celsius = read_optional<double>(
-                    options, "bonus_fire_warmth_feet_celsius" );
+                options, "bonus_fire_warmth_feet_celsius" );
         value->default_tint_color = read_optional<std::string>(
                                         options, "default_tint_color" );
         value->activatable_eoc = read_optional<std::string>( options, "activatable_eoc" );
@@ -2395,7 +2397,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                 throw std::invalid_argument(
                     "vehicle part light_color must have red, green, and blue channels" );
             }
-            value->light_color = std::array<int, 3>{ channels[0], channels[1], channels[2] };
+            value->light_color = std::array<int, 3> { channels[0], channels[1], channels[2] };
         }
         if( const sol::optional<sol::table> categories =
                 options.get<sol::optional<sol::table>>( "categories" ) ) {
@@ -2426,33 +2428,33 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                                                "extend_categories" ),
                                            "vehicle part patch.extend_categories" );
             value->delete_categories = read_string_set(
-                                          patch->get<sol::optional<sol::table>>(
-                                              "delete_categories" ),
-                                          "vehicle part patch.delete_categories" );
+                                           patch->get<sol::optional<sol::table>>(
+                                               "delete_categories" ),
+                                           "vehicle part patch.delete_categories" );
             value->extend_flags = read_string_set(
                                       patch->get<sol::optional<sol::table>>(
                                           "extend_flags" ),
                                       "vehicle part patch.extend_flags" );
             value->delete_flags = read_string_set(
-                                     patch->get<sol::optional<sol::table>>(
-                                         "delete_flags" ),
-                                     "vehicle part patch.delete_flags" );
+                                      patch->get<sol::optional<sol::table>>(
+                                          "delete_flags" ),
+                                      "vehicle part patch.delete_flags" );
             value->extend_emissions = read_string_set(
                                           patch->get<sol::optional<sol::table>>(
                                               "extend_emissions" ),
                                           "vehicle part patch.extend_emissions" );
             value->delete_emissions = read_string_set(
-                                         patch->get<sol::optional<sol::table>>(
-                                             "delete_emissions" ),
-                                         "vehicle part patch.delete_emissions" );
+                                          patch->get<sol::optional<sol::table>>(
+                                              "delete_emissions" ),
+                                          "vehicle part patch.delete_emissions" );
             value->extend_exhaust = read_string_set(
                                         patch->get<sol::optional<sol::table>>(
                                             "extend_exhaust" ),
                                         "vehicle part patch.extend_exhaust" );
             value->delete_exhaust = read_string_set(
-                                       patch->get<sol::optional<sol::table>>(
-                                           "delete_exhaust" ),
-                                       "vehicle part patch.delete_exhaust" );
+                                        patch->get<sol::optional<sol::table>>(
+                                            "delete_exhaust" ),
+                                        "vehicle part patch.delete_exhaust" );
         }
         if( const sol::optional<sol::table> fuel_options =
                 options.get<sol::optional<sol::table>>( "fuel_options" ) ) {
@@ -2490,7 +2492,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                 options.get<sol::optional<sol::table>>( "variant_bases" ) ) {
             value->variant_bases.emplace();
             for( const sol::table &base : read_dense_array<sol::table>(
-                        *bases, "vehicle part variant bases" ) ) {
+                     *bases, "vehicle part variant bases" ) ) {
                 value->variant_bases->emplace_back(
                     base.get_or( "id", std::string() ),
                     base.get_or( "label", std::string() ) );
@@ -2501,7 +2503,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             value->enchantments = read_string_vector(
                                       enchantments, "vehicle part enchantments" );
         }
-        const auto read_integer_map = []( const sol::table &source,
+        const auto read_integer_map = []( const sol::table & source,
         const char *description ) {
             std::map<std::string, int> result;
             for( const auto &entry : source ) {
@@ -2522,7 +2524,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                 options.get<sol::optional<sol::table>>( "pseudo_tools" ) ) {
             value->pseudo_tools.emplace();
             for( const sol::table &tool : read_dense_array<sol::table>(
-                        *tools, "vehicle part pseudo tools" ) ) {
+                     *tools, "vehicle part pseudo tools" ) ) {
                 const std::string hotkey = tool.get_or( "hotkey", std::string() );
                 value->pseudo_tools->push_back( {
                     tool.get_or( "id", std::string() ),
@@ -2559,8 +2561,8 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                             "vehicle wheel terrain modifiers must map flags to pairs" );
                     }
                     const std::vector<int> values = read_dense_array<int>(
-                                modifier.second.as<sol::table>(),
-                                "vehicle wheel terrain modifier" );
+                                                        modifier.second.as<sol::table>(),
+                                                        "vehicle wheel terrain modifier" );
                     if( values.size() != 2 ) {
                         throw std::invalid_argument(
                             "vehicle wheel terrain modifier needs override and penalty" );
@@ -2604,7 +2606,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             value->terrain_transform = std::move( parsed );
         }
         const auto read_requirement = []( const sol::optional<sol::table> &source,
-        vpart_requirement_data &target ) {
+        vpart_requirement_data & target ) {
             if( !source ) {
                 return;
             }
@@ -2613,7 +2615,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             if( const sol::optional<sol::table> requirements =
                     source->get<sol::optional<sol::table>>( "using" ) ) {
                 for( const sol::table &requirement : read_dense_array<sol::table>(
-                            *requirements, "vehicle part requirements" ) ) {
+                         *requirements, "vehicle part requirements" ) ) {
                     target.using_requirements.emplace_back(
                         requirement.get_or( "id", std::string() ),
                         requirement.get_or( "multiplier", 1 ) );
@@ -2653,7 +2655,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         return vpart_handle{ std::move( value ), owner };
     } );
-    content.set_function( "Vehicle", [owner]( const sol::table &options ) {
+    content.set_function( "Vehicle", [owner]( const sol::table & options ) {
         if( owner->state != lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
@@ -2666,7 +2668,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             value->color_palette = *palette;
             value->color_palette_set = true;
         }
-        const auto read_part_placement = []( const sol::table &part ) {
+        const auto read_part_placement = []( const sol::table & part ) {
             static const std::set<std::string> placement_fields = {
                 "x", "y", "part", "variant", "with_ammo", "ammo_types",
                 "ammo_quantity", "fuel", "tools"
@@ -2715,7 +2717,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                     patch->get<sol::optional<sol::table>>( "extend_parts" ) ) {
                 value->extend_parts.emplace();
                 for( const sol::table &part : read_dense_array<sol::table>(
-                            *extend, "vehicle patch.extend_parts" ) ) {
+                         *extend, "vehicle patch.extend_parts" ) ) {
                     value->extend_parts->push_back( read_part_placement( part ) );
                 }
             }
@@ -2723,7 +2725,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                     patch->get<sol::optional<sol::table>>( "delete_parts" ) ) {
                 value->delete_parts.emplace();
                 for( const sol::table &part : read_dense_array<sol::table>(
-                            *remove, "vehicle patch.delete_parts" ) ) {
+                         *remove, "vehicle patch.delete_parts" ) ) {
                     value->delete_parts->push_back( read_part_placement( part ) );
                 }
             }
@@ -2742,7 +2744,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                 if( const sol::optional<sol::table> spawned =
                         item.get<sol::optional<sol::table>>( "items" ) ) {
                     for( const sol::object &spawn : read_dense_array<sol::object>(
-                                *spawned, "vehicle spawn items" ) ) {
+                             *spawned, "vehicle spawn items" ) ) {
                         if( spawn.get_type() == sol::type::string ) {
                             parsed.items.emplace_back( spawn.as<std::string>(), std::string() );
                         } else if( spawn.get_type() == sol::type::table ) {
@@ -2757,8 +2759,8 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                     }
                 }
                 parsed.groups = read_string_vector(
-                                   item.get<sol::optional<sol::table>>( "groups" ),
-                                   "vehicle spawn groups" );
+                                    item.get<sol::optional<sol::table>>( "groups" ),
+                                    "vehicle spawn groups" );
                 value->items.push_back( std::move( parsed ) );
             }
         }
@@ -2788,7 +2790,7 @@ bool world_content_transaction::register_definition( const sol::object &value,
         throw std::runtime_error( "invalid Platform content operation" );
     }
     const operation op = static_cast<operation>( raw_operation );
-    const auto register_value = [this, op]( auto handle, auto &entries, const char *kind ) {
+    const auto register_value = [this, op]( auto handle, auto & entries, const char *kind ) {
         if( handle.owner != pimpl_->handle_token ) {
             throw std::runtime_error( std::string( "cannot register a " ) + kind +
                                       " definition owned by another Mod" );
@@ -2799,7 +2801,7 @@ bool world_content_transaction::register_definition( const sol::object &value,
         handle.definition->registered = true;
         if( op == operation::edit ) {
             const auto target = std::find_if( entries.rbegin(), entries.rend(),
-            [&handle]( const auto &entry ) {
+            [&handle]( const auto & entry ) {
                 return entry.definition->id == handle.definition->id;
             } );
             if( target == entries.rend() ) {
@@ -2833,25 +2835,37 @@ bool world_content_transaction::validate( const runtime &owner_runtime,
         const bool check_engine_state, std::string &error ) const
 {
     try {
-        const auto faction_exists = []( const std::string &id ) {
+        const auto faction_exists = []( const std::string & id ) {
             const auto &values = detail::faction_template_registry();
-            return std::any_of( values.begin(), values.end(), [&id]( const faction_template &value ) {
+            return std::any_of( values.begin(), values.end(), [&id]( const faction_template & value ) {
                 return value.id == faction_id( id );
             } );
         };
         validate_registrations( pimpl_->factions, "faction", check_engine_state, faction_exists );
         validate_registrations( pimpl_->npc_classes, "NPC class", check_engine_state,
-        []( const std::string &id ) { return npc_class_id( id ).is_valid(); } );
+        []( const std::string & id ) {
+            return npc_class_id( id ).is_valid();
+        } );
         validate_registrations( pimpl_->npcs, "NPC", check_engine_state,
-        []( const std::string &id ) { return npc_template_id( id ).is_valid(); } );
+        []( const std::string & id ) {
+            return npc_template_id( id ).is_valid();
+        } );
         validate_registrations( pimpl_->overmap_terrains, "overmap terrain", check_engine_state,
-        []( const std::string &id ) { return oter_type_str_id( id ).is_valid(); } );
+        []( const std::string & id ) {
+            return oter_type_str_id( id ).is_valid();
+        } );
         validate_registrations( pimpl_->overmap_specials, "overmap special", check_engine_state,
-        []( const std::string &id ) { return overmap_special_id( id ).is_valid(); } );
+        []( const std::string & id ) {
+            return overmap_special_id( id ).is_valid();
+        } );
         validate_registrations( pimpl_->vehicle_parts, "vehicle part", check_engine_state,
-        []( const std::string &id ) { return vpart_id( id ).is_valid(); } );
+        []( const std::string & id ) {
+            return vpart_id( id ).is_valid();
+        } );
         validate_registrations( pimpl_->vehicles, "vehicle", check_engine_state,
-        []( const std::string &id ) { return vproto_id( id ).is_valid(); } );
+        []( const std::string & id ) {
+            return vproto_id( id ).is_valid();
+        } );
         for( const registration<faction_data> &entry : pimpl_->factions ) {
             const faction_data &faction = *entry.definition;
             if( faction.food_calories < 0 || faction.food_calories >
@@ -2952,9 +2966,9 @@ bool world_content_transaction::validate( const runtime &owner_runtime,
                                           "' has an invalid symbol or color" );
             }
             static_cast<void>( io::string_to_enum<oter_type_t::see_costs>(
-                                    entry.definition->see_cost ) );
+                                   entry.definition->see_cost ) );
             static_cast<void>( io::string_to_enum<oter_travel_cost_type>(
-                                    entry.definition->travel_cost ) );
+                                   entry.definition->travel_cost ) );
             if( entry.definition->static_spawns &&
                 ( entry.definition->static_spawns->group.empty() ||
                   entry.definition->static_spawns->population.minimum < 0 ||
@@ -3102,13 +3116,13 @@ bool world_content_transaction::validate( const runtime &owner_runtime,
         if( !detail::resolve_platform_inheritance_order(
                 pimpl_->vehicle_parts,
         []( const registration<vehicle_part_data> &entry ) {
-            return entry.definition->id;
-        },
-        []( const registration<vehicle_part_data> &entry ) {
-            return entry.definition->copy_from;
-        },
-        [check_engine_state]( const std::string &id ) {
-            return !check_engine_state || vpart_id( id ).is_valid();
+        return entry.definition->id;
+    },
+    []( const registration<vehicle_part_data> &entry ) {
+        return entry.definition->copy_from;
+    },
+    [check_engine_state]( const std::string & id ) {
+        return !check_engine_state || vpart_id( id ).is_valid();
         },
         vehicle_part_order, inheritance_error, "vehicle part" ) ) {
             throw std::runtime_error( inheritance_error );
@@ -3121,7 +3135,7 @@ bool world_content_transaction::validate( const runtime &owner_runtime,
                                                 const std::optional<std::set<std::string>> &replacement,
                                                 const std::optional<std::set<std::string>> &extend,
                                                 const std::optional<std::set<std::string>> &remove,
-                                                const char *field ) {
+            const char *field ) {
                 if( ( extend || remove ) && part.copy_from.empty() ) {
                     throw std::runtime_error( std::string( "vehicle part '" ) + part.id +
                                               "' patch." + field +
@@ -3142,8 +3156,9 @@ bool world_content_transaction::validate( const runtime &owner_runtime,
                         }
                     }
                 }
-                for( const std::optional<std::set<std::string>> *values :
-                        { &extend, &remove } ) {
+                for( const std::optional<std::set<std::string>> *values : {
+                         &extend, &remove
+                     } ) {
                     if( *values ) {
                         for( const std::string &value : **values ) {
                             if( value.empty() ) {
@@ -3164,7 +3179,7 @@ bool world_content_transaction::validate( const runtime &owner_runtime,
             validate_set_patch( part.exhaust, part.extend_exhaust,
                                 part.delete_exhaust, "exhaust" );
             if( ( part.color && color_from_string( *part.color,
-                                                  report_color_error::no ) == c_unset ) ||
+                                                   report_color_error::no ) == c_unset ) ||
                 ( part.broken_color && color_from_string( *part.broken_color,
                         report_color_error::no ) == c_unset ) ) {
                 throw std::runtime_error( "vehicle part '" + part.id +
@@ -3224,13 +3239,13 @@ bool world_content_transaction::validate( const runtime &owner_runtime,
         if( !detail::resolve_platform_inheritance_order(
                 pimpl_->vehicles,
         []( const registration<vehicle_data> &entry ) {
-            return entry.definition->id;
-        },
-        []( const registration<vehicle_data> &entry ) {
-            return entry.definition->copy_from;
-        },
-        [check_engine_state]( const std::string &id ) {
-            return !check_engine_state || vproto_id( id ).is_valid();
+        return entry.definition->id;
+    },
+    []( const registration<vehicle_data> &entry ) {
+        return entry.definition->copy_from;
+    },
+    [check_engine_state]( const std::string & id ) {
+        return !check_engine_state || vproto_id( id ).is_valid();
         },
         vehicle_order, inheritance_error, "vehicle" ) ) {
             throw std::runtime_error( inheritance_error );
@@ -3252,9 +3267,9 @@ bool world_content_transaction::validate( const runtime &owner_runtime,
                 for( const vehicle_part_placement_data &removed : *vehicle.delete_parts ) {
                     if( std::any_of( vehicle.extend_parts->begin(),
                                      vehicle.extend_parts->end(),
-                [&removed]( const vehicle_part_placement_data &added ) {
+                    [&removed]( const vehicle_part_placement_data & added ) {
                     return same_vehicle_part_placement( added, removed );
-                } ) ) {
+                    } ) ) {
                         throw std::runtime_error( "vehicle '" + vehicle.id +
                                                   " has conflicting extend_parts/delete_parts" );
                     }
@@ -3271,8 +3286,9 @@ bool world_content_transaction::validate( const runtime &owner_runtime,
                                               "' has an invalid part placement" );
                 }
             }
-            for( const std::optional<std::vector<vehicle_part_placement_data>> *patch :
-                    { &vehicle.extend_parts, &vehicle.delete_parts } ) {
+            for( const std::optional<std::vector<vehicle_part_placement_data>> *patch : {
+                     &vehicle.extend_parts, &vehicle.delete_parts
+                 } ) {
                 if( *patch ) {
                     for( const vehicle_part_placement_data &part : **patch ) {
                         if( part.part.empty() ||
@@ -3318,7 +3334,7 @@ bool world_content_transaction::find_overmap_terrain_handler(
 {
     const auto found = std::find_if(
                            pimpl_->overmap_terrains.rbegin(), pimpl_->overmap_terrains.rend(),
-    [&id]( const registration<overmap_terrain_data> & entry ) {
+    [&id]( const registration<overmap_terrain_data> &entry ) {
         return entry.definition->id == id;
     } );
     if( found == pimpl_->overmap_terrains.rend() ) {
@@ -3334,7 +3350,7 @@ bool world_content_transaction::find_overmap_special_handler(
 {
     const auto found = std::find_if(
                            pimpl_->overmap_specials.rbegin(), pimpl_->overmap_specials.rend(),
-    [&id]( const registration<overmap_special_data> & entry ) {
+    [&id]( const registration<overmap_special_data> &entry ) {
         return entry.definition->id == id;
     } );
     if( found == pimpl_->overmap_specials.rend() ) {
@@ -3350,7 +3366,7 @@ bool world_content_transaction::find_vehicle_part_handler(
 {
     const auto found = std::find_if(
                            pimpl_->vehicle_parts.rbegin(), pimpl_->vehicle_parts.rend(),
-    [&id]( const registration<vehicle_part_data> & entry ) {
+    [&id]( const registration<vehicle_part_data> &entry ) {
         return entry.definition->id == id;
     } );
     if( found == pimpl_->vehicle_parts.rend() ) {
@@ -3376,7 +3392,9 @@ bool world_content_transaction::apply( std::string &error )
             const faction_id id( source.id );
             std::vector<faction_template> &registry = detail::faction_template_registry();
             const auto previous = std::find_if( registry.begin(), registry.end(),
-            [&id]( const faction_template &value ) { return value.id == id; } );
+            [&id]( const faction_template & value ) {
+                return value.id == id;
+            } );
             pimpl_->faction_undo.emplace_back(
                 id, previous == registry.end() ? std::nullopt :
                 std::optional<faction_template>( *previous ) );
@@ -3425,8 +3443,8 @@ bool world_content_transaction::apply( std::string &error )
                                                     !rule.group.empty() ? rule.group : rule.category;
                     const std::string handler = rule.condition_handler;
                     base.platform_condition = [mod, owner_id, selector_kind, selector_id,
-                                                   handler]( const item & candidate,
-                                                            const npc & shopkeeper ) {
+                                                    handler]( const item & candidate,
+                    const npc & shopkeeper ) {
                         return invoke_shop_condition_handler(
                                    mod, owner_id, "faction_price_rule", selector_kind,
                                    selector_id, handler, &candidate, shopkeeper ).value_or( false );
@@ -3557,8 +3575,8 @@ bool world_content_transaction::apply( std::string &error )
                                                     !rule.group.empty() ? rule.group : rule.category;
                     const std::string handler = rule.condition_handler;
                     base.platform_condition = [mod, owner_id, selector_kind, selector_id,
-                                                   handler]( const item & candidate,
-                                                            const npc & shopkeeper ) {
+                                                    handler]( const item & candidate,
+                    const npc & shopkeeper ) {
                         return invoke_shop_condition_handler(
                                    mod, owner_id, "npc_class_price_rule", selector_kind,
                                    selector_id, handler, &candidate, shopkeeper ).value_or( false );
@@ -3829,13 +3847,13 @@ bool world_content_transaction::apply( std::string &error )
         if( !detail::resolve_platform_inheritance_order(
                 pimpl_->vehicle_parts,
         []( const registration<vehicle_part_data> &entry ) {
-            return entry.definition->id;
-        },
-        []( const registration<vehicle_part_data> &entry ) {
-            return entry.definition->copy_from;
-        },
-        []( const std::string &id ) {
-            return vpart_id( id ).is_valid();
+        return entry.definition->id;
+    },
+    []( const registration<vehicle_part_data> &entry ) {
+        return entry.definition->copy_from;
+    },
+    []( const std::string & id ) {
+        return vpart_id( id ).is_valid();
         },
         vehicle_part_order, inheritance_error, "vehicle part" ) ) {
             throw std::runtime_error( inheritance_error );
@@ -3925,7 +3943,7 @@ bool world_content_transaction::apply( std::string &error )
             }
             if( source.floor_bedding_warmth_celsius ) {
                 native.floor_bedding_warmth = units::from_celsius_delta(
-                                                   *source.floor_bedding_warmth_celsius );
+                                                  *source.floor_bedding_warmth_celsius );
             }
             if( source.bonus_fire_warmth_feet_celsius ) {
                 native.bonus_fire_warmth_feet = units::from_celsius_delta(
@@ -3953,8 +3971,8 @@ bool world_content_transaction::apply( std::string &error )
                     native.emissions,
                     source.extend_emissions ? &*source.extend_emissions : nullptr,
                     source.delete_emissions ? &*source.delete_emissions : nullptr,
-            []( const std::string &value ) {
-                return emit_id( value );
+            []( const std::string & value ) {
+            return emit_id( value );
             },
             "vehicle part emissions", error ) ) {
                 throw std::runtime_error( error );
@@ -3963,8 +3981,8 @@ bool world_content_transaction::apply( std::string &error )
                     native.exhaust,
                     source.extend_exhaust ? &*source.extend_exhaust : nullptr,
                     source.delete_exhaust ? &*source.delete_exhaust : nullptr,
-            []( const std::string &value ) {
-                return emit_id( value );
+            []( const std::string & value ) {
+            return emit_id( value );
             },
             "vehicle part exhaust", error ) ) {
                 throw std::runtime_error( error );
@@ -3985,10 +4003,10 @@ bool world_content_transaction::apply( std::string &error )
                     native.categories,
                     source.extend_categories ? &*source.extend_categories : nullptr,
                     source.delete_categories ? &*source.delete_categories : nullptr,
-            []( const std::string &value ) {
-                return value;
-            },
-            "vehicle part categories", error ) ) {
+            []( const std::string & value ) {
+            return value;
+        },
+        "vehicle part categories", error ) ) {
                 throw std::runtime_error( error );
             }
             if( source.flags ) {
@@ -4002,10 +4020,10 @@ bool world_content_transaction::apply( std::string &error )
                     native.flags,
                     source.extend_flags ? &*source.extend_flags : nullptr,
                     source.delete_flags ? &*source.delete_flags : nullptr,
-            []( const std::string &value ) {
-                return value;
-            },
-            "vehicle part flags", error ) ) {
+            []( const std::string & value ) {
+            return value;
+        },
+        "vehicle part flags", error ) ) {
                 throw std::runtime_error( error );
             }
             native.bitflags.reset();
@@ -4132,9 +4150,9 @@ bool world_content_transaction::apply( std::string &error )
                 native.workbench_info.emplace();
                 native.workbench_info->multiplier = source.workbench->multiplier;
                 native.workbench_info->allowed_mass = units::from_gram(
-                                                          source.workbench->mass_grams );
+                        source.workbench->mass_grams );
                 native.workbench_info->allowed_volume = units::from_milliliter(
-                                                            source.workbench->volume_ml );
+                        source.workbench->volume_ml );
             }
             if( source.toolkit_allowed_tools ) {
                 native.toolkit_info.emplace();
@@ -4175,9 +4193,9 @@ bool world_content_transaction::apply( std::string &error )
             for( const auto &[damage, amount] : source.damage_reduction ) {
                 native.damage_reduction[damage_type_id( damage )] = amount;
             }
-            const auto apply_requirement = []( const vpart_requirement_data &value,
-            std::vector<std::pair<requirement_id, int>> &requirements,
-            std::map<skill_id, int> &skills, time_duration &time ) {
+            const auto apply_requirement = []( const vpart_requirement_data & value,
+                                               std::vector<std::pair<requirement_id, int>> &requirements,
+            std::map<skill_id, int> &skills, time_duration & time ) {
                 if( !value.id.empty() ) {
                     requirements = { { requirement_id( value.id ), value.multiplier } };
                 }
@@ -4231,13 +4249,13 @@ bool world_content_transaction::apply( std::string &error )
         if( !detail::resolve_platform_inheritance_order(
                 pimpl_->vehicles,
         []( const registration<vehicle_data> &entry ) {
-            return entry.definition->id;
-        },
-        []( const registration<vehicle_data> &entry ) {
-            return entry.definition->copy_from;
-        },
-        []( const std::string &id ) {
-            return vproto_id( id ).is_valid();
+        return entry.definition->id;
+    },
+    []( const registration<vehicle_data> &entry ) {
+        return entry.definition->copy_from;
+    },
+    []( const std::string & id ) {
+        return vproto_id( id ).is_valid();
         },
         vehicle_order, inheritance_error, "vehicle" ) ) {
             throw std::runtime_error( inheritance_error );
@@ -4281,8 +4299,8 @@ bool world_content_transaction::apply( std::string &error )
                 }
                 native.parts.push_back( std::move( native_part ) );
             }
-            const auto matches_placement = []( const vehicle_prototype::part_def &existing,
-            const vehicle_part_placement_data &requested, const bool exact ) {
+            const auto matches_placement = []( const vehicle_prototype::part_def & existing,
+            const vehicle_part_placement_data & requested, const bool exact ) {
                 if( existing.pos != point_rel_ms( requested.x, requested.y ) ||
                     existing.part != vpart_id( requested.part ) ||
                     existing.variant != requested.variant ) {
@@ -4313,8 +4331,8 @@ bool world_content_transaction::apply( std::string &error )
             if( source.extend_parts ) {
                 for( const vehicle_part_placement_data &part : *source.extend_parts ) {
                     if( std::any_of( native.parts.begin(), native.parts.end(),
-                    [&part, &matches_placement]( const vehicle_prototype::part_def &existing ) {
-                        return matches_placement( existing, part, false );
+                    [&part, &matches_placement]( const vehicle_prototype::part_def & existing ) {
+                    return matches_placement( existing, part, false );
                     } ) ) {
                         throw std::runtime_error( "vehicle '" + source.id +
                                                   "' extend_parts conflicts with an existing placement" );
@@ -4340,7 +4358,7 @@ bool world_content_transaction::apply( std::string &error )
             if( source.delete_parts ) {
                 for( const vehicle_part_placement_data &part : *source.delete_parts ) {
                     const auto found = std::find_if( native.parts.begin(), native.parts.end(),
-                    [&part, &matches_placement]( const vehicle_prototype::part_def &existing ) {
+                    [&part, &matches_placement]( const vehicle_prototype::part_def & existing ) {
                         return matches_placement( existing, part, true );
                     } );
                     if( found == native.parts.end() ) {
@@ -4406,7 +4424,7 @@ bool world_content_transaction::validate_finalized( std::string &error ) const
         error = "world content finalization was already validated";
         return false;
     }
-    const auto validate = [&error]( const auto &entries, auto make_id, const char *kind ) {
+    const auto validate = [&error]( const auto & entries, auto make_id, const char *kind ) {
         for( const auto &entry : entries ) {
             if( !make_id( entry.definition->id ).is_valid() ) {
                 error = std::string( "Lua-first " ) + kind + " '" + entry.definition->id +
@@ -4418,32 +4436,32 @@ bool world_content_transaction::validate_finalized( std::string &error ) const
     };
     const std::vector<faction_template> &factions = detail::faction_template_registry();
     for( const registration<faction_data> &entry : pimpl_->factions ) {
-        if( std::none_of( factions.begin(), factions.end(), [&entry]( const faction_template &value ) {
+        if( std::none_of( factions.begin(), factions.end(), [&entry]( const faction_template & value ) {
         return value.id == faction_id( entry.definition->id );
-    } ) ) {
+        } ) ) {
             error = "Lua-first faction '" + entry.definition->id +
                     "' did not survive global finalization";
             return false;
         }
     }
-    if( !validate( pimpl_->npc_classes, []( const std::string &id ) {
+    if( !validate( pimpl_->npc_classes, []( const std::string & id ) {
     return npc_class_id( id );
-}, "NPC class" ) ||
-    !validate( pimpl_->npcs, []( const std::string &id ) {
-    return npc_template_id( id );
-}, "NPC" ) ||
-    !validate( pimpl_->overmap_terrains, []( const std::string &id ) {
-    return oter_type_str_id( id );
-}, "overmap terrain" ) ||
-    !validate( pimpl_->overmap_specials, []( const std::string &id ) {
-    return overmap_special_id( id );
-}, "overmap special" ) ||
-    !validate( pimpl_->vehicle_parts, []( const std::string &id ) {
-    return vpart_id( id );
-}, "vehicle part" ) ||
-    !validate( pimpl_->vehicles, []( const std::string &id ) {
-    return vproto_id( id );
-}, "vehicle" ) ) {
+    }, "NPC class" ) ||
+    !validate( pimpl_->npcs, []( const std::string & id ) {
+        return npc_template_id( id );
+    }, "NPC" ) ||
+    !validate( pimpl_->overmap_terrains, []( const std::string & id ) {
+        return oter_type_str_id( id );
+    }, "overmap terrain" ) ||
+    !validate( pimpl_->overmap_specials, []( const std::string & id ) {
+        return overmap_special_id( id );
+    }, "overmap special" ) ||
+    !validate( pimpl_->vehicle_parts, []( const std::string & id ) {
+        return vpart_id( id );
+    }, "vehicle part" ) ||
+    !validate( pimpl_->vehicles, []( const std::string & id ) {
+        return vproto_id( id );
+    }, "vehicle" ) ) {
         return false;
     }
     pimpl_->finalization_validated = true;
@@ -4530,7 +4548,9 @@ void world_content_transaction::rollback()
     std::vector<faction_template> &factions = detail::faction_template_registry();
     for( auto it = pimpl_->faction_undo.rbegin(); it != pimpl_->faction_undo.rend(); ++it ) {
         const auto current = std::find_if( factions.begin(), factions.end(),
-        [&it]( const faction_template &value ) { return value.id == it->first; } );
+        [&it]( const faction_template & value ) {
+            return value.id == it->first;
+        } );
         if( current != factions.end() ) {
             factions.erase( current );
         }

@@ -540,7 +540,7 @@ void overmap::insert_npc( const shared_ptr_fast<npc> &who )
         // replacement, not an ordinary overmap relocation.  Retire the old
         // task records before publishing the replacement instance.
         const shared_ptr_fast<npc> replaced = *iter;
-        overmap_buffer.foreach_loaded_camp( [&replaced]( basecamp &camp ) {
+        overmap_buffer.foreach_loaded_camp( [&replaced]( basecamp & camp ) {
             camp.platform_retire_tasks_for_worker( *replaced );
         } );
         overmap_buffer.platform_unregister_npc( replaced );

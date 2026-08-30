@@ -851,8 +851,10 @@ bool Character::activate_bionic( bionic &bio, bool eff_only, bool *close_bionics
         { "character", this },
         { "bionic", cata::lua_platform::native_callback_id{ "bionic", bio.id.str() } },
         { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) },
-        { "activation_cost_millijoules",
-          units::to_millijoule( bio.info().power_activate ) }
+        {
+            "activation_cost_millijoules",
+            units::to_millijoule( bio.info().power_activate )
+        }
     } );
 
     item tmp_item;
@@ -1317,8 +1319,10 @@ bool Character::deactivate_bionic( bionic &bio, bool eff_only )
         { "character", this },
         { "bionic", cata::lua_platform::native_callback_id{ "bionic", bio.id.str() } },
         { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) },
-        { "deactivation_cost_millijoules",
-          units::to_millijoule( bio.info().power_deactivate ) }
+        {
+            "deactivation_cost_millijoules",
+            units::to_millijoule( bio.info().power_deactivate )
+        }
     } );
 
     if( bio.info().has_flag( json_flag_BIONIC_WEAPON ) ) {
@@ -1715,8 +1719,10 @@ void Character::process_bionic( bionic &bio )
         { "character", this },
         { "bionic", cata::lua_platform::native_callback_id{ "bionic", bio.id.str() } },
         { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) },
-        { "over_time_energy_millijoules",
-          units::to_millijoule( bio.info().power_over_time ) }
+        {
+            "over_time_energy_millijoules",
+            units::to_millijoule( bio.info().power_over_time )
+        }
     } );
 
     // Bionic effects on every turn they are active go here.

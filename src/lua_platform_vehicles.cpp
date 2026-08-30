@@ -607,7 +607,7 @@ sol::table snapshot_live_part(
                 here, part ) );
     sol::table result = lua.create_table();
     result["vehicle"] = make_vehicle_handle(
-                              entry, runtime_generation, world_generation );
+                            entry, runtime_generation, world_generation );
     // Index is diagnostic ordering only; the stable public identity is the
     // part's base-item UID plus its owning Vehicle handle.
     result["index"] = part_index;
@@ -620,8 +620,8 @@ sol::table snapshot_live_part(
     }
     if( !part.removed && !part.is_fake && stable_id ) {
         result["handle"] = make_vehicle_part_handle(
-                                entry, part_index, runtime_generation,
-                                world_generation );
+                               entry, part_index, runtime_generation,
+                               world_generation );
     } else {
         result["handle"] = sol::nil;
     }
@@ -1101,11 +1101,11 @@ sol::table set_vehicle_part_enabled(
         const int after_index = entry->index_of_part( after_part.value, true );
         if( after_index >= 0 ) {
             value["after"] = snapshot_live_part(
-                                  state, here, *entry, after_index,
-                                  runtime_generation, world_generation );
+                                 state, here, *entry, after_index,
+                                 runtime_generation, world_generation );
             value["part"] = make_vehicle_part_handle(
-                                 *entry, after_index, runtime_generation,
-                                 world_generation );
+                                *entry, after_index, runtime_generation,
+                                world_generation );
             value["part_stale"] = false;
         } else {
             value["after"] = sol::nil;
@@ -1252,7 +1252,7 @@ sol::table spawn_vehicle(
     sol::state_view state( lua );
     if( created == nullptr ) {
         return make_game_error_result(
-        state, { "blocked", "The vehicle could not be placed at the requested position" } );
+                   state, { "blocked", "The vehicle could not be placed at the requested position" } );
     }
     if( options.owner ) {
         created->set_owner( *options.owner );
@@ -1260,7 +1260,7 @@ sol::table spawn_vehicle(
     }
     sol::table value = state.create_table();
     value["handle"] = make_vehicle_handle(
-                           *created, runtime_generation, world_generation );
+                          *created, runtime_generation, world_generation );
     value["vehicle"] = snapshot_live_vehicle( state, here, *created );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
@@ -1285,8 +1285,8 @@ sol::table destroy_live_vehicle(
     sol::table value = state.create_table();
     value["name"] = entry->disp_name();
     value["position"] = script_tripoint_coord::from_native(
-                              coords::origin::abs, coords::scale::map_square,
-                              entry->pos_abs().raw() );
+                            coords::origin::abs, coords::scale::map_square,
+                            entry->pos_abs().raw() );
     retire_vehicle_handle_identity( *entry );
     get_map().destroy_vehicle( entry );
     value["destroyed"] = true;
@@ -1315,7 +1315,7 @@ sol::table set_vehicle_owner(
     sol::table value = state.create_table();
     value["before"] = entry->get_owner().is_null() ? sol::make_object( state, sol::nil ) :
                       sol::make_object( state, script_game_id(
-                                           "faction", entry->get_owner().str() ) );
+                                            "faction", entry->get_owner().str() ) );
     entry->set_owner( faction_id( owner.value() ) );
     entry->remove_old_owner();
     value["after"] = owner;
@@ -1333,8 +1333,8 @@ sol::table vehicle_has_part_flag(
         flag.size() > maximum_vehicle_part_flag_bytes ||
         std::any_of( flag.begin(), flag.end(),
     []( const unsigned char ch ) {
-        return ch < 0x20U || ch == 0x7fU;
-    } ) ) {
+    return ch < 0x20U || ch == 0x7fU;
+} ) ) {
         throw std::invalid_argument(
             "services.vehicles.has_part_flag requires 1 to 128 non-control bytes" );
     }
@@ -1381,17 +1381,17 @@ sol::table full_repair_quote_value( sol::state_view state, const npc &mechanic )
     sol::table value = state.create_table();
     value["status"] = npc_value_string( mechanic, "vehicle_full_repair_status" );
     value["vehicle_name"] = npc_value_string(
-                                  mechanic, "vehicle_full_repair_vehicle_name" );
+                                mechanic, "vehicle_full_repair_vehicle_name" );
     value["part_count"] = npc_value_integer(
-                                mechanic, "vehicle_full_repair_part_count" );
+                              mechanic, "vehicle_full_repair_part_count" );
     value["cost_cents"] = npc_value_integer(
-                                mechanic, "vehicle_full_repair_cost" );
+                              mechanic, "vehicle_full_repair_cost" );
     value["cost_text"] = npc_value_string(
-                               mechanic, "vehicle_full_repair_cost_text" );
+                             mechanic, "vehicle_full_repair_cost_text" );
     value["time_turns"] = npc_value_integer(
-                                mechanic, "vehicle_full_repair_time" );
+                              mechanic, "vehicle_full_repair_time" );
     value["time_text"] = npc_value_string(
-                               mechanic, "vehicle_full_repair_time_text" );
+                             mechanic, "vehicle_full_repair_time_text" );
     return value;
 }
 
@@ -1610,8 +1610,8 @@ void install_vehicle_api(
     vehicles_api.set_function(
         "set_part_enabled",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &vehicle_handle,
-            const game_handle &part_handle, const bool enabled ) {
+            sol::this_state lua_state, const game_handle & vehicle_handle,
+    const game_handle & part_handle, const bool enabled ) {
         require_write();
         return set_vehicle_part_enabled(
                    lua_state, vehicle_handle, part_handle, enabled,
@@ -1620,7 +1620,7 @@ void install_vehicle_api(
     } );
     vehicles_api.set_function(
         "prototype_value",
-        [require_read]( const script_game_id &id,
+        [require_read]( const script_game_id & id,
     const sol::optional<bool> &post_cataclysm ) {
         require_read();
         return prototype_value( id, post_cataclysm.value_or( true ) );
@@ -1628,7 +1628,7 @@ void install_vehicle_api(
     vehicles_api.set_function(
         "value",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &handle,
+            sol::this_state lua_state, const game_handle & handle,
     const sol::optional<sol::table> &options ) {
         require_read();
         return live_vehicle_value(
@@ -1638,7 +1638,7 @@ void install_vehicle_api(
     vehicles_api.set_function(
         "is_player_controlling",
         [current_runtime_generation, current_world_generation, require_read](
-    sol::this_state lua_state, const game_handle &handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_read();
         return is_player_controlling_vehicle(
                    lua_state, handle, current_runtime_generation(),
@@ -1647,8 +1647,8 @@ void install_vehicle_api(
     vehicles_api.set_function(
         "has_part_flag",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &handle,
-            const std::string &flag,
+            sol::this_state lua_state, const game_handle & handle,
+            const std::string & flag,
     const sol::optional<bool> &enabled ) {
         require_read();
         return vehicle_has_part_flag(
@@ -1660,8 +1660,8 @@ void install_vehicle_api(
     vehicles_api.set_function(
         "spawn",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const script_game_id &prototype,
-            const script_tripoint_coord &position,
+            sol::this_state lua_state, const script_game_id & prototype,
+            const script_tripoint_coord & position,
     const sol::optional<sol::table> &options ) {
         require_write();
         return spawn_vehicle(
@@ -1671,7 +1671,7 @@ void install_vehicle_api(
     vehicles_api.set_function(
         "destroy",
         [current_runtime_generation, current_world_generation, require_write](
-    sol::this_state lua_state, const game_handle &handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_write();
         return destroy_live_vehicle(
                    lua_state, handle, current_runtime_generation(),
@@ -1680,8 +1680,8 @@ void install_vehicle_api(
     vehicles_api.set_function(
         "set_owner",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-    const script_game_id &owner ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & owner ) {
         require_write();
         return set_vehicle_owner(
                    lua_state, handle, owner, current_runtime_generation(),
@@ -1690,8 +1690,8 @@ void install_vehicle_api(
     vehicles_api.set_function(
         "quote_full_repair",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &vehicle_handle,
-            const game_handle &mechanic_handle,
+            sol::this_state lua_state, const game_handle & vehicle_handle,
+            const game_handle & mechanic_handle,
     const sol::optional<double> &repair_multiplier ) {
         require_write();
         return quote_full_repair(
@@ -1702,8 +1702,8 @@ void install_vehicle_api(
     vehicles_api.set_function(
         "start_full_repair",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &vehicle_handle,
-            const game_handle &mechanic_handle,
+            sol::this_state lua_state, const game_handle & vehicle_handle,
+            const game_handle & mechanic_handle,
     const sol::optional<double> &repair_multiplier ) {
         require_write();
         return start_full_repair(
@@ -1714,8 +1714,8 @@ void install_vehicle_api(
     vehicles_api.set_function(
         "open_part_service",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &vehicle_handle,
-            const game_handle &mechanic_handle,
+            sol::this_state lua_state, const game_handle & vehicle_handle,
+            const game_handle & mechanic_handle,
             const sol::optional<double> &repair_multiplier,
     const sol::optional<double> &install_multiplier ) {
         require_write();

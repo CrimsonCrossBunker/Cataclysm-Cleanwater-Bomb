@@ -391,9 +391,9 @@ void mission::fail( avatar &player_character )
     "on_mission_end", {
         {
             "mission",
-        cata::lua_platform::native_callback_mission {
-            uid, identity_generation_
-        }
+            cata::lua_platform::native_callback_mission {
+                uid, identity_generation_
+            }
         },
         { "success", false }
     } );
@@ -535,9 +535,9 @@ void mission::wrap_up( avatar &player_character )
     "on_mission_end", {
         {
             "mission",
-        cata::lua_platform::native_callback_mission {
-            uid, identity_generation_
-        }
+            cata::lua_platform::native_callback_mission {
+                uid, identity_generation_
+            }
         },
         { "success", true }
     } );

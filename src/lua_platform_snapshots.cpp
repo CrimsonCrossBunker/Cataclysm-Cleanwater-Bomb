@@ -384,7 +384,7 @@ sol::table item_contents_snapshot( sol::this_state lua, const Character &player,
 
     sol::state_view state( lua );
     const native_handle_result<item> resolved = item_handle.resolve_item(
-            runtime_generation, world_generation );
+                runtime_generation, world_generation );
     if( !resolved ) {
         return make_game_error_result( state, *resolved.error );
     }
@@ -445,7 +445,7 @@ sol::table item_contents_snapshot( sol::this_state lua, const Character &player,
 }
 
 sol::table current_tile_snapshot( sol::this_state lua, const Character &player,
-                                   sol::optional<int> requested_field_limit )
+                                  sol::optional<int> requested_field_limit )
 {
     const int field_limit = bounded_limit( requested_field_limit, default_field_snapshot_limit,
                                            maximum_snapshot_limit, "services.current_tile_snapshot" );
@@ -604,8 +604,8 @@ sol::table missions_snapshot( sol::this_state lua, const Character &player,
                                           avatar_player->get_active_missions() :
                                           std::vector<mission *>();
     const std::vector<mission *> completed = avatar_player != nullptr ?
-                                             avatar_player->get_completed_missions() :
-                                             std::vector<mission *>();
+            avatar_player->get_completed_missions() :
+            std::vector<mission *>();
     const std::vector<mission *> failed = avatar_player != nullptr ?
                                           avatar_player->get_failed_missions() :
                                           std::vector<mission *>();
@@ -755,16 +755,16 @@ void install_snapshot_api(
     std::function<void()> require_read )
 {
     services.set_function( "character_snapshot", [
-        current_runtime_generation, current_world_generation, require_read
-    ]( sol::this_state lua, const game_handle &handle ) {
+                            current_runtime_generation, current_world_generation, require_read
+    ]( sol::this_state lua, const game_handle & handle ) {
         require_read();
         return character_value_result(
                    lua, handle, current_runtime_generation(),
                    current_world_generation(), character_snapshot );
     } );
     services.set_function( "movement_modes_snapshot", [
-        current_runtime_generation, current_world_generation, require_read
-    ]( sol::this_state lua, const game_handle &handle ) {
+                            current_runtime_generation, current_world_generation, require_read
+    ]( sol::this_state lua, const game_handle & handle ) {
         require_read();
         return character_value_result(
                    lua, handle, current_runtime_generation(),
@@ -779,54 +779,54 @@ void install_snapshot_api(
         return weather_snapshot( lua );
     } );
     services.set_function( "inventory_snapshot", [
-        current_runtime_generation, current_world_generation, require_read
-    ]( sol::this_state lua, const game_handle &handle, sol::optional<int> limit ) {
+                            current_runtime_generation, current_world_generation, require_read
+    ]( sol::this_state lua, const game_handle & handle, sol::optional<int> limit ) {
         require_read();
         return character_value_result(
                    lua, handle, current_runtime_generation(),
                    current_world_generation(), [limit]( sol::this_state state,
-        const Character &character ) {
+        const Character & character ) {
             return inventory_snapshot( state, character, limit );
         } );
     } );
     services.set_function( "effects_snapshot", [
-        current_runtime_generation, current_world_generation, require_read
-    ]( sol::this_state lua, const game_handle &handle, sol::optional<int> limit ) {
+                            current_runtime_generation, current_world_generation, require_read
+    ]( sol::this_state lua, const game_handle & handle, sol::optional<int> limit ) {
         require_read();
         return character_value_result(
                    lua, handle, current_runtime_generation(),
                    current_world_generation(), [limit]( sol::this_state state,
-        const Character &character ) {
+        const Character & character ) {
             return effects_snapshot( state, character, limit );
         } );
     } );
     services.set_function( "skills_snapshot", [
-        current_runtime_generation, current_world_generation, require_read
-    ]( sol::this_state lua, const game_handle &handle, sol::optional<int> limit ) {
+                            current_runtime_generation, current_world_generation, require_read
+    ]( sol::this_state lua, const game_handle & handle, sol::optional<int> limit ) {
         require_read();
         return character_value_result(
                    lua, handle, current_runtime_generation(),
                    current_world_generation(), [limit]( sol::this_state state,
-        const Character &character ) {
+        const Character & character ) {
             return skills_snapshot( state, character, limit );
         } );
     } );
     services.set_function( "equipment_snapshot", [
-        current_runtime_generation, current_world_generation, require_read
-    ]( sol::this_state lua, const game_handle &handle, sol::optional<int> limit ) {
+                            current_runtime_generation, current_world_generation, require_read
+    ]( sol::this_state lua, const game_handle & handle, sol::optional<int> limit ) {
         require_read();
         return character_value_result(
                    lua, handle, current_runtime_generation(),
                    current_world_generation(), [limit]( sol::this_state state,
-        const Character &character ) {
+        const Character & character ) {
             return equipment_snapshot( state, character, limit );
         } );
     } );
     services.set_function( "item_contents_snapshot", [
-        current_runtime_generation, current_world_generation, require_read
-    ]( sol::this_state lua, const game_handle &character_handle,
-       const game_handle &item_handle, std::optional<int> offset,
-       sol::optional<int> limit ) {
+                            current_runtime_generation, current_world_generation, require_read
+                        ]( sol::this_state lua, const game_handle & character_handle,
+                              const game_handle & item_handle, std::optional<int> offset,
+    sol::optional<int> limit ) {
         require_read();
         sol::state_view state( lua );
         std::optional<game_handle_error> error;
@@ -843,69 +843,69 @@ void install_snapshot_api(
                    current_world_generation(), offset, limit );
     } );
     services.set_function( "current_tile_snapshot", [
-        current_runtime_generation, current_world_generation, require_read
-    ]( sol::this_state lua, const game_handle &handle, sol::optional<int> limit ) {
+                            current_runtime_generation, current_world_generation, require_read
+    ]( sol::this_state lua, const game_handle & handle, sol::optional<int> limit ) {
         require_read();
         return character_value_result(
                    lua, handle, current_runtime_generation(),
                    current_world_generation(), [limit]( sol::this_state state,
-        const Character &character ) {
+        const Character & character ) {
             return current_tile_snapshot( state, character, limit );
         } );
     } );
     services.set_function( "mutations_snapshot", [
-        current_runtime_generation, current_world_generation, require_read
-    ]( sol::this_state lua, const game_handle &handle, sol::optional<int> limit ) {
+                            current_runtime_generation, current_world_generation, require_read
+    ]( sol::this_state lua, const game_handle & handle, sol::optional<int> limit ) {
         require_read();
         return character_value_result(
                    lua, handle, current_runtime_generation(),
                    current_world_generation(), [limit]( sol::this_state state,
-        const Character &character ) {
+        const Character & character ) {
             return mutations_snapshot( state, character, limit );
         } );
     } );
     services.set_function( "bionics_snapshot", [
-        current_runtime_generation, current_world_generation, require_read
-    ]( sol::this_state lua, const game_handle &handle, sol::optional<int> limit ) {
+                            current_runtime_generation, current_world_generation, require_read
+    ]( sol::this_state lua, const game_handle & handle, sol::optional<int> limit ) {
         require_read();
         return character_value_result(
                    lua, handle, current_runtime_generation(),
                    current_world_generation(), [limit]( sol::this_state state,
-        const Character &character ) {
+        const Character & character ) {
             return bionics_snapshot( state, character, limit );
         } );
     } );
     services.set_function( "missions_snapshot", [
-        current_runtime_generation, current_world_generation, require_read
-    ]( sol::this_state lua, const game_handle &handle, sol::optional<int> limit ) {
+                            current_runtime_generation, current_world_generation, require_read
+    ]( sol::this_state lua, const game_handle & handle, sol::optional<int> limit ) {
         require_read();
         return character_value_result(
                    lua, handle, current_runtime_generation(),
                    current_world_generation(), [limit]( sol::this_state state,
-        const Character &character ) {
+        const Character & character ) {
             return missions_snapshot( state, character, limit );
         } );
     } );
     services.set_function( "activity_snapshot", [
-        current_runtime_generation, current_world_generation, require_read
-    ]( sol::this_state lua, const game_handle &handle, sol::optional<int> limit ) {
+                            current_runtime_generation, current_world_generation, require_read
+    ]( sol::this_state lua, const game_handle & handle, sol::optional<int> limit ) {
         require_read();
         return character_value_result(
                    lua, handle, current_runtime_generation(),
                    current_world_generation(), [limit]( sol::this_state state,
-        const Character &character ) {
+        const Character & character ) {
             return activity_snapshot( state, character, limit );
         } );
     } );
     services.set_function( "nearby_creatures_snapshot", [
-        current_runtime_generation, current_world_generation, require_read
-    ]( sol::this_state lua, const game_handle &handle,
-       sol::optional<int> radius, sol::optional<int> limit ) {
+                            current_runtime_generation, current_world_generation, require_read
+                        ]( sol::this_state lua, const game_handle & handle,
+    sol::optional<int> radius, sol::optional<int> limit ) {
         require_read();
         return character_value_result(
                    lua, handle, current_runtime_generation(),
                    current_world_generation(), [radius, limit]( sol::this_state state,
-        const Character &character ) {
+        const Character & character ) {
             return nearby_creatures_snapshot( state, character, radius, limit );
         } );
     } );

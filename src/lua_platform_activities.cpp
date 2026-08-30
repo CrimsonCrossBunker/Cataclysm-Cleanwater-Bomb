@@ -118,7 +118,7 @@ std::optional<item_location> owned_item_location(
         return std::nullopt;
     }
     std::optional<item_location> result;
-    character.visit_items( [&character, target, &result]( item *candidate, item * ) {
+    character.visit_items( [&character, target, &result]( item * candidate, item * ) {
         if( candidate == target ) {
             result.emplace( character, target );
             return VisitResponse::ABORT;
@@ -200,8 +200,8 @@ void install_activity_api(
         "snapshot",
         [require_read, current_runtime_generation,
                        current_world_generation](
-                           sol::this_state lua,
-                           const game_handle &handle ) {
+            sol::this_state lua,
+    const game_handle & handle ) {
         require_read();
         sol::state_view state( lua );
         std::optional<game_handle_error> error;
@@ -221,10 +221,10 @@ void install_activity_api(
         "assign_timed",
         [require_write, current_runtime_generation,
                         current_world_generation](
-                            sol::this_state lua,
-                            const game_handle &handle,
-                            const script_game_id &id,
-                            const script_time_duration &duration ) {
+            sol::this_state lua,
+            const game_handle & handle,
+            const script_game_id & id,
+    const script_time_duration & duration ) {
         require_write();
         if( id.kind() != "activity" || !id.is_valid() ) {
             throw std::invalid_argument(
@@ -297,9 +297,9 @@ void install_activity_api(
         "assign_npc_job",
         [require_write, current_runtime_generation,
                         current_world_generation](
-                            sol::this_state lua,
-                            const game_handle &handle,
-                            const std::string &job ) {
+            sol::this_state lua,
+            const game_handle & handle,
+    const std::string & job ) {
         require_write();
         if( job.empty() || job.size() > maximum_activity_job_bytes ||
             job.find( '\0' ) != std::string::npos ) {
@@ -400,8 +400,8 @@ void install_activity_api(
         "dismount",
         [require_write, current_runtime_generation,
                         current_world_generation](
-                            sol::this_state lua,
-                            const game_handle &npc_handle ) {
+            sol::this_state lua,
+    const game_handle & npc_handle ) {
         require_write();
         sol::state_view state( lua );
         std::optional<game_handle_error> error;
@@ -429,8 +429,8 @@ void install_activity_api(
         "drop_nonfavorite_items",
         [require_write, current_runtime_generation,
                         current_world_generation](
-                            sol::this_state lua,
-                            const game_handle &npc_handle ) {
+            sol::this_state lua,
+    const game_handle & npc_handle ) {
         require_write();
         sol::state_view state( lua );
         std::optional<game_handle_error> error;
@@ -469,8 +469,8 @@ void install_activity_api(
         "revert_npc_job",
         [require_write, current_runtime_generation,
                         current_world_generation](
-                            sol::this_state lua,
-                            const game_handle &handle ) {
+            sol::this_state lua,
+    const game_handle & handle ) {
         require_write();
         sol::state_view state( lua );
         std::optional<game_handle_error> error;
@@ -503,10 +503,10 @@ void install_activity_api(
         "socialize",
         [require_write, current_runtime_generation,
                         current_world_generation](
-                            sol::this_state lua,
-                            const game_handle &character_handle,
-                            const game_handle &partner_handle,
-                            const script_time_duration &duration ) {
+            sol::this_state lua,
+            const game_handle & character_handle,
+            const game_handle & partner_handle,
+    const script_time_duration & duration ) {
         require_write();
         const time_duration native_duration =
             checked_activity_duration(
@@ -549,13 +549,13 @@ void install_activity_api(
         "read",
         [require_write, current_runtime_generation,
                         current_world_generation](
-                            sol::this_state lua,
-                            const game_handle &character_handle,
-                            const game_handle &book_handle,
-                            const script_time_duration &duration,
-                            const sol::optional<game_handle> &ereader_handle,
-                            const sol::optional<bool> &continuous,
-                            const sol::optional<game_handle> &learner_handle ) {
+            sol::this_state lua,
+            const game_handle & character_handle,
+            const game_handle & book_handle,
+            const script_time_duration & duration,
+            const sol::optional<game_handle> &ereader_handle,
+            const sol::optional<bool> &continuous,
+    const sol::optional<game_handle> &learner_handle ) {
         require_write();
         const time_duration native_duration =
             checked_activity_duration(
@@ -624,12 +624,12 @@ void install_activity_api(
         "drop_item",
         [require_write, current_runtime_generation,
                         current_world_generation](
-                            sol::this_state lua,
-                            const game_handle &character_handle,
-                            const game_handle &item_handle,
-                            const std::int64_t quantity,
-                            const sol::optional<script_tripoint_coord> &placement,
-                            const sol::optional<bool> &force_ground ) {
+            sol::this_state lua,
+            const game_handle & character_handle,
+            const game_handle & item_handle,
+            const std::int64_t quantity,
+            const sol::optional<script_tripoint_coord> &placement,
+    const sol::optional<bool> &force_ground ) {
         require_write();
         if( quantity <= 0 ||
             quantity > std::numeric_limits<int>::max() ) {
@@ -649,7 +649,7 @@ void install_activity_api(
                 "services.activities.drop_item placement must be a relative map-square Tripoint" );
         }
         const tripoint_rel_ms native_placement = tripoint_rel_ms(
-                placement->to_native() );
+                    placement->to_native() );
         const game_handle_runtime runtime =
             current_runtime_generation();
         const std::size_t world = current_world_generation();
@@ -690,18 +690,18 @@ void install_activity_api(
                                 state, character->activity );
         return make_game_value_result(
                    state, sol::make_object(
-                   state, std::move( value ) ) );
+                       state, std::move( value ) ) );
     } );
 
     activities.set_function(
         "pickup_item",
         [require_write, current_runtime_generation,
                         current_world_generation](
-                            sol::this_state lua,
-                            const game_handle &character_handle,
-                            const game_handle &item_handle,
-                            const std::int64_t quantity,
-                            const sol::optional<bool> &autopickup ) {
+            sol::this_state lua,
+            const game_handle & character_handle,
+            const game_handle & item_handle,
+            const std::int64_t quantity,
+    const sol::optional<bool> &autopickup ) {
         require_write();
         if( quantity <= 0 ||
             quantity > std::numeric_limits<int>::max() ) {
@@ -791,11 +791,11 @@ void install_activity_api(
         "start_training",
         [require_write, current_runtime_generation,
                         current_world_generation](
-                            sol::this_state lua,
-                            const game_handle &teacher_handle,
-                            const sol::table &trainee_handles,
-                            const script_game_id &subject_id,
-                            const script_time_duration &duration ) {
+            sol::this_state lua,
+            const game_handle & teacher_handle,
+            const sol::table & trainee_handles,
+            const script_game_id & subject_id,
+    const script_time_duration & duration ) {
         require_write();
         const std::size_t participant_count =
             trainee_handles.size();
@@ -877,10 +877,10 @@ void install_activity_api(
         "wait_for_npc",
         [require_write, current_runtime_generation,
                         current_world_generation](
-                            sol::this_state lua,
-                            const game_handle &character_handle,
-                            const game_handle &npc_handle,
-                            const script_time_duration &duration ) {
+            sol::this_state lua,
+            const game_handle & character_handle,
+            const game_handle & npc_handle,
+    const script_time_duration & duration ) {
         require_write();
         const time_duration native_duration =
             checked_activity_duration(
@@ -917,8 +917,8 @@ void install_activity_api(
         "target_practice",
         [require_write, current_runtime_generation,
                         current_world_generation](
-                            sol::this_state lua,
-                            const game_handle &character_handle ) {
+            sol::this_state lua,
+    const game_handle & character_handle ) {
         require_write();
         sol::state_view state( lua );
         std::optional<game_handle_error> error;
@@ -941,8 +941,8 @@ void install_activity_api(
         "suspend",
         [require_write, current_runtime_generation,
                         current_world_generation](
-                            sol::this_state lua,
-                            const game_handle &character_handle ) {
+            sol::this_state lua,
+    const game_handle & character_handle ) {
         require_write();
         sol::state_view state( lua );
         std::optional<game_handle_error> error;
@@ -981,8 +981,8 @@ void install_activity_api(
         "resume",
         [require_write, current_runtime_generation,
                         current_world_generation](
-                            sol::this_state lua,
-                            const game_handle &character_handle ) {
+            sol::this_state lua,
+    const game_handle & character_handle ) {
         require_write();
         sol::state_view state( lua );
         std::optional<game_handle_error> error;
@@ -1020,8 +1020,8 @@ void install_activity_api(
         "clear_backlog",
         [require_write, current_runtime_generation,
                         current_world_generation](
-                            sol::this_state lua,
-                            const game_handle &character_handle ) {
+            sol::this_state lua,
+    const game_handle & character_handle ) {
         require_write();
         sol::state_view state( lua );
         std::optional<game_handle_error> error;
@@ -1047,8 +1047,8 @@ void install_activity_api(
         "cancel",
         [require_write, current_runtime_generation,
                         current_world_generation](
-                            sol::this_state lua,
-                            const game_handle &character_handle ) {
+            sol::this_state lua,
+    const game_handle & character_handle ) {
         require_write();
         sol::state_view state( lua );
         std::optional<game_handle_error> error;
@@ -1066,7 +1066,7 @@ void install_activity_api(
         sol::table value = state.create_table();
         value["changed"] = changed;
         value["activity"] = character_activity_snapshot(
-                             state, *character );
+                                state, *character );
         return make_game_value_result(
                    state, sol::make_object(
                        state, std::move( value ) ) );
@@ -1074,7 +1074,7 @@ void install_activity_api(
 
     activities.set_function(
         "offer_interruption",
-        [require_write]( const std::string &reason ) {
+    [require_write]( const std::string & reason ) {
         require_write();
         if( reason.size() > maximum_interruption_message_bytes ||
             reason.find( '\0' ) != std::string::npos ) {
@@ -1091,7 +1091,7 @@ void install_activity_api(
 
     activities.set_function(
         "offer_portal_storm_interruption",
-        [require_write]( const std::string &message ) {
+    [require_write]( const std::string & message ) {
         require_write();
         if( message.empty() ||
             message.size() > maximum_interruption_message_bytes ||

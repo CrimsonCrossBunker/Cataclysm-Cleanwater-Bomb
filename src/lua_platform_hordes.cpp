@@ -56,20 +56,20 @@ constexpr int all_horde_flavors =
 constexpr std::size_t initial_horde_token_owner_generation = 1;
 
 struct horde_token_owner {
-    explicit horde_token_owner( const std::size_t generation ) :
-        generation_( generation ) {}
+        explicit horde_token_owner( const std::size_t generation ) :
+            generation_( generation ) {}
 
-    bool is_active() const noexcept {
-        return active_.load( std::memory_order_acquire );
-    }
+        bool is_active() const noexcept {
+            return active_.load( std::memory_order_acquire );
+        }
 
-    void retire() noexcept {
-        active_.store( false, std::memory_order_release );
-    }
+        void retire() noexcept {
+            active_.store( false, std::memory_order_release );
+        }
 
-    std::size_t generation() const noexcept {
-        return generation_;
-    }
+        std::size_t generation() const noexcept {
+            return generation_;
+        }
 
     private:
         std::atomic<bool> active_ { true };
@@ -1796,14 +1796,14 @@ sol::table alert_entity(
     if( !inserted.inserted ) {
         if( !rollback( std::move( inserted.node ) ) ) {
             return make_game_error_result(
-                       state, game_handle_error{
+            state, game_handle_error{
                 "rollback_failed",
                 "Horde entity alert insertion failed and the original entity "
                 "could not be restored"
             } );
         }
         return make_game_error_result(
-                   state, game_handle_error{
+        state, game_handle_error{
             "rolled_back",
             "Horde entity alert insertion failed; the original entity was "
             "restored"
@@ -1820,14 +1820,14 @@ sol::table alert_entity(
                 inserted.position );
         if( !rollback( std::move( rollback_node ) ) ) {
             return make_game_error_result(
-                       state, game_handle_error{
+            state, game_handle_error{
                 "rollback_failed",
                 "Horde entity alert commit could not be resolved and the "
                 "original entity could not be restored"
             } );
         }
         return make_game_error_result(
-                   state, game_handle_error{
+        state, game_handle_error{
             "rolled_back",
             "Horde entity alert commit could not be resolved; the original "
             "entity was restored"

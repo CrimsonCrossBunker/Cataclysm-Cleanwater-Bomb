@@ -430,11 +430,12 @@ void suffer::while_grabbed( Character &you )
             pressure_absorbed = false;
         }
     };
-    const auto absorb_sub_bodypart_pressure = [&]( const sub_bodypart_id & sbp, float pressure_amount ) {
+    const auto absorb_sub_bodypart_pressure = [&]( const sub_bodypart_id & sbp,
+    float pressure_amount ) {
         damage_instance pressure( damage_bash, pressure_amount );
         you.absorb_hit( sbp, pressure, false );
         if( pressure.total_damage() > 0.0f ) {
-            if ( sbp == sub_body_part_head_throat.id() ) {
+            if( sbp == sub_body_part_head_throat.id() ) {
                 you.absorb_hit( sub_body_part_torso_neck.id(), pressure, false );
                 if( pressure.total_damage() > 0.0f ) {
                     pressure_absorbed = false;
@@ -2149,7 +2150,7 @@ void Character::apply_wetness_morale( units::temperature temperature )
 
     // Sensitivity scales how much being wet affects morale, ±50% across 0..500.
     const double sens_mult = clamp( 1.0 + 0.5 * std::log( std::clamp( get_sensitive(), 1,
-                                           500 ) / 100.0 ) / std::log( 5.0 ), 0.5, 1.5 );
+                                    500 ) / 100.0 ) / std::log( 5.0 ), 0.5, 1.5 );
     const int scaled_effect = round( morale_effect * sens_mult );
     if( scaled_effect != 0 || morale_effect == 0 ) {
         morale_effect = scaled_effect;

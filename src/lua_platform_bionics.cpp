@@ -1146,7 +1146,7 @@ void install_bionic_api(
     bionics.set_function(
         "quote_limb_repairs",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_read();
         return quote_bionic_limb_repairs(
                    lua_state, handle,
@@ -1155,7 +1155,7 @@ void install_bionic_api(
     bionics.set_function(
         "repair_limbs",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_write();
         return repair_bionic_limbs(
                    lua_state, handle,

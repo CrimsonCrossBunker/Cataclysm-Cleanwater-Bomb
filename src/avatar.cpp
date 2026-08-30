@@ -166,7 +166,7 @@ void avatar::control_npc( npc &np, const bool debug )
     const character_id new_character = np.getID();
     const character_id previous_character = getID();
     const std::function<void( npc & )> update_npc =
-        [previous_character, new_character]( npc &guy ) {
+    [previous_character, new_character]( npc & guy ) {
         guy.update_missions_target( previous_character, new_character );
     };
     overmap_buffer.foreach_npc( update_npc );

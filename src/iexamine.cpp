@@ -3316,9 +3316,11 @@ void iexamine::water_plant( Character &you, const tripoint_bub_ms &examp )
     const int stage_idx = get_plant_current_stage_idx_from_effective( here, examp );
     const std::string stage = stage_idx >= 0 ?
                               seed->type->seed->get_growth_stages()[stage_idx].first.str() : "";
+    const std::map<std::string, double> water_context = {
+        { "water_added", static_cast<double>( irrigation::WATER_PER_POUR ) }
+    };
     run_plant_lifecycle_event(
-        "water", you, here, examp, *seed, stage, stage, {},
-    { { "water_added", static_cast<double>( irrigation::WATER_PER_POUR ) } } );
+        "water", you, here, examp, *seed, stage, stage, {}, water_context );
 
     you.add_msg_if_player( m_good, _( "You pour some water on the %s." ), seed->get_plant_name() );
 }
@@ -3608,27 +3610,34 @@ void iexamine::run_plant_lifecycle_event(
     const std::map<std::string, std::string> &string_context,
     const std::map<std::string, double> &num_context )
 {
-    const auto select_eocs = [phase]( const auto &source ) ->
-    const std::vector<effect_on_condition_id> * {
-        if( phase == "plant" ) {
+    using eoc_collection = std::vector<effect_on_condition_id>;
+    const auto select_eocs = [phase]( const auto & source ) -> const eoc_collection * {
+        if( phase == "plant" )
+        {
             return &source.eoc_on_plant;
         }
-        if( phase == "grow" ) {
+        if( phase == "grow" )
+        {
             return &source.eoc_on_grow;
         }
-        if( phase == "mature" ) {
+        if( phase == "mature" )
+        {
             return &source.eoc_on_mature;
         }
-        if( phase == "overgrow" ) {
+        if( phase == "overgrow" )
+        {
             return &source.eoc_on_overgrow;
         }
-        if( phase == "harvest" ) {
+        if( phase == "harvest" )
+        {
             return &source.eoc_on_harvest;
         }
-        if( phase == "fertilize" ) {
+        if( phase == "fertilize" )
+        {
             return &source.eoc_on_fertilize;
         }
-        if( phase == "water" ) {
+        if( phase == "water" )
+        {
             return &source.eoc_on_water;
         }
         return nullptr;

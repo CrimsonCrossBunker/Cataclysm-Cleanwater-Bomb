@@ -292,9 +292,9 @@ std::vector<std::string> collect_native_mapgen_factory_usages(
         return {};
     }
     return dispatch_native_hook_result(
-               "on_make_mapgen_factory_list", {
-                   { "candidates", candidates }
-               } ).results;
+    "on_make_mapgen_factory_list", {
+        { "candidates", candidates }
+    } ).results;
 }
 
 void dispatch_native_monster_spawn(
@@ -400,7 +400,7 @@ native_hook_result dispatch_native_dialogue_hook(
 void clear_dialogue_response_callbacks()
 {
     cata::lua_platform::dialogue::clear_response_callbacks(
-               cata::lua_platform::dialogue::response_callback_origin::platform );
+        cata::lua_platform::dialogue::response_callback_origin::platform );
 }
 
 void begin_dialogue_session( ::dialogue &d )

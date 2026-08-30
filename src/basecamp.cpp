@@ -56,7 +56,7 @@
 #include "type_id.h"
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-#include "lua_platform_handle.h"
+    #include "lua_platform_handle.h"
 #endif
 
 static const flag_id json_flag_PSEUDO( "PSEUDO" );
@@ -239,7 +239,7 @@ bool resource_change_sets_equal(
     std::vector<bool> matched( rhs.size(), false );
     for( const basecamp_platform_resource_change &left : lhs ) {
         const auto right = std::find_if( rhs.begin(), rhs.end(),
-        [&left, &rhs, &matched]( const basecamp_platform_resource_change &candidate ) {
+        [&left, &rhs, &matched]( const basecamp_platform_resource_change & candidate ) {
             const std::size_t index = static_cast<std::size_t>( &candidate - rhs.data() );
             return !matched[index] && candidate.resource_id == left.resource_id &&
                    candidate.delta == left.delta;
@@ -264,7 +264,7 @@ bool validate_resource_work_against_resources(
 {
     for( const basecamp_platform_resource_change &change : work.resource_inputs ) {
         const auto found = std::find_if( resources.begin(), resources.end(),
-        [&change]( const basecamp_resource &resource ) {
+        [&change]( const basecamp_resource & resource ) {
             return resource.fake_id == change.resource_id;
         } );
         if( found == resources.end() ) {
@@ -274,7 +274,7 @@ bool validate_resource_work_against_resources(
     }
     for( const basecamp_platform_resource_change &change : work.resource_outputs ) {
         const auto found = std::find_if( resources.begin(), resources.end(),
-        [&change]( const basecamp_resource &resource ) {
+        [&change]( const basecamp_resource & resource ) {
             return resource.fake_id == change.resource_id;
         } );
         if( found == resources.end() ) {
@@ -308,7 +308,7 @@ bool apply_platform_resource_availability(
     }
     for( const basecamp_platform_resource_change &change : changes ) {
         const auto found = std::find_if( normalized.begin(), normalized.end(),
-        [&change]( const basecamp_resource &resource ) {
+        [&change]( const basecamp_resource & resource ) {
             return resource.fake_id == change.resource_id;
         } );
         if( found == normalized.end() ) {
@@ -321,8 +321,8 @@ bool apply_platform_resource_availability(
             if( outstanding_liability != nullptr ) {
                 const auto liability = std::find_if(
                                            outstanding_liability->begin(),
-                outstanding_liability->end(), [&change](
-                    const basecamp_platform_resource_change &candidate ) {
+                                           outstanding_liability->end(), [&change](
+                const basecamp_platform_resource_change & candidate ) {
                     return candidate.resource_id == change.resource_id;
                 } );
                 if( liability != outstanding_liability->end() ) {
@@ -359,7 +359,7 @@ bool apply_platform_resource_availability(
                 remaining -= applied;
             } else {
                 const std::uint64_t applied = std::min( remaining,
-                                          static_cast<std::uint64_t>( resource.available ) );
+                                                        static_cast<std::uint64_t>( resource.available ) );
                 resource.available -= static_cast<int>( applied );
                 remaining -= applied;
             }
@@ -384,7 +384,7 @@ bool apply_platform_resource_consumption(
     }
     for( const basecamp_platform_resource_change &change : changes ) {
         const auto found = std::find_if( normalized.begin(), normalized.end(),
-        [&change]( const basecamp_resource &resource ) {
+        [&change]( const basecamp_resource & resource ) {
             return resource.fake_id == change.resource_id;
         } );
         if( found == normalized.end() ) {
@@ -494,7 +494,7 @@ bool apply_platform_food_delta( faction &owner, const std::int64_t delta,
         nutrients added;
         added.calories = delta * 1000;
         const nutrients applied = owner.add_to_food_supply(
-                                       { { calendar::turn_zero, added } } );
+        { { calendar::turn_zero, added } } );
         if( applied.calories != added.calories ) {
             owner.debug_food_supply() = before;
             error = "resource_work food output or refund was not applied atomically";
@@ -799,7 +799,7 @@ bool recipe_escrow_shape_matches_work(
             return false;
         }
         const auto holder = std::find_if( work.source_holders.begin(),
-        work.source_holders.end(), [&entry]( const basecamp_platform_recipe_holder &candidate ) {
+        work.source_holders.end(), [&entry]( const basecamp_platform_recipe_holder & candidate ) {
             return recipe_holders_equal( entry.source_holder, candidate );
         } );
         const bool is_output_holder = !entry.tool && recipe_holders_equal(
@@ -857,9 +857,9 @@ bool recipe_escrow_matches_work( const basecamp_platform_recipe_work &work,
         }
     }
     const time_duration expected_duration = making.batch_duration(
-                                             *worker,
-                                             crafting_cost_context::for_recipe( *worker, making ),
-                                             work.batch );
+            *worker,
+            crafting_cost_context::for_recipe( *worker, making ),
+            work.batch );
     if( to_turns<std::int64_t>( expected_duration ) != work.duration_turns ) {
         error = "recipe_work duration does not match the authoritative recipe duration";
         return false;
@@ -900,7 +900,7 @@ bool upgrade_escrow_shape_matches_work(
             return false;
         }
         const bool known_holder = std::any_of( work.source_holders.begin(),
-        work.source_holders.end(), [&entry]( const basecamp_platform_recipe_holder &holder ) {
+        work.source_holders.end(), [&entry]( const basecamp_platform_recipe_holder & holder ) {
             return recipe_holders_equal( entry.source_holder, holder );
         } );
         if( !known_holder ) {
@@ -1014,7 +1014,8 @@ const std::array<basecamp_platform_task_kind_executor, 4> &platform_task_executo
                 validate_upgrade_work_parameters,
                 dispatch_upgrade_work_task
             }
-        }};
+        }
+    };
     return executors;
 }
 
@@ -1114,10 +1115,10 @@ bool dispatch_worker_reservation_task(
                 return false;
             }
             if( std::any_of( context.staged_tasks->begin(), context.staged_tasks->end(),
-            [&context]( const basecamp_platform_task &candidate ) {
-                const bool active = candidate.task_id != context.task->task_id &&
-                                     ( candidate.state == basecamp_platform_task_state::pending ||
-                                       candidate.state == basecamp_platform_task_state::running );
+            [&context]( const basecamp_platform_task & candidate ) {
+            const bool active = candidate.task_id != context.task->task_id &&
+                                ( candidate.state == basecamp_platform_task_state::pending ||
+                                  candidate.state == basecamp_platform_task_state::running );
                 return active && candidate.worker == context.worker->getID() &&
                        candidate.worker_identity_generation ==
                        context.worker->platform_identity_generation();
@@ -1176,8 +1177,8 @@ bool dispatch_worker_reservation_task(
                     return false;
                 }
                 const auto worker_it = std::find_if(
-                    context.staged_assigned->begin(), context.staged_assigned->end(),
-                [&context]( const npc_ptr &candidate ) {
+                                           context.staged_assigned->begin(), context.staged_assigned->end(),
+                [&context]( const npc_ptr & candidate ) {
                     return candidate && candidate.get() == context.worker.get();
                 } );
                 if( worker_it == context.staged_assigned->end() ) {
@@ -1242,7 +1243,7 @@ bool dispatch_resource_work_task(
     const std::int64_t food_output = work.food_output_kcal.value_or( 0 );
     const auto ledger_matches_work = [&]() {
         return resource_change_sets_equal( context.task->reserved_resources,
-                                            work.resource_inputs ) &&
+                                           work.resource_inputs ) &&
                context.task->reserved_food_kcal == food_input;
     };
 
@@ -1301,10 +1302,10 @@ bool dispatch_resource_work_task(
                 return false;
             }
             if( std::any_of( context.staged_tasks->begin(), context.staged_tasks->end(),
-            [&context]( const basecamp_platform_task &candidate ) {
-                const bool active = candidate.task_id != context.task->task_id &&
-                                     ( candidate.state == basecamp_platform_task_state::pending ||
-                                       candidate.state == basecamp_platform_task_state::running );
+            [&context]( const basecamp_platform_task & candidate ) {
+            const bool active = candidate.task_id != context.task->task_id &&
+                                ( candidate.state == basecamp_platform_task_state::pending ||
+                                  candidate.state == basecamp_platform_task_state::running );
                 return active && candidate.worker == context.worker->getID() &&
                        candidate.worker_identity_generation ==
                        context.worker->platform_identity_generation();
@@ -1372,8 +1373,8 @@ bool dispatch_resource_work_task(
                     return false;
                 }
                 const auto assigned = std::find_if(
-                                       context.staged_assigned->begin(),
-                context.staged_assigned->end(), [&context]( const npc_ptr &candidate ) {
+                                          context.staged_assigned->begin(),
+                context.staged_assigned->end(), [&context]( const npc_ptr & candidate ) {
                     return candidate && candidate.get() == context.worker.get();
                 } );
                 if( assigned == context.staged_assigned->end() ) {
@@ -1410,7 +1411,7 @@ bool dispatch_resource_work_task(
                     faction *owner = platform_task_owner( *context.camp, error );
                     if( owner == nullptr ||
                         !validate_platform_food_delta( *owner, food_output, error,
-                                                        outstanding_food_kcal ) ) {
+                                                       outstanding_food_kcal ) ) {
                         return false;
                     }
                 }
@@ -1435,8 +1436,8 @@ bool dispatch_resource_work_task(
 
             if( running ) {
                 const auto assigned = std::find_if(
-                                       context.staged_assigned->begin(),
-                context.staged_assigned->end(), [&context]( const npc_ptr &candidate ) {
+                                          context.staged_assigned->begin(),
+                context.staged_assigned->end(), [&context]( const npc_ptr & candidate ) {
                     return candidate && candidate.get() == context.worker.get();
                 } );
                 if( assigned != context.staged_assigned->end() ) {
@@ -1537,7 +1538,7 @@ bool dispatch_upgrade_work_task(
                 }
                 if( !context.camp->platform_validate_upgrade_target( work, error ) ||
                     !upgrade_escrow_matches_work( work, context.task->recipe_escrow,
-                            context.worker.get(), error ) ) {
+                                                  context.worker.get(), error ) ) {
                     return false;
                 }
                 if( !context.recipe_escrow->empty() &&
@@ -1585,7 +1586,7 @@ bool dispatch_upgrade_work_task(
                 context.task->state == basecamp_platform_task_state::completed_unclaimed ) {
                 if( context.task->recipe_escrow.empty() ||
                     !upgrade_escrow_shape_matches_work( work,
-                            context.task->recipe_escrow, error ) ) {
+                                                        context.task->recipe_escrow, error ) ) {
                     return false;
                 }
             } else if( !context.task->recipe_escrow.empty() ) {
@@ -1620,9 +1621,9 @@ bool dispatch_upgrade_work_task(
                 return false;
             }
             if( std::any_of( context.staged_tasks->begin(), context.staged_tasks->end(),
-            [&context]( const basecamp_platform_task &candidate ) {
-                return candidate.task_id != context.task->task_id &&
-                       platform_task_is_active( candidate ) &&
+            [&context]( const basecamp_platform_task & candidate ) {
+            return candidate.task_id != context.task->task_id &&
+                   platform_task_is_active( candidate ) &&
                        candidate.worker == context.worker->getID() &&
                        candidate.worker_identity_generation ==
                        context.worker->platform_identity_generation();
@@ -1632,7 +1633,7 @@ bool dispatch_upgrade_work_task(
             }
             if( !context.camp->platform_validate_upgrade_target( work, error ) ||
                 !upgrade_escrow_matches_work( work, *context.recipe_escrow,
-                        context.worker.get(), error ) ) {
+                                              context.worker.get(), error ) ) {
                 return false;
             }
             context.task->recipe_escrow = *context.recipe_escrow;
@@ -1688,7 +1689,7 @@ bool dispatch_upgrade_work_task(
                 return false;
             }
             const auto assigned = std::find_if( context.staged_assigned->begin(),
-            context.staged_assigned->end(), [&context]( const npc_ptr &candidate ) {
+            context.staged_assigned->end(), [&context]( const npc_ptr & candidate ) {
                 return candidate && candidate.get() == context.worker.get();
             } );
             if( assigned == context.staged_assigned->end() ) {
@@ -1746,8 +1747,8 @@ bool dispatch_upgrade_work_task(
                 context.task->finished_at = context.now;
                 if( context.staged_assigned != nullptr && context.worker != nullptr ) {
                     const auto assigned = std::find_if(
-                        context.staged_assigned->begin(), context.staged_assigned->end(),
-                    [&context]( const npc_ptr &candidate ) {
+                                              context.staged_assigned->begin(), context.staged_assigned->end(),
+                    [&context]( const npc_ptr & candidate ) {
                         return candidate && candidate.get() == context.worker.get();
                     } );
                     if( assigned != context.staged_assigned->end() ) {
@@ -1814,7 +1815,7 @@ bool dispatch_recipe_work_task(
                 context.task->state == basecamp_platform_task_state::completed_unclaimed ) {
                 if( context.task->recipe_escrow.empty() ||
                     !recipe_escrow_shape_matches_work( work,
-                            context.task->recipe_escrow, error ) ) {
+                                                       context.task->recipe_escrow, error ) ) {
                     return false;
                 }
             } else if( !context.task->recipe_escrow.empty() ) {
@@ -1849,9 +1850,9 @@ bool dispatch_recipe_work_task(
                 return false;
             }
             if( std::any_of( context.staged_tasks->begin(), context.staged_tasks->end(),
-            [&context]( const basecamp_platform_task &candidate ) {
-                const bool active = candidate.task_id != context.task->task_id &&
-                                     platform_task_is_active( candidate );
+            [&context]( const basecamp_platform_task & candidate ) {
+            const bool active = candidate.task_id != context.task->task_id &&
+                                platform_task_is_active( candidate );
                 return active && candidate.worker == context.worker->getID() &&
                        candidate.worker_identity_generation ==
                        context.worker->platform_identity_generation();
@@ -1927,8 +1928,8 @@ bool dispatch_recipe_work_task(
                 return false;
             }
             const auto assigned = std::find_if(
-                                       context.staged_assigned->begin(),
-            context.staged_assigned->end(), [&context]( const npc_ptr &candidate ) {
+                                      context.staged_assigned->begin(),
+            context.staged_assigned->end(), [&context]( const npc_ptr & candidate ) {
                 return candidate && candidate.get() == context.worker.get();
             } );
             if( assigned == context.staged_assigned->end() ) {
@@ -1943,7 +1944,7 @@ bool dispatch_recipe_work_task(
                                           *context.recipe_original_escrow ) ||
                     context.recipe_escrow->empty() ||
                     !recipe_escrow_shape_matches_work( *context.task->recipe_work,
-                            *context.recipe_escrow, error ) ) {
+                                                       *context.recipe_escrow, error ) ) {
                     if( error.empty() ) {
                         error = "recipe_work completion escrow is not fully preflighted";
                     }
@@ -1991,7 +1992,7 @@ bool stage_platform_task_refund(
     if( !task.resource_work ||
         !validate_basecamp_platform_resource_work( *task.resource_work, error ) ||
         !resource_change_sets_equal( task.reserved_resources,
-                                      task.resource_work->resource_inputs ) ||
+                                     task.resource_work->resource_inputs ) ||
         task.reserved_food_kcal != task.resource_work->food_input_kcal.value_or( 0 ) ) {
         error = "resource_work reservation cannot be refunded safely";
         return false;
@@ -2021,7 +2022,7 @@ bool basecamp_upgrade_orientation_flags( const recipe_id &recipe,
     rotation = 0;
     std::string direction_string;
 
-    const auto check_rotation = [&]( const std::string &flag, const int rotation_value ) {
+    const auto check_rotation = [&]( const std::string & flag, const int rotation_value ) {
         if( !recipe->has_flag( flag ) ) {
             return true;
         }
@@ -2064,7 +2065,7 @@ bool basecamp_upgrade_orientation_flags( const recipe_id &recipe,
         return false;
     }
 
-    const auto check_mirror = [&]( const std::string &flag, bool &target,
+    const auto check_mirror = [&]( const std::string & flag, bool & target,
     const char *axis ) {
         if( !recipe->has_flag( flag ) ) {
             return true;
@@ -2246,7 +2247,7 @@ bool validate_basecamp_platform_upgrade_work(
     }
     for( std::size_t index = 0; index < work.source_holders.size(); ++index ) {
         if( !validate_recipe_holder( work.source_holders[index],
-                                      "upgrade_work source holder", error ) ) {
+                                     "upgrade_work source holder", error ) ) {
             return false;
         }
         for( std::size_t prior = 0; prior < index; ++prior ) {
@@ -3048,7 +3049,7 @@ bool basecamp::recall_exact_worker( const npc_ptr &worker )
     }
     const auto found = std::find_if(
                            assigned_npcs.begin(), assigned_npcs.end(),
-    [&worker]( const npc_ptr &assigned ) {
+    [&worker]( const npc_ptr & assigned ) {
         return assigned && assigned.get() == worker.get();
     } );
     if( found == assigned_npcs.end() ) {
@@ -3065,7 +3066,7 @@ bool basecamp::has_exact_worker( const npc &worker ) const noexcept
 {
     return std::any_of(
                assigned_npcs.begin(), assigned_npcs.end(),
-    [&worker]( const npc_ptr &assigned ) {
+    [&worker]( const npc_ptr & assigned ) {
         return assigned && assigned.get() == &worker;
     } );
 }
@@ -3260,7 +3261,7 @@ bool basecamp::platform_normalize_resources(
             return false;
         }
         const auto existing = std::find_if( result.begin(), result.end(),
-        [&resource]( const basecamp_resource &candidate ) {
+        [&resource]( const basecamp_resource & candidate ) {
             return candidate.fake_id == resource.fake_id;
         } );
         if( existing == result.end() ) {
@@ -3323,7 +3324,7 @@ bool basecamp::platform_adjust_resources(
         }
 
         const auto resource = std::find_if( normalized.begin(), normalized.end(),
-        [&change]( const basecamp_resource &candidate ) {
+        [&change]( const basecamp_resource & candidate ) {
             return candidate.fake_id == change.resource_id;
         } );
         if( resource == normalized.end() ) {
@@ -3343,8 +3344,8 @@ bool basecamp::platform_adjust_resources(
             return false;
         }
         const auto liability = std::find_if( outstanding_resources.begin(),
-        outstanding_resources.end(), [&change](
-            const basecamp_platform_resource_change &candidate ) {
+                                             outstanding_resources.end(), [&change](
+        const basecamp_platform_resource_change & candidate ) {
             return candidate.resource_id == change.resource_id;
         } );
         const std::uint64_t reserved = liability == outstanding_resources.end() ? 0 :
@@ -3368,7 +3369,7 @@ bool basecamp::platform_adjust_resources(
                     continue;
                 }
                 const std::uint64_t applied = std::min( remaining,
-                                              static_cast<std::uint64_t>( candidate.available ) );
+                                                        static_cast<std::uint64_t>( candidate.available ) );
                 if( applied > static_cast<std::uint64_t>(
                         std::numeric_limits<int>::max() - candidate.consumed ) ) {
                     error = "resource consumption bookkeeping would overflow";
@@ -3383,8 +3384,8 @@ bool basecamp::platform_adjust_resources(
     // the native entries, so a rejected batch cannot partially consume stock.
     for( const basecamp_platform_resource_change &change : changes ) {
         std::uint64_t remaining = change.delta < 0 ?
-                                   static_cast<std::uint64_t>( -( change.delta + 1 ) ) + 1U :
-                                   static_cast<std::uint64_t>( change.delta );
+                                  static_cast<std::uint64_t>( -( change.delta + 1 ) ) + 1U :
+                                  static_cast<std::uint64_t>( change.delta );
         for( basecamp_resource &resource : resources ) {
             if( resource.fake_id != change.resource_id || remaining == 0 ) {
                 continue;
@@ -3397,7 +3398,7 @@ bool basecamp::platform_adjust_resources(
                 remaining -= applied;
             } else {
                 const std::uint64_t applied = std::min( remaining,
-                                          static_cast<std::uint64_t>( resource.available ) );
+                                                        static_cast<std::uint64_t>( resource.available ) );
                 resource.available -= static_cast<int>( applied );
                 resource.consumed += static_cast<int>( applied );
                 remaining -= applied;
@@ -3450,14 +3451,14 @@ bool basecamp::platform_reservation_liability(
         }
         if( task.reservation_discarded ||
             !resource_change_sets_equal( task.reserved_resources,
-                                          task.resource_work->resource_inputs ) ||
+                                         task.resource_work->resource_inputs ) ||
             task.reserved_food_kcal != task.resource_work->food_input_kcal.value_or( 0 ) ) {
             error = "resource_work reservation ledger is inconsistent";
             return false;
         }
         for( const basecamp_platform_resource_change &change : task.reserved_resources ) {
             const auto native = std::find_if( normalized.begin(), normalized.end(),
-            [&change]( const basecamp_resource &resource ) {
+            [&change]( const basecamp_resource & resource ) {
                 return resource.fake_id == change.resource_id;
             } );
             if( native == normalized.end() ) {
@@ -3465,13 +3466,13 @@ bool basecamp::platform_reservation_liability(
                 return false;
             }
             const auto existing = std::find_if( result.begin(), result.end(),
-            [&change]( const basecamp_platform_resource_change &candidate ) {
+            [&change]( const basecamp_platform_resource_change & candidate ) {
                 return candidate.resource_id == change.resource_id;
             } );
             if( existing == result.end() ) {
                 result.push_back( change );
             } else if( existing->delta > std::numeric_limits<std::int64_t>::max() -
-                        change.delta ) {
+                       change.delta ) {
                 error = "resource_work reservation liability overflows";
                 result.clear();
                 return false;
@@ -3502,8 +3503,8 @@ bool basecamp::platform_reservation_liability(
 std::vector<basecamp_platform_task> basecamp::platform_task_snapshot() const
 {
     std::vector<basecamp_platform_task> result = platform_tasks;
-    std::sort( result.begin(), result.end(), []( const basecamp_platform_task &lhs,
-    const basecamp_platform_task &rhs ) {
+    std::sort( result.begin(), result.end(), []( const basecamp_platform_task & lhs,
+    const basecamp_platform_task & rhs ) {
         return lhs.task_id < rhs.task_id;
     } );
     return result;
@@ -3517,7 +3518,7 @@ std::vector<basecamp_platform_expansion> basecamp::platform_expansion_snapshot()
         basecamp_platform_expansion snapshot = stored;
         const auto legacy = expansions.find( stored.direction );
         snapshot.work_in_progress = legacy != expansions.end() &&
-                                     !legacy->second.in_progress.empty();
+                                    !legacy->second.in_progress.empty();
         snapshot.camp_id = platform_id_;
         result.push_back( std::move( snapshot ) );
         static_cast<void>( expansion_id );
@@ -3548,9 +3549,9 @@ bool basecamp::platform_validate_expansion_placement(
         return false;
     }
     if( std::any_of( platform_expansions_.begin(), platform_expansions_.end(),
-    [&position]( const auto &entry ) {
-        return entry.second.position == position;
-    } ) ) {
+    [&position]( const auto & entry ) {
+    return entry.second.position == position;
+} ) ) {
         error = "an expansion already occupies the requested position";
         return false;
     }
@@ -3578,7 +3579,7 @@ bool basecamp::platform_validate_expansion_placement(
         target.om->mapgen_args( target.local );
     const std::map<recipe_id, translation> eligible_expansions =
         recipe_group::get_recipes_by_id( "all_faction_base_expansions", actual_terrain,
-                maybe_args );
+                                         maybe_args );
     if( !requested_recipe.is_valid() ||
         eligible_expansions.find( requested_recipe ) == eligible_expansions.end() ) {
         error = "expansion type is not eligible for the target OMT terrain";
@@ -3972,9 +3973,9 @@ bool basecamp::platform_can_remove( std::string &error ) const
     }
     for( const basecamp_platform_task &task : platform_tasks ) {
         const bool active = task.state == basecamp_platform_task_state::pending ||
-                             task.state == basecamp_platform_task_state::running ||
-                             task.state == basecamp_platform_task_state::refund_pending ||
-                             task.state == basecamp_platform_task_state::completed_unclaimed;
+                            task.state == basecamp_platform_task_state::running ||
+                            task.state == basecamp_platform_task_state::refund_pending ||
+                            task.state == basecamp_platform_task_state::completed_unclaimed;
         if( active || !task.recipe_escrow.empty() || task.upgrade_commit_marker != 0 ||
             task.upgrade_applying_marker != 0 || !task.reserved_resources.empty() ||
             task.reserved_food_kcal != 0 ) {
@@ -4075,19 +4076,19 @@ bool basecamp::platform_create_task( basecamp_platform_task &task, std::string &
         return false;
     }
     if( std::any_of( platform_tasks.begin(), platform_tasks.end(),
-    [&task]( const basecamp_platform_task &existing ) {
-        return existing.task_id == task.task_id;
-    } ) ) {
+    [&task]( const basecamp_platform_task & existing ) {
+    return existing.task_id == task.task_id;
+} ) ) {
         error = "task id is already in use";
         return false;
     }
     if( std::any_of( platform_tasks.begin(), platform_tasks.end(),
-    [&task]( const basecamp_platform_task &existing ) {
-        const bool active = existing.state == basecamp_platform_task_state::pending ||
-                             existing.state == basecamp_platform_task_state::running;
-        return active && existing.worker == task.worker &&
-               existing.worker_identity_generation == task.worker_identity_generation;
-    } ) ) {
+    [&task]( const basecamp_platform_task & existing ) {
+    const bool active = existing.state == basecamp_platform_task_state::pending ||
+                        existing.state == basecamp_platform_task_state::running;
+    return active && existing.worker == task.worker &&
+           existing.worker_identity_generation == task.worker_identity_generation;
+} ) ) {
         error = "worker already has an active Platform camp task";
         return false;
     }
@@ -4097,8 +4098,8 @@ bool basecamp::platform_create_task( basecamp_platform_task &task, std::string &
             return false;
         }
         if( std::any_of( platform_tasks.begin(), platform_tasks.end(),
-        [&task]( const basecamp_platform_task &existing ) {
-            if( existing.kind != basecamp_platform_upgrade_work_kind ||
+        [&task]( const basecamp_platform_task & existing ) {
+        if( existing.kind != basecamp_platform_upgrade_work_kind ||
                 !existing.upgrade_work || !task.upgrade_work ||
                 !platform_task_is_active( existing ) ) {
                 return false;
@@ -4124,8 +4125,8 @@ bool basecamp::platform_create_task( basecamp_platform_task &task, std::string &
     reserve_platform_task_id( task.task_id );
     std::vector<basecamp_platform_task> staged = platform_tasks;
     staged.push_back( task );
-    std::sort( staged.begin(), staged.end(), []( const basecamp_platform_task &lhs,
-    const basecamp_platform_task &rhs ) {
+    std::sort( staged.begin(), staged.end(), []( const basecamp_platform_task & lhs,
+    const basecamp_platform_task & rhs ) {
         return lhs.task_id < rhs.task_id;
     } );
     platform_tasks.swap( staged );
@@ -4139,7 +4140,7 @@ bool basecamp::platform_start_task( const std::uint64_t task_id,
                                     const time_duration duration, std::string &error )
 {
     auto task_it = std::find_if( platform_tasks.begin(), platform_tasks.end(),
-    [task_id]( const basecamp_platform_task &candidate ) {
+    [task_id]( const basecamp_platform_task & candidate ) {
         return candidate.task_id == task_id;
     } );
     if( task_it == platform_tasks.end() ) {
@@ -4154,7 +4155,7 @@ bool basecamp::platform_start_task( const std::uint64_t task_id,
     std::vector<basecamp_platform_task> staged_tasks = platform_tasks;
     std::vector<basecamp_resource> staged_resources = resources;
     auto staged_it = std::find_if( staged_tasks.begin(), staged_tasks.end(),
-    [task_id]( const basecamp_platform_task &candidate ) {
+    [task_id]( const basecamp_platform_task & candidate ) {
         return candidate.task_id == task_id;
     } );
     if( staged_it == staged_tasks.end() ) {
@@ -4178,7 +4179,7 @@ bool basecamp::platform_start_task( const std::uint64_t task_id,
         faction *owner_faction = platform_task_owner( *this, error );
         if( owner_faction == nullptr ||
             !apply_platform_food_delta( *owner_faction,
-                                         context.staged_food_delta_kcal, error ) ) {
+                                        context.staged_food_delta_kcal, error ) ) {
             return false;
         }
     }
@@ -4199,7 +4200,7 @@ bool basecamp::platform_start_task(
     std::string &error )
 {
     auto task_it = std::find_if( platform_tasks.begin(), platform_tasks.end(),
-    [task_id]( const basecamp_platform_task &candidate ) {
+    [task_id]( const basecamp_platform_task & candidate ) {
         return candidate.task_id == task_id;
     } );
     if( task_it == platform_tasks.end() ) {
@@ -4219,7 +4220,7 @@ bool basecamp::platform_start_task(
     std::vector<basecamp_platform_task> staged_tasks = platform_tasks;
     std::vector<basecamp_resource> staged_resources = resources;
     auto staged_it = std::find_if( staged_tasks.begin(), staged_tasks.end(),
-    [task_id]( const basecamp_platform_task &candidate ) {
+    [task_id]( const basecamp_platform_task & candidate ) {
         return candidate.task_id == task_id;
     } );
     if( staged_it == staged_tasks.end() ) {
@@ -4256,7 +4257,7 @@ bool basecamp::platform_finish_task( const std::uint64_t task_id,
                                      const bool complete, std::string &error )
 {
     auto task_it = std::find_if( platform_tasks.begin(), platform_tasks.end(),
-    [task_id]( const basecamp_platform_task &candidate ) {
+    [task_id]( const basecamp_platform_task & candidate ) {
         return candidate.task_id == task_id;
     } );
     if( task_it == platform_tasks.end() ) {
@@ -4271,7 +4272,7 @@ bool basecamp::platform_finish_task( const std::uint64_t task_id,
     std::vector<basecamp_platform_task> staged_tasks = platform_tasks;
     std::vector<basecamp_resource> staged_resources = resources;
     auto staged_it = std::find_if( staged_tasks.begin(), staged_tasks.end(),
-    [task_id]( const basecamp_platform_task &candidate ) {
+    [task_id]( const basecamp_platform_task & candidate ) {
         return candidate.task_id == task_id;
     } );
     if( staged_it == staged_tasks.end() ) {
@@ -4297,7 +4298,7 @@ bool basecamp::platform_finish_task( const std::uint64_t task_id,
         faction *owner_faction = platform_task_owner( *this, error );
         if( owner_faction == nullptr ||
             !apply_platform_food_delta( *owner_faction,
-                                         context.staged_food_delta_kcal, error ) ) {
+                                        context.staged_food_delta_kcal, error ) ) {
             return false;
         }
     }
@@ -4318,7 +4319,7 @@ bool basecamp::platform_finish_task(
     std::string &error )
 {
     auto task_it = std::find_if( platform_tasks.begin(), platform_tasks.end(),
-    [task_id]( const basecamp_platform_task &candidate ) {
+    [task_id]( const basecamp_platform_task & candidate ) {
         return candidate.task_id == task_id;
     } );
     if( task_it == platform_tasks.end() ) {
@@ -4368,7 +4369,7 @@ bool basecamp::platform_complete_recipe_task(
     std::string &error )
 {
     auto task_it = std::find_if( platform_tasks.begin(), platform_tasks.end(),
-    [task_id]( const basecamp_platform_task &candidate ) {
+    [task_id]( const basecamp_platform_task & candidate ) {
         return candidate.task_id == task_id;
     } );
     if( task_it == platform_tasks.end() ) {
@@ -4387,7 +4388,7 @@ bool basecamp::platform_complete_recipe_task(
     std::vector<npc_ptr> staged_assigned = assigned_npcs;
     std::vector<basecamp_platform_task> staged_tasks = platform_tasks;
     auto staged_it = std::find_if( staged_tasks.begin(), staged_tasks.end(),
-    [task_id]( const basecamp_platform_task &candidate ) {
+    [task_id]( const basecamp_platform_task & candidate ) {
         return candidate.task_id == task_id;
     } );
     if( staged_it == staged_tasks.end() ) {
@@ -4426,7 +4427,7 @@ bool basecamp::platform_claim_recipe_escrow(
     std::string &error )
 {
     auto task_it = std::find_if( platform_tasks.begin(), platform_tasks.end(),
-    [task_id]( const basecamp_platform_task &candidate ) {
+    [task_id]( const basecamp_platform_task & candidate ) {
         return candidate.task_id == task_id;
     } );
     if( task_it == platform_tasks.end() ) {
@@ -4461,7 +4462,7 @@ bool basecamp::platform_claim_recipe_escrow(
         }
         std::vector<basecamp_platform_task> staged_tasks = platform_tasks;
         auto staged_it = std::find_if( staged_tasks.begin(), staged_tasks.end(),
-        [task_id]( const basecamp_platform_task &candidate ) {
+        [task_id]( const basecamp_platform_task & candidate ) {
             return candidate.task_id == task_id;
         } );
         if( staged_it == staged_tasks.end() ) {
@@ -4483,7 +4484,7 @@ bool basecamp::platform_claim_recipe_escrow(
     }
     std::vector<basecamp_platform_task> staged_tasks = platform_tasks;
     auto staged_it = std::find_if( staged_tasks.begin(), staged_tasks.end(),
-    [task_id]( const basecamp_platform_task &candidate ) {
+    [task_id]( const basecamp_platform_task & candidate ) {
         return candidate.task_id == task_id;
     } );
     if( staged_it == staged_tasks.end() ) {
@@ -4515,7 +4516,7 @@ bool basecamp::platform_prepare_recipe_refund(
     std::string &error ) const
 {
     const auto task_it = std::find_if( platform_tasks.begin(), platform_tasks.end(),
-    [task_id]( const basecamp_platform_task &candidate ) {
+    [task_id]( const basecamp_platform_task & candidate ) {
         return candidate.task_id == task_id;
     } );
     if( task_it == platform_tasks.end() ) {
@@ -4546,12 +4547,12 @@ bool basecamp::platform_prepare_recipe_refund(
     if( !task_it->recipe_recovery_required ) {
         if( task_it->kind == basecamp_platform_recipe_work_kind &&
             !recipe_escrow_shape_matches_work( *task_it->recipe_work,
-                                                task_it->recipe_escrow, error ) ) {
+                                               task_it->recipe_escrow, error ) ) {
             return false;
         }
         if( task_it->kind == basecamp_platform_upgrade_work_kind &&
             !upgrade_escrow_shape_matches_work( *task_it->upgrade_work,
-                                                 task_it->recipe_escrow, error ) ) {
+                                                task_it->recipe_escrow, error ) ) {
             return false;
         }
     }
@@ -4568,7 +4569,7 @@ bool basecamp::platform_prepare_recipe_completion(
 {
     remaining_escrow.clear();
     const auto task_it = std::find_if( platform_tasks.begin(), platform_tasks.end(),
-    [task_id]( const basecamp_platform_task &candidate ) {
+    [task_id]( const basecamp_platform_task & candidate ) {
         return candidate.task_id == task_id;
     } );
     if( task_it == platform_tasks.end() ) {
@@ -4623,8 +4624,8 @@ bool basecamp::platform_prepare_recipe_completion(
     // The recipe result helper receives the exact detached component values,
     // preserving the engine's food/uncraft component inheritance semantics.
     const std::vector<item> result_items = making.create_results(
-                                             task_it->recipe_work->batch,
-                                             &consumed_components );
+            task_it->recipe_work->batch,
+            &consumed_components );
     if( result_items.empty() || result_items.size() > maximum_platform_recipe_escrow_items ) {
         error = "recipe_work authoritative recipe result is empty or unbounded";
         return false;
@@ -4681,7 +4682,7 @@ bool basecamp::platform_prepare_upgrade_completion(
 {
     remaining_escrow.clear();
     const auto task_it = std::find_if( platform_tasks.begin(), platform_tasks.end(),
-    [task_id]( const basecamp_platform_task &candidate ) {
+    [task_id]( const basecamp_platform_task & candidate ) {
         return candidate.task_id == task_id;
     } );
     if( task_it == platform_tasks.end() ) {
@@ -4703,7 +4704,7 @@ bool basecamp::platform_prepare_upgrade_completion(
     }
     if( !platform_validate_upgrade_target( *task_it->upgrade_work, error ) ||
         !upgrade_escrow_matches_work( *task_it->upgrade_work,
-                                       task_it->recipe_escrow, worker.get(), error ) ) {
+                                      task_it->recipe_escrow, worker.get(), error ) ) {
         return false;
     }
 
@@ -4729,7 +4730,7 @@ bool basecamp::platform_prepare_upgrade_completion(
         value.metadata = entry;
         std::string item_error;
         if( !deserialize_platform_recipe_item( entry.serialized_item,
-                                                value.value, item_error ) ) {
+                                               value.value, item_error ) ) {
             error = item_error;
             return false;
         }
@@ -4785,7 +4786,7 @@ bool basecamp::platform_complete_upgrade_task(
     std::string &error )
 {
     auto task_it = std::find_if( platform_tasks.begin(), platform_tasks.end(),
-    [task_id]( const basecamp_platform_task &candidate ) {
+    [task_id]( const basecamp_platform_task & candidate ) {
         return candidate.task_id == task_id;
     } );
     if( task_it == platform_tasks.end() ) {
@@ -4812,13 +4813,13 @@ bool basecamp::platform_complete_upgrade_task(
     }
     if( !platform_validate_upgrade_target( *task_it->upgrade_work, error ) ||
         !upgrade_escrow_matches_work( *task_it->upgrade_work,
-                                       task_it->recipe_escrow, worker.get(), error ) ) {
+                                      task_it->recipe_escrow, worker.get(), error ) ) {
         return false;
     }
     if( remaining_escrow.size() > maximum_platform_recipe_escrow_items ||
         ( !remaining_escrow.empty() &&
           !upgrade_escrow_shape_matches_work( *task_it->upgrade_work,
-                                              remaining_escrow, error ) ) ) {
+                  remaining_escrow, error ) ) ) {
         if( error.empty() ) {
             error = "upgrade_work completion escrow is outside its bound";
         }
@@ -4914,7 +4915,7 @@ bool basecamp::platform_complete_upgrade_task(
     }
 
     auto staged_task_it = std::find_if( staged_tasks.begin(), staged_tasks.end(),
-    [task_id]( const basecamp_platform_task &candidate ) {
+    [task_id]( const basecamp_platform_task & candidate ) {
         return candidate.task_id == task_id;
     } );
     if( staged_task_it == staged_tasks.end() ) {
@@ -4984,10 +4985,10 @@ bool basecamp::platform_complete_upgrade_task(
         oter_str_id( work.upgrade_id ).is_valid() ?
         std::optional<oter_id>( oter_id( work.upgrade_id ) ) : std::nullopt;
     const ret_val<void> mapgen_result = run_mapgen_update_func_transactional(
-                                           upgrade.get_blueprint(), work.target_position,
-                                           work.mapgen_args, nullptr, true,
-                                           mirror_horizontal, mirror_vertical, rotation,
-                                           expected_terrain, terrain_publication );
+                                            upgrade.get_blueprint(), work.target_position,
+                                            work.mapgen_args, nullptr, true,
+                                            mirror_horizontal, mirror_vertical, rotation,
+                                            expected_terrain, terrain_publication );
     if( !mapgen_result.success() ) {
         error = "upgrade_work mapgen update failed: " + mapgen_result.str();
         return false;
@@ -5009,7 +5010,7 @@ bool basecamp::platform_mark_recipe_refund_pending(
     std::string &error )
 {
     auto task_it = std::find_if( platform_tasks.begin(), platform_tasks.end(),
-    [task_id]( const basecamp_platform_task &candidate ) {
+    [task_id]( const basecamp_platform_task & candidate ) {
         return candidate.task_id == task_id;
     } );
     if( task_it == platform_tasks.end() ) {
@@ -5134,7 +5135,7 @@ void basecamp::platform_retire_tasks_for_worker( npc &worker )
         faction *owner_faction = platform_task_owner( *this, refund_error );
         if( owner_faction == nullptr ||
             !validate_platform_food_delta( *owner_faction, food_refund_kcal,
-                                            refund_error ) ) {
+                                           refund_error ) ) {
             can_refund = false;
         }
     }
@@ -5187,12 +5188,12 @@ void basecamp::platform_retire_tasks_for_worker( npc &worker )
 
 bool basecamp::platform_retire_tasks_for_camp( const bool owner_change )
 {
-    const auto has_item_escrow = []( const basecamp_platform_task &task ) {
+    const auto has_item_escrow = []( const basecamp_platform_task & task ) {
         return ( task.kind == basecamp_platform_recipe_work_kind ||
                  task.kind == basecamp_platform_upgrade_work_kind ) &&
                !task.recipe_escrow.empty();
     };
-    const auto is_item_escrow_state = []( const basecamp_platform_task &task ) {
+    const auto is_item_escrow_state = []( const basecamp_platform_task & task ) {
         return task.state == basecamp_platform_task_state::pending ||
                task.state == basecamp_platform_task_state::running ||
                task.state == basecamp_platform_task_state::completed_unclaimed;
@@ -5246,7 +5247,7 @@ bool basecamp::platform_retire_tasks_for_camp( const bool owner_change )
         faction *owner_faction = platform_task_owner( *this, refund_error );
         if( owner_faction == nullptr ||
             !validate_platform_food_delta( *owner_faction, food_refund_kcal,
-                                            refund_error ) ) {
+                                           refund_error ) ) {
             can_refund = false;
         }
     }
@@ -5285,7 +5286,7 @@ bool basecamp::platform_retire_tasks_for_camp( const bool owner_change )
     for( const npc_ptr &candidate : assigned_npcs ) {
         const bool is_platform_reservation = candidate &&
                                              std::any_of( released_workers.begin(),
-                                             released_workers.end(),
+                                                     released_workers.end(),
         [&candidate]( const std::pair<character_id, std::uint64_t> &identity ) {
             return candidate->getID() == identity.first &&
                    candidate->platform_identity_generation() == identity.second;
@@ -5324,7 +5325,7 @@ bool basecamp::platform_reconcile_task_reservations(
         return basecamp_platform_actor_lookup_result{};
     };
 
-    auto retire_invalid = [&]( basecamp_platform_task &task, const std::string &reason ) {
+    auto retire_invalid = [&]( basecamp_platform_task & task, const std::string & reason ) {
         all_valid = false;
         error = "CampTask " + std::to_string( task.task_id ) + " archived: " + reason;
         if( task.state == basecamp_platform_task_state::running ) {
@@ -5346,7 +5347,7 @@ bool basecamp::platform_reconcile_task_reservations(
     };
 
     std::sort( staged_tasks.begin(), staged_tasks.end(),
-    []( const basecamp_platform_task &lhs, const basecamp_platform_task &rhs ) {
+    []( const basecamp_platform_task & lhs, const basecamp_platform_task & rhs ) {
         return lhs.task_id < rhs.task_id;
     } );
 
@@ -5464,10 +5465,10 @@ bool basecamp::platform_reconcile_task_reservations(
         }
         active_worker_ids.push_back( task.worker );
         const std::pair<character_id, std::uint64_t> worker_identity =
-            { task.worker, task.worker_identity_generation };
+        { task.worker, task.worker_identity_generation };
 
         auto assigned_by_identity = std::find_if( staged_assigned.begin(), staged_assigned.end(),
-        [&worker_identity]( const npc_ptr &candidate ) {
+        [&worker_identity]( const npc_ptr & candidate ) {
             return candidate && candidate->getID() == worker_identity.first &&
                    candidate->platform_identity_generation() == worker_identity.second;
         } );
@@ -5496,7 +5497,7 @@ bool basecamp::platform_reconcile_task_reservations(
 
     for( const std::pair<character_id, std::uint64_t> &identity : released_workers ) {
         const bool rebound = std::any_of( workers_to_bind.begin(), workers_to_bind.end(),
-        [&identity]( const npc_ptr &candidate ) {
+        [&identity]( const npc_ptr & candidate ) {
             return candidate && candidate->getID() == identity.first &&
                    candidate->platform_identity_generation() == identity.second;
         } );

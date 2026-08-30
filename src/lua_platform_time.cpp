@@ -371,9 +371,9 @@ sol::table reschedule_events(
             "services.time.reschedule duration must be within +/-31536000 turns" );
     }
     const std::size_t matched = static_cast<std::size_t>( std::count_if(
-        get_timed_events().get_all().begin(),
-        get_timed_events().get_all().end(),
-    [&key]( const timed_event &event ) {
+                                    get_timed_events().get_all().begin(),
+                                    get_timed_events().get_all().end(),
+    [&key]( const timed_event & event ) {
         return event.key == key;
     } ) );
     get_timed_events().set_all( key, duration.to_native() );
@@ -445,8 +445,8 @@ void install_time_api(
     time.set_function(
         "reschedule",
         [require_write]( sol::this_state lua,
-                         const std::string &key,
-                         const script_time_duration &duration ) {
+                         const std::string & key,
+    const script_time_duration & duration ) {
         require_write();
         return reschedule_events( lua, key, duration );
     } );

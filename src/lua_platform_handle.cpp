@@ -749,9 +749,9 @@ native_handle_result<vehicle_part> game_handle::resolve_vehicle_part(
         }
         if( match != nullptr ) {
             return { nullptr, game_handle_error{
-                         "duplicate_vehicle_part_identity",
-                         "The Vehicle contains duplicate stable VehiclePart identities"
-                     } };
+                    "duplicate_vehicle_part_identity",
+                    "The Vehicle contains duplicate stable VehiclePart identities"
+                } };
         }
         match = &candidate;
     }
@@ -767,20 +767,20 @@ native_handle_result<vehicle_part> game_handle::resolve_vehicle_part_for_vehicle
     const std::size_t current_world_generation ) const
 {
     const native_handle_result<vehicle> owner = owner_handle.resolve_vehicle(
-            current_runtime, current_world_generation );
+                current_runtime, current_world_generation );
     if( !owner ) {
         return { nullptr, owner.error };
     }
     const native_handle_result<vehicle_part> part = resolve_vehicle_part(
-            current_runtime, current_world_generation );
+                current_runtime, current_world_generation );
     if( !part ) {
         return part;
     }
     if( vehicle_.get() != owner.value ) {
         return { nullptr, game_handle_error{
-                     "wrong_vehicle",
-                     "The VehiclePart does not belong to the requested Vehicle"
-                 } };
+                "wrong_vehicle",
+                "The VehiclePart does not belong to the requested Vehicle"
+            } };
     }
     return part;
 }
@@ -831,7 +831,7 @@ npc *resolve_exact_npc(
     std::optional<game_handle_error> &error )
 {
     const native_handle_result<Creature> resolved = handle.resolve_creature(
-            current_runtime, current_world_generation );
+                current_runtime, current_world_generation );
     if( !resolved ) {
         error = resolved.error;
         return nullptr;
@@ -871,7 +871,7 @@ avatar *resolve_exact_avatar(
     std::optional<game_handle_error> &error )
 {
     const native_handle_result<Creature> resolved = handle.resolve_creature(
-            current_runtime, current_world_generation );
+                current_runtime, current_world_generation );
     if( !resolved ) {
         error = resolved.error;
         return nullptr;
@@ -911,7 +911,7 @@ monster *resolve_exact_monster(
     std::optional<game_handle_error> &error )
 {
     const native_handle_result<Creature> resolved = handle.resolve_creature(
-            current_runtime, current_world_generation );
+                current_runtime, current_world_generation );
     if( !resolved ) {
         error = resolved.error;
         return nullptr;
@@ -961,7 +961,7 @@ bool resolve_exact_item_for_character(
         return false;
     }
     const native_handle_result<item> resolved = item_handle.resolve_item(
-            current_runtime, current_world_generation );
+                current_runtime, current_world_generation );
     if( !resolved ) {
         entry = nullptr;
         error = resolved.error;

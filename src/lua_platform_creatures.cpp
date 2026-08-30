@@ -387,8 +387,8 @@ sol::table creature_has_body_type(
     if( requested.empty() || requested.size() > 128 ||
         std::any_of( requested.begin(), requested.end(),
     []( const unsigned char ch ) {
-        return ch < 0x20U || ch == 0x7fU;
-    } ) ) {
+    return ch < 0x20U || ch == 0x7fU;
+} ) ) {
         throw std::invalid_argument(
             "services.creatures.has_body_type requires 1 to 128 non-control bytes" );
     }
@@ -501,7 +501,7 @@ sol::table visible_monsters_by_direction(
     result["type_count"] = visible.unique_mons[index].size();
     result["present"] = !visible.unique_mons[index].empty();
     result["dangerous"] = index < visible.dangerous.size() &&
-                            visible.dangerous[index];
+                          visible.dangerous[index];
     return result;
 }
 
@@ -515,8 +515,8 @@ sol::table nearby_creatures(
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *player = resolve_exact_character(
-                                  observer_handle, runtime_generation,
-                                  world_generation, error );
+                            observer_handle, runtime_generation,
+                            world_generation, error );
     if( player == nullptr ) {
         return make_game_error_result( state, *error );
     }
@@ -599,7 +599,7 @@ sol::table nearby_creatures(
     result["include_hallucinations"] = options.include_hallucinations;
     result["has_more"] = offset + returned < creatures.size();
     result["truncated"] = offset != 0 ||
-                            returned < creatures.size();
+                          returned < creatures.size();
     return result;
 }
 
@@ -1093,7 +1093,7 @@ sol::table character_has_part_temperature(
                            character->get_part_temp_conv( part ) );
     return make_game_value_result(
                state, sol::make_object( state,
-                   static_cast<double>( actual ) >= minimum ) );
+                                        static_cast<double>( actual ) >= minimum ) );
 }
 
 sol::table character_armor(
@@ -1713,7 +1713,7 @@ sol::table pick_character_body_part(
                 options.types.begin(), options.types.end(),
         [&part]( const bp_type type ) {
         return part->has_type( type );
-    } ) ) {
+        } ) ) {
             continue;
         }
         if( std::any_of(
@@ -1721,14 +1721,14 @@ sol::table pick_character_body_part(
                 options.excluded_types.end(),
         [&part]( const bp_type type ) {
         return part->has_type( type );
-    } ) ) {
+        } ) ) {
             continue;
         }
         if( !std::all_of(
                 options.flags.begin(), options.flags.end(),
         [&part]( const json_character_flag & flag ) {
         return part->has_flag( flag );
-    } ) ) {
+        } ) ) {
             continue;
         }
         if( std::any_of(
@@ -1736,7 +1736,7 @@ sol::table pick_character_body_part(
                 options.excluded_flags.end(),
         [&part]( const json_character_flag & flag ) {
         return part->has_flag( flag );
-    } ) ) {
+        } ) ) {
             continue;
         }
         candidates.push_back( part );
@@ -1772,7 +1772,7 @@ sol::table pick_character_body_part(
     value["cancelled"] = !picked.has_value();
     if( picked ) {
         value["body_part"] = script_game_id(
-                                  "body_part", picked->id().str() );
+                                 "body_part", picked->id().str() );
     } else {
         value["body_part"] = sol::nil;
     }
@@ -1926,7 +1926,7 @@ sol::table damage_character(
             "services.characters.damage amount must be finite and within -1000000..1000000" );
     }
     const character_damage_options options = read_character_damage_options(
-            requested_options );
+                requested_options );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_exact_character(
@@ -1962,13 +1962,13 @@ sol::table damage_character(
                        static_cast<float>( options.armor_penetration_multiplier ),
                        static_cast<float>( options.damage_multiplier ), 1.0f, 1.0f );
     const dealt_damage_instance dealt = character->deal_damage(
-            character, selected_body_part, damage );
+                                            character, selected_body_part, damage );
     const int after = character->get_part_hp_cur( selected_body_part );
 
     sol::table value = state.create_table();
     value["damage_type"] = requested_damage_type;
     value["body_part"] = script_game_id(
-                              "body_part", selected_body_part.id().str() );
+                             "body_part", selected_body_part.id().str() );
     value["requested"] = amount;
     value["before"] = before;
     value["after"] = after;
@@ -2355,7 +2355,7 @@ sol::table attack_character(
             "services.characters.attack requires a valid martial-art technique id" );
     }
     const character_attack_options options = read_character_attack_options(
-            requested_options );
+                requested_options );
     sol::state_view state( lua );
     std::optional<game_handle_error> attacker_error;
     Character *attacker = resolve_exact_character(
@@ -2365,7 +2365,7 @@ sol::table attack_character(
         return make_game_error_result( state, *attacker_error );
     }
     const native_handle_result<Creature> target = target_handle.resolve_creature(
-            runtime_generation, world_generation );
+                runtime_generation, world_generation );
     if( !target ) {
         return make_game_error_result( state, *target.error );
     }
@@ -2400,7 +2400,7 @@ sol::table choose_character_technique(
         return make_game_error_result( state, *attacker_error );
     }
     const native_handle_result<Creature> target = target_handle.resolve_creature(
-            runtime_generation, world_generation );
+                runtime_generation, world_generation );
     if( !target ) {
         return make_game_error_result( state, *target.error );
     }
@@ -2413,11 +2413,11 @@ sol::table choose_character_technique(
     value["found"] = !technique.is_empty();
     value["accepted"] = !technique.is_empty();
     value["technique"] = script_game_id(
-                              "martial_art_technique", technique.str() );
+                             "martial_art_technique", technique.str() );
     value["attack_vector"] = script_game_id(
-                                  "attack_vector", attack_vector.str() );
+                                 "attack_vector", attack_vector.str() );
     value["contact_area"] = script_game_id(
-                                 "sub_body_part", contact_area.str() );
+                                "sub_body_part", contact_area.str() );
     value["attacker"] = attacker_handle;
     value["target"] = target_handle;
     return make_game_value_result(
@@ -2439,7 +2439,7 @@ sol::table ranged_attack_character(
         return make_game_error_result( state, *attacker_error );
     }
     const native_handle_result<Creature> target = target_handle.resolve_creature(
-            runtime_generation, world_generation );
+                runtime_generation, world_generation );
     if( !target ) {
         return make_game_error_result( state, *target.error );
     }
@@ -2452,7 +2452,7 @@ sol::table ranged_attack_character(
         if( mode.qty > 0 && wielded->ammo_sufficient(
                 attacker, mode.qty * 2 ) ) {
             attempted = true;
-            shots = attacker->fire_gun( target.value->pos_bub() , mode.qty );
+            shots = attacker->fire_gun( target.value->pos_bub(), mode.qty );
         }
     }
     sol::table value = state.create_table();
@@ -2531,7 +2531,7 @@ sol::table knockback_character(
     const tripoint_bub_ms target = options.target ?
                                    combat_bub_position( *options.target ) : actor_position;
     tripoint_bub_ms direction = options.direction ?
-                                 combat_bub_position( *options.direction ) : actor_position;
+                                combat_bub_position( *options.direction ) : actor_position;
     if( direction == target ) {
         point random_direction( rng( -1, 1 ), rng( -1, 1 ) );
         while( random_direction == point::zero ) {
@@ -2543,11 +2543,11 @@ sol::table knockback_character(
                   options.dam_mult );
     sol::table value = state.create_table();
     value["target"] = script_tripoint_coord::from_native(
-                           coords::origin::abs, coords::scale::map_square,
-                           here.get_abs( target ).raw() );
+                          coords::origin::abs, coords::scale::map_square,
+                          here.get_abs( target ).raw() );
     value["direction"] = script_tripoint_coord::from_native(
-                              coords::origin::abs, coords::scale::map_square,
-                              here.get_abs( direction ).raw() );
+                             coords::origin::abs, coords::scale::map_square,
+                             here.get_abs( direction ).raw() );
     value["force"] = options.force;
     value["stun"] = options.stun;
     value["dam_mult"] = options.dam_mult;
@@ -2628,10 +2628,11 @@ character_explosion_options read_character_explosion_options(
     }
     constexpr std::string_view api_name = "services.characters.explosion";
     reject_unknown_combat_options(
-        *requested, api_name,
-    { "power", "distance_factor", "max_noise", "fire", "target", "shrapnel",
-      "emp_blast", "scrambler_blast", "flashbang",
-      "flashbang_avatar_is_immune", "flashbang_radius" } );
+    *requested, api_name, {
+        "power", "distance_factor", "max_noise", "fire", "target", "shrapnel",
+        "emp_blast", "scrambler_blast", "flashbang",
+        "flashbang_avatar_is_immune", "flashbang_radius"
+    } );
     result.power = combat_number_option(
                        combat_option( *requested, "power" ), api_name, "power",
                        result.power, -maximum_combat_number, maximum_combat_number );
@@ -2660,8 +2661,8 @@ character_explosion_options read_character_explosion_options(
                            combat_option( *requested, "flashbang" ), api_name,
                            "flashbang", result.flashbang );
     result.flashbang_avatar_is_immune = combat_boolean_option(
-            combat_option( *requested, "flashbang_avatar_is_immune" ), api_name,
-            "flashbang_avatar_is_immune", result.flashbang_avatar_is_immune );
+                                            combat_option( *requested, "flashbang_avatar_is_immune" ), api_name,
+                                            "flashbang_avatar_is_immune", result.flashbang_avatar_is_immune );
     result.flashbang_radius = combat_integer_option(
                                   combat_option( *requested, "flashbang_radius" ),
                                   api_name, "flashbang_radius", result.flashbang_radius,
@@ -2717,8 +2718,8 @@ sol::table explosion_character(
     sol::table value = state.create_table();
     value["queued"] = true;
     value["target"] = script_tripoint_coord::from_native(
-                           coords::origin::abs, coords::scale::map_square,
-                           here.get_abs( target ).raw() );
+                          coords::origin::abs, coords::scale::map_square,
+                          here.get_abs( target ).raw() );
     value["power"] = options.power;
     value["distance_factor"] = options.distance_factor;
     value["fire"] = options.fire;
@@ -2762,8 +2763,8 @@ sol::table emit_character(
     value["emission"] = emission;
     value["chance"] = chance;
     value["position"] = script_tripoint_coord::from_native(
-                             coords::origin::abs, coords::scale::map_square,
-                             character->pos_abs().raw() );
+                            coords::origin::abs, coords::scale::map_square,
+                            character->pos_abs().raw() );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -2809,9 +2810,10 @@ character_cast_spell_options read_character_cast_spell_options(
     }
     constexpr std::string_view api_name = "services.characters.cast_spell";
     reject_unknown_combat_options(
-        *requested, api_name,
-    { "hit_self", "min_level", "max_level", "message", "npc_message",
-      "target", "targeted" } );
+    *requested, api_name, {
+        "hit_self", "min_level", "max_level", "message", "npc_message",
+        "target", "targeted"
+    } );
     result.hit_self = combat_boolean_option(
                           combat_option( *requested, "hit_self" ), api_name,
                           "hit_self", result.hit_self );
@@ -2830,7 +2832,7 @@ character_cast_spell_options read_character_cast_spell_options(
     result.message = combat_message_option(
                          combat_option( *requested, "message" ), api_name, "message" );
     result.npc_message = combat_message_option(
-            combat_option( *requested, "npc_message" ), api_name, "npc_message" );
+                             combat_option( *requested, "npc_message" ), api_name, "npc_message" );
     result.targeted = combat_boolean_option(
                           combat_option( *requested, "targeted" ), api_name,
                           "targeted", result.targeted );
@@ -2908,8 +2910,8 @@ sol::table cast_spell_character(
     character->add_msg_player_or_npc(
         fake.trigger_message, fake.npc_trigger_message );
     value["target"] = script_tripoint_coord::from_native(
-                           coords::origin::abs, coords::scale::map_square,
-                           get_map().get_abs( *target ).raw() );
+                          coords::origin::abs, coords::scale::map_square,
+                          get_map().get_abs( *target ).raw() );
     if( options.max_level ) {
         value["max_level"] = *options.max_level;
     }
@@ -3101,10 +3103,10 @@ sol::table character_demographic_state(
     result["fat_bmi"] = character.get_bmi_fat();
     result["lean_bmi"] = character.get_bmi_lean();
     result["bmi_permil"] = static_cast<int>(
-                                      std::round(
-                                          character.get_bmi_fat() * 1000.0f ) );
+                               std::round(
+                                   character.get_bmi_fat() * 1000.0f ) );
     result["size_index"] = static_cast<int>(
-                                character.get_size() );
+                               character.get_size() );
     return result;
 }
 
@@ -3435,7 +3437,7 @@ sol::table character_temperature_state(
     result["current_extreme_body_part"] = script_game_id(
             "body_part", current_extreme.id().str() );
     result["convergent_extreme_body_part"] = script_game_id(
-            "body_part", convergent_extreme.id().str() );
+                "body_part", convergent_extreme.id().str() );
     result["current_celsius"] = units::to_celsius( current );
     result["convergent_celsius"] = units::to_celsius( convergent );
     result["legacy_current"] =
@@ -3559,8 +3561,8 @@ sol::table snapshot_character(
     senses["quiet"] = character.is_quiet();
     senses["stealthy"] = character.is_stealthy();
     senses["can_see"] = !character.is_blind() &&
-                         ( !character.in_sleep_state() ||
-                           character.has_flag( json_flag_SEESLEEP ) );
+                        ( !character.in_sleep_state() ||
+                          character.has_flag( json_flag_SEESLEEP ) );
     senses["has_watch"] = character.has_watch();
     senses["has_alarm_clock"] = character.has_alarm_clock();
     senses["fine_detail_vision_modifier"] =
@@ -3618,8 +3620,8 @@ sol::table snapshot_character(
     const optional_vpart_position vehicle_position =
         get_map().veh_at( character.pos_bub() );
     movement["controlling_vehicle"] = vehicle_position &&
-                                        vehicle_position->vehicle().player_in_control(
-                                            get_map(), character );
+                                      vehicle_position->vehicle().player_in_control(
+                                          get_map(), character );
     result["movement"] = std::move( movement );
 
     sol::table activity = lua.create_table();
@@ -3627,7 +3629,7 @@ sol::table snapshot_character(
     activity["level_index"] = character.activity_level_index();
     if( !character.activity.is_null() ) {
         activity["id"] = script_game_id(
-                              "activity", character.activity.id().str() );
+                             "activity", character.activity.id().str() );
     }
     result["activity"] = std::move( activity );
 
@@ -3775,9 +3777,9 @@ sol::table character_training_offers(
     value["style_count"] = styles.size();
     value["spell_count"] = spells.size();
     value["truncated"] = skills.size() > maximum_training_offers ||
-                           proficiencies.size() > maximum_training_offers ||
-                           styles.size() > maximum_training_offers ||
-                           spells.size() > maximum_training_offers;
+                         proficiencies.size() > maximum_training_offers ||
+                         styles.size() > maximum_training_offers ||
+                         spells.size() > maximum_training_offers;
     return make_game_value_result(
                state, sol::make_object(
                    state, std::move( value ) ) );
@@ -4042,8 +4044,8 @@ sol::table nearby_characters(
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *player = resolve_exact_character(
-                                  observer_handle, runtime_generation,
-                                  world_generation, error );
+                            observer_handle, runtime_generation,
+                            world_generation, error );
     if( player == nullptr ) {
         return make_game_error_result( state, *error );
     }
@@ -4133,7 +4135,7 @@ void install_creature_api(
         "nearby",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state,
-    const game_handle &observer,
+            const game_handle & observer,
     const sol::optional<sol::table> &options ) {
         require_read();
         return nearby_creatures(
@@ -4153,7 +4155,7 @@ void install_creature_api(
     creatures.set_function(
         "can_see",
         [current_runtime_generation, current_world_generation, require_read](
-    sol::this_state lua_state, const game_handle & observer,
+            sol::this_state lua_state, const game_handle & observer,
     const game_handle & target ) {
         require_read();
         sol::state_view state( lua_state );
@@ -4178,8 +4180,8 @@ void install_creature_api(
         "has_line_of_sight",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state,
-            const game_handle &observer,
-            const game_handle &target ) {
+            const game_handle & observer,
+    const game_handle & target ) {
         require_read();
         return creature_line_of_sight(
                    lua_state, observer, target,
@@ -4189,7 +4191,7 @@ void install_creature_api(
     creatures.set_function(
         "visible_monsters",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &observer,
+            sol::this_state lua_state, const game_handle & observer,
     const std::string & direction ) {
         require_read();
         return visible_monsters_by_direction(
@@ -4199,8 +4201,8 @@ void install_creature_api(
     creatures.set_function(
         "has_species",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &handle,
-    const script_game_id &species ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & species ) {
         require_read();
         return creature_has_species(
                    lua_state, handle, species,
@@ -4210,8 +4212,8 @@ void install_creature_api(
     creatures.set_function(
         "has_flag",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &handle,
-    const script_game_id &flag ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & flag ) {
         require_read();
         return creature_has_flag(
                    lua_state, handle, flag,
@@ -4221,8 +4223,8 @@ void install_creature_api(
     creatures.set_function(
         "has_body_type",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &handle,
-    const std::string &body_type ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string & body_type ) {
         require_read();
         return creature_has_body_type(
                    lua_state, handle, body_type,
@@ -4235,8 +4237,8 @@ void install_creature_api(
     monsters.set_function(
         "set_disposition",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const sol::table &values ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::table & values ) {
         require_write();
         return change_monster_disposition(
                    lua_state, handle, values, false,
@@ -4246,8 +4248,8 @@ void install_creature_api(
     monsters.set_function(
         "modify_disposition",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const sol::table &deltas ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::table & deltas ) {
         require_write();
         return change_monster_disposition(
                    lua_state, handle, deltas, true,
@@ -4257,7 +4259,7 @@ void install_creature_api(
     monsters.set_function(
         "set_friendly",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
+            sol::this_state lua_state, const game_handle & handle,
     const bool friendly ) {
         require_write();
         return set_monster_friendly(
@@ -4268,8 +4270,8 @@ void install_creature_api(
     monsters.set_function(
         "set_summon",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const script_time_duration &lifespan,
+            sol::this_state lua_state, const game_handle & handle,
+            const script_time_duration & lifespan,
             const sol::optional<game_handle> &summoner,
     const sol::optional<bool> &temporary_drop_items ) {
         require_write();
@@ -4283,9 +4285,9 @@ void install_creature_api(
         "count_nearby",
         [require_read](
             sol::this_state lua_state,
-            const script_tripoint_coord &origin,
+            const script_tripoint_coord & origin,
             const sol::optional<sol::table> &ids,
-            const sol::optional<sol::table> &options ) {
+    const sol::optional<sol::table> &options ) {
         require_read();
         return count_nearby_monsters(
                    lua_state, origin, ids, options,
@@ -4295,9 +4297,9 @@ void install_creature_api(
         "count_species_nearby",
         [require_read](
             sol::this_state lua_state,
-            const script_tripoint_coord &origin,
+            const script_tripoint_coord & origin,
             const sol::optional<sol::table> &species,
-            const sol::optional<sol::table> &options ) {
+    const sol::optional<sol::table> &options ) {
         require_read();
         return count_nearby_monsters(
                    lua_state, origin, species, options,
@@ -4307,9 +4309,9 @@ void install_creature_api(
         "count_groups_nearby",
         [require_read](
             sol::this_state lua_state,
-            const script_tripoint_coord &origin,
+            const script_tripoint_coord & origin,
             const sol::optional<sol::table> &groups,
-            const sol::optional<sol::table> &options ) {
+    const sol::optional<sol::table> &options ) {
         require_read();
         return count_nearby_monsters(
                    lua_state, origin, groups, options,
@@ -4351,7 +4353,7 @@ void install_creature_api(
         "nearby",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state,
-    const game_handle &observer,
+            const game_handle & observer,
     const sol::optional<sol::table> &options ) {
         require_read();
         return nearby_characters(
@@ -4364,9 +4366,9 @@ void install_creature_api(
          current_world_generation,
          require_read](
             sol::this_state lua_state,
-            const script_tripoint_coord &origin,
+            const script_tripoint_coord & origin,
             const sol::optional<game_handle> &observer,
-            const sol::optional<sol::table> &options ) {
+    const sol::optional<sol::table> &options ) {
         require_read();
         return count_nearby_characters(
                    lua_state, origin, observer, options,
@@ -4377,8 +4379,8 @@ void install_creature_api(
         "training_offers",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state,
-            const game_handle &trainer,
-            const game_handle &student ) {
+            const game_handle & trainer,
+    const game_handle & student ) {
         require_read();
         return character_training_offers(
                    lua_state, trainer, student,
@@ -4389,8 +4391,8 @@ void install_creature_api(
         "can_see_location",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state,
-            const game_handle &observer,
-            const script_tripoint_coord &position ) {
+            const game_handle & observer,
+    const script_tripoint_coord & position ) {
         require_read();
         return character_can_see_location(
                    lua_state, observer, position,
@@ -4400,9 +4402,9 @@ void install_creature_api(
     characters.set_function(
         "armor",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &handle,
-            const script_game_id &damage_type,
-    const script_game_id &body_part ) {
+            sol::this_state lua_state, const game_handle & handle,
+            const script_game_id & damage_type,
+    const script_game_id & body_part ) {
         require_read();
         return character_armor(
                    lua_state, handle, damage_type, body_part,
@@ -4412,8 +4414,8 @@ void install_creature_api(
     characters.set_function(
         "coverage",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &handle,
-    const script_game_id &body_part ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & body_part ) {
         require_read();
         return character_coverage(
                    lua_state, handle, body_part,
@@ -4423,8 +4425,8 @@ void install_creature_api(
     characters.set_function(
         "limb_score",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &handle,
-            const script_game_id &score,
+            sol::this_state lua_state, const game_handle & handle,
+            const script_game_id & score,
     const sol::optional<std::string> &body_part_type ) {
         require_read();
         return character_limb_score(
@@ -4435,7 +4437,7 @@ void install_creature_api(
     characters.set_function(
         "consumption_count",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &handle,
+            sol::this_state lua_state, const game_handle & handle,
             const sol::optional<script_game_id> &item,
     const sol::optional<script_time_duration> &window ) {
         require_read();
@@ -4447,8 +4449,8 @@ void install_creature_api(
     characters.set_function(
         "enchantment_value",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &handle,
-            const std::string &key,
+            sol::this_state lua_state, const game_handle & handle,
+            const std::string & key,
     const sol::optional<double> &base ) {
         require_read();
         return character_enchantment_value(
@@ -4470,8 +4472,8 @@ void install_creature_api(
     characters.set_function(
         "set_demographics",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const sol::table &updates ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::table & updates ) {
         require_write();
         return set_character_demographics(
                    lua_state, handle, updates,
@@ -4481,8 +4483,8 @@ void install_creature_api(
     characters.set_function(
         "set_attributes",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const sol::table &values ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::table & values ) {
         require_write();
         return change_character_attributes(
                    lua_state, handle, values, false,
@@ -4492,8 +4494,8 @@ void install_creature_api(
     characters.set_function(
         "modify_attributes",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const sol::table &deltas ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::table & deltas ) {
         require_write();
         return change_character_attributes(
                    lua_state, handle, deltas, true,
@@ -4503,8 +4505,8 @@ void install_creature_api(
     characters.set_function(
         "set_kill_xp",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const std::int64_t value ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const std::int64_t value ) {
         require_write();
         return change_character_kill_xp(
                    lua_state, handle, value, false,
@@ -4514,8 +4516,8 @@ void install_creature_api(
     characters.set_function(
         "modify_kill_xp",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const std::int64_t delta ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const std::int64_t delta ) {
         require_write();
         return change_character_kill_xp(
                    lua_state, handle, delta, true,
@@ -4536,8 +4538,8 @@ void install_creature_api(
     characters.set_function(
         "set_hp",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const script_game_id &body_part, const int hp ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & body_part, const int hp ) {
         require_write();
         return set_character_hp(
                    lua_state, handle, body_part, hp,
@@ -4547,8 +4549,8 @@ void install_creature_api(
     characters.set_function(
         "hp_group",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &handle,
-    const std::string &group ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string & group ) {
         require_read();
         return character_hp_group(
                    lua_state, handle, group,
@@ -4558,8 +4560,8 @@ void install_creature_api(
     characters.set_function(
         "set_hp_group",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const std::string &group, const int hp ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string & group, const int hp ) {
         require_write();
         return set_character_hp_group(
                    lua_state, handle, group, hp,
@@ -4569,9 +4571,9 @@ void install_creature_api(
     characters.set_function(
         "attack",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &attacker,
-            const game_handle &target, const std::string &technique,
-            const sol::optional<sol::table> &options ) {
+            sol::this_state lua_state, const game_handle & attacker,
+            const game_handle & target, const std::string & technique,
+    const sol::optional<sol::table> &options ) {
         require_write();
         return attack_character(
                    lua_state, attacker, target, technique, options,
@@ -4580,9 +4582,9 @@ void install_creature_api(
     characters.set_function(
         "choose_technique",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &attacker,
-            const game_handle &target,
-            const sol::optional<sol::table> &options ) {
+            sol::this_state lua_state, const game_handle & attacker,
+            const game_handle & target,
+    const sol::optional<sol::table> &options ) {
         require_write();
         return choose_character_technique(
                    lua_state, attacker, target, options,
@@ -4591,8 +4593,8 @@ void install_creature_api(
     characters.set_function(
         "ranged_attack",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &attacker,
-            const game_handle &target ) {
+            sol::this_state lua_state, const game_handle & attacker,
+    const game_handle & target ) {
         require_write();
         return ranged_attack_character(
                    lua_state, attacker, target,
@@ -4601,8 +4603,8 @@ void install_creature_api(
     characters.set_function(
         "knockback",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const sol::optional<sol::table> &options ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::optional<sol::table> &options ) {
         require_write();
         return knockback_character(
                    lua_state, handle, options,
@@ -4611,8 +4613,8 @@ void install_creature_api(
     characters.set_function(
         "explosion",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const sol::optional<sol::table> &options ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::optional<sol::table> &options ) {
         require_write();
         return explosion_character(
                    lua_state, handle, options,
@@ -4621,9 +4623,9 @@ void install_creature_api(
     characters.set_function(
         "emit",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const std::string &emission,
-            const sol::optional<double> &chance ) {
+            sol::this_state lua_state, const game_handle & handle,
+            const std::string & emission,
+    const sol::optional<double> &chance ) {
         require_write();
         return emit_character(
                    lua_state, handle, emission, chance,
@@ -4632,8 +4634,8 @@ void install_creature_api(
     characters.set_function(
         "cast_spell",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const script_game_id &spell, const sol::optional<sol::table> &options ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & spell, const sol::optional<sol::table> &options ) {
         require_write();
         return cast_spell_character(
                    lua_state, handle, spell, options,
@@ -4642,8 +4644,8 @@ void install_creature_api(
     characters.set_function(
         "die",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const sol::optional<sol::table> &options ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::optional<sol::table> &options ) {
         require_write();
         return die_character(
                    lua_state, handle, options,
@@ -4652,7 +4654,7 @@ void install_creature_api(
     characters.set_function(
         "prevent_death",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_write();
         return prevent_death_character(
                    lua_state, handle,
@@ -4661,7 +4663,7 @@ void install_creature_api(
     characters.set_function(
         "recalculate_enchantments",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_write();
         return recalculate_character_enchantments(
                    lua_state, handle,
@@ -4670,8 +4672,8 @@ void install_creature_api(
     characters.set_function(
         "pick_body_part",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &handle,
-            const sol::optional<sol::table> &options ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::optional<sol::table> &options ) {
         require_read();
         return pick_character_body_part(
                    lua_state, handle, options,
@@ -4681,8 +4683,8 @@ void install_creature_api(
     characters.set_function(
         "choose_body_part",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const sol::optional<sol::table> &options ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::optional<sol::table> &options ) {
         require_write();
         return pick_character_body_part(
                    lua_state, handle, options,
@@ -4693,7 +4695,7 @@ void install_creature_api(
         "damage",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state, const game_handle & handle,
-    const script_game_id & damage_type, const double amount,
+            const script_game_id & damage_type, const double amount,
     const sol::optional<sol::table> &options ) {
         require_write();
         return damage_character(
@@ -4703,8 +4705,8 @@ void install_creature_api(
     characters.set_function(
         "add_faction_trust",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const std::int64_t amount ) {
+            sol::this_state lua_state, const game_handle & handle,
+    const std::int64_t amount ) {
         require_write();
         return add_character_faction_trust(
                    lua_state, handle, amount,
@@ -4713,9 +4715,9 @@ void install_creature_api(
     characters.set_function(
         "set_faction_relationship",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &source,
-            const game_handle &target, const std::string &relationship,
-            const bool enabled ) {
+            sol::this_state lua_state, const game_handle & source,
+            const game_handle & target, const std::string & relationship,
+    const bool enabled ) {
         require_write();
         return set_character_faction_relationship(
                    lua_state, source, target, relationship, enabled,
@@ -4760,7 +4762,7 @@ void install_creature_api(
     characters.set_function(
         "has_part_temp",
         [current_runtime_generation, current_world_generation, require_read](
-    sol::this_state lua_state, const game_handle & handle,
+            sol::this_state lua_state, const game_handle & handle,
     const script_game_id & body_part, const double minimum ) {
         require_read();
         return character_has_part_temperature(
@@ -4770,7 +4772,7 @@ void install_creature_api(
     characters.set_function(
         "has_flag",
         [current_runtime_generation, current_world_generation, require_read](
-    sol::this_state lua_state, const game_handle & handle,
+            sol::this_state lua_state, const game_handle & handle,
     const script_game_id & flag ) {
         require_read();
         if( flag.kind() != "json_flag" ) {
@@ -4795,7 +4797,7 @@ void install_creature_api(
     characters.set_function(
         "has_profession",
         [current_runtime_generation, current_world_generation, require_read](
-    sol::this_state lua_state, const game_handle & handle,
+            sol::this_state lua_state, const game_handle & handle,
     const std::string & profession_id_string ) {
         require_read();
         sol::state_view state( lua_state );
@@ -4814,7 +4816,7 @@ void install_creature_api(
     characters.set_function(
         "add_wet",
         [current_runtime_generation, current_world_generation, require_write](
-    sol::this_state lua_state, const game_handle & handle,
+            sol::this_state lua_state, const game_handle & handle,
     const std::int64_t amount ) {
         require_write();
         if( amount < -1000000 || amount > 1000000 ) {
